@@ -19,7 +19,7 @@ class AppSettings:
     """Application settings manager with theme support"""
     
     def __init__(self):
-        self.settings_file = Path("chip_editor_settings.json")
+        self.settings_file = Path("imgfactory_settings.json")
         self.themes = {
             "LCARS": {
                 "name": "LCARS (Star Trek)",

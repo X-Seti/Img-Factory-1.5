@@ -1,0 +1,22 @@
+{
+  "theme": "Deep_Purple",
+  "font_family": "Segoe UI",
+  "font_size": 9,
+  "panel_opacity": 95,
+  "show_tooltips": true,
+  "auto_save": true,
+  "grid_size": 5,
+  "snap_to_grid": true,
+  "show_grid": true,
+  "show_perfboard": true,
+  "pin_label_size": 8,
+  "zoom_sensitivity": 1.2,
+  "max_undo_levels": 50,
+  "panel_layout": "left",
+  "collapsible_panels": true,
+  "remember_window_state": true,
+  "voice_commands": false,
+  "animations": true,
+  "sound_effects": false,
+  "lcars_sounds": false
+}
