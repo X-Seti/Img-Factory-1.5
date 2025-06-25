@@ -1,0 +1,201 @@
+﻿  WTDMipmap.cpp
+  WTDManager.cpp
+  WTDFormat.cpp
+h:\sdks\projects\new-img-factory\bxgi\code\bxgi\format\wtd\wtdformat.cpp(57): warning C4244: 'argument': conversion from 'uint32' to 'uint16', possible loss of data
+h:\sdks\projects\new-img-factory\bxgi\code\bxgi\format\wtd\wtdformat.cpp(58): warning C4244: 'argument': conversion from 'uint32' to 'uint16', possible loss of data
+h:\sdks\projects\new-img-factory\bxgi\code\bxgi\format\wtd\wtdformat.cpp(63): warning C4244: 'argument': conversion from 'uint32' to 'uint16', possible loss of data
+h:\sdks\projects\new-img-factory\bxgi\code\bxgi\format\wtd\wtdformat.cpp(64): warning C4244: 'argument': conversion from 'uint32' to 'uint16', possible loss of data
+h:\sdks\projects\new-img-factory\bxgi\code\bxgi\format\wtd\wtdformat.cpp(240): warning C4244: 'initializing': conversion from 'uint32' to 'uint16', possible loss of data
+  WTDEntry.cpp
+h:\sdks\projects\new-img-factory\bxgi\code\bxgi\format\wtd\wtdentry.cpp(32): warning C4244: 'argument': conversion from 'uint32' to 'uint16', possible loss of data
+h:\sdks\projects\new-img-factory\bxgi\code\bxgi\format\wtd\wtdentry.cpp(33): warning C4244: 'argument': conversion from 'uint32' to 'uint16', possible loss of data
+h:\sdks\projects\new-img-factory\bxgi\code\bxgi\format\wtd\wtdentry.cpp(39): warning C4244: 'argument': conversion from 'uint32' to 'uint16', possible loss of data
+h:\sdks\projects\new-img-factory\bxgi\code\bxgi\format\wtd\wtdentry.cpp(40): warning C4244: 'argument': conversion from 'uint32' to 'uint16', possible loss of data
+  WDRManager.cpp
+  WDRFormat.cpp
+  TXDManager.cpp
+  TXDFormat.cpp
+  IPLEntry_PATH_Node.cpp
+  IPLEntry_PATH_Group.cpp
+  IPLEntry_ZONE.cpp
+  IPLEntry_VNOD.cpp
+  IPLEntry_UnknownSection.cpp
+  IPLEntry_TCYC.cpp
+  IPLEntry_SLOW.cpp
+  IPLEntry_RTFX.cpp
+  IPLEntry_PICK.cpp
+  IPLEntry_PATH.cpp
+  IPLEntry_OCCL.cpp
+  IPLEntry_MZON.cpp
+  Generating Code...
+  Compiling...
+  IPLEntry_MULT.cpp
+  IPLEntry_MLOPLUS.cpp
+  IPLEntry_LODM.cpp
+  IPLEntry_LINK.cpp
+  IPLEntry_JUMP.cpp
+  IPLEntry_INST.cpp
+  IPLEntry_GRGE.cpp
+  IPLEntry_ENEX.cpp
+  IPLEntry_CULL.cpp
+  IPLEntry_CARS.cpp
+  IPLEntry_BLOK.cpp
+  IPLEntry_AUZO.cpp
+  IPLEntry_2DFX.cpp
+  IPLEntry_Section.cpp
+  IPLEntry_Other.cpp
+  IPLManager.cpp
+  IPLFormat.cpp
+  IPLEntry.cpp
+  IMGManager.cpp
+  IMGFormat.cpp
+  Generating Code...
+  Compiling...
+  IMGEntry.cpp
+h:\sdks\projects\new-img-factory\bxgi\code\bxgi\format\img\regular\imgentry.cpp(340): warning C4244: 'initializing': conversion from 'float' to 'uint32', possible loss of data
+  IDEEntry_PATH_Node.cpp
+  IDEEntry_PATH_Group.cpp
+  IDEEntry_WEAP.cpp
+  IDEEntry_VNOD.cpp
+  IDEEntry_UnknownSection.cpp
+  IDEEntry_TXDP.cpp
+  IDEEntry_TREE.cpp
+  IDEEntry_TOBJ.cpp
+  IDEEntry_TANM.cpp
+  IDEEntry_PEDS.cpp
+  IDEEntry_PATH.cpp
+  IDEEntry_OBJS.cpp
+  IDEEntry_MLO.cpp
+  IDEEntry_LODM.cpp
+  IDEEntry_LINK.cpp
+  IDEEntry_HIER.cpp
+  IDEEntry_HAND.cpp
+  IDEEntry_CARS.cpp
+  IDEEntry_ANIM.cpp
+  Generating Code...
+  Compiling...
+  IDEEntry_AMAT.cpp
+  IDEEntry_AGRPS.cpp
+  IDEEntry_2DFX.cpp
+  IDEEntry_2DFX_WorldPoint.cpp
+  IDEEntry_2DFX_WalkDontWalkAttr.cpp
+  IDEEntry_2DFX_Unknown1.cpp
+  IDEEntry_2DFX_SwayableAttr.cpp
+  IDEEntry_2DFX_SunReflection.cpp
+  IDEEntry_2DFX_SpawnPoint.cpp
+  IDEEntry_2DFX_ScrollBar.cpp
+  IDEEntry_2DFX_ProcObject.cpp
+  IDEEntry_2DFX_Ped.cpp
+  IDEEntry_2DFX_Particle.cpp
+  IDEEntry_2DFX_LightShaft.cpp
+  IDEEntry_2DFX_Light.cpp
+  IDEEntry_2DFX_Ladder.cpp
+  IDEEntry_2DFX_Explosion.cpp
+  IDEEntry_2DFX_Escalator.cpp
+  IDEEntry_2DFX_BouyancyAttr.cpp
+  IDEEntry_2DFX_Audio.cpp
+  Generating Code...
+  Compiling...
+  IDEEntry_Section.cpp
+  IDEEntry_Other.cpp
+  IDEManager.cpp
+  IDEFormat.cpp
+  IDEEntry.cpp
+  SectionLinesEntry_Other.cpp
+  SectionLinesEntry_Data.cpp
+  SectionLinesFormat.cpp
+  SectionLinesEntry.cpp
+  DFFManager.cpp
+  DFFFormat.cpp
+  DATWaterproFormat.cpp
+  DATWaterproEntry.cpp
+  DATScriptPathFormat.cpp
+  DATScriptPathEntry.cpp
+  DATPathManager.cpp
+  DATPathFormat.cpp
+  DATLoaderManager.cpp
+  DATLoaderFormat.cpp
+  DATChaseFormat.cpp
+  Generating Code...
+  Compiling...
+  DATChaseEntry.cpp
+  DATCAPSFormat.cpp
+  DATAnimgrpSection.cpp
+  DATAnimgrpFormat.cpp
+  DATAnimgrpEntry.cpp
+  COLVersionManager.cpp
+  COLManager.cpp
+  COLFormat.cpp
+  COLEntry.cpp
+  RWSection_UnknownSection.cpp
+  RWSection_TextureNative.cpp
+  RWSection_TextureDictionary.cpp
+  RWSection_Texture.cpp
+  RWSection_String.cpp
+  RWSection_MaterialList.cpp
+  RWSection_Material.cpp
+  RWSection_Light.cpp
+  RWSection_GeometryList.cpp
+  RWSection_Geometry.cpp
+  RWSection_FrameList.cpp
+  Generating Code...
+  Compiling...
+  RWSection_Frame.cpp
+  RWSection_ExtraVertColour.cpp
+  RWSection_Extension.cpp
+  RWSection_Clump.cpp
+  RWSection_BinMeshPLG.cpp
+  RWSection_Atomic.cpp
+  RWSection_2dEffect.cpp
+  RWEntry_TextureNative_MipMap.cpp
+  _2dEffect.cpp
+  RWEntry_2dEffect_SunGlare.cpp
+  RWEntry_2dEffect_StreetSign.cpp
+  RWEntry_2dEffect_SlotmachineWheel.cpp
+  RWEntry_2dEffect_PedAttractor.cpp
+  RWEntry_2dEffect_ParticleEffect.cpp
+  RWEntry_2dEffect_Light.cpp
+  RWEntry_2dEffect_Escalator.cpp
+  RWEntry_2dEffect_EnterExit.cpp
+  RWEntry_2dEffect_CoverPoint.cpp
+  RWVersionManager.cpp
+  RWVersion.cpp
+  Generating Code...
+  Compiling...
+  RWSectionContainer.cpp
+  RWSection.cpp
+  RWManager.cpp
+  RWFormat.cpp
+  RageResourceTypeManager.cpp
+  RageResourceType.cpp
+  RageManager.cpp
+  IntermediateTextureFormat.cpp
+  IntermediateGeometry.cpp
+  IntermediateBoundingObject.cpp
+  IntermediateModelFormat.cpp
+  PlatformedGame.cpp
+  GameManager.cpp
+  Game.cpp
+  RWGeometryBoundingInfo.cpp
+  RWEntry_BinMeshPLG_Mesh.cpp
+  TextureEntry.cpp
+  RWSectionDepthData.cpp
+  IMGFormatVersionStories.cpp
+h:\sdks\projects\new-img-factory\bxgi\code\bxgi\format\img\regular\imgformatversionstories.cpp(74): warning C4244: 'initializing': conversion from 'uint32' to 'int16', possible loss of data
+h:\sdks\projects\new-img-factory\bxgi\code\bxgi\format\img\regular\imgformatversionstories.cpp(75): warning C4244: 'initializing': conversion from 'uint32' to 'int16', possible loss of data
+  IMGFormatVersionFastman92.cpp
+h:\sdks\projects\new-img-factory\bxgi\code\bxgi\format\img\regular\imgformatversionfastman92.cpp(158): warning C4244: 'initializing': conversion from 'uint32' to 'uint16', possible loss of data
+  Generating Code...
+  Compiling...
+  IMGFormatVersion3.cpp
+h:\sdks\projects\new-img-factory\bxgi\code\bxgi\format\img\regular\imgformatversion3.cpp(194): warning C4244: 'argument': conversion from 'uint32' to 'uint16', possible loss of data
+h:\sdks\projects\new-img-factory\bxgi\code\bxgi\format\img\regular\imgformatversion3.cpp(288): warning C4244: 'argument': conversion from 'uint32' to 'uint16', possible loss of data
+  IMGFormatVersion2.cpp
+h:\sdks\projects\new-img-factory\bxgi\code\bxgi\format\img\regular\imgformatversion2.cpp(94): warning C4244: 'argument': conversion from 'uint32' to 'uint16', possible loss of data
+h:\sdks\projects\new-img-factory\bxgi\code\bxgi\format\img\regular\imgformatversion2.cpp(95): warning C4244: 'argument': conversion from 'uint32' to 'uint16', possible loss of data
+  IMGFormatVersion1.cpp
+  GameFormat.cpp
+  FormatVersionManager.cpp
+  DATLoaderEntry.cpp
+  Generating Code...
+  BXGI.vcxproj -> H:\SDKs\Projects\new-img-factory\BXGI\Compiler\Projects\BXGI\../../../../Output/Final/BXGI/Debug.Win32/BXGI.lib
