@@ -1,13 +1,16 @@
+#this belongs in components/ /img_creator.py
 #!/usr/bin/env python3
 """
-IMG Creator - Dialog for creating new IMG files
-Based on the enhanced creation system from the original codebase
+X-Seti - June25,2025 - IMG Factory 1.5 - IMG Creator
+Enhanced IMG Creator dialog for creating new IMG files
 """
 
 import os
 import json
+import struct
 from pathlib import Path
 from typing import Dict, Optional, List
+from enum import Enum
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QGridLayout, QFormLayout,
     QLabel, QPushButton, QLineEdit, QComboBox, QSpinBox, QCheckBox,
@@ -16,7 +19,49 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QThread
 from PyQt6.QtGui import QFont, QIcon
-from components.img_core_classes import IMGFile, IMGEntry, IMGVersion, format_file_size
+
+# Import with fallback
+try:
+    from .img_core_classes import IMGFile, IMGEntry, IMGVersion, format_file_size
+except ImportError:
+    try:
+        from components.img_core_classes import IMGFile, IMGEntry, IMGVersion, format_file_size
+    except ImportError:
+        try:
+            from img_core_classes import IMGFile, IMGEntry, IMGVersion, format_file_size
+        except ImportError:
+            print("Warning: Could not import core classes")
+            
+            class IMGFile:
+                def __init__(self, path=""):
+                    self.file_path = path
+                    self.entries = []
+                    self.version = None
+            
+            class IMGEntry:
+                def __init__(self):
+                    self.name = ""
+                    self.size = 0
+            
+            class IMGVersion:
+                IMG_1 = 1
+                IMG_2 = 2
+                IMG_3 = 3
+                IMG_FASTMAN92 = 4
+                IMG_STORIES = 5
+            
+            def format_file_size(size):
+                return f"{size} bytes"
+
+
+class Platform(Enum):
+    """Platform enumeration"""
+    PC = "PC"
+    XBOX = "XBOX"
+    PS2 = "PS2"
+    PSP = "PSP"
+    MOBILE = "Mobile"
+
 
 class GameType:
     """Game type definitions with specific configurations"""
@@ -24,7 +69,7 @@ class GameType:
     GTA3 = {
         'name': 'GTA III',
         'code': 'gta3',
-        'img_version': IMGVersion.VERSION_1,
+        'img_version': IMGVersion.IMG_1,
         'platform': Platform.PC,
         'default_size': 50,
         'supports_compression': False,
@@ -36,7 +81,7 @@ class GameType:
     GTAVC = {
         'name': 'GTA Vice City',
         'code': 'gtavc',
-        'img_version': IMGVersion.VERSION_1,
+        'img_version': IMGVersion.IMG_1,
         'platform': Platform.PC,
         'default_size': 75,
         'supports_compression': False,
@@ -48,718 +93,556 @@ class GameType:
     GTASA = {
         'name': 'GTA San Andreas',
         'code': 'gtasa',
-        'img_version': IMGVersion.VERSION_2,
+        'img_version': IMGVersion.IMG_2,
         'platform': Platform.PC,
         'default_size': 150,
         'supports_compression': False,
         'supports_encryption': False,
-        'common_files': ['gta3.img', 'cutscene.img', 'gta_int.img', 'player.img'],
-        'description': 'Grand Theft Auto San Andreas - V2 format with single file'
+        'common_files': ['gta3.img', 'player.img', 'gta_int.img'],
+        'description': 'Grand Theft Auto San Andreas - Version 2 single file format'
     }
     
     GTAIV = {
         'name': 'GTA IV',
         'code': 'gtaiv',
-        'img_version': IMGVersion.VERSION_3,
+        'img_version': IMGVersion.IMG_3,
         'platform': Platform.PC,
-        'default_size': 500,
+        'default_size': 200,
         'supports_compression': True,
         'supports_encryption': True,
-        'common_files': ['pc.img', 'vehicles.img', 'componentpeds.img'],
-        'description': 'Grand Theft Auto IV - Advanced V3 format with encryption support'
+        'common_files': ['pc.img', 'vehicles.img'],
+        'description': 'Grand Theft Auto IV - Advanced format with compression'
     }
     
-    BULLY = {
-        'name': 'Bully',
-        'code': 'bully',
-        'img_version': IMGVersion.VERSION_2,
-        'platform': Platform.PC,
+    GTASTORIES = {
+        'name': 'GTA Stories',
+        'code': 'gtastories',
+        'img_version': IMGVersion.IMG_STORIES,
+        'platform': Platform.PSP,
         'default_size': 100,
         'supports_compression': False,
         'supports_encryption': False,
-        'common_files': ['models.img', 'textures.img'],
-        'description': 'Bully - Modified V2 format'
+        'common_files': ['gta3.img'],
+        'description': 'GTA Liberty City/Vice City Stories - PSP format'
     }
     
-    CUSTOM = {
-        'name': 'Custom',
-        'code': 'custom',
-        'img_version': IMGVersion.VERSION_2,
+    FASTMAN92 = {
+        'name': 'Fastman92 Limit Adjuster',
+        'code': 'fastman92',
+        'img_version': IMGVersion.IMG_FASTMAN92,
         'platform': Platform.PC,
-        'default_size': 100,
+        'default_size': 500,
         'supports_compression': True,
         'supports_encryption': False,
-        'common_files': [],
-        'description': 'Custom IMG format with user-defined settings'
+        'common_files': ['gta3.img'],
+        'description': 'Fastman92 extended format - Support for larger files'
     }
-    
+
     @classmethod
     def get_all_types(cls):
-        """Get all game type definitions"""
-        return {
-            'gta3': cls.GTA3,
-            'gtavc': cls.GTAVC,
-            'gtasa': cls.GTASA,
-            'gtaiv': cls.GTAIV,
-            'bully': cls.BULLY,
-            'custom': cls.CUSTOM
-        }
-    
+        """Get all game type configurations"""
+        return [cls.GTA3, cls.GTAVC, cls.GTASA, cls.GTAIV, cls.GTASTORIES, cls.FASTMAN92]
+
     @classmethod
-    def get_type(cls, code: str):
-        """Get specific game type by code"""
-        return cls.get_all_types().get(code, cls.CUSTOM)
+    def get_by_code(cls, code: str):
+        """Get game type by code"""
+        for game_type in cls.get_all_types():
+            if game_type['code'] == code:
+                return game_type
+        return None
 
 
 class IMGCreationThread(QThread):
     """Background thread for IMG file creation"""
-    
     progress_updated = pyqtSignal(int, str)  # progress, status
-    creation_completed = pyqtSignal(str)  # file_path
-    creation_error = pyqtSignal(str)  # error_message
+    creation_finished = pyqtSignal(str)      # output_path
+    creation_error = pyqtSignal(str)         # error_message
     
     def __init__(self, settings: Dict):
         super().__init__()
         self.settings = settings
     
     def run(self):
-        """Run IMG creation in background"""
         try:
-            self.progress_updated.emit(10, "Initializing...")
+            self.progress_updated.emit(10, "Initializing IMG creation...")
             
-            # Create IMG file
-            img_file = IMGFile()
-            file_path = self.settings['output_path']
-            img_version = self.settings['img_version']
+            output_path = self.settings['output_path']
+            game_type = self.settings['game_type']
+            initial_size_mb = self.settings.get('initial_size_mb', 10)
             
-            self.progress_updated.emit(30, "Creating IMG structure...")
+            self.progress_updated.emit(30, "Creating IMG file structure...")
             
-            if not img_file.create_new(file_path, img_version):
-                self.creation_error.emit("Failed to create IMG file structure")
-                return
-            
-            self.progress_updated.emit(50, "Setting up file properties...")
-            
-            # Apply settings
-            img_file.platform = self.settings.get('platform', Platform.PC)
-            
-            self.progress_updated.emit(70, "Creating initial structure...")
-            
-            # Add initial structure if requested
-            if self.settings.get('create_structure', False):
-                self._create_folder_structure(img_file)
-            
-            self.progress_updated.emit(90, "Finalizing...")
-            
-            # Save the file
-            if img_file.rebuild(file_path):
-                self.progress_updated.emit(100, "IMG file created successfully!")
-                self.creation_completed.emit(file_path)
+            # Create the file based on version
+            if game_type['img_version'] == IMGVersion.IMG_1:
+                self._create_version1_img(output_path, initial_size_mb)
+            elif game_type['img_version'] == IMGVersion.IMG_2:
+                self._create_version2_img(output_path, initial_size_mb)
+            elif game_type['img_version'] == IMGVersion.IMG_3:
+                self._create_version3_img(output_path, initial_size_mb)
+            elif game_type['img_version'] == IMGVersion.IMG_FASTMAN92:
+                self._create_fastman92_img(output_path, initial_size_mb)
             else:
-                self.creation_error.emit("Failed to save IMG file")
+                self._create_version2_img(output_path, initial_size_mb)  # Default
             
-            img_file.close()
+            self.progress_updated.emit(80, "Finalizing IMG file...")
+            
+            # Create directory structure if requested
+            if self.settings.get('create_structure', False):
+                self._create_directory_structure(os.path.dirname(output_path))
+            
+            self.progress_updated.emit(100, "IMG creation completed")
+            self.creation_finished.emit(output_path)
             
         except Exception as e:
-            self.creation_error.emit(f"Creation failed: {str(e)}")
+            self.creation_error.emit(f"IMG creation failed: {str(e)}")
     
-    def _create_folder_structure(self, img_file: IMGFile):
-        """Create basic folder structure in IMG"""
-        game_type = self.settings.get('game_type', 'custom')
+    def _create_version1_img(self, output_path: str, size_mb: int):
+        """Create IMG Version 1 (GTA III/VC style)"""
+        # Create DIR file
+        dir_path = output_path.replace('.img', '.dir')
+        with open(dir_path, 'wb') as dir_file:
+            # Empty DIR file - entries will be added later
+            pass
         
-        if game_type in ['gta3', 'gtavc']:
-            # Basic structure for GTA III/VC
-            structure_files = [
-                ('readme.txt', b'IMG Factory generated file\nGame: ' + game_type.upper().encode()),
-            ]
-        elif game_type == 'gtasa':
-            # GTA SA structure
-            structure_files = [
-                ('readme.txt', b'IMG Factory generated file for GTA San Andreas'),
-            ]
-        elif game_type == 'gtaiv':
-            # GTA IV structure
-            structure_files = [
-                ('readme.txt', b'IMG Factory generated file for GTA IV'),
-            ]
-        else:
-            # Custom structure
-            structure_files = [
-                ('readme.txt', b'IMG Factory generated custom IMG file'),
-            ]
+        # Create IMG file
+        with open(output_path, 'wb') as img_file:
+            # Fill with zeros to desired size
+            size_bytes = size_mb * 1024 * 1024
+            img_file.write(b'\x00' * size_bytes)
+    
+    def _create_version2_img(self, output_path: str, size_mb: int):
+        """Create IMG Version 2 (GTA SA style)"""
+        with open(output_path, 'wb') as img_file:
+            # Write IMG Version 2 header
+            img_file.write(b'VER2')  # Signature
+            img_file.write(struct.pack('<I', 0))  # Entry count (initially 0)
+            
+            # Reserve space for entries (will be added later)
+            size_bytes = size_mb * 1024 * 1024
+            remaining_size = size_bytes - 8  # Subtract header size
+            if remaining_size > 0:
+                img_file.write(b'\x00' * remaining_size)
+    
+    def _create_version3_img(self, output_path: str, size_mb: int):
+        """Create IMG Version 3 (GTA IV style)"""
+        with open(output_path, 'wb') as img_file:
+            # Write GTA IV magic number
+            img_file.write(struct.pack('<I', 0xA94E2A52))
+            img_file.write(struct.pack('<I', 2))  # Version
+            img_file.write(struct.pack('<I', 0))  # Entry count
+            img_file.write(struct.pack('<I', 0))  # Table size
+            
+            # Reserve space
+            size_bytes = size_mb * 1024 * 1024
+            remaining_size = size_bytes - 16
+            if remaining_size > 0:
+                img_file.write(b'\x00' * remaining_size)
+    
+    def _create_fastman92_img(self, output_path: str, size_mb: int):
+        """Create Fastman92 IMG format"""
+        with open(output_path, 'wb') as img_file:
+            # Write Fastman92 signature
+            img_file.write(b'VERF')  # Version Fastman92
+            img_file.write(struct.pack('<I', 1))  # Version number
+            img_file.write(struct.pack('<I', 0))  # Entry count
+            img_file.write(struct.pack('<I', 0))  # Reserved
+            
+            # Reserve space
+            size_bytes = size_mb * 1024 * 1024
+            remaining_size = size_bytes - 16
+            if remaining_size > 0:
+                img_file.write(b'\x00' * remaining_size)
+    
+    def _create_directory_structure(self, base_dir: str):
+        """Create typical directory structure for modding"""
+        directories = [
+            'extracted_files',
+            'extracted_files/models',
+            'extracted_files/textures', 
+            'extracted_files/audio',
+            'extracted_files/collision',
+            'extracted_files/animation',
+            'backup',
+            'custom_mods'
+        ]
         
-        # Add structure files
-        for filename, content in structure_files:
-            img_file.add_entry(filename, content)
+        for directory in directories:
+            dir_path = os.path.join(base_dir, directory)
+            os.makedirs(dir_path, exist_ok=True)
+            
+            # Create README file in each directory
+            readme_path = os.path.join(dir_path, 'README.txt')
+            try:
+                with open(readme_path, 'w') as readme:
+                    readme.write(f"Directory: {directory}\n")
+                    readme.write(f"Created by IMG Factory 1.5\n")
+                    readme.write(f"Purpose: {self._get_directory_purpose(directory)}\n")
+            except:
+                pass  # Skip if can't write README
+    
+    def _get_directory_purpose(self, directory: str) -> str:
+        """Get purpose description for directory"""
+        purposes = {
+            'extracted_files': 'Store files extracted from IMG archives',
+            'extracted_files/models': 'Store DFF model files',
+            'extracted_files/textures': 'Store TXD texture files',
+            'extracted_files/audio': 'Store WAV audio files',
+            'extracted_files/collision': 'Store COL collision files',
+            'extracted_files/animation': 'Store IFP animation files',
+            'backup': 'Store backup copies of original IMG files',
+            'custom_mods': 'Store custom modification files'
+        }
+        return purposes.get(directory, 'General purpose directory')
 
 
 class NewIMGDialog(QDialog):
-    """Enhanced dialog for creating new IMG files"""
-    
-    img_created = pyqtSignal(str)  # Emits path of created IMG file
+    """Dialog for creating new IMG files"""
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Create New IMG Archive")
-        self.setMinimumSize(650, 550)
+        self.setWindowTitle("Create New IMG File - IMG Factory 1.5")
+        self.setMinimumSize(600, 500)
         self.setModal(True)
         
-        self.selected_game_type = 'gtasa'  # Default
-        self.template_manager = None  # Will be set by parent if available
+        # Initialize attributes
+        self.selected_game_type = None
+        self.creation_thread = None
         
         self._create_ui()
-        self._load_settings()
+        self._connect_signals()
+        self._load_default_settings()
     
     def _create_ui(self):
-        """Create the dialog UI"""
+        """Create the dialog user interface"""
         layout = QVBoxLayout(self)
         
-        # Header
-        header = QLabel("🎮 Create New IMG Archive")
-        font = QFont()
-        font.setPointSize(16)
-        font.setBold(True)
-        header.setFont(font)
-        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header.setStyleSheet("color: #2E7D32; margin: 10px;")
-        layout.addWidget(header)
+        # Title
+        title_label = QLabel("Create New IMG Archive")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_font = QFont()
+        title_font.setBold(True)
+        title_font.setPointSize(14)
+        title_label.setFont(title_font)
+        layout.addWidget(title_label)
         
-        # Create tabs
-        tab_widget = QTabWidget()
+        # Tab widget for organization
+        self.tab_widget = QTabWidget()
+        layout.addWidget(self.tab_widget)
         
         # Basic Settings Tab
-        basic_tab = self._create_basic_tab()
-        tab_widget.addTab(basic_tab, "📋 Basic Settings")
+        self._create_basic_tab()
         
         # Advanced Settings Tab
-        advanced_tab = self._create_advanced_tab()
-        tab_widget.addTab(advanced_tab, "⚙️ Advanced Settings")
+        self._create_advanced_tab()
         
-        # Templates Tab
-        template_tab = self._create_template_tab()
-        tab_widget.addTab(template_tab, "📄 Templates")
-        
-        layout.addWidget(tab_widget)
-        
-        # Progress bar (hidden initially)
+        # Progress bar (initially hidden)
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
         layout.addWidget(self.progress_bar)
         
         # Status label
-        self.status_label = QLabel("")
-        self.status_label.setVisible(False)
+        self.status_label = QLabel("Ready to create IMG file")
         layout.addWidget(self.status_label)
         
         # Buttons
-        self._create_button_section(layout)
+        button_layout = QHBoxLayout()
+        
+        self.preview_button = QPushButton("Preview Settings")
+        self.preview_button.clicked.connect(self._preview_settings)
+        button_layout.addWidget(self.preview_button)
+        
+        button_layout.addStretch()
+        
+        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(self.cancel_button)
+        
+        self.create_button = QPushButton("Create IMG")
+        self.create_button.clicked.connect(self._create_img_file)
+        self.create_button.setDefault(True)
+        button_layout.addWidget(self.create_button)
+        
+        layout.addLayout(button_layout)
     
-    def _create_basic_tab(self) -> QWidget:
+    def _create_basic_tab(self):
         """Create basic settings tab"""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
+        basic_widget = QWidget()
+        layout = QVBoxLayout(basic_widget)
         
         # Game Type Selection
-        game_group = QGroupBox("🎮 Game Type")
-        game_layout = QGridLayout(game_group)
+        game_group = QGroupBox("Game Type")
+        game_layout = QVBoxLayout(game_group)
         
         self.game_button_group = QButtonGroup()
-        game_types = GameType.get_all_types()
         
-        for i, (code, game_info) in enumerate(game_types.items()):
-            radio = QRadioButton(game_info['name'])
-            radio.game_code = code
-            radio.game_info = game_info
-            radio.setToolTip(game_info['description'])
+        for i, game_type in enumerate(GameType.get_all_types()):
+            radio = QRadioButton(f"{game_type['name']} - {game_type['description']}")
+            radio.setProperty("game_type", game_type)
+            self.game_button_group.addButton(radio, i)
+            game_layout.addWidget(radio)
             
-            if code == 'gtasa':  # Default selection
+            if i == 2:  # Default to GTA SA
                 radio.setChecked(True)
-            
-            self.game_button_group.addButton(radio)
-            radio.toggled.connect(lambda checked, r=radio: self._on_game_type_changed(r) if checked else None)
-            
-            game_layout.addWidget(radio, i // 2, i % 2)
+                self.selected_game_type = game_type
         
         layout.addWidget(game_group)
         
         # File Settings
-        file_group = QGroupBox("📁 File Settings")
+        file_group = QGroupBox("File Settings")
         file_layout = QFormLayout(file_group)
         
+        # Output path
+        output_layout = QHBoxLayout()
+        self.output_path_edit = QLineEdit()
+        self.output_path_edit.setPlaceholderText("Select output location...")
+        output_layout.addWidget(self.output_path_edit)
+        
+        browse_button = QPushButton("Browse")
+        browse_button.clicked.connect(self._browse_output_path)
+        output_layout.addWidget(browse_button)
+        
+        file_layout.addRow("Output File:", output_layout)
+        
         # Filename
-        self.filename_input = QLineEdit("new_archive.img")
-        self.filename_input.textChanged.connect(self._validate_input)
-        file_layout.addRow("Filename:", self.filename_input)
-        
-        # Output directory
-        dir_layout = QHBoxLayout()
-        self.output_dir_input = QLineEdit()
-        self.output_dir_input.setReadOnly(True)
-        self.output_dir_input.setPlaceholderText("Select output directory...")
-        
-        browse_btn = QPushButton("📂 Browse")
-        browse_btn.clicked.connect(self._browse_output_dir)
-        
-        dir_layout.addWidget(self.output_dir_input)
-        dir_layout.addWidget(browse_btn)
-        file_layout.addRow("Output Directory:", dir_layout)
+        self.filename_edit = QLineEdit("new_archive.img")
+        file_layout.addRow("Filename:", self.filename_edit)
         
         # Initial size
-        self.initial_size_spin = QSpinBox()
-        self.initial_size_spin.setRange(1, 2048)
-        self.initial_size_spin.setValue(100)
-        self.initial_size_spin.setSuffix(" MB")
-        self.initial_size_spin.setToolTip("Initial size allocation for the IMG file")
-        file_layout.addRow("Initial Size:", self.initial_size_spin)
+        self.size_spin = QSpinBox()
+        self.size_spin.setMinimum(1)
+        self.size_spin.setMaximum(2048)
+        self.size_spin.setValue(100)
+        self.size_spin.setSuffix(" MB")
+        file_layout.addRow("Initial Size:", self.size_spin)
         
         layout.addWidget(file_group)
         
-        # Quick Options
-        options_group = QGroupBox("⚡ Quick Options")
-        options_layout = QVBoxLayout(options_group)
-        
-        self.auto_structure_check = QCheckBox("Create basic folder structure")
-        self.auto_structure_check.setToolTip("Add basic directory structure to the IMG file")
-        options_layout.addWidget(self.auto_structure_check)
-        
-        self.open_after_create_check = QCheckBox("Open in IMG Factory after creation")
-        self.open_after_create_check.setChecked(True)
-        options_layout.addWidget(self.open_after_create_check)
-        
-        layout.addWidget(options_group)
-        
-        layout.addStretch()
-        return tab
-    
-    def _create_advanced_tab(self) -> QWidget:
-        """Create advanced settings tab"""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        
         # Platform Settings
-        platform_group = QGroupBox("🖥️ Platform Settings")
-        platform_layout = QFormLayout(platform_group)
+        platform_group = QGroupBox("Platform")
+        platform_layout = QHBoxLayout(platform_group)
         
         self.platform_combo = QComboBox()
-        self.platform_combo.addItems([platform.value for platform in Platform])
-        self.platform_combo.setCurrentText(Platform.PC.value)
-        platform_layout.addRow("Target Platform:", self.platform_combo)
+        self.platform_combo.addItems(["PC", "XBOX", "PS2", "PSP", "Mobile"])
+        platform_layout.addWidget(self.platform_combo)
         
         layout.addWidget(platform_group)
         
-        # Compression Settings
-        compression_group = QGroupBox("🗜️ Compression Settings")
-        compression_layout = QVBoxLayout(compression_group)
+        layout.addStretch()
+        self.tab_widget.addTab(basic_widget, "Basic Settings")
+    
+    def _create_advanced_tab(self):
+        """Create advanced settings tab"""
+        advanced_widget = QWidget()
+        layout = QVBoxLayout(advanced_widget)
         
-        self.compression_check = QCheckBox("Enable compression (if supported)")
-        self.compression_check.setToolTip("Enable compression for supported IMG formats")
-        compression_layout.addWidget(self.compression_check)
+        # Directory Structure
+        structure_group = QGroupBox("Directory Structure")
+        structure_layout = QVBoxLayout(structure_group)
         
-        compression_options_layout = QFormLayout()
+        self.create_structure_check = QCheckBox("Create modding directory structure")
+        self.create_structure_check.setChecked(True)
+        structure_layout.addWidget(self.create_structure_check)
         
-        self.compression_type_combo = QComboBox()
-        self.compression_type_combo.addItems(["ZLib", "LZ4", "Auto"])
-        self.compression_type_combo.setEnabled(False)
-        compression_options_layout.addRow("Compression Type:", self.compression_type_combo)
+        structure_info = QLabel("Creates folders: extracted_files, backup, custom_mods, etc.")
+        structure_info.setStyleSheet("color: gray; font-size: 9pt;")
+        structure_layout.addWidget(structure_info)
         
-        self.compression_level_spin = QSpinBox()
-        self.compression_level_spin.setRange(1, 9)
-        self.compression_level_spin.setValue(6)
-        self.compression_level_spin.setEnabled(False)
-        compression_options_layout.addRow("Compression Level:", self.compression_level_spin)
+        layout.addWidget(structure_group)
         
-        compression_layout.addLayout(compression_options_layout)
+        # Validation Settings
+        validation_group = QGroupBox("Validation")
+        validation_layout = QVBoxLayout(validation_group)
         
-        self.compression_check.toggled.connect(self.compression_type_combo.setEnabled)
-        self.compression_check.toggled.connect(self.compression_level_spin.setEnabled)
+        self.validate_creation_check = QCheckBox("Validate after creation")
+        self.validate_creation_check.setChecked(True)
+        validation_layout.addWidget(self.validate_creation_check)
         
-        layout.addWidget(compression_group)
-        
-        # Encryption Settings
-        encryption_group = QGroupBox("🔒 Encryption Settings")
-        encryption_layout = QVBoxLayout(encryption_group)
-        
-        self.encryption_check = QCheckBox("Enable encryption (GTA IV only)")
-        self.encryption_check.setToolTip("Enable encryption for GTA IV format")
-        self.encryption_check.setEnabled(False)  # Only for GTA IV
-        encryption_layout.addWidget(self.encryption_check)
-        
-        layout.addWidget(encryption_group)
-        
-        # Advanced Options
-        advanced_group = QGroupBox("🔧 Advanced Options")
-        advanced_layout = QFormLayout(advanced_group)
-        
-        self.sector_size_combo = QComboBox()
-        self.sector_size_combo.addItems(["2048 bytes (standard)", "4096 bytes", "8192 bytes"])
-        advanced_layout.addRow("Sector Size:", self.sector_size_combo)
-        
-        self.endianness_combo = QComboBox()
-        self.endianness_combo.addItems(["Little Endian (PC)", "Big Endian (Console)"])
-        advanced_layout.addRow("Byte Order:", self.endianness_combo)
-        
-        layout.addWidget(advanced_group)
+        layout.addWidget(validation_group)
         
         layout.addStretch()
-        return tab
+        self.tab_widget.addTab(advanced_widget, "Advanced")
     
-    def _create_template_tab(self) -> QWidget:
-        """Create templates tab"""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        
-        # Template info
-        info_label = QLabel("💡 Templates allow you to save and reuse IMG creation settings.")
-        info_label.setWordWrap(True)
-        info_label.setStyleSheet("color: #666; font-style: italic; margin: 10px;")
-        layout.addWidget(info_label)
-        
-        # Template actions
-        template_actions_layout = QHBoxLayout()
-        
-        load_template_btn = QPushButton("📁 Load Template")
-        load_template_btn.setToolTip("Load a saved template")
-        load_template_btn.clicked.connect(self._load_template)
-        template_actions_layout.addWidget(load_template_btn)
-        
-        save_template_btn = QPushButton("💾 Save as Template")
-        save_template_btn.setToolTip("Save current settings as a reusable template")
-        save_template_btn.clicked.connect(self._save_template)
-        template_actions_layout.addWidget(save_template_btn)
-        
-        manage_templates_btn = QPushButton("⚙️ Manage Templates")
-        manage_templates_btn.setToolTip("Open template manager")
-        manage_templates_btn.clicked.connect(self._manage_templates)
-        template_actions_layout.addWidget(manage_templates_btn)
-        
-        template_actions_layout.addStretch()
-        layout.addLayout(template_actions_layout)
-        
-        # Recent templates preview
-        recent_group = QGroupBox("🕒 Recent Templates")
-        recent_layout = QVBoxLayout(recent_group)
-        
-        self.recent_templates_text = QTextEdit()
-        self.recent_templates_text.setMaximumHeight(150)
-        self.recent_templates_text.setReadOnly(True)
-        self.recent_templates_text.setPlaceholderText("No recent templates available...")
-        recent_layout.addWidget(self.recent_templates_text)
-        
-        layout.addWidget(recent_group)
-        
-        layout.addStretch()
-        return tab
+    def _connect_signals(self):
+        """Connect UI signals"""
+        self.game_button_group.buttonClicked.connect(self._on_game_type_changed)
+        self.filename_edit.textChanged.connect(self._update_output_path)
     
-    def _create_button_section(self, parent_layout):
-        """Create dialog buttons"""
-        button_layout = QHBoxLayout()
-        
-        # Help button
-        help_btn = QPushButton("❓ Help")
-        help_btn.setToolTip("Show help information")
-        help_btn.clicked.connect(self._show_help)
-        button_layout.addWidget(help_btn)
-        
-        button_layout.addStretch()
-        
-        # Standard buttons
-        cancel_btn = QPushButton("❌ Cancel")
-        cancel_btn.clicked.connect(self.reject)
-        button_layout.addWidget(cancel_btn)
-        
-        self.create_btn = QPushButton("✨ Create IMG Archive")
-        self.create_btn.setDefault(True)
-        self.create_btn.clicked.connect(self._create_img_file)
-        button_layout.addWidget(self.create_btn)
-        
-        parent_layout.addLayout(button_layout)
+    def _load_default_settings(self):
+        """Load default settings"""
+        # Set default output path
+        default_path = os.path.expanduser("~/Desktop")
+        self.output_path_edit.setText(default_path)
+        self._update_output_path()
     
-    def _on_game_type_changed(self, radio_button):
+    def _on_game_type_changed(self, button):
         """Handle game type selection change"""
-        if not radio_button.isChecked():
-            return
+        self.selected_game_type = button.property("game_type")
         
-        self.selected_game_type = radio_button.game_code
-        game_info = radio_button.game_info
-        
-        # Update default values based on game type
-        self.initial_size_spin.setValue(game_info['default_size'])
-        
-        # Enable/disable features based on game capabilities
-        self.compression_check.setEnabled(game_info['supports_compression'])
-        self.encryption_check.setEnabled(game_info['supports_encryption'])
-        
-        if not game_info['supports_compression']:
-            self.compression_check.setChecked(False)
-        
-        if not game_info['supports_encryption']:
-            self.encryption_check.setChecked(False)
-        
-        # Update filename suggestion
-        if not self.filename_input.text() or self.filename_input.text().startswith('new_'):
-            suggested_name = f"{game_info['code']}_custom.img"
-            self.filename_input.setText(suggested_name)
+        # Update UI based on selected game type
+        if self.selected_game_type:
+            # Update default size
+            self.size_spin.setValue(self.selected_game_type['default_size'])
+            
+            # Update platform
+            platform_name = self.selected_game_type['platform'].value
+            index = self.platform_combo.findText(platform_name)
+            if index >= 0:
+                self.platform_combo.setCurrentIndex(index)
     
-    def _browse_output_dir(self):
+    def _browse_output_path(self):
         """Browse for output directory"""
-        directory = QFileDialog.getExistingDirectory(self, "Select Output Directory")
+        directory = QFileDialog.getExistingDirectory(
+            self, "Select Output Directory",
+            self.output_path_edit.text() or os.path.expanduser("~")
+        )
         if directory:
-            self.output_dir_input.setText(directory)
-            self._validate_input()
+            self.output_path_edit.setText(directory)
+            self._update_output_path()
     
-    def _validate_input(self):
-        """Validate user input and enable/disable create button"""
-        filename = self.filename_input.text().strip()
-        output_dir = self.output_dir_input.text().strip()
-        
-        # Check filename
-        valid_filename = bool(filename and not any(c in filename for c in '<>:"|?*'))
-        
-        # Check output directory
-        valid_output_dir = bool(output_dir and os.path.isdir(output_dir))
-        
-        # Check if file already exists
-        file_exists = False
-        if valid_filename and valid_output_dir:
+    def _update_output_path(self):
+        """Update the full output path preview"""
+        output_dir = self.output_path_edit.text()
+        filename = self.filename_edit.text()
+        if output_dir and filename:
             full_path = os.path.join(output_dir, filename)
-            file_exists = os.path.exists(full_path)
-        
-        # Update create button state
-        can_create = valid_filename and valid_output_dir
-        self.create_btn.setEnabled(can_create)
-        
-        # Update button text based on file existence
-        if file_exists:
-            self.create_btn.setText("⚠️ Overwrite IMG Archive")
-            self.create_btn.setToolTip("File already exists and will be overwritten")
-        else:
-            self.create_btn.setText("✨ Create IMG Archive")
-            self.create_btn.setToolTip("Create new IMG archive")
+            self.status_label.setText(f"Output: {full_path}")
     
-    def _load_template(self):
-        """Load template from template manager"""
-        if not self.template_manager:
-            QMessageBox.information(self, "Templates", "Template system not available")
-            return
+    def _preview_settings(self):
+        """Preview creation settings"""
+        settings = self.get_creation_settings()
         
-        # This would open a template selection dialog
-        QMessageBox.information(self, "Load Template", "Template loading feature coming soon!")
-    
-    def _save_template(self):
-        """Save current settings as template"""
-        if not self.template_manager:
-            QMessageBox.information(self, "Templates", "Template system not available")
-            return
+        preview_text = "IMG Creation Settings:\n\n"
+        preview_text += f"Game Type: {settings['game_type']['name']}\n"
+        preview_text += f"Version: {settings['game_type']['img_version']}\n"
+        preview_text += f"Platform: {settings['platform']}\n"
+        preview_text += f"Output File: {settings['output_path']}\n"
+        preview_text += f"Initial Size: {settings['initial_size_mb']} MB\n"
+        preview_text += f"Create Structure: {settings['create_structure']}\n"
         
-        # This would save current settings
-        QMessageBox.information(self, "Save Template", "Template saving feature coming soon!")
-    
-    def _manage_templates(self):
-        """Open template manager"""
-        if not self.template_manager:
-            QMessageBox.information(self, "Templates", "Template system not available")
-            return
-        
-        # This would open the template manager dialog
-        QMessageBox.information(self, "Manage Templates", "Template manager coming soon!")
-    
-    def _show_help(self):
-        """Show help dialog"""
-        help_text = """
-<h3>IMG Factory - Create New Archive</h3>
-
-<h4>Game Types:</h4>
-<ul>
-<li><b>GTA III:</b> Uses DIR+IMG file pair, limited features</li>
-<li><b>GTA Vice City:</b> Enhanced version of GTA III format</li>
-<li><b>GTA San Andreas:</b> Single IMG file with header, most popular</li>
-<li><b>GTA IV:</b> Advanced format with compression and encryption</li>
-<li><b>Bully:</b> Modified San Andreas format</li>
-<li><b>Custom:</b> User-defined settings</li>
-</ul>
-
-<h4>Settings:</h4>
-<ul>
-<li><b>Initial Size:</b> Starting size allocation for the IMG file</li>
-<li><b>Structure:</b> Create basic folder structure in the archive</li>
-<li><b>Compression:</b> Reduce file size (where supported)</li>
-<li><b>Encryption:</b> Password protection (GTA IV only)</li>
-</ul>
-
-<h4>Templates:</h4>
-<p>Save frequently used settings as templates for quick reuse.</p>
-        """
-        
-        QMessageBox.information(self, "Help", help_text)
+        QMessageBox.information(self, "Preview Settings", preview_text)
     
     def _create_img_file(self):
         """Create the IMG file"""
-        try:
-            # Collect settings
-            settings = self._collect_settings()
-            
-            # Validate settings
-            validation_result = self._validate_settings(settings)
-            if not validation_result['valid']:
-                QMessageBox.warning(self, "Validation Error", validation_result['message'])
-                return
-            
-            # Show progress
-            self.progress_bar.setVisible(True)
-            self.status_label.setVisible(True)
-            self.create_btn.setEnabled(False)
-            
-            # Start creation thread
-            self.creation_thread = IMGCreationThread(settings)
-            self.creation_thread.progress_updated.connect(self._update_progress)
-            self.creation_thread.creation_completed.connect(self._on_creation_completed)
-            self.creation_thread.creation_error.connect(self._on_creation_error)
-            self.creation_thread.start()
-            
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to start IMG creation:\n{str(e)}")
-            self._reset_ui()
-    
-    def _collect_settings(self) -> Dict:
-        """Collect all settings from the dialog"""
-        game_info = GameType.get_type(self.selected_game_type)
+        # Validate settings
+        if not self._validate_settings():
+            return
         
-        filename = self.filename_input.text().strip()
-        output_dir = self.output_dir_input.text().strip()
-        output_path = os.path.join(output_dir, filename)
+        # Get creation settings
+        settings = self.get_creation_settings()
         
-        return {
-            'game_type': self.selected_game_type,
-            'img_version': game_info['img_version'],
-            'filename': filename,
-            'output_dir': output_dir,
-            'output_path': output_path,
-            'initial_size_mb': self.initial_size_spin.value(),
-            'platform': Platform(self.platform_combo.currentText()),
-            'create_structure': self.auto_structure_check.isChecked(),
-            'compression_enabled': self.compression_check.isChecked(),
-            'encryption_enabled': self.encryption_check.isChecked(),
-            'open_after_create': self.open_after_create_check.isChecked()
-        }
+        # Disable UI during creation
+        self._set_ui_enabled(False)
+        self.progress_bar.setVisible(True)
+        
+        # Start creation thread
+        self.creation_thread = IMGCreationThread(settings)
+        self.creation_thread.progress_updated.connect(self._on_progress_updated)
+        self.creation_thread.creation_finished.connect(self._on_creation_finished)
+        self.creation_thread.creation_error.connect(self._on_creation_error)
+        self.creation_thread.start()
     
-    def _validate_settings(self, settings: Dict) -> Dict:
+    def _validate_settings(self) -> bool:
         """Validate creation settings"""
-        # Check output directory exists
-        if not os.path.isdir(settings['output_dir']):
-            return {'valid': False, 'message': 'Output directory does not exist'}
+        if not self.selected_game_type:
+            QMessageBox.warning(self, "Validation Error", "Please select a game type")
+            return False
         
-        # Check write permissions
-        try:
-            test_file = os.path.join(settings['output_dir'], 'test_write.tmp')
-            with open(test_file, 'w') as f:
-                f.write('test')
-            os.remove(test_file)
-        except:
-            return {'valid': False, 'message': 'No write permission in output directory'}
+        if not self.filename_edit.text().strip():
+            QMessageBox.warning(self, "Validation Error", "Please enter a filename")
+            return False
         
-        # Check filename
-        filename = settings['filename']
-        if not filename or any(c in filename for c in '<>:"|?*'):
-            return {'valid': False, 'message': 'Invalid filename'}
+        if not self.output_path_edit.text().strip():
+            QMessageBox.warning(self, "Validation Error", "Please select an output directory")
+            return False
         
-        # Check file extension
-        if not filename.lower().endswith('.img'):
-            return {'valid': False, 'message': 'Filename must end with .img'}
+        output_dir = self.output_path_edit.text()
+        if not os.path.exists(output_dir):
+            QMessageBox.warning(self, "Validation Error", "Output directory does not exist")
+            return False
         
-        return {'valid': True, 'message': 'Settings are valid'}
+        return True
     
-    def _update_progress(self, progress: int, status: str):
-        """Update progress display"""
+    def _set_ui_enabled(self, enabled: bool):
+        """Enable/disable UI elements"""
+        self.tab_widget.setEnabled(enabled)
+        self.create_button.setEnabled(enabled)
+        self.preview_button.setEnabled(enabled)
+    
+    def _on_progress_updated(self, progress: int, status: str):
+        """Handle progress updates"""
         self.progress_bar.setValue(progress)
         self.status_label.setText(status)
     
-    def _on_creation_completed(self, file_path: str):
-        """Handle successful IMG creation"""
-        self._reset_ui()
+    def _on_creation_finished(self, output_path: str):
+        """Handle successful creation"""
+        self.progress_bar.setVisible(False)
+        self._set_ui_enabled(True)
         
-        # Save to recent settings if template manager available
-        if self.template_manager:
-            settings = self._collect_settings()
-            self.template_manager.save_recent_settings(settings)
-        
-        # Show success message
         QMessageBox.information(
-            self, "Success", 
-            f"IMG archive created successfully!\n\nLocation: {file_path}"
+            self, "Creation Complete",
+            f"IMG file created successfully:\n{output_path}"
         )
         
-        # Emit signal and close dialog
-        self.img_created.emit(file_path)
         self.accept()
     
     def _on_creation_error(self, error_message: str):
-        """Handle IMG creation error"""
-        self._reset_ui()
-        QMessageBox.critical(self, "Creation Error", f"Failed to create IMG archive:\n{error_message}")
-    
-    def _reset_ui(self):
-        """Reset UI to normal state"""
+        """Handle creation error"""
         self.progress_bar.setVisible(False)
-        self.status_label.setVisible(False)
-        self.create_btn.setEnabled(True)
-    
-    def _load_settings(self):
-        """Load saved settings"""
-        # Set default output directory to Documents
-        try:
-            from pathlib import Path
-            default_dir = str(Path.home() / "Documents" / "IMG Factory")
-            os.makedirs(default_dir, exist_ok=True)
-            self.output_dir_input.setText(default_dir)
-        except:
-            pass
+        self._set_ui_enabled(True)
+        self.status_label.setText("Creation failed")
         
-        self._validate_input()
+        QMessageBox.critical(self, "Creation Error", f"Failed to create IMG file:\n{error_message}")
+    
+    def get_creation_settings(self) -> Dict:
+        """Get current creation settings"""
+        output_dir = self.output_path_edit.text()
+        filename = self.filename_edit.text()
+        
+        return {
+            'game_type': self.selected_game_type or GameType.GTASA,
+            'output_path': os.path.join(output_dir, filename),
+            'filename': filename,
+            'initial_size_mb': self.size_spin.value(),
+            'platform': self.platform_combo.currentText(),
+            'create_structure': self.create_structure_check.isChecked(),
+            'validate_after_creation': self.validate_creation_check.isChecked()
+        }
 
 
-# Utility function for integration
 def add_new_img_functionality(main_window):
-    """Add new IMG functionality to main window"""
-    # This function can be called from the main application
-    # to add new IMG creation capabilities
+    """Add new IMG creation functionality to main window"""
+    def create_new_img():
+        dialog = NewIMGDialog(main_window)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            settings = dialog.get_creation_settings()
+            # Handle successful creation
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"New IMG created: {settings['output_path']}")
     
-    # Add menu item
-    file_menu = None
-    for action in main_window.menuBar().actions():
-        if action.text() == "File":
-            file_menu = action.menu()
-            break
+    # Add to main window if it has the method
+    if hasattr(main_window, 'create_new_img'):
+        main_window.create_new_img = create_new_img
     
-    if file_menu:
-        new_action = file_menu.addAction("🆕 New IMG Archive...")
-        new_action.setShortcut("Ctrl+N")
-        new_action.triggered.connect(lambda: show_new_img_dialog(main_window))
-        
-        # Insert at the beginning
-        actions = file_menu.actions()
-        if actions:
-            file_menu.insertAction(actions[0], new_action)
-            file_menu.insertSeparator(actions[0])
+    return create_new_img
 
 
-def show_new_img_dialog(parent=None):
-    """Show new IMG creation dialog"""
-    dialog = NewIMGDialog(parent)
-    return dialog.exec()
-
-
-# Example usage
-if __name__ == "__main__":
+# Test function for development
+def test_new_img_dialog():
+    """Test the NewIMGDialog"""
     import sys
     from PyQt6.QtWidgets import QApplication
     
     app = QApplication(sys.argv)
     
-    # Test the dialog
     dialog = NewIMGDialog()
-    if dialog.exec() == QDialog.DialogCode.Accepted:
-        print("IMG creation dialog completed successfully")
-    else:
-        print("IMG creation dialog cancelled")
+    result = dialog.exec()
     
-    sys.exit(app.exec())
+    if result == QDialog.DialogCode.Accepted:
+        settings = dialog.get_creation_settings()
+        print("Creation settings:", settings)
+    
+    return result
+
+
+if __name__ == "__main__":
+    test_new_img_dialog()
