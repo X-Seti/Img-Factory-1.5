@@ -13,10 +13,14 @@
 │       ├── img_combined_open_dialog.cpython-312.pyc
 │       ├── img_core_classes.cpython-312.pyc
 │       ├── img_creator.cpython-312.pyc
-│       ├── img_manager.cpython-312.pyc
-│       ├── img_templates.cpython-312.pyc
-│       └── img_validator.cpython-312.pyc
+│       └── img_templates.cpython-312.pyc
 ├── gui
+│   ├── buttons.py
+│   ├── gui_buttons.py
+│   ├── gui_menu.py
+│   ├── gui_panels.py
+│   ├── menu.py
+│   ├── panels.py
 │   ├── pastel_button_theme.py
 │   ├── __pycache__
 │   │   └── pastel_button_theme.cpython-312.pyc
@@ -26,12 +30,7 @@
 ├── imgfactory_settings.json
 ├── launch_imgfactory.py
 ├── __pycache__
-│   ├── app_settings_system.cpython-312.pyc
-│   ├── App_settings_system.cpython-312.pyc
-│   ├── enhanced_img_formats.cpython-312.pyc
-│   ├── img_core_classes.cpython-312.pyc
-│   ├── new_img_creator.cpython-312.pyc
-│   └── pastel_button_theme.cpython-312.pyc
+│   └── App_settings_system.cpython-312.pyc
 ├── templates
 │   └── new_templates.json
 ├── themer_settings.json
@@ -1081,4 +1080,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-942 directories, 140 files
+942 directories, 139 files
