@@ -1,0 +1,29 @@
+{
+    "name": "LCARS (Star Trek)",
+    "description": "Inspired by Enterprise computer interfaces 🖖",
+    "category": "🖖 Star Trek Universe",
+    "author": "X-Seti",
+    "version": "1.0",
+    "colors": {
+        "bg_primary": "#1a1a2e",
+        "bg_secondary": "#16213e",
+        "bg_tertiary": "#0f3460",
+        "panel_bg": "#2d2d44",
+        "accent_primary": "#ff6600",
+        "accent_secondary": "#9d4edd",
+        "text_primary": "#e0e1dd",
+        "text_secondary": "#c9ada7",
+        "text_accent": "#f2cc8f",
+        "button_normal": "#3a86ff",
+        "button_hover": "#4895ff",
+        "button_pressed": "#2563eb",
+        "border": "#577590",
+        "success": "#06ffa5",
+        "warning": "#ffb700",
+        "error": "#ff006e",
+        "grid": "#403d58",
+        "pin_default": "#c0c0c0",
+        "pin_highlight": "#f9e71e"
+    },
+    "special_styling": "lcars"
+}

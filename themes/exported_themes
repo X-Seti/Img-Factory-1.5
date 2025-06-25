@@ -1,0 +1,512 @@
+class AppSettings:
+    """ application settings manager with extended theme support"""
+
+    def __init__(self):
+        self.settings_file = Path("themer_settings.json")
+        self.themes = {
+            "LCARS": {
+                "name": "LCARS (Star Trek)",
+                "description": "Inspired by Enterprise computer interfaces 🖖",
+                "colors": {
+                    "bg_primary": "#1a1a2e",
+                    "bg_secondary": "#16213e",
+                    "bg_tertiary": "#0f3460",
+                    "panel_bg": "#2d2d44",
+                    "accent_primary": "#ff6600",
+                    "accent_secondary": "#9d4edd",
+                    "text_primary": "#e0e1dd",
+                    "text_secondary": "#c9ada7",
+                    "text_accent": "#f2cc8f",
+                    "button_normal": "#3a86ff",
+                    "button_hover": "#4895ff",
+                    "button_pressed": "#2563eb",
+                    "border": "#577590",
+                    "success": "#06ffa5",
+                    "warning": "#ffb700",
+                    "error": "#ff006e",
+                    "grid": "#403d58",
+                    "pin_default": "#c0c0c0",
+                    "pin_highlight": "#f9e71e"
+                }
+            },
+
+            "Tea_and_Toast": {
+                "name": "Tea 'n' Toast Morning",
+                "description": "Warm browns and purples for cozy mornings ☕🍞",
+                "colors": {
+                    "bg_primary": "#2d1b20",
+                    "bg_secondary": "#3d2b30",
+                    "bg_tertiary": "#4a3540",
+                    "panel_bg": "#5d4e75",
+                    "accent_primary": "#8b5a83",
+                    "accent_secondary": "#d4a574",
+                    "text_primary": "#f4e4c1",
+                    "text_secondary": "#e6d7b0",
+                    "text_accent": "#f2b705",
+                    "button_normal": "#7b68ee",
+                    "button_hover": "#9370db",
+                    "button_pressed": "#6a4c93",
+                    "border": "#8b7355",
+                    "success": "#90c695",
+                    "warning": "#f4a261",
+                    "error": "#e76f51",
+                    "grid": "#5a4a5a",
+                    "pin_default": "#d4a574",
+                    "pin_highlight": "#f2cc8f"
+                }
+            },
+
+            "Deep_Purple": {
+                "name": "Deep Purple Space",
+                "description": "Rich purples with cosmic blues 🟣✨",
+                "colors": {
+                    "bg_primary": "#1a0d26",
+                    "bg_secondary": "#2d1b3d",
+                    "bg_tertiary": "#3d2850",
+                    "panel_bg": "#4a3366",
+                    "accent_primary": "#8e44ad",
+                    "accent_secondary": "#3498db",
+                    "text_primary": "#f8f9fa",
+                    "text_secondary": "#e9ecef",
+                    "text_accent": "#bb86fc",
+                    "button_normal": "#6f42c1",
+                    "button_hover": "#7952cc",
+                    "button_pressed": "#5a32a3",
+                    "border": "#6c5ce7",
+                    "success": "#00b894",
+                    "warning": "#fdcb6e",
+                    "error": "#e84393",
+                    "grid": "#4a3366",
+                    "pin_default": "#a29bfe",
+                    "pin_highlight": "#fd79a8"
+                }
+            },
+
+            "Matrix": {
+                "name": "Matrix Digital Rain",
+                "description": "Follow the white rabbit... 🐰💊",
+                "colors": {
+                    "bg_primary": "#000000",
+                    "bg_secondary": "#001100",
+                    "bg_tertiary": "#002200",
+                    "panel_bg": "#0d1f0d",
+                    "accent_primary": "#00ff00",
+                    "accent_secondary": "#00cc00",
+                    "text_primary": "#00ff00",
+                    "text_secondary": "#00cc00",
+                    "text_accent": "#33ff33",
+                    "button_normal": "#003300",
+                    "button_hover": "#004400",
+                    "button_pressed": "#002200",
+                    "border": "#00aa00",
+                    "success": "#00ff00",
+                    "warning": "#ffff00",
+                    "error": "#ff0000",
+                    "grid": "#002200",
+                    "pin_default": "#00cc00",
+                    "pin_highlight": "#00ffff"
+                }
+            },
+
+            "Borg": {
+                "name": "Borg Collective",
+                "description": "Resistance is futile. You will be assimilated. 🤖",
+                "colors": {
+                    "bg_primary": "#0a0a0a",
+                    "bg_secondary": "#1a1a1a",
+                    "bg_tertiary": "#2a2a2a",
+                    "panel_bg": "#1f1f1f",
+                    "accent_primary": "#00ff00",
+                    "accent_secondary": "#ff0000",
+                    "text_primary": "#c0c0c0",
+                    "text_secondary": "#a0a0a0",
+                    "text_accent": "#00ff00",
+                    "button_normal": "#333333",
+                    "button_hover": "#404040",
+                    "button_pressed": "#202020",
+                    "border": "#666666",
+                    "success": "#00ff00",
+                    "warning": "#ffff00",
+                    "error": "#ff0000",
+                    "grid": "#333333",
+                    "pin_default": "#808080",
+                    "pin_highlight": "#00ff00"
+                }
+            },
+
+            "Klingon": {
+                "name": "Klingon Empire",
+                "description": "Qapla'! Today is a good day to code! ⚔️",
+                "colors": {
+                    "bg_primary": "#1a0000",
+                    "bg_secondary": "#2a0a0a",
+                    "bg_tertiary": "#3a1010",
+                    "panel_bg": "#2a1a1a",
+                    "accent_primary": "#ff0000",
+                    "accent_secondary": "#cc0000",
+                    "text_primary": "#ffdddd",
+                    "text_secondary": "#ccbbbb",
+                    "text_accent": "#ff6666",
+                    "button_normal": "#4a0000",
+                    "button_hover": "#660000",
+                    "button_pressed": "#330000",
+                    "border": "#aa3333",
+                    "success": "#ffaa00",
+                    "warning": "#ff6600",
+                    "error": "#ff0000",
+                    "grid": "#441111",
+                    "pin_default": "#aa4444",
+                    "pin_highlight": "#ffaa00"
+                }
+            },
+
+            "Dominion": {
+                "name": "The Dominion",
+                "description": "Order through submission. Victory is life! 👁️",
+                "colors": {
+                    "bg_primary": "#1a1a0a",
+                    "bg_secondary": "#2a2a1a",
+                    "bg_tertiary": "#3a3a2a",
+                    "panel_bg": "#2a2a1f",
+                    "accent_primary": "#ccaa00",
+                    "accent_secondary": "#aa8800",
+                    "text_primary": "#ffffcc",
+                    "text_secondary": "#ddddaa",
+                    "text_accent": "#ffcc44",
+                    "button_normal": "#4a4a00",
+                    "button_hover": "#666600",
+                    "button_pressed": "#333300",
+                    "border": "#888855",
+                    "success": "#88cc00",
+                    "warning": "#ff8800",
+                    "error": "#cc4400",
+                    "grid": "#444433",
+                    "pin_default": "#aaaa55",
+                    "pin_highlight": "#ffcc00"
+                }
+            },
+
+            "Knight_Rider": {
+                "name": "Knight Rider KITT",
+                "description": "A shadowy flight into the dangerous world of... coding! 🚗",
+                "colors": {
+                    "bg_primary": "#000000",
+                    "bg_secondary": "#111111",
+                    "bg_tertiary": "#222222",
+                    "panel_bg": "#1a1a1a",
+                    "accent_primary": "#ff0000",
+                    "accent_secondary": "#cc0000",
+                    "text_primary": "#ff4444",
+                    "text_secondary": "#cc3333",
+                    "text_accent": "#ff6666",
+                    "button_normal": "#330000",
+                    "button_hover": "#550000",
+                    "button_pressed": "#220000",
+                    "border": "#666666",
+                    "success": "#00ff00",
+                    "warning": "#ffaa00",
+                    "error": "#ff0000",
+                    "grid": "#333333",
+                    "pin_default": "#aa3333",
+                    "pin_highlight": "#ff0000"
+                }
+            },
+
+                "Amiga_MUI": {
+                "name": "Amiga MUI (Magic User Interface)",
+                "description": "The classic Amiga look with 3D beveled buttons! 💾",
+                "colors": {
+                    "bg_primary": "#c0c0c0",
+                    "bg_secondary": "#b0b0b0",
+                    "bg_tertiary": "#a0a0a0",
+                    "panel_bg": "#c8c8c8",
+                    "accent_primary": "#0066cc",
+                    "accent_secondary": "#004499",
+                    "text_primary": "#000000",
+                    "text_secondary": "#333333",
+                    "text_accent": "#0066cc",
+                    "button_normal": "#d0d0d0",
+                    "button_hover": "#e0e0e0",
+                    "button_pressed": "#b0b0b0",
+                    "border": "#808080",
+                    "success": "#008800",
+                    "warning": "#cc6600",
+                    "error": "#cc0000",
+                    "grid": "#aaaaaa",
+                    "pin_default": "#666666",
+                    "pin_highlight": "#0066cc"
+                }
+            },
+
+            "IMG_Factory_Old": {
+            "name": "IMG Factory Alternative",
+            "description": "Clean, organized interface inspired by IMG Factory 📁",
+                "colors": {
+                    "bg_primary": "#ffffff",
+                    "bg_secondary": "#f8f9fa",
+                    "bg_tertiary": "#e9ecef",
+                    "panel_bg": "#f1f3f4",
+                    "accent_primary": "#1976d2",
+                    "accent_secondary": "#1565c0",
+                    "text_primary": "#212529",
+                    "text_secondary": "#495057",
+                    "text_accent": "#1976d2",
+                    "button_normal": "#e3f2fd",
+                    "button_hover": "#bbdefb",
+                    "button_pressed": "#90caf9",
+                    "border": "#dee2e6",
+                    "success": "#4caf50",
+                    "warning": "#ff9800",
+                    "error": "#f44336",
+                    "grid": "#f0f0f0",
+                    "pin_default": "#757575",
+                    "pin_highlight": "#2196f3",
+                    # Action-specific button colors
+                    "action_import": "#e3f2fd",      # Light blue
+                    "action_export": "#e8f5e8",      # Light green
+                    "action_remove": "#ffebee",      # Light red
+                    "action_update": "#fff3e0",      # Light orange
+                    "action_convert": "#f3e5f5",     # Light purple
+                    "panel_entries": "#e8f5e8",
+                    "panel_filter": "#fff3e0",
+                    "toolbar_bg": "#fafafa"
+                }
+            },
+
+            "Amiga_Workbench": {
+            "name": "Amiga Workbench",
+            "description": "Classic Amiga Workbench look with proper beveled buttons! 💾",
+                "colors": {
+                    "bg_primary": "#c0c0c0",
+                    "bg_secondary": "#b0b0b0",
+                    "bg_tertiary": "#a0a0a0",
+                    "panel_bg": "#c8c8c8",
+                    "accent_primary": "#0066cc",
+                    "accent_secondary": "#004499",
+                    "text_primary": "#000000",
+                    "text_secondary": "#333333",
+                    "text_accent": "#0066cc",
+                    "button_normal": "#d0d0d0",
+                    "button_hover": "#e0e0e0",
+                    "button_pressed": "#b0b0b0",
+                    "border": "#808080",
+                    "success": "#008800",
+                    "warning": "#cc6600",
+                    "error": "#cc0000",
+                    "grid": "#aaaaaa",
+                    "pin_default": "#666666",
+                    "pin_highlight": "#0066cc",
+                    # Action-specific button colors (Amiga style)
+                    "action_import": "#d0d0ff",      # Light blue-gray
+                    "action_export": "#d0ffd0",      # Light green-gray
+                    "action_remove": "#ffd0d0",      # Light red-gray
+                    "action_update": "#ffe0d0",      # Light orange-gray
+                    "action_convert": "#f0d0f0",     # Light purple-gray
+                    "panel_entries": "#d8d8d8",
+                    "panel_filter": "#e0e0e0",
+                    "toolbar_bg": "#c0c0c0"
+                }
+            },
+
+            "IMG_Factory_Dark": {
+                "name": "IMG Factory Dark Mode",
+                "description": "Dark version of the IMG Factory theme 🌙📁",
+                "colors": {
+                    "bg_primary": "#1e1e1e",
+                    "bg_secondary": "#2d2d30",
+                    "bg_tertiary": "#3e3e42",
+                    "panel_bg": "#383838",
+                    "accent_primary": "#0078d4",
+                    "accent_secondary": "#106ebe",
+                    "text_primary": "#ffffff",
+                    "text_secondary": "#cccccc",
+                    "text_accent": "#569cd6",
+                    "button_normal": "#404040",
+                    "button_hover": "#505050",
+                    "button_pressed": "#303030",
+                    "border": "#555555",
+                    "success": "#4ec9b0",
+                    "warning": "#ffd700",
+                    "error": "#f14c4c",
+                    "grid": "#444444",
+                    "pin_default": "#c0c0c0",
+                    "pin_highlight": "#ffd700",
+                    # Action-specific button colors (dark theme)
+                    "action_import": "#1e3a5f",      # Dark blue
+                    "action_export": "#1e3f1e",      # Dark green
+                    "action_remove": "#3f1e1e",      # Dark red
+                    "action_update": "#3f2e1e",      # Dark orange
+                    "action_convert": "#2e1e3f",     # Dark purple
+                    "panel_entries": "#2a2a2a",
+                    "panel_filter": "#353535",
+                    "toolbar_bg": "#252526"
+                }
+            },
+
+            "Retro_Computing": {
+                "name": "Retro Computing",
+                "description": "Inspired by classic computing interfaces 🖥️💾",
+                "colors": {
+                    "bg_primary": "#003366",
+                    "bg_secondary": "#004080",
+                    "bg_tertiary": "#0059b3",
+                    "panel_bg": "#336699",
+                    "accent_primary": "#00ffff",
+                    "accent_secondary": "#00cccc",
+                    "text_primary": "#ffffff",
+                    "text_secondary": "#ccffff",
+                    "text_accent": "#ffff00",
+                    "button_normal": "#0066cc",
+                    "button_hover": "#0080ff",
+                    "button_pressed": "#004499",
+                    "border": "#00cccc",
+                    "success": "#00ff00",
+                    "warning": "#ffff00",
+                    "error": "#ff4444",
+                    "grid": "#004d99",
+                    "pin_default": "#99ccff",
+                    "pin_highlight": "#ffff00",
+                    # Action-specific button colors (retro style)
+                    "action_import": "#0080ff",      # Bright blue
+                    "action_export": "#00ff80",      # Bright green
+                    "action_remove": "#ff4080",      # Bright red
+                    "action_update": "#ff8040",      # Bright orange
+                    "action_convert": "#8040ff",     # Bright purple
+                    "panel_entries": "#004d80",
+                    "panel_filter": "#005999",
+                    "toolbar_bg": "#002d4d"
+                }
+            },
+
+            "Classic_Dark": {
+                "name": "Classic Dark",
+                "description": "Professional dark theme with blue accents",
+                "colors": {
+                    "bg_primary": "#2b2b2b",
+                    "bg_secondary": "#3c3c3c",
+                    "bg_tertiary": "#4d4d4d",
+                    "panel_bg": "#383838",
+                    "accent_primary": "#0078d4",
+                    "accent_secondary": "#106ebe",
+                    "text_primary": "#ffffff",
+                    "text_secondary": "#cccccc",
+                    "text_accent": "#569cd6",
+                    "button_normal": "#0e639c",
+                    "button_hover": "#1177bb",
+                    "button_pressed": "#094771",
+                    "border": "#555555",
+                    "success": "#4ec9b0",
+                    "warning": "#ffd700",
+                    "error": "#f14c4c",
+                    "grid": "#444444",
+                    "pin_default": "#c0c0c0",
+                    "pin_highlight": "#ffd700"
+                }
+            },
+
+            "Light_Professional": {
+                "name": "Light Professional",
+                "description": "Clean light theme for daytime work",
+                "colors": {
+                    "bg_primary": "#ffffff",
+                    "bg_secondary": "#f5f5f5",
+                    "bg_tertiary": "#e0e0e0",
+                    "panel_bg": "#f0f0f0",
+                    "accent_primary": "#0066cc",
+                    "accent_secondary": "#0052a3",
+                    "text_primary": "#000000",
+                    "text_secondary": "#333333",
+                    "text_accent": "#0066cc",
+                    "button_normal": "#0078d4",
+                    "button_hover": "#106ebe",
+                    "button_pressed": "#005a9e",
+                    "border": "#cccccc",
+                    "success": "#107c10",
+                    "warning": "#ff8c00",
+                    "error": "#d13438",
+                    "grid": "#dddddd",
+                    "pin_default": "#666666",
+                    "pin_highlight": "#ff8c00"
+                }
+            },
+
+            "IMG_Factory": {
+                "name": "IMG Factory Professional",
+                "description": "Clean, organized interface inspired by IMG Factory 📁",
+                "colors": {
+                    "bg_primary": "#ffffff",
+                    "bg_secondary": "#f8f9fa",
+                    "bg_tertiary": "#e9ecef",
+                    "panel_bg": "#f1f3f4",
+                    "accent_primary": "#1976d2",
+                    "accent_secondary": "#1565c0",
+                    "text_primary": "#212529",
+                    "text_secondary": "#495057",
+                    "text_accent": "#1976d2",
+                    "button_normal": "#e3f2fd",
+                    "button_hover": "#bbdefb",
+                    "button_pressed": "#90caf9",
+                    "border": "#dee2e6",
+                    "success": "#4caf50",
+                    "warning": "#ff9800",
+                    "error": "#f44336",
+                    "grid": "#f0f0f0",
+                    "pin_default": "#757575",
+                    "pin_highlight": "#2196f3",
+                    "action_import": "#2196f3",
+                    "action_export": "#4caf50",
+                    "action_remove": "#f44336",
+                    "action_update": "#ff9800",
+                    "action_convert": "#9c27b0",
+                    "panel_entries": "#e8f5e8",
+                    "panel_filter": "#fff3e0",
+                    "toolbar_bg": "#fafafa"
+                }
+            }
+        }
+
+        #  default settings
+        self.defaults = {
+            "theme": "LCARS",
+            "font_family": "Segoe UI",
+            "font_size": 9,
+            "font_weight": "normal",
+            "font_style": "normal",
+            "panel_font_family": "Segoe UI",
+            "panel_font_size": 9,
+            "panel_font_weight": "normal",
+            "button_font_family": "Segoe UI",
+            "button_font_size": 9,
+            "button_font_weight": "bold",
+            "panel_opacity": 95,
+            "show_tooltips": True,
+            "auto_save": True,
+            "grid_size": 5,
+            "snap_to_grid": True,
+            "show_grid": True,
+            "show_perfboard": True,
+            "pin_label_size": 8,
+            "zoom_sensitivity": 1.2,
+            "max_undo_levels": 50,
+            "panel_layout": "left",
+            "collapsible_panels": True,
+            "remember_window_state": True,
+            "voice_commands": False,
+            "animations": True,
+            "sound_effects": False,
+            "lcars_sounds": False,
+            # Custom button colors
+            "custom_button_colors": False,
+            "button_import_color": "#2196f3",
+            "button_export_color": "#4caf50",
+            "button_remove_color": "#f44336",
+            "button_update_color": "#ff9800",
+            "button_convert_color": "#9c27b0",
+            "button_default_color": "#0078d4"
+        }
+
+        self.current_settings = self.defaults.copy()
+        self.load_settings()
+
+
+
