@@ -3,34 +3,22 @@
 ├── components
 │   ├── img_core_classes.py
 │   ├── img_creator.py
+│   ├── img_creator.py.backup
 │   ├── img_manager.py
 │   ├── img_templates.json
 │   ├── img_templates.py
 │   ├── img_validator.py
-│   ├── old
-│   │   ├── img_creation_validator.py
-│   │   ├── img_creator.py
-│   │   ├── img_factory_integration.py
-│   │   ├── img_formats.py
-│   │   ├── img_quick_start_wizard.py
-│   │   └── img_template_manager.py
 │   └── __pycache__
 │       ├── img_core_classes.cpython-312.pyc
 │       └── img_creator.cpython-312.pyc
 ├── gui
 │   ├── pastel_button_theme.py
 │   └── responsive_button_panel.py
-├── img_creator.py
 ├── Img Factory1.3 -> /home/x2/code base/Img Factory1.3
 ├── imgfactory_demo.py
 ├── imgfactory_main.py
-├── imgfactory.py
 ├── imgfactory_settings.json
 ├── launch_imgfactory.py
-├── LICENSE
-├── old
-│   ├── imgfactory1.4-basegui.py
-│   └── template_system_integration.py
 ├── __pycache__
 │   ├── app_settings_system.cpython-312.pyc
 │   ├── App_settings_system.cpython-312.pyc
@@ -40,15 +28,16 @@
 │   └── pastel_button_theme.cpython-312.pyc
 ├── templates
 │   └── new_templates.json
-├── test_gui.py
 ├── themer_settings.json
 ├── themes
 │   ├── exported_themes
 │   ├── img_factory.json
 │   └── lcars.json
 ├── tree.git
+├── unix_launcher.sh
 ├── utils
 │   └── App_settings_system_alt.py
+├── windows_launcher.bat
 └── windows source
     ├── BXCF
     │   ├── Code
@@ -1086,4 +1075,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-943 directories, 144 files
+941 directories, 135 files
