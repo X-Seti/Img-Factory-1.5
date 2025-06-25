@@ -100,6 +100,7 @@ class ImgFactoryDemo(QMainWindow):
         self.current_img = None
         self.current_col = None
         self.load_thread = None
+
         
         # Data storage for different file types
         self.img_entries = []
@@ -130,30 +131,164 @@ class ImgFactoryDemo(QMainWindow):
         self._populate_sample_data()
 
     def _setup_styling(self):
-        """Setup modern professional styling"""
+        """Setup modern professional styling with file dialog fix"""
+
+        # Global application style for dialogs
+        QApplication.instance().setStyleSheet("""
+            /* Global file dialog styling */
+            QFileDialog {
+                background-color: #ffffff;
+                color: #333333;
+            }
+
+            QFileDialog QToolButton {
+                background-color: #ffffff;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                padding: 8px;
+                margin: 2px;
+                color: #333333;
+                font-weight: normal;
+                min-width: 32px;
+                min-height: 32px;
+            }
+
+            QFileDialog QToolButton:hover {
+                background-color: #e3f2fd;
+                border-color: #2196f3;
+                color: #1976d2;
+            }
+
+            QFileDialog QToolButton:pressed {
+                background-color: #bbdefb;
+            }
+
+            QFileDialog QToolButton:disabled {
+                background-color: #f5f5f5;
+                border-color: #e0e0e0;
+                color: #999999;
+            }
+
+            QFileDialog QToolBar {
+                background-color: #f8f9fa;
+                border: 1px solid #ddd;
+                spacing: 2px;
+                padding: 4px;
+            }
+
+            QFileDialog QListView,
+            QFileDialog QTreeView {
+                background-color: #ffffff;
+                border: 1px solid #ddd;
+                selection-background-color: #e3f2fd;
+                color: #333333;
+                alternate-background-color: #f9f9f9;
+            }
+
+            QFileDialog QListView::item:selected,
+            QFileDialog QTreeView::item:selected {
+                background-color: #2196f3;
+                color: #ffffff;
+            }
+
+            QFileDialog QHeaderView::section {
+                background-color: #f8f9fa;
+                border: 1px solid #ddd;
+                padding: 6px 8px;
+                color: #333333;
+                font-weight: bold;
+            }
+
+            QFileDialog QPushButton {
+                background-color: #ffffff;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                padding: 8px 16px;
+                color: #333333;
+                font-weight: normal;
+                min-width: 80px;
+            }
+
+            QFileDialog QPushButton:hover {
+                background-color: #e3f2fd;
+                border-color: #2196f3;
+                color: #1976d2;
+            }
+
+            QFileDialog QPushButton:default {
+                background-color: #2196f3;
+                color: #ffffff;
+                border-color: #1976d2;
+            }
+
+            QFileDialog QPushButton:default:hover {
+                background-color: #1976d2;
+            }
+
+            QFileDialog QComboBox {
+                background-color: #ffffff;
+                border: 1px solid #ddd;
+                color: #333333;
+                border-radius: 4px;
+                padding: 4px 8px;
+                min-width: 120px;
+            }
+
+            QFileDialog QLineEdit {
+                background-color: #ffffff;
+                border: 1px solid #ddd;
+                color: #333333;
+                border-radius: 4px;
+                padding: 6px 8px;
+            }
+
+            QFileDialog QSplitter::handle {
+                background-color: #ddd;
+                width: 2px;
+            }
+
+            QFileDialog QScrollBar:vertical {
+                background-color: #f8f9fa;
+                width: 12px;
+                border: none;
+                border-radius: 6px;
+            }
+
+            QFileDialog QScrollBar::handle:vertical {
+                background-color: #ddd;
+                border-radius: 6px;
+                min-height: 20px;
+            }
+
+            QFileDialog QScrollBar::handle:vertical:hover {
+                background-color: #2196f3;
+            }
+        """)
+
+        # Main window styling (keep existing styling)
         self.setStyleSheet("""
             QMainWindow {
                 background-color: #f5f5f5;
                 color: #333333;
             }
-            
+
             QMenuBar {
                 background-color: #ffffff;
                 border-bottom: 1px solid #ddd;
                 padding: 4px;
             }
-            
+
             QMenuBar::item {
                 background-color: transparent;
                 padding: 4px 12px;
                 border-radius: 4px;
             }
-            
+
             QMenuBar::item:selected {
                 background-color: #e3f2fd;
                 color: #1976d2;
             }
-            
+
             QTableWidget {
                 background-color: #ffffff;
                 border: 1px solid #ddd;
@@ -162,12 +297,12 @@ class ImgFactoryDemo(QMainWindow):
                 selection-background-color: #2196f3;
                 alternate-background-color: #f9f9f9;
             }
-            
+
             QTableWidget::item:selected {
                 background-color: #2196f3;
                 color: white;
             }
-            
+
             QTableWidget QHeaderView::section {
                 background-color: #f1f3f4;
                 border: none;
@@ -177,7 +312,7 @@ class ImgFactoryDemo(QMainWindow):
                 font-weight: bold;
                 color: #555;
             }
-            
+
             QGroupBox {
                 font-weight: bold;
                 border: 2px solid #e0e0e0;
@@ -186,7 +321,7 @@ class ImgFactoryDemo(QMainWindow):
                 padding-top: 10px;
                 background-color: #fafafa;
             }
-            
+
             QGroupBox::title {
                 subcontrol-origin: margin;
                 left: 10px;
@@ -194,7 +329,7 @@ class ImgFactoryDemo(QMainWindow):
                 background-color: #fafafa;
                 color: #1976d2;
             }
-            
+
             QPushButton {
                 background-color: #ffffff;
                 border: 1px solid #e0e0e0;
@@ -204,46 +339,46 @@ class ImgFactoryDemo(QMainWindow):
                 min-height: 14px;
                 font-size: 11px;
             }
-            
+
             QPushButton:hover {
                 background-color: #f0f0f0;
                 border-color: #2196f3;
             }
-            
+
             QPushButton:pressed {
                 background-color: #e0e0e0;
             }
-            
+
             QPushButton[action-type="import"] {
                 background-color: #e3f2fd;
                 border-color: #2196f3;
                 color: #1976d2;
             }
-            
+
             QPushButton[action-type="export"] {
                 background-color: #e8f5e8;
                 border-color: #4caf50;
                 color: #2e7d32;
             }
-            
+
             QPushButton[action-type="remove"] {
                 background-color: #ffebee;
                 border-color: #f44336;
                 color: #c62828;
             }
-            
+
             QPushButton[action-type="update"] {
                 background-color: #fff3e0;
                 border-color: #ff9800;
                 color: #ef6c00;
             }
-            
+
             QPushButton[action-type="convert"] {
                 background-color: #f3e5f5;
                 border-color: #9c27b0;
                 color: #7b1fa2;
             }
-            
+
             QTextEdit {
                 background-color: #ffffff;
                 border: 1px solid #ddd;
@@ -252,7 +387,7 @@ class ImgFactoryDemo(QMainWindow):
                 font-family: 'Consolas', 'Monaco', monospace;
                 font-size: 9pt;
             }
-            
+
             QComboBox {
                 background-color: #ffffff;
                 border: 1px solid #ddd;
@@ -260,47 +395,65 @@ class ImgFactoryDemo(QMainWindow):
                 padding: 4px 8px;
                 min-width: 100px;
             }
-            
+
             QComboBox:hover {
                 border-color: #2196f3;
             }
-            
+
             QComboBox::drop-down {
                 border: none;
                 width: 20px;
             }
-            
+
             QComboBox::down-arrow {
                 image: none;
                 border-left: 4px solid transparent;
                 border-right: 4px solid transparent;
                 border-top: 4px solid #666;
             }
-            
+
+            QLineEdit {
+                background-color: #ffffff;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+
+            QLineEdit:focus {
+                border-color: #2196f3;
+                outline: none;
+            }
+
             QProgressBar {
                 border: 1px solid #ddd;
                 border-radius: 4px;
                 background-color: #f0f0f0;
                 text-align: center;
             }
-            
+
+            QProgressBar::chunk {
+                background-color: #2196f3;
+                border-radius: 3px;
+            }
+
             QTabWidget {
                 background-color: #ffffff;
                 border: 1px solid #ddd;
                 border-radius: 4px;
             }
-            
+
             QTabWidget::pane {
                 border: 1px solid #ddd;
                 border-radius: 4px;
                 margin: 0px;
                 padding: 0px;
             }
-            
+
             QTabWidget::tab-bar {
                 left: 5px;
             }
-            
+
             QTabBar::tab {
                 background-color: #f5f5f5;
                 border: 1px solid #ddd;
@@ -310,17 +463,16 @@ class ImgFactoryDemo(QMainWindow):
                 margin-right: 2px;
                 min-width: 60px;
             }
-            
+
             QTabBar::tab:selected {
                 background-color: #ffffff;
                 border-color: #2196f3;
                 color: #2196f3;
                 font-weight: bold;
             }
-            
-            QProgressBar::chunk {
-                background-color: #2196f3;
-                border-radius: 3px;
+
+            QTabBar::tab:hover {
+                background-color: #e3f2fd;
             }
         """)
 
@@ -797,30 +949,79 @@ class ImgFactoryDemo(QMainWindow):
             self.entries_label.setText(f"Entries: {count}")
             self.img_status.setText("Both: IMG + COL loaded")
 
-    # File operations
     def open_img_file(self):
-        """Open IMG file dialog"""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open IMG File", "", 
-            "IMG Files (*.img);;All Files (*)"
-        )
-        if file_path:
-            self.log_message(f"Loading IMG file: {file_path}")
-            # Switch to IMG tab
-            self.file_tabs.setCurrentIndex(0)
-            # TODO: Implement actual IMG loading
+        """Open IMG file dialog with forced styling"""
+        # Force clean file dialog
+        dialog = QFileDialog(self)
+        dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
+        dialog.setNameFilter("IMG Files (*.img);;All Files (*)")
+        dialog.setWindowTitle("Open IMG File")
+
+        # Apply additional styling to this specific dialog
+        dialog.setStyleSheet("""
+            QFileDialog {
+                background-color: #ffffff;
+                color: #333333;
+                font-size: 11px;
+            }
+            QFileDialog QToolButton {
+                background-color: #ffffff;
+                border: 1px solid #ddd;
+                color: #333333;
+                padding: 8px;
+                border-radius: 4px;
+            }
+            QFileDialog QToolButton:hover {
+                background-color: #e3f2fd;
+                border-color: #2196f3;
+            }
+        """)
+
+        if dialog.exec() == QFileDialog.DialogCode.Accepted:
+            files = dialog.selectedFiles()
+            if files:
+                file_path = files[0]
+                self.log_message(f"Loading IMG file: {file_path}")
+                # Switch to IMG tab
+                self.file_tabs.setCurrentIndex(0)
+                # TODO: Implement actual IMG loading
     
     def open_col_file(self):
-        """Open COL file dialog"""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open COL File", "", 
-            "COL Files (*.col);;All Files (*)"
-        )
-        if file_path:
-            self.log_message(f"Loading COL file: {file_path}")
-            # Switch to COL tab
-            self.file_tabs.setCurrentIndex(1)
-            # TODO: Implement actual COL loading
+        """Open COL file dialog with forced styling"""
+        # Force clean file dialog
+        dialog = QFileDialog(self)
+        dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
+        dialog.setNameFilter("COL Files (*.col);;All Files (*)")
+        dialog.setWindowTitle("Open COL File")
+
+        # Apply styling
+        dialog.setStyleSheet("""
+            QFileDialog {
+                background-color: #ffffff;
+                color: #333333;
+                font-size: 11px;
+            }
+            QFileDialog QToolButton {
+                background-color: #ffffff;
+                border: 1px solid #ddd;
+                color: #333333;
+                padding: 8px;
+                border-radius: 4px;
+            }
+            QFileDialog QToolButton:hover {
+                background-color: #e3f2fd;
+                border-color: #2196f3;
+            }
+        """)
+
+        if dialog.exec() == QFileDialog.DialogCode.Accepted:
+            files = dialog.selectedFiles()
+            if files:
+                file_path = files[0]
+                self.log_message(f"Loading COL file: {file_path}")
+                # Switch to COL tab
+                self.file_tabs.setCurrentIndex(1)
+                # TODO: Implement actual COL loading
 
     def close_file(self):
         """Close current file based on active tab"""
@@ -916,18 +1117,21 @@ def cleanup_on_exit():
         print(f"⚠️  Exit cleanup error: {e}")
 
 def main():
-    """Main application entry point with cleanup integration"""
+    """Main application entry point with file dialog fix"""
     try:
         app = QApplication(sys.argv)
-        
+
+        # CRITICAL FIX: Force consistent style for file dialogs
+        app.setStyle('Fusion')  # This ensures consistent dialogs across platforms
+
         # Register cleanup function
         import atexit
         atexit.register(cleanup_on_exit)
-        
+
         # Initialize settings
         settings = AppSettings()
 
-        # Apply theme
+        # Apply theme AFTER setting style
         apply_theme_to_app(app, settings)
 
         # Create window
@@ -936,15 +1140,16 @@ def main():
 
         # Show window
         window.show()
-        
+
         print("🎮 IMG Factory 1.5 started successfully!")
         return app.exec()
-        
+
     except Exception as e:
         print(f"💥 Fatal error in main: {e}")
         import traceback
         traceback.print_exc()
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())
