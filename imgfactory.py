@@ -49,16 +49,31 @@ try:
     TEMPLATES_AVAILABLE = True
 except ImportError:
     try:
-        from components.img_templates import IMGTemplateManager, TemplateManagerDialog
+        from components.img_templates import IMGTemplateManager, TemplateManagerDialog  
         print("✓ IMG Templates imported")
         TEMPLATES_AVAILABLE = True
     except ImportError as e:
         print(f"⚠ Template system not available: {e}")
+        # Create robust dummy classes
         class IMGTemplateManager:
-            def __init__(self): pass
+            def __init__(self): 
+                print("Using dummy template manager")
+            def get_user_templates(self): 
+                return []
+            def save_template(self, *args): 
+                return False
+            def delete_template(self, *args):
+                return False
+            def import_templates(self, *args):
+                return {"imported": 0, "skipped": 0, "errors": []}
+            def export_templates(self, *args):
+                return False
+        
         class TemplateManagerDialog:
-            def __init__(self, *args): pass
-            def exec(self): return 0
+            def __init__(self, *args): 
+                pass
+            def exec(self): 
+                return 0
         TEMPLATES_AVAILABLE = False
 
 # Validator - now should work with fixed dependencies
@@ -192,7 +207,18 @@ class IMGFactoryMain(QMainWindow):
         # Application state
         self.current_img: Optional[IMGFile] = None
         self.settings = QSettings("IMGFactory", "ImgFactory15")
-        self.template_manager = IMGTemplateManager()
+        
+        # Initialize template manager with error handling
+        try:
+            self.template_manager = IMGTemplateManager()
+        except Exception as e:
+            print(f"⚠ Template manager initialization failed: {e}")
+            # Create dummy template manager
+            class DummyTemplateManager:
+                def __init__(self): pass
+                def get_user_templates(self): return []
+                def save_template(self, *args): return False
+            self.template_manager = DummyTemplateManager()
         
         # Threads
         self.load_thread: Optional[IMGLoadThread] = None
@@ -224,7 +250,7 @@ class IMGFactoryMain(QMainWindow):
         
         # Right splitter for entries and log
         right_splitter = QSplitter(Qt.Orientation.Vertical)
-        main_splitter.addSplitter(right_splitter)
+        main_splitter.addWidget(right_splitter)
         
         # Entries table
         self._create_entries_section(right_splitter)
