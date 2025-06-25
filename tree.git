@@ -1,0 +1,1089 @@
+.
+├── App_settings_system.py
+├── components
+│   ├── img_core_classes.py
+│   ├── img_creator.py
+│   ├── img_manager.py
+│   ├── img_templates.json
+│   ├── img_templates.py
+│   ├── img_validator.py
+│   ├── old
+│   │   ├── img_creation_validator.py
+│   │   ├── img_creator.py
+│   │   ├── img_factory_integration.py
+│   │   ├── img_formats.py
+│   │   ├── img_quick_start_wizard.py
+│   │   └── img_template_manager.py
+│   └── __pycache__
+│       ├── img_core_classes.cpython-312.pyc
+│       └── img_creator.cpython-312.pyc
+├── gui
+│   ├── pastel_button_theme.py
+│   └── responsive_button_panel.py
+├── img_creator.py
+├── Img Factory1.3 -> /home/x2/code base/Img Factory1.3
+├── imgfactory_demo.py
+├── imgfactory_main.py
+├── imgfactory.py
+├── imgfactory_settings.json
+├── launch_imgfactory.py
+├── LICENSE
+├── old
+│   ├── imgfactory1.4-basegui.py
+│   └── template_system_integration.py
+├── __pycache__
+│   ├── app_settings_system.cpython-312.pyc
+│   ├── App_settings_system.cpython-312.pyc
+│   ├── enhanced_img_formats.cpython-312.pyc
+│   ├── img_core_classes.cpython-312.pyc
+│   ├── new_img_creator.cpython-312.pyc
+│   └── pastel_button_theme.cpython-312.pyc
+├── templates
+│   └── new_templates.json
+├── test_gui.py
+├── themer_settings.json
+├── themes
+│   ├── exported_themes
+│   ├── img_factory.json
+│   └── lcars.json
+├── tree.git
+├── utils
+│   └── App_settings_system_alt.py
+└── windows source
+    ├── BXCF
+    │   ├── Code
+    │   │   ├── BXCF
+    │   │   │   ├── Compression
+    │   │   │   ├── Crash
+    │   │   │   ├── Encryption
+    │   │   │   ├── Event
+    │   │   │   ├── Exception
+    │   │   │   ├── Format
+    │   │   │   │   ├── Image
+    │   │   │   │   │   ├── BMP
+    │   │   │   │   │   ├── CUR
+    │   │   │   │   │   ├── DDS
+    │   │   │   │   │   └── ICO
+    │   │   │   │   ├── Network
+    │   │   │   │   │   └── JSON
+    │   │   │   │   ├── Text
+    │   │   │   │   │   └── INI
+    │   │   │   │   └── Web
+    │   │   │   │       └── URL
+    │   │   │   ├── Image
+    │   │   │   ├── Localization
+    │   │   │   ├── Object
+    │   │   │   ├── Platform
+    │   │   │   │   └── Hardware
+    │   │   │   ├── Pool
+    │   │   │   ├── Protocol
+    │   │   │   ├── Static
+    │   │   │   ├── Stream
+    │   │   │   ├── Timer
+    │   │   │   ├── Type
+    │   │   │   │   ├── Axis
+    │   │   │   │   ├── Colour
+    │   │   │   │   └── Vector
+    │   │   │   └── Unit
+    │   │   │       └── Byte
+    │   │   ├── BXCF.App
+    │   │   └── BXCF.ThirdParty
+    │   │       ├── Checksum
+    │   │       │   └── CRC
+    │   │       ├── Compression
+    │   │       │   ├── LZ4
+    │   │       │   ├── LZO
+    │   │       │   │   └── include
+    │   │       │   │       └── lzo
+    │   │       │   └── ZLib
+    │   │       ├── Encryption
+    │   │       │   └── AES
+    │   │       │       └── Rijndael
+    │   │       ├── Format
+    │   │       │   └── INI
+    │   │       ├── Image
+    │   │       │   ├── Common
+    │   │       │   │   └── STB
+    │   │       │   └── DXT
+    │   │       │       └── Squish
+    │   │       │           ├── extra
+    │   │       │           ├── squish.xcodeproj
+    │   │       │           ├── vs7
+    │   │       │           │   ├── squish
+    │   │       │           │   ├── squishpng
+    │   │       │           │   └── squishtest
+    │   │       │           ├── vs8
+    │   │       │           │   ├── squish
+    │   │       │           │   ├── squishpng
+    │   │       │           │   └── squishtest
+    │   │       │           └── vs9
+    │   │       │               ├── squish
+    │   │       │               ├── squishpng
+    │   │       │               └── squishtest
+    │   │       └── Protocol
+    │   │           └── HTTP
+    │   │               └── HappyHTTP
+    │   └── Compiler
+    │       ├── Projects
+    │       │   ├── BXCF
+    │       │   ├── BXCF.App
+    │       │   └── BXCF.ThirdParty
+    │       └── Solutions
+    │           └── BXA.CPlusPlus
+    ├── BXGI
+    │   ├── Code
+    │   │   └── BXGI
+    │   │       ├── Engine
+    │   │       │   ├── RAGE
+    │   │       │   └── RW
+    │   │       ├── Event
+    │   │       ├── Format
+    │   │       │   ├── COL
+    │   │       │   │   └── Parts
+    │   │       │   ├── DAT
+    │   │       │   │   ├── Animgrp
+    │   │       │   │   ├── CAPS
+    │   │       │   │   ├── Chase
+    │   │       │   │   ├── Loader
+    │   │       │   │   ├── Path
+    │   │       │   │   │   └── Entries
+    │   │       │   │   │       ├── Default
+    │   │       │   │   │       │   └── Wrapper
+    │   │       │   │   │       ├── Fastman92
+    │   │       │   │   │       └── Intermediate
+    │   │       │   │   ├── ScriptPath
+    │   │       │   │   └── Waterpro
+    │   │       │   ├── DFF
+    │   │       │   ├── IDE
+    │   │       │   │   └── Entry
+    │   │       │   │       └── DataEntry
+    │   │       │   │           ├── 2DFX
+    │   │       │   │           └── PATH
+    │   │       │   ├── IMG
+    │   │       │   │   ├── Fastman92
+    │   │       │   │   └── Regular
+    │   │       │   │       └── Raw
+    │   │       │   ├── IPL
+    │   │       │   │   └── Entry
+    │   │       │   │       └── DataEntry
+    │   │       │   │           └── PATH
+    │   │       │   ├── RW
+    │   │       │   │   ├── Entries
+    │   │       │   │   │   └── 2dEffects
+    │   │       │   │   ├── Pools
+    │   │       │   │   └── Sections
+    │   │       │   │       └── Partial
+    │   │       │   ├── TXD
+    │   │       │   ├── WDR
+    │   │       │   └── WTD
+    │   │       │       └── Raw
+    │   │       ├── Game
+    │   │       ├── Helper
+    │   │       │   └── SectionLines
+    │   │       │       └── Entry
+    │   │       └── Intermediate
+    │   │           ├── Model
+    │   │           │   └── Data
+    │   │           └── Texture
+    │   │               └── Data
+    │   └── Compiler
+    │       ├── Projects
+    │       │   └── BXGI
+    │       └── Solutions
+    │           └── BXGI
+    ├── BXGX
+    │   ├── Code
+    │   │   ├── BXGX
+    │   │   │   ├── Control
+    │   │   │   │   ├── Base
+    │   │   │   │   ├── Components
+    │   │   │   │   ├── Controls
+    │   │   │   │   └── Entries
+    │   │   │   ├── DragDrop
+    │   │   │   ├── Event
+    │   │   │   ├── Format
+    │   │   │   │   └── BXS
+    │   │   │   ├── Geometry
+    │   │   │   │   ├── Base
+    │   │   │   │   └── Geometries
+    │   │   │   ├── GraphicsLibrary
+    │   │   │   │   ├── Base
+    │   │   │   │   └── Libraries
+    │   │   │   ├── Interaction
+    │   │   │   ├── Item
+    │   │   │   │   ├── Layer
+    │   │   │   │   └── Render
+    │   │   │   ├── Layer
+    │   │   │   │   └── Layers
+    │   │   │   ├── Shape
+    │   │   │   │   ├── Base
+    │   │   │   │   └── Shapes
+    │   │   │   ├── String
+    │   │   │   ├── Style
+    │   │   │   │   ├── Loading
+    │   │   │   │   │   └── Group
+    │   │   │   │   │       ├── Base
+    │   │   │   │   │       └── Groups
+    │   │   │   │   └── Parts
+    │   │   │   └── Window
+    │   │   ├── BXGX.App
+    │   │   └── BXGX.ThirdParty
+    │   │       ├── DXSDK
+    │   │       │   └── DXF
+    │   │       │       ├── DXSDK
+    │   │       │       │   ├── bin
+    │   │       │       │   │   └── DXUtils
+    │   │       │       │   │       └── AppWizard
+    │   │       │       │   ├── doc
+    │   │       │       │   │   ├── DirectX8
+    │   │       │       │   │   └── DirectXEULAs
+    │   │       │       │   ├── include
+    │   │       │       │   │   └── DShowIDL
+    │   │       │       │   ├── license
+    │   │       │       │   ├── Redist
+    │   │       │       │   │   └── DirectX81
+    │   │       │       │   ├── samples
+    │   │       │       │   │   └── Multimedia
+    │   │       │       │   │       ├── Common
+    │   │       │       │   │       │   ├── include
+    │   │       │       │   │       │   └── src
+    │   │       │       │   │       ├── Demos
+    │   │       │       │   │       │   ├── DMBoids
+    │   │       │       │   │       │   ├── Donuts3D
+    │   │       │       │   │       │   ├── Duel
+    │   │       │       │   │       │   └── DuelVoice
+    │   │       │       │   │       ├── Direct3D
+    │   │       │       │   │       │   ├── Billboard
+    │   │       │       │   │       │   ├── bin
+    │   │       │       │   │       │   ├── BumpMapping
+    │   │       │       │   │       │   │   ├── BumpEarth
+    │   │       │       │   │       │   │   ├── BumpLens
+    │   │       │       │   │       │   │   ├── BumpSelfShadow
+    │   │       │       │   │       │   │   ├── BumpUnderwater
+    │   │       │       │   │       │   │   ├── BumpWaves
+    │   │       │       │   │       │   │   ├── DotProduct3
+    │   │       │       │   │       │   │   └── Emboss
+    │   │       │       │   │       │   ├── ClipMirror
+    │   │       │       │   │       │   ├── Cull
+    │   │       │       │   │       │   ├── DolphinVS
+    │   │       │       │   │       │   ├── DXTex
+    │   │       │       │   │       │   ├── EnhancedMesh
+    │   │       │       │   │       │   ├── EnvMapping
+    │   │       │       │   │       │   │   ├── CubeMap
+    │   │       │       │   │       │   │   ├── FishEye
+    │   │       │       │   │       │   │   └── SphereMap
+    │   │       │       │   │       │   ├── Lighting
+    │   │       │       │   │       │   ├── MFCFog
+    │   │       │       │   │       │   ├── MFCPixelShader
+    │   │       │       │   │       │   ├── MFCTex
+    │   │       │       │   │       │   ├── OptimizedMesh
+    │   │       │       │   │       │   ├── Pick
+    │   │       │       │   │       │   ├── PointSprites
+    │   │       │       │   │       │   ├── ProgressiveMesh
+    │   │       │       │   │       │   ├── RTPatch
+    │   │       │       │   │       │   ├── Screensavers
+    │   │       │       │   │       │   │   └── Moire
+    │   │       │       │   │       │   ├── SkinnedMesh
+    │   │       │       │   │       │   ├── StencilBuffer
+    │   │       │       │   │       │   │   ├── ShadowVolume
+    │   │       │       │   │       │   │   ├── StencilDepth
+    │   │       │       │   │       │   │   └── StencilMirror
+    │   │       │       │   │       │   ├── Text3D
+    │   │       │       │   │       │   ├── Tutorials
+    │   │       │       │   │       │   │   ├── Tut01_CreateDevice
+    │   │       │       │   │       │   │   ├── Tut02_Vertices
+    │   │       │       │   │       │   │   ├── Tut03_Matrices
+    │   │       │       │   │       │   │   ├── Tut04_Lights
+    │   │       │       │   │       │   │   ├── Tut05_Textures
+    │   │       │       │   │       │   │   └── Tut06_Meshes
+    │   │       │       │   │       │   ├── VertexBlend
+    │   │       │       │   │       │   ├── VertexShader
+    │   │       │       │   │       │   ├── VolumeFog
+    │   │       │       │   │       │   ├── VolumeTexture
+    │   │       │       │   │       │   └── Water
+    │   │       │       │   │       ├── DirectDraw
+    │   │       │       │   │       │   ├── AnimatePalette
+    │   │       │       │   │       │   ├── DDEnum
+    │   │       │       │   │       │   ├── DirectSurfaceWrite
+    │   │       │       │   │       │   ├── FullScreenDialog
+    │   │       │       │   │       │   ├── FullScreenMode
+    │   │       │       │   │       │   ├── GammaControl
+    │   │       │       │   │       │   ├── Multimon
+    │   │       │       │   │       │   ├── OverlayAnimate
+    │   │       │       │   │       │   ├── RefreshRate
+    │   │       │       │   │       │   ├── SpriteAnimate
+    │   │       │       │   │       │   ├── SwitchScreenMode
+    │   │       │       │   │       │   └── WindowedMode
+    │   │       │       │   │       ├── DirectInput
+    │   │       │       │   │       │   ├── ActionMapper
+    │   │       │       │   │       │   ├── bin
+    │   │       │       │   │       │   ├── DIConfig
+    │   │       │       │   │       │   ├── FFConst
+    │   │       │       │   │       │   ├── JoyStick
+    │   │       │       │   │       │   ├── Keyboard
+    │   │       │       │   │       │   ├── Mouse
+    │   │       │       │   │       │   ├── MultiMapper
+    │   │       │       │   │       │   ├── ReadFFE
+    │   │       │       │   │       │   └── Scrawl
+    │   │       │       │   │       ├── DirectMusic
+    │   │       │       │   │       │   ├── 3DAudio
+    │   │       │       │   │       │   ├── AudioFX
+    │   │       │       │   │       │   ├── AudioPath
+    │   │       │       │   │       │   ├── AudioScripts
+    │   │       │       │   │       │   ├── MusicTool
+    │   │       │       │   │       │   ├── PlayAudio
+    │   │       │       │   │       │   ├── PlayMotif
+    │   │       │       │   │       │   └── Tutorials
+    │   │       │       │   │       │       ├── Tut1
+    │   │       │       │   │       │       └── Tut2
+    │   │       │       │   │       ├── DirectPlay
+    │   │       │       │   │       │   ├── AddressOverride
+    │   │       │       │   │       │   ├── ChatPeer
+    │   │       │       │   │       │   ├── DataRelay
+    │   │       │       │   │       │   ├── LobbyClient
+    │   │       │       │   │       │   ├── Maze
+    │   │       │       │   │       │   │   ├── MazeClient
+    │   │       │       │   │       │   │   ├── MazeCommon
+    │   │       │       │   │       │   │   ├── MazeConsoleClient
+    │   │       │       │   │       │   │   └── MazeServer
+    │   │       │       │   │       │   ├── SimpleClientServer
+    │   │       │       │   │       │   │   ├── Common
+    │   │       │       │   │       │   │   ├── SimpleClient
+    │   │       │       │   │       │   │   └── SimpleServer
+    │   │       │       │   │       │   ├── SimplePeer
+    │   │       │       │   │       │   ├── StagedPeer
+    │   │       │       │   │       │   ├── Tutorials
+    │   │       │       │   │       │   │   ├── Tut01_EnumSP
+    │   │       │       │   │       │   │   ├── Tut02_Host
+    │   │       │       │   │       │   │   ├── Tut03_EnumHosts
+    │   │       │       │   │       │   │   ├── Tut04_Connect
+    │   │       │       │   │       │   │   ├── Tut05_Send
+    │   │       │       │   │       │   │   ├── Tut06_HostMigration
+    │   │       │       │   │       │   │   ├── Tut07_LobbyLaunch
+    │   │       │       │   │       │   │   ├── Tut08_Voice
+    │   │       │       │   │       │   │   └── Tut09_ClientServer
+    │   │       │       │   │       │   │       ├── Client
+    │   │       │       │   │       │   │       └── Server
+    │   │       │       │   │       │   ├── VoiceClientServer
+    │   │       │       │   │       │   │   ├── Common
+    │   │       │       │   │       │   │   ├── VoiceClient
+    │   │       │       │   │       │   │   └── VoiceServer
+    │   │       │       │   │       │   ├── VoiceConnect
+    │   │       │       │   │       │   ├── VoiceGroup
+    │   │       │       │   │       │   └── VoicePosition
+    │   │       │       │   │       ├── DirectShow
+    │   │       │       │   │       │   ├── BaseClasses
+    │   │       │       │   │       │   ├── BDA
+    │   │       │       │   │       │   │   └── BDASample
+    │   │       │       │   │       │   ├── Capture
+    │   │       │       │   │       │   │   ├── AMCap
+    │   │       │       │   │       │   │   ├── AudioCap
+    │   │       │       │   │       │   │   │   └── Res
+    │   │       │       │   │       │   │   ├── DVApp
+    │   │       │       │   │       │   │   ├── PlayCap
+    │   │       │       │   │       │   │   └── PlayCapMoniker
+    │   │       │       │   │       │   ├── Common
+    │   │       │       │   │       │   ├── DMO
+    │   │       │       │   │       │   │   ├── DMODemo
+    │   │       │       │   │       │   │   ├── DMOSample
+    │   │       │       │   │       │   │   └── GargleDMO
+    │   │       │       │   │       │   │       ├── ControlBase
+    │   │       │       │   │       │   │       ├── DMOBase
+    │   │       │       │   │       │   │       └── MedParamBase
+    │   │       │       │   │       │   ├── DVD
+    │   │       │       │   │       │   │   └── DVDSample
+    │   │       │       │   │       │   ├── Editing
+    │   │       │       │   │       │   │   ├── SampGrabCB
+    │   │       │       │   │       │   │   ├── StillCap
+    │   │       │       │   │       │   │   │   └── res
+    │   │       │       │   │       │   │   ├── TimelineTest
+    │   │       │       │   │       │   │   └── XTLTest
+    │   │       │       │   │       │   ├── Filters
+    │   │       │       │   │       │   │   ├── Async
+    │   │       │       │   │       │   │   │   ├── Base
+    │   │       │       │   │       │   │   │   ├── Filter
+    │   │       │       │   │       │   │   │   ├── Include
+    │   │       │       │   │       │   │   │   └── Memfile
+    │   │       │       │   │       │   │   ├── Ball
+    │   │       │       │   │       │   │   ├── Contrast
+    │   │       │       │   │       │   │   ├── Dump
+    │   │       │       │   │       │   │   ├── EZRGB24
+    │   │       │       │   │       │   │   ├── Gargle
+    │   │       │       │   │       │   │   ├── grabber
+    │   │       │       │   │       │   │   ├── InfTee
+    │   │       │       │   │       │   │   ├── NullIP
+    │   │       │       │   │       │   │   ├── NullNull
+    │   │       │       │   │       │   │   ├── SampVid
+    │   │       │       │   │       │   │   ├── Scope
+    │   │       │       │   │       │   │   ├── Synth
+    │   │       │       │   │       │   │   ├── TextOut
+    │   │       │       │   │       │   │   └── WavDest
+    │   │       │       │   │       │   ├── Misc
+    │   │       │       │   │       │   │   ├── ASFCopy
+    │   │       │       │   │       │   │   ├── DMOEnum
+    │   │       │       │   │       │   │   │   └── Res
+    │   │       │       │   │       │   │   ├── Mapper
+    │   │       │       │   │       │   │   │   └── res
+    │   │       │       │   │       │   │   └── SysEnum
+    │   │       │       │   │       │   │       └── res
+    │   │       │       │   │       │   └── Players
+    │   │       │       │   │       │       ├── BGMusic
+    │   │       │       │   │       │       ├── CutScene
+    │   │       │       │   │       │       ├── DDrawXCL
+    │   │       │       │   │       │       ├── Jukebox
+    │   │       │       │   │       │       │   └── res
+    │   │       │       │   │       │       ├── JukeboxASF
+    │   │       │       │   │       │       │   └── res
+    │   │       │       │   │       │       ├── PlayDMO
+    │   │       │       │   │       │       │   └── res
+    │   │       │       │   │       │       ├── PlayWnd
+    │   │       │       │   │       │       ├── PlayWndASF
+    │   │       │       │   │       │       ├── StillView
+    │   │       │       │   │       │       │   └── res
+    │   │       │       │   │       │       └── Texture3D
+    │   │       │       │   │       ├── DirectShow_WinXP
+    │   │       │       │   │       │   ├── VideoControl
+    │   │       │       │   │       │   │   ├── CPP
+    │   │       │       │   │       │   │   ├── HTML
+    │   │       │       │   │       │   │   └── VisualBasic
+    │   │       │       │   │       │   └── VMR
+    │   │       │       │   │       │       ├── Cube
+    │   │       │       │   │       │       ├── Renderless
+    │   │       │       │   │       │       ├── TxtPlayer
+    │   │       │       │   │       │       ├── VMRMix
+    │   │       │       │   │       │       │   └── res
+    │   │       │       │   │       │       ├── VMRPlayer
+    │   │       │       │   │       │       └── VMRXcl
+    │   │       │       │   │       ├── DirectSound
+    │   │       │       │   │       │   ├── AdjustSound
+    │   │       │       │   │       │   ├── AmplitudeModulation
+    │   │       │       │   │       │   ├── CaptureSound
+    │   │       │       │   │       │   ├── EnumDevices
+    │   │       │       │   │       │   ├── FullDuplexFilter
+    │   │       │       │   │       │   ├── Play3DSound
+    │   │       │       │   │       │   ├── PlaySound
+    │   │       │       │   │       │   ├── SoundFX
+    │   │       │       │   │       │   ├── StreamData
+    │   │       │       │   │       │   └── VoiceManagement
+    │   │       │       │   │       ├── Media
+    │   │       │       │   │       ├── Misc
+    │   │       │       │   │       │   ├── DXErr
+    │   │       │       │   │       │   ├── DXinstall
+    │   │       │       │   │       │   └── GetDXVer
+    │   │       │       │   │       └── VBSamples
+    │   │       │       │   │           ├── Common
+    │   │       │       │   │           ├── Demos
+    │   │       │       │   │           │   ├── AirHockey
+    │   │       │       │   │           │   ├── bin
+    │   │       │       │   │           │   │   ├── Models
+    │   │       │       │   │           │   │   └── Sounds
+    │   │       │       │   │           │   └── ClubMet
+    │   │       │       │   │           ├── Direct3D
+    │   │       │       │   │           │   ├── AnimKeys
+    │   │       │       │   │           │   ├── AutoParts
+    │   │       │       │   │           │   ├── BarGraph
+    │   │       │       │   │           │   ├── Billboard
+    │   │       │       │   │           │   ├── Dolphin
+    │   │       │       │   │           │   ├── Donuts
+    │   │       │       │   │           │   ├── PixelShader
+    │   │       │       │   │           │   ├── PointSprites
+    │   │       │       │   │           │   ├── ScatterGraph
+    │   │       │       │   │           │   ├── SkinnedMesh
+    │   │       │       │   │           │   ├── Tutorials
+    │   │       │       │   │           │   │   ├── Tut01_CreateDevice
+    │   │       │       │   │           │   │   ├── Tut02_Vertices
+    │   │       │       │   │           │   │   ├── Tut03_Matrices
+    │   │       │       │   │           │   │   ├── Tut04_Lights
+    │   │       │       │   │           │   │   ├── Tut05_Textures
+    │   │       │       │   │           │   │   └── Tut06_Meshes
+    │   │       │       │   │           │   ├── VertexBlend
+    │   │       │       │   │           │   └── VertexShader
+    │   │       │       │   │           ├── DirectDraw
+    │   │       │       │   │           │   └── Tutorials
+    │   │       │       │   │           │       ├── Tut1
+    │   │       │       │   │           │       ├── Tut2
+    │   │       │       │   │           │       ├── Tut3
+    │   │       │       │   │           │       ├── Tut4
+    │   │       │       │   │           │       └── Tut5
+    │   │       │       │   │           ├── DirectInput
+    │   │       │       │   │           │   ├── ActionMapper
+    │   │       │       │   │           │   ├── Feedback
+    │   │       │       │   │           │   ├── Joystick
+    │   │       │       │   │           │   ├── Keyboard
+    │   │       │       │   │           │   └── Scrawl
+    │   │       │       │   │           ├── DirectMusic
+    │   │       │       │   │           │   ├── AudioEffects
+    │   │       │       │   │           │   ├── AudioPath
+    │   │       │       │   │           │   ├── DLSEffects
+    │   │       │       │   │           │   ├── DMDrums
+    │   │       │       │   │           │   ├── PlayAudio
+    │   │       │       │   │           │   ├── PlayMotif
+    │   │       │       │   │           │   ├── SimpleAudioPath
+    │   │       │       │   │           │   └── Tutorials
+    │   │       │       │   │           │       ├── Tut1
+    │   │       │       │   │           │       └── Tut2
+    │   │       │       │   │           ├── DirectPlay
+    │   │       │       │   │           │   ├── Chat
+    │   │       │       │   │           │   ├── Conferencer
+    │   │       │       │   │           │   ├── DataRelay
+    │   │       │       │   │           │   ├── DXVBMessenger
+    │   │       │       │   │           │   │   ├── Client
+    │   │       │       │   │           │   │   └── Server
+    │   │       │       │   │           │   ├── Memory
+    │   │       │       │   │           │   ├── SimpleClient
+    │   │       │       │   │           │   ├── SimplePeer
+    │   │       │       │   │           │   ├── SimpleServer
+    │   │       │       │   │           │   ├── SimpleVoice
+    │   │       │       │   │           │   ├── StagedPeer
+    │   │       │       │   │           │   └── VoiceGroup
+    │   │       │       │   │           ├── DirectShow
+    │   │       │       │   │           │   ├── Builder
+    │   │       │       │   │           │   ├── Editing
+    │   │       │       │   │           │   │   ├── DexterVB
+    │   │       │       │   │           │   │   │   └── resources
+    │   │       │       │   │           │   │   │       ├── bmp
+    │   │       │       │   │           │   │   │       │   ├── ctl
+    │   │       │       │   │           │   │   │       │   └── ops
+    │   │       │       │   │           │   │   │       ├── doc
+    │   │       │       │   │           │   │   │       └── ico
+    │   │       │       │   │           │   │   ├── DShowVBLib
+    │   │       │       │   │           │   │   ├── SlideShowVB
+    │   │       │       │   │           │   │   │   └── resources
+    │   │       │       │   │           │   │   │       ├── bmp
+    │   │       │       │   │           │   │   │       ├── doc
+    │   │       │       │   │           │   │   │       ├── ico
+    │   │       │       │   │           │   │   │       └── txt
+    │   │       │       │   │           │   │   ├── TrimmerVB
+    │   │       │       │   │           │   │   │   └── resources
+    │   │       │       │   │           │   │   │       ├── ico
+    │   │       │       │   │           │   │   │       └── txt
+    │   │       │       │   │           │   │   └── XTLTestVB
+    │   │       │       │   │           │   │       └── resources
+    │   │       │       │   │           │   │           ├── ico
+    │   │       │       │   │           │   │           └── txt
+    │   │       │       │   │           │   ├── VBDemo
+    │   │       │       │   │           │   └── WebDVD
+    │   │       │       │   │           ├── DirectSound
+    │   │       │       │   │           │   ├── AdjustSound
+    │   │       │       │   │           │   ├── DeferredEffects
+    │   │       │       │   │           │   ├── EffectsBuffers
+    │   │       │       │   │           │   ├── EnumDevice
+    │   │       │       │   │           │   ├── Play3DSound
+    │   │       │       │   │           │   └── Tutorials
+    │   │       │       │   │           │       └── Tut1
+    │   │       │       │   │           ├── Media
+    │   │       │       │   │           └── Misc
+    │   │       │       │   │               ├── DXSetup
+    │   │       │       │   │               ├── PowerManagement
+    │   │       │       │   │               └── SubClass
+    │   │       │       │   └── SDKDev
+    │   │       │       │       ├── debug
+    │   │       │       │       ├── retail
+    │   │       │       │       └── Windows XP
+    │   │       │       └── System32
+    │   │       └── sparsehash
+    │   │           └── internal
+    │   └── Compiler
+    │       ├── Projects
+    │       │   ├── BXGX
+    │       │   ├── BXGX.App
+    │       │   └── BXGX.ThirdParty
+    │       └── Solutions
+    │           └── BXGX
+    ├── IMGF
+    │   ├── Code
+    │   │   ├── IMGF
+    │   │   │   ├── DragDrop
+    │   │   │   ├── Event
+    │   │   │   ├── Format
+    │   │   │   │   ├── DB
+    │   │   │   │   └── LST
+    │   │   │   ├── GUI
+    │   │   │   │   ├── Editor
+    │   │   │   │   │   ├── Base
+    │   │   │   │   │   │   └── Tab
+    │   │   │   │   │   ├── Components
+    │   │   │   │   │   └── Editors
+    │   │   │   │   │       ├── Entry
+    │   │   │   │   │       └── Tab
+    │   │   │   │   ├── Input
+    │   │   │   │   ├── Layer
+    │   │   │   │   │   └── Layers
+    │   │   │   │   │       ├── AboutWindow
+    │   │   │   │   │       ├── DATPathsMoverWindow
+    │   │   │   │   │       ├── DumpWindow
+    │   │   │   │   │       ├── FormatsWindow
+    │   │   │   │   │       ├── IDEInputWindow
+    │   │   │   │   │       ├── IPLInputWindow
+    │   │   │   │   │       ├── MainLayer
+    │   │   │   │   │       ├── MainMenu
+    │   │   │   │   │       ├── MapMoverAndIDShifterWindow
+    │   │   │   │   │       ├── RenamerWindow
+    │   │   │   │   │       ├── SessionManagerWindow
+    │   │   │   │   │       ├── SettingsWindow
+    │   │   │   │   │       ├── TXDBuilderWindow
+    │   │   │   │   │       ├── TXDOrganizerWindow
+    │   │   │   │   │       └── WebsitesWindow
+    │   │   │   │   └── Window
+    │   │   │   │       └── Windows
+    │   │   │   │           └── MainWindow
+    │   │   │   ├── Language
+    │   │   │   ├── Program
+    │   │   │   ├── Settings
+    │   │   │   ├── Static
+    │   │   │   ├── Task
+    │   │   │   │   ├── Base
+    │   │   │   │   ├── Duration
+    │   │   │   │   ├── Repeat
+    │   │   │   │   └── Tasks
+    │   │   │   │       ├── Dump
+    │   │   │   │       ├── FileGroups
+    │   │   │   │       ├── Filter
+    │   │   │   │       ├── Find
+    │   │   │   │       ├── LST
+    │   │   │   │       ├── RecentlyOpen
+    │   │   │   │       ├── Renamer
+    │   │   │   │       └── Sort
+    │   │   │   └── Updater
+    │   │   ├── IMGF.BuildVersion
+    │   │   ├── IMGF.Installer
+    │   │   │   └── Installer
+    │   │   └── IMGF.ThirdParty
+    │   │       ├── Bitmap
+    │   │       ├── DXSDK
+    │   │       │   └── DXF
+    │   │       │       └── DXSDK
+    │   │       │           ├── include
+    │   │       │           └── samples
+    │   │       │               └── Multimedia
+    │   │       │                   ├── Common
+    │   │       │                   │   └── include
+    │   │       │                   ├── Demos
+    │   │       │                   │   ├── DMBoids
+    │   │       │                   │   ├── Donuts3D
+    │   │       │                   │   ├── Duel
+    │   │       │                   │   └── DuelVoice
+    │   │       │                   ├── Direct3D
+    │   │       │                   │   ├── Billboard
+    │   │       │                   │   ├── BumpMapping
+    │   │       │                   │   │   ├── BumpEarth
+    │   │       │                   │   │   ├── BumpLens
+    │   │       │                   │   │   ├── BumpSelfShadow
+    │   │       │                   │   │   ├── BumpUnderwater
+    │   │       │                   │   │   ├── BumpWaves
+    │   │       │                   │   │   ├── DotProduct3
+    │   │       │                   │   │   └── Emboss
+    │   │       │                   │   ├── ClipMirror
+    │   │       │                   │   ├── Cull
+    │   │       │                   │   ├── DolphinVS
+    │   │       │                   │   ├── DXTex
+    │   │       │                   │   ├── EnhancedMesh
+    │   │       │                   │   ├── EnvMapping
+    │   │       │                   │   │   ├── CubeMap
+    │   │       │                   │   │   ├── FishEye
+    │   │       │                   │   │   └── SphereMap
+    │   │       │                   │   ├── Lighting
+    │   │       │                   │   ├── MFCFog
+    │   │       │                   │   ├── MFCPixelShader
+    │   │       │                   │   ├── MFCTex
+    │   │       │                   │   ├── OptimizedMesh
+    │   │       │                   │   ├── Pick
+    │   │       │                   │   ├── PointSprites
+    │   │       │                   │   ├── ProgressiveMesh
+    │   │       │                   │   ├── RTPatch
+    │   │       │                   │   ├── Screensavers
+    │   │       │                   │   │   └── Moire
+    │   │       │                   │   ├── SkinnedMesh
+    │   │       │                   │   ├── StencilBuffer
+    │   │       │                   │   │   ├── ShadowVolume
+    │   │       │                   │   │   ├── StencilDepth
+    │   │       │                   │   │   └── StencilMirror
+    │   │       │                   │   ├── Text3D
+    │   │       │                   │   ├── VertexBlend
+    │   │       │                   │   ├── VertexShader
+    │   │       │                   │   ├── VolumeFog
+    │   │       │                   │   ├── VolumeTexture
+    │   │       │                   │   └── Water
+    │   │       │                   ├── DirectDraw
+    │   │       │                   │   ├── AnimatePalette
+    │   │       │                   │   ├── DDEnum
+    │   │       │                   │   ├── DirectSurfaceWrite
+    │   │       │                   │   ├── FullScreenDialog
+    │   │       │                   │   ├── FullScreenMode
+    │   │       │                   │   ├── GammaControl
+    │   │       │                   │   ├── Multimon
+    │   │       │                   │   ├── OverlayAnimate
+    │   │       │                   │   ├── RefreshRate
+    │   │       │                   │   ├── SpriteAnimate
+    │   │       │                   │   ├── SwitchScreenMode
+    │   │       │                   │   └── WindowedMode
+    │   │       │                   ├── DirectInput
+    │   │       │                   │   ├── ActionMapper
+    │   │       │                   │   ├── DIConfig
+    │   │       │                   │   ├── FFConst
+    │   │       │                   │   ├── JoyStick
+    │   │       │                   │   ├── Keyboard
+    │   │       │                   │   ├── Mouse
+    │   │       │                   │   ├── MultiMapper
+    │   │       │                   │   ├── ReadFFE
+    │   │       │                   │   └── Scrawl
+    │   │       │                   ├── DirectMusic
+    │   │       │                   │   ├── 3DAudio
+    │   │       │                   │   ├── AudioFX
+    │   │       │                   │   ├── AudioPath
+    │   │       │                   │   ├── AudioScripts
+    │   │       │                   │   ├── MusicTool
+    │   │       │                   │   ├── PlayAudio
+    │   │       │                   │   └── PlayMotif
+    │   │       │                   ├── DirectPlay
+    │   │       │                   │   ├── AddressOverride
+    │   │       │                   │   ├── ChatPeer
+    │   │       │                   │   ├── DataRelay
+    │   │       │                   │   ├── LobbyClient
+    │   │       │                   │   ├── Maze
+    │   │       │                   │   │   ├── MazeClient
+    │   │       │                   │   │   ├── MazeCommon
+    │   │       │                   │   │   ├── MazeConsoleClient
+    │   │       │                   │   │   └── MazeServer
+    │   │       │                   │   ├── SimpleClientServer
+    │   │       │                   │   │   ├── Common
+    │   │       │                   │   │   ├── SimpleClient
+    │   │       │                   │   │   └── SimpleServer
+    │   │       │                   │   ├── SimplePeer
+    │   │       │                   │   ├── StagedPeer
+    │   │       │                   │   ├── VoiceClientServer
+    │   │       │                   │   │   ├── Common
+    │   │       │                   │   │   ├── VoiceClient
+    │   │       │                   │   │   └── VoiceServer
+    │   │       │                   │   ├── VoiceConnect
+    │   │       │                   │   ├── VoiceGroup
+    │   │       │                   │   └── VoicePosition
+    │   │       │                   ├── DirectShow
+    │   │       │                   │   ├── BaseClasses
+    │   │       │                   │   ├── BDA
+    │   │       │                   │   │   └── BDASample
+    │   │       │                   │   ├── Capture
+    │   │       │                   │   │   ├── AMCap
+    │   │       │                   │   │   ├── AudioCap
+    │   │       │                   │   │   ├── DVApp
+    │   │       │                   │   │   ├── PlayCap
+    │   │       │                   │   │   └── PlayCapMoniker
+    │   │       │                   │   ├── Common
+    │   │       │                   │   ├── DMO
+    │   │       │                   │   │   ├── DMODemo
+    │   │       │                   │   │   ├── DMOSample
+    │   │       │                   │   │   └── GargleDMO
+    │   │       │                   │   │       ├── ControlBase
+    │   │       │                   │   │       ├── DMOBase
+    │   │       │                   │   │       └── MedParamBase
+    │   │       │                   │   ├── DVD
+    │   │       │                   │   │   └── DVDSample
+    │   │       │                   │   ├── Editing
+    │   │       │                   │   │   ├── SampGrabCB
+    │   │       │                   │   │   ├── StillCap
+    │   │       │                   │   │   └── TimelineTest
+    │   │       │                   │   ├── Filters
+    │   │       │                   │   │   ├── Async
+    │   │       │                   │   │   │   ├── Filter
+    │   │       │                   │   │   │   ├── Include
+    │   │       │                   │   │   │   └── Memfile
+    │   │       │                   │   │   ├── Ball
+    │   │       │                   │   │   ├── Contrast
+    │   │       │                   │   │   ├── Dump
+    │   │       │                   │   │   ├── EZRGB24
+    │   │       │                   │   │   ├── Gargle
+    │   │       │                   │   │   ├── grabber
+    │   │       │                   │   │   ├── InfTee
+    │   │       │                   │   │   ├── NullIP
+    │   │       │                   │   │   ├── SampVid
+    │   │       │                   │   │   ├── Scope
+    │   │       │                   │   │   ├── Synth
+    │   │       │                   │   │   ├── TextOut
+    │   │       │                   │   │   └── WavDest
+    │   │       │                   │   ├── Misc
+    │   │       │                   │   │   ├── ASFCopy
+    │   │       │                   │   │   ├── DMOEnum
+    │   │       │                   │   │   ├── Mapper
+    │   │       │                   │   │   └── SysEnum
+    │   │       │                   │   └── Players
+    │   │       │                   │       ├── BGMusic
+    │   │       │                   │       ├── CutScene
+    │   │       │                   │       ├── DDrawXCL
+    │   │       │                   │       ├── Jukebox
+    │   │       │                   │       ├── JukeboxASF
+    │   │       │                   │       ├── PlayDMO
+    │   │       │                   │       ├── PlayWnd
+    │   │       │                   │       ├── PlayWndASF
+    │   │       │                   │       ├── StillView
+    │   │       │                   │       └── Texture3D
+    │   │       │                   ├── DirectShow_WinXP
+    │   │       │                   │   ├── VideoControl
+    │   │       │                   │   │   └── CPP
+    │   │       │                   │   └── VMR
+    │   │       │                   │       ├── Cube
+    │   │       │                   │       ├── Renderless
+    │   │       │                   │       ├── TxtPlayer
+    │   │       │                   │       ├── VMRMix
+    │   │       │                   │       ├── VMRPlayer
+    │   │       │                   │       └── VMRXcl
+    │   │       │                   ├── DirectSound
+    │   │       │                   │   ├── AdjustSound
+    │   │       │                   │   ├── AmplitudeModulation
+    │   │       │                   │   ├── CaptureSound
+    │   │       │                   │   ├── EnumDevices
+    │   │       │                   │   ├── FullDuplexFilter
+    │   │       │                   │   ├── Play3DSound
+    │   │       │                   │   ├── PlaySound
+    │   │       │                   │   ├── SoundFX
+    │   │       │                   │   ├── StreamData
+    │   │       │                   │   └── VoiceManagement
+    │   │       │                   ├── Misc
+    │   │       │                   │   ├── DXErr
+    │   │       │                   │   └── DXinstall
+    │   │       │                   └── VBSamples
+    │   │       │                       └── Misc
+    │   │       │                           └── DXSetup
+    │   │       ├── Freeglut
+    │   │       │   └── include
+    │   │       │       └── GL
+    │   │       ├── Freetype
+    │   │       │   ├── devel
+    │   │       │   ├── include
+    │   │       │   │   └── freetype
+    │   │       │   │       ├── config
+    │   │       │   │       └── internal
+    │   │       │   │           └── services
+    │   │       │   └── src
+    │   │       │       ├── autofit
+    │   │       │       ├── base
+    │   │       │       ├── bdf
+    │   │       │       ├── bzip2
+    │   │       │       ├── cache
+    │   │       │       ├── cff
+    │   │       │       ├── cid
+    │   │       │       ├── gxvalid
+    │   │       │       ├── gzip
+    │   │       │       ├── lzw
+    │   │       │       ├── otvalid
+    │   │       │       ├── pcf
+    │   │       │       ├── pfr
+    │   │       │       ├── psaux
+    │   │       │       ├── pshinter
+    │   │       │       ├── psnames
+    │   │       │       ├── raster
+    │   │       │       ├── sfnt
+    │   │       │       ├── smooth
+    │   │       │       ├── tools
+    │   │       │       │   ├── docmaker
+    │   │       │       │   └── ftrandom
+    │   │       │       ├── truetype
+    │   │       │       ├── type1
+    │   │       │       ├── type42
+    │   │       │       └── winfonts
+    │   │       ├── freetype-gl
+    │   │       │   ├── CMakeModules
+    │   │       │   ├── data
+    │   │       │   ├── demos
+    │   │       │   ├── doc
+    │   │       │   │   └── images
+    │   │       │   ├── fonts
+    │   │       │   ├── harfbuzz
+    │   │       │   ├── shaders
+    │   │       │   └── windows
+    │   │       │       ├── AntTweakBar
+    │   │       │       │   ├── include
+    │   │       │       │   └── lib
+    │   │       │       ├── freetype
+    │   │       │       │   └── freetype
+    │   │       │       │       ├── config
+    │   │       │       │       └── internal
+    │   │       │       │           └── services
+    │   │       │       ├── glew
+    │   │       │       │   ├── doc
+    │   │       │       │   └── include
+    │   │       │       │       └── GL
+    │   │       │       └── include
+    │   │       ├── GLEW
+    │   │       │   └── GL
+    │   │       ├── GLFW
+    │   │       │   ├── deps
+    │   │       │   │   ├── EGL
+    │   │       │   │   ├── GL
+    │   │       │   │   ├── glad
+    │   │       │   │   └── KHR
+    │   │       │   ├── include
+    │   │       │   │   └── GLFW
+    │   │       │   └── src
+    │   │       └── GLM
+    │   │           ├── detail
+    │   │           ├── gtc
+    │   │           └── gtx
+    │   ├── Compiler
+    │   │   ├── Projects
+    │   │   │   ├── IMGF
+    │   │   │   │   └── Internal2
+    │   │   │   │       ├── BXS
+    │   │   │   │       ├── Debug
+    │   │   │   │       └── Images
+    │   │   │   ├── IMGF.BuildVersion
+    │   │   │   ├── IMGF.Installer
+    │   │   │   └── IMGF.ThirdParty
+    │   │   └── Solutions
+    │   │       ├── IMGF
+    │   │       │   └── Debug
+    │   │       ├── IMGF.BuildVersion
+    │   │       └── IMGF.ThirdParty
+    │   └── Resources
+    ├── IMGF Installer Files
+    │   ├── DefaultFiles
+    │   │   └── ModelNames
+    │   ├── Images
+    │   ├── Program
+    │   ├── Settings
+    │   └── Styles
+    ├── Input
+    │   ├── d3d8.lib
+    │   ├── d3dx8.lib
+    │   ├── freeglut.lib
+    │   ├── freetype261-debug.lib
+    │   ├── freetype261-release.lib
+    │   ├── libci.lib
+    │   └── libc.lib
+    └── Output
+        └── Intermediate
+            ├── BXCF
+            │   ├── BXCF
+            │   │   └── Debug.Win32
+            │   │       ├── BXCF.log
+            │   │       └── BXCF.tlog
+            │   │           ├── BXCF.lastbuildstate
+            │   │           └── Lib-link.write.1.tlog
+            │   ├── BXCF.App
+            │   │   └── Debug.Win32
+            │   │       ├── BXCF.App.log
+            │   │       └── BXCF.App.tlog
+            │   │           ├── BXCF.App.lastbuildstate
+            │   │           ├── CL.command.1.tlog
+            │   │           ├── CL.write.1.tlog
+            │   │           ├── link.command.1.tlog
+            │   │           ├── link.read.1.tlog
+            │   │           └── link.write.1.tlog
+            │   └── BXCF.ThirdParty
+            │       └── Debug.Win32
+            │           ├── adler32.obj
+            │           ├── BXCF.ThirdParty.log
+            │           ├── BXCF.ThirdParty.tlog
+            │           │   └── BXCF.ThirdParty.lastbuildstate
+            │           ├── compress.obj
+            │           ├── gzclose.obj
+            │           ├── inffast.obj
+            │           ├── inftrees.obj
+            │           ├── lzo1b_1.obj
+            │           ├── lzo1b_2.obj
+            │           ├── lzo1b_cc.obj
+            │           ├── lzo1b_d1.obj
+            │           ├── lzo1b_d2.obj
+            │           ├── lzo1b_rr.obj
+            │           ├── lzo1b_xx.obj
+            │           ├── lzo1c_1.obj
+            │           ├── lzo1c_2.obj
+            │           ├── lzo1c_cc.obj
+            │           ├── lzo1c_d1.obj
+            │           ├── lzo1c_d2.obj
+            │           ├── lzo1c_rr.obj
+            │           ├── lzo1c_xx.obj
+            │           ├── lzo1f_1.obj
+            │           ├── lzo1f_d1.obj
+            │           ├── lzo1f_d2.obj
+            │           ├── lzo1x_d1.obj
+            │           ├── lzo1x_d2.obj
+            │           ├── lzo1x_d3.obj
+            │           ├── lzo1y_d1.obj
+            │           ├── lzo1y_d2.obj
+            │           ├── lzo1y_d3.obj
+            │           ├── lzo1z_d1.obj
+            │           ├── lzo1z_d2.obj
+            │           ├── lzo1z_d3.obj
+            │           ├── lzo2a_d1.obj
+            │           ├── lzo2a_d2.obj
+            │           ├── lzo_crc.obj
+            │           ├── lzo_ptr.obj
+            │           ├── lzo_str.obj
+            │           ├── lzo_util.obj
+            │           ├── uncompr.obj
+            │           └── zutil.obj
+            ├── BXGI
+            │   └── BXGI
+            │       └── Debug.Win32
+            │           ├── BXGI.log
+            │           ├── BXGI.tlog
+            │           │   └── BXGI.lastbuildstate
+            │           └── RWSectionDepthData.obj
+            ├── BXGX
+            │   ├── BXGX
+            │   │   └── Debug.Win32
+            │   │       ├── BXGX.log
+            │   │       ├── BXGX.tlog
+            │   │       │   └── BXGX.lastbuildstate
+            │   │       └── nsbxgx.obj
+            │   ├── BXGX.App
+            │   │   └── Debug.Win32
+            │   │       ├── BXGX.App.log
+            │   │       └── BXGX.App.tlog
+            │   │           ├── BXGX.App.lastbuildstate
+            │   │           ├── CL.command.1.tlog
+            │   │           ├── CL.write.1.tlog
+            │   │           ├── link.command.1.tlog
+            │   │           ├── link.read.1.tlog
+            │   │           └── link.write.1.tlog
+            │   └── BXGX.ThirdParty
+            │       └── Debug.Win32
+            │           ├── BXGX.ThirdParty.log
+            │           └── BXGX.ThirdParty.tlog
+            │               ├── BXGX.ThirdParty.lastbuildstate
+            │               ├── CL.command.1.tlog
+            │               ├── CL.write.1.tlog
+            │               ├── Lib.command.1.tlog
+            │               ├── Lib-link.read.1.tlog
+            │               └── Lib-link.write.1.tlog
+            └── IMGF
+                ├── IMGF
+                │   └── Debug.Win32
+                │       └── IMGF.tlog
+                │           ├── IMGF.lastbuildstate
+                │           ├── rc.command.1.tlog
+                │           ├── rc.read.1.tlog
+                │           └── rc.write.1.tlog
+                ├── IMGF.BuildVersion
+                │   └── Debug.Win32
+                │       ├── IMGF.Bui.6FBD84F0.tlog
+                │       │   ├── CL.command.1.tlog
+                │       │   ├── CL.write.1.tlog
+                │       │   ├── IMGF.BuildVersion.lastbuildstate
+                │       │   ├── link.command.1.tlog
+                │       │   ├── link.read.1.tlog
+                │       │   └── link.write.1.tlog
+                │       └── IMGF.BuildVersion.log
+                ├── IMGF.Installer
+                │   └── Debug.Win32
+                │       ├── IMGF.Installer.log
+                │       └── IMGF.Installer.tlog
+                │           ├── CL.command.1.tlog
+                │           ├── CL.write.1.tlog
+                │           ├── IMGF.Installer.lastbuildstate
+                │           ├── link.command.1.tlog
+                │           ├── link.read.1.tlog
+                │           ├── link.write.1.tlog
+                │           ├── rc.command.1.tlog
+                │           ├── rc.read.1.tlog
+                │           └── rc.write.1.tlog
+                └── IMGF.ThirdParty
+                    └── Debug.Win32
+                        ├── IMGF.ThirdParty.tlog
+                        │   ├── IMGF.ThirdParty.lastbuildstate
+                        │   ├── Lib.command.1.tlog
+                        │   ├── Lib-link.read.1.tlog
+                        │   └── Lib-link.write.1.tlog
+                        └── platform.obj
+
+943 directories, 144 files
