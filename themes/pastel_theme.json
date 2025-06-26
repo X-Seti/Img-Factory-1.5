@@ -1,0 +1,160 @@
+#this belongs in root /pastel_theme.json
+
+{
+    "name": "Pastel Button Theme",
+    "description": "X-Seti - June05, 2025 - Light Pastel Button Theme Template for IMG Factory - Creates soft, modern button styling with action-type specific colors",
+    "category": "🎨 Pastel",
+    "author": "X-Seti",
+    "version": "1.5",
+    "colors": {
+        "bg_primary": "#ffffff",
+        "bg_secondary": "#f8f9fa",
+        "bg_tertiary": "#e9ecef",
+        "panel_bg": "#f1f3f4",
+        "accent_primary": "#1976d2",
+        "accent_secondary": "#1565c0",
+        "text_primary": "#212529",
+        "text_secondary": "#495057",
+        "text_accent": "#1976d2",
+        "border": "#dee2e6",
+        "success": "#4caf50",
+        "warning": "#ff9800",
+        "error": "#f44336",
+        "grid": "#f0f0f0",
+        "pin_default": "#757575",
+        "pin_highlight": "#2196f3",
+        "panel_entries": "#e8f5e8",
+        "panel_filter": "#fff3e0",
+        "toolbar_bg": "#fafafa",
+        
+        "button_normal": "#F5F5F5",
+        "button_hover": "#EEEEEE",
+        "button_pressed": "#E0E0E0",
+        "button_border": "#9E9E9E",
+        "button_text": "#424242",
+        "button_disabled": "#FAFAFA",
+        "button_disabled_border": "#E0E0E0",
+        "button_disabled_text": "#BDBDBD",
+        
+        "action_import": "#E3F2FD",
+        "action_import_hover": "#BBDEFB",
+        "action_import_pressed": "#90CAF9",
+        "action_import_border": "#2196F3",
+        "action_import_text": "#1565C0",
+        
+        "action_export": "#E8F5E8",
+        "action_export_hover": "#C8E6C9",
+        "action_export_pressed": "#A5D6A7",
+        "action_export_border": "#4CAF50",
+        "action_export_text": "#2E7D32",
+        
+        "action_remove": "#FFEBEE",
+        "action_remove_hover": "#FFCDD2",
+        "action_remove_pressed": "#EF9A9A",
+        "action_remove_border": "#F44336",
+        "action_remove_text": "#C62828",
+        
+        "action_update": "#FFF3E0",
+        "action_update_hover": "#FFE0B2",
+        "action_update_pressed": "#FFCC02",
+        "action_update_border": "#FF9800",
+        "action_update_text": "#E65100",
+        
+        "action_convert": "#F3E5F5",
+        "action_convert_hover": "#E1BEE7",
+        "action_convert_pressed": "#CE93D8",
+        "action_convert_border": "#9C27B0",
+        "action_convert_text": "#6A1B9A"
+    },
+    "styles": {
+        "base_button": {
+            "background_color": "button_normal",
+            "border": "2px solid button_border",
+            "border_radius": "8px",
+            "padding": "8px 16px",
+            "color": "button_text",
+            "font_weight": "bold",
+            "min_height": "24px",
+            "min_width": "80px",
+            "text_align": "center"
+        },
+        "button_hover": {
+            "background_color": "button_hover",
+            "border_color": "#757575",
+            "transform": "translateY(-1px)"
+        },
+        "button_pressed": {
+            "background_color": "button_pressed",
+            "border_color": "#616161",
+            "transform": "translateY(1px)"
+        },
+        "button_disabled": {
+            "background_color": "button_disabled",
+            "border_color": "button_disabled_border",
+            "color": "button_disabled_text"
+        },
+        "grouped_buttons": {
+            "margin": "2px",
+            "font_size": "9pt"
+        },
+        "large_action_buttons": {
+            "font_size": "10pt",
+            "font_weight": "bold",
+            "min_height": "32px",
+            "padding": "10px 20px"
+        },
+        "icon_buttons": {
+            "min_width": "40px",
+            "max_width": "40px",
+            "padding": "8px"
+        },
+        "toolbar_buttons": {
+            "border_radius": "6px",
+            "font_size": "9pt",
+            "padding": "6px 12px",
+            "min_height": "28px"
+        },
+        "filter_buttons": {
+            "min_width": "32px",
+            "max_width": "40px",
+            "border_radius": "4px"
+        }
+    },
+    "action_types": {
+        "import": {
+            "normal": "action_import",
+            "hover": "action_import_hover",
+            "pressed": "action_import_pressed",
+            "border": "action_import_border",
+            "text": "action_import_text"
+        },
+        "export": {
+            "normal": "action_export",
+            "hover": "action_export_hover",
+            "pressed": "action_export_pressed",
+            "border": "action_export_border",
+            "text": "action_export_text"
+        },
+        "remove": {
+            "normal": "action_remove",
+            "hover": "action_remove_hover",
+            "pressed": "action_remove_pressed",
+            "border": "action_remove_border",
+            "text": "action_remove_text"
+        },
+        "update": {
+            "normal": "action_update",
+            "hover": "action_update_hover",
+            "pressed": "action_update_pressed",
+            "border": "action_update_border",
+            "text": "action_update_text"
+        },
+        "convert": {
+            "normal": "action_convert",
+            "hover": "action_convert_hover",
+            "pressed": "action_convert_pressed",
+            "border": "action_convert_border",
+            "text": "action_convert_text"
+        }
+    }
+}

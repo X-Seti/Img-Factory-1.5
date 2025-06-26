@@ -21,25 +21,14 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer, QSettings
 from PyQt6.QtGui import QAction, QFont, QIcon, QPixmap
 
-# Import components
-try:
-    from components.img_core_classes import IMGFile, IMGEntry, IMGVersion, format_file_size
-    from components.img_creator import NewIMGDialog
-    from components.img_templates import IMGTemplateManager, TemplateManagerDialog
-    from components.img_manager import IMGFile, IMGVersion, Platform
-    from components.img_validator import IMGValidator
-    from app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
-    print("Components imported successfully")
-    try:
-        from gui.pastel_button_theme import apply_pastel_theme_to_buttons
-        print("Pastel Theme imported successfully")
-    except ImportError:
-        print("Pastel theme not available")
-except ImportError as e:
-    print(f"Failed to import components: {e}")
-    print("Make sure all component files are in the components/ directory")
-    sys.exit(1)
-
+# Import component
+from components.img_core_classes import IMGFile, IMGEntry, IMGVersion, format_file_size
+from components.img_creator import NewIMGDialog
+from components.img_templates import IMGTemplateManager, TemplateManagerDialog
+from components.img_manager import IMGFile, IMGVersion, Platform
+from components.img_validator import IMGValidator
+from app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
+print("Components imported successfully")
 
 class IMGLoadThread(QThread):
     """Background thread for loading IMG files"""
@@ -1320,12 +1309,7 @@ def main():
     window.show()
     
     # Apply any additional themes
-    try:
-        if hasattr(settings, 'current_settings'):
-            apply_pastel_theme_to_buttons(app, settings)
-    except Exception as e:
-        print(f"Pastel theme not available: {e}")
-    
+
     return app.exec()
 
 
