@@ -1,5 +1,5 @@
 {
-  "theme": "IMG_Factory",
+  "theme": "steve_m_col_editor",
   "font_family": "Segoe UI",
   "font_size": 9,
   "font_weight": "normal",
@@ -13,6 +13,16 @@
   "panel_opacity": 95,
   "show_tooltips": true,
   "auto_save": true,
+  "show_menu_icons": true,
+  "show_button_icons": true,
+  "show_emoji_in_buttons": false,
+  "custom_button_colors": false,
+  "button_import_color": "#2196f3",
+  "button_export_color": "#4caf50",
+  "button_remove_color": "#f44336",
+  "button_update_color": "#ff9800",
+  "button_convert_color": "#9c27b0",
+  "button_default_color": "#0078d4",
   "grid_size": 5,
   "snap_to_grid": true,
   "show_grid": true,
@@ -26,12 +36,5 @@
   "voice_commands": false,
   "animations": true,
   "sound_effects": false,
-  "lcars_sounds": true,
-  "custom_button_colors": false,
-  "button_import_color": "#2196f3",
-  "button_export_color": "#4caf50",
-  "button_remove_color": "#f44336",
-  "button_update_color": "#ff9800",
-  "button_convert_color": "#9c27b0",
-  "button_default_color": "#0078d4"
+  "lcars_sounds": true
 }
