@@ -826,13 +826,21 @@ class IMGFactory(QMainWindow):
     
     # File Operations
     def create_new_img(self):
-        """Create a new IMG file"""
+        """Show new IMG creation dialog"""
         try:
-            dialog = NewIMGDialog(self)
-            if dialog.exec() == dialog.DialogCode.Accepted:
-                self.log_message("New IMG creation dialog completed")
+            img_debugger.debug("Starting IMG creation dialog")
+            dialog = NewIMGDialog(self, self.app_settings)  # Pass settings here
+
+            # Debug the dialog
+            debug_img_creation_process(dialog)
+
+            dialog.img_created.connect(self.load_img_file)
+            dialog.img_created.connect(lambda path: self.log_message(f"Created: {os.path.basename(path)}"))
+            dialog.exec()
+
         except Exception as e:
-            self.log_message(f"Error creating new IMG: {e}")
+            img_debugger.trace_exception(e)
+            raise
     
     def open_img_file(self):
         """Open an IMG file"""

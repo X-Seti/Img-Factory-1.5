@@ -221,21 +221,76 @@ class IMGCreationThread(QThread):
 
 
 class NewIMGDialog(QDialog):
-    """Enhanced dialog for creating new IMG files"""
-    
-    img_created = pyqtSignal(str)  # Emits path of created IMG file
-    
-    def __init__(self, parent=None):
+    img_created = pyqtSignal(str)
+
+    def __init__(self, parent=None, app_settings=None):
         super().__init__(parent)
+        self.app_settings = app_settings  # Pass settings from main app
+        self.template_manager = None
+        self.selected_game = 'gtasa'  # Default
+
         self.setWindowTitle("Create New IMG Archive")
-        self.setMinimumSize(650, 550)
         self.setModal(True)
-        
-        self.selected_game_type = 'gtasa'  # Default
-        self.template_manager = None  # Will be set by parent if available
-        
-        self._create_ui()
-        self._load_settings()
+        self.resize(500, 600)
+
+        self._setup_ui()
+        self._load_saved_paths()  # NEW: Load remembered paths
+
+    def _load_saved_paths(self):
+        """Load saved paths from settings"""
+        if self.app_settings:
+            # Set last used output path
+            last_path = self.app_settings.get_last_img_output_path()
+            if last_path and os.path.exists(last_path):
+                self.output_dir_input.setText(last_path)
+            else:
+                # Default to Documents/IMG Factory
+                try:
+                    from pathlib import Path
+                    default_dir = str(Path.home() / "Documents" / "IMG Factory")
+                    os.makedirs(default_dir, exist_ok=True)
+                    self.output_dir_input.setText(default_dir)
+                except:
+                    self.output_dir_input.setText(os.getcwd())
+
+    def _browse_output_directory(self):
+        """Browse for output directory with path remembering"""
+        # Start from current path or last used path
+        current_path = self.output_dir_input.text()
+        start_path = current_path if current_path and os.path.exists(current_path) else os.getcwd()
+
+        directory = QFileDialog.getExistingDirectory(
+            self, "Select Output Directory", start_path
+        )
+
+        if directory:
+            self.output_dir_input.setText(directory)
+
+            # Remember this path for next time
+            if self.app_settings:
+                self.app_settings.set_last_img_output_path(directory)
+
+            self._validate_input()
+
+    # Also update the _setup_ui method to connect the browse button:
+    def _setup_ui(self):
+        """Setup the dialog UI"""
+        layout = QVBoxLayout(self)
+
+        # ... existing UI code ...
+
+        # In the file settings section:
+        # Output directory
+        dir_layout = QHBoxLayout()
+        self.output_dir_input = QLineEdit()
+        self.output_dir_input.setReadOnly(True)
+        self.output_dir_input.setPlaceholderText("Select output directory...")
+
+        browse_btn = QPushButton("📂 Browse")
+        browse_btn.clicked.connect(self._browse_output_directory)  # Connect to our method
+
+        dir_layout.addWidget(self.output_dir_input)
+        dir_layout.addWidget(browse_btn)
     
     def _create_ui(self):
         """Create the dialog UI"""

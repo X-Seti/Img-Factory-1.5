@@ -5,7 +5,6 @@ X-Seti - June26 2025 - IMG Validator - Validation and verification utilities for
 Provides comprehensive validation for IMG files, entries, and operations
 """
 
-import os
 import struct
 from typing import List, Dict, Tuple, Optional, Union
 from pathlib import Path

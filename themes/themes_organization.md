@@ -38,9 +38,9 @@ Each theme file follows this structure:
         "panel_bg": "#f1f3f4",
         "accent_primary": "#1976d2",
         "accent_secondary": "#1565c0",
-        "text_primary": "#212529",
-        "text_secondary": "#495057",
-        "text_accent": "#1976d2",
+        "text_primary": "#000000",      // Pure black text
+        "text_secondary": "#2d2d2d",    // Very dark gray
+        "text_accent": "#15803d",       // Keep accent darker
         "button_normal": "#e3f2fd",
         "button_hover": "#bbdefb", 
         "button_pressed": "#90caf9",

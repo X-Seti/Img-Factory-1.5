@@ -1,0 +1,20 @@
+=== IMG Factory Debug Log ===
+Started: 2025-06-26 20:31:18
+Python: 3.12.3 (main, Jun 18 2025, 17:59:45) [GCC 13.3.0]
+Platform: linux
+==================================================
+
+[20:31:18] DEBUG: img_debug.py:94 in debug() - === DEBUGGING IMPORT ERRORS ===
+[20:31:18] SUCCESS: img_debug.py:110 in success() - ✓ components.img_core_classes imported successfully
+[20:31:18] SUCCESS: img_debug.py:110 in success() - ✓ components.img_creator imported successfully
+[20:31:18] SUCCESS: img_debug.py:110 in success() - ✓ components.img_validator imported successfully
+[20:31:18] SUCCESS: img_debug.py:110 in success() - ✓ components.img_templates imported successfully
+[20:31:18] SUCCESS: img_debug.py:110 in success() - ✓ components.img_manager imported successfully
+[20:31:18] DEBUG: img_debug.py:94 in debug() - INSPECTING IMGFile (IMGFile):
+[20:31:18] DEBUG: img_debug.py:94 in debug() -   Attributes:
+[20:31:18] DEBUG: img_debug.py:94 in debug() -   entries = []
+[20:31:18] DEBUG: img_debug.py:94 in debug() -   file_path = ''
+[20:31:18] DEBUG: img_debug.py:94 in debug() -   is_encrypted = False
+[20:31:18] DEBUG: img_debug.py:94 in debug() -   platform = 'PC'
+[20:31:18] DEBUG: img_debug.py:94 in debug() -   version = <IMGVersion.IMG_UNKNOWN: 0>
+[20:31:18] DEBUG: img_debug.py:94 in debug() -   Methods: add_entry, close, detect_version, get_entries_by_extension, get_entry_by_name, open, read_entry_data, rebuild, remove_entry, write_entry_data
