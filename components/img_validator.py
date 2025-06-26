@@ -1,951 +1,736 @@
-#this belongs in /components/img_validator.py
+# this belongs in components/img_validator.py
 #!/usr/bin/env python3
 """
-X-Seti - June26 2025 - IMG Validator - Complete Validation and Repair System
-Credit MexUK 2007 IMG Factory 1.2 - Full validation suite port
+X-Seti - June26 2025 - IMG Validator - Validation and verification utilities for IMG files
+Provides comprehensive validation for IMG files, entries, and operations
 """
 
 import os
 import struct
-import zlib
-import hashlib
-from typing import List, Dict, Optional, Tuple, Set
-from enum import Enum
-from dataclasses import dataclass, field
+from typing import List, Dict, Tuple, Optional, Union
 from pathlib import Path
-
-from img_manager import IMGVersion, IMGValidationResult, IMGEntry,  IMGFile, format_file_size
-
-
-class ValidationSeverity(Enum):
-    """Validation issue severity levels"""
-    INFO = "info"
-    WARNING = "warning" 
-    ERROR = "error"
-    CRITICAL = "critical"
+from components.img_core_classes import IMGFile, IMGEntry, IMGVersion
 
 
-class ValidationCategory(Enum):
-    """Categories of validation issues"""
-    STRUCTURE = "structure"
-    INTEGRITY = "integrity"
-    PERFORMANCE = "performance"
-    COMPATIBILITY = "compatibility"
-    CORRUPTION = "corruption"
-
-
-@dataclass
-class ValidationIssue:
-    """Individual validation issue"""
-    severity: ValidationSeverity
-    category: ValidationCategory
-    message: str
-    entry_name: Optional[str] = None
-    offset: Optional[int] = None
-    size: Optional[int] = None
-    suggested_fix: Optional[str] = None
-    auto_repairable: bool = False
-
-
-@dataclass
-class ValidationReport:
-    """Complete validation report"""
-    is_valid: bool = True
-    file_path: str = ""
-    img_version: IMGVersion = IMGVersion.UNKNOWN
-    total_entries: int = 0
-    total_size: int = 0
-    issues: List[ValidationIssue] = field(default_factory=list)
-    statistics: Dict = field(default_factory=dict)
+class ValidationResult:
+    """Container for validation results"""
     
-    def get_issues_by_severity(self, severity: ValidationSeverity) -> List[ValidationIssue]:
-        """Get issues by severity level"""
-        return [issue for issue in self.issues if issue.severity == severity]
+    def __init__(self, is_valid: bool = True, warnings: List[str] = None, errors: List[str] = None):
+        self.is_valid = is_valid
+        self.warnings = warnings or []
+        self.errors = errors or []
+        self.info = []
     
-    def get_issues_by_category(self, category: ValidationCategory) -> List[ValidationIssue]:
-        """Get issues by category"""
-        return [issue for issue in self.issues if issue.category == category]
+    def add_warning(self, message: str):
+        """Add a warning message"""
+        self.warnings.append(message)
     
-    def has_critical_issues(self) -> bool:
-        """Check if report has critical issues"""
-        return any(issue.severity == ValidationSeverity.CRITICAL for issue in self.issues)
+    def add_error(self, message: str):
+        """Add an error message"""
+        self.errors.append(message)
+        self.is_valid = False
     
-    def has_errors(self) -> bool:
-        """Check if report has errors"""
-        return any(issue.severity == ValidationSeverity.ERROR for issue in self.issues)
+    def add_info(self, message: str):
+        """Add an info message"""
+        self.info.append(message)
     
     def get_summary(self) -> str:
         """Get validation summary"""
-        if not self.issues:
-            return "No issues found"
-        
-        summary = []
-        for severity in ValidationSeverity:
-            count = len(self.get_issues_by_severity(severity))
-            if count > 0:
-                summary.append(f"{severity.value.title()}: {count}")
-        
-        return ", ".join(summary)
+        if self.is_valid:
+            if self.warnings:
+                return f"Valid with {len(self.warnings)} warnings"
+            else:
+                return "Valid"
+        else:
+            return f"Invalid - {len(self.errors)} errors, {len(self.warnings)} warnings"
     
-    def get_auto_repairable_count(self) -> int:
-        """Get count of auto-repairable issues"""
-        return sum(1 for issue in self.issues if issue.auto_repairable)
+    def get_details(self) -> str:
+        """Get detailed validation report"""
+        details = []
+        
+        if self.errors:
+            details.append("ERRORS:")
+            for error in self.errors:
+                details.append(f"  • {error}")
+        
+        if self.warnings:
+            details.append("WARNINGS:")
+            for warning in self.warnings:
+                details.append(f"  • {warning}")
+        
+        if self.info:
+            details.append("INFO:")
+            for info in self.info:
+                details.append(f"  • {info}")
+        
+        return "\n".join(details) if details else "No issues found."
+
+
+def detect_img_version(file_path: str) -> IMGVersion:
+    """Detect IMG file version from file header"""
+    try:
+        with open(file_path, 'rb') as f:
+            header = f.read(8)
+            
+        if len(header) < 8:
+            return IMGVersion.UNKNOWN
+            
+        # Check for VER2 (GTA SA/IV)
+        if header.startswith(b'VER2'):
+            return IMGVersion.VER2
+        
+        # Check for common IMG patterns
+        # GTA III/VC files often start with entry data
+        first_dword = struct.unpack('<I', header[:4])[0]
+        
+        # If first value looks like an offset and is reasonable
+        if 32 <= first_dword <= 0x10000000:
+            return IMGVersion.VER1
+            
+        return IMGVersion.UNKNOWN
+        
+    except Exception:
+        return IMGVersion.UNKNOWN
 
 
 class IMGValidator:
-    """Complete IMG file validation system"""
+    """Comprehensive IMG file validator"""
     
-    def __init__(self):
-        self.deep_scan = False
-        self.check_file_headers = True
-        self.check_compression = True
-        self.check_encryption = True
-        self.check_duplicates = True
-        self.calculate_checksums = True
-        
-        # Known file signatures for validation
-        self.file_signatures = {
-            'DFF': [b'\x10\x00\x00\x00', b'\x0F\x00\x00\x00'],  # RenderWare DFF
-            'TXD': [b'\x16\x00\x00\x00'],  # RenderWare TXD
-            'COL': [b'COLL'],  # Collision
-            'IFP': [b'ANPK'],  # Animation package
-            'WAV': [b'RIFF'],  # WAV audio
-            'IMG': [b'VER2', b'VERF'],  # IMG signatures
-        }
+    # Known file signatures for validation
+    KNOWN_SIGNATURES = {
+        'DFF': [b'\x10\x00\x00\x00', b'\x0E\x00\x00\x00'],  # RenderWare DFF
+        'TXD': [b'\x16\x00\x00\x00'],  # RenderWare TXD
+        'COL': [b'COL\x01', b'COL\x02', b'COL\x03', b'COL\x04', b'COLL'],  # Collision
+        'IFP': [b'ANPK'],  # Animation package
+        'SCM': [b'\x03\x00', b'\x04\x00'],  # Script
+    }
+    
+    # Maximum reasonable file sizes (in MB)
+    MAX_FILE_SIZES = {
+        'DFF': 50,   # Model files
+        'TXD': 100,  # Texture files
+        'COL': 10,   # Collision files
+        'IFP': 20,   # Animation files
+        'SCM': 5,    # Script files
+        'IPL': 1,    # Item placement
+        'IDE': 1,    # Item definition
+        'DAT': 1,    # Data files
+    }
     
     @staticmethod
-    def validate_img_file(img_file: IMGFile, deep_scan: bool = False) -> ValidationReport:
-        """Main validation entry point"""
-        validator = IMGValidator()
-        validator.deep_scan = deep_scan
-        return validator._validate_img(img_file)
-    
-    def _validate_img(self, img_file: IMGFile) -> ValidationReport:
-        """Internal validation method"""
-        report = ValidationReport()
-        report.file_path = img_file.file_path
-        report.img_version = img_file.version
-        report.total_entries = len(img_file.entries)
-        report.total_size = sum(entry.size for entry in img_file.entries)
+    def validate_img_file(img_file: IMGFile) -> ValidationResult:
+        """Validate an entire IMG file"""
+        result = ValidationResult()
         
-        try:
-            # Basic file system checks
-            self._validate_file_system(img_file, report)
-            
-            # Version-specific validation
-            self._validate_version_specific(img_file, report)
-            
-            # Header validation
-            self._validate_headers(img_file, report)
-            
-            # Entry validation
-            self._validate_entries(img_file, report)
-            
-            # Structure validation
-            self._validate_structure(img_file, report)
-            
-            # Integrity validation
-            if self.deep_scan:
-                self._validate_integrity_deep(img_file, report)
-            else:
-                self._validate_integrity_basic(img_file, report)
-            
-            # Performance analysis
-            self._analyze_performance(img_file, report)
-            
-            # Compatibility checks
-            self._check_compatibility(img_file, report)
-            
-            # Generate statistics
-            self._generate_statistics(img_file, report)
-            
-            # Determine overall validity
-            report.is_valid = not (report.has_critical_issues() or report.has_errors())
-            
-        except Exception as e:
-            report.issues.append(ValidationIssue(
-                severity=ValidationSeverity.CRITICAL,
-                category=ValidationCategory.STRUCTURE,
-                message=f"Validation failed: {str(e)}"
-            ))
-            report.is_valid = False
+        if not img_file:
+            result.add_error("IMG file object is None")
+            return result
         
-        return report
-    
-    def _validate_file_system(self, img_file: IMGFile, report: ValidationReport):
-        """Validate file system level issues"""
-        # Check if file exists
+        # Basic file validation
         if not os.path.exists(img_file.file_path):
-            report.issues.append(ValidationIssue(
-                severity=ValidationSeverity.CRITICAL,
-                category=ValidationCategory.STRUCTURE,
-                message="IMG file does not exist",
-                suggested_fix="Restore file from backup"
-            ))
+            result.add_error(f"IMG file does not exist: {img_file.file_path}")
+            return result
+        
+        # File size validation
+        file_size = os.path.getsize(img_file.file_path)
+        if file_size == 0:
+            result.add_error("IMG file is empty")
+            return result
+        
+        if file_size > 2 * 1024 * 1024 * 1024:  # 2GB
+            result.add_warning("IMG file is very large (>2GB)")
+        
+        # Version-specific validation
+        IMGValidator._validate_img_version(img_file, result)
+        
+        # Entry validation
+        IMGValidator._validate_img_entries(img_file, result)
+        
+        # Structure validation
+        IMGValidator._validate_img_structure(img_file, result)
+        
+        return result
+    
+    @staticmethod
+    def _validate_img_version(img_file: IMGFile, result: ValidationResult):
+        """Validate IMG version-specific aspects"""
+        version = img_file.version
+        
+        if version == IMGVersion.UNKNOWN:
+            result.add_error("Unknown IMG version")
             return
         
-        # Check file size
-        try:
-            file_size = os.path.getsize(img_file.file_path)
-            if file_size == 0:
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.CRITICAL,
-                    category=ValidationCategory.STRUCTURE,
-                    message="IMG file is empty"
-                ))
-            elif file_size < 8:  # Minimum header size
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.CRITICAL,
-                    category=ValidationCategory.STRUCTURE,
-                    message="IMG file too small to contain valid header"
-                ))
-        except OSError as e:
-            report.issues.append(ValidationIssue(
-                severity=ValidationSeverity.ERROR,
-                category=ValidationCategory.STRUCTURE,
-                message=f"Cannot access file: {str(e)}"
-            ))
-        
-        # Check for DIR file (Version 1)
-        if img_file.version == IMGVersion.VERSION_1:
+        # Version 1 specific validation
+        if version == IMGVersion.VERSION_1:
             dir_path = img_file.file_path.replace('.img', '.dir')
             if not os.path.exists(dir_path):
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.CRITICAL,
-                    category=ValidationCategory.STRUCTURE,
-                    message="DIR file missing for Version 1 IMG",
-                    suggested_fix="Recreate DIR file or convert to Version 2"
-                ))
+                result.add_error(f"DIR file missing for IMG Version 1: {dir_path}")
+            else:
+                # Validate DIR file size
+                dir_size = os.path.getsize(dir_path)
+                expected_size = len(img_file.entries) * 32
+                if dir_size != expected_size:
+                    result.add_warning(f"DIR file size mismatch. Expected: {expected_size}, Actual: {dir_size}")
         
-        # Check file permissions
-        if not os.access(img_file.file_path, os.R_OK):
-            report.issues.append(ValidationIssue(
-                severity=ValidationSeverity.ERROR,
-                category=ValidationCategory.STRUCTURE,
-                message="IMG file not readable"
-            ))
+        # Version 3 specific validation
+        elif version == IMGVersion.VERSION_3:
+            if img_file.is_encrypted and img_file.encryption_type == 0:
+                result.add_warning("IMG Version 3 marked as encrypted but encryption type is unknown")
+        
+        # Fastman92 specific validation
+        elif version == IMGVersion.FASTMAN92:
+            if img_file.is_encrypted:
+                result.add_warning("Fastman92 format encryption is not fully supported")
+            
+            if img_file.game_type != 0:
+                result.add_warning(f"Fastman92 format with non-standard game type: {img_file.game_type}")
     
-    def _validate_version_specific(self, img_file: IMGFile, report: ValidationReport):
-        """Validate version-specific requirements"""
-        if img_file.version == IMGVersion.UNKNOWN:
-            report.issues.append(ValidationIssue(
-                severity=ValidationSeverity.CRITICAL,
-                category=ValidationCategory.STRUCTURE,
-                message="Unknown IMG version",
-                suggested_fix="Check file format or try manual version detection"
-            ))
+    @staticmethod
+    def _validate_img_entries(img_file: IMGFile, result: ValidationResult):
+        """Validate all entries in the IMG file"""
+        entries = img_file.entries
+        
+        if not entries:
+            result.add_warning("IMG file contains no entries")
             return
         
-        try:
-            with open(img_file.file_path, 'rb') as f:
-                header = f.read(32)
-                
-                if img_file.version == IMGVersion.VERSION_2:
-                    if not header.startswith(b'VER2'):
-                        report.issues.append(ValidationIssue(
-                            severity=ValidationSeverity.ERROR,
-                            category=ValidationCategory.STRUCTURE,
-                            message="Invalid Version 2 signature"
-                        ))
-                
-                elif img_file.version == IMGVersion.FASTMAN92:
-                    if not header.startswith(b'VERF'):
-                        report.issues.append(ValidationIssue(
-                            severity=ValidationSeverity.ERROR,
-                            category=ValidationCategory.STRUCTURE,
-                            message="Invalid Fastman92 signature"
-                        ))
-                
-                elif img_file.version == IMGVersion.VERSION_3:
-                    try:
-                        signature = struct.unpack('<I', header[:4])[0]
-                        if signature != 0xA94E2A52:
-                            report.issues.append(ValidationIssue(
-                                severity=ValidationSeverity.ERROR,
-                                category=ValidationCategory.STRUCTURE,
-                                message="Invalid Version 3 signature"
-                            ))
-                    except struct.error:
-                        report.issues.append(ValidationIssue(
-                            severity=ValidationSeverity.ERROR,
-                            category=ValidationCategory.STRUCTURE,
-                            message="Cannot read Version 3 header"
-                        ))
-                        
-        except Exception as e:
-            report.issues.append(ValidationIssue(
-                severity=ValidationSeverity.ERROR,
-                category=ValidationCategory.STRUCTURE,
-                message=f"Error validating version: {str(e)}"
-            ))
-    
-    def _validate_headers(self, img_file: IMGFile, report: ValidationReport):
-        """Validate IMG headers"""
-        try:
-            with open(img_file.file_path, 'rb') as f:
-                if img_file.version == IMGVersion.VERSION_2:
-                    f.seek(4)  # Skip signature
-                    entry_count = struct.unpack('<I', f.read(4))[0]
-                    
-                    if entry_count != len(img_file.entries):
-                        report.issues.append(ValidationIssue(
-                            severity=ValidationSeverity.ERROR,
-                            category=ValidationCategory.STRUCTURE,
-                            message=f"Entry count mismatch: header={entry_count}, actual={len(img_file.entries)}",
-                            auto_repairable=True,
-                            suggested_fix="Rebuild IMG file to fix header"
-                        ))
-                    
-                    # Check for reasonable entry count
-                    if entry_count > 65535:  # Arbitrary reasonable limit
-                        report.issues.append(ValidationIssue(
-                            severity=ValidationSeverity.WARNING,
-                            category=ValidationCategory.PERFORMANCE,
-                            message=f"Very large entry count: {entry_count}"
-                        ))
-                
-                elif img_file.version == IMGVersion.FASTMAN92:
-                    f.seek(4)  # Skip signature
-                    version, entry_count = struct.unpack('<II', f.read(8))
-                    
-                    if entry_count != len(img_file.entries):
-                        report.issues.append(ValidationIssue(
-                            severity=ValidationSeverity.ERROR,
-                            category=ValidationCategory.STRUCTURE,
-                            message=f"Fastman92 entry count mismatch: header={entry_count}, actual={len(img_file.entries)}",
-                            auto_repairable=True
-                        ))
-                        
-        except Exception as e:
-            report.issues.append(ValidationIssue(
-                severity=ValidationSeverity.ERROR,
-                category=ValidationCategory.STRUCTURE,
-                message=f"Error validating headers: {str(e)}"
-            ))
-    
-    def _validate_entries(self, img_file: IMGFile, report: ValidationReport):
-        """Validate individual entries"""
-        seen_names = set()
-        seen_offsets = set()
+        # Check for duplicate names
+        names = [entry.name.upper() for entry in entries]
+        duplicates = set([name for name in names if names.count(name) > 1])
+        if duplicates:
+            result.add_error(f"Duplicate entry names found: {', '.join(duplicates)}")
         
-        for i, entry in enumerate(img_file.entries):
-            # Check for duplicate names
-            name_upper = entry.name.upper()
-            if name_upper in seen_names:
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.WARNING,
-                    category=ValidationCategory.STRUCTURE,
-                    message=f"Duplicate entry name: {entry.name}",
-                    entry_name=entry.name,
-                    auto_repairable=True,
-                    suggested_fix="Rename duplicate entries"
-                ))
-            seen_names.add(name_upper)
+        # Validate individual entries
+        total_size = 0
+        offset_ranges = []
+        
+        for i, entry in enumerate(entries):
+            entry_result = IMGValidator.validate_img_entry(entry, img_file)
             
-            # Check for invalid names
-            if not entry.name or len(entry.name.strip()) == 0:
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.ERROR,
-                    category=ValidationCategory.STRUCTURE,
-                    message=f"Entry {i} has empty name",
-                    auto_repairable=True
-                ))
+            # Merge entry validation results
+            result.warnings.extend([f"Entry '{entry.name}': {w}" for w in entry_result.warnings])
+            result.errors.extend([f"Entry '{entry.name}': {e}" for e in entry_result.errors])
+            if not entry_result.is_valid:
+                result.is_valid = False
             
-            # Check name length (IMG format limitation)
-            if len(entry.name) > 23:  # 24 bytes with null terminator
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.ERROR,
-                    category=ValidationCategory.COMPATIBILITY,
-                    message=f"Entry name too long: {entry.name} ({len(entry.name)} chars)",
-                    entry_name=entry.name,
-                    suggested_fix="Shorten filename to 23 characters or less"
-                ))
-            
-            # Check for invalid characters
-            invalid_chars = '<>:"|?*'
-            if any(char in entry.name for char in invalid_chars):
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.WARNING,
-                    category=ValidationCategory.COMPATIBILITY,
-                    message=f"Entry name contains invalid characters: {entry.name}",
-                    entry_name=entry.name
-                ))
-            
-            # Check entry size
-            if entry.size <= 0:
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.ERROR,
-                    category=ValidationCategory.STRUCTURE,
-                    message=f"Entry has invalid size: {entry.name} ({entry.size} bytes)",
-                    entry_name=entry.name
-                ))
-            elif entry.size > 1024 * 1024 * 1024:  # 1GB limit
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.WARNING,
-                    category=ValidationCategory.PERFORMANCE,
-                    message=f"Entry is very large: {entry.name} ({format_file_size(entry.size)})",
-                    entry_name=entry.name
-                ))
-            
-            # Check entry offset
-            if entry.offset < 0:
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.ERROR,
-                    category=ValidationCategory.STRUCTURE,
-                    message=f"Entry has invalid offset: {entry.name} ({entry.offset})",
-                    entry_name=entry.name,
-                    offset=entry.offset
-                ))
-            
-            # Check for overlapping offsets
-            if entry.offset in seen_offsets:
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.CRITICAL,
-                    category=ValidationCategory.CORRUPTION,
-                    message=f"Entry has overlapping offset: {entry.name} at {entry.offset}",
-                    entry_name=entry.name,
-                    offset=entry.offset
-                ))
-            
-            if entry.offset > 0:  # Skip entries with 0 offset (new entries)
-                seen_offsets.add(entry.offset)
-            
-            # Check sector alignment for versions that require it
-            if img_file.version in [IMGVersion.VERSION_1, IMGVersion.VERSION_2]:
+            # Track size and offsets
+            total_size += entry.size
+            offset_ranges.append((entry.offset, entry.offset + entry.size))
+        
+        # Check for overlapping entries
+        sorted_ranges = sorted(offset_ranges)
+        for i in range(len(sorted_ranges) - 1):
+            current_end = sorted_ranges[i][1]
+            next_start = sorted_ranges[i + 1][0]
+            if current_end > next_start:
+                result.add_error(f"Overlapping entries detected at offset {next_start}")
+        
+        # File size validation
+        file_size = os.path.getsize(img_file.file_path)
+        if total_size > file_size:
+            result.add_error(f"Total entry size ({total_size}) exceeds file size ({file_size})")
+        
+        result.add_info(f"Validated {len(entries)} entries")
+    
+    @staticmethod
+    def _validate_img_structure(img_file: IMGFile, result: ValidationResult):
+        """Validate IMG file structure and layout"""
+        version = img_file.version
+        
+        # Check sector alignment for appropriate versions
+        if version in [IMGVersion.VERSION_2, IMGVersion.VERSION_3]:
+            for entry in img_file.entries:
                 if entry.offset % 2048 != 0:
-                    report.issues.append(ValidationIssue(
-                        severity=ValidationSeverity.ERROR,
-                        category=ValidationCategory.STRUCTURE,
-                        message=f"Entry not sector-aligned: {entry.name} (offset {entry.offset})",
-                        entry_name=entry.name,
-                        offset=entry.offset,
-                        auto_repairable=True,
-                        suggested_fix="Rebuild IMG to fix alignment"
-                    ))
-            
-            # Validate file extension
-            if not entry.extension and '.' in entry.name:
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.INFO,
-                    category=ValidationCategory.STRUCTURE,
-                    message=f"Entry extension not detected: {entry.name}",
-                    entry_name=entry.name
-                ))
-            
-            # Check for common file types
-            if entry.extension:
-                known_extensions = ['DFF', 'TXD', 'COL', 'IFP', 'WAV', 'SCM', 'CS', 'FXT', 'DAT']
-                if entry.extension not in known_extensions:
-                    report.issues.append(ValidationIssue(
-                        severity=ValidationSeverity.INFO,
-                        category=ValidationCategory.COMPATIBILITY,
-                        message=f"Unknown file type: {entry.name} (.{entry.extension})",
-                        entry_name=entry.name
-                    ))
-    
-    def _validate_structure(self, img_file: IMGFile, report: ValidationReport):
-        """Validate overall IMG structure"""
-        if not img_file.entries:
-            report.issues.append(ValidationIssue(
-                severity=ValidationSeverity.WARNING,
-                category=ValidationCategory.STRUCTURE,
-                message="IMG file contains no entries"
-            ))
-            return
+                    result.add_warning(f"Entry '{entry.name}' not aligned to 2048-byte boundary")
         
-        # Check for gaps and fragmentation
-        sorted_entries = sorted([e for e in img_file.entries if e.offset > 0], key=lambda x: x.offset)
-        
-        total_gaps = 0
-        overlaps = 0
-        
+        # Check for gaps between entries
+        sorted_entries = sorted(img_file.entries, key=lambda e: e.offset)
         for i in range(len(sorted_entries) - 1):
-            current = sorted_entries[i]
-            next_entry = sorted_entries[i + 1]
-            
-            current_end = current.offset + current.get_padded_size()
-            gap = next_entry.offset - current_end
+            current_end = sorted_entries[i].offset + sorted_entries[i].size
+            next_start = sorted_entries[i + 1].offset
+            gap = next_start - current_end
             
             if gap > 0:
-                total_gaps += gap
-            elif gap < 0:
-                overlaps += 1
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.CRITICAL,
-                    category=ValidationCategory.CORRUPTION,
-                    message=f"Overlapping entries: {current.name} and {next_entry.name}",
-                    entry_name=current.name
-                ))
+                if version in [IMGVersion.VERSION_2, IMGVersion.VERSION_3]:
+                    # Large gaps might indicate corruption
+                    if gap > 4096:  # 4KB gap
+                        result.add_warning(f"Large gap ({gap} bytes) between entries")
+                else:
+                    # Version 1 should have no gaps
+                    result.add_warning(f"Gap ({gap} bytes) between entries in Version 1 IMG")
+    
+    @staticmethod
+    def validate_img_entry(entry: IMGEntry, img_file: IMGFile = None) -> ValidationResult:
+        """Validate an individual IMG entry"""
+        result = ValidationResult()
         
-        # Calculate fragmentation
-        if sorted_entries:
-            total_used = sum(e.get_padded_size() for e in sorted_entries)
-            fragmentation = (total_gaps / (total_used + total_gaps)) * 100 if total_used > 0 else 0
+        # Basic entry validation
+        if not entry:
+            result.add_error("Entry object is None")
+            return result
+        
+        # Name validation
+        if not entry.name:
+            result.add_error("Entry has no name")
+        else:
+            # Check for invalid characters
+            invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
+            if any(char in entry.name for char in invalid_chars):
+                result.add_error(f"Entry name contains invalid characters: {entry.name}")
             
-            if fragmentation > 25:
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.WARNING,
-                    category=ValidationCategory.PERFORMANCE,
-                    message=f"High fragmentation: {fragmentation:.1f}%",
-                    auto_repairable=True,
-                    suggested_fix="Defragment IMG file"
-                ))
+            # Check name length
+            if len(entry.name) > 24:
+                result.add_warning(f"Entry name exceeds 24 characters: {entry.name}")
+            elif len(entry.name) == 0:
+                result.add_error("Entry name is empty")
+        
+        # Size validation
+        if entry.size < 0:
+            result.add_error(f"Entry has negative size: {entry.size}")
+        elif entry.size == 0:
+            result.add_warning(f"Entry is empty: {entry.name}")
+        elif entry.size > 100 * 1024 * 1024:  # 100MB
+            result.add_warning(f"Entry is very large: {entry.name} ({entry.size} bytes)")
+        
+        # Offset validation
+        if entry.offset < 0:
+            result.add_error(f"Entry has negative offset: {entry.offset}")
+        
+        # Extension-based validation
+        if hasattr(entry, 'extension') and entry.extension:
+            ext = entry.extension.upper()
             
-            # Store fragmentation in statistics
-            report.statistics['fragmentation_percentage'] = fragmentation
-            report.statistics['total_gaps'] = total_gaps
-            report.statistics['overlap_count'] = overlaps
+            # Check against known extensions
+            if ext in IMGValidator.MAX_FILE_SIZES:
+                max_size_mb = IMGValidator.MAX_FILE_SIZES[ext]
+                max_size_bytes = max_size_mb * 1024 * 1024
+                if entry.size > max_size_bytes:
+                    result.add_warning(f"{ext} file is unusually large: {entry.name} ({entry.size} bytes)")
+            
+            # Validate file format if IMG file is available
+            if img_file and img_file.is_open:
+                try:
+                    data = img_file.extract_entry_data(entry, max_bytes=1024)
+                    format_result = IMGValidator._validate_entry_format(entry, data)
+                    result.warnings.extend(format_result.warnings)
+                    result.errors.extend(format_result.errors)
+                    if not format_result.is_valid:
+                        result.is_valid = False
+                except Exception as e:
+                    result.add_warning(f"Could not validate entry format: {str(e)}")
+        
+        return result
     
-    def _validate_integrity_basic(self, img_file: IMGFile, report: ValidationReport):
-        """Basic integrity validation"""
-        unreadable_entries = 0
+    @staticmethod
+    def _validate_entry_format(entry: IMGEntry, data: bytes) -> ValidationResult:
+        """Validate entry data format based on file extension"""
+        result = ValidationResult()
         
-        for entry in img_file.entries:
-            try:
-                # Try to read first few bytes
-                if entry.offset > 0:  # Skip new entries
-                    with open(img_file.file_path, 'rb') as f:
-                        f.seek(entry.offset)
-                        data = f.read(min(1024, entry.size))
-                        
-                        if len(data) == 0:
-                            report.issues.append(ValidationIssue(
-                                severity=ValidationSeverity.ERROR,
-                                category=ValidationCategory.CORRUPTION,
-                                message=f"Cannot read entry data: {entry.name}",
-                                entry_name=entry.name
-                            ))
-                            unreadable_entries += 1
-                        elif len(data) < min(1024, entry.size):
-                            report.issues.append(ValidationIssue(
-                                severity=ValidationSeverity.WARNING,
-                                category=ValidationCategory.INTEGRITY,
-                                message=f"Partial data read for entry: {entry.name}",
-                                entry_name=entry.name
-                            ))
-                            
-            except Exception as e:
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.ERROR,
-                    category=ValidationCategory.CORRUPTION,
-                    message=f"Error reading entry {entry.name}: {str(e)}",
-                    entry_name=entry.name
-                ))
-                unreadable_entries += 1
+        if not hasattr(entry, 'extension') or not entry.extension:
+            return result
         
-        report.statistics['unreadable_entries'] = unreadable_entries
+        ext = entry.extension.upper()
+        
+        if ext == 'DFF':
+            IMGValidator._validate_dff_format(data, result)
+        elif ext == 'TXD':
+            IMGValidator._validate_txd_format(data, result)
+        elif ext == 'COL':
+            IMGValidator._validate_col_format(data, result)
+        elif ext == 'IFP':
+            IMGValidator._validate_ifp_format(data, result)
+        elif ext == 'SCM':
+            IMGValidator._validate_scm_format(data, result)
+        elif ext in ['IPL', 'IDE', 'DAT']:
+            IMGValidator._validate_text_format(data, result, ext)
+        
+        return result
     
-    def _validate_integrity_deep(self, img_file: IMGFile, report: ValidationReport):
-        """Deep integrity validation"""
-        self._validate_integrity_basic(img_file, report)
+    @staticmethod
+    def _validate_dff_format(data: bytes, result: ValidationResult):
+        """Validate DFF (model) file format"""
+        if len(data) < 12:
+            result.add_error("DFF file too small to contain valid header")
+            return
         
-        corrupted_files = 0
-        signature_mismatches = 0
-        
-        for entry in img_file.entries:
-            try:
-                if entry.offset <= 0:  # Skip new entries
-                    continue
-                
-                # Read full entry data
-                data = entry.get_data()
-                
-                # Validate file signatures
-                if self.check_file_headers and entry.extension in self.file_signatures:
-                    expected_sigs = self.file_signatures[entry.extension]
-                    if not any(data.startswith(sig) for sig in expected_sigs):
-                        report.issues.append(ValidationIssue(
-                            severity=ValidationSeverity.WARNING,
-                            category=ValidationCategory.INTEGRITY,
-                            message=f"File signature mismatch: {entry.name}",
-                            entry_name=entry.name
-                        ))
-                        signature_mismatches += 1
-                
-                # Check for null/empty data
-                if len(set(data[:min(1024, len(data))])) <= 1:
-                    report.issues.append(ValidationIssue(
-                        severity=ValidationSeverity.WARNING,
-                        category=ValidationCategory.INTEGRITY,
-                        message=f"Suspicious uniform data pattern: {entry.name}",
-                        entry_name=entry.name
-                    ))
-                
-                # Validate RenderWare files
-                if entry.extension in ['DFF', 'TXD']:
-                    self._validate_renderware_file(entry, data, report)
-                
-                # Calculate and store checksums if enabled
-                if self.calculate_checksums:
-                    entry.crc32 = zlib.crc32(data) & 0xffffffff
-                    entry.md5_hash = hashlib.md5(data).hexdigest()
-                
-            except Exception as e:
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.ERROR,
-                    category=ValidationCategory.CORRUPTION,
-                    message=f"Deep validation failed for {entry.name}: {str(e)}",
-                    entry_name=entry.name
-                ))
-                corrupted_files += 1
-        
-        report.statistics['corrupted_files'] = corrupted_files
-        report.statistics['signature_mismatches'] = signature_mismatches
-    
-    def _validate_renderware_file(self, entry: IMGEntry, data: bytes, report: ValidationReport):
-        """Validate RenderWare file structure"""
         try:
-            if len(data) < 12:  # Minimum RW section header
-                return
+            # Check RenderWare binary stream format
+            section_type = struct.unpack('<I', data[0:4])[0]
+            section_size = struct.unpack('<I', data[4:8])[0]
+            version = struct.unpack('<I', data[8:12])[0]
             
-            # Read RenderWare header
-            section_type, section_size, rw_version = struct.unpack('<III', data[:12])
+            # Common RenderWare section types for DFF files
+            valid_sections = [
+                0x0001,  # Struct
+                0x0002,  # String
+                0x0003,  # Extension
+                0x0006,  # Texture
+                0x0007,  # Material
+                0x0008,  # Material List
+                0x000E,  # Atomic
+                0x000F,  # Plane Section
+                0x0010,  # World
+                0x0014,  # Frame List
+                0x0015,  # Geometry
+                0x001A,  # Clump
+            ]
             
-            # Validate section size
-            if section_size + 12 > len(data):
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.WARNING,
-                    category=ValidationCategory.INTEGRITY,
-                    message=f"RenderWare section size mismatch: {entry.name}",
-                    entry_name=entry.name
-                ))
+            if section_type not in valid_sections:
+                result.add_warning(f"Unusual DFF section type: 0x{section_type:08X}")
             
-            # Store RenderWare version
-            entry.rw_version = rw_version
+            # Version validation
+            if version < 0x30000 or version > 0x3FFFF:
+                result.add_warning(f"Unusual RenderWare version: 0x{version:08X}")
             
-            # Check for reasonable RW version
-            if rw_version < 0x30000 or rw_version > 0x40000:
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.INFO,
-                    category=ValidationCategory.COMPATIBILITY,
-                    message=f"Unusual RenderWare version: {entry.name} (0x{rw_version:08X})",
-                    entry_name=entry.name
-                ))
+            # Size validation
+            if section_size > len(data) - 12:
+                result.add_warning("DFF section size exceeds available data")
+                
+        except struct.error:
+            result.add_error("DFF file has malformed header")
+    
+    @staticmethod
+    def _validate_txd_format(data: bytes, result: ValidationResult):
+        """Validate TXD (texture) file format"""
+        if len(data) < 12:
+            result.add_error("TXD file too small to contain valid header")
+            return
+        
+        try:
+            section_type = struct.unpack('<I', data[0:4])[0]
+            section_size = struct.unpack('<I', data[4:8])[0]
+            version = struct.unpack('<I', data[8:12])[0]
+            
+            # TXD should start with texture dictionary section (0x16)
+            if section_type != 0x16:
+                result.add_warning(f"TXD doesn't start with texture dictionary section (found 0x{section_type:08X})")
+            
+            # Version validation
+            if version < 0x30000 or version > 0x3FFFF:
+                result.add_warning(f"Unusual RenderWare version: 0x{version:08X}")
+                
+        except struct.error:
+            result.add_error("TXD file has malformed header")
+    
+    @staticmethod
+    def _validate_col_format(data: bytes, result: ValidationResult):
+        """Validate COL (collision) file format"""
+        if len(data) < 4:
+            result.add_error("COL file too small to contain valid header")
+            return
+        
+        # Check COL signature
+        signature = data[:4]
+        valid_signatures = [b'COL\x01', b'COL\x02', b'COL\x03', b'COL\x04', b'COLL']
+        
+        if signature not in valid_signatures:
+            result.add_warning("COL file doesn't have recognized signature")
+        
+        # Version-specific validation
+        if signature.startswith(b'COL') and len(signature) == 4:
+            version = signature[3]
+            if version < 1 or version > 4:
+                result.add_warning(f"Unusual COL version: {version}")
+    
+    @staticmethod
+    def _validate_ifp_format(data: bytes, result: ValidationResult):
+        """Validate IFP (animation) file format"""
+        if len(data) < 4:
+            result.add_error("IFP file too small to contain valid header")
+            return
+        
+        # Check IFP signature
+        if not data.startswith(b'ANPK'):
+            result.add_warning("IFP file doesn't start with ANPK signature")
+    
+    @staticmethod
+    def _validate_scm_format(data: bytes, result: ValidationResult):
+        """Validate SCM (script) file format"""
+        if len(data) < 4:
+            result.add_error("SCM file too small to contain valid header")
+            return
+        
+        # Check for common SCM signatures
+        if data.startswith(b'\x03\x00') or data.startswith(b'\x04\x00'):
+            result.add_info("Valid SCM script file detected")
+        else:
+            result.add_warning("SCM file doesn't start with expected signature")
+    
+    @staticmethod
+    def _validate_text_format(data: bytes, result: ValidationResult, ext: str):
+        """Validate text-based file formats (IPL, IDE, DAT)"""
+        try:
+            # Try to decode as text
+            text = data.decode('utf-8', errors='ignore')
+            
+            # Check for binary data in text files
+            null_count = text.count('\x00')
+            if null_count > len(text) * 0.1:  # More than 10% null bytes
+                result.add_warning(f"{ext} file appears to contain binary data")
+            
+            # Basic format checks
+            lines = text.split('\n')
+            if len(lines) < 2:
+                result.add_warning(f"{ext} file has very few lines")
                 
         except Exception:
-            # Not a valid RenderWare file or corrupted
-            report.issues.append(ValidationIssue(
-                severity=ValidationSeverity.WARNING,
-                category=ValidationCategory.INTEGRITY,
-                message=f"Invalid RenderWare structure: {entry.name}",
-                entry_name=entry.name
-            ))
+            result.add_warning(f"Could not validate {ext} file as text")
     
-    def _analyze_performance(self, img_file: IMGFile, report: ValidationReport):
-        """Analyze performance-related issues"""
-        if not img_file.entries:
-            return
+    @staticmethod
+    def validate_file_for_import(file_path: str) -> ValidationResult:
+        """Validate a file before importing into IMG"""
+        result = ValidationResult()
         
-        # Analyze entry sizes
-        sizes = [entry.size for entry in img_file.entries]
-        avg_size = sum(sizes) / len(sizes)
-        max_size = max(sizes)
-        min_size = min(sizes)
+        if not os.path.exists(file_path):
+            result.add_error(f"File does not exist: {file_path}")
+            return result
         
-        # Check for very small files (potential waste)
-        small_files = [e for e in img_file.entries if e.size < 1024]
-        if len(small_files) > len(img_file.entries) * 0.3:  # More than 30% are small files
-            report.issues.append(ValidationIssue(
-                severity=ValidationSeverity.INFO,
-                category=ValidationCategory.PERFORMANCE,
-                message=f"Many small files detected: {len(small_files)} files < 1KB",
-                suggested_fix="Consider file consolidation"
-            ))
+        # Basic file checks
+        file_size = os.path.getsize(file_path)
+        if file_size == 0:
+            result.add_error("File is empty")
+            return result
         
-        # Check for potential compression candidates
-        if img_file.version == IMGVersion.FASTMAN92:
-            large_uncompressed = [e for e in img_file.entries 
-                                 if e.size > 10240 and not e.is_compressed]  # > 10KB
-            if large_uncompressed:
-                total_potential_savings = 0
-                for entry in large_uncompressed[:10]:  # Test first 10 files
-                    try:
-                        data = entry.get_data()
-                        compressed = zlib.compress(data, 6)
-                        if len(compressed) < len(data) * 0.8:  # At least 20% compression
-                            total_potential_savings += len(data) - len(compressed)
-                    except:
-                        continue
-                
-                if total_potential_savings > 1024 * 1024:  # > 1MB potential savings
-                    report.issues.append(ValidationIssue(
-                        severity=ValidationSeverity.INFO,
-                        category=ValidationCategory.PERFORMANCE,
-                        message=f"Compression could save ~{format_file_size(total_potential_savings)}",
-                        suggested_fix="Enable compression for large files"
-                    ))
+        if file_size > 500 * 1024 * 1024:  # 500MB
+            result.add_warning("File is very large (>500MB)")
         
-        # Store performance statistics
-        report.statistics.update({
-            'average_file_size': avg_size,
-            'largest_file_size': max_size,
-            'smallest_file_size': min_size,
-            'small_files_count': len(small_files)
-        })
-    
-    def _check_compatibility(self, img_file: IMGFile, report: ValidationReport):
-        """Check compatibility issues"""
-        # Check for game-specific issues
-        if img_file.version == IMGVersion.VERSION_3:
-            # GTA IV specific checks
-            if any(entry.size > 16 * 1024 * 1024 for entry in img_file.entries):
-                report.issues.append(ValidationIssue(
-                    severity=ValidationSeverity.WARNING,
-                    category=ValidationCategory.COMPATIBILITY,
-                    message="Very large files may cause issues in GTA IV"
-                ))
+        # Name validation
+        filename = os.path.basename(file_path)
+        if len(filename) > 24:
+            result.add_warning(f"Filename is long ({len(filename)} chars) and may be truncated")
         
-        # Check total file count limits
-        entry_count = len(img_file.entries)
-        if entry_count > 10000:
-            report.issues.append(ValidationIssue(
-                severity=ValidationSeverity.WARNING,
-                category=ValidationCategory.COMPATIBILITY,
-                message=f"Very high entry count ({entry_count}) may impact performance"
-            ))
+        # Check for invalid characters
+        invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
+        if any(char in filename for char in invalid_chars):
+            result.add_error(f"Filename contains invalid characters: {filename}")
         
-        # Check for long paths that might cause issues
-        long_names = [e for e in img_file.entries if len(e.name) > 20]
-        if len(long_names) > entry_count * 0.1:  # More than 10% have long names
-            report.issues.append(ValidationIssue(
-                severity=ValidationSeverity.INFO,
-                category=ValidationCategory.COMPATIBILITY,
-                message=f"{len(long_names)} entries have long filenames"
-            ))
-    
-    def _generate_statistics(self, img_file: IMGFile, report: ValidationReport):
-        """Generate comprehensive statistics"""
-        if not img_file.entries:
-            return
-        
-        # File type distribution
-        type_counts = {}
-        for entry in img_file.entries:
-            ext = entry.extension or "Unknown"
-            type_counts[ext] = type_counts.get(ext, 0) + 1
-        
-        # Size distribution
-        size_ranges = {
-            '< 1KB': 0,
-            '1KB - 10KB': 0,
-            '10KB - 100KB': 0,
-            '100KB - 1MB': 0,
-            '1MB - 10MB': 0,
-            '> 10MB': 0
-        }
-        
-        for entry in img_file.entries:
-            size = entry.size
-            if size < 1024:
-                size_ranges['< 1KB'] += 1
-            elif size < 10240:
-                size_ranges['1KB - 10KB'] += 1
-            elif size < 102400:
-                size_ranges['10KB - 100KB'] += 1
-            elif size < 1048576:
-                size_ranges['100KB - 1MB'] += 1
-            elif size < 10485760:
-                size_ranges['1MB - 10MB'] += 1
-            else:
-                size_ranges['> 10MB'] += 1
-        
-        # Compression statistics
-        compression_stats = {
-            'compressed_entries': 0,
-            'uncompressed_entries': 0,
-            'total_compressed_size': 0,
-            'total_uncompressed_size': 0
-        }
-        
-        for entry in img_file.entries:
-            if entry.is_compressed:
-                compression_stats['compressed_entries'] += 1
-                compression_stats['total_compressed_size'] += entry.size
-                compression_stats['total_uncompressed_size'] += entry.uncompressed_size
-            else:
-                compression_stats['uncompressed_entries'] += 1
-        
-        report.statistics.update({
-            'file_type_distribution': type_counts,
-            'size_distribution': size_ranges,
-            'compression_statistics': compression_stats,
-            'total_disk_size': os.path.getsize(img_file.file_path) if os.path.exists(img_file.file_path) else 0
-        })
-    
-    def repair_img(self, img_file: IMGFile, report: ValidationReport, backup: bool = True) -> bool:
-        """Attempt to repair IMG file based on validation report"""
-        if backup:
-            backup_path = img_file.file_path + '.backup'
-            try:
-                import shutil
-                shutil.copy2(img_file.file_path, backup_path)
-            except Exception as e:
-                print(f"Warning: Could not create backup: {e}")
-        
-        repairs_made = 0
-        
-        # Fix auto-repairable issues
-        for issue in report.issues:
-            if not issue.auto_repairable:
-                continue
+        # Extension validation
+        extension = Path(file_path).suffix.upper().lstrip('.')
+        if extension:
+            # Create dummy entry for format validation
+            dummy_entry = IMGEntry(filename, 0, file_size)
+            dummy_entry.extension = extension
             
             try:
-                if "Entry count mismatch" in issue.message:
-                    # This would be fixed by rebuilding
-                    repairs_made += 1
+                with open(file_path, 'rb') as f:
+                    data = f.read(min(1024, file_size))  # Read first 1KB for validation
                 
-                elif "not sector-aligned" in issue.message:
-                    # This would be fixed by rebuilding
-                    repairs_made += 1
-                
-                elif "Duplicate entry name" in issue.message:
-                    # Rename duplicate entries
-                    self._repair_duplicate_names(img_file)
-                    repairs_made += 1
-                
-                elif "fragmentation" in issue.message.lower():
-                    # Defragment by rebuilding
-                    repairs_made += 1
+                format_result = IMGValidator._validate_entry_format(dummy_entry, data)
+                result.warnings.extend(format_result.warnings)
+                result.errors.extend(format_result.errors)
+                if not format_result.is_valid:
+                    result.is_valid = False
                     
             except Exception as e:
-                print(f"Error during repair: {e}")
+                result.add_warning(f"Could not read file for format validation: {str(e)}")
         
-        # If repairs were made, rebuild the IMG
-        if repairs_made > 0:
+        return result
+    
+    @staticmethod
+    def validate_img_creation_settings(settings: Dict) -> ValidationResult:
+        """Validate settings for IMG creation"""
+        result = ValidationResult()
+        
+        # Required fields
+        required_fields = ['output_path', 'img_version', 'initial_size_mb']
+        for field in required_fields:
+            if field not in settings:
+                result.add_error(f"Missing required setting: {field}")
+        
+        if not result.is_valid:
+            return result
+        
+        # Validate output path
+        output_path = settings['output_path']
+        output_dir = os.path.dirname(output_path)
+        
+        if not os.path.exists(output_dir):
+            result.add_error(f"Output directory does not exist: {output_dir}")
+        
+        if os.path.exists(output_path):
+            result.add_warning("Output file already exists and will be overwritten")
+        
+        # Validate filename
+        filename = os.path.basename(output_path)
+        if not filename.lower().endswith('.img'):
+            result.add_warning("Output filename should have .img extension")
+        
+        # Validate size
+        size_mb = settings.get('initial_size_mb', 0)
+        if size_mb <= 0:
+            result.add_error("Initial size must be greater than 0")
+        elif size_mb > 2048:  # 2GB
+            result.add_warning("Very large initial size (>2GB)")
+        
+        # Validate version
+        version = settings.get('img_version')
+        if isinstance(version, str):
             try:
-                return img_file.rebuild()
-            except Exception as e:
-                print(f"Error rebuilding IMG during repair: {e}")
-                return False
+                version = IMGVersion[version]
+            except KeyError:
+                result.add_error(f"Unknown IMG version: {version}")
         
-        return repairs_made > 0
+        return result
     
-    def _repair_duplicate_names(self, img_file: IMGFile):
-        """Repair duplicate entry names"""
-        seen_names = set()
+    @staticmethod
+    def get_img_statistics(img_file: IMGFile) -> Dict:
+        """Get detailed statistics about an IMG file"""
+        stats = {
+            'total_entries': len(img_file.entries),
+            'total_size': 0,
+            'file_types': {},
+            'largest_file': None,
+            'smallest_file': None,
+            'average_size': 0,
+            'version': img_file.version.name if img_file.version else 'Unknown',
+            'file_size': os.path.getsize(img_file.file_path) if os.path.exists(img_file.file_path) else 0
+        }
         
+        if not img_file.entries:
+            return stats
+        
+        sizes = []
         for entry in img_file.entries:
-            original_name = entry.name
-            base_name = os.path.splitext(original_name)[0]
-            extension = os.path.splitext(original_name)[1]
+            stats['total_size'] += entry.size
+            sizes.append(entry.size)
             
-            counter = 1
-            while entry.name.upper() in seen_names:
-                entry.name = f"{base_name}_{counter:02d}{extension}"
-                counter += 1
+            # Track file types
+            if hasattr(entry, 'extension') and entry.extension:
+                ext = entry.extension.upper()
+                stats['file_types'][ext] = stats['file_types'].get(ext, 0) + 1
+            else:
+                # Try to guess extension from name
+                if '.' in entry.name:
+                    ext = entry.name.split('.')[-1].upper()
+                    stats['file_types'][ext] = stats['file_types'].get(ext, 0) + 1
+                else:
+                    stats['file_types']['Unknown'] = stats['file_types'].get('Unknown', 0) + 1
             
-            seen_names.add(entry.name.upper())
+            # Track largest/smallest
+            if stats['largest_file'] is None or entry.size > stats['largest_file']['size']:
+                stats['largest_file'] = {'name': entry.name, 'size': entry.size}
             
-            if entry.name != original_name:
-                img_file.is_modified = True
-
-
-class IMGRepairTool:
-    """Advanced IMG repair utilities"""
-    
-    @staticmethod
-    def attempt_recovery(file_path: str) -> Optional[IMGFile]:
-        """Attempt to recover corrupted IMG file"""
-        try:
-            # Try different version parsers
-            for version in [IMGVersion.VERSION_2, IMGVersion.VERSION_1, IMGVersion.FASTMAN92]:
-                try:
-                    img = IMGFile(file_path)
-                    img.version = version
-                    if img.open():
-                        return img
-                except:
-                    continue
-            
-            return None
-            
-        except Exception:
-            return None
-    
-    @staticmethod
-    def rebuild_from_fragments(file_path: str, output_path: str) -> bool:
-        """Attempt to rebuild IMG from file fragments"""
-        try:
-            # This would implement advanced recovery techniques
-            # For now, just return False as it's a complex operation
-            return False
-        except Exception:
-            return False
-    
-    @staticmethod
-    def extract_recoverable_files(file_path: str, output_dir: str) -> int:
-        """Extract files that can be recovered from corrupted IMG"""
-        recovered_count = 0
+            if stats['smallest_file'] is None or entry.size < stats['smallest_file']['size']:
+                stats['smallest_file'] = {'name': entry.name, 'size': entry.size}
         
-        try:
-            with open(file_path, 'rb') as f:
-                # Scan for file signatures
-                signatures = {
-                    b'RIFF': 'wav',
-                    b'\x10\x00\x00\x00': 'dff',
-                    b'\x16\x00\x00\x00': 'txd',
-                    b'COLL': 'col'
-                }
-                
-                f.seek(0)
-                data = f.read()
-                
-                for i, byte in enumerate(data[:-4]):
-                    for sig, ext in signatures.items():
-                        if data[i:i+len(sig)] == sig:
-                            # Found potential file
-                            try:
-                                # Extract reasonable amount of data
-                                file_data = data[i:i+1024*1024]  # 1MB max
-                                output_file = os.path.join(output_dir, f"recovered_{recovered_count:04d}.{ext}")
-                                
-                                with open(output_file, 'wb') as out_f:
-                                    out_f.write(file_data)
-                                
-                                recovered_count += 1
-                                
-                            except:
-                                continue
-            
-            return recovered_count
-            
-        except Exception:
-            return 0
+        stats['average_size'] = sum(sizes) // len(sizes) if sizes else 0
+        
+        return stats
+    
+    @staticmethod
+    def suggest_optimizations(img_file: IMGFile) -> List[str]:
+        """Suggest optimizations for an IMG file"""
+        suggestions = []
+        stats = IMGValidator.get_img_statistics(img_file)
+        
+        # Size-based suggestions
+        if stats['total_entries'] > 1000:
+            suggestions.append("Consider splitting into multiple IMG files for better performance")
+        
+        if stats['average_size'] < 1024:  # Less than 1KB average
+            suggestions.append("Many small files detected - consider bundling related files")
+        
+        # Format suggestions
+        file_types = stats['file_types']
+        if 'TXD' in file_types and file_types['TXD'] > 50:
+            suggestions.append("Many texture files - consider texture optimization")
+        
+        if 'DFF' in file_types and file_types['DFF'] > 100:
+            suggestions.append("Many model files - verify all are necessary")
+        
+        # Version suggestions
+        if img_file.version == IMGVersion.VERSION_1:
+            suggestions.append("Consider upgrading to IMG Version 2 for better performance")
+        
+        return suggestions
+    
+    @staticmethod
+    def recommend_fixes(validation: ValidationResult, stats: Dict = None) -> List[str]:
+        """Recommend fixes for validation issues"""
+        recommendations = []
+        
+        if validation.errors:
+            recommendations.append("Fix critical errors before using this IMG file")
+        
+        if validation.warnings:
+            recommendations.append("Review validation warnings for potential issues")
+        
+        # File type recommendations
+        if stats and 'file_types' in stats:
+            file_types = stats['file_types']
+            if 'Unknown' in file_types and file_types['Unknown'] > 5:
+                recommendations.append("Many files with unknown extensions - verify file types")
+        
+        return recommendations
 
 
-# Example usage and testing
+# Utility functions for integration
+def quick_validate_img(file_path: str) -> ValidationResult:
+    """Quick validation of IMG file without full loading"""
+    result = ValidationResult()
+    
+    if not os.path.exists(file_path):
+        result.add_error(f"File does not exist: {file_path}")
+        return result
+    
+    try:
+        # Try to detect version
+        version = detect_img_version(file_path)
+        if version == IMGVersion.UNKNOWN:
+            result.add_error("Unknown or invalid IMG file format")
+        else:
+            result.add_info(f"Detected IMG version: {version.name}")
+    
+    except Exception as e:
+        result.add_error(f"Failed to analyze file: {str(e)}")
+    
+    return result
+
+
+def validate_before_import(file_paths: List[str]) -> Dict[str, ValidationResult]:
+    """Validate multiple files before import"""
+    results = {}
+    
+    for file_path in file_paths:
+        results[file_path] = IMGValidator.validate_file_for_import(file_path)
+    
+    return results
+
+
+def batch_validate_directory(directory_path: str, extensions: List[str] = None) -> Dict[str, ValidationResult]:
+    """Validate all files in a directory for IMG import"""
+    results = {}
+    
+    if not os.path.exists(directory_path):
+        return results
+    
+    if extensions is None:
+        extensions = ['dff', 'txd', 'col', 'ifp', 'scm', 'ipl', 'ide', 'dat']
+    
+    for root, dirs, files in os.walk(directory_path):
+        for file in files:
+            file_path = os.path.join(root, file)
+            ext = Path(file_path).suffix.lower().lstrip('.')
+            
+            if ext in [e.lower() for e in extensions]:
+                results[file_path] = IMGValidator.validate_file_for_import(file_path)
+    
+    return results
+
+
+# Example usage
 if __name__ == "__main__":
     # Test validation system
-    print("Testing IMG Validator...")
+    print("IMG Validator Test")
     
-    # Test with a sample IMG file
-    test_img_path = "test.img"
-    if os.path.exists(test_img_path):
-        img = IMGFile(test_img_path)
-        if img.open():
-            # Basic validation
-            report = IMGValidator.validate_img_file(img, deep_scan=False)
-            print(f"✓ Basic validation: {report.get_summary()}")
-            
-            # Deep validation
-            deep_report = IMGValidator.validate_img_file(img, deep_scan=True)
-            print(f"✓ Deep validation: {deep_report.get_summary()}")
-            
-            # Print issues
-            for issue in deep_report.issues:
-                print(f"  {issue.severity.value.upper()}: {issue.message}")
-            
-            # Attempt repair if needed
-            if deep_report.get_auto_repairable_count() > 0:
-                validator = IMGValidator()
-                if validator.repair_img(img, deep_report):
-                    print("✓ Repairs applied successfully")
-                else:
-                    print("✗ Failed to apply repairs")
-            
-            img.close()
-    else:
-        print("No test IMG file found")
+    # Test file validation
+    test_files = ["test.dff", "test.txd", "nonexistent.img"]
     
-    print("IMG Validator tests completed!")
-                
+    for test_file in test_files:
+        print(f"\nValidating: {test_file}")
+        result = IMGValidator.validate_file_for_import(test_file)
+        print(f"Result: {result.get_summary()}")
+        if result.warnings or result.errors:
+            print(result.get_details())
+    
+    print("\nValidation tests completed!")
