@@ -1,7 +1,7 @@
 {
     "name": "Light Pink Blossom",
-    "description": "Gentle pink theme like cherry blossoms and soft roses \ud83c\udf38",
-    "category": "\ud83c\udf38 Light Colors",
+    "description": "Gentle pink theme like cherry blossoms and soft roses 🌸",
+    "category": "🌸 Light Colors",
     "author": "X-Seti",
     "version": "1.0",
     "colors": {
@@ -31,9 +31,6 @@
         "action_convert": "#f3e8ff",
         "panel_entries": "#f0fdf4",
         "panel_filter": "#fefce8",
-        "toolbar_bg": "#f9fafb",
-        "button_text_color": "#000000",
-        "button_text_hover": "#000000",
-        "button_text_pressed": "#000000"
+        "toolbar_bg": "#f9fafb"
     }
 }

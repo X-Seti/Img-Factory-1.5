@@ -1,7 +1,7 @@
 {
     "name": "Pastel Button Theme",
-    "description": "X-Seti - June05, 2025 - Light Pastel Button Theme Template for IMG Factory - Creates soft, modern button styling with action-type specific colors \ud83c\udfa8",
-    "category": "\ud83c\udfa8 Pastel",
+    "description": "X-Seti - June05, 2025 - Light Pastel Button Theme Template for IMG Factory - Creates soft, modern button styling with action-type specific colors 🎨",
+    "category": "🎨 Pastel",
     "author": "X-Seti",
     "version": "1.5",
     "colors": {
@@ -25,7 +25,7 @@
         "pin_default": "#757575",
         "pin_highlight": "#2196f3",
         "action_import": "#E3F2FD",
-        "action_export": "#E8F5E8",
+        "action_export": "#E8F5E8", 
         "action_remove": "#FFEBEE",
         "action_update": "#FFF3E0",
         "action_convert": "#F3E5F5",
@@ -36,9 +36,6 @@
         "action_convert_text": "#6A1B9A",
         "panel_entries": "#e8f5e8",
         "panel_filter": "#fff3e0",
-        "toolbar_bg": "#fafafa",
-        "button_text_color": "#000000",
-        "button_text_hover": "#000000",
-        "button_text_pressed": "#000000"
+        "toolbar_bg": "#fafafa"
     }
 }

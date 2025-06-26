@@ -1,7 +1,7 @@
 {
     "name": "Matrix Green",
-    "description": "Follow the green code... \ud83d\udc8a\ud83d\udfe2",
-    "category": "\ud83c\udfac Pop Culture",
+    "description": "Follow the green code... 💊🟢",
+    "category": "🎬 Pop Culture",
     "author": "X-Seti",
     "version": "1.0",
     "colors": {
@@ -31,9 +31,6 @@
         "action_convert": "#ff00ff",
         "panel_entries": "#161b22",
         "panel_filter": "#21262d",
-        "toolbar_bg": "#0d1117",
-        "button_text_color": "#ffffff",
-        "button_text_hover": "#ffffff",
-        "button_text_pressed": "#ffffff"
+        "toolbar_bg": "#0d1117"
     }
 }

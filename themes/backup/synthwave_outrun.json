@@ -1,7 +1,7 @@
 {
     "name": "Synthwave Outrun",
-    "description": "Drive into the neon sunset \ud83c\udf34\ud83c\udf05\ud83c\udfb6",
-    "category": "\ud83c\udfa8 Creative",
+    "description": "Drive into the neon sunset 🌴🌅🎶",
+    "category": "🎨 Creative",
     "author": "X-Seti",
     "version": "1.0",
     "colors": {
@@ -31,9 +31,6 @@
         "action_convert": "#a663cc",
         "panel_entries": "#442c8b",
         "panel_filter": "#5b3dad",
-        "toolbar_bg": "#2d1b69",
-        "button_text_color": "#ffffff",
-        "button_text_hover": "#ffffff",
-        "button_text_pressed": "#ffffff"
+        "toolbar_bg": "#2d1b69"
     }
 }

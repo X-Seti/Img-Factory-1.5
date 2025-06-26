@@ -1,7 +1,7 @@
 {
     "name": "Light Professional",
-    "description": "Clean light theme for daytime work \u2600\ufe0f",
-    "category": "\ud83c\udfe2 Professional",
+    "description": "Clean light theme for daytime work ☀️",
+    "category": "🏢 Professional",
     "author": "X-Seti",
     "version": "1.0",
     "colors": {
@@ -31,9 +31,6 @@
         "action_convert": "#8764b8",
         "panel_entries": "#f5f5f5",
         "panel_filter": "#fff8dc",
-        "toolbar_bg": "#fafafa",
-        "button_text_color": "#000000",
-        "button_text_hover": "#000000",
-        "button_text_pressed": "#000000"
+        "toolbar_bg": "#fafafa"
     }
 }

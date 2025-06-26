@@ -1,7 +1,7 @@
 {
     "name": "IMG Factory Dark Mode",
-    "description": "Dark version of the IMG Factory theme \ud83c\udf19\ud83d\udcc1",
-    "category": "\ud83c\udfe2 Professional",
+    "description": "Dark version of the IMG Factory theme 🌙📁",
+    "category": "🏢 Professional",
     "author": "X-Seti",
     "version": "1.0",
     "colors": {
@@ -31,9 +31,6 @@
         "action_convert": "#9c27b0",
         "panel_entries": "#2d3a2d",
         "panel_filter": "#3d2f1e",
-        "toolbar_bg": "#252526",
-        "button_text_color": "#ffffff",
-        "button_text_hover": "#ffffff",
-        "button_text_pressed": "#ffffff"
+        "toolbar_bg": "#252526"
     }
 }

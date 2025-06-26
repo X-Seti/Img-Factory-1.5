@@ -23,6 +23,200 @@ from PyQt6.QtGui import QFont
 
 
 class AppSettings:
+    def __init__(self):
+        self.settings_file = Path("imgfactory.settings.json")  # Use correct settings file
+        self.themes = {}
+
+        # Load themes from JSON files in themes/ folder
+        self._load_themes_from_files()
+
+        # Fallback hardcoded themes if no files found
+        if not self.themes:
+            self._load_default_themes()
+
+        # Default settings
+        self.defaults = {
+            "theme": "lightgreen",  # Default to lightgreen instead of LCARS
+            "font_family": "Segoe UI",
+            "font_size": 9,
+            "font_weight": "normal",
+            "font_style": "normal",
+            "panel_font_family": "Segoe UI",
+            "panel_font_size": 9,
+            "panel_font_weight": "normal",
+            "button_font_family": "Segoe UI",
+            "button_font_size": 9,
+            "button_font_weight": "bold",
+            "panel_opacity": 95,
+            "show_tooltips": True,
+            "auto_save": True,
+            "grid_size": 5,
+            "snap_to_grid": True,
+            "show_grid": True,
+            "show_perfboard": True,
+            "pin_label_size": 8,
+            "zoom_sensitivity": 1.2,
+            "max_undo_levels": 50,
+            "panel_layout": "left",
+            "collapsible_panels": True,
+            "remember_window_state": True,
+            "voice_commands": False,
+            "animations": True,
+            "sound_effects": False,
+            "lcars_sounds": False,
+            # Custom button colors
+            "custom_button_colors": False,
+            "button_import_color": "#2196f3",
+            "button_export_color": "#4caf50",
+            "button_remove_color": "#f44336",
+            "button_update_color": "#ff9800",
+            "button_convert_color": "#9c27b0",
+            "button_default_color": "#0078d4",
+            # Icon control settings
+            "show_button_icons": False,
+            "show_menu_icons": True,
+            "show_emoji_in_buttons": False,
+
+            # Path remembering settings (from your existing file)
+            "remember_img_output_path": True,
+            "last_img_output_path": "/home/x2",
+            "remember_import_path": True,
+            "last_import_path": "",
+            "remember_export_path": True,
+            "last_export_path": "",
+            "default_img_version": "VER2",
+            "default_initial_size_mb": 100,
+            "auto_create_directory_structure": False,
+            "compression_enabled_by_default": False,
+            "remember_dialog_positions": True,
+            "show_creation_tips": True,
+            "validate_before_creation": True
+        }
+
+        self.current_settings = self.defaults.copy()
+        self.load_settings()
+
+    def _load_themes_from_files(self):
+        """Load themes from JSON files in themes/ directory"""
+        themes_dir = Path("themes")
+        if not themes_dir.exists():
+            print("⚠️ themes/ directory not found - using hardcoded themes")
+            return
+
+        print("🎨 Loading themes from files...")
+        for theme_file in themes_dir.glob("*.json"):
+            try:
+                with open(theme_file, 'r') as f:
+                    theme_data = json.load(f)
+
+                # Use filename without extension as theme key
+                theme_key = theme_file.stem
+                self.themes[theme_key] = theme_data
+
+                print(f"  ✅ Loaded: {theme_key} - {theme_data.get('name', 'Unnamed')}")
+
+            except Exception as e:
+                print(f"  ❌ Failed to load {theme_file}: {e}")
+
+        print(f"📊 Total themes loaded: {len(self.themes)}")
+
+    def _load_default_themes(self):
+        """Load hardcoded fallback themes"""
+        print("🔄 Loading default hardcoded themes...")
+        self.themes = {
+            "LCARS": {
+                "name": "LCARS (Star Trek)",
+                "description": "Inspired by Enterprise computer interfaces 🖖",
+                "colors": {
+                    "bg_primary": "#1a1a2e",
+                    "bg_secondary": "#16213e",
+                    "bg_tertiary": "#0f3460",
+                    "panel_bg": "#2d2d44",
+                    "accent_primary": "#ff6600",
+                    "accent_secondary": "#9d4edd",
+                    "text_primary": "#e0e1dd",
+                    "text_secondary": "#c9ada7",
+                    "text_accent": "#f2cc8f",
+                    "button_normal": "#3a86ff",
+                    "button_hover": "#4895ff",
+                    "button_pressed": "#2563eb",
+                    "border": "#577590",
+                    "success": "#06ffa5",
+                    "warning": "#ffb700",
+                    "error": "#ff006e",
+                    "grid": "#403d58",
+                    "pin_default": "#c0c0c0",
+                    "pin_highlight": "#f9e71e",
+                    "button_text_color": "#ffffff",  # White text for dark theme
+                    "button_text_hover": "#ffffff",
+                    "button_text_pressed": "#ffffff"
+                }
+            },
+            "lightgreen": {
+                "name": "Light Green Garden",
+                "description": "Fresh green theme 🌱",
+                "colors": {
+                    "bg_primary": "#f0fdf4",
+                    "bg_secondary": "#dcfce7",
+                    "bg_tertiary": "#bbf7d0",
+                    "panel_bg": "#f7fee7",
+                    "accent_primary": "#16a34a",
+                    "accent_secondary": "#15803d",
+                    "text_primary": "#14532d",
+                    "text_secondary": "#166534",
+                    "text_accent": "#15803d",
+                    "button_normal": "#dcfce7",
+                    "button_hover": "#bbf7d0",
+                    "button_pressed": "#86efac",
+                    "border": "#d1d5db",
+                    "success": "#16a34a",
+                    "warning": "#d97706",
+                    "error": "#dc2626",
+                    "grid": "#e5e7eb",
+                    "pin_default": "#6b7280",
+                    "pin_highlight": "#16a34a",
+                    "action_import": "#dbeafe",
+                    "action_export": "#dcfce7",
+                    "action_remove": "#fee2e2",
+                    "action_update": "#fef3c7",
+                    "action_convert": "#f3e8ff",
+                    "panel_entries": "#f0fdf4",
+                    "panel_filter": "#fefce8",
+                    "toolbar_bg": "#f9fafb",
+                    "button_text_color": "#000000",  # Black text for light theme
+                    "button_text_hover": "#000000",
+                    "button_text_pressed": "#000000"
+                }
+            }
+        }
+
+    # KEEP all your existing methods: get_theme, get_color, save_settings, etc.
+    # Just add this method:
+
+    def get_available_themes(self):
+        """Get list of available theme names"""
+        return list(self.themes.keys())
+
+# ALSO UPDATE your get_theme method to handle missing themes:
+
+    def get_theme(self, theme_name=None):
+        """Get theme colors with fallback"""
+        if theme_name is None:
+            theme_name = self.current_settings["theme"]
+
+        # Handle theme name mismatches (lightyellow_theme -> lightyellow)
+        if theme_name.endswith('_theme'):
+            theme_name = theme_name[:-6]  # Remove '_theme' suffix
+
+        # Return theme or fallback to first available theme
+        if theme_name in self.themes:
+            return self.themes[theme_name]
+        else:
+            print(f"⚠️ Theme '{theme_name}' not found, using fallback")
+            fallback_theme = list(self.themes.keys())[0] if self.themes else "LCARS"
+            return self.themes.get(fallback_theme, {"colors": {}})
+
+class AppSettings:
     def __init__(self, settings_file="imgfactory.settings.json"):  # Note: .settings not _settings
         self.settings_file = settings_file
         self.defaults = {
@@ -70,6 +264,7 @@ class AppSettings:
             "remember_dialog_positions": True,
             "show_creation_tips": True,
             "validate_before_creation": True
+
         }
 
         self.current_settings = self.defaults.copy()
@@ -597,82 +792,248 @@ class SettingsDialog(QDialog):
     # UPDATE your get_stylesheet() method to use smart text colors:
 
     def get_stylesheet(self):
-        """Generate complete stylesheet for current theme with smart text colors"""
+        """Generate complete stylesheet for current theme with JSON button text colors"""
         theme = self.get_theme()
         colors = theme["colors"]
 
-        # ... your existing button_colors code ...
+        # Use custom button colors if enabled
+        if self.current_settings["custom_button_colors"]:
+            button_colors = {
+                "import": self.current_settings["button_import_color"],
+                "export": self.current_settings["button_export_color"],
+                "remove": self.current_settings["button_remove_color"],
+                "update": self.current_settings["button_update_color"],
+                "convert": self.current_settings["button_convert_color"],
+                "default": self.current_settings["button_default_color"]
+            }
+        else:
+            button_colors = {
+                "import": colors.get("action_import", colors["accent_primary"]),
+                "export": colors.get("action_export", colors["success"]),
+                "remove": colors.get("action_remove", colors["error"]),
+                "update": colors.get("action_update", colors["warning"]),
+                "convert": colors.get("action_convert", colors["accent_secondary"]),
+                "default": colors["button_normal"]
+            }
 
-        # Calculate smart text colors for each button type
-        default_text = self.get_contrast_text_color(colors["button_normal"])
-        import_text = self.get_contrast_text_color(colors.get("action_import", colors["accent_primary"]))
-        export_text = self.get_contrast_text_color(colors.get("action_export", colors["success"]))
-        remove_text = self.get_contrast_text_color(colors.get("action_remove", colors["error"]))
-        update_text = self.get_contrast_text_color(colors.get("action_update", colors["warning"]))
-        convert_text = self.get_contrast_text_color(colors.get("action_convert", colors["accent_secondary"]))
+        # Build font strings
+        main_font = f'{self.current_settings["font_family"]}, {self.current_settings["font_size"]}pt'
+        panel_font = f'{self.current_settings["panel_font_family"]}, {self.current_settings["panel_font_size"]}pt'
+        button_font = f'{self.current_settings["button_font_family"]}, {self.current_settings["button_font_size"]}pt'
+
+        # GET BUTTON TEXT COLORS FROM JSON THEME (this is the key fix!)
+        button_text = colors.get("button_text_color", "#000000")        # Use JSON color
+        button_text_hover = colors.get("button_text_hover", button_text)  # Use JSON color
+        button_text_pressed = colors.get("button_text_pressed", button_text)  # Use JSON color
+
+        # Icon control CSS
+        icon_style = ""
+        if not self.current_settings.get("show_button_icons", False):
+            icon_style = """
+            QPushButton {
+                qproperty-iconSize: 0px 0px;
+            }
+            """
 
         return f"""
-            /* Default Buttons with Smart Text Color */
+            /* Main Window and Widgets */
+            QMainWindow {{
+                background-color: {colors["bg_primary"]};
+                color: {colors["text_primary"]};
+                font: {main_font};
+            }}
+
+            QWidget {{
+                background-color: {colors["bg_primary"]};
+                color: {colors["text_primary"]};
+                font: {main_font};
+            }}
+
+            /* Panels and Group Boxes */
+            QGroupBox {{
+                background-color: {colors["panel_bg"]};
+                border: 2px solid {colors["border"]};
+                border-radius: 8px;
+                margin-top: 1ex;
+                padding-top: 10px;
+                font: {panel_font};
+                font-weight: {self.current_settings["panel_font_weight"]};
+                color: {colors["text_accent"]};
+            }}
+
+            QGroupBox::title {{
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 8px 0 8px;
+                color: {colors["accent_primary"]};
+                font-weight: bold;
+            }}
+
+            /* FIXED: Default Buttons with JSON text color */
             QPushButton {{
-                background-color: {colors["button_normal"]};
+                background-color: {button_colors["default"]};
                 border: 2px solid {colors["accent_primary"]};
                 border-radius: 6px;
                 padding: 8px 16px;
-                color: {default_text};  /* Smart text color */
-                font-weight: bold;
+                color: {button_text};  /* USE JSON BUTTON TEXT COLOR */
+                font: {button_font};
+                font-weight: {self.current_settings["button_font_weight"]};
                 min-height: 20px;
             }}
 
             QPushButton:hover {{
                 background-color: {colors["button_hover"]};
                 border-color: {colors["accent_secondary"]};
-                color: {self.get_contrast_text_color(colors["button_hover"])};  /* Smart hover text */
+                color: {button_text_hover};  /* USE JSON HOVER TEXT COLOR */
             }}
 
             QPushButton:pressed {{
                 background-color: {colors["button_pressed"]};
-                color: {self.get_contrast_text_color(colors["button_pressed"])};  /* Smart pressed text */
+                color: {button_text_pressed};  /* USE JSON PRESSED TEXT COLOR */
             }}
 
-            /* Action-specific buttons with smart text colors */
+            /* FIXED: Action-specific buttons with JSON text colors */
             QPushButton[action-type="import"] {{
-                background-color: {colors.get("action_import", colors["accent_primary"])};
-                border-color: {colors.get("action_import", colors["accent_primary"])};
-                color: {import_text};  /* Smart text for import */
+                background-color: {button_colors["import"]};
+                border-color: {button_colors["import"]};
+                color: {button_text};  /* USE JSON TEXT COLOR */
             }}
 
             QPushButton[action-type="export"] {{
-                background-color: {colors.get("action_export", colors["success"])};
-                border-color: {colors.get("action_export", colors["success"])};
-                color: {export_text};  /* Smart text for export */
+                background-color: {button_colors["export"]};
+                border-color: {button_colors["export"]};
+                color: {button_text};  /* USE JSON TEXT COLOR */
             }}
 
             QPushButton[action-type="remove"] {{
-                background-color: {colors.get("action_remove", colors["error"])};
-                border-color: {colors.get("action_remove", colors["error"])};
-                color: {remove_text};  /* Smart text for remove */
+                background-color: {button_colors["remove"]};
+                border-color: {button_colors["remove"]};
+                color: {button_text};  /* USE JSON TEXT COLOR */
             }}
 
             QPushButton[action-type="update"] {{
-                background-color: {colors.get("action_update", colors["warning"])};
-                border-color: {colors.get("action_update", colors["warning"])};
-                color: {update_text};  /* Smart text for update */
+                background-color: {button_colors["update"]};
+                border-color: {button_colors["update"]};
+                color: {button_text};  /* USE JSON TEXT COLOR */
             }}
 
             QPushButton[action-type="convert"] {{
-                background-color: {colors.get("action_convert", colors["accent_secondary"])};
-                border-color: {colors.get("action_convert", colors["accent_secondary"])};
-                color: {convert_text};  /* Smart text for convert */
+                background-color: {button_colors["convert"]};
+                border-color: {button_colors["convert"]};
+                color: {button_text};  /* USE JSON TEXT COLOR */
             }}
 
-            /* ... rest of your existing stylesheet ... */
-        """
+            /* Action button hover states */
+            QPushButton[action-type="import"]:hover,
+            QPushButton[action-type="export"]:hover,
+            QPushButton[action-type="remove"]:hover,
+            QPushButton[action-type="update"]:hover,
+            QPushButton[action-type="convert"]:hover {{
+                color: {button_text_hover};  /* USE JSON HOVER TEXT COLOR */
+            }}
 
-        # EXAMPLE: How it works
-        """
-        Light Green Background (#dcfce7) → Luminance = 0.85 → Black Text (#000000)
-        Dark Purple Background (#4c1d95) → Luminance = 0.12 → White Text (#ffffff)
-        Medium Blue Background (#3b82f6) → Luminance = 0.35 → White Text (#ffffff)
+            /* Action button pressed states */
+            QPushButton[action-type="import"]:pressed,
+            QPushButton[action-type="export"]:pressed,
+            QPushButton[action-type="remove"]:pressed,
+            QPushButton[action-type="update"]:pressed,
+            QPushButton[action-type="convert"]:pressed {{
+                color: {button_text_pressed};  /* USE JSON PRESSED TEXT COLOR */
+            }}
+
+            /* Combo Boxes */
+            QComboBox {{
+                background-color: {colors["bg_secondary"]};
+                border: 2px solid {colors["border"]};
+                border-radius: 4px;
+                padding: 4px 8px;
+                color: {colors["text_primary"]};
+                min-height: 20px;
+                font: {main_font};
+            }}
+
+            QComboBox:hover {{
+                border-color: {colors["accent_primary"]};
+            }}
+
+            QComboBox QAbstractItemView {{
+                background-color: {colors["bg_secondary"]};
+                border: 2px solid {colors["accent_primary"]};
+                selection-background-color: {colors["accent_primary"]};
+                color: {colors["text_primary"]};
+            }}
+
+            /* Tables */
+            QTableWidget {{
+                background-color: {colors["bg_secondary"]};
+                border: 1px solid {colors["border"]};
+                color: {colors["text_primary"]};
+                gridline-color: {colors["grid"]};
+                font: {main_font};
+            }}
+
+            QTableWidget::item {{
+                padding: 4px;
+                border-bottom: 1px solid {colors["grid"]};
+            }}
+
+            QTableWidget::item:selected {{
+                background-color: {colors["accent_primary"]};
+                color: {colors["bg_primary"]};
+            }}
+
+            QHeaderView::section {{
+                background-color: {colors["panel_bg"]};
+                color: {colors["text_accent"]};
+                padding: 6px;
+                border: 1px solid {colors["border"]};
+                font-weight: bold;
+            }}
+
+            /* Text Edit */
+            QTextEdit {{
+                background-color: {colors["bg_secondary"]};
+                border: 1px solid {colors["border"]};
+                color: {colors["text_primary"]};
+                padding: 4px;
+                font: {main_font};
+            }}
+
+            /* Line Edit */
+            QLineEdit {{
+                background-color: {colors["bg_secondary"]};
+                border: 2px solid {colors["border"]};
+                border-radius: 4px;
+                padding: 4px 8px;
+                color: {colors["text_primary"]};
+                font: {main_font};
+            }}
+
+            QLineEdit:focus {{
+                border-color: {colors["accent_primary"]};
+            }}
+
+            /* Checkboxes */
+            QCheckBox {{
+                color: {colors["text_primary"]};
+                font: {main_font};
+            }}
+
+            QCheckBox::indicator {{
+                width: 16px;
+                height: 16px;
+                border: 2px solid {colors["border"]};
+                border-radius: 3px;
+                background-color: {colors["bg_secondary"]};
+            }}
+
+            QCheckBox::indicator:checked {{
+                background-color: {colors["accent_primary"]};
+                border-color: {colors["accent_primary"]};
+            }}
+
+            /* Icon control */
+            {icon_style}
         """
 
     def _create_demo_tab(self) -> QWidget:

@@ -1,7 +1,7 @@
 {
     "name": "Light Peach Glow",
-    "description": "Warm peach theme like sunset skies and fresh peaches \ud83c\udf51",
-    "category": "\ud83c\udf38 Light Colors",
+    "description": "Warm peach theme like sunset skies and fresh peaches 🍑",
+    "category": "🌸 Light Colors",
     "author": "X-Seti",
     "version": "1.0",
     "colors": {
@@ -31,9 +31,6 @@
         "action_convert": "#f3e8ff",
         "panel_entries": "#f0fdf4",
         "panel_filter": "#fefce8",
-        "toolbar_bg": "#fafaf9",
-        "button_text_color": "#000000",
-        "button_text_hover": "#000000",
-        "button_text_pressed": "#000000"
+        "toolbar_bg": "#fafaf9"
     }
 }

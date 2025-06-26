@@ -1,8 +1,8 @@
 {
     "name": "GTA III",
-    "description": "Liberty City gritty urban atmosphere \ud83c\udfd9\ufe0f\ud83d\ude97",
-    "category": "\ud83c\udfae GTA Games",
-    "author": "X-Seti",
+    "description": "Liberty City gritty urban atmosphere 🏙️🚗",
+    "category": "🎮 GTA Games",
+    "author": "X-Seti", 
     "version": "1.0",
     "colors": {
         "bg_primary": "#1a1a1a",
@@ -31,9 +31,6 @@
         "action_convert": "#9966cc",
         "panel_entries": "#2d2d2d",
         "panel_filter": "#3d3d3d",
-        "toolbar_bg": "#1a1a1a",
-        "button_text_color": "#ffffff",
-        "button_text_hover": "#ffffff",
-        "button_text_pressed": "#ffffff"
+        "toolbar_bg": "#1a1a1a"
     }
 }

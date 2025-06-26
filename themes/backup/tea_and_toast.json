@@ -1,7 +1,7 @@
 {
     "name": "Tea 'n' Toast Morning",
-    "description": "Warm browns and purples for cozy mornings \u2615\ud83c\udf5e",
-    "category": "\ud83c\udfa8 Creative",
+    "description": "Warm browns and purples for cozy mornings ☕🍞",
+    "category": "🎨 Creative",
     "author": "X-Seti",
     "version": "1.0",
     "colors": {
@@ -31,9 +31,6 @@
         "action_convert": "#9370db",
         "panel_entries": "#3d2b30",
         "panel_filter": "#4a3540",
-        "toolbar_bg": "#2d1b20",
-        "button_text_color": "#ffffff",
-        "button_text_hover": "#ffffff",
-        "button_text_pressed": "#ffffff"
+        "toolbar_bg": "#2d1b20"
     }
 }

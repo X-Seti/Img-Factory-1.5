@@ -1,7 +1,7 @@
 {
     "name": "GTA Vice City",
-    "description": "Miami Vice neon nights and pink sunsets \ud83c\udf34\ud83c\udf05",
-    "category": "\ud83c\udfae GTA Games",
+    "description": "Miami Vice neon nights and pink sunsets 🌴🌅",
+    "category": "🎮 GTA Games", 
     "author": "X-Seti",
     "version": "1.0",
     "colors": {
@@ -31,9 +31,6 @@
         "action_convert": "#66ccff",
         "panel_entries": "#4a2d5a",
         "panel_filter": "#5a3d6a",
-        "toolbar_bg": "#2d1b3d",
-        "button_text_color": "#ffffff",
-        "button_text_hover": "#ffffff",
-        "button_text_pressed": "#ffffff"
+        "toolbar_bg": "#2d1b3d"
     }
 }

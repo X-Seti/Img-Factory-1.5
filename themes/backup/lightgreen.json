@@ -1,7 +1,7 @@
 {
     "name": "LightGreen",
-    "description": "Classic modding tool green theme \ud83d\udd27\ud83d\udc9a",
-    "category": "\ud83d\udee0\ufe0f Modding Tools",
+    "description": "Classic modding tool green theme 🔧💚",
+    "category": "🛠️ Modding Tools",
     "author": "X-Seti",
     "version": "1.0",
     "colors": {
@@ -31,9 +31,6 @@
         "action_convert": "#8844cc",
         "panel_entries": "#e8f4e8",
         "panel_filter": "#d8ead8",
-        "toolbar_bg": "#f0f8f0",
-        "button_text_color": "#000000",
-        "button_text_hover": "#000000",
-        "button_text_pressed": "#000000"
+        "toolbar_bg": "#f0f8f0"
     }
 }

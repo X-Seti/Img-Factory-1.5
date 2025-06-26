@@ -1,7 +1,7 @@
 {
     "name": "Rockstar Games",
-    "description": "Official Rockstar black, yellow and red \ud83c\udf1f\ud83c\udfae",
-    "category": "\ud83c\udfae Game Studios",
+    "description": "Official Rockstar black, yellow and red 🌟🎮",
+    "category": "🎮 Game Studios",
     "author": "X-Seti",
     "version": "1.0",
     "colors": {
@@ -31,9 +31,6 @@
         "action_convert": "#cc00cc",
         "panel_entries": "#1a1a1a",
         "panel_filter": "#2d2d2d",
-        "toolbar_bg": "#000000",
-        "button_text_color": "#ffffff",
-        "button_text_hover": "#ffffff",
-        "button_text_pressed": "#ffffff"
+        "toolbar_bg": "#000000"
     }
 }

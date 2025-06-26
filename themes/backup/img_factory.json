@@ -1,7 +1,7 @@
 {
     "name": "IMG Factory Professional",
-    "description": "Clean, organized interface inspired by IMG Factory \ud83d\udcc1",
-    "category": "\ud83c\udfe2 Professional",
+    "description": "Clean, organized interface inspired by IMG Factory 📁",
+    "category": "🏢 Professional",
     "author": "X-Seti",
     "version": "1.0",
     "colors": {
@@ -31,9 +31,6 @@
         "action_convert": "#9c27b0",
         "panel_entries": "#e8f5e8",
         "panel_filter": "#fff3e0",
-        "toolbar_bg": "#fafafa",
-        "button_text_color": "#000000",
-        "button_text_hover": "#000000",
-        "button_text_pressed": "#000000"
+        "toolbar_bg": "#fafafa"
     }
 }

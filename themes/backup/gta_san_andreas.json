@@ -1,7 +1,7 @@
 {
     "name": "GTA San Andreas",
-    "description": "Grove Street vibes and Los Santos sunshine \ud83c\udf34\ud83d\ude97",
-    "category": "\ud83c\udfae GTA Games",
+    "description": "Grove Street vibes and Los Santos sunshine 🌴🚗",
+    "category": "🎮 GTA Games",
     "author": "X-Seti",
     "version": "1.0",
     "colors": {
@@ -31,9 +31,6 @@
         "action_convert": "#cc66ff",
         "panel_entries": "#2d4a2d",
         "panel_filter": "#3d5a3d",
-        "toolbar_bg": "#1a2f1a",
-        "button_text_color": "#ffffff",
-        "button_text_hover": "#ffffff",
-        "button_text_pressed": "#ffffff"
+        "toolbar_bg": "#1a2f1a"
     }
 }

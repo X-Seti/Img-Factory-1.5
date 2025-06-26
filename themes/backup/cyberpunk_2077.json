@@ -1,7 +1,7 @@
 {
     "name": "Cyberpunk 2077",
-    "description": "Welcome to Night City, choom! \ud83c\udf03\u26a1",
-    "category": "\ud83c\udfac Pop Culture",
+    "description": "Welcome to Night City, choom! 🌃⚡",
+    "category": "🎬 Pop Culture",
     "author": "X-Seti",
     "version": "1.0",
     "colors": {
@@ -31,9 +31,6 @@
         "action_convert": "#ff00ff",
         "panel_entries": "#1a1a2e",
         "panel_filter": "#16213e",
-        "toolbar_bg": "#0f0f23",
-        "button_text_color": "#ffffff",
-        "button_text_hover": "#ffffff",
-        "button_text_pressed": "#ffffff"
+        "toolbar_bg": "#0f0f23"
     }
 }

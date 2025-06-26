@@ -1,7 +1,7 @@
 {
     "name": "Knight Rider",
-    "description": "KITT's dashboard theme \ud83d\ude97\ud83d\udca8",
-    "category": "\ud83c\udfac Pop Culture",
+    "description": "KITT's dashboard theme 🚗💨",
+    "category": "🎬 Pop Culture",
     "author": "X-Seti",
     "version": "1.0",
     "colors": {
@@ -31,9 +31,6 @@
         "action_convert": "#ff00ff",
         "panel_entries": "#1a1a1a",
         "panel_filter": "#2d2d2d",
-        "toolbar_bg": "#000000",
-        "button_text_color": "#ffffff",
-        "button_text_hover": "#ffffff",
-        "button_text_pressed": "#ffffff"
+        "toolbar_bg": "#000000"
     }
 }
