@@ -190,7 +190,7 @@ class AppSettings:
             }
         }
 
-    # KEEP all your existing methods: get_theme, get_color, save_settings, etc.
+
     # Just add this method:
 
     def get_available_themes(self):
@@ -315,7 +315,6 @@ class AppSettings:
             "auto_create_structure": self.current_settings.get("auto_create_directory_structure", False),
             "compression_enabled": self.current_settings.get("compression_enabled_by_default", False)
         }
-
 
 class AppSettings:
     """Application settings manager with extended theme support"""
@@ -1165,14 +1164,14 @@ class SettingsDialog(QDialog):
 
         self.demo_buttons = []
         toolbar_buttons = [
-            ("📂 Open IMG", "import", "Open IMG archive"),
-            ("📥 Import Files", "import", "Import files to archive"),
-            ("📤 Export Selected", "export", "Export selected entries"),
-            ("🗑️ Remove Entry", "remove", "Remove selected entry"),
-            ("🔄 Update List", "update", "Refresh entry list"),
-            ("🔄 Convert Format", "convert", "Convert file format"),
-            ("💾 Save Archive", None, "Save current archive"),
-            ("⚙️ Settings", None, "Open settings dialog")
+            ("Open IMG", "import", "Open IMG archive"),
+            ("Import Files", "import", "Import files to archive"),
+            ("Export Selected", "export", "Export selected entries"),
+            ("Remove Entry", "remove", "Remove selected entry"),
+            ("Update List", "update", "Refresh entry list"),
+            ("Convert Format", "convert", "Convert file format"),
+            ("Save Archive", None, "Save current archive"),
+            ("Settings", None, "Open settings dialog")
         ]
 
         for i, (text, action_type, tooltip) in enumerate(toolbar_buttons):
@@ -1193,21 +1192,6 @@ class SettingsDialog(QDialog):
         self.demo_table = QTableWidget(5, 5)
         self.demo_table.setHorizontalHeaderLabels(["Filename", "Type", "Size", "Version", "Status"])
         self.demo_table.setMaximumHeight(180)
-
-        # Enhanced sample data
-        sample_data = [
-            ["player.dff", "Model", "245 KB", "RW 3.6.0.3", "✅ Ready"],
-            ["player.txd", "Texture", "512 KB", "RW 3.6.0.3", "✅ Ready"],
-            ["vehicle.col", "Collision", "128 KB", "COL v2", "✅ Ready"],
-            ["dance.ifp", "Animation", "1.2 MB", "IFP v1", "🗜️ Compressed"],
-            ["mission.scm", "Script", "856 KB", "SCM v3", "🔒 Protected"]
-        ]
-
-        for row, data in enumerate(sample_data):
-            for col, value in enumerate(data):
-                item = QTableWidgetItem(value)
-                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                self.demo_table.setItem(row, col, item)
 
         # Auto-resize columns
         self.demo_table.resizeColumnsToContents()
