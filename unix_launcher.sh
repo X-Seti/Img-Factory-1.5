@@ -3,11 +3,6 @@
 # IMG Factory 1.5 - Unix Launcher with Cache Cleanup
 # X-Seti - June25,2025
 
-echo ""
-echo "=========================================="
-echo "  IMG Factory 1.5 - Unix Launcher"
-echo "=========================================="
-echo ""
 
 # Function to check command existence
 command_exists() {
@@ -46,10 +41,10 @@ if ! $PYTHON_CMD -c "import sys; exit(0 if sys.version_info >= (3, 8) else 1)"; 
 fi
 
 # Check if we're in the right directory
-if [[ ! -f "Imgfactory_Demo.py" && ! -f "imgfactory_demo.py" ]]; then
+if [[ ! -f "Imgfactory.py" && ! -f "imgfactory.py" ]]; then
     echo "ERROR: IMG Factory main file not found"
     echo "Make sure you're running this from the IMG Factory directory"
-    echo "Looking for: Imgfactory_Demo.py or imgfactory_demo.py"
+    echo "Looking for: Imgfactory.py or imgfactory.py"
     echo ""
     read -p "Press Enter to exit..."
     exit 1
@@ -72,20 +67,20 @@ elif [[ -f "img_cache_manager.py" ]]; then
     $PYTHON_CMD -c "from img_cache_manager import auto_cleanup; auto_cleanup()"
     
     # Start main application
-    if [[ -f "Imgfactory_Demo.py" ]]; then
-        $PYTHON_CMD Imgfactory_Demo.py
+    if [[ -f "Imgfactory.py" ]]; then
+        $PYTHON_CMD Imgfactory.py
         EXIT_CODE=$?
     else
-        $PYTHON_CMD imgfactory_demo.py
+        $PYTHON_CMD imgfactory.py
         EXIT_CODE=$?
     fi
 else
     echo "Cache cleanup not available, starting normally..."
-    if [[ -f "Imgfactory_Demo.py" ]]; then
-        $PYTHON_CMD Imgfactory_Demo.py
+    if [[ -f "Imgfactory.py" ]]; then
+        $PYTHON_CMD Imgfactory.py
         EXIT_CODE=$?
     else
-        $PYTHON_CMD imgfactory_demo.py
+        $PYTHON_CMD imgfactory.py
         EXIT_CODE=$?
     fi
 fi

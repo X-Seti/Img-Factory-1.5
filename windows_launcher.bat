@@ -24,8 +24,8 @@ echo Python version:
 python --version
 
 REM Check if we're in the right directory
-if not exist "Imgfactory_Demo.py" (
-    if not exist "imgfactory_demo.py" (
+if not exist "Imgfactory.py" (
+    if not exist "imgfactory.py" (
         echo ERROR: IMG Factory main file not found
         echo Make sure you're running this from the IMG Factory directory
         echo Looking for: Imgfactory_Demo.py or imgfactory_demo.py
@@ -46,14 +46,14 @@ if exist "startup_cleanup.py" (
 ) else if exist "img_cache_manager.py" (
     echo Running manual cache cleanup...
     python -c "from img_cache_manager import auto_cleanup; auto_cleanup()"
-    if exist "Imgfactory_Demo.py" (
+    if exist "Imgfactory.py" (
         python Imgfactory_Demo.py
     ) else (
         python imgfactory_demo.py
     )
 ) else (
     echo Cache cleanup not available, starting normally...
-    if exist "Imgfactory_Demo.py" (
+    if exist "Imgfactory.py" (
         python Imgfactory_Demo.py
     ) else (
         python imgfactory_demo.py
