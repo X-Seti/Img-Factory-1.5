@@ -216,39 +216,6 @@ class ImgFactory(QMainWindow):
             elif name == "Settings":
                 menu.addAction("Manage Templates", self.manage_templates)
 
-    def _create_status_bar(self):
-        """Create status bar"""
-        self.status_bar = self.statusBar()
-        self.status_bar.showMessage("Ready")
-
-    def resizeEvent(self, event):
-        """Handle window resize to adapt button text"""
-        super().resizeEvent(event)
-
-        # Use GUI layout's adaptive method
-        if hasattr(self.gui_layout, 'main_splitter'):
-            sizes = self.gui_layout.main_splitter.sizes()
-            if len(sizes) > 1:
-                right_panel_width = sizes[1]
-                self.gui_layout.adapt_buttons_to_width(right_panel_width)
-
-    def _connect_signals(self):
-        """Connect signals for table interactions"""
-        if self.gui_layout.table:
-            self.gui_layout.table.itemSelectionChanged.connect(self.on_selection_changed)
-            self.gui_layout.table.itemDoubleClicked.connect(self.on_item_double_clicked)
-
-    def on_selection_changed(self):
-        """Handle table selection change"""
-        selected_items = self.gui_layout.table.selectedItems()
-        if selected_items:
-            self.log_message(f"Selected: {selected_items[0].text()}")
-
-    def on_item_double_clicked(self, item):
-        """Handle double-click on table item"""
-        filename = self.gui_layout.table.item(item.row(), 0).text()
-        self.log_message(f"Double-clicked: {filename}")
-
     def log_message(self, message):
         """Log a message using GUI layout's log method"""
         self.gui_layout.log_message(message)
@@ -368,38 +335,7 @@ class IMGFactory(QMainWindow):
         
         # Log startup
         self.log_message("IMG Factory 1.5 initialized")
-    
-    def _create_ui(self):
-        """Create the main user interface"""
-        # Central widget
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        
-        # Main layout
-        main_layout = QVBoxLayout(central_widget)
-        main_layout.setContentsMargins(5, 5, 5, 5)
-        
-        # Check if advanced UI is enabled, otherwise use fallback
-        use_advanced_ui = True
-        if hasattr(self.settings, 'current_settings'):
-            use_advanced_ui = self.settings.current_settings.get('use_advanced_ui', True)
-        elif isinstance(self.settings, dict):
-            use_advanced_ui = self.settings.get('use_advanced_ui', True)
-        
-        if use_advanced_ui:
-            self._create_advanced_ui(main_layout)
-        else:
-            self._create_fallback_ui(main_layout)
-    
-    def _create_advanced_ui(self, main_layout):
-        """Create advanced UI with all features"""
-        # Create menu and status bars FIRST
-        self._create_menu_bar()
-        self._create_status_bar()
-        
-        # Then create main UI
-        self._create_main_ui_with_splitters(main_layout)
-    
+
     def _create_fallback_ui(self, main_layout):
         """Create simplified fallback UI"""
         # Create menu and status bars FIRST
@@ -919,85 +855,6 @@ class IMGFactory(QMainWindow):
         """Legacy method for compatibility"""
         return self._create_adaptive_button(label, action_type, icon, None, bold)
     
-    def _create_menu_bar(self):
-        """Create the comprehensive menu bar"""
-        menubar = self.menuBar()
-
-        # All menu names from the original design
-        menu_names = [
-            "File", "Edit", "Dat", "IMG", "Model",
-            "Texture", "Collision", "Item Definition",
-            "Item Placement", "Entry", "Settings", "Help"
-        ]
-
-        for name in menu_names:
-            menu = menubar.addMenu(name)
-            
-            if name == "File":
-                menu.addAction(QIcon.fromTheme("document-new"), "New IMG...", self.create_new_img)
-                menu.addAction(QIcon.fromTheme("document-open"), "Open IMG...", self.open_img_file)
-                menu.addAction(QIcon.fromTheme("document-open"), "Open COL...", self.open_col_file)
-                menu.addSeparator()
-                menu.addAction(QIcon.fromTheme("window-close"), "Close", self.close_img_file)
-                menu.addSeparator()
-                menu.addAction(QIcon.fromTheme("application-exit"), "Exit", self.close)
-                
-            elif name == "Edit":
-                menu.addAction(QIcon.fromTheme("edit-undo"), "Undo")
-                menu.addAction(QIcon.fromTheme("edit-redo"), "Redo")
-                menu.addSeparator()
-                menu.addAction(QIcon.fromTheme("edit-copy"), "Copy")
-                menu.addAction(QIcon.fromTheme("edit-paste"), "Paste")
-                
-            elif name == "IMG":
-                menu.addAction(QIcon.fromTheme("document-save"), "Rebuild", self.rebuild_img)
-                menu.addAction(QIcon.fromTheme("document-save-as"), "Rebuild As...", self.rebuild_img_as)
-                menu.addSeparator()
-                menu.addAction(QIcon.fromTheme("document-merge"), "Merge IMG Files")
-                menu.addAction(QIcon.fromTheme("edit-cut"), "Split IMG File")
-                menu.addSeparator()
-                menu.addAction(QIcon.fromTheme("dialog-information"), "IMG Properties")
-                
-            elif name == "Entry":
-                menu.addAction(QIcon.fromTheme("go-down"), "Import Files...", self.import_files)
-                menu.addAction(QIcon.fromTheme("go-up"), "Export Selected...", self.export_selected)
-                menu.addAction(QIcon.fromTheme("go-up"), "Export All...", self.export_all)
-                menu.addSeparator()
-                menu.addAction(QIcon.fromTheme("list-remove"), "Remove Selected", self.remove_selected)
-                menu.addAction(QIcon.fromTheme("edit"), "Rename Entry")
-                
-            elif name == "Settings":
-                menu.addAction(QIcon.fromTheme("preferences-other"), "Preferences...", self.show_settings)
-                menu.addAction(QIcon.fromTheme("applications-graphics"), "Themes...", self.show_theme_settings)
-                menu.addSeparator()
-                menu.addAction(QIcon.fromTheme("folder"), "Manage Templates...", self.manage_templates)
-                
-            elif name == "Help":
-                menu.addAction(QIcon.fromTheme("help-contents"), "User Guide")
-                menu.addAction(QIcon.fromTheme("help-about"), "About IMG Factory", self.show_about)
-                
-            else:
-                # Add placeholder for unimplemented menus
-                placeholder = QAction("(Coming Soon)", self)
-                placeholder.setEnabled(False)
-                menu.addAction(placeholder)
-    
-    def _create_status_bar(self):
-        """Create the status bar with progress indicator"""
-        # Use Qt's built-in statusBar() method
-        status_bar = self.statusBar()
-        
-        # Progress bar for operations
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setVisible(False)
-        status_bar.addPermanentWidget(self.progress_bar)
-        
-        # Status labels
-        self.status_label = QLabel("Ready")
-        status_bar.addWidget(self.status_label)
-        
-        self.img_info_label = QLabel("No IMG loaded")
-        status_bar.addPermanentWidget(self.img_info_label)
     
     def _apply_table_theme(self):
         """Apply theme styling to the table"""
