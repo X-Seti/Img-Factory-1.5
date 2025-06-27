@@ -1,16 +1,30 @@
-#this belongs in root /imgfactory.py
-
 #!/usr/bin/env python3
 """
 X-Seti - JUNE25 2025 - IMG Factory 1.5 - Main Application Entry Point
 Clean Qt6-based implementation for IMG archive management
 """
-
+#this belongs in root /imgfactory.py
 import sys
 import os
 import mimetypes
+from pathlib import Path  # Move this up here
 print("Starting application...")
-from pathlib import Path
+
+# Setup paths FIRST - before any other imports
+current_dir = Path(__file__).parent
+components_dir = current_dir / "components"
+gui_dir = current_dir / "gui"
+
+# Add directories to Python path
+if str(current_dir) not in sys.path:
+    sys.path.insert(0, str(current_dir))
+if components_dir.exists() and str(components_dir) not in sys.path:
+    sys.path.insert(0, str(components_dir))
+if gui_dir.exists() and str(gui_dir) not in sys.path:
+    sys.path.insert(0, str(gui_dir))
+
+# Now continue with other imports
+
 from typing import Optional, List, Dict, Any
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -18,11 +32,11 @@ from PyQt6.QtWidgets import (
     QPushButton, QFileDialog, QMessageBox, QMenuBar, QStatusBar,
     QProgressBar, QHeaderView, QGroupBox, QComboBox, QLineEdit,
     QAbstractItemView, QTreeWidget, QTreeWidgetItem, QTabWidget,
-    QGridLayout, QMenu, QButtonGroup, QRadioButton, QContextMenuEvent
+    QGridLayout, QMenu, QButtonGroup, QRadioButton, QDialog
 )
 print("PyQt6.QtCore imported successfully")
 from PyQt6.QtCore import Qt, QThread, pyqtSignal,  QTimer, QSettings, QMimeData
-from PyQt6.QtGui import QAction, QFont, QIcon, QPixmap, QDragEnterEvent, QDropEvent
+from PyQt6.QtGui import QAction, QFont, QIcon, QPixmap, QDragEnterEvent, QDropEvent, QContextMenuEvent
 
 # Import component in alphabetical order.
 from app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
@@ -32,15 +46,11 @@ from components.img_formats import GameSpecificIMGDialog, EnhancedIMGCreator
 from components.img_manager import IMGFile, IMGVersion, Platform
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_validator import IMGValidator
-from imgfactory_col_integration import setup_col_integration
-from gui.pastel_button_theme import apply_pastel_theme_to_buttons
+#from imgfactory_col_integration import setup_col_integration
 from gui.gui_layout import IMGFactoryGUILayout
+from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 
 # After creating the main interface:
-if setup_col_integration(self):
-    self.log_message("COL functionality integrated successfully")
-else:
-    self.log_message("Failed to integrate COL functionality")
 print("Components imported successfully")
 
 class IMGLoadThread(QThread):
@@ -90,9 +100,18 @@ class IMGLoadThread(QThread):
             self.loading_finished.emit(img_file)
             
         except Exception as e:
-            self.loading_error.emit(f"Loading error: {str(e)}")
-        except Exception as e:
             self.error.emit(f"Error loading IMG file: {str(e)}")
+        try:
+            from imgfactory_col_integration import setup_col_integration
+        except ImportError:
+            print("Warning: COL integration not available")
+            def setup_col_integration(main_window):
+                return False
+
+        if setup_col_integration(self):
+            self.log_message("COL functionality integrated successfully")
+        else:
+            self.log_message("Failed to integrate COL functionality")
 
 class ExportProgressDialog(QDialog):
     """Progress dialog for export operations"""
@@ -142,6 +161,8 @@ class ImgFactory(QMainWindow):
 
         # Initialize GUI layout
         self.gui_layout = IMGFactoryGUILayout(self)
+        self.gui_layout = IMGFactoryGUILayout(self)
+        self.gui_layout.create_main_ui_with_splitters(main_layout)
 
         self._create_menu()
         self._create_status_bar()
@@ -1583,7 +1604,7 @@ if __name__ == "__main__":
     settings = AppSettings()
 
     # Create and show main window
-    main_window = ImgFactoryDemo(settings)
+    main_window = ImgFactory(settings)
 
     # Apply theme
     apply_theme_to_app(app, settings)

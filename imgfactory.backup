@@ -1,36 +1,62 @@
-#this belongs in root /imgfactory.py
-
 #!/usr/bin/env python3
 """
 X-Seti - JUNE25 2025 - IMG Factory 1.5 - Main Application Entry Point
 Clean Qt6-based implementation for IMG archive management
 """
-
+#this belongs in root /imgfactory.py
 import sys
 import os
-from pathlib import Path
+import mimetypes
+from pathlib import Path  # Move this up here
+print("Starting application...")
+
+# Setup paths FIRST - before any other imports
+current_dir = Path(__file__).parent
+components_dir = current_dir / "components"
+gui_dir = current_dir / "gui"
+
+# Add directories to Python path
+if str(current_dir) not in sys.path:
+    sys.path.insert(0, str(current_dir))
+if components_dir.exists() and str(components_dir) not in sys.path:
+    sys.path.insert(0, str(components_dir))
+if gui_dir.exists() and str(gui_dir) not in sys.path:
+    sys.path.insert(0, str(gui_dir))
+
+# Now continue with other imports
+
 from typing import Optional, List, Dict, Any
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QSplitter, QTableWidget, QTableWidgetItem, QTextEdit, QLabel, QContextMenuEvent,
+    QSplitter, QTableWidget, QTableWidgetItem, QTextEdit, QLabel,
     QPushButton, QFileDialog, QMessageBox, QMenuBar, QStatusBar,
     QProgressBar, QHeaderView, QGroupBox, QComboBox, QLineEdit,
     QAbstractItemView, QTreeWidget, QTreeWidgetItem, QTabWidget,
     QGridLayout, QMenu, QButtonGroup, QRadioButton
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer, QSettings
-from PyQt6.QtGui import QAction, QFont, QIcon, QPixmap
+print("PyQt6.QtCore imported successfully")
+from PyQt6.QtCore import Qt, QThread, pyqtSignal,  QTimer, QSettings, QMimeData
+from PyQt6.QtGui import QAction, QFont, QIcon, QPixmap, QDragEnterEvent, QDropEvent, QContextMenuEvent
 
-# Import component
-from components.img_core_classes import IMGFile, IMGEntry, IMGVersion, format_file_size
-from components.img_creator import NewIMGDialog
-from components.img_templates import IMGTemplateManager, TemplateManagerDialog
-from components.img_manager import IMGFile, IMGVersion, Platform
-from components.img_validator import IMGValidator
+# Import component in alphabetical order.
 from app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
+from components.img_creator import NewIMGDialog
+from components.img_core_classes import IMGFile, IMGEntry, IMGVersion, format_file_size
+from components.img_formats import GameSpecificIMGDialog, EnhancedIMGCreator
+from components.img_manager import IMGFile, IMGVersion, Platform
+from components.img_templates import IMGTemplateManager, TemplateManagerDialog
+from components.img_validator import IMGValidator
+#from imgfactory_col_integration import setup_col_integration
+from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
-# Import COL integration
-from imgfactory_col_integration import setup_col_integration
+
+
+try:
+    from imgfactory_col_integration import setup_col_integration
+except ImportError:
+    print("Warning: COL integration not available")
+    def setup_col_integration(main_window):
+        return False
 
 # After creating the main interface:
 if setup_col_integration(self):
@@ -44,7 +70,12 @@ class IMGLoadThread(QThread):
     progress_updated = pyqtSignal(int, str)  # progress, status
     loading_finished = pyqtSignal(object)    # IMGFile object
     loading_error = pyqtSignal(str)          # error message
-    
+
+    """Background thread for loading IMG files"""
+    progress = pyqtSignal(int)
+    finished = pyqtSignal(object)  # IMGFile object
+    error = pyqtSignal(str)
+
     def __init__(self, file_path: str):
         super().__init__()
         self.file_path = file_path
@@ -54,15 +85,17 @@ class IMGLoadThread(QThread):
             self.progress_updated.emit(10, "Opening file...")
             
             # Create IMG file instance
+            self.progress.emit(10)
             img_file = IMGFile(self.file_path)
-            
             self.progress_updated.emit(30, "Detecting format...")
             
             # Open and parse file
+            self.progress.emit(30)
             if not img_file.open():
-                self.loading_error.emit(f"Failed to open IMG file: {self.file_path}")
+                self.error.emit(f"Failed to open IMG file: {self.file_path}")
                 return
-            
+
+
             self.progress_updated.emit(80, "Loading entries...")
             
             # Validate the loaded file
@@ -71,11 +104,240 @@ class IMGLoadThread(QThread):
                 self.loading_error.emit(f"IMG file validation failed: {validation.get_summary()}")
                 return
             
+
+            self.progress.emit(100)
+            self.finished.emit(img_file)
+
             self.progress_updated.emit(100, "Complete")
             self.loading_finished.emit(img_file)
             
         except Exception as e:
             self.loading_error.emit(f"Loading error: {str(e)}")
+        except Exception as e:
+            self.error.emit(f"Error loading IMG file: {str(e)}")
+
+class ExportProgressDialog(QDialog):
+    """Progress dialog for export operations"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Exporting Files...")
+        self.setMinimumSize(400, 200)
+        self.setModal(True)
+
+        layout = QVBoxLayout(self)
+
+        # Progress info
+        self.status_label = QLabel("Preparing export...")
+        layout.addWidget(self.status_label)
+
+        self.progress_bar = QProgressBar()
+        layout.addWidget(self.progress_bar)
+
+        # Cancel button
+        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button.clicked.connect(self.reject)
+        layout.addWidget(self.cancel_button)
+
+    def update_progress(self, current, total, filename=""):
+        """Update progress display"""
+        if total > 0:
+            progress = int((current / total) * 100)
+            self.progress_bar.setValue(progress)
+
+        if filename:
+            self.status_label.setText(f"Exporting: {filename}")
+        else:
+            self.status_label.setText(f"Progress: {current}/{total}")
+
+class ImgFactory(QMainWindow):
+    def __init__(self, app_settings):
+        super().__init__()
+        self.setWindowTitle("IMG Factory 1.5")
+        self.setGeometry(100, 100, 1100, 700)
+        self.app_settings = app_settings
+
+        # Current IMG file
+        self.current_img: IMGFile = None
+        self.load_thread: IMGLoadThread = None
+        self.template_manager = IMGTemplateManager()
+
+        # Initialize GUI layout
+        self.gui_layout = IMGFactoryGUILayout(self)
+
+        self._create_menu()
+        self._create_status_bar()
+
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+
+        main_layout = QHBoxLayout(central_widget)
+        main_layout.setContentsMargins(5, 5, 5, 5)
+
+        # Use GUI layout module instead of duplicate functions
+        self.gui_layout.create_main_ui_with_splitters(main_layout)
+
+        # Connect signals and add sample data
+        self._connect_signals()
+        self.gui_layout.add_sample_data()
+
+    def themed_button(self, label, action_type=None, icon=None, bold=False):
+        """Create themed button - keep this in main class for theming"""
+        btn = QPushButton(label)
+        if action_type:
+            btn.setProperty("action-type", action_type)
+        if icon:
+            btn.setIcon(QIcon.fromTheme(icon))
+        if bold:
+            font = btn.font()
+            font.setBold(True)
+            btn.setFont(font)
+        return btn
+
+    def _create_menu(self):
+        menubar = self.menuBar()
+
+        menu_names = [
+            "File", "Edit", "Dat", "IMG", "Model",
+            "Texture", "Collision", "Item Definition",
+            "Item Placement", "Entry", "Settings", "Help"
+        ]
+
+        for name in menu_names:
+            menu = menubar.addMenu(name)
+            if name == "File":
+                menu.addAction(QIcon.fromTheme("document-open"), "Open")
+                menu.addAction(QIcon.fromTheme("window-close"), "Close")
+                menu.addSeparator()
+                menu.addAction(QIcon.fromTheme("application-exit"), "Exit", self.close)
+            elif name == "IMG":
+                menu.addAction(QIcon.fromTheme("document-save"), "Rebuild")
+                menu.addAction(QIcon.fromTheme("document-merge"), "Merge")
+                menu.addAction(QIcon.fromTheme("document-new"), "New IMG", self.create_new_img)
+            elif name == "Settings":
+                menu.addAction("Manage Templates", self.manage_templates)
+
+    def _create_status_bar(self):
+        """Create status bar"""
+        self.status_bar = self.statusBar()
+        self.status_bar.showMessage("Ready")
+
+    def resizeEvent(self, event):
+        """Handle window resize to adapt button text"""
+        super().resizeEvent(event)
+
+        # Use GUI layout's adaptive method
+        if hasattr(self.gui_layout, 'main_splitter'):
+            sizes = self.gui_layout.main_splitter.sizes()
+            if len(sizes) > 1:
+                right_panel_width = sizes[1]
+                self.gui_layout.adapt_buttons_to_width(right_panel_width)
+
+    def _connect_signals(self):
+        """Connect signals for table interactions"""
+        if self.gui_layout.table:
+            self.gui_layout.table.itemSelectionChanged.connect(self.on_selection_changed)
+            self.gui_layout.table.itemDoubleClicked.connect(self.on_item_double_clicked)
+
+    def on_selection_changed(self):
+        """Handle table selection change"""
+        selected_items = self.gui_layout.table.selectedItems()
+        if selected_items:
+            self.log_message(f"Selected: {selected_items[0].text()}")
+
+    def on_item_double_clicked(self, item):
+        """Handle double-click on table item"""
+        filename = self.gui_layout.table.item(item.row(), 0).text()
+        self.log_message(f"Double-clicked: {filename}")
+
+    def log_message(self, message):
+        """Log a message using GUI layout's log method"""
+        self.gui_layout.log_message(message)
+
+    def create_new_img(self):
+        """Show new IMG creation dialog"""
+        dialog = GameSpecificIMGDialog(self)
+        dialog.template_manager = self.template_manager
+        dialog.img_created.connect(self.load_img_file)
+        dialog.img_created.connect(lambda path: self.log_message(f"Created: {os.path.basename(path)}"))
+        dialog.exec()
+
+    def manage_templates(self):
+        """Show template manager dialog"""
+        dialog = TemplateManagerDialog(self.template_manager, self)
+        dialog.template_selected.connect(self._apply_template)
+        dialog.exec()
+
+
+    def _apply_template(self, template_data):
+        """Apply a template to create new IMG"""
+        dialog = GameSpecificIMGDialog(self)
+        dialog.template_manager = self.template_manager
+
+        # Apply template settings
+        game_type_str = template_data.get('game_type', 'gtasa')
+        settings = template_data.get('settings', {})
+
+        dialog.img_created.connect(self.load_img_file)
+        dialog.exec()
+
+    def load_img_file(self, file_path):
+        """Load IMG file in background thread"""
+        if self.load_thread and self.load_thread.isRunning():
+            return
+
+        self.load_thread = IMGLoadThread(file_path)
+        self.load_thread.progress.connect(self._update_load_progress)
+        self.load_thread.finished.connect(self._on_img_loaded)
+        self.load_thread.error.connect(self._on_load_error)
+        self.load_thread.start()
+
+        self.log_message(f"Loading IMG file: {os.path.basename(file_path)}")
+
+    def _update_load_progress(self, progress):
+        """Update loading progress"""
+        self.status_bar.showMessage(f"Loading... {progress}%")
+
+    def _on_img_loaded(self, img_file):
+        """Handle successful IMG file load"""
+        self.current_img = img_file
+        self.status_bar.showMessage(f"Loaded: {os.path.basename(img_file.file_path)}")
+        self.log_message(f"Successfully loaded {len(img_file.entries)} entries")
+
+        # Update table with real data
+        self._populate_table()
+
+    def _on_load_error(self, error_message):
+        """Handle IMG file load error"""
+        self.status_bar.showMessage("Load failed")
+        self.log_message(f"Error: {error_message}")
+        QMessageBox.critical(self, "Load Error", error_message)
+
+    def _populate_table(self):
+        """Populate table with IMG file entries"""
+        if not self.current_img or not self.gui_layout.table:
+            return
+
+        entries = self.current_img.entries
+        self.gui_layout.table.setRowCount(len(entries))
+
+        for row, entry in enumerate(entries):
+            # Filename
+            self.gui_layout.table.setItem(row, 0, QTableWidgetItem(entry.name))
+            # Type
+            file_type = entry.name.split('.')[-1].upper() if '.' in entry.name else "Unknown"
+            self.gui_layout.table.setItem(row, 1, QTableWidgetItem(file_type))
+            # Size
+            self.gui_layout.table.setItem(row, 2, QTableWidgetItem(format_file_size(entry.size)))
+            # Offset
+            self.gui_layout.table.setItem(row, 3, QTableWidgetItem(f"0x{entry.offset:X}"))
+            # Version
+            self.gui_layout.table.setItem(row, 4, QTableWidgetItem(str(entry.version)))
+            # Compression
+            compression = "ZLib" if hasattr(entry, 'compressed') and entry.compressed else "None"
+            self.gui_layout.table.setItem(row, 5, QTableWidgetItem(compression))
+            # Status
+            self.gui_layout.table.setItem(row, 6, QTableWidgetItem("Ready"))
 
 
 class IMGFactory(QMainWindow):
@@ -901,19 +1163,25 @@ class IMGFactory(QMainWindow):
         if hasattr(self, 'statusBar') and self.statusBar():
             self.statusBar().showMessage(status)
     
+
     def _on_img_loaded(self, img_file):
-        """Handle successful IMG file loading"""
+        """Handle successful IMG file load"""
         self.current_img = img_file
         self._update_ui_for_loaded_img()
         self.progress_bar.setVisible(False)
-        self.log_message(f"IMG file loaded: {len(img_file.entries)} entries")
+        self.status_bar.showMessage(f"Loaded: {os.path.basename(img_file.file_path)}")
+        self.log_message(f"Successfully loaded {len(img_file.entries)} entries")
+
+        # Update table with real data
+        self._populate_table()
     
-    def _on_load_error(self, error_msg):
-        """Handle IMG loading errors"""
-        QMessageBox.critical(self, "Loading Error", error_msg)
+    def _on_load_error(self, error_message):
+        """Handle IMG file load error"""
+        QMessageBox.critical(self, "Load Error", error_message)
+        self.status_bar.showMessage("Load failed")
         self.progress_bar.setVisible(False)
         self.log_message(f"Load error: {error_msg}")
-    
+
     def _update_ui_for_loaded_img(self):
         """Update UI when IMG file is loaded"""
         if not self.current_img:
@@ -1330,6 +1598,20 @@ def main():
 
     return app.exec()
 
-
 if __name__ == "__main__":
+    app = QApplication(sys.argv)
+
+    # Create settings
+    settings = AppSettings()
+
+    # Create and show main window
+    main_window = ImgFactoryDemo(settings)
+
+    # Apply theme
+    apply_theme_to_app(app, settings)
+
+    main_window.show()
+
+    sys.exit(app.exec())
+
     main()
