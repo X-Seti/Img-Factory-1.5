@@ -12,10 +12,10 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
     QMenuBar, QMenu, QMessageBox, QFileDialog, QTabWidget,
     QTableWidget, QTableWidgetItem, QPushButton, QLabel,
-    QContextMenuEvent, QHeaderView, QAbstractItemView
+    QHeaderView, QAbstractItemView, QDialog, QTextEdit
 )
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QAction, QIcon, QContextMenuEvent
+from PyQt6.QtGui import QAction, QIcon, QShortcut, QKeySequence, QFont
 
 # Import COL components
 from components.col_core_classes import COLFile, COLModel, COLVersion

@@ -1,1049 +1,413 @@
-#this belongs in root /imgfactory.py
-
 #!/usr/bin/env python3
 """
-X-Seti - June25 2025 - IMG Factory 1.5
-Complete IMG Factory application with modular GUI system
-Features: Tear-off panels, customizable buttons, modular menus
+#this belongs in root /imgfactory.py
+IMG Factory 2.0 - Main Application Entry Point - FIXED IMPORTS
+Clean Qt6-based implementation for IMG archive management
 """
 
 import sys
 import os
 from pathlib import Path
+from typing import Optional, List, Dict, Any
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QGridLayout, QSplitter, QProgressBar, QLabel, QPushButton, QFileDialog,
-    QMessageBox, QCheckBox, QGroupBox, QListWidget, QListWidgetItem,
-    QTextEdit, QComboBox, QTableWidget, QTableWidgetItem, QHeaderView,
-    QAbstractItemView, QMenuBar, QMenu, QStatusBar, QSizePolicy, QLineEdit
+    QSplitter, QTableWidget, QTableWidgetItem, QTextEdit, QLabel,
+    QPushButton, QFileDialog, QMessageBox, QMenuBar, QStatusBar,
+    QProgressBar, QHeaderView, QGroupBox, QComboBox, QLineEdit,
+    QAbstractItemView, QTreeWidget, QTreeWidgetItem, QTabWidget
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QMimeData
-from PyQt6.QtGui import QAction, QIcon, QFont, QDragEnterEvent, QDropEvent
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer, QSettings
+from PyQt6.QtGui import QAction, QFont, QIcon, QPixmap
 
-print("Loading IMG Factory with modular GUI system...")
-
-# Import required components - no fallbacks
-from App_settings_system import AppSettings, apply_theme_to_app
-from gui.pastel_button_theme import apply_pastel_theme_to_buttons
-from gui.buttons import ButtonPresetManager, ButtonFactory
-from gui.panels import PanelManager, ButtonPanel, FilterSearchPanel
-from gui.menu import IMGFactoryMenuBar, ContextMenuManager
-from components.img_core_classes import IMGFile, IMGEntry, IMGVersion, format_file_size
-from components.img_combined_open_dialog import show_combined_open_dialog, open_single_img_file
-
-print("✓ All components imported successfully")
+# Import components
+try:
+    from components.img_core_classes import IMGFile, IMGEntry, IMGVersion, format_file_size
+    from components.img_creator import NewIMGDialog
+    from components.img_templates import IMGTemplateManager, TemplateManagerDialog
+    print("Core components imported successfully")
+    
+    # Try to import App Settings System
+    try:
+        from App_settings_system import AppSettings, apply_theme_to_app
+        print("App Settings System imported successfully")
+    except ImportError:
+        print("App Settings System not found - using defaults")
+        AppSettings = None
+        apply_theme_to_app = None
+    
+    # Try to import pastel theme
+    try:
+        from gui.pastel_button_theme import apply_pastel_theme_to_buttons
+        print("Pastel Theme imported successfully")
+    except ImportError:
+        print("Pastel Theme not found - using default styling")
+        apply_pastel_theme_to_buttons = None
+    
+    # Try to import COL GUI components
+    try:
+        from gui.col_gui_components import setup_col_gui
+        print("COL GUI components imported successfully")
+    except ImportError:
+        print("COL GUI components not found - COL buttons disabled")
+        setup_col_gui = None
+    
+    # Try to import validator
+    try:
+        from components.img_validator import IMGValidator
+        print("IMG Validator imported successfully")
+    except ImportError:
+        print("IMG Validator not found - validation disabled")
+        IMGValidator = None
+        
+except ImportError as e:
+    print(f"Failed to import core components: {e}")
+    print("Make sure all component files are in the components/ directory")
+    sys.exit(1)
 
 
 class IMGLoadThread(QThread):
     """Background thread for loading IMG files"""
-    progress = pyqtSignal(int)
-    finished = pyqtSignal(object)  # IMGFile object
-    error = pyqtSignal(str)
+    progress_updated = pyqtSignal(int, str)  # progress, status
+    loading_finished = pyqtSignal(object)    # IMGFile object
+    loading_error = pyqtSignal(str)          # error message
     
-    def __init__(self, file_path):
+    def __init__(self, file_path: str):
         super().__init__()
         self.file_path = file_path
     
     def run(self):
         try:
-            self.progress.emit(10)
+            self.progress_updated.emit(10, "Opening file...")
+            
+            # Create IMG file instance
             img_file = IMGFile(self.file_path)
             
-            self.progress.emit(30)
+            self.progress_updated.emit(30, "Detecting format...")
+            
+            # Open and parse file
             if not img_file.open():
-                self.error.emit(f"Failed to open IMG file: {self.file_path}")
+                self.loading_error.emit(f"Failed to open IMG file: {self.file_path}")
                 return
             
-            self.progress.emit(100)
-            self.finished.emit(img_file)
+            self.progress_updated.emit(80, "Loading entries...")
+            
+            # Validate the loaded file if validator available
+            if IMGValidator:
+                validation = IMGValidator.validate_img_file(img_file)
+                if not validation.is_valid:
+                    self.loading_error.emit(f"IMG file validation failed: {validation.get_summary()}")
+                    return
+            
+            self.progress_updated.emit(100, "Loading complete")
+            self.loading_finished.emit(img_file)
             
         except Exception as e:
-            self.error.emit(f"Error loading IMG file: {str(e)}")
+            self.loading_error.emit(f"Error loading IMG file: {str(e)}")
 
 
-class IMGFactory(QMainWindow):
-    """Main IMG Factory application with modular GUI"""
+class ExportThread(QThread):
+    """Background thread for exporting files"""
+    progress_updated = pyqtSignal(int, int, str)  # current, total, filename
+    finished_signal = pyqtSignal(int, int)  # exported_count, error_count
+    error_signal = pyqtSignal(str)
     
-    def __init__(self, app_settings):
+    def __init__(self, img_file: IMGFile, entries: List[IMGEntry], export_dir: str):
         super().__init__()
-        self.setWindowTitle("IMG Factory 1.5")
-        self.setGeometry(100, 100, 1100, 700)
-        self.app_settings = app_settings
-        
-        # Current IMG file
-        self.current_img: IMGFile = None
-        self.load_thread: IMGLoadThread = None
-
-        # Initialize modular GUI components
-        self.preset_manager = ButtonPresetManager()
-        self.panel_manager = None  # Will be created after UI
-        
-        self._create_ui()
-        self._create_status_bar()
-        
-        # Create menu system
-        self.menu_bar = IMGFactoryMenuBar(self, self.panel_manager)
-        self.context_menu_manager = ContextMenuManager(self)
-        self._setup_menu_callbacks()
-
-    def _create_ui(self):
-        """Create the main UI with modular panel system"""
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        
-        main_layout = QHBoxLayout(central_widget)
-        main_layout.setContentsMargins(5, 5, 5, 5)
-
-        # Main horizontal splitter (left content | right panels)
-        self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
-        
-        # Left side: Table and Log with vertical splitter
-        left_widget = self._create_left_panel()
-        
-        # Right side: Modular panels
-        right_widget = self._create_modular_right_panel()
-        
-        # Add widgets to main splitter
-        self.main_splitter.addWidget(left_widget)
-        self.main_splitter.addWidget(right_widget)
-        
-        # Set initial sizes (left panel 70%, right panel 30%)
-        self.main_splitter.setSizes([770, 330])
-        
-        # Prevent panels from collapsing
-        self.main_splitter.setChildrenCollapsible(False)
-        
-        main_layout.addWidget(self.main_splitter)
-
-    def _create_modular_right_panel(self):
-        """Create right panel with modular tear-off panels"""
-        # Create panel manager with callbacks
-        callbacks = self._get_button_callbacks()
-        self.panel_manager = PanelManager(self, self.preset_manager)
-        
-        # Create default panels
-        panels = self.panel_manager.create_default_panels(callbacks)
-        
-        # Create container for panels
-        right_widget = QWidget()
-        right_layout = QVBoxLayout(right_widget)
-        right_layout.setSpacing(5)
-        
-        # Add panels to layout
-        for panel_id in ["img_ops", "entries_ops", "filter_search"]:
-            if panel_id in panels:
-                right_layout.addWidget(panels[panel_id])
-        
-        right_layout.addStretch()
-        
-        # Connect filter panel signals
-        if "filter_search" in panels:
-            filter_panel = panels["filter_search"]
-            filter_panel.filter_changed.connect(self._on_filter_changed)
-            filter_panel.search_requested.connect(self._on_search_requested)
-        
-        return right_widget
-
-    def _create_left_panel(self):
-        """Create left panel with IMG table and log"""
-        left_container = QWidget()
-        left_layout = QVBoxLayout(left_container)
-        
-        # Vertical splitter for table and log
-        self.left_splitter = QSplitter(Qt.Orientation.Vertical)
-        
-        # IMG entries table
-        self._create_entries_table()
-        self.left_splitter.addWidget(self.table)
-        
-        # Log section
-        self.log = QTextEdit()
-        self.log.setMaximumHeight(150)
-        self.log.setPlaceholderText("Activity log will appear here...")
-        self.left_splitter.addWidget(self.log)
-        
-        # Set sizes (table 80%, log 20%)
-        self.left_splitter.setSizes([400, 100])
-        
-        left_layout.addWidget(self.left_splitter)
-        
-        return left_container
-
-    def _create_entries_table(self):
-        """Create the IMG entries table"""
-        self.table = QTableWidget()
-        self.table.setColumnCount(5)
-        self.table.setHorizontalHeaderLabels(["ID", "Type", "Name", "Offset", "Size"])
-        
-        # Configure table
-        header = self.table.horizontalHeader()
-        header.setStretchLastSection(True)
-        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-        
-        self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.table.setAlternatingRowColors(True)
-        self.table.setSortingEnabled(True)
-        
-        # Connect signals
-        self.table.itemSelectionChanged.connect(self._on_selection_changed)
-        self.table.itemDoubleClicked.connect(self._on_item_double_clicked)
-
-    def _create_status_bar(self):
-        """Create status bar"""
-        status = QStatusBar()
-        self.setStatusBar(status)
-        
-        # Left side status
-        self.status_label = QLabel("Ready")
-        status.addWidget(self.status_label)
-        
-        # Entries count
-        self.entries_count_label = QLabel("Entries: 0")
-        status.addWidget(self.entries_count_label)
-        
-        # Selected count
-        self.selected_count_label = QLabel("Selected: 0")
-        status.addWidget(self.selected_count_label)
-        
-        # Right side - IMG info
-        self.img_status_label = QLabel("IMG: (no tabs open)")
-        status.addPermanentWidget(self.img_status_label)
-        
-        # Progress bar
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setVisible(False)
-        status.addPermanentWidget(self.progress_bar)
-
-    def _get_button_callbacks(self):
-        """Get button callbacks for the modular system"""
-        return {
-            # IMG Operations
-            "open": self.open_img_file,
-            "close": self.close_img_file,
-            "rebuild": self.rebuild_img,
-            "merge": self.merge_img,
-            "split": self.split_img,
-            "convert": self.convert_img,
-            
-            # Entry Operations
-            "import": self.import_files,
-            "export": self.export_selected_entries,
-            "remove": self.remove_selected_entries,
-            "update_list": self.refresh_table,
-            "select_all": self._select_all,
-            "select_inverse": self._select_inverse,
-            "sort": self._sort_entries,
-            
-            # Advanced
-            "open_multiple": self.open_multiple_files,
-            "new_img": self.create_new_img,
-        }
-
-    def _setup_menu_callbacks(self):
-        """Setup menu callbacks"""
-        callbacks = {
-            # File menu
-            "new_img": self.create_new_img,
-            "open_img": self.open_img_file,
-            "open_multiple": self.open_multiple_files,
-            "close_img": self.close_img_file,
-            "exit": self.close,
-            
-            # Edit menu
-            "select_all": self._select_all,
-            "select_inverse": self._select_inverse,
-            "find": self._focus_search,
-            
-            # IMG menu
-            "img_rebuild": self.rebuild_img,
-            "img_validate": self.validate_img,
-            
-            # Entry menu
-            "entry_import": self.import_files,
-            "entry_export": self.export_selected_entries,
-            "entry_remove": self.remove_selected_entries,
-            
-            # Settings menu
-            "customize_buttons": self._show_button_customization,
-            "customize_panels": self._show_panel_customization,
-            
-            # Help menu
-            "about": self._show_about,
-        }
-        
-        self.menu_bar.set_callbacks(callbacks)
-
-    # Core functionality methods
-
-    def open_img_file(self):
-        """REVERTED: Original single IMG file open dialog (as requested)"""
-        file_path = open_single_img_file(self)
-        
-        if file_path:
-            self.load_img_file(file_path)
-
-    def open_multiple_files(self):
-        """NEW: Combined multiple file open dialog"""
-        files, mode = show_combined_open_dialog(self)
-        
-        if files:
-            if mode == "single" and len(files) == 1:
-                # Single IMG file
-                self.load_img_file(files[0])
-            elif mode == "multiple":
-                # Multiple files - handle appropriately
-                self._handle_multiple_files(files)
-
-    def _handle_multiple_files(self, files):
-        """Handle opening multiple files"""
-        img_files = [f for f in files if f.lower().endswith('.img')]
-        other_files = [f for f in files if not f.lower().endswith('.img')]
-        
-        if img_files:
-            # Load the first IMG file
-            self.load_img_file(img_files[0])
-            
-            if len(img_files) > 1:
-                self.log_message(f"Note: Only first IMG file loaded. Other IMG files ignored.")
-        
-        if other_files and self.current_img:
-            # Import other files into the loaded IMG
-            self.log_message(f"Importing {len(other_files)} additional files...")
-            # Implementation would go here
-        elif other_files:
-            self.log_message("Cannot import files - no IMG archive loaded")
-
-    def load_img_file(self, file_path):
-        """Load IMG file"""
-        if self.load_thread and self.load_thread.isRunning():
-            return
-
-        self.log_message(f"Loading IMG file: {os.path.basename(file_path)}")
-
-        # Show progress
-        self.progress_bar.setVisible(True)
-        self.progress_bar.setRange(0, 100)
-        self.status_label.setText("Loading IMG file...")
-
-        # Start loading thread
-        self.load_thread = IMGLoadThread(file_path)
-        self.load_thread.progress.connect(self.progress_bar.setValue)
-        self.load_thread.finished.connect(self._on_img_loaded)
-        self.load_thread.error.connect(self._on_load_error)
-        self.load_thread.start()
-
-    def _on_img_loaded(self, img_file):
-        """Handle successful IMG loading"""
-        self.current_img = img_file
-
-        # Update UI
-        self.populate_table()
-        self._update_img_info()
-        self._update_button_states()
-
-        # Hide progress
-        self.progress_bar.setVisible(False)
-        self.status_label.setText("Ready")
-
-        self.log_message(f"Loaded IMG: {os.path.basename(img_file.file_path)} ({len(img_file.entries)} entries)")
-
-    def _on_load_error(self, error_message):
-        """Handle IMG loading error"""
-        self.progress_bar.setVisible(False)
-        self.status_label.setText("Ready")
-
-        self.log_message(f"Failed to load IMG: {error_message}")
-        QMessageBox.critical(self, "Loading Error", f"Failed to load IMG file:\n{error_message}")
-
-    def close_img_file(self):
-        """Close current IMG file"""
-        if self.current_img:
-            self.current_img.close()
-            self.current_img = None
-
-            # Clear UI
-            self.table.setRowCount(0)
-            self._update_img_info()
-            self._update_button_states()
-
-            self.log_message("IMG file closed")
-
-    def populate_table(self):
-        """Populate entries table"""
-        if not self.current_img:
-            return
-
-        self.table.setRowCount(len(self.current_img.entries))
-
-        for row, entry in enumerate(self.current_img.entries):
-            # ID
-            id_item = QTableWidgetItem(str(row + 1))
-            self.table.setItem(row, 0, id_item)
-
-            # Type
-            ext = os.path.splitext(entry.name)[1].upper().lstrip('.')
-            type_item = QTableWidgetItem(ext or "Unknown")
-            self.table.setItem(row, 1, type_item)
-
-            # Name
-            name_item = QTableWidgetItem(entry.name)
-            self.table.setItem(row, 2, name_item)
-
-            # Offset
-            offset_item = QTableWidgetItem(f"0x{entry.offset:08X}")
-            self.table.setItem(row, 3, offset_item)
-
-            # Size
-            size_item = QTableWidgetItem(format_file_size(entry.size))
-            self.table.setItem(row, 4, size_item)
-
-        # Resize columns
-        self.table.resizeColumnsToContents()
-
-    def _update_img_info(self):
-        """Update IMG information display"""
-        if self.current_img:
-            file_name = os.path.basename(self.current_img.file_path)
-            self.img_status_label.setText(f"IMG: {file_name}")
-            self.entries_count_label.setText(f"Entries: {len(self.current_img.entries)}")
-        else:
-            self.img_status_label.setText("IMG: (no tabs open)")
-            self.entries_count_label.setText("Entries: 0")
-
-    def _update_button_states(self):
-        """Update button enabled states"""
-        has_img = self.current_img is not None
-        
-        # Update menu actions
-        self.menu_bar.enable_action("close_img", has_img)
-        self.menu_bar.enable_action("img_rebuild", has_img)
-        self.menu_bar.enable_action("entry_import", has_img)
-        self.menu_bar.enable_action("entry_export", has_img)
-
-    def _on_selection_changed(self):
-        """Handle table selection changes"""
-        selected_rows = len(self.table.selectionModel().selectedRows())
-        self.selected_count_label.setText(f"Selected: {selected_rows}")
-
-    def _on_item_double_clicked(self, item):
-        """Handle double-click on table item"""
-        row = item.row()
-        if self.current_img and row < len(self.current_img.entries):
-            entry = self.current_img.entries[row]
-            self.log_message(f"Entry info: {entry.name} ({format_file_size(entry.size)})")
-
-    def _on_filter_changed(self, filter_type: str, value: str):
-        """Handle filter changes"""
-        self.log_message(f"Filter changed: {filter_type} = {value}")
-        # Implementation would go here
-
-    def _on_search_requested(self, search_text: str):
-        """Handle search requests"""
-        if not search_text:
-            # Show all rows
-            for row in range(self.table.rowCount()):
-                self.table.setRowHidden(row, False)
-        else:
-            # Filter based on search text
-            for row in range(self.table.rowCount()):
-                name_item = self.table.item(row, 2)  # Name column
-                if name_item:
-                    visible = search_text.lower() in name_item.text().lower()
-                    self.table.setRowHidden(row, not visible)
-
-    def _select_all(self):
-        """Select all entries"""
-        self.table.selectAll()
-
-    def _select_inverse(self):
-        """Select inverse"""
-        # Implementation would go here
-        self.log_message("Select inverse not yet implemented")
-
-    def _sort_entries(self):
-        """Sort entries"""
-        self.table.sortItems(2)  # Sort by name column
-
-    def _focus_search(self):
-        """Focus search box in filter panel"""
-        if self.panel_manager:
-            filter_panel = self.panel_manager.get_panel("filter_search")
-            if filter_panel and hasattr(filter_panel, 'search_box'):
-                filter_panel.search_box.setFocus()
-
-    def refresh_table(self):
-        """Refresh the entries table"""
-        if self.current_img:
-            self.populate_table()
-            self.log_message("Table refreshed")
-
-    def create_new_img(self):
-        """Show new IMG creation dialog"""
-        from components.img_creator import NewIMGDialog
-        dialog = NewIMGDialog(self)
-        if dialog.exec() == dialog.DialogCode.Accepted:
-            self.log_message("New IMG creation completed")
-
-    def _show_button_customization(self):
-        """Show button customization dialog"""
-        from gui.buttons import ButtonCustomizationDialog
-        dialog = ButtonCustomizationDialog(self.preset_manager, self)
-        dialog.preset_changed.connect(self._apply_button_preset)
-        dialog.exec()
-
-    def _show_panel_customization(self):
-        """Show panel customization options"""
-        self.log_message("Panel customization not yet implemented")
-
-    def _apply_button_preset(self, preset_name: str):
-        """Apply button preset to panels"""
-        if self.panel_manager:
-            for panel_id, panel in self.panel_manager.panels.items():
-                if hasattr(panel, 'apply_preset'):
-                    panel.apply_preset(preset_name)
-
-    def _show_about(self):
-        """Show about dialog"""
-        about_text = """
-<h3>IMG Factory 1.5</h3>
-<p>Advanced IMG archive manager for GTA games</p>
-<p><b>Features:</b></p>
-<ul>
-<li>Modular tear-off panels</li>
-<li>Customizable button layouts</li>
-<li>Support for GTA III, Vice City, San Andreas, and IV</li>
-<li>Import/export files with validation</li>
-</ul>
-<p><b>Supported Files:</b> IMG, COL, TXD, DFF, IFP, WAV, SCM</p>
-<p>X-Seti - June25 2025</p>
-        """
-        QMessageBox.about(self, "About IMG Factory 1.5", about_text)
-
-    # Placeholder methods for functionality
-    def import_files(self):
-        """Import files into IMG"""
-        self.log_message("Import functionality coming soon!")
-
-    def export_selected_entries(self):
-        """Export selected entries"""
-        self.log_message("Export functionality coming soon!")
-
-    def remove_selected_entries(self):
-        """Remove selected entries"""
-        self.log_message("Remove functionality coming soon!")
-
-    def rebuild_img(self):
-        """Rebuild IMG file"""
-        self.log_message("Rebuild functionality coming soon!")
-
-    def validate_img(self):
-        """Validate IMG file"""
-        self.log_message("Validate functionality coming soon!")
-
-    def merge_img(self):
-        """Merge IMG files"""
-        self.log_message("Merge functionality coming soon!")
-
-    def split_img(self):
-        """Split IMG file"""
-        self.log_message("Split functionality coming soon!")
-
-    def convert_img(self):
-        """Convert IMG format"""
-        self.log_message("Convert functionality coming soon!")
-
-    # Logging
-    def log_message(self, message):
-        """Add message to log"""
-        self.log.append(f"[INFO] {message}")
-
-    def log_error(self, message):
-        """Add error message to log"""
-        self.log.append(f"[ERROR] {message}")
-
-
-def main():
-    """Main application entry point"""
-    import os
-    import warnings
+        self.img_file = img_file
+        self.entries = entries
+        self.export_dir = export_dir
+        self.should_stop = False
     
-    # Suppress Qt warnings about unknown CSS properties
-    os.environ['QT_LOGGING_RULES'] = '*.debug=false;qt.qpa.*=false'
-    warnings.filterwarnings("ignore", category=DeprecationWarning)
-    
-    app = QApplication(sys.argv)
-    app.setApplicationName("IMG Factory")
-    app.setApplicationVersion("1.5")
-    
-    # Suppress console spam
-    app.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, False)
-    
-    # Create settings system
-    settings = AppSettings()
-    
-    # Apply themes
-    apply_theme_to_app(app, settings)
-    apply_pastel_theme_to_buttons(app, settings)
-    print("✓ Themes applied successfully")
-    
-    # Create main window
-    window = IMGFactory(settings)
-    window.show()
-    
-    # Log startup
-    window.log_message("IMG Factory 1.5 started")
-    window.log_message("Modular GUI system active")
-    window.log_message("Ready to work with IMG archives")
-    
-    # Suppress any remaining console spam
-    import logging
-    logging.getLogger().setLevel(logging.ERROR)
-    
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    main()
-
-
-class IMGLoadThread(QThread):
-    """Background thread for loading IMG files (same as before)"""
-    progress = pyqtSignal(int)
-    finished = pyqtSignal(object)  # IMGFile object
-    error = pyqtSignal(str)
-    
-    def __init__(self, file_path):
-        super().__init__()
-        self.file_path = file_path
+    def stop(self):
+        self.should_stop = True
     
     def run(self):
         try:
-            self.progress.emit(10)
-            img_file = IMGFile(self.file_path)
+            exported_count = 0
+            error_count = 0
+            total = len(self.entries)
             
-            self.progress.emit(30)
-            if not img_file.open():
-                self.error.emit(f"Failed to open IMG file: {self.file_path}")
-                return
+            for i, entry in enumerate(self.entries):
+                if self.should_stop:
+                    break
+                
+                try:
+                    self.progress_updated.emit(i + 1, total, entry.name)
+                    
+                    # Get entry data
+                    data = entry.get_data()
+                    
+                    # Write to file
+                    output_path = os.path.join(self.export_dir, entry.name)
+                    with open(output_path, 'wb') as f:
+                        f.write(data)
+                    
+                    exported_count += 1
+                    
+                except Exception as e:
+                    error_count += 1
+                    print(f"Export error for {entry.name}: {e}")
             
-            self.progress.emit(100)
-            self.finished.emit(img_file)
+            self.finished_signal.emit(exported_count, error_count)
             
         except Exception as e:
-            self.error.emit(f"Error loading IMG file: {str(e)}")
+            self.error_signal.emit(f"Export failed: {str(e)}")
 
 
-class IMGFactory(QMainWindow):
-    """Main IMG Factory application with modular GUI"""
+class ImportThread(QThread):
+    """Background thread for importing files"""
+    progress_updated = pyqtSignal(int, int, str)  # current, total, filename
+    finished_signal = pyqtSignal(int, int)  # imported_count, error_count
+    error_signal = pyqtSignal(str)
     
-    def __init__(self, app_settings):
+    def __init__(self, img_file: IMGFile, file_paths: List[str]):
         super().__init__()
-        self.setWindowTitle("IMG Factory 1.5")
-        self.setGeometry(100, 100, 1100, 700)
-        self.app_settings = app_settings
-        
-        # Current IMG file
-        self.current_img: IMGFile = None
-        self.load_thread: IMGLoadThread = None
+        self.img_file = img_file
+        self.file_paths = file_paths
+        self.should_stop = False
+    
+    def stop(self):
+        self.should_stop = True
+    
+    def run(self):
+        try:
+            imported_count = 0
+            error_count = 0
+            total_files = len(self.file_paths)
+            
+            for i, file_path in enumerate(self.file_paths):
+                if self.should_stop:
+                    break
+                
+                try:
+                    filename = os.path.basename(file_path)
+                    self.progress_updated.emit(i + 1, total_files, filename)
+                    
+                    # Read file data
+                    with open(file_path, 'rb') as f:
+                        data = f.read()
+                    
+                    # Add to IMG
+                    self.img_file.add_entry(filename, data)
+                    imported_count += 1
+                    
+                except Exception as e:
+                    error_count += 1
+                    print(f"Import error for {file_path}: {e}")
+            
+            self.progress_updated.emit(total_files, total_files, "")
+            self.finished_signal.emit(imported_count, error_count)
+            
+        except Exception as e:
+            self.error_signal.emit(f"Import failed: {str(e)}")
 
-        # Initialize modular GUI components
-        if MODULAR_GUI_AVAILABLE:
-            self.preset_manager = ButtonPresetManager()
-            self.panel_manager = None  # Will be created after UI
+
+class IMGFactoryMain(QMainWindow):
+    """Main IMG Factory application window"""
+    
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("IMG Factory 2.0 - Python Edition")
+        self.setGeometry(100, 100, 1200, 800)
+        
+        # Core data
+        self.current_img: Optional[IMGFile] = None
+        self.template_manager = IMGTemplateManager() if 'IMGTemplateManager' in globals() else None
+        
+        # Background threads
+        self.load_thread: Optional[IMGLoadThread] = None
+        self.export_thread: Optional[ExportThread] = None
+        self.import_thread: Optional[ImportThread] = None
         
         self._create_ui()
-        self._create_status_bar()
-        
-        # Create menu system
-        if MODULAR_GUI_AVAILABLE:
-            self.menu_bar = IMGFactoryMenuBar(self, self.panel_manager)
-            self.context_menu_manager = ContextMenuManager(self)
-            self._setup_menu_callbacks()
-        else:
-            self._create_fallback_menu()
-
+        self._connect_signals()
+    
     def _create_ui(self):
-        """Create the main UI with modular panel system"""
+        """Create the main user interface"""
+        # Central widget with splitter layout
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         
         main_layout = QHBoxLayout(central_widget)
         main_layout.setContentsMargins(5, 5, 5, 5)
-
-        if MODULAR_GUI_AVAILABLE:
-            self._create_modular_ui(main_layout)
-        else:
-            self._create_fallback_ui(main_layout)
-
-    def _create_modular_ui(self, main_layout):
-        """Create UI with modular panel system"""
-        # Main horizontal splitter (left content | right panels)
+        
+        # Main splitter (left content | right controls)
         self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
         
-        # Left side: Table and Log with vertical splitter
-        left_widget = self._create_left_panel()
+        # Left panel - IMG content and log
+        left_panel = self._create_left_panel()
+        self.main_splitter.addWidget(left_panel)
         
-        # Right side: Modular panels
-        right_widget = self._create_modular_right_panel()
+        # Right panel - Controls
+        right_panel = self._create_right_panel()
+        self.main_splitter.addWidget(right_panel)
         
-        # Add widgets to main splitter
-        self.main_splitter.addWidget(left_widget)
-        self.main_splitter.addWidget(right_widget)
-        
-        # Set initial sizes (left panel 70%, right panel 30%)
-        self.main_splitter.setSizes([770, 330])
-        
-        # Prevent panels from collapsing
-        self.main_splitter.setChildrenCollapsible(False)
+        # Set splitter proportions (70% left, 30% right)
+        self.main_splitter.setSizes([840, 360])
         
         main_layout.addWidget(self.main_splitter)
-
-    def _create_modular_right_panel(self):
-        """Create right panel with modular tear-off panels"""
-        # Create panel manager with callbacks
-        callbacks = self._get_button_callbacks()
-        self.panel_manager = PanelManager(self, self.preset_manager)
         
-        # Create default panels
-        panels = self.panel_manager.create_default_panels(callbacks)
-        
-        # Create container for panels
-        right_widget = QWidget()
-        right_layout = QVBoxLayout(right_widget)
-        right_layout.setSpacing(5)
-        
-        # Add panels to layout
-        for panel_id in ["img_ops", "entries_ops", "filter_search"]:
-            if panel_id in panels:
-                right_layout.addWidget(panels[panel_id])
-        
-        right_layout.addStretch()
-        
-        # Connect filter panel signals
-        if "filter_search" in panels:
-            filter_panel = panels["filter_search"]
-            filter_panel.filter_changed.connect(self._on_filter_changed)
-            filter_panel.search_requested.connect(self._on_search_requested)
-        
-        return right_widget
-
-    def _create_fallback_ui(self, main_layout):
-        """Create fallback UI if modular system not available"""
-        # Same as before - create the traditional layout
-        self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
-        
-        left_widget = self._create_left_panel()
-        right_widget = self._create_traditional_right_panel()
-        
-        self.main_splitter.addWidget(left_widget)
-        self.main_splitter.addWidget(right_widget)
-        self.main_splitter.setSizes([770, 330])
-        
-        main_layout.addWidget(self.main_splitter)
-
-    def _create_left_panel(self):
-        """Create left panel with IMG table and log (same as before)"""
-        left_container = QWidget()
-        left_layout = QVBoxLayout(left_container)
-        
-        # Vertical splitter for table and log
-        self.left_splitter = QSplitter(Qt.Orientation.Vertical)
+        # Create menu bar and status bar
+        self._create_menu_bar()
+        self._create_status_bar()
+    
+    def _create_left_panel(self) -> QWidget:
+        """Create left panel with IMG content and log"""
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
         
         # IMG entries table
-        self._create_entries_table()
-        self.left_splitter.addWidget(self.table)
+        entries_group = QGroupBox("📁 IMG Entries")
+        entries_layout = QVBoxLayout(entries_group)
         
-        # Log section
-        self.log = QTextEdit()
-        self.log.setMaximumHeight(150)
-        self.log.setPlaceholderText("Activity log will appear here...")
-        self.left_splitter.addWidget(self.log)
-        
-        # Set sizes (table 80%, log 20%)
-        self.left_splitter.setSizes([400, 100])
-        
-        left_layout.addWidget(self.left_splitter)
-        
-        return left_container
-
-    def _create_main_ui_with_splitters(self, main_layout):
-        """Create the main UI matching original IMG Factory layout"""
-        
-        # Main horizontal splitter (left content | right controls)
-        self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
-        
-        # Left side: Table and Log with vertical splitter
-        left_widget = self._create_left_panel()
-        
-        # Right side: Control panels (matching original layout)
-        right_widget = self._create_right_panel()
-        
-        # Add widgets to main splitter
-        self.main_splitter.addWidget(left_widget)
-        self.main_splitter.addWidget(right_widget)
-        
-        # Set initial sizes (left panel 70%, right panel 30%)
-        self.main_splitter.setSizes([770, 330])
-        
-        # Prevent panels from collapsing
-        self.main_splitter.setChildrenCollapsible(False)
-        
-        main_layout.addWidget(self.main_splitter)
-
-    def _create_left_panel(self):
-        """Create left panel with IMG table and log"""
-        
-        left_container = QWidget()
-        left_layout = QVBoxLayout(left_container)
-        
-        # Vertical splitter for table and log
-        self.left_splitter = QSplitter(Qt.Orientation.Vertical)
-        
-        # IMG entries table
-        self._create_entries_table()
-        self.left_splitter.addWidget(self.table)
-        
-        # Log section
-        self.log = QTextEdit()
-        self.log.setMaximumHeight(150)
-        self.log.setPlaceholderText("Activity log will appear here...")
-        self.left_splitter.addWidget(self.log)
-        
-        # Set sizes (table 80%, log 20%)
-        self.left_splitter.setSizes([400, 100])
-        
-        left_layout.addWidget(self.left_splitter)
-        
-        return left_container
-
-    def _create_entries_table(self):
-        """Create the IMG entries table"""
-        self.table = QTableWidget()
-        self.table.setColumnCount(5)
-        self.table.setHorizontalHeaderLabels(["ID", "Type", "Name", "Offset", "Size"])
+        self.entries_table = QTableWidget()
+        self.entries_table.setColumnCount(5)
+        self.entries_table.setHorizontalHeaderLabels([
+            "Name", "Type", "Size", "Offset", "Compressed"
+        ])
         
         # Configure table
-        header = self.table.horizontalHeader()
-        header.setStretchLastSection(True)
-        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        header = self.entries_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         
-        self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.table.setAlternatingRowColors(True)
-        self.table.setSortingEnabled(True)
+        self.entries_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.entries_table.setAlternatingRowColors(True)
+        self.entries_table.setSortingEnabled(True)
         
-        # Connect signals
-        self.table.itemSelectionChanged.connect(self._on_selection_changed)
-        self.table.itemDoubleClicked.connect(self._on_item_double_clicked)
-
-    def _create_right_panel(self):
-        """Create right control panel (original IMG Factory style)"""
+        entries_layout.addWidget(self.entries_table)
+        layout.addWidget(entries_group)
         
-        right_widget = QWidget()
-        right_widget.setMinimumWidth(280)
-        right_layout = QVBoxLayout(right_widget)
+        # Log area
+        log_group = QGroupBox("📋 Activity Log")
+        log_layout = QVBoxLayout(log_group)
+        
+        self.log_text = QTextEdit()
+        self.log_text.setMaximumHeight(150)
+        self.log_text.setReadOnly(True)
+        log_layout.addWidget(self.log_text)
+        
+        layout.addWidget(log_group)
+        
+        return panel
+    
+    def _create_right_panel(self) -> QWidget:
+        """Create right panel with controls"""
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
         
         # IMG Operations
-        img_group = QGroupBox("IMG")
-        img_layout = QGridLayout(img_group)
-        img_layout.setSpacing(3)
+        img_group = QGroupBox("📁 IMG Operations")
+        img_layout = QVBoxLayout(img_group)
         
-        # Row 1
-        self.open_btn = QPushButton("Open")
-        self.open_btn.setProperty("action-type", "import")
-        self.open_btn.clicked.connect(self.open_img_file)  # REVERTED: Single file
-        img_layout.addWidget(self.open_btn, 0, 0)
+        self.open_btn = QPushButton("📂 Open IMG")
+        self.open_btn.clicked.connect(self.open_img)
+        img_layout.addWidget(self.open_btn)
         
-        self.close_btn = QPushButton("Close")
-        self.close_btn.clicked.connect(self.close_img_file)
+        self.new_btn = QPushButton("🆕 New IMG")
+        self.new_btn.clicked.connect(self.new_img)
+        img_layout.addWidget(self.new_btn)
+        
+        self.save_btn = QPushButton("💾 Save IMG")
+        self.save_btn.clicked.connect(self.save_img)
+        self.save_btn.setEnabled(False)
+        img_layout.addWidget(self.save_btn)
+        
+        self.close_btn = QPushButton("❌ Close IMG")
+        self.close_btn.clicked.connect(self.close_img)
         self.close_btn.setEnabled(False)
-        img_layout.addWidget(self.close_btn, 0, 1)
+        img_layout.addWidget(self.close_btn)
         
-        self.close_all_btn = QPushButton("Close All")
-        img_layout.addWidget(self.close_all_btn, 0, 2)
+        layout.addWidget(img_group)
         
-        # Row 2
-        self.rebuild_btn = QPushButton("Rebuild")
-        self.rebuild_btn.setProperty("action-type", "update")
-        self.rebuild_btn.clicked.connect(self.rebuild_img)
-        self.rebuild_btn.setEnabled(False)
-        img_layout.addWidget(self.rebuild_btn, 1, 0)
+        # Entry Operations
+        entry_group = QGroupBox("📄 Entry Operations")
+        entry_layout = QVBoxLayout(entry_group)
         
-        self.rebuild_as_btn = QPushButton("Rebuild As")
-        self.rebuild_as_btn.setProperty("action-type", "update")
-        img_layout.addWidget(self.rebuild_as_btn, 1, 1)
-        
-        self.rebuild_all_btn = QPushButton("Rebuild All")
-        self.rebuild_all_btn.setProperty("action-type", "update")
-        img_layout.addWidget(self.rebuild_all_btn, 1, 2)
-        
-        # Row 3
-        self.merge_btn = QPushButton("Merge")
-        self.merge_btn.setProperty("action-type", "convert")
-        img_layout.addWidget(self.merge_btn, 2, 0)
-        
-        self.split_btn = QPushButton("Split")
-        self.split_btn.setProperty("action-type", "convert")
-        img_layout.addWidget(self.split_btn, 2, 1)
-        
-        self.convert_btn = QPushButton("Convert")
-        self.convert_btn.setProperty("action-type", "convert")
-        img_layout.addWidget(self.convert_btn, 2, 2)
-        
-        right_layout.addWidget(img_group)
-        
-        # Entries Operations
-        entries_group = QGroupBox("Entries")
-        entries_layout = QGridLayout(entries_group)
-        entries_layout.setSpacing(3)
-        
-        # Row 1
-        self.import_btn = QPushButton("Import")
-        self.import_btn.setProperty("action-type", "import")
+        self.import_btn = QPushButton("📥 Import Files")
         self.import_btn.clicked.connect(self.import_files)
         self.import_btn.setEnabled(False)
-        entries_layout.addWidget(self.import_btn, 0, 0)
+        entry_layout.addWidget(self.import_btn)
         
-        self.import_via_btn = QPushButton("Import via")
-        self.import_via_btn.setProperty("action-type", "import")
-        entries_layout.addWidget(self.import_via_btn, 0, 1)
-        
-        self.update_list_btn = QPushButton("Update list")
-        self.update_list_btn.setProperty("action-type", "update")
-        self.update_list_btn.clicked.connect(self.refresh_table)
-        entries_layout.addWidget(self.update_list_btn, 0, 2)
-        
-        # Row 2
-        self.export_btn = QPushButton("Export")
-        self.export_btn.setProperty("action-type", "export")
-        self.export_btn.clicked.connect(self.export_selected_entries)
+        self.export_btn = QPushButton("📤 Export Selected")
+        self.export_btn.clicked.connect(self.export_selected)
         self.export_btn.setEnabled(False)
-        entries_layout.addWidget(self.export_btn, 1, 0)
+        entry_layout.addWidget(self.export_btn)
         
-        self.export_via_btn = QPushButton("Export via")
-        self.export_via_btn.setProperty("action-type", "export")
-        entries_layout.addWidget(self.export_via_btn, 1, 1)
+        self.export_all_btn = QPushButton("📤 Export All")
+        self.export_all_btn.clicked.connect(self.export_all)
+        self.export_all_btn.setEnabled(False)
+        entry_layout.addWidget(self.export_all_btn)
         
-        self.quick_export_btn = QPushButton("Quick Export")
-        self.quick_export_btn.setProperty("action-type", "export")
-        entries_layout.addWidget(self.quick_export_btn, 1, 2)
+        entry_layout.addWidget(QLabel("---"))
         
-        # Row 3
-        self.remove_btn = QPushButton("Remove")
-        self.remove_btn.setProperty("action-type", "remove")
-        self.remove_btn.clicked.connect(self.remove_selected_entries)
+        self.remove_btn = QPushButton("🗑️ Remove Selected")
+        self.remove_btn.clicked.connect(self.remove_selected)
         self.remove_btn.setEnabled(False)
-        entries_layout.addWidget(self.remove_btn, 2, 0)
+        entry_layout.addWidget(self.remove_btn)
         
-        self.remove_via_btn = QPushButton("Remove via")
-        self.remove_via_btn.setProperty("action-type", "remove")
-        entries_layout.addWidget(self.remove_via_btn, 2, 1)
-        
-        self.dump_btn = QPushButton("Dump")
-        self.dump_btn.setProperty("action-type", "update")
-        entries_layout.addWidget(self.dump_btn, 2, 2)
-        
-        # Row 4
-        self.rename_btn = QPushButton("Rename")
-        entries_layout.addWidget(self.rename_btn, 3, 0)
-        
-        self.replace_btn = QPushButton("Replace")
-        self.replace_btn.setProperty("action-type", "convert")
-        entries_layout.addWidget(self.replace_btn, 3, 1)
-        
-        # Row 5
-        self.select_all_btn = QPushButton("Select All")
-        self.select_all_btn.clicked.connect(self._select_all)
-        entries_layout.addWidget(self.select_all_btn, 4, 0)
-        
-        self.select_inverse_btn = QPushButton("Select Inverse")
-        entries_layout.addWidget(self.select_inverse_btn, 4, 1)
-        
-        self.sort_btn = QPushButton("Sort")
-        entries_layout.addWidget(self.sort_btn, 4, 2)
-        
-        right_layout.addWidget(entries_group)
+        layout.addWidget(entry_group)
         
         # Filter & Search
-        filter_group = QGroupBox("Filter & Search")
+        filter_group = QGroupBox("🔍 Filter & Search")
         filter_layout = QVBoxLayout(filter_group)
         
-        # Filter dropdowns
-        filter_row1 = QHBoxLayout()
-        self.type_filter = QComboBox()
-        self.type_filter.addItems(["All Types", "DFF", "TXD", "COL", "IFP", "WAV"])
-        filter_row1.addWidget(QLabel("Type:"))
-        filter_row1.addWidget(self.type_filter)
-        filter_layout.addLayout(filter_row1)
+        self.filter_combo = QComboBox()
+        self.filter_combo.addItems([
+            "All Files", "Models (DFF)", "Textures (TXD)", 
+            "Collision (COL)", "Animation (IFP)", "Audio (WAV)", "Scripts (SCM)"
+        ])
+        self.filter_combo.currentTextChanged.connect(self.apply_filter)
+        filter_layout.addWidget(self.filter_combo)
         
-        filter_row2 = QHBoxLayout()
-        self.version_filter = QComboBox()
-        self.version_filter.addItems(["All Versions"])
-        filter_row2.addWidget(QLabel("Version:"))
-        filter_row2.addWidget(self.version_filter)
-        filter_layout.addLayout(filter_row2)
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Search entries...")
+        self.search_input.textChanged.connect(self.apply_filter)
+        filter_layout.addWidget(self.search_input)
         
-        # Search box
-        search_row = QHBoxLayout()
-        self.search_box = QLineEdit()
-        self.search_box.setPlaceholderText("Search...")
-        self.search_box.textChanged.connect(self._filter_entries)
-        search_row.addWidget(self.search_box)
+        layout.addWidget(filter_group)
         
-        self.find_btn = QPushButton("Find")
-        search_row.addWidget(self.find_btn)
-        filter_layout.addLayout(search_row)
+        # Templates (if available)
+        if self.template_manager:
+            template_group = QGroupBox("📋 Templates")
+            template_layout = QVBoxLayout(template_group)
+            
+            self.manage_templates_btn = QPushButton("⚙️ Manage Templates")
+            self.manage_templates_btn.clicked.connect(self.manage_templates)
+            template_layout.addWidget(self.manage_templates_btn)
+            
+            layout.addWidget(template_group)
         
-        # Filter checkboxes
-        self.hit_tabs_check = QCheckBox("Hit Tabs")
-        filter_layout.addWidget(self.hit_tabs_check)
+        layout.addStretch()
         
-        right_layout.addWidget(filter_group)
-        
-        # NEW: Add combined open button
-        advanced_group = QGroupBox("Advanced")
-        advanced_layout = QVBoxLayout(advanced_group)
-        
-        self.open_multiple_btn = QPushButton("📁 Open Multiple Files")
-        self.open_multiple_btn.setProperty("action-type", "import")
-        self.open_multiple_btn.clicked.connect(self.open_multiple_files)  # NEW: Combined dialog
-        advanced_layout.addWidget(self.open_multiple_btn)
-        
-        self.new_img_btn = QPushButton("🆕 New IMG")
-        self.new_img_btn.setProperty("action-type", "import")
-        self.new_img_btn.clicked.connect(self.create_new_img)
-        advanced_layout.addWidget(self.new_img_btn)
-        
-        right_layout.addWidget(advanced_group)
-        
-        right_layout.addStretch()
-        
-        return right_widget
-
-    def _create_menu(self):
-        """Create menu bar (original IMG Factory style)"""
+        return panel
+    
+    def _create_menu_bar(self):
+        """Create menu bar"""
         menubar = self.menuBar()
-
-        # File menu
+        
+        # File Menu
         file_menu = menubar.addMenu("File")
         
-        # REVERTED: Original single IMG open
-        open_action = QAction("Open IMG", self)
+        open_action = QAction("Open IMG...", self)
         open_action.setShortcut("Ctrl+O")
-        open_action.triggered.connect(self.open_img_file)
+        open_action.triggered.connect(self.open_img)
         file_menu.addAction(open_action)
         
-        # NEW: Combined multiple file open
-        open_multi_action = QAction("Open Multiple Files", self)
-        open_multi_action.setShortcut("Ctrl+Shift+O")
-        open_multi_action.triggered.connect(self.open_multiple_files)
-        file_menu.addAction(open_multi_action)
+        new_action = QAction("New IMG...", self)
+        new_action.setShortcut("Ctrl+N")
+        new_action.triggered.connect(self.new_img)
+        file_menu.addAction(new_action)
         
         file_menu.addSeparator()
         
-        close_action = QAction("Close", self)
-        close_action.setShortcut("Ctrl+W")
-        close_action.triggered.connect(self.close_img_file)
-        file_menu.addAction(close_action)
+        save_action = QAction("Save IMG", self)
+        save_action.setShortcut("Ctrl+S")
+        save_action.triggered.connect(self.save_img)
+        file_menu.addAction(save_action)
         
         file_menu.addSeparator()
         
@@ -1051,362 +415,496 @@ class IMGFactory(QMainWindow):
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
-
-        # Add other menus (placeholders)
-        for menu_name in ["Edit", "Dat", "IMG", "Model", "Texture", "Collision", 
-                         "Item Definition", "Item Placement", "Entry", "Settings", "Help"]:
-            menu = menubar.addMenu(menu_name)
-            placeholder = QAction(f"{menu_name} (Coming Soon)", self)
-            placeholder.setEnabled(False)
-            menu.addAction(placeholder)
-
+        
+        # Edit Menu
+        edit_menu = menubar.addMenu("Edit")
+        
+        import_action = QAction("Import Files...", self)
+        import_action.setShortcut("Ctrl+I")
+        import_action.triggered.connect(self.import_files)
+        edit_menu.addAction(import_action)
+        
+        export_action = QAction("Export Selected...", self)
+        export_action.setShortcut("Ctrl+E")
+        export_action.triggered.connect(self.export_selected)
+        edit_menu.addAction(export_action)
+        
+        # Help Menu
+        help_menu = menubar.addMenu("Help")
+        
+        about_action = QAction("About", self)
+        about_action.triggered.connect(self.show_about)
+        help_menu.addAction(about_action)
+    
     def _create_status_bar(self):
         """Create status bar"""
-        status = QStatusBar()
-        self.setStatusBar(status)
+        self.status_bar = QStatusBar()
+        self.setStatusBar(self.status_bar)
         
-        # Left side status
-        self.status_label = QLabel("Ready")
-        status.addWidget(self.status_label)
-        
-        # Entries count
-        self.entries_count_label = QLabel("Entries: 0")
-        status.addWidget(self.entries_count_label)
-        
-        # Selected count
-        self.selected_count_label = QLabel("Selected: 0")
-        status.addWidget(self.selected_count_label)
-        
-        # Right side - IMG info
-        self.img_status_label = QLabel("IMG: (no tabs open)")
-        status.addPermanentWidget(self.img_status_label)
-        
-        # Progress bar
+        # Progress bar (hidden by default)
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
-        status.addPermanentWidget(self.progress_bar)
-
-    # Core functionality methods
-
-    def open_img_file(self):
-        """REVERTED: Original single IMG file open dialog (as requested)"""
-        if COMBINED_DIALOG_AVAILABLE:
-            file_path = open_single_img_file(self)
-        else:
-            file_path, _ = QFileDialog.getOpenFileName(
-                self, "Open IMG Archive", "", "IMG Files (*.img);;All Files (*)"
-            )
+        self.status_bar.addPermanentWidget(self.progress_bar)
+        
+        self.status_bar.showMessage("Ready")
+    
+    def _connect_signals(self):
+        """Connect UI signals"""
+        self.entries_table.itemSelectionChanged.connect(self.on_selection_changed)
+    
+    def log_message(self, message: str):
+        """Add message to activity log"""
+        self.log_text.append(f"[{QTimer().remainingTime()}] {message}")
+        # Ensure log doesn't get too long
+        if self.log_text.document().blockCount() > 1000:
+            cursor = self.log_text.textCursor()
+            cursor.movePosition(cursor.MoveOperation.Start)
+            cursor.select(cursor.SelectionType.BlockUnderCursor)
+            cursor.removeSelectedText()
+    
+    def on_selection_changed(self):
+        """Handle entry selection change"""
+        has_selection = len(self.entries_table.selectedItems()) > 0
+        has_img = self.current_img is not None
+        
+        self.export_btn.setEnabled(has_selection and has_img)
+        self.remove_btn.setEnabled(has_selection and has_img)
+    
+    def open_img(self):
+        """Open IMG file"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Open IMG File", "", "IMG Files (*.img);;All Files (*)"
+        )
         
         if file_path:
             self.load_img_file(file_path)
-
-    def open_multiple_files(self):
-        """NEW: Combined multiple file open dialog"""
-        if COMBINED_DIALOG_AVAILABLE:
-            files, mode = show_combined_open_dialog(self)
-        else:
-            files, _ = QFileDialog.getOpenFileNames(
-                self, "Select Files to Open", "",
-                "All Supported (*.img *.col *.txd *.dff);;IMG Archives (*.img);;All Files (*)"
-            )
-            mode = "multiple"
-        
-        if files:
-            if mode == "single" and len(files) == 1:
-                # Single IMG file
-                self.load_img_file(files[0])
-            elif mode == "multiple":
-                # Multiple files - handle appropriately
-                self._handle_multiple_files(files)
-
-    def _handle_multiple_files(self, files):
-        """Handle opening multiple files"""
-        img_files = [f for f in files if f.lower().endswith('.img')]
-        other_files = [f for f in files if not f.lower().endswith('.img')]
-        
-        if img_files:
-            # Load the first IMG file
-            self.load_img_file(img_files[0])
-            
-            if len(img_files) > 1:
-                self.log_message(f"Note: Only first IMG file loaded. Other IMG files ignored.")
-        
-        if other_files and self.current_img:
-            # Import other files into the loaded IMG
-            self.log_message(f"Importing {len(other_files)} additional files...")
-            # Implementation would go here
-        elif other_files:
-            self.log_message("Cannot import files - no IMG archive loaded")
-
-    def load_img_file(self, file_path):
-        """Load IMG file"""
+    
+    def load_img_file(self, file_path: str):
+        """Load IMG file in background thread"""
         if self.load_thread and self.load_thread.isRunning():
             return
-
+        
         self.log_message(f"Loading IMG file: {os.path.basename(file_path)}")
-
-        # Show progress
+        self.status_bar.showMessage("Loading IMG file...")
         self.progress_bar.setVisible(True)
         self.progress_bar.setRange(0, 100)
-        self.status_label.setText("Loading IMG file...")
-
-        # Start loading thread
+        
+        # Create and start loading thread
         self.load_thread = IMGLoadThread(file_path)
-        self.load_thread.progress.connect(self.progress_bar.setValue)
-        self.load_thread.finished.connect(self._on_img_loaded)
-        self.load_thread.error.connect(self._on_load_error)
+        self.load_thread.progress_updated.connect(self.on_load_progress)
+        self.load_thread.loading_finished.connect(self.on_img_loaded)
+        self.load_thread.loading_error.connect(self.on_load_error)
         self.load_thread.start()
-
-    def _on_img_loaded(self, img_file):
-        """Handle successful IMG loading"""
+    
+    def on_load_progress(self, progress: int, status: str):
+        """Handle loading progress"""
+        self.progress_bar.setValue(progress)
+        self.status_bar.showMessage(status)
+    
+    def on_img_loaded(self, img_file: IMGFile):
+        """Handle IMG file loaded"""
         self.current_img = img_file
-
-        # Update UI
-        self.populate_table()
-        self._update_img_info()
-        self._update_button_states()
-
-        # Hide progress
+        self.populate_entries_table()
+        
         self.progress_bar.setVisible(False)
-        self.status_label.setText("Ready")
-
-        self.log_message(f"Loaded IMG: {os.path.basename(img_file.file_path)} ({len(img_file.entries)} entries)")
-
-    def _on_load_error(self, error_message):
-        """Handle IMG loading error"""
+        self.status_bar.showMessage(f"Loaded: {os.path.basename(img_file.file_path)} - {len(img_file.entries)} entries")
+        self.log_message(f"Successfully loaded {len(img_file.entries)} entries")
+        
+        # Enable controls
+        self.save_btn.setEnabled(True)
+        self.close_btn.setEnabled(True)
+        self.import_btn.setEnabled(True)
+        self.export_all_btn.setEnabled(True)
+    
+    def on_load_error(self, error_msg: str):
+        """Handle loading error"""
         self.progress_bar.setVisible(False)
-        self.status_label.setText("Ready")
-
-        self.log_message(f"Failed to load IMG: {error_message}")
-        QMessageBox.critical(self, "Loading Error", f"Failed to load IMG file:\n{error_message}")
-
-    def close_img_file(self):
-        """Close current IMG file"""
-        if self.current_img:
-            self.current_img.close()
-            self.current_img = None
-
-            # Clear UI
-            self.table.setRowCount(0)
-            self._update_img_info()
-            self._update_button_states()
-
-            self.log_message("IMG file closed")
-
-    def populate_table(self):
-        """Populate entries table"""
+        self.status_bar.showMessage("Ready")
+        
+        QMessageBox.critical(self, "Loading Error", error_msg)
+        self.log_message(f"Loading error: {error_msg}")
+    
+    def populate_entries_table(self):
+        """Populate entries table with current IMG data"""
         if not self.current_img:
+            self.entries_table.setRowCount(0)
             return
-
-        self.table.setRowCount(len(self.current_img.entries))
-
-        for row, entry in enumerate(self.current_img.entries):
-            # ID
-            id_item = QTableWidgetItem(str(row + 1))
-            self.table.setItem(row, 0, id_item)
-
-            # Type
-            ext = os.path.splitext(entry.name)[1].upper().lstrip('.')
-            type_item = QTableWidgetItem(ext or "Unknown")
-            self.table.setItem(row, 1, type_item)
-
+        
+        entries = self.current_img.entries
+        self.entries_table.setRowCount(len(entries))
+        
+        for row, entry in enumerate(entries):
             # Name
             name_item = QTableWidgetItem(entry.name)
-            self.table.setItem(row, 2, name_item)
-
-            # Offset
-            offset_item = QTableWidgetItem(f"0x{entry.offset:08X}")
-            self.table.setItem(row, 3, offset_item)
-
+            name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.entries_table.setItem(row, 0, name_item)
+            
+            # Type (based on extension) 
+            ext = entry.extension.upper() if entry.extension else "Unknown"
+            type_item = QTableWidgetItem(ext)
+            type_item.setFlags(type_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.entries_table.setItem(row, 1, type_item)
+            
             # Size
             size_item = QTableWidgetItem(format_file_size(entry.size))
-            self.table.setItem(row, 4, size_item)
-
-        # Resize columns
-        self.table.resizeColumnsToContents()
-
-    def _update_img_info(self):
-        """Update IMG information display"""
-        if self.current_img:
-            file_name = os.path.basename(self.current_img.file_path)
-            self.img_status_label.setText(f"IMG: {file_name}")
-            self.entries_count_label.setText(f"Entries: {len(self.current_img.entries)}")
+            size_item.setFlags(size_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.entries_table.setItem(row, 2, size_item)
+            
+            # Offset
+            offset_item = QTableWidgetItem(f"0x{entry.offset:08X}")
+            offset_item.setFlags(offset_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.entries_table.setItem(row, 3, offset_item)
+            
+            # Compressed
+            compressed_item = QTableWidgetItem("Yes" if entry.is_compressed() else "No")
+            compressed_item.setFlags(compressed_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.entries_table.setItem(row, 4, compressed_item)
+    
+    def new_img(self):
+        """Create new IMG file"""
+        if 'NewIMGDialog' in globals():
+            dialog = NewIMGDialog(self)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                self.log_message("Created new IMG file")
         else:
-            self.img_status_label.setText("IMG: (no tabs open)")
-            self.entries_count_label.setText("Entries: 0")
-
-    def _update_button_states(self):
-        """Update button enabled states"""
-        has_img = self.current_img is not None
-
-        # IMG operations
-        self.close_btn.setEnabled(has_img)
-        self.rebuild_btn.setEnabled(has_img)
-
-        # Entry operations
-        self.import_btn.setEnabled(has_img)
-        self.export_btn.setEnabled(has_img)
-        self.remove_btn.setEnabled(has_img)
-
-    def _on_selection_changed(self):
-        """Handle table selection changes"""
-        selected_rows = len(self.table.selectionModel().selectedRows())
-        self.selected_count_label.setText(f"Selected: {selected_rows}")
-
-    def _on_item_double_clicked(self, item):
-        """Handle double-click on table item"""
-        row = item.row()
-        if self.current_img and row < len(self.current_img.entries):
-            entry = self.current_img.entries[row]
-            self.log_message(f"Entry info: {entry.name} ({format_file_size(entry.size)})")
-
-    def _filter_entries(self, text):
-        """Filter entries table based on search text"""
-        for row in range(self.table.rowCount()):
-            name_item = self.table.item(row, 2)  # Name column
-            if name_item:
-                visible = text.lower() in name_item.text().lower() if text else True
-                self.table.setRowHidden(row, not visible)
-
-    def _select_all(self):
-        """Select all entries"""
-        self.table.selectAll()
-
-    def refresh_table(self):
-        """Refresh the entries table"""
-        if self.current_img:
-            self.populate_table()
-            self.log_message("Table refreshed")
-
-    def create_new_img(self):
-        """Show new IMG creation dialog"""
-        dialog = NewIMGDialog(self)
-        if dialog.exec() == dialog.DialogCode.Accepted:
-            self.log_message("New IMG creation completed")
-
-    # Placeholder methods for functionality
+            QMessageBox.information(self, "New IMG", "New IMG creation not available - missing component")
+    
+    def save_img(self):
+        """Save current IMG file"""
+        if not self.current_img:
+            return
+        
+        try:
+            if self.current_img.save():
+                self.log_message("IMG file saved successfully")
+                self.status_bar.showMessage("IMG file saved", 2000)
+            else:
+                QMessageBox.warning(self, "Save Error", "Failed to save IMG file")
+        except Exception as e:
+            QMessageBox.critical(self, "Save Error", f"Error saving IMG file: {str(e)}")
+    
+    def close_img(self):
+        """Close current IMG file"""
+        self.current_img = None
+        self.entries_table.setRowCount(0)
+        
+        # Disable controls
+        self.save_btn.setEnabled(False)
+        self.close_btn.setEnabled(False)
+        self.import_btn.setEnabled(False)
+        self.export_btn.setEnabled(False)
+        self.export_all_btn.setEnabled(False)
+        self.remove_btn.setEnabled(False)
+        
+        self.status_bar.showMessage("Ready")
+        self.log_message("IMG file closed")
+    
     def import_files(self):
-        """Import files into IMG"""
-        self.log_message("Import functionality coming soon!")
-        QMessageBox.information(self, "Import", "Import functionality will be implemented")
-
-    def export_selected_entries(self):
+        """Import files into current IMG"""
+        if not self.current_img:
+            return
+        
+        files, _ = QFileDialog.getOpenFileNames(
+            self, "Import Files", "", "All Files (*)"
+        )
+        
+        if files:
+            self.log_message(f"Importing {len(files)} files...")
+            # Start import thread
+            self.import_thread = ImportThread(self.current_img, files)
+            self.import_thread.progress_updated.connect(self.on_import_progress)
+            self.import_thread.finished_signal.connect(self.on_import_finished)
+            self.import_thread.error_signal.connect(self.on_import_error)
+            self.import_thread.start()
+            
+            self.progress_bar.setVisible(True)
+            self.progress_bar.setRange(0, len(files))
+    
+    def on_import_progress(self, current: int, total: int, filename: str):
+        """Handle import progress"""
+        self.progress_bar.setValue(current)
+        self.status_bar.showMessage(f"Importing {filename}...")
+    
+    def on_import_finished(self, imported_count: int, error_count: int):
+        """Handle import finished"""
+        self.progress_bar.setVisible(False)
+        self.populate_entries_table()
+        
+        message = f"Import complete: {imported_count} files imported"
+        if error_count > 0:
+            message += f", {error_count} errors"
+        
+        self.status_bar.showMessage(message, 3000)
+        self.log_message(message)
+    
+    def on_import_error(self, error_msg: str):
+        """Handle import error"""
+        self.progress_bar.setVisible(False)
+        QMessageBox.critical(self, "Import Error", error_msg)
+        self.log_message(f"Import error: {error_msg}")
+    
+    def export_selected(self):
         """Export selected entries"""
-        self.log_message("Export functionality coming soon!")
-        QMessageBox.information(self, "Export", "Export functionality will be implemented")
-
-    def remove_selected_entries(self):
+        if not self.current_img:
+            return
+        
+        selected_rows = set()
+        for item in self.entries_table.selectedItems():
+            selected_rows.add(item.row())
+        
+        if not selected_rows:
+            QMessageBox.information(self, "No Selection", "Please select entries to export")
+            return
+        
+        selected_entries = [self.current_img.entries[row] for row in selected_rows]
+        self.export_entries(selected_entries)
+    
+    def export_all(self):
+        """Export all entries"""
+        if not self.current_img:
+            return
+        
+        self.export_entries(self.current_img.entries)
+    
+    def export_entries(self, entries: List[IMGEntry]):
+        """Export list of entries"""
+        export_dir = QFileDialog.getExistingDirectory(self, "Export Directory")
+        if not export_dir:
+            return
+        
+        self.log_message(f"Exporting {len(entries)} entries...")
+        
+        # Start export thread
+        self.export_thread = ExportThread(self.current_img, entries, export_dir)
+        self.export_thread.progress_updated.connect(self.on_export_progress)
+        self.export_thread.finished_signal.connect(self.on_export_finished)
+        self.export_thread.error_signal.connect(self.on_export_error)
+        self.export_thread.start()
+        
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setRange(0, len(entries))
+    
+    def on_export_progress(self, current: int, total: int, filename: str):
+        """Handle export progress"""
+        self.progress_bar.setValue(current)
+        self.status_bar.showMessage(f"Exporting {filename}...")
+    
+    def on_export_finished(self, exported_count: int, error_count: int):
+        """Handle export finished"""
+        self.progress_bar.setVisible(False)
+        
+        message = f"Export complete: {exported_count} files exported"
+        if error_count > 0:
+            message += f", {error_count} errors"
+        
+        self.status_bar.showMessage(message, 3000)
+        self.log_message(message)
+    
+    def on_export_error(self, error_msg: str):
+        """Handle export error"""
+        self.progress_bar.setVisible(False)
+        QMessageBox.critical(self, "Export Error", error_msg)
+        self.log_message(f"Export error: {error_msg}")
+    
+    def remove_selected(self):
         """Remove selected entries"""
-        self.log_message("Remove functionality coming soon!")
-        QMessageBox.information(self, "Remove", "Remove functionality will be implemented")
-
-    def rebuild_img(self):
-        """Rebuild IMG file"""
+        if not self.current_img:
+            return
+        
+        selected_rows = set()
+        for item in self.entries_table.selectedItems():
+            selected_rows.add(item.row())
+        
+        if not selected_rows:
+            return
+        
         reply = QMessageBox.question(
-            self, "Rebuild IMG",
-            "This will rebuild the IMG file and may take some time.\n\nContinue?",
+            self, "Remove Entries",
+            f"Remove {len(selected_rows)} selected entries?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
-
+        
         if reply == QMessageBox.StandardButton.Yes:
-            self.log_message("Rebuild functionality coming soon!")
-            QMessageBox.information(self, "Rebuild", "Rebuild functionality will be implemented")
+            # Remove entries (in reverse order to maintain indices)
+            for row in sorted(selected_rows, reverse=True):
+                if 0 <= row < len(self.current_img.entries):
+                    removed_entry = self.current_img.entries.pop(row)
+                    self.log_message(f"Removed entry: {removed_entry.name}")
+            
+            self.populate_entries_table()
+            self.status_bar.showMessage(f"Removed {len(selected_rows)} entries", 2000)
+    
+    def apply_filter(self):
+        """Apply filter and search to entries table"""
+        if not self.current_img:
+            return
+        
+        filter_type = self.filter_combo.currentText()
+        search_text = self.search_input.text().lower()
+        
+        for row in range(self.entries_table.rowCount()):
+            show_row = True
+            
+            # Apply type filter
+            if filter_type != "All Files":
+                type_item = self.entries_table.item(row, 1)
+                if type_item:
+                    file_type = type_item.text()
+                    if filter_type == "Models (DFF)" and file_type != "DFF":
+                        show_row = False
+                    elif filter_type == "Textures (TXD)" and file_type != "TXD":
+                        show_row = False
+                    elif filter_type == "Collision (COL)" and file_type != "COL":
+                        show_row = False
+                    elif filter_type == "Animation (IFP)" and file_type != "IFP":
+                        show_row = False
+                    elif filter_type == "Audio (WAV)" and file_type not in ["WAV", "MP3"]:
+                        show_row = False
+                    elif filter_type == "Scripts (SCM)" and file_type not in ["SCM", "CS"]:
+                        show_row = False
+            
+            # Apply search filter
+            if show_row and search_text:
+                name_item = self.entries_table.item(row, 0)
+                if name_item and search_text not in name_item.text().lower():
+                    show_row = False
+            
+            self.entries_table.setRowHidden(row, not show_row)
+    
+    def manage_templates(self):
+        """Show template manager dialog"""
+        if self.template_manager and 'TemplateManagerDialog' in globals():
+            dialog = TemplateManagerDialog(self.template_manager, self)
+            dialog.exec()
+        else:
+            QMessageBox.information(self, "Templates", "Template manager not available")
+    
+    def show_about(self):
+        """Show about dialog"""
+        about_text = """
+<h2>IMG Factory 2.0</h2>
+<p>Modern IMG archive manager for GTA and related games</p>
 
-    # Logging
-    def log_message(self, message):
-        """Add message to log"""
-        self.log.append(f"[INFO] {message}")
+<h3>Features:</h3>
+<ul>
+<li>Support for IMG versions 1 and 2</li>
+<li>Import and export files</li>
+<li>Background processing</li>
+<li>File filtering and search</li>
+<li>Template system</li>
+</ul>
 
-    def log_error(self, message):
-        """Add error message to log"""
-        self.log.append(f"[ERROR] {message}")
+<h3>Supported Games:</h3>
+<ul>
+<li>GTA III</li>
+<li>GTA Vice City</li>
+<li>GTA San Andreas</li>
+<li>GTA Liberty City Stories</li>
+<li>GTA Vice City Stories</li>
+<li>Bully (Canis Canem Edit)</li>
+</ul>
+
+<p><b>Version:</b> 2.0<br>
+<b>Build:</b> Python/PyQt6</p>
+        """
+        
+        QMessageBox.about(self, "About IMG Factory", about_text)
 
 
 def main():
     """Main application entry point"""
-    import os
-    import warnings
-    
-    # Suppress Qt warnings about unknown CSS properties
-    os.environ['QT_LOGGING_RULES'] = '*.debug=false;qt.qpa.*=false'
-    warnings.filterwarnings("ignore", category=DeprecationWarning)
-    
     app = QApplication(sys.argv)
+    
+    # Set application properties
     app.setApplicationName("IMG Factory")
-    app.setApplicationVersion("1.5")
+    app.setApplicationVersion("2.0")
+    app.setOrganizationName("X-Seti")
     
-    # Suppress console spam
-    app.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, False)
-    
-    # Create settings system
-    try:
-        settings = AppSettings()
-        
-        # Apply base theme from App_settings_system
-        apply_theme_to_app(app, settings)
-        print("✓ Base theme applied")
-        
-        # Apply pastel button theme on top (with error handling)
+    # Apply theme if available
+    if apply_theme_to_app:
         try:
-            apply_pastel_theme_to_buttons(app, settings)
-            print("✓ Pastel theme applied")
+            # Create dummy settings if AppSettings not available
+            if AppSettings:
+                settings = AppSettings()
+                apply_theme_to_app(app, settings)
+            else:
+                app.setStyleSheet("""
+                    QMainWindow {
+                        background-color: #f0f0f0;
+                    }
+                    QGroupBox {
+                        font-weight: bold;
+                        border: 2px solid #cccccc;
+                        border-radius: 5px;
+                        margin-top: 1ex;
+                    }
+                    QGroupBox::title {
+                        subcontrol-origin: margin;
+                        left: 10px;
+                        padding: 0 5px 0 5px;
+                    }
+                    QPushButton {
+                        background-color: #e1e1e1;
+                        border: 2px solid #999999;
+                        border-radius: 6px;
+                        padding: 6px;
+                        min-width: 80px;
+                    }
+                    QPushButton:hover {
+                        background-color: #d0d0d0;
+                    }
+                    QPushButton:pressed {
+                        background-color: #c0c0c0;
+                    }
+                    QPushButton:disabled {
+                        background-color: #f0f0f0;
+                        color: #999999;
+                    }
+                """)
         except Exception as e:
-            print(f"⚠ Pastel theme failed: {e}")
-        
-    except Exception as e:
-        print(f"⚠ Theme system failed: {e}")
-        settings = AppSettings()  # Use dummy
-        
-        # Apply minimal styling to prevent ugly default look
-        app.setStyleSheet("""
-            QMainWindow {
-                background-color: #f0f0f0;
-            }
-            QPushButton {
-                background-color: #e0e0e0;
-                border: 1px solid #c0c0c0;
-                border-radius: 4px;
-                padding: 4px 8px;
-                min-height: 20px;
-            }
-            QPushButton:hover {
-                background-color: #d0d0d0;
-            }
-            QPushButton:pressed {
-                background-color: #c0c0c0;
-            }
-            QPushButton[action-type="import"] {
-                background-color: #e3f2fd;
-            }
-            QPushButton[action-type="export"] {
-                background-color: #e8f5e8;
-            }
-            QPushButton[action-type="remove"] {
-                background-color: #ffebee;
-            }
-            QPushButton[action-type="update"] {
-                background-color: #fff3e0;
-            }
-            QPushButton[action-type="convert"] {
-                background-color: #f3e5f5;
-            }
-        """)
-        print("✓ Fallback styling applied")
+            print(f"Failed to apply theme: {e}")
     
-    # Create main window
-    window = IMGFactory(settings)
+    # Apply button theme if available
+    if apply_pastel_theme_to_buttons:
+        try:
+            apply_pastel_theme_to_buttons(app, None)
+        except Exception as e:
+            print(f"Failed to apply button theme: {e}")
+    
+    # Create and show main window
+    window = IMGFactoryMain()
     window.show()
     
-    # Log startup
-    window.log_message("IMG Factory 1.5 started")
-    window.log_message("Ready to work with IMG archives")
+    # Add welcome message
+    window.log_message("IMG Factory 2.0 started successfully")
+    window.log_message("Ready to load IMG files")
     
-    # Suppress any remaining console spam
-    import logging
-    logging.getLogger().setLevel(logging.ERROR)
+    # Try to integrate COL functionality
+    try:
+        from imgfactory_col_integration import setup_col_integration
+        if setup_col_integration(window):
+            window.log_message("COL functionality integrated successfully")
+        else:
+            window.log_message("COL integration failed - functionality disabled")
+    except ImportError:
+        window.log_message("COL components not found - COL functionality disabled")
+    except Exception as e:
+        window.log_message(f"COL integration error: {str(e)}")
     
-    sys.exit(app.exec())
+    # Try to integrate COL GUI components
+    try:
+        if setup_col_gui:
+            if setup_col_gui(window):
+                window.log_message("COL GUI components integrated successfully")
+            else:
+                window.log_message("COL GUI integration failed")
+        else:
+            window.log_message("COL GUI components not available")
+    except Exception as e:
+        window.log_message(f"COL GUI integration error: {str(e)}")
+    
+    return app.exec()
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
