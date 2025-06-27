@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QSplitter, QTableWidget, QTableWidgetItem, QTextEdit, QLabel,
+    QSplitter, QTableWidget, QTableWidgetItem, QTextEdit, QLabel, QContextMenuEvent,
     QPushButton, QFileDialog, QMessageBox, QMenuBar, QStatusBar,
     QProgressBar, QHeaderView, QGroupBox, QComboBox, QLineEdit,
     QAbstractItemView, QTreeWidget, QTreeWidgetItem, QTabWidget,
@@ -29,6 +29,14 @@ from components.img_manager import IMGFile, IMGVersion, Platform
 from components.img_validator import IMGValidator
 from app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
+# Import COL integration
+from imgfactory_col_integration import setup_col_integration
+
+# After creating the main interface:
+if setup_col_integration(self):
+    self.log_message("COL functionality integrated successfully")
+else:
+    self.log_message("Failed to integrate COL functionality")
 print("Components imported successfully")
 
 class IMGLoadThread(QThread):
