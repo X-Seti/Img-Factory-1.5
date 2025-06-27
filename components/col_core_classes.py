@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-#this belongs in components/col_core_classes.py
+#this belongs in components/col_core_classes.py - version 10
 X-Seti - June27 2025 - COL Core Classes for Img Factory 1.5
 Handles collision file parsing and manipulation for GTA III, VC, SA
 Based on Steve's COL Editor II functionality

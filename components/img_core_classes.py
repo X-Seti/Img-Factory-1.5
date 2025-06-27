@@ -4,6 +4,7 @@ IMG Factory - Core IMG Format Classes
 Clean implementation of IMG file handling for Qt6
 """
 
+#This goes in components/ img_core_classes.py - version 6
 import struct
 import os
 import zlib

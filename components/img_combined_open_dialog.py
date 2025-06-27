@@ -1,4 +1,4 @@
-#this belongs in components/ img_combined_open_dialog.py
+#this belongs in components/ img_combined_open_dialog.py - version 16
 
 #!/usr/bin/env python3
 """

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-#this belongs in components/col_utilities.py
+#this belongs in components/col_utilities.py - version 6
 X-Seti - June27 2025 - COL Utilities for Img Factory 1.5
 Batch processing, optimization, and conversion utilities for COL files
 """

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-#this belongs in gui/col_gui_components.py
+#this belongs in gui/col_gui_components.py - version 11
 X-Seti - June27 2025 - COL GUI Components for Img Factory 1.5
 GUI buttons, menus, and styling for COL functionality integration
 """

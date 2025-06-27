@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-#this belongs in components/col_editor.py
+#this belongs in components/col_editor.py - version 5
 X-Seti - June27 2025 - COL Editor for Img Factory 1.5
 Complete COL editing functionality based on Steve's COL Editor II
 """

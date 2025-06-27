@@ -1,4 +1,4 @@
-# this belongs in components/img_validator.py
+# this belongs in components/img_validator.py - version 10
 #!/usr/bin/env python3
 """
 X-Seti - June26 2025 - IMG Validator - Validation and verification utilities for IMG files

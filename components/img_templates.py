@@ -1,4 +1,4 @@
-#this belongs in components/ img_templates.py
+#this belongs in components/ img_templates.py - version 20
 
 #!/usr/bin/env python3
 """

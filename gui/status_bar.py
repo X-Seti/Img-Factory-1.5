@@ -1,4 +1,4 @@
-#this belongs in gui/ status_bar.py
+#this belongs in gui/ status_bar.py - version 13
 # $vers" X-Seti - June26, 2025 - Img Factory 1.5"
 # $hist" Credit MexUK 2007 Img Factory 1.2"
 

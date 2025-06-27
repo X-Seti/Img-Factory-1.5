@@ -1,4 +1,4 @@
-#this belongs in components/ img_creator.py
+#this belongs in components/ img_creator.py - version 15
 
 #!/usr/bin/env python3
 """

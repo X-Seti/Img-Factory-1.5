@@ -1,4 +1,4 @@
-# this belongs in components/img_debug.py
+# this belongs in components/img_debug.py - version 2
 #!/usr/bin/env python3
 """
 X-Seti - June26 2025 - IMG Debug - Debugging utilities for IMG Factory

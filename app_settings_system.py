@@ -7,6 +7,8 @@ IMG Factory App Settings System - Clean Version
 Settings management without demo code
 """
 
+#This goes in root/ app_settings_system.py - version 54
+
 import json
 from pathlib import Path
 from PyQt6.QtWidgets import (

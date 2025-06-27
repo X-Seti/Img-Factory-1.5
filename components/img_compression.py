@@ -1,4 +1,4 @@
-#this belongs in /components/img_compression.py
+#this belongs in /components/img_compression.py - version 11
 #!/usr/bin/env python3
 """
 X-Seti - June26 2025 - IMG Compression - Complete Compression System

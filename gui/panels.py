@@ -1,4 +1,4 @@
-#this belongs in gui/ panels.py
+#this belongs in gui/ panels.py - version 4
 
 #!/usr/bin/env python3
 """

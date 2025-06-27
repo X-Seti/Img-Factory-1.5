@@ -1,4 +1,4 @@
-#this belongs in gui/ log_panel.py
+#this belongs in gui/ log_panel.py - version 2
 # $vers" X-Seti - June26, 2025 - Img Factory 1.5"
 # $hist" Credit MexUK 2007 Img Factory 1.2"
 

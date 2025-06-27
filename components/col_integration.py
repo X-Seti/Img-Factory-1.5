@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-#this belongs in components/col_integration.py
+#this belongs in components/col_integration.py - version 4
 X-Seti - June27 2025 - COL Integration for Img Factory 1.5
 Integrates COL functionality into the main IMG Factory interface
 """

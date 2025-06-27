@@ -3,7 +3,7 @@
 X-Seti - JUNE25 2025 - IMG Factory 1.5 - Main Application Entry Point
 Clean Qt6-based implementation for IMG archive management
 """
-#this belongs in root /imgfactory.py
+#this belongs in root /imgfactory.py - version 60
 import sys
 import os
 import mimetypes

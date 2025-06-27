@@ -3,6 +3,8 @@
 X-Seti - June05, 2023 - button panel with responsive layout and tooltips
 """
 
+#This goes in gui/ button_panel.py - version 4
+
 from PyQt6.QtWidgets import (QGroupBox, QGridLayout, QPushButton, QVBoxLayout, ScrollArea, QWidget, QSizePolicy)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon

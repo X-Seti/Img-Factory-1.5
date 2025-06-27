@@ -1,4 +1,4 @@
-#this belongs in /components/img_formats.py
+#this belongs in /components/img_formats.py - version 7
 #!/usr/bin/env python3
 """
 X-Seti - June26 2025 - Enhanced IMG Formats - Complete Format System

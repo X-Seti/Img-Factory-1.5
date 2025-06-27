@@ -1,4 +1,4 @@
-#this belongs in gui/ gui_layout.py
+#this belongs in gui/ gui_layers.py - version 1 (backup of layout.py)
 # X-Seti - JUNE27 2025 - Img Factory 1.5 - GUI Layout Module
 
 from PyQt6.QtWidgets import (

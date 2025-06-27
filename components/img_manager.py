@@ -5,7 +5,7 @@ X-Seti - June26 2025 - IMG Manager - Complete Core System
 Credit MexUK 2007 IMG Factory 1.2 - Complete port of all functionality
 """
 
-#this belongs in /components/img_manager.py
+#this belongs in /components/img_manager.py - version 32
 
 import os
 import struct
