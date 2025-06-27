@@ -28,6 +28,7 @@ from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_manager import IMGFile, IMGVersion, Platform
 from components.img_validator import IMGValidator
 from app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
+from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 print("Components imported successfully")
 
 class IMGLoadThread(QThread):
@@ -39,7 +40,7 @@ class IMGLoadThread(QThread):
     def __init__(self, file_path: str):
         super().__init__()
         self.file_path = file_path
-    
+
     def run(self):
         try:
             self.progress_updated.emit(10, "Opening file...")
@@ -164,8 +165,8 @@ class IMGFactory(QMainWindow):
         # Style the splitter
         self.main_splitter.setStyleSheet("""
             QSplitter::handle {
-                background-color: #666666;
-                border: 1px solid #444444;
+                background-color: #232323;
+                border: 1px solid #323223;
                 width: 6px;
                 margin: 2px;
                 border-radius: 3px;
@@ -1298,7 +1299,8 @@ def main():
     app.setApplicationName("IMG Factory")
     app.setApplicationVersion("1.5")
     app.setOrganizationName("X-Seti")
-    
+    #apply_pastel_theme_to_buttons(app, settings)
+
     # Load settings
     try:
         settings = AppSettings()

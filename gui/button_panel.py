@@ -154,7 +154,7 @@ def create_enhanced_right_panel(parent):
     
     # IMG Operations with enhanced layout
     img_buttons_data = [
-        ("Open IMG", "import", "document-open", parent.open_img_file),
+        ("Open IMG/COL", "import", "document-open", parent.open_img_file),
         ("Refresh", "update", "view-refresh", parent.refresh_table),
         ("Close", None, "window-close", parent.close_img_file),
         ("Rebuild", "update", "document-save", parent.rebuild_img),

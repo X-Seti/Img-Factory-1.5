@@ -533,6 +533,9 @@ class AppSettings:
         
         return self.themes.get(theme_name, {}).get("colors", {})
 
+
+
+
     def get_stylesheet(self):
         """Generate complete stylesheet for current theme"""
         colors = self.get_theme_colors()
