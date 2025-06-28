@@ -1,6 +1,7 @@
 .
 ├── app_settings_system.py
 ├── components
+│   ├── button_connections.py
 │   ├── col_core_classes.py
 │   ├── col_editor.py
 │   ├── col_integration.py
@@ -15,15 +16,6 @@
 │   ├── img_templates.json
 │   ├── img_templates.py
 │   ├── img_validator.py
-│   ├── __pycache__
-│   │   ├── col_core_classes.cpython-312.pyc
-│   │   ├── col_editor.cpython-312.pyc
-│   │   ├── img_core_classes.cpython-312.pyc
-│   │   ├── img_creator.cpython-312.pyc
-│   │   ├── img_formats.cpython-312.pyc
-│   │   ├── img_manager.cpython-312.pyc
-│   │   ├── img_templates.cpython-312.pyc
-│   │   └── img_validator.cpython-312.pyc
 │   └── txd_converter.py
 ├── gui
 │   ├── button_panel.py
@@ -31,8 +23,8 @@
 │   ├── col_gui_integration.py
 │   ├── control_panels.py
 │   ├── dialogs.py
-│   ├── gui_layers.py
 │   ├── gui_layout.py
+│   ├── gui_layout.zip
 │   ├── __init__.py
 │   ├── log_panel.py
 │   ├── main_window.py
@@ -40,30 +32,15 @@
 │   ├── menu_system.py
 │   ├── panels.py
 │   ├── pastel_button_theme.py
-│   ├── __pycache__
-│   │   ├── control_panels.cpython-312.pyc
-│   │   ├── dialogs.cpython-312.pyc
-│   │   ├── gui_layout.cpython-312.pyc
-│   │   ├── __init__.cpython-312.pyc
-│   │   ├── log_panel.cpython-312.pyc
-│   │   ├── main_window.cpython-312.pyc
-│   │   ├── menu_system.cpython-312.pyc
-│   │   ├── pastel_button_theme.cpython-312.pyc
-│   │   ├── status_bar.cpython-312.pyc
-│   │   └── table_view.cpython-312.pyc
 │   ├── status_bar.py
 │   └── table_view.py
 ├── gui_layout_rules.md
 ├── Img Factory1.3 -> /home/x2/code base/Img Factory1.3
-├── imgfactory.backup
 ├── imgfactory_col_integration.py
 ├── img_factory_debug.log
 ├── imgfactory.py
 ├── imgfactory.settings.json
 ├── launch_imgfactory.py
-├── __pycache__
-│   ├── app_settings_system.cpython-312.pyc
-│   └── imgfactory_col_integration.cpython-312.pyc
 ├── templates
 │   └── new_templates.json
 ├── themer_settings.json
@@ -93,37 +70,10 @@
 │   ├── synthwave_outrun.json
 │   ├── tea_and_toast.json
 │   └── themes_organization.md
-├── themes_backup
-│   ├── amiga_mui.json
-│   ├── amiga_workbench.json
-│   ├── classic_dark.json
-│   ├── cyberpunk_2077.json
-│   ├── gta3.json
-│   ├── gta_forums.json
-│   ├── gta_san_andreas.json
-│   ├── gta_vice_city.json
-│   ├── img_factory_dark.json
-│   ├── img_factory.json
-│   ├── knight_rider.json
-│   ├── lightblue_theme.json
-│   ├── lightgreen.json
-│   ├── lightgreen_theme.json
-│   ├── lightlavender_theme.json
-│   ├── lightpeach_theme.json
-│   ├── lightpink_theme.json
-│   ├── light_professional.json
-│   ├── lightyellow_theme.json
-│   ├── matrix.json
-│   ├── pastel_theme.json
-│   ├── rockstar.json
-│   ├── synthwave_outrun.json
-│   ├── tea_and_toast.json
-│   └── themes_organization.md
 ├── tree.git
 ├── unix_launcher.sh
 ├── utils
-│   ├── App_settings_system_alt.py
 │   └── update_themes_script.py
 └── windows_launcher.bat
 
-11 directories, 116 files
+7 directories, 70 files
