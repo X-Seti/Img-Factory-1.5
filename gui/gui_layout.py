@@ -43,8 +43,9 @@ class IMGFactoryGUILayout:
         self.main_splitter.addWidget(right_panel)
         
         # Set splitter proportions (80% left, 20% right) - made right panel 20% narrower  
-        self.main_splitter.setSizes([960, 240])  # Was 912,288 - now even narrower right panel
-        
+        self.main_splitter.setSizes([1000, 200])  # Was 912,288 - now even narrower right panel
+        #bug, settings above arn't changing the right bar width?'
+
         # Style the main horizontal splitter handle with theme colors
         theme_colors = self._get_theme_colors("default")
         splitter_bg = theme_colors.get('splitter_color_background', '777777')
@@ -81,7 +82,7 @@ class IMGFactoryGUILayout:
         """Create left panel with 3 sections: Info Bar, File Window, Status Window"""
         left_container = QWidget()
         left_layout = QVBoxLayout(left_container)
-        left_layout.setContentsMargins(5, 5, 5, 5)
+        left_layout.setContentsMargins(3, 3, 3, 3)
         left_layout.setSpacing(0)  # No spacing - splitter handles this
         
         # Create vertical splitter for the 3 sections
@@ -101,7 +102,7 @@ class IMGFactoryGUILayout:
         
         # Set size ratios: Info(small), File(large), Status(medium)
         # Heights: Info=80px, File=400px, Status=120px (total=600px)
-        self.left_vertical_splitter.setSizes([80, 400, 120])
+        self.left_vertical_splitter.setSizes([90, 420, 90])
         
         # Style the vertical splitter handles with theme colors
         theme_colors = self._get_theme_colors("default")
@@ -195,7 +196,9 @@ class IMGFactoryGUILayout:
         self.file_type_tabs.addTab(QWidget(), "DFF")
         self.file_type_tabs.addTab(QWidget(), "COL") 
         self.file_type_tabs.addTab(QWidget(), "Both")
-        
+        self.file_type_tabs.addTab(QWidget(), "TXD")
+        self.file_type_tabs.addTab(QWidget(), "Other")
+
         file_layout.addWidget(self.file_type_tabs)
         
         # Main table with scrollbars
@@ -250,9 +253,10 @@ class IMGFactoryGUILayout:
         right_layout.setContentsMargins(5, 5, 5, 5)
 
         # IMG Section with pastel colors
-        img_box = QGroupBox("IMG Files")
+        img_box = QGroupBox("IMG, COL Files")
         img_layout = QGridLayout()
         img_buttons_data = [
+            ("New", "new", "document-new", "#EEFAFA"),      # Light Something
             ("Open", "open", "document-open", "#E3F2FD"),      # Light Blue
             ("Close", "close", "window-close", "#FFF3E0"),     # Light Orange
             ("Close All", "close_all", "edit-clear", "#FFF3E0"),
@@ -303,19 +307,21 @@ class IMGFactoryGUILayout:
         options_box = QGroupBox("Editing Options")
         options_layout = QGridLayout()
         options_buttons_data = [
-            ("Col Edit", "col_edit", "edit-col", "#FFE0B2"),        # Light Deep Orange
-            ("Txd Edit", "txd_edit", "edit-txd", "#E8EAF6"),        # Light Indigo
-            ("Dff Edit", "dff_edit", "edit-dff", "#F1F8E9"),        # Light Light Green
-            ("Ipf Edit", "ipf_edit", "edit-ipf", "#FFF3E0"),        # Light Orange
-            ("IPL Edit", "ipl_edit", "edit-ipl", "#FFEBEE"),        # Light Red
-            ("IDE Edit", "ide_edit", "edit-ide", "#E0F2F1"),        # Light Teal
-            ("Dat Edit", "dat_edit", "dat-editor", "#F3E5F5"),      # Light Purple
-            ("Zons Edit", "zons_edit", "zon-editor", "#E1F5FE"),    # Light Cyan
-            ("Weap Edit", "weap_edit", "weap-editor", "#FFF8E1"),   # Light Yellow
-            ("Vehi Edit", "vehi_edit", "vehi-editor", "#E8F5E8"),   # Light Green
-            ("Radar Map", "radar_map", "radar-map", "#FCE4EC"),     # Light Pink
-            ("Paths Map", "paths_map", "paths-map", "#F9FBE7"),     # Light Lime
-            ("Waterpro", "waterpro", "waterpro", "#E3F2FD"),        # Light Blue
+            ("Col Edit", "col_edit", "edit-col", "#E3F2FD"),         # Light Blue
+            ("Txd Edit", "txd_edit", "edit-txd", "#F3E5F5"),         # Light Purple
+            ("Dff Edit", "dff_edit", "edit-dff", "#F1F8E9"),         # Light Light Green
+            ("Ipf Edit", "ipf_edit", "edit-ipf", "#FFF3E0"),         # Light Orange
+            ("IDE IPL Edit", "ideipl_ed", "edit-ideipl", "#FFEBEE"), # Light Red
+            ("Dat Edit", "dat_edit", "dat-editor","#E8EAF6"),        # Light Indigo
+            ("Zons Cull Ed", "zonscul_ed", "zoncol-ed", "#E1F5FE"),  # Light Cyan
+            ("Weap Edit", "weap_edit", "weap-editor", "#FFF8E1"),    # Light Yellow
+            ("Vehi Edit", "vehi_edit", "vehi-editor", "#E8F5E8"),    # Light Green
+            ("Radar Map", "radar_map", "radar-map", "#FCE4EC"),      # Light Pink
+            ("Paths Map", "paths_map", "paths-map", "#F9FBE7"),      # Light Lime
+            ("Waterpro", "waterpro", "waterpro", "#E3F2FD"),         # Light Blue
+            ("Weather", "timecyc", "timecyc", "#E0F2F1"),            # Light Teal
+            ("Handling", "handling", "handling", "#E4E3ED"),         # Light Blue
+            ("Objects", "ojs_breakble", "ojs-breakble", "#FFE0B2"),  # Light Deep Orange
         ]
         
         for i, (label, action_type, icon, color) in enumerate(options_buttons_data):
@@ -417,7 +423,7 @@ class IMGFactoryGUILayout:
         menu_names = [
             "File", "Edit", "Dat", "IMG", "Model",
             "Texture", "Collision", "Item Definition",
-            "Item Placement", "Entry", "Settings", "Help"
+            "Item Placement", "Zons/ Cull", "Entry", "Settings", "Help"
         ]
 
         for name in menu_names:
@@ -973,7 +979,7 @@ class IMGFactoryGUILayout:
         
         for button in all_buttons:
             if hasattr(button, 'full_text'):
-                if width > 280:
+                if width > 300:
                     button.setText(button.full_text)
                 elif width > 200:
                     # Medium text - remove some words
@@ -1006,6 +1012,7 @@ class IMGFactoryGUILayout:
         
         # Update info bar with sample data
         self.update_file_info("sample_archive.img", "IMG Archive", 4, 1024*512)  # 512KB sample
+        #self.update_file_info("Second Line", "TXD Archive", 4, 1024*512)
     
     def update_file_info(self, file_path=None, file_type=None, item_count=0, file_size=0):
         """Update the information bar with current file details"""
