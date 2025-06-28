@@ -1,8 +1,8 @@
-#this belongs in gui/ panels.py - version 4
+#this belongs in gui/ panels.py - Version: 5
 
 #!/usr/bin/env python3
 """
-X-Seti - June25 2025 - IMG Factory 1.5
+X-Seti - June28 2025 - IMG Factory 1.5
 Tear-off panels system for flexible GUI layout
 """
 
@@ -13,10 +13,10 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox,
     QSplitter, QFrame, QLabel, QPushButton, QComboBox, QCheckBox,
     QSpinBox, QDialog, QListWidget, QListWidgetItem, QMessageBox,
-    QApplication, QMenu, QAction
+    QApplication, QMenu, QLineEdit
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QRect, QTimer
-from PyQt6.QtGui import QDrag, QPixmap, QPainter, QCursor, QIcon
+from PyQt6.QtGui import QDrag, QPixmap, QPainter, QCursor, QIcon, QAction
 
 from gui.buttons import (
     DraggableButton, ButtonFactory, ButtonPresetManager, 
@@ -448,7 +448,6 @@ class FilterSearchPanel(TearOffPanel):
         # Search
         search_layout = QHBoxLayout()
         
-        from PyQt6.QtWidgets import QLineEdit
         self.search_box = QLineEdit()
         self.search_box.setPlaceholderText("Search...")
         self.search_box.returnPressed.connect(self._do_search)

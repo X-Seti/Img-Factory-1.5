@@ -510,6 +510,77 @@ class IMGFactoryGUILayout:
         
         self.main_window.setStatusBar(self.status_bar)
 
+
+
+    def connect_button_signals(self):
+        """Public method to connect all button signals - call this after UI creation"""
+        try:
+            self._connect_all_button_signals()
+            self.log_message("Button signals connected successfully")
+        except Exception as e:
+            self.log_message(f"Error connecting button signals: {str(e)}")
+
+    def _connect_all_button_signals(self):
+        """Connect all button signals to their respective functions"""
+        # Connect IMG buttons
+        self._connect_img_buttons()
+        # Connect entry buttons
+        self._connect_entry_buttons()
+        # Connect options buttons if they exist
+        if hasattr(self, 'options_buttons'):
+            self._connect_options_buttons()
+
+    def _connect_img_buttons(self):
+        """Connect IMG operation buttons to their functions"""
+        button_map = {
+            "New": self.main_window.create_new_img,
+            "Open": self.main_window.open_img_file,
+            "Close": self.main_window.close_img_file,
+            "Close All": self.main_window.close_all_img,
+            "Rebuild": self.main_window.rebuild_img,
+            "Rebuild As": self.main_window.rebuild_img_as,
+            "Rebuild All": self.main_window.rebuild_all_img,
+            "Merge": self.main_window.merge_img,
+            "Split": self.main_window.split_img,
+            "Convert": self.main_window.convert_img
+        }
+
+        connected_count = 0
+        for button in self.img_buttons:
+            if hasattr(button, 'full_text'):
+                func = button_map.get(button.full_text)
+                if func:
+                    button.clicked.connect(func)
+                    connected_count += 1
+                    print(f"Connected IMG button: {button.full_text} -> {func.__name__}")
+
+        self.log_message(f"Connected {connected_count} IMG buttons")
+
+    def _connect_entry_buttons(self):
+        """Connect entry operation buttons to their functions"""
+        button_map = {
+            "Import": self.main_window.import_files,
+            "Import via": self.main_window.import_via_tool,
+            "Export": self.main_window.export_selected,
+            "Export via": self.main_window.export_via_tool,
+            "Remove": self.main_window.remove_selected,
+            "Remove All": self.main_window.remove_all_entries,
+            "Update list": self.main_window.refresh_table,
+            "Quick Export": self.main_window.quick_export,
+            "Pin selected": self.main_window.pin_selected
+        }
+
+        connected_count = 0
+        for button in self.entry_buttons:
+            if hasattr(button, 'full_text'):
+                func = button_map.get(button.full_text)
+                if func:
+                    button.clicked.connect(func)
+                    connected_count += 1
+                    print(f"Connected Entry button: {button.full_text} -> {func.__name__}")
+
+        self.log_message(f"Connected {connected_count} entry buttons")
+
     def update_file_info(self, filename=None, file_type=None, item_count=0, file_size=0):
         """Update the file information display"""
         if filename:

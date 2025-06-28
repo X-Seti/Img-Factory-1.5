@@ -208,13 +208,24 @@ class IMGFactory(QMainWindow):
         self._create_advanced_ui(main_layout)
     
     def _create_advanced_ui(self, main_layout):
-        """Create the main UI"""
+        """Create advanced UI with all features"""
+        # Create GUI layout using the gui_layout class
         self.gui_layout.create_main_ui_with_splitters(main_layout)
-        # Menu already created by unified system
-        self.menu_bar_system = IMGFactoryMenuBar(self)
+
+        # Create menu and status bars
+        self.gui_layout.create_menu_bar()
         self.gui_layout.create_status_bar()
+
+        # Apply theme to table
         self.gui_layout.apply_table_theme()
+
+        # Connect table signals
         self.gui_layout.connect_table_signals()
+
+        # ADD THIS LINE: Connect button signals
+        self.gui_layout.connect_button_signals()
+
+        # Add sample data for demonstration
         self.gui_layout.add_sample_data()
 
 

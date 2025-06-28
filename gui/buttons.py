@@ -1,8 +1,8 @@
-#this belongs in gui/ buttons.py - version 14
+#this belongs in gui/ buttons.py - Version: 15
 
 #!/usr/bin/env python3
 """
-X-Seti - June25 2025 - IMG Factory 1.5
+X-Seti - June28 2025 - IMG Factory 1.5
 Modular button system with customizable layouts and tear-off functionality
 """
 
@@ -12,11 +12,12 @@ from pathlib import Path
 from typing import Dict, List, Optional, Callable, Any
 from PyQt6.QtWidgets import (
     QPushButton, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
-    QGroupBox, QMenu, QAction, QDialog, QListWidget, QListWidgetItem,
-    QCheckBox, QSpinBox, QLabel, QComboBox, QMessageBox, QFileDialog
+    QGroupBox, QMenu, QDialog, QListWidget, QListWidgetItem,
+    QCheckBox, QSpinBox, QLabel, QComboBox, QMessageBox, QFileDialog,
+    QApplication, QInputDialog
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QMimeData, QPoint
-from PyQt6.QtGui import QDrag, QPixmap, QPainter, QCursor
+from PyQt6.QtGui import QDrag, QPixmap, QPainter, QCursor, QAction
 
 
 class DraggableButton(QPushButton):
@@ -447,8 +448,6 @@ class ButtonCustomizationDialog(QDialog):
     
     def _save_preset(self):
         """Save current configuration as new preset"""
-        from PyQt6.QtWidgets import QInputDialog
-        
         name, ok = QInputDialog.getText(self, "Save Preset", "Preset name:")
         if ok and name:
             preset = self._create_preset_from_ui(name)
