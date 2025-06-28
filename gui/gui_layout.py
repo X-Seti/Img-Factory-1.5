@@ -282,15 +282,21 @@ class IMGFactoryGUILayout:
         entries_box = QGroupBox("File Entries")
         entries_layout = QGridLayout()
         entry_buttons_data = [
-            ("Import", "import", "document-import", "#E1F5FE"),     # Light Cyan
+            ("Import", "import", "document-import", "#E1F5FE"),                 # Light Cyan
             ("Import via", "import_via", "document-import", "#E1F5FE"),
-            ("Export", "export", "document-export", "#E0F2F1"),    # Light Teal
+            ("Update list", "update", "view-refresh", "#F9FBE7"),               # Light Gray
+            ("Export", "export", "document-export", "#E0F2F1"),                 # Light Teal
             ("Export via", "export_via", "document-export", "#E0F2F1"),
-            ("Remove", "remove", "edit-delete", "#FFEBEE"),        # Light Red
+            ("Quick Export", "export_quick", "document-export", "#E0E2F1"),
+            ("Remove", "remove", "edit-delete", "#FFEBEE"),                     # Light Red
             ("Remove All", "remove_all", "edit-clear", "#FFEBEE"),
-            ("Update list", "update", "view-refresh", "#F9FBE7"),  # Light Lime
-            ("Quick Export", "quick_export", "document-export", "#E0F2F1"),
-            ("Pin selected", "pin", "view-pin", "#FCE4EC"),        # Light Pink
+            ("Dump", "dump_all", "dump-clear", "#FFF3E0"),                      # Light Orange
+            ("Reame", "rename_selected", "document-rename", "#F9FBE7"),         # Light Gray
+            ("Replace", "replace_selected", "document_replace", "#FFF3E0"),     # Light Orange
+            ("Select All", "all_selected", "document_allsel",  "#F9FBE7"),
+            ("Sel Inverse", "inverse_select", "document_inverse",  "#F9FBE7"),
+            ("Sort", "sort_selected", "document_sort",  "#F9FBE7"),
+            ("Pin selected", "pin", "view-pin",  "#F9FBE7"),
         ]
         
         for i, (label, action_type, icon, color) in enumerate(entry_buttons_data):
@@ -311,7 +317,8 @@ class IMGFactoryGUILayout:
             ("Txd Edit", "txd_edit", "edit-txd", "#F3E5F5"),         # Light Purple
             ("Dff Edit", "dff_edit", "edit-dff", "#F1F8E9"),         # Light Light Green
             ("Ipf Edit", "ipf_edit", "edit-ipf", "#FFF3E0"),         # Light Orange
-            ("IDE IPL Edit", "ideipl_ed", "edit-ideipl", "#FFEBEE"), # Light Red
+            ("IDE Edit", "ide_ed", "edit-ide", "#FFEBEE"), # Light Red
+            ("IPL Edit", "ipl_ed", "edit-ipl", "#FFEBEE"), # Light Red
             ("Dat Edit", "dat_edit", "dat-editor","#E8EAF6"),        # Light Indigo
             ("Zons Cull Ed", "zonscul_ed", "zoncol-ed", "#E1F5FE"),  # Light Cyan
             ("Weap Edit", "weap_edit", "weap-editor", "#FFF8E1"),    # Light Yellow
@@ -443,9 +450,9 @@ class IMGFactoryGUILayout:
                 
                 col_action = QAction("Open COL...", self.main_window)
                 col_action.setIcon(QIcon.fromTheme("document-open"))
-                col_action.triggered.connect(self.main_window.open_col_file)
+                col_action.triggered.connect(self.main_window.open_file)
                 menu.addAction(col_action)
-                
+
                 menu.addSeparator()
                 
                 close_action = QAction("Close", self.main_window)
@@ -1045,16 +1052,6 @@ class IMGFactoryGUILayout:
         else:
             self.file_size_label.setText("0 KB")
     
-    def log_message(self, message):
-        """Log a message to the log widget"""
-        if self.log:
-            import time
-            timestamp = time.strftime("%H:%M:%S")
-            formatted_message = f"[{timestamp}] {message}"
-            self.log.append(formatted_message)
-            # Auto-scroll to bottom
-            self.log.ensureCursorVisible()
-
     def show_progress(self, value, message=""):
         """Show progress in status bar"""
         if self.progress_bar:
@@ -1066,3 +1063,92 @@ class IMGFactoryGUILayout:
         
         if message and self.status_label:
             self.status_label.setText(message)
+
+
+    def _connect_all_button_signals(self):
+        """Connect all button signals to their respective functions - ADD TO create_main_ui_with_splitters"""
+        # Connect IMG buttons
+        self._connect_img_buttons()
+        # Connect entry buttons
+        self._connect_entry_buttons()
+        # Connect options buttons if they exist
+        if hasattr(self, 'options_buttons'):
+            self._connect_options_buttons()
+
+    def _connect_img_buttons(self):
+        """Connect IMG operation buttons to their functions"""
+        button_map = {
+            "New": self.main_window.create_new_img,
+            "Open": self.main_window.open_img_file,
+            "Close": self.main_window.close_img_file,
+            "Close All": self.main_window.close_all_img,
+            "Rebuild": self.main_window.rebuild_img,
+            "Rebuild As": self.main_window.rebuild_img_as,
+            "Rebuild All": self.main_window.rebuild_all_img,
+            "Merge": self.main_window.merge_img,
+            "Split": self.main_window.split_img,
+            "Convert": self.main_window.convert_img
+        }
+
+        for button in self.img_buttons:
+            if hasattr(button, 'full_text'):
+                func = button_map.get(button.full_text)
+                if func:
+                    button.clicked.connect(func)
+
+    def _connect_entry_buttons(self):
+        """Connect entry operation buttons to their functions"""
+        button_map = {
+            "Import": self.main_window.import_files,
+            "Import via": self.main_window.import_via_tool,
+            "Export": self.main_window.export_selected,
+            "Export via": self.main_window.export_via_tool,
+            "Remove": self.main_window.remove_selected,
+            "Remove All": self.main_window.remove_all_entries,
+            "Update list": self.main_window.refresh_table,
+            "Quick Export": self.main_window.quick_export,
+            "Pin selected": self.main_window.pin_selected
+        }
+
+        for button in self.entry_buttons:
+            if hasattr(button, 'full_text'):
+                func = button_map.get(button.full_text)
+                if func:
+                    button.clicked.connect(func)
+
+    def _connect_options_buttons(self):
+        """Connect COL and editor buttons"""
+        button_map = {
+            "Col Edit": self.main_window.open_col_editor,
+            "Txd Edit": self.main_window.open_txd_editor,
+            "Dff Edit": self.main_window.open_dff_editor,
+            "Ipf Edit": self.main_window.open_ipf_editor,
+            "IPL Edit": self.main_window.open_ipl_editor,
+            "IDE Edit": self.main_window.open_ide_editor,
+            "Dat Edit": self.main_window.open_dat_editor,
+            "Zons Edit": self.main_window.open_zons_editor,
+            "Weap Edit": self.main_window.open_weap_editor,
+            "Vehi Edit": self.main_window.open_vehi_editor,
+            "Radar Map": self.main_window.open_radar_map,
+            "Paths Map": self.main_window.open_paths_map,
+            "Waterpro": self.main_window.open_waterpro
+        }
+
+        for button in self.options_buttons:
+            if hasattr(button, 'full_text'):
+                func = button_map.get(button.full_text)
+                if func:
+                    button.clicked.connect(func)
+
+    # logging
+    def log_message(self, message):
+        """Add message to activity log"""
+        if self.log:
+            from PyQt6.QtCore import QDateTime
+            timestamp = QDateTime.currentDateTime().toString("hh:mm:ss")
+            self.log.append(f"[{timestamp}] {message}")
+            # Auto-scroll to bottom
+            self.log.verticalScrollBar().setValue(
+                self.log.verticalScrollBar().maximum()
+            )
+

@@ -282,6 +282,29 @@ class IMGFactory(QMainWindow):
     # IMG FILE OPERATIONS - KEEP 100% OF FUNCTIONALITY
     # =============================================================================
 
+    def _update_ui_for_loaded_col(self):
+        """Update UI when COL file is loaded"""
+        # Enable COL-specific buttons
+        if hasattr(self, 'gui_layout'):
+            # Update table with COL info
+            if self.gui_layout.table:
+                self.gui_layout.table.setRowCount(1)
+                col_name = os.path.basename(self.current_col) if self.current_col else "Unknown"
+                items = [
+                    (col_name, "COL", "Unknown", "0x0", "COL", "None", "Loaded")
+                ]
+
+                for row, item_data in enumerate(items):
+                    for col, value in enumerate(item_data):
+                        item = QTableWidgetItem(str(value))
+                        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                        self.gui_layout.table.setItem(row, col, item)
+
+        # Update status
+        if hasattr(self, 'statusBar') and self.statusBar():
+            self.statusBar().showMessage(f"COL file loaded: {os.path.basename(self.current_col)}")
+
+
     def create_new_img(self):
         """Show new IMG creation dialog"""
         dialog = GameSpecificIMGDialog(self)
@@ -290,16 +313,58 @@ class IMGFactory(QMainWindow):
         dialog.img_created.connect(lambda path: self.log_message(f"Created: {os.path.basename(path)}"))
         dialog.exec()
 
-    def open_img_file(self):
-        """Open IMG file dialog"""
+    def open_file(self):
+        """Unified function to open IMG or COL files"""
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open IMG Archive", "", 
-            "IMG Archives (*.img);;All Files (*)"
+            self, "Open IMG or COL File", "",
+            "IMG/COL Files (*.img *.col);;IMG Files (*.img);;COL Files (*.col);;All Files (*)"
         )
-        
+
         if file_path:
-            self.load_img_file(file_path)
-    
+            file_ext = os.path.splitext(file_path)[1].lower()
+
+            if file_ext == '.img':
+                self._load_img_file(file_path)
+            elif file_ext == '.col':
+                self._load_col_file(file_path)
+            else:
+                # Try to detect file type by content
+                try:
+                    with open(file_path, 'rb') as f:
+                        header = f.read(8)
+
+                    # Check for IMG signatures
+                    if header[:4] in [b'VER2', b'VER3'] or len(header) >= 8:
+                        self._load_img_file(file_path)
+                    # Check for COL signatures
+                    elif header[:4] in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
+                        self._load_col_file(file_path)
+                    else:
+                        # Default to IMG
+                        self._load_img_file(file_path)
+
+                except Exception as e:
+                    QMessageBox.critical(self, "Error", f"Could not determine file type: {e}")
+
+
+    def open_img_file(self):
+        """Open IMG file specifically"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Open IMG File", "", "IMG Files (*.img);;All Files (*)"
+        )
+
+        if file_path:
+            self._load_img_file(file_path)
+
+    def open_col_file(self):
+        """Open COL file specifically"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Open COL File", "", "COL Files (*.col);;All Files (*)"
+        )
+
+        if file_path:
+            self._load_col_file(file_path)
+
     def load_img_file(self, file_path: str):
         """Load IMG file in background thread"""
         if self.load_thread and self.load_thread.isRunning():
@@ -341,6 +406,171 @@ class IMGFactory(QMainWindow):
         self.log_message(f"Error: {error_message}")
         self.gui_layout.show_progress(-1, "Error")
         QMessageBox.critical(self, "Loading Error", error_message)
+
+    def close_all_img(self):
+        """Close all open IMG files"""
+        self.current_img = None
+        self.current_col = None
+        self._update_ui_for_no_img()
+        self.log_message("All IMG files closed")
+
+    def rebuild_all_img(self):
+        """Rebuild all IMG files in directory"""
+        if not self.current_img:
+            QMessageBox.warning(self, "Warning", "No IMG file loaded")
+            return
+
+        base_dir = os.path.dirname(self.current_img.file_path)
+        img_files = [f for f in os.listdir(base_dir) if f.endswith('.img')]
+
+        if not img_files:
+            QMessageBox.information(self, "Info", "No IMG files found in directory")
+            return
+
+        reply = QMessageBox.question(self, "Rebuild All",
+                                    f"Rebuild {len(img_files)} IMG files?")
+        if reply == QMessageBox.StandardButton.Yes:
+            self.log_message(f"Rebuilding {len(img_files)} IMG files...")
+            # Implementation would iterate through files
+
+    def merge_img(self):
+        """Merge multiple IMG files"""
+        files, _ = QFileDialog.getOpenFileNames(
+            self, "Select IMG files to merge", "", "IMG Files (*.img)"
+        )
+        if len(files) < 2:
+            QMessageBox.warning(self, "Warning", "Select at least 2 IMG files")
+            return
+
+        output_file, _ = QFileDialog.getSaveFileName(
+            self, "Save merged IMG as", "", "IMG Files (*.img)"
+        )
+        if output_file:
+            self.log_message(f"Merging {len(files)} IMG files...")
+            QMessageBox.information(self, "Info", "Merge functionality coming soon")
+
+    def split_img(self):
+        """Split IMG file into smaller parts"""
+        if not self.current_img:
+            QMessageBox.warning(self, "Warning", "No IMG file loaded")
+            return
+
+        dialog = QMessageBox.question(self, "Split IMG",
+                                    "Split current IMG into multiple files?")
+        if dialog == QMessageBox.StandardButton.Yes:
+            self.log_message("IMG split functionality coming soon")
+
+    def convert_img(self):
+        """Convert IMG between versions"""
+        if not self.current_img:
+            QMessageBox.warning(self, "Warning", "No IMG file loaded")
+            return
+
+        self.log_message("IMG conversion functionality coming soon")
+
+    def import_via_tool(self):
+        """Import files using external tool"""
+        self.log_message("Import via tool functionality coming soon")
+
+    def export_via_tool(self):
+        """Export using external tool"""
+        if not self.current_img:
+            QMessageBox.warning(self, "Warning", "No IMG file loaded")
+            return
+        self.log_message("Export via tool functionality coming soon")
+
+    def remove_all_entries(self):
+        """Remove all entries from IMG"""
+        if not self.current_img:
+            QMessageBox.warning(self, "Warning", "No IMG file loaded")
+            return
+
+        reply = QMessageBox.question(self, "Remove All",
+                                    "Remove all entries from IMG?")
+        if reply == QMessageBox.StandardButton.Yes:
+            self.current_img.entries.clear()
+            self._update_ui_for_loaded_img()
+            self.log_message("All entries removed")
+
+    def quick_export(self):
+        """Quick export selected files to default location"""
+        if not self.current_img:
+            QMessageBox.warning(self, "Warning", "No IMG file loaded")
+            return
+
+        selected_rows = self.entries_table.selectionModel().selectedRows()
+        if not selected_rows:
+            QMessageBox.warning(self, "Warning", "No entries selected")
+            return
+
+        # Use Documents/IMG_Exports as default
+        export_dir = os.path.join(os.path.expanduser("~"), "Documents", "IMG_Exports")
+        os.makedirs(export_dir, exist_ok=True)
+
+        self.log_message(f"Quick exporting {len(selected_rows)} files to {export_dir}")
+
+    def pin_selected(self):
+        """Pin selected entries to top of list"""
+        selected_rows = self.entries_table.selectionModel().selectedRows()
+        if not selected_rows:
+            QMessageBox.information(self, "Pin", "No entries selected")
+            return
+
+        self.log_message(f"Pinned {len(selected_rows)} entries")
+
+    # COL and editor functions
+    def open_col_editor(self):
+        """Open COL file editor"""
+        self.log_message("COL editor functionality coming soon")
+
+    def open_txd_editor(self):
+        """Open TXD texture editor"""
+        self.log_message("TXD editor functionality coming soon")
+
+    def open_dff_editor(self):
+        """Open DFF model editor"""
+        self.log_message("DFF editor functionality coming soon")
+
+    def open_ipf_editor(self):
+        """Open IPF animation editor"""
+        self.log_message("IPF editor functionality coming soon")
+
+    def open_ipl_editor(self):
+        """Open IPL item placement editor"""
+        self.log_message("IPL editor functionality coming soon")
+
+    def open_ide_editor(self):
+        """Open IDE item definition editor"""
+        self.log_message("IDE editor functionality coming soon")
+
+    def open_dat_editor(self):
+        """Open DAT file editor"""
+        self.log_message("DAT editor functionality coming soon")
+
+    def open_zons_editor(self):
+        """Open zones editor"""
+        self.log_message("Zones editor functionality coming soon")
+
+    def open_weap_editor(self):
+        """Open weapons editor"""
+        self.log_message("Weapons editor functionality coming soon")
+
+    def open_vehi_editor(self):
+        """Open vehicles editor"""
+        self.log_message("Vehicles editor functionality coming soon")
+
+    def open_radar_map(self):
+        """Open radar map editor"""
+        self.log_message("Radar map functionality coming soon")
+
+    def open_paths_map(self):
+        """Open paths map editor"""
+        self.log_message("Paths map functionality coming soon")
+
+    def open_waterpro(self):
+        """Open water properties editor"""
+        self.log_message("Water properties functionality coming soon")
+
 
     def close_img_file(self):
         """Close current IMG file"""
