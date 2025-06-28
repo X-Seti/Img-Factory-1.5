@@ -8,14 +8,13 @@ Modular menu system with customizable layouts
 
 from typing import Dict, List, Optional, Callable, Any
 from PyQt6.QtWidgets import (
-    QMenuBar, QMenu, QAction, QActionGroup, QDialog, QVBoxLayout, 
+    QMenuBar, QMenu, QDialog, QVBoxLayout,
     QHBoxLayout, QListWidget, QListWidgetItem, QPushButton, QCheckBox,
     QGroupBox, QLabel, QLineEdit, QComboBox, QMessageBox, QTabWidget,
-    QWidget, QSplitter, QTextEdit
+    QWidget, QSplitter, QTextEdit, QButtonGroup
 )
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QIcon, QKeySequence, QAction
-
+from PyQt6.QtGui import QAction, QIcon, QKeySequence, QActionGroup
 from gui.panels import PanelManager
 
 

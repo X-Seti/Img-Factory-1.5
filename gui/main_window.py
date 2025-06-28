@@ -11,7 +11,7 @@ Main window setup and layout orchestration
 import sys
 from typing import Optional
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSplitter
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QButtonGroup
 )
 from PyQt6.QtCore import Qt
 

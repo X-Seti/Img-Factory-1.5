@@ -50,6 +50,7 @@ from components.img_validator import IMGValidator
 #from imgfactory_col_integration import setup_col_integration
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
+from gui.menu_system import create_menu_system
 
 
 try:
@@ -157,13 +158,19 @@ class IMGFactory(QMainWindow):
         
         # Initialize GUI layout
         self.gui_layout = IMGFactoryGUILayout(self)
-        
+
+
+
+        # Create unified menu system (REPLACES gui_layout menu creation)
+        #self.menu_system = create_menu_system(self)
+        #self._setup_menu_callbacks()
+
         # Debug: check if methods exist
         print(f"Has create_new_img: {hasattr(self, 'create_new_img')}")
         print(f"Has validate_img: {hasattr(self, 'validate_img')}")
         print(f"Has show_about: {hasattr(self, 'show_about')}")
-        
-        # Initialize UI
+
+        # Initialize UI (but without menu creation in gui_layout)
         self._create_ui()
         self._connect_signals()
         self._restore_settings()
@@ -186,46 +193,24 @@ class IMGFactory(QMainWindow):
         # Central widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-        
+
         # Main layout
         main_layout = QVBoxLayout(central_widget)
         main_layout.setContentsMargins(5, 5, 5, 5)
-        
-        # Check if advanced UI is enabled, otherwise use fallback
-        use_advanced_ui = True
-        if hasattr(self.settings, 'current_settings'):
-            use_advanced_ui = self.settings.current_settings.get('use_advanced_ui', True)
-        elif isinstance(self.settings, dict):
-            use_advanced_ui = self.settings.get('use_advanced_ui', True)
-        
-        if use_advanced_ui:
-            self._create_advanced_ui(main_layout)
-        else:
-            self._create_fallback_ui(main_layout)
+
+        # Create UI - no fallback, just works
+        self._create_advanced_ui(main_layout)
     
     def _create_advanced_ui(self, main_layout):
-        """Create advanced UI with all features"""
-        # Create GUI layout using the gui_layout class
+        """Create the main UI"""
         self.gui_layout.create_main_ui_with_splitters(main_layout)
-        
-        # Create menu and status bars
+        # Menu already created by unified system
         self.gui_layout.create_menu_bar()
         self.gui_layout.create_status_bar()
-        
-        # Apply theme to table
         self.gui_layout.apply_table_theme()
-        
-        # Connect table signals
         self.gui_layout.connect_table_signals()
-        
-        # Add sample data for demonstration
         self.gui_layout.add_sample_data()
 
-    def _create_fallback_ui(self, main_layout):
-        """Create fallback UI"""
-        self.gui_layout.create_main_ui_with_splitters(main_layout)
-        self.gui_layout.create_menu_bar()
-        self.gui_layout.create_status_bar()
 
     def resizeEvent(self, event):
         """Handle window resize to adapt button text"""
