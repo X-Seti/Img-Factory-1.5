@@ -45,6 +45,7 @@ from components.img_creator import NewIMGDialog
 from components.img_core_classes import IMGFile, IMGEntry, IMGVersion, format_file_size
 from components.img_formats import GameSpecificIMGDialog, EnhancedIMGCreator
 from components.img_manager import IMGFile, IMGVersion, Platform
+from components.table_filter import IMGEntriesTable, TabFilterWidget, integrate_filtering
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_validator import IMGValidator
 #from imgfactory_col_integration import setup_col_integration
@@ -60,6 +61,97 @@ except ImportError:
         return False
 
 print("Components imported successfully")
+
+def populate_img_table(table: QTableWidget, img_file: IMGFile):
+    """Populate table with IMG file entries - module level function"""
+    if not img_file or not img_file.entries:
+        table.setRowCount(0)
+        return
+
+    entries = img_file.entries
+
+    # Clear existing data first
+    table.setRowCount(0)
+    table.setRowCount(len(entries))
+
+    for row, entry in enumerate(entries):
+        # Name
+        table.setItem(row, 0, QTableWidgetItem(entry.name))
+
+        # Type (file extension)
+        file_type = entry.name.split('.')[-1].upper() if '.' in entry.name else "Unknown"
+        table.setItem(row, 1, QTableWidgetItem(file_type))
+
+        # Size (formatted)
+        try:
+            from components.img_core_classes import format_file_size
+            size_text = format_file_size(entry.size)
+        except:
+            size_text = f"{entry.size} bytes"
+        table.setItem(row, 2, QTableWidgetItem(size_text))
+
+        # Offset (hex format)
+        table.setItem(row, 3, QTableWidgetItem(f"0x{entry.offset:X}"))
+
+        # Version - Improved detection
+        version = "Unknown"
+        try:
+            if hasattr(entry, 'get_version_text') and callable(entry.get_version_text):
+                version = entry.get_version_text()
+            elif hasattr(img_file, 'version'):
+                # Use IMG file version to provide better info
+                if img_file.version.name == 'IMG_1':
+                    # For GTA III/VC files, try to detect from file types
+                    if file_type in ['DFF', 'TXD']:
+                        version = "RW 3.6.0.3"  # Common version for GTA III/VC
+                    elif file_type == 'COL':
+                        version = "COL 2"
+                    elif file_type == 'IFP':
+                        version = "IFP 1"
+                    else:
+                        version = "GTA III/VC"
+                elif img_file.version.name == 'IMG_2':
+                    version = "GTA SA"
+                elif img_file.version.name == 'IMG_3':
+                    version = "GTA IV"
+                else:
+                    version = img_file.version.name
+        except:
+            version = "Unknown"
+        table.setItem(row, 4, QTableWidgetItem(version))
+
+        # Compression
+        compression = "None"
+        try:
+            if hasattr(entry, 'compression') and hasattr(entry.compression, 'name'):
+                if entry.compression.name != 'NONE':
+                    compression = entry.compression.name
+            elif hasattr(entry, 'compressed') and entry.compressed:
+                compression = "ZLib"
+            elif hasattr(entry, 'is_compressed') and callable(entry.is_compressed) and entry.is_compressed():
+                compression = "Compressed"
+        except:
+            compression = "None"
+        table.setItem(row, 5, QTableWidgetItem(compression))
+
+        # Status
+        status = "Ready"
+        try:
+            if hasattr(entry, 'is_new_entry') and entry.is_new_entry:
+                status = "New"
+            elif hasattr(entry, 'is_replaced') and entry.is_replaced:
+                status = "Modified"
+        except:
+            status = "Ready"
+        table.setItem(row, 6, QTableWidgetItem(status))
+
+        # Make items read-only
+        for col in range(7):
+            item = table.item(row, col)
+            if item:
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+
+
 
 class IMGLoadThread(QThread):
     """Background thread for loading IMG files"""
@@ -79,62 +171,69 @@ class IMGLoadThread(QThread):
     def run(self):
         try:
             self.progress_updated.emit(10, "Opening file...")
-            
+
             # Create IMG file instance
-            self.progress.emit(10)
             img_file = IMGFile(self.file_path)
+
             self.progress_updated.emit(30, "Detecting format...")
-            
-            # Open and parse file
-            self.progress.emit(30)
+
+            # Open and parse file (entries are loaded automatically by open())
             if not img_file.open():
-                self.error.emit(f"Failed to open IMG file: {self.file_path}")
+                self.loading_error.emit(f"Failed to open IMG file: {self.file_path}")
                 return
-            
+
             self.progress_updated.emit(60, "Reading entries...")
-            self.progress.emit(60)
-            
-            # Parse entries
-            if not img_file.parse_entries():
-                self.error.emit(f"Failed to parse IMG entries: {self.file_path}")
+
+            # Check if entries were loaded
+            if not img_file.entries:
+                self.loading_error.emit(f"No entries found in IMG file: {self.file_path}")
                 return
-            
+
+            self.progress_updated.emit(80, "Validating...")
+
+            # Validate the loaded file if validator exists
+            try:
+                validation = IMGValidator.validate_img_file(img_file)
+                if not validation.is_valid:
+                    # Just warn but don't fail - some IMG files might have minor issues
+                    print(f"IMG validation warnings: {validation.get_summary()}")
+            except:
+                # If validator fails, just continue - validation is optional
+                pass
+
             self.progress_updated.emit(100, "Complete")
-            self.progress.emit(100)
-            
+
             # Return the loaded IMG file
-            self.finished.emit(img_file)
             self.loading_finished.emit(img_file)
-            
+
         except Exception as e:
-            self.error.emit(f"Error loading IMG file: {str(e)}")
             self.loading_error.emit(f"Error loading IMG file: {str(e)}")
 
-def populate_img_table(table: QTableWidget, img_file: IMGFile):
-    """Populate table with IMG file entries"""
-    if not img_file or not img_file.entries:
-        table.setRowCount(0)
-        return
-    
-    table.setRowCount(len(img_file.entries))
-    
-    for row, entry in enumerate(img_file.entries):
-        # Filename
-        table.setItem(row, 0, QTableWidgetItem(entry.name))
-        # File type
-        file_type = entry.name.split('.')[-1].upper() if '.' in entry.name else "Unknown"
-        table.setItem(row, 1, QTableWidgetItem(file_type))
-        # Size
-        table.setItem(row, 2, QTableWidgetItem(format_file_size(entry.size)))
-        # Offset
-        table.setItem(row, 3, QTableWidgetItem(f"0x{entry.offset:X}"))
-        # Version
-        table.setItem(row, 4, QTableWidgetItem(str(entry.version)))
-        # Compression
-        compression = "ZLib" if hasattr(entry, 'compressed') and entry.compressed else "None"
-        table.setItem(row, 5, QTableWidgetItem(compression))
-        # Status
-        table.setItem(row, 6, QTableWidgetItem("Ready"))
+    def populate_img_table(table: QTableWidget, img_file: IMGFile):
+        """Populate table with IMG file entries"""
+        if not img_file or not img_file.entries:
+            table.setRowCount(0)
+            return
+
+        table.setRowCount(len(img_file.entries))
+
+        for row, entry in enumerate(img_file.entries):
+            # Filename
+            table.setItem(row, 0, QTableWidgetItem(entry.name))
+            # File type
+            file_type = entry.name.split('.')[-1].upper() if '.' in entry.name else "Unknown"
+            table.setItem(row, 1, QTableWidgetItem(file_type))
+            # Size
+            table.setItem(row, 2, QTableWidgetItem(format_file_size(entry.size)))
+            # Offset
+            table.setItem(row, 3, QTableWidgetItem(f"0x{entry.offset:X}"))
+            # Version
+            table.setItem(row, 4, QTableWidgetItem(str(entry.version)))
+            # Compression
+            compression = "ZLib" if hasattr(entry, 'compressed') and entry.compressed else "None"
+            table.setItem(row, 5, QTableWidgetItem(compression))
+            # Status
+            table.setItem(row, 6, QTableWidgetItem("Ready"))
 
 
 class IMGFactory(QMainWindow):
@@ -170,12 +269,6 @@ class IMGFactory(QMainWindow):
             }
         self.menu_bar_system.set_callbacks(callbacks)
 
-
-        # Debug: check if methods exist
-        print(f"Has create_new_img: {hasattr(self, 'create_new_img')}")
-        print(f"Has validate_img: {hasattr(self, 'validate_img')}")
-        print(f"Has show_about: {hasattr(self, 'show_about')}")
-
         # Initialize UI (but without menu creation in gui_layout)
         self._create_ui()
         self._connect_signals()
@@ -203,7 +296,7 @@ class IMGFactory(QMainWindow):
         # Main layout
         main_layout = QVBoxLayout(central_widget)
         main_layout.setContentsMargins(5, 5, 5, 5)
-
+        #self._create_status_bar()
         # Create UI - no fallback, just works
         self._create_advanced_ui(main_layout)
     
@@ -213,7 +306,7 @@ class IMGFactory(QMainWindow):
         self.gui_layout.create_main_ui_with_splitters(main_layout)
 
         # Create menu and status bars
-        self.gui_layout.create_menu_bar()
+        #self.gui_layout.create_menu_bar()
         self.gui_layout.create_status_bar()
 
         # Apply theme to table
@@ -384,6 +477,49 @@ class IMGFactory(QMainWindow):
         self.load_thread.loading_error.connect(self._on_load_error)
         self.load_thread.start()
     
+    def _load_img_file(self, file_path: str):
+        """Internal method that calls the public load_img_file method"""
+        self.load_img_file(file_path)
+
+    def _update_ui_for_no_img(self):
+        """Update UI when no IMG file is loaded"""
+        # Clear current data
+        self.current_img = None
+
+        # Update window title
+        self.setWindowTitle("IMG Factory 1.5")
+
+        # Clear table if it exists
+        if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
+            self.gui_layout.table.setRowCount(0)
+
+        # Update status
+        if hasattr(self, 'gui_layout'):
+            self.gui_layout.show_progress(-1, "Ready")
+            self.gui_layout.update_img_info("No IMG loaded")
+
+        # Reset any status labels
+        if hasattr(self, 'file_path_label'):
+            self.file_path_label.setText("No file loaded")
+        if hasattr(self, 'version_label'):
+            self.version_label.setText("---")
+        if hasattr(self, 'entry_count_label'):
+            self.entry_count_label.setText("0")
+        if hasattr(self, 'img_status_label'):
+            self.img_status_label.setText("No IMG loaded")
+
+        # Disable buttons that require an IMG to be loaded
+        buttons_to_disable = [
+            'close_img_btn', 'rebuild_btn', 'rebuild_as_btn', 'validate_btn',
+            'import_btn', 'export_all_btn', 'merge_btn', 'split_btn'
+        ]
+
+        for button_name in buttons_to_disable:
+            if hasattr(self, button_name):
+                getattr(self, button_name).setEnabled(False)
+
+        self.log_message("IMG interface reset")
+
     def _on_load_progress(self, progress: int, status: str):
         """Handle loading progress updates"""
         self.gui_layout.show_progress(progress, status)
@@ -392,17 +528,83 @@ class IMGFactory(QMainWindow):
         """Handle successful IMG loading"""
         self.current_img = img_file
         self.log_message(f"Loaded: {img_file.file_path} ({len(img_file.entries)} entries)")
-        
+
         # Update table
         populate_img_table(self.gui_layout.table, img_file)
-        
+
         # Update status
         self.gui_layout.show_progress(-1, "Ready")
-        self.gui_layout.update_img_info(f"{len(img_file.entries)} entries loaded")
-        
+
+        # Fix: Use correct method name
+        if hasattr(self.gui_layout, 'update_file_info'):
+            self.gui_layout.update_file_info(f"{len(img_file.entries)} entries loaded")
+        elif hasattr(self.gui_layout, 'update_img_info'):
+            self.gui_layout.update_img_info(f"{len(img_file.entries)} entries loaded")
+        else:
+            # Fallback - just log the info
+            self.log_message(f"File info: {len(img_file.entries)} entries loaded")
+
         # Update window title
         self.setWindowTitle(f"IMG Factory 1.5 - {os.path.basename(img_file.file_path)}")
-    
+
+
+    def _populate_real_img_table(self, img_file: IMGFile):
+        """Populate table with real IMG file entries"""
+        if not img_file or not img_file.entries:
+            self.gui_layout.table.setRowCount(0)
+            return
+
+        table = self.gui_layout.table
+        entries = img_file.entries
+
+        # Clear existing data (including sample entries)
+        table.setRowCount(0)
+        table.setRowCount(len(entries))
+
+        for row, entry in enumerate(entries):
+            # Name
+            table.setItem(row, 0, QTableWidgetItem(entry.name))
+
+            # Type (file extension)
+            file_type = entry.extension if entry.extension else "Unknown"
+            table.setItem(row, 1, QTableWidgetItem(file_type))
+
+            # Size (formatted)
+            from components.img_core_classes import format_file_size
+            size_text = format_file_size(entry.size)
+            table.setItem(row, 2, QTableWidgetItem(size_text))
+
+            # Offset (hex format)
+            offset_text = f"0x{entry.offset:X}"
+            table.setItem(row, 3, QTableWidgetItem(offset_text))
+
+            # Version
+            version_text = entry.get_version_text() if hasattr(entry, 'get_version_text') else "Unknown"
+            table.setItem(row, 4, QTableWidgetItem(version_text))
+
+            # Compression
+            if hasattr(entry, 'is_compressed') and callable(entry.is_compressed):
+                comp_text = "Compressed" if entry.is_compressed() else "None"
+            else:
+                comp_text = "None"
+            table.setItem(row, 5, QTableWidgetItem(comp_text))
+
+            # Status
+            if hasattr(entry, 'is_new_entry') and entry.is_new_entry:
+                status_text = "New"
+            elif hasattr(entry, 'is_replaced') and entry.is_replaced:
+                status_text = "Modified"
+            else:
+                status_text = "Ready"
+            table.setItem(row, 6, QTableWidgetItem(status_text))
+
+            # Make all items read-only
+            for col in range(7):
+                item = table.item(row, col)
+                if item:
+                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+
+
     def _on_load_error(self, error_message: str):
         """Handle IMG loading error"""
         self.log_message(f"Error: {error_message}")
