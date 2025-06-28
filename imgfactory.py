@@ -907,15 +907,6 @@ class IMGFactory(QMainWindow):
     # SETTINGS AND DIALOGS - KEEP 100% OF FUNCTIONALITY
     # =============================================================================
 
-    def show_settings(self):
-        """Show settings dialog"""
-        dialog = SettingsDialog(self.app_settings, self)
-        if dialog.exec() == dialog.DialogCode.Accepted:
-            # Apply new settings
-            apply_theme_to_app(QApplication.instance(), self.app_settings)
-            self.gui_layout.apply_table_theme()
-            self.log_message("Settings updated")
-
     def show_theme_settings(self):
         """Show theme settings dialog"""
         # This would open a dedicated theme settings dialog
@@ -941,6 +932,161 @@ class IMGFactory(QMainWindow):
         """
         
         QMessageBox.about(self, "About IMG Factory", about_text)
+
+    def show_gui_settings(self):
+        """Show GUI settings dialog - ADD THIS METHOD TO YOUR MAIN WINDOW CLASS"""
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QPushButton, QGroupBox
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("GUI Layout Settings")
+        dialog.setMinimumSize(500, 250)
+
+        layout = QVBoxLayout(dialog)
+
+        # Panel width group
+        width_group = QGroupBox("📏 Right Panel Width Settings")
+        width_layout = QVBoxLayout(width_group)
+
+        # Current width display
+        current_width = self.gui_layout.main_splitter.sizes()[1] if len(self.gui_layout.main_splitter.sizes()) > 1 else 240
+
+        # Width spinner
+        spinner_layout = QHBoxLayout()
+        spinner_layout.addWidget(QLabel("Width:"))
+        width_spin = QSpinBox()
+        width_spin.setRange(180, 400)
+        width_spin.setValue(current_width)
+        width_spin.setSuffix(" px")
+        spinner_layout.addWidget(width_spin)
+        spinner_layout.addStretch()
+        width_layout.addLayout(spinner_layout)
+
+        # Preset buttons
+        presets_layout = QHBoxLayout()
+        presets_layout.addWidget(QLabel("Presets:"))
+        presets = [("Narrow", 200), ("Default", 240), ("Wide", 280), ("Extra Wide", 320)]
+        for name, value in presets:
+            btn = QPushButton(f"{name}\n({value}px)")
+            btn.clicked.connect(lambda checked, v=value: width_spin.setValue(v))
+            presets_layout.addWidget(btn)
+        presets_layout.addStretch()
+        width_layout.addLayout(presets_layout)
+
+        layout.addWidget(width_group)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+
+        preview_btn = QPushButton("👁️ Preview")
+        def preview_changes():
+            width = width_spin.value()
+            sizes = self.gui_layout.main_splitter.sizes()
+            if len(sizes) >= 2:
+                self.gui_layout.main_splitter.setSizes([sizes[0], width])
+
+            right_widget = self.gui_layout.main_splitter.widget(1)
+            if right_widget:
+                right_widget.setMaximumWidth(width + 60)
+                right_widget.setMinimumWidth(max(180, width - 40))
+
+        preview_btn.clicked.connect(preview_changes)
+        button_layout.addWidget(preview_btn)
+
+        apply_btn = QPushButton("✅ Apply & Close")
+        def apply_changes():
+            width = width_spin.value()
+            sizes = self.gui_layout.main_splitter.sizes()
+            if len(sizes) >= 2:
+                self.gui_layout.main_splitter.setSizes([sizes[0], width])
+
+            right_widget = self.gui_layout.main_splitter.widget(1)
+            if right_widget:
+                right_widget.setMaximumWidth(width + 60)
+                right_widget.setMinimumWidth(max(180, width - 40))
+
+            # Save to settings if you have app_settings
+            if hasattr(self, 'app_settings'):
+                self.app_settings.current_settings["right_panel_width"] = width
+                self.app_settings.save_settings()
+
+            self.log_message(f"Right panel width set to {width}px")
+            dialog.accept()
+
+        apply_btn.clicked.connect(apply_changes)
+        button_layout.addWidget(apply_btn)
+
+        cancel_btn = QPushButton("❌ Cancel")
+        cancel_btn.clicked.connect(dialog.reject)
+        button_layout.addWidget(cancel_btn)
+
+        layout.addLayout(button_layout)
+
+        dialog.exec()
+
+    def show_gui_layout_settings(self):
+        """Show GUI Layout settings - called from menu"""
+        if hasattr(self, 'gui_layout'):
+            self.gui_layout.show_gui_layout_settings()
+        else:
+            self.log_message("GUI Layout not available")
+
+        # ADD THIS TO YOUR MENU CREATION (in your _create_menu or create_menu_bar method):
+        # Find where you create the Settings menu and add:
+
+    def add_gui_settings_menu_item(self):
+        """Add GUI settings to Settings menu - CALL THIS AFTER CREATING YOUR MENU"""
+        # Find the Settings menu
+        menubar = self.menuBar()
+        for action in menubar.actions():
+            if action.text() == "Settings":
+                settings_menu = action.menu()
+                if settings_menu:
+                    settings_menu.addSeparator()
+                    gui_settings_action = settings_menu.addAction("🖥️ GUI Layout")
+                    gui_settings_action.triggered.connect(self.show_gui_settings)
+                    break
+
+# Add these methods to your imgfactory.py to test what's being called:
+
+    def show_settings(self):
+        """Show settings dialog"""
+        print("show_settings called!")  # Debug
+        try:
+            from app_settings_system import SettingsDialog
+            dialog = SettingsDialog(self.app_settings, self)
+            if dialog.exec() == dialog.DialogCode.Accepted:
+                from app_settings_system import apply_theme_to_app
+                apply_theme_to_app(QApplication.instance(), self.app_settings)
+                self.gui_layout.apply_table_theme()
+                self.log_message("Settings updated")
+        except Exception as e:
+            print(f"Settings error: {e}")
+            self.log_message(f"Settings error: {str(e)}")
+
+    def show_theme_settings(self):
+        """Show theme settings dialog"""
+        print("show_theme_settings called!")  # Debug
+        self.show_settings()
+
+    def manage_templates(self):
+        """Show template manager dialog"""
+        try:
+            dialog = TemplateManagerDialog(self.template_manager, self)
+            dialog.template_selected.connect(self._apply_template)
+            dialog.exec()
+        except Exception as e:
+            self.log_message(f"Template manager not available: {str(e)}")
+
+    def _apply_template(self, template_data):
+        """Apply template to create new IMG"""
+        self.log_message(f"Template applied: {template_data.get('name', 'Unknown')}")
+
+    def show_gui_layout_settings(self):
+        """Show GUI Layout settings - called from menu"""
+        if hasattr(self, 'gui_layout'):
+            self.gui_layout.show_gui_layout_settings()
+        else:
+            self.log_message("GUI Layout not available")
 
     # =============================================================================
     # SETTINGS PERSISTENCE - KEEP 100% OF FUNCTIONALITY

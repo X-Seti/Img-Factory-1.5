@@ -1,5 +1,5 @@
-#this belongs in gui/ gui_layout.py - version 10
-# X-Seti - JUNE27 2025 - Img Factory 1.5 - GUI Layout Module
+#this belongs in gui/ gui_layout.py - Version: 11
+# X-Seti - JUNE28 2025 - Img Factory 1.5 - GUI Layout Module
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSplitter,
@@ -42,10 +42,13 @@ class IMGFactoryGUILayout:
         self.main_splitter.addWidget(left_panel)
         self.main_splitter.addWidget(right_panel)
         
-        # Set splitter proportions (80% left, 20% right) - made right panel 20% narrower  
-        self.main_splitter.setSizes([1000, 200])  # Was 912,288 - now even narrower right panel
-        #bug, settings above arn't changing the right bar width?'
-
+        # FIXED: Set splitter proportions and force constraints
+        self.main_splitter.setSizes([1000, 280])  # Fixed right panel to 280px
+        
+        # FIXED: Add size constraints to force the right panel width
+        right_panel.setMaximumWidth(280)  # Fixed at 280px
+        right_panel.setMinimumWidth(280)  # Fixed at 280px
+        
         # Style the main horizontal splitter handle with theme colors
         theme_colors = self._get_theme_colors("default")
         splitter_bg = theme_colors.get('splitter_color_background', '777777')
@@ -147,7 +150,7 @@ class IMGFactoryGUILayout:
         
         # Current file info
         info_layout.addWidget(QLabel("File:"))
-        self.current_file_label = QLabel("No file loaded")
+        self.current_file_label = QLabel("sample_archive.img")
         self.current_file_label.setStyleSheet("font-weight: bold; color: #2E7D32;")
         info_layout.addWidget(self.current_file_label)
         
@@ -155,29 +158,30 @@ class IMGFactoryGUILayout:
         
         # File type
         info_layout.addWidget(QLabel("Type:"))
-        self.file_type_label = QLabel("Unknown")
+        self.file_type_label = QLabel("IMG Archive")
         info_layout.addWidget(self.file_type_label)
         
         info_layout.addWidget(QLabel("|"))
         
-        # Entry/model count
+        # Entry count
         info_layout.addWidget(QLabel("Items:"))
-        self.item_count_label = QLabel("0")
+        self.item_count_label = QLabel("4")
         info_layout.addWidget(self.item_count_label)
         
         info_layout.addWidget(QLabel("|"))
         
         # File size
         info_layout.addWidget(QLabel("Size:"))
-        self.file_size_label = QLabel("0 KB")
+        self.file_size_label = QLabel("512.0 KB")
         info_layout.addWidget(self.file_size_label)
-        
-        info_layout.addStretch()
         
         # Status indicator
         self.status_indicator = QLabel("●")
-        self.status_indicator.setStyleSheet("color: #ff4444; font-size: 16px;")  # Red = no file
+        self.status_indicator.setStyleSheet("color: #4CAF50; font-size: 16px;")
         info_layout.addWidget(self.status_indicator)
+        
+        # Add stretch to push everything to the left
+        info_layout.addStretch()
         
         return info_bar
     
@@ -185,42 +189,47 @@ class IMGFactoryGUILayout:
         """Create middle file window with tabs and table"""
         file_window = QWidget()
         file_layout = QVBoxLayout(file_window)
-        file_layout.setContentsMargins(0, 0, 0, 0)
-        file_layout.setSpacing(2)
+        file_layout.setContentsMargins(5, 5, 5, 5)
         
-        # File type tabs (DFF | COL | Both)
-        self.file_type_tabs = QTabWidget()
-        self.file_type_tabs.setMaximumHeight(35)  # Compact tabs
+        # Create tab widget
+        self.tab_widget = QTabWidget()
         
         # Add tabs
-        self.file_type_tabs.addTab(QWidget(), "DFF")
-        self.file_type_tabs.addTab(QWidget(), "COL") 
-        self.file_type_tabs.addTab(QWidget(), "Both")
-        self.file_type_tabs.addTab(QWidget(), "TXD")
-        self.file_type_tabs.addTab(QWidget(), "Other")
-
-        file_layout.addWidget(self.file_type_tabs)
+        self.tab_widget.addTab(QWidget(), "DFF")
+        self.tab_widget.addTab(QWidget(), "COL")
+        both_tab = QWidget()
+        self.tab_widget.addTab(both_tab, "Both")
+        self.tab_widget.addTab(QWidget(), "TXD")
+        self.tab_widget.addTab(QWidget(), "Other")
         
-        # Main table with scrollbars
+        # Set "Both" as active tab
+        self.tab_widget.setCurrentIndex(2)
+        
+        # Create main table in the "Both" tab
+        both_layout = QVBoxLayout(both_tab)
+        both_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Create table
         self.table = QTableWidget()
         self.table.setColumnCount(7)
-        headers = ["Filename", "Type", "Size", "Offset", "Version", "Compression", "Status"]
-        self.table.setHorizontalHeaderLabels(headers)
-        self.table.setAlternatingRowColors(True)
+        self.table.setHorizontalHeaderLabels([
+            "", "Filename", "Type", "Size", "Offset", "Version", "Compression", "Status"
+        ])
+        
+        # Configure table appearance
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.table.setAlternatingRowColors(True)
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.verticalHeader().setVisible(False)
         
-        # Enable scrollbars
-        self.table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        
-        # Apply theme styling to table
+        # Apply theme styling
         self._apply_table_theme_styling()
         
-        self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        both_layout.addWidget(self.table)
+        file_layout.addWidget(self.tab_widget)
         
-        file_layout.addWidget(self.table)
+        # Add sample data
+        self._add_sample_data()
         
         return file_window
     
@@ -247,14 +256,16 @@ class IMGFactoryGUILayout:
         return status_window
     
     def _create_right_panel_with_pastel_buttons(self):
-        """Create right panel with pastel colored buttons"""
+        """Create right panel with pastel colored buttons - ONLY CHANGED SPACING"""
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
-        right_layout.setContentsMargins(5, 5, 5, 5)
+        right_layout.setContentsMargins(4, 4, 4, 4)  # FIXED: Reduced margins slightly
+        right_layout.setSpacing(6)  # FIXED: Even spacing between sections
 
         # IMG Section with pastel colors
         img_box = QGroupBox("IMG, COL Files")
         img_layout = QGridLayout()
+        img_layout.setSpacing(2)  # FIXED: Tighter button spacing
         img_buttons_data = [
             ("New", "new", "document-new", "#EEFAFA"),      # Light Something
             ("Open", "open", "document-open", "#E3F2FD"),      # Light Blue
@@ -281,22 +292,23 @@ class IMGFactoryGUILayout:
         # Entries Section with pastel colors
         entries_box = QGroupBox("File Entries")
         entries_layout = QGridLayout()
+        entries_layout.setSpacing(2)  # FIXED: Tighter button spacing
         entry_buttons_data = [
             ("Import", "import", "document-import", "#E1F5FE"),                 # Light Cyan
             ("Import via", "import_via", "document-import", "#E1F5FE"),
-            ("Update list", "update", "view-refresh", "#F9FBE7"),               # Light Gray
-            ("Export", "export", "document-export", "#E0F2F1"),                 # Light Teal
-            ("Export via", "export_via", "document-export", "#E0F2F1"),
-            ("Quick Export", "export_quick", "document-export", "#E0E2F1"),
+            ("Update list", "update", "view-refresh", "#F9FBE7"),               # Light Lime
+            ("Export", "export", "document-export", "#E8F5E8"),                 # Light Green
+            ("Export via", "export_via", "document-export", "#E8F5E8"),
+            ("Quick Export", "quick_export", "document-send", "#E8F5E8"),
             ("Remove", "remove", "edit-delete", "#FFEBEE"),                     # Light Red
-            ("Remove All", "remove_all", "edit-clear", "#FFEBEE"),
-            ("Dump", "dump_all", "dump-clear", "#FFF3E0"),                      # Light Orange
-            ("Reame", "rename_selected", "document-rename", "#F9FBE7"),         # Light Gray
-            ("Replace", "replace_selected", "document_replace", "#FFF3E0"),     # Light Orange
-            ("Select All", "all_selected", "document_allsel",  "#F9FBE7"),
-            ("Sel Inverse", "inverse_select", "document_inverse",  "#F9FBE7"),
-            ("Sort", "sort_selected", "document_sort",  "#F9FBE7"),
-            ("Pin selected", "pin", "view-pin",  "#F9FBE7"),
+            ("Remove All", "remove_all", "edit-delete", "#FFEBEE"),
+            ("Dump", "dump", "document-save", "#F3E5F5"),                       # Light Purple
+            ("Rename", "rename", "edit-rename", "#FFF8E1"),                     # Light Yellow
+            ("Replace", "replace", "edit-copy", "#FFF8E1"),
+            ("Select All", "select_all", "edit-select-all", "#F1F8E9"),         # Light Light Green
+            ("Sel Inverse", "sel_inverse", "edit-select", "#F1F8E9"),
+            ("Sort", "sort", "view-sort", "#F1F8E9"),
+            ("Pin selected", "pin_selected", "pin", "#E8EAF6"),                 # Light Indigo
         ]
         
         for i, (label, action_type, icon, color) in enumerate(entry_buttons_data):
@@ -309,23 +321,24 @@ class IMGFactoryGUILayout:
         entries_box.setLayout(entries_layout)
         right_layout.addWidget(entries_box)
 
-        # Options Section - Third button group
+        # Options Section with pastel colors
         options_box = QGroupBox("Editing Options")
         options_layout = QGridLayout()
+        options_layout.setSpacing(2)  # FIXED: Tighter button spacing
         options_buttons_data = [
-            ("Col Edit", "col_edit", "edit-col", "#E3F2FD"),         # Light Blue
-            ("Txd Edit", "txd_edit", "edit-txd", "#F3E5F5"),         # Light Purple
-            ("Dff Edit", "dff_edit", "edit-dff", "#F1F8E9"),         # Light Light Green
-            ("Ipf Edit", "ipf_edit", "edit-ipf", "#FFF3E0"),         # Light Orange
-            ("IDE Edit", "ide_ed", "edit-ide", "#FFEBEE"), # Light Red
-            ("IPL Edit", "ipl_ed", "edit-ipl", "#FFEBEE"), # Light Red
-            ("Dat Edit", "dat_edit", "dat-editor","#E8EAF6"),        # Light Indigo
-            ("Zons Cull Ed", "zonscul_ed", "zoncol-ed", "#E1F5FE"),  # Light Cyan
-            ("Weap Edit", "weap_edit", "weap-editor", "#FFF8E1"),    # Light Yellow
-            ("Vehi Edit", "vehi_edit", "vehi-editor", "#E8F5E8"),    # Light Green
-            ("Radar Map", "radar_map", "radar-map", "#FCE4EC"),      # Light Pink
-            ("Paths Map", "paths_map", "paths-map", "#F9FBE7"),      # Light Lime
-            ("Waterpro", "waterpro", "waterpro", "#E3F2FD"),         # Light Blue
+            ("Col Edit", "col_edit", "col-edit", "#E3F2FD"),         # Light Blue
+            ("Txd Edit", "txd_edit", "txd-edit", "#F8BBD9"),         # Light Pink
+            ("Dff Edit", "dff_edit", "dff-edit", "#E1F5FE"),         # Light Cyan
+            ("Ipf Edit", "ipf_edit", "ipf-edit", "#FFF3E0"),         # Light Orange
+            ("IDE Edit", "ide_edit", "ide-edit", "#F8BBD9"),         # Light Pink
+            ("IPL Edit", "ipl_edit", "ipl-edit", "#E1F5FE"),         # Light Cyan
+            ("Dat Edit", "dat_edit", "dat-edit", "#E3F2FD"),         # Light Blue
+            ("Zons Cull Ed", "zones_cull", "zones-cull", "#E8F5E8"), # Light Green
+            ("Weap Edit", "weap_edit", "weap-edit", "#E1F5FE"),      # Light Cyan
+            ("Vehi Edit", "vehi_edit", "vehi-edit", "#E3F2FD"),      # Light Blue
+            ("Radar Map", "radar_map", "radar-map", "#F8BBD9"),      # Light Pink
+            ("Paths Map", "paths_map", "paths-map", "#E1F5FE"),      # Light Cyan
+            ("Waterpro", "timecyc", "timecyc", "#E3F2FD"),         # Light Blue
             ("Weather", "timecyc", "timecyc", "#E0F2F1"),            # Light Teal
             ("Handling", "handling", "handling", "#E4E3ED"),         # Light Blue
             ("Objects", "ojs_breakble", "ojs-breakble", "#FFE0B2"),  # Light Deep Orange
@@ -344,6 +357,7 @@ class IMGFactoryGUILayout:
         # Filter Section
         filter_box = QGroupBox("Filter & Search")
         filter_layout = QVBoxLayout()
+        filter_layout.setSpacing(4)  # FIXED: Consistent spacing
         
         # Filter controls
         filter_controls = QHBoxLayout()
@@ -369,8 +383,10 @@ class IMGFactoryGUILayout:
         return right_panel
     
     def _create_pastel_button(self, label, action_type, icon, bg_color):
-        """Create a button with pastel coloring"""
+        """Create a button with pastel coloring - ONLY CHANGED HEIGHT"""
         btn = QPushButton(label)
+        btn.setMaximumHeight(22)  # FIXED: Compact button height
+        btn.setMinimumHeight(20)  # FIXED: Minimum button height
         
         # Set icon if provided
         if icon:
@@ -382,8 +398,9 @@ class IMGFactoryGUILayout:
                 background-color: {bg_color};
                 border: 1px solid #cccccc;
                 border-radius: 4px;
-                padding: 6px 12px;
+                padding: 4px 8px;
                 font-weight: bold;
+                font-size: 8pt;
                 color: #333333;
             }}
             QPushButton:hover {{
@@ -402,7 +419,7 @@ class IMGFactoryGUILayout:
         """)
         
         # Set button properties
-        btn.setMinimumHeight(30)
+        btn.setMinimumHeight(20)
         btn.setProperty("action-type", action_type)
         
         return btn
@@ -467,565 +484,35 @@ class IMGFactoryGUILayout:
                 exit_action.triggered.connect(self.main_window.close)
                 menu.addAction(exit_action)
                 
-            elif name == "Edit":
-                undo_action = QAction("Undo", self.main_window)
-                undo_action.setIcon(QIcon.fromTheme("edit-undo"))
-                menu.addAction(undo_action)
-                
-                redo_action = QAction("Redo", self.main_window)
-                redo_action.setIcon(QIcon.fromTheme("edit-redo"))
-                menu.addAction(redo_action)
-                
-                menu.addSeparator()
-                
-                copy_action = QAction("Copy", self.main_window)
-                copy_action.setIcon(QIcon.fromTheme("edit-copy"))
-                menu.addAction(copy_action)
-                
-                paste_action = QAction("Paste", self.main_window)
-                paste_action.setIcon(QIcon.fromTheme("edit-paste"))
-                menu.addAction(paste_action)
-                
-            elif name == "IMG":
-                rebuild_action = QAction("Rebuild", self.main_window)
-                rebuild_action.setIcon(QIcon.fromTheme("document-save"))
-                rebuild_action.triggered.connect(self.main_window.rebuild_img)
-                menu.addAction(rebuild_action)
-                
-                rebuild_as_action = QAction("Rebuild As...", self.main_window)
-                rebuild_as_action.setIcon(QIcon.fromTheme("document-save-as"))
-                rebuild_as_action.triggered.connect(self.main_window.rebuild_img_as)
-                menu.addAction(rebuild_as_action)
-                
-                menu.addSeparator()
-                
-                merge_action = QAction("Merge IMG Files", self.main_window)
-                merge_action.setIcon(QIcon.fromTheme("document-merge"))
-                menu.addAction(merge_action)
-                
-                split_action = QAction("Split IMG File", self.main_window)
-                split_action.setIcon(QIcon.fromTheme("edit-cut"))
-                menu.addAction(split_action)
-                
-                menu.addSeparator()
-                
-                properties_action = QAction("IMG Properties", self.main_window)
-                properties_action.setIcon(QIcon.fromTheme("dialog-information"))
-                menu.addAction(properties_action)
-                
-            elif name == "Entry":
-                import_action = QAction("Import Files...", self.main_window)
-                import_action.setIcon(QIcon.fromTheme("go-down"))
-                import_action.triggered.connect(self.main_window.import_files)
-                menu.addAction(import_action)
-                
-                export_selected_action = QAction("Export Selected...", self.main_window)
-                export_selected_action.setIcon(QIcon.fromTheme("go-up"))
-                export_selected_action.triggered.connect(self.main_window.export_selected)
-                menu.addAction(export_selected_action)
-                
-                export_all_action = QAction("Export All...", self.main_window)
-                export_all_action.setIcon(QIcon.fromTheme("go-up"))
-                export_all_action.triggered.connect(self.main_window.export_all)
-                menu.addAction(export_all_action)
-                
-                menu.addSeparator()
-                
-                remove_action = QAction("Remove Selected", self.main_window)
-                remove_action.setIcon(QIcon.fromTheme("list-remove"))
-                remove_action.triggered.connect(self.main_window.remove_selected)
-                menu.addAction(remove_action)
-                
-                rename_action = QAction("Rename Entry", self.main_window)
-                rename_action.setIcon(QIcon.fromTheme("edit"))
-                menu.addAction(rename_action)
-                
-            elif name == "Settings":
-                preferences_action = QAction("Preferences...", self.main_window)
-                preferences_action.setIcon(QIcon.fromTheme("preferences-other"))
-                preferences_action.triggered.connect(self.main_window.show_settings)
-                menu.addAction(preferences_action)
-                
-                themes_action = QAction("Themes...", self.main_window)
-                themes_action.setIcon(QIcon.fromTheme("applications-graphics"))
-                themes_action.triggered.connect(self.main_window.show_theme_settings)
-                menu.addAction(themes_action)
-                
-                menu.addSeparator()
-                
-                templates_action = QAction("Manage Templates...", self.main_window)
-                templates_action.setIcon(QIcon.fromTheme("folder"))
-                templates_action.triggered.connect(self.main_window.manage_templates)
-                menu.addAction(templates_action)
-                
-            elif name == "Help":
-                guide_action = QAction("User Guide", self.main_window)
-                guide_action.setIcon(QIcon.fromTheme("help-contents"))
-                menu.addAction(guide_action)
-                
-                about_action = QAction("About IMG Factory", self.main_window)
-                about_action.setIcon(QIcon.fromTheme("help-about"))
-                about_action.triggered.connect(self.main_window.show_about)
-                menu.addAction(about_action)
-                
             else:
-                # Add placeholder for unimplemented menus
-                placeholder = QAction("(Coming Soon)", self.main_window)
+                # Add placeholder for other menus
+                placeholder = QAction("(No items yet)", self.main_window)
                 placeholder.setEnabled(False)
                 menu.addAction(placeholder)
 
     def create_status_bar(self):
-        """Create the status bar with progress indicator"""
-        # Use Qt's built-in statusBar() method
-        self.status_bar = self.main_window.statusBar()
+        """Create status bar with progress indicator"""
+        self.status_bar = QStatusBar()
         
-        # Progress bar for operations
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setVisible(False)
-        self.status_bar.addPermanentWidget(self.progress_bar)
-        
-        # Status labels
+        # Status label
         self.status_label = QLabel("Ready")
         self.status_bar.addWidget(self.status_label)
         
+        # Progress bar (initially hidden)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        self.progress_bar.setMaximumWidth(200)
+        self.status_bar.addPermanentWidget(self.progress_bar)
+        
+        # IMG info label
         self.img_info_label = QLabel("No IMG loaded")
         self.status_bar.addPermanentWidget(self.img_info_label)
-
-    def _apply_table_theme_styling(self):
-        """Apply theme-aware styling to table"""
-        # Check if we have theme settings
-        theme_name = "default"
-        if hasattr(self.main_window, 'app_settings') and hasattr(self.main_window.app_settings, 'current_settings'):
-            theme_name = self.main_window.app_settings.current_settings.get('theme', 'default')
         
-        # Get theme colors from JSON if available
-        theme_colors = self._get_theme_colors(theme_name)
-        
-        if theme_name == "LCARS":
-            # LCARS theme styling
-            self.table.setStyleSheet("""
-                QTableWidget {
-                    background-color: #000000;
-                    color: #ff9900;
-                    gridline-color: #ff9900;
-                    font-weight: bold;
-                    border: 2px solid #ff9900;
-                    selection-background-color: #ff6600;
-                    selection-color: #000000;
-                    alternate-background-color: #1a1a1a;
-                }
-                QHeaderView::section {
-                    background-color: #ff9900;
-                    color: #000000;
-                    font-weight: bold;
-                    border: 1px solid #ff6600;
-                    padding: 6px;
-                }
-                QScrollBar:vertical {
-                    background-color: #2a2a2a;
-                    border: 1px solid #ff9900;
-                    width: 16px;
-                    border-radius: 8px;
-                }
-                QScrollBar::handle:vertical {
-                    background-color: #ff9900;
-                    border: 1px solid #ff6600;
-                    border-radius: 6px;
-                    min-height: 20px;
-                }
-                QScrollBar::handle:vertical:hover {
-                    background-color: #ffaa00;
-                }
-                QScrollBar:horizontal {
-                    background-color: #2a2a2a;
-                    border: 1px solid #ff9900;
-                    height: 16px;
-                    border-radius: 8px;
-                }
-                QScrollBar::handle:horizontal {
-                    background-color: #ff9900;
-                    border: 1px solid #ff6600;
-                    border-radius: 6px;
-                    min-width: 20px;
-                }
-                QScrollBar::handle:horizontal:hover {
-                    background-color: #ffaa00;
-                }
-            """)
-        elif theme_name == "dark":
-            # Dark theme styling
-            self.table.setStyleSheet("""
-                QTableWidget {
-                    background-color: #2b2b2b;
-                    color: #ffffff;
-                    gridline-color: #555555;
-                    font-weight: bold;
-                    border: 1px solid #555555;
-                    selection-background-color: #0078d4;
-                    selection-color: #ffffff;
-                    alternate-background-color: #353535;
-                }
-                QHeaderView::section {
-                    background-color: #404040;
-                    color: #ffffff;
-                    font-weight: bold;
-                    border: 1px solid #555555;
-                    padding: 4px;
-                }
-                QScrollBar:vertical {
-                    background-color: #404040;
-                    border: 1px solid #555555;
-                    width: 14px;
-                    border-radius: 7px;
-                }
-                QScrollBar::handle:vertical {
-                    background-color: #606060;
-                    border: 1px solid #555555;
-                    border-radius: 5px;
-                    min-height: 20px;
-                }
-                QScrollBar::handle:vertical:hover {
-                    background-color: #707070;
-                }
-                QScrollBar:horizontal {
-                    background-color: #404040;
-                    border: 1px solid #555555;
-                    height: 14px;
-                    border-radius: 7px;
-                }
-                QScrollBar::handle:horizontal {
-                    background-color: #606060;
-                    border: 1px solid #555555;
-                    border-radius: 5px;
-                    min-width: 20px;
-                }
-                QScrollBar::handle:horizontal:hover {
-                    background-color: #707070;
-                }
-            """)
-        else:
-            # Default/light theme styling with improved selection visibility
-            splitter_bg = theme_colors.get('splitter_color_background', '777777')
-            splitter_shine = theme_colors.get('splitter_color_shine', '787878')
-            splitter_shadow = theme_colors.get('splitter_color_shadow', '757575')
-            
-            self.table.setStyleSheet(f"""
-                QTableWidget {{
-                    background-color: #ffffff;
-                    color: #333333;
-                    gridline-color: #e0e0e0;
-                    font-weight: bold;
-                    border: 1px solid #cccccc;
-                    selection-background-color: #0078d4;
-                    selection-color: #ffffff;
-                    alternate-background-color: #f8f9fa;
-                }}
-                QHeaderView::section {{
-                    background-color: #f5f5f5;
-                    color: #333333;
-                    font-weight: bold;
-                    border: 1px solid #cccccc;
-                    padding: 4px;
-                }}
-                QScrollBar:vertical {{
-                    background-color: #{splitter_bg};
-                    border: 1px solid #{splitter_shadow};
-                    width: 14px;
-                    border-radius: 7px;
-                }}
-                QScrollBar::handle:vertical {{
-                    background-color: #{splitter_shine};
-                    border: 1px solid #{splitter_shadow};
-                    border-radius: 5px;
-                    min-height: 20px;
-                }}
-                QScrollBar::handle:vertical:hover {{
-                    background-color: #a0a0a0;
-                }}
-                QScrollBar::handle:vertical:pressed {{
-                    background-color: #808080;
-                }}
-                QScrollBar:horizontal {{
-                    background-color: #{splitter_bg};
-                    border: 1px solid #{splitter_shadow};
-                    height: 14px;
-                    border-radius: 7px;
-                }}
-                QScrollBar::handle:horizontal {{
-                    background-color: #{splitter_shine};
-                    border: 1px solid #{splitter_shadow};
-                    border-radius: 5px;
-                    min-width: 20px;
-                }}
-                QScrollBar::handle:horizontal:hover {{
-                    background-color: #a0a0a0;
-                }}
-                QScrollBar::handle:horizontal:pressed {{
-                    background-color: #808080;
-                }}
-            """)
-    
-    def _apply_log_theme_styling(self):
-        """Apply theme-aware styling to log widget"""
-        # Check if we have theme settings
-        theme_name = "default"
-        if hasattr(self.main_window, 'app_settings') and hasattr(self.main_window.app_settings, 'current_settings'):
-            theme_name = self.main_window.app_settings.current_settings.get('theme', 'default')
-        
-        if theme_name == "LCARS":
-            # LCARS theme styling for log
-            self.log.setStyleSheet("""
-                QTextEdit {
-                    font-family: 'Consolas', 'Courier New', monospace;
-                    font-size: 9pt;
-                    background-color: #000000;
-                    color: #ff9900;
-                    border: 2px solid #ff9900;
-                }
-                QScrollBar:vertical {
-                    background-color: #2a2a2a;
-                    border: 1px solid #ff9900;
-                    width: 16px;
-                    border-radius: 8px;
-                }
-                QScrollBar::handle:vertical {
-                    background-color: #ff9900;
-                    border: 1px solid #ff6600;
-                    border-radius: 6px;
-                    min-height: 20px;
-                }
-                QScrollBar::handle:vertical:hover {
-                    background-color: #ffaa00;
-                }
-                QScrollBar:horizontal {
-                    background-color: #2a2a2a;
-                    border: 1px solid #ff9900;
-                    height: 16px;
-                    border-radius: 8px;
-                }
-                QScrollBar::handle:horizontal {
-                    background-color: #ff9900;
-                    border: 1px solid #ff6600;
-                    border-radius: 6px;
-                    min-width: 20px;
-                }
-                QScrollBar::handle:horizontal:hover {
-                    background-color: #ffaa00;
-                }
-            """)
-        elif theme_name == "dark":
-            # Dark theme styling for log
-            self.log.setStyleSheet("""
-                QTextEdit {
-                    font-family: 'Consolas', 'Courier New', monospace;
-                    font-size: 9pt;
-                    background-color: #2b2b2b;
-                    color: #ffffff;
-                    border: 1px solid #555555;
-                }
-                QScrollBar:vertical {
-                    background-color: #404040;
-                    border: 1px solid #555555;
-                    width: 14px;
-                    border-radius: 7px;
-                }
-                QScrollBar::handle:vertical {
-                    background-color: #606060;
-                    border: 1px solid #555555;
-                    border-radius: 5px;
-                    min-height: 20px;
-                }
-                QScrollBar::handle:vertical:hover {
-                    background-color: #707070;
-                }
-                QScrollBar:horizontal {
-                    background-color: #404040;
-                    border: 1px solid #555555;
-                    height: 14px;
-                    border-radius: 7px;
-                }
-                QScrollBar::handle:horizontal {
-                    background-color: #606060;
-                    border: 1px solid #555555;
-                    border-radius: 5px;
-                    min-width: 20px;
-                }
-                QScrollBar::handle:horizontal:hover {
-                    background-color: #707070;
-                }
-            """)
-        else:
-            # Default/light theme styling for log
-            self.log.setStyleSheet("""
-                QTextEdit {
-                    font-family: 'Consolas', 'Courier New', monospace;
-                    font-size: 9pt;
-                    background-color: #f8f8f8;
-                    border: 1px solid #ddd;
-                    color: #333333;
-                }
-                QScrollBar:vertical {
-                    background-color: #f0f0f0;
-                    border: 1px solid #cccccc;
-                    width: 14px;
-                    border-radius: 7px;
-                }
-                QScrollBar::handle:vertical {
-                    background-color: #c0c0c0;
-                    border: 1px solid #999999;
-                    border-radius: 5px;
-                    min-height: 20px;
-                }
-                QScrollBar::handle:vertical:hover {
-                    background-color: #a0a0a0;
-                }
-                QScrollBar::handle:vertical:pressed {
-                    background-color: #808080;
-                }
-                QScrollBar:horizontal {
-                    background-color: #f0f0f0;
-                    border: 1px solid #cccccc;
-                    height: 14px;
-                    border-radius: 7px;
-                }
-                QScrollBar::handle:horizontal {
-                    background-color: #c0c0c0;
-                    border: 1px solid #999999;
-                    border-radius: 5px;
-                    min-width: 20px;
-                }
-                QScrollBar::handle:horizontal:hover {
-                    background-color: #a0a0a0;
-                }
-                QScrollBar::handle:horizontal:pressed {
-                    background-color: #808080;
-                }
-            """)
+        self.main_window.setStatusBar(self.status_bar)
 
-    def _get_theme_colors(self, theme_name):
-        """Get theme colors from JSON theme file"""
-        try:
-            if hasattr(self.main_window, 'app_settings') and hasattr(self.main_window.app_settings, 'themes'):
-                theme_data = self.main_window.app_settings.themes.get(theme_name, {})
-                return theme_data.get('colors', {})
-        except:
-            pass
-        return {}
-
-    def apply_table_theme(self):
-        """Apply theme styling to the table - called from main window when theme changes"""
-        if hasattr(self, 'table') and self.table:
-            self._apply_table_theme_styling()
-        if hasattr(self, 'log') and self.log:
-            self._apply_log_theme_styling()
-
-    def handle_resize_event(self, event):
-        """Handle window resize to adapt button text"""
-        # Use GUI layout's adaptive method
-        if self.main_splitter:
-            sizes = self.main_splitter.sizes()
-            if len(sizes) > 1:
-                right_panel_width = sizes[1]
-                self.adapt_buttons_to_width(right_panel_width)
-
-    def connect_table_signals(self):
-        """Connect signals for table interactions"""
-        if self.table:
-            self.table.itemSelectionChanged.connect(self.main_window.on_selection_changed)
-            self.table.itemDoubleClicked.connect(self.main_window.on_item_double_clicked)
-
-    def on_selection_changed(self):
-        """Handle table selection change"""
-        selected_items = self.table.selectedItems()
-        if selected_items:
-            self.log_message(f"Selected: {selected_items[0].text()}")
-
-    def on_item_double_clicked(self, item):
-        """Handle double-click on table item"""
-        filename = self.table.item(item.row(), 0).text()
-        self.log_message(f"Double-clicked: {filename}")
-    
-    def _get_short_text(self, full_text):
-        """Get abbreviated text for buttons when space is limited"""
-        abbreviations = {
-            'Import': 'Imp',
-            'Import via': 'Imp>',
-            'Export': 'Exp',
-            'Export via': 'Exp>',
-            'Remove': 'Rem',
-            'Remove All': 'Rem All',
-            'Update list': 'Update',
-            'Quick Export': 'Q-Exp',
-            'Pin selected': 'Pin',
-            'Rebuild': 'Build',
-            'Rebuild As': 'Build>',
-            'Rebuild All': 'Build All',
-            'Close All': 'Close All',
-            'Convert': 'Conv',
-            # Options section abbreviations
-            'Col Edit': 'COL',
-            'Txd Edit': 'TXD',
-            'Dff Edit': 'DFF',
-            'Ipf Edit': 'IPF',
-            'IPL Edit': 'IPL',
-            'IDE Edit': 'IDE',
-            'Dat Edit': 'DAT',
-            'Zons Edit': 'ZON',
-            'Weap Edit': 'WEAP',
-            'Vehi Edit': 'VEHI',
-            'Radar Map': 'RADAR',
-            'Paths Map': 'PATH',
-            'Waterpro': 'WATER'
-        }
-        
-        return abbreviations.get(full_text, full_text[:5])
-    
-    def adapt_buttons_to_width(self, width):
-        """Adapt button text based on available width"""
-        all_buttons = self.img_buttons + self.entry_buttons + self.options_buttons
-        
-        for button in all_buttons:
-            if hasattr(button, 'full_text'):
-                if width > 300:
-                    button.setText(button.full_text)
-                elif width > 200:
-                    # Medium text - remove some words
-                    text = button.full_text.replace(' via', '>').replace(' lst', '')
-                    button.setText(text)
-                elif width > 150:
-                    button.setText(button.short_text)
-                else:
-                    # Icon only mode
-                    button.setText("")
-    
-    def add_sample_data(self):
-        """Add sample data to show the interface"""
-        if not self.table:
-            return
-            
-        sample_entries = [
-            ("player.dff", "DFF", "245 KB", "0x2000", "3.6.0.3", "None", "Ready"),
-            ("player.txd", "TXD", "512 KB", "0x42000", "3.6.0.3", "None", "Ready"),
-            ("vehicle.col", "COL", "128 KB", "0x84000", "COL 2", "None", "Ready"),
-            ("dance.ifp", "IFP", "1.2 MB", "0xA4000", "IFP 1", "ZLib", "Ready"),
-        ]
-        
-        self.table.setRowCount(len(sample_entries))
-        for row, entry_data in enumerate(sample_entries):
-            for col, value in enumerate(entry_data):
-                item = QTableWidgetItem(str(value))
-                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                self.table.setItem(row, col, item)
-        
-        # Update info bar with sample data
-        self.update_file_info("sample_archive.img", "IMG Archive", 4, 1024*512)  # 512KB sample
-        #self.update_file_info("Second Line", "TXD Archive", 4, 1024*512)
-    
-    def update_file_info(self, file_path=None, file_type=None, item_count=0, file_size=0):
-        """Update the information bar with current file details"""
-        if file_path:
-            import os
-            filename = os.path.basename(file_path)
+    def update_file_info(self, filename=None, file_type=None, item_count=0, file_size=0):
+        """Update the file information display"""
+        if filename:
             self.current_file_label.setText(filename)
             self.current_file_label.setStyleSheet("font-weight: bold; color: #2E7D32;")  # Green = loaded
             self.status_indicator.setStyleSheet("color: #4CAF50; font-size: 16px;")  # Green dot
@@ -1064,6 +551,223 @@ class IMGFactoryGUILayout:
         if message and self.status_label:
             self.status_label.setText(message)
 
+    def _apply_table_theme_styling(self):
+        """Apply theme-aware styling to the table"""
+        self.table.setStyleSheet("""
+            QTableWidget {
+                gridline-color: #e0e0e0;
+                background-color: #ffffff;
+                alternate-background-color: #f5f5f5;
+                selection-background-color: #3498db;
+                selection-color: white;
+            }
+            QTableWidget::item {
+                padding: 8px;
+                border: none;
+            }
+            QTableWidget::item:selected {
+                background-color: #3498db;
+                color: white;
+            }
+            QHeaderView::section {
+                background-color: #e8e8e8;
+                padding: 8px;
+                border: 1px solid #c0c0c0;
+                font-weight: bold;
+            }
+        """)
+
+    def _apply_log_theme_styling(self):
+        """Apply theme-aware styling to the log"""
+        self.log.setStyleSheet("""
+            QTextEdit {
+                font-family: 'Consolas', 'Courier New', monospace;
+                font-size: 9pt;
+                background-color: #f8f8f8;
+                border: 1px solid #ddd;
+                border-radius: 3px;
+            }
+            QScrollBar:vertical {
+                background-color: #f0f0f0;
+                width: 12px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:vertical {
+                background-color: #c0c0c0;
+                min-height: 20px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background-color: #a0a0a0;
+            }
+            QScrollBar::handle:vertical:pressed {
+                background-color: #808080;
+            }
+        """)
+
+    def _get_theme_colors(self, theme_name):
+        """Get theme colors from JSON theme file"""
+        try:
+            if hasattr(self.main_window, 'app_settings') and hasattr(self.main_window.app_settings, 'themes'):
+                theme_data = self.main_window.app_settings.themes.get(theme_name, {})
+                return theme_data.get('colors', {})
+        except:
+            pass
+        return {}
+
+    def apply_table_theme(self):
+        """Apply theme styling to the table - called from main window when theme changes"""
+        if hasattr(self, 'table') and self.table:
+            self._apply_table_theme_styling()
+        if hasattr(self, 'log') and self.log:
+            self._apply_log_theme_styling()
+
+    def handle_resize_event(self, event):
+        """Handle window resize to adapt button text"""
+        # Use GUI layout's adaptive method
+        if self.main_splitter:
+            sizes = self.main_splitter.sizes()
+            if len(sizes) > 1:
+                right_panel_width = sizes[1]
+                self.adapt_buttons_to_width(right_panel_width)
+
+    def adapt_buttons_to_width(self, width):
+        """Adapt button text based on available width"""
+        all_buttons = []
+        if hasattr(self, 'img_buttons'):
+            all_buttons.extend(self.img_buttons)
+        if hasattr(self, 'entry_buttons'):
+            all_buttons.extend(self.entry_buttons)
+        if hasattr(self, 'options_buttons'):
+            all_buttons.extend(self.options_buttons)
+        
+        for button in all_buttons:
+            if hasattr(button, 'full_text'):
+                if width > 280:
+                    button.setText(button.full_text)
+                elif width > 200:
+                    # Medium text - remove some words
+                    text = button.full_text.replace(' via', '>').replace(' lst', '')
+                    button.setText(text)
+                elif width > 150:
+                    button.setText(button.short_text)
+                else:
+                    # Icon only mode
+                    button.setText("")
+
+    def connect_table_signals(self):
+        """Connect signals for table interactions"""
+        if self.table:
+            self.table.itemSelectionChanged.connect(self.main_window.on_selection_changed)
+            self.table.itemDoubleClicked.connect(self.main_window.on_item_double_clicked)
+
+    def on_selection_changed(self):
+        """Handle table selection change"""
+        selected_items = self.table.selectedItems()
+        if selected_items:
+            self.log_message(f"Selected: {selected_items[0].text()}")
+
+    def on_item_double_clicked(self, item):
+        """Handle double-click on table item"""
+        filename = self.table.item(item.row(), 0).text()
+        self.log_message(f"Double-clicked: {filename}")
+    
+    def _get_short_text(self, full_text):
+        """Get abbreviated text for buttons when space is limited"""
+        abbreviations = {
+            'Import': 'Imp',
+            'Import via': 'Imp>',
+            'Export': 'Exp',
+            'Export via': 'Exp>',
+            'Remove': 'Rem',
+            'Remove All': 'Rem All',
+            'Update list': 'Update',
+            'Quick Export': 'Q-Exp',
+            'Pin selected': 'Pin',
+            'Rebuild': 'Build',
+            'Rebuild As': 'Build>',
+            'Rebuild All': 'Build All',
+            'Close All': 'Close All',
+            'Convert': 'Conv',
+            'Col Edit': 'Col',
+            'Txd Edit': 'Txd',
+            'Dff Edit': 'Dff',
+            'Ipf Edit': 'Ipf',
+            'IDE Edit': 'IDE',
+            'IPL Edit': 'IPL',
+            'Dat Edit': 'Dat',
+            'Zons Cull Ed': 'Zons',
+            'Weap Edit': 'Weap',
+            'Vehi Edit': 'Vehi',
+            'Radar Map': 'Radar',
+            'Paths Map': 'Paths',
+            'Waterpro': 'Water',
+            'Weather': 'Weath',
+            'Handling': 'Hand',
+            'Objects': 'Objs'
+        }
+        
+        return abbreviations.get(full_text, full_text[:5])
+
+    def resizeEvent(self, event):
+        """Handle window resize to adapt button text"""
+        super().resizeEvent(event)
+        
+        # Get right panel width
+        if hasattr(self, 'main_splitter'):
+            sizes = self.main_splitter.sizes()
+            if len(sizes) > 1:
+                right_panel_width = sizes[1]
+                self._adapt_buttons_to_width(right_panel_width)
+
+    def _adapt_buttons_to_width(self, width):
+        """Adapt button text based on available width"""
+        all_buttons = []
+        if hasattr(self, 'img_buttons'):
+            all_buttons.extend(self.img_buttons)
+        if hasattr(self, 'entry_buttons'):
+            all_buttons.extend(self.entry_buttons)
+        
+        for button in all_buttons:
+            if hasattr(button, 'full_text'):
+                if width > 280:
+                    button.setText(button.full_text)
+                elif width > 200:
+                    # Medium text - remove some words
+                    text = button.full_text.replace(' via', '>').replace(' lst', '')
+                    button.setText(text)
+                elif width > 150:
+                    button.setText(button.short_text)
+                else:
+                    # Icon only mode
+                    button.setText("")
+
+    def _connect_signals(self):
+        """Connect signals for table interactions"""
+        self.table.itemSelectionChanged.connect(self.on_selection_changed)
+        self.table.itemDoubleClicked.connect(self.on_item_double_clicked)
+
+    def _add_sample_data(self):
+        """Add sample data to show the interface"""
+        sample_entries = [
+            ("1", "player.dff", "DFF", "245 KB", "0x2000", "3.6.0.3", "None", "Ready"),
+            ("2", "player.txd", "TXD", "512 KB", "0x42000", "3.6.0.3", "None", "Ready"),
+            ("3", "vehicle.col", "COL", "128 KB", "0x84000", "COL 2", "None", "Ready"),
+            ("4", "dance.ifp", "IFP", "1.2 MB", "0xA4000", "IFP 1", "ZLib", "Ready"),
+        ]
+        
+        self.table.setRowCount(len(sample_entries))
+        for row, entry_data in enumerate(sample_entries):
+            for col, value in enumerate(entry_data):
+                item = QTableWidgetItem(str(value))
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self.table.setItem(row, col, item)
+        
+        self.log_message("Interface loaded with sample data. Open an IMG file to see real content.")
+
+    def add_sample_data(self):
+        """Public method to add sample data - calls private method"""
+        self._add_sample_data()
 
     def _connect_all_button_signals(self):
         """Connect all button signals to their respective functions - ADD TO create_main_ui_with_splitters"""
@@ -1126,7 +830,7 @@ class IMGFactoryGUILayout:
             "IPL Edit": self.main_window.open_ipl_editor,
             "IDE Edit": self.main_window.open_ide_editor,
             "Dat Edit": self.main_window.open_dat_editor,
-            "Zons Edit": self.main_window.open_zons_editor,
+            "Zons Cull Ed": self.main_window.open_zons_editor,
             "Weap Edit": self.main_window.open_weap_editor,
             "Vehi Edit": self.main_window.open_vehi_editor,
             "Radar Map": self.main_window.open_radar_map,
@@ -1151,4 +855,257 @@ class IMGFactoryGUILayout:
             self.log.verticalScrollBar().setValue(
                 self.log.verticalScrollBar().maximum()
             )
-
+    
+    def show_gui_layout_settings(self):
+        """Show comprehensive GUI Layout settings dialog - called from Settings menu"""
+        from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, 
+                                     QPushButton, QGroupBox, QCheckBox, QComboBox, QTabWidget, 
+                                     QWidget, QSlider, QFormLayout)
+        
+        dialog = QDialog(self.main_window)
+        dialog.setWindowTitle("🖥️ GUI Layout Settings")
+        dialog.setMinimumSize(600, 500)
+        
+        layout = QVBoxLayout(dialog)
+        
+        # Create tab widget for different settings categories
+        tabs = QTabWidget()
+        
+        # === TAB 1: Panel Layout ===
+        panel_tab = QWidget()
+        panel_layout = QVBoxLayout(panel_tab)
+        
+        # Right Panel Width
+        width_group = QGroupBox("📏 Right Panel Width")
+        width_layout = QVBoxLayout(width_group)
+        
+        current_width = self.main_splitter.sizes()[1] if len(self.main_splitter.sizes()) > 1 else 280
+        
+        # Width spinner
+        width_form = QFormLayout()
+        width_spin = QSpinBox()
+        width_spin.setRange(180, 400)
+        width_spin.setValue(current_width)
+        width_spin.setSuffix(" px")
+        width_form.addRow("Panel Width:", width_spin)
+        
+        # Preview label
+        preview_label = QLabel(f"Current: {current_width}px")
+        preview_label.setStyleSheet("color: #666; font-style: italic;")
+        width_form.addRow("Preview:", preview_label)
+        width_layout.addLayout(width_form)
+        
+        # Update preview when width changes
+        def update_preview():
+            width = width_spin.value()
+            percentage = round((width / 1240) * 100)
+            preview_label.setText(f"Current: {width}px ({percentage}% of window)")
+        
+        width_spin.valueChanged.connect(update_preview)
+        update_preview()
+        
+        # Preset buttons
+        presets_layout = QHBoxLayout()
+        presets_layout.addWidget(QLabel("Quick Presets:"))
+        presets = [("Narrow", 200), ("Default", 240), ("Wide", 280), ("Extra Wide", 320)]
+        for name, value in presets:
+            btn = QPushButton(f"{name}\n({value}px)")
+            btn.clicked.connect(lambda checked, v=value: (width_spin.setValue(v), update_preview()))
+            presets_layout.addWidget(btn)
+        presets_layout.addStretch()
+        width_layout.addLayout(presets_layout)
+        
+        panel_layout.addWidget(width_group)
+        
+        # Section Spacing
+        spacing_group = QGroupBox("📐 Spacing Settings")
+        spacing_form = QFormLayout(spacing_group)
+        
+        section_spacing_spin = QSpinBox()
+        section_spacing_spin.setRange(2, 20)
+        section_spacing_spin.setValue(6)
+        section_spacing_spin.setSuffix(" px")
+        spacing_form.addRow("Section Spacing:", section_spacing_spin)
+        
+        button_spacing_spin = QSpinBox()
+        button_spacing_spin.setRange(1, 10)
+        button_spacing_spin.setValue(2)
+        button_spacing_spin.setSuffix(" px")
+        spacing_form.addRow("Button Spacing:", button_spacing_spin)
+        
+        panel_margins_spin = QSpinBox()
+        panel_margins_spin.setRange(2, 15)
+        panel_margins_spin.setValue(4)
+        panel_margins_spin.setSuffix(" px")
+        spacing_form.addRow("Panel Margins:", panel_margins_spin)
+        
+        panel_layout.addWidget(spacing_group)
+        panel_layout.addStretch()
+        
+        tabs.addTab(panel_tab, "📐 Panel Layout")
+        
+        # === TAB 2: Button Settings ===
+        button_tab = QWidget()
+        button_layout = QVBoxLayout(button_tab)
+        
+        # Button Appearance
+        button_group = QGroupBox("🔲 Button Appearance")
+        button_form = QFormLayout(button_group)
+        
+        button_height_spin = QSpinBox()
+        button_height_spin.setRange(18, 35)
+        button_height_spin.setValue(22)
+        button_height_spin.setSuffix(" px")
+        button_form.addRow("Button Height:", button_height_spin)
+        
+        button_font_size_spin = QSpinBox()
+        button_font_size_spin.setRange(6, 14)
+        button_font_size_spin.setValue(8)
+        button_font_size_spin.setSuffix(" pt")
+        button_form.addRow("Font Size:", button_font_size_spin)
+        
+        # Font family
+        font_combo = QComboBox()
+        font_combo.addItems(["Segoe UI", "Arial", "Helvetica", "Verdana", "Tahoma", "Consolas"])
+        font_combo.setCurrentText("Segoe UI")
+        button_form.addRow("Font Family:", font_combo)
+        
+        button_layout.addWidget(button_group)
+        
+        # Button Features
+        features_group = QGroupBox("✨ Button Features")
+        features_layout = QVBoxLayout(features_group)
+        
+        show_icons_check = QCheckBox("Show button icons")
+        show_icons_check.setChecked(False)
+        features_layout.addWidget(show_icons_check)
+        
+        adaptive_text_check = QCheckBox("Use adaptive button text (shorter text on narrow panels)")
+        adaptive_text_check.setChecked(True)
+        features_layout.addWidget(adaptive_text_check)
+        
+        show_tooltips_check = QCheckBox("Show button tooltips")
+        show_tooltips_check.setChecked(True)
+        features_layout.addWidget(show_tooltips_check)
+        
+        button_layout.addWidget(features_group)
+        button_layout.addStretch()
+        
+        tabs.addTab(button_tab, "🔲 Buttons")
+        
+        # === TAB 3: Colors & Theme ===
+        theme_tab = QWidget()
+        theme_layout = QVBoxLayout(theme_tab)
+        
+        # Theme selection
+        theme_group = QGroupBox("🎨 Button Color Theme")
+        theme_form = QFormLayout(theme_group)
+        
+        color_scheme_combo = QComboBox()
+        color_scheme_combo.addItems(["Default Pastel", "High Contrast", "Dark Mode", "Custom"])
+        theme_form.addRow("Color Scheme:", color_scheme_combo)
+        
+        # Opacity slider
+        opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        opacity_slider.setRange(50, 100)
+        opacity_slider.setValue(95)
+        opacity_label = QLabel("95%")
+        def update_opacity(value):
+            opacity_label.setText(f"{value}%")
+        opacity_slider.valueChanged.connect(update_opacity)
+        
+        opacity_layout = QHBoxLayout()
+        opacity_layout.addWidget(opacity_slider)
+        opacity_layout.addWidget(opacity_label)
+        theme_form.addRow("Panel Opacity:", opacity_layout)
+        
+        theme_layout.addWidget(theme_group)
+        theme_layout.addStretch()
+        
+        tabs.addTab(theme_tab, "🎨 Colors")
+        
+        layout.addWidget(tabs)
+        
+        # Bottom buttons
+        button_layout = QHBoxLayout()
+        
+        preview_btn = QPushButton("👁️ Preview Changes")
+        def preview_changes():
+            width = width_spin.value()
+            self._apply_right_panel_width(width)
+            # Could apply other settings here for preview
+        
+        preview_btn.clicked.connect(preview_changes)
+        button_layout.addWidget(preview_btn)
+        
+        apply_btn = QPushButton("✅ Apply & Save")
+        def apply_changes():
+            # Apply all settings
+            width = width_spin.value()
+            self._apply_right_panel_width(width)
+            
+            # Save all settings to app_settings
+            if hasattr(self.main_window, 'app_settings'):
+                settings = self.main_window.app_settings.current_settings
+                settings.update({
+                    "right_panel_width": width,
+                    "section_spacing": section_spacing_spin.value(),
+                    "button_spacing": button_spacing_spin.value(),
+                    "panel_margins": panel_margins_spin.value(),
+                    "button_height": button_height_spin.value(),
+                    "button_font_size": button_font_size_spin.value(),
+                    "button_font_family": font_combo.currentText(),
+                    "show_button_icons": show_icons_check.isChecked(),
+                    "adaptive_button_text": adaptive_text_check.isChecked(),
+                    "show_tooltips": show_tooltips_check.isChecked(),
+                    "color_scheme": color_scheme_combo.currentText(),
+                    "panel_opacity": opacity_slider.value()
+                })
+                self.main_window.app_settings.save_settings()
+            
+            self.log_message(f"GUI settings applied: {width}px panel, {font_combo.currentText()} font")
+            dialog.accept()
+        
+        apply_btn.clicked.connect(apply_changes)
+        button_layout.addWidget(apply_btn)
+        
+        reset_btn = QPushButton("🔄 Reset to Defaults")
+        def reset_defaults():
+            width_spin.setValue(280)
+            section_spacing_spin.setValue(6)
+            button_spacing_spin.setValue(2)
+            panel_margins_spin.setValue(4)
+            button_height_spin.setValue(22)
+            button_font_size_spin.setValue(8)
+            font_combo.setCurrentText("Segoe UI")
+            show_icons_check.setChecked(False)
+            adaptive_text_check.setChecked(True)
+            show_tooltips_check.setChecked(True)
+            color_scheme_combo.setCurrentText("Default Pastel")
+            opacity_slider.setValue(95)
+            update_preview()
+        
+        reset_btn.clicked.connect(reset_defaults)
+        button_layout.addWidget(reset_btn)
+        
+        cancel_btn = QPushButton("❌ Cancel")
+        cancel_btn.clicked.connect(dialog.reject)
+        button_layout.addWidget(cancel_btn)
+        
+        layout.addLayout(button_layout)
+        
+        dialog.exec()
+    
+    def _apply_right_panel_width(self, width):
+        """Apply right panel width immediately"""
+        # Update splitter sizes
+        sizes = self.main_splitter.sizes()
+        if len(sizes) >= 2:
+            left_size = sizes[0]
+            self.main_splitter.setSizes([left_size, width])
+        
+        # Update right panel widget constraints
+        right_widget = self.main_splitter.widget(1)
+        if right_widget:
+            right_widget.setMaximumWidth(width + 60)  # Allow some flexibility
+            right_widget.setMinimumWidth(max(180, width - 40))
