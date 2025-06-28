@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-IMG Factory Launch Script
+#this belongs in root /launch_imgfactory.py - version 2
+X-Seti - June28 2025 - IMG Factory 1.5 Launch Script
 Entry point for the IMG Factory application with error handling and setup
 """
 
@@ -69,23 +70,42 @@ def setup_paths():
     if components_dir.exists() and str(components_dir) not in sys.path:
         sys.path.insert(0, str(components_dir))
     
+    # Add gui directory if it exists
+    gui_dir = current_dir / "gui"
+    if gui_dir.exists() and str(gui_dir) not in sys.path:
+        sys.path.insert(0, str(gui_dir))
+    
     print(f"✓ Added {current_dir} to Python path")
     if components_dir.exists():
         print(f"✓ Added {components_dir} to Python path")
+    if gui_dir.exists():
+        print(f"✓ Added {gui_dir} to Python path")
 
 def check_files():
     """Check if required IMG Factory files exist"""
     required_files = [
-        "imgfactory_main.py",
-        "img_manager.py", 
-        "img_creator.py",
-        "img_template_manager.py",
-        "img_validator.py"
+        "imgfactory.py",  # FIXED: Changed from imgfactory_main.py
+        "app_settings_system.py",
+    ]
+    
+    # Check for component files
+    component_files = [
+        "components/img_core_classes.py",
+        "components/img_creator.py",
+        "components/img_templates.py",
+        "components/img_validator.py"
+    ]
+    
+    # Check for GUI files
+    gui_files = [
+        "gui/gui_layout.py",
+        "gui/menu_system.py"
     ]
     
     current_dir = Path(__file__).parent
     missing_files = []
     
+    # Check required files
     for file_name in required_files:
         file_path = current_dir / file_name
         if file_path.exists():
@@ -93,6 +113,22 @@ def check_files():
         else:
             missing_files.append(file_name)
             print(f"❌ {file_name} missing")
+    
+    # Check component files
+    for file_name in component_files:
+        file_path = current_dir / file_name
+        if file_path.exists():
+            print(f"✓ {file_name} found")
+        else:
+            print(f"⚠ {file_name} missing (optional)")
+    
+    # Check GUI files
+    for file_name in gui_files:
+        file_path = current_dir / file_name
+        if file_path.exists():
+            print(f"✓ {file_name} found")
+        else:
+            print(f"⚠ {file_name} missing (optional)")
     
     if missing_files:
         print(f"\n❌ Missing required files: {', '.join(missing_files)}")
@@ -103,7 +139,7 @@ def check_files():
 
 def main():
     """Main entry point"""
-    print("🎮 IMG Factory 2.0 - Python Edition")
+    print("🎮 IMG Factory 1.5 - Python Edition")
     print("=" * 40)
     
     # Check dependencies
@@ -129,24 +165,47 @@ def main():
         
         # Test import before running
         try:
-            import imgfactory_main
+            import imgfactory  # FIXED: Changed from imgfactory_main
             print("✓ Main application module imported successfully")
         except ImportError as e:
             print(f"❌ Failed to import main application: {e}")
-            print("\nTrying to import individual modules for diagnosis...")
+            print("\nTrying to import individual components for diagnosis...")
             
-            modules = ["img_manager", "img_creator", "img_template_manager", "img_validator"]
-            for module in modules:
+            # Test component imports
+            components = {
+                "app_settings_system": "Application settings",
+                "components.img_core_classes": "IMG core classes",
+                "components.img_creator": "IMG creator",
+                "gui.gui_layout": "GUI layout system"
+            }
+            
+            for module, description in components.items():
                 try:
                     __import__(module)
-                    print(f"✓ {module} imported successfully")
+                    print(f"✓ {module} - {description}")
                 except ImportError as import_err:
-                    print(f"❌ {module} failed to import: {import_err}")
+                    print(f"❌ {module} - {description}: {import_err}")
             
             raise e
         
-        # Run the application
-        imgfactory_main.main()
+        # Run the application - Get the main function from imgfactory
+        if hasattr(imgfactory, 'main'):
+            imgfactory.main()
+        else:
+            # Create and run the application directly
+            from PyQt6.QtWidgets import QApplication
+            
+            app = QApplication(sys.argv)
+            app.setApplicationName("IMG Factory")
+            app.setApplicationVersion("1.5")
+            app.setOrganizationName("IMG Factory")
+            
+            # Create main window
+            window = imgfactory.IMGFactory(imgfactory.AppSettings())
+            window.show()
+            
+            print("✓ IMG Factory started successfully")
+            sys.exit(app.exec())
         
     except ImportError as e:
         print(f"\n❌ Import error: {e}")
