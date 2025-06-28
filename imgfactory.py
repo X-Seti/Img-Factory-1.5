@@ -50,8 +50,7 @@ from components.img_validator import IMGValidator
 #from imgfactory_col_integration import setup_col_integration
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
-from gui.menu_system import create_menu_system
-
+from gui.menu import IMGFactoryMenuBar
 
 try:
     from imgfactory_col_integration import setup_col_integration
@@ -158,12 +157,19 @@ class IMGFactory(QMainWindow):
         
         # Initialize GUI layout
         self.gui_layout = IMGFactoryGUILayout(self)
+        self.menu_bar_system = IMGFactoryMenuBar(self)
 
+        callbacks = {
+            "about": self.show_about,
+            "open_img": self.open_img_file,
+            "new_img": self.create_new_img,
+            "exit": self.close,
+            "img_validate": self.validate_img,
+            "customize_interface": self.show_gui_settings,
+            # Add more as your methods exist
+            }
+        self.menu_bar_system.set_callbacks(callbacks)
 
-
-        # Create unified menu system (REPLACES gui_layout menu creation)
-        #self.menu_system = create_menu_system(self)
-        #self._setup_menu_callbacks()
 
         # Debug: check if methods exist
         print(f"Has create_new_img: {hasattr(self, 'create_new_img')}")
@@ -205,7 +211,7 @@ class IMGFactory(QMainWindow):
         """Create the main UI"""
         self.gui_layout.create_main_ui_with_splitters(main_layout)
         # Menu already created by unified system
-        self.gui_layout.create_menu_bar()
+        self.menu_bar_system = IMGFactoryMenuBar(self)
         self.gui_layout.create_status_bar()
         self.gui_layout.apply_table_theme()
         self.gui_layout.connect_table_signals()
@@ -1017,21 +1023,6 @@ class IMGFactory(QMainWindow):
 
         # ADD THIS TO YOUR MENU CREATION (in your _create_menu or create_menu_bar method):
         # Find where you create the Settings menu and add:
-
-    def add_gui_settings_menu_item(self):
-        """Add GUI settings to Settings menu - CALL THIS AFTER CREATING YOUR MENU"""
-        # Find the Settings menu
-        menubar = self.menuBar()
-        for action in menubar.actions():
-            if action.text() == "Settings":
-                settings_menu = action.menu()
-                if settings_menu:
-                    settings_menu.addSeparator()
-                    gui_settings_action = settings_menu.addAction("🖥️ GUI Layout")
-                    gui_settings_action.triggered.connect(self.show_gui_settings)
-                    break
-
-# Add these methods to your imgfactory.py to test what's being called:
 
     def show_settings(self):
         """Show settings dialog"""
