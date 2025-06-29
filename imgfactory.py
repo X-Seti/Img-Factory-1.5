@@ -38,21 +38,21 @@ print("PyQt6.QtCore imported successfully")
 from PyQt6.QtCore import Qt, QThread, pyqtSignal,  QTimer, QSettings, QMimeData
 from PyQt6.QtGui import QAction, QFont, QIcon, QPixmap, QDragEnterEvent, QDropEvent, QContextMenuEvent
 
-# Import component in alphabetical order.
-
 from app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
 from components.img_creator import NewIMGDialog
-from components.img_core_classes import IMGFile, IMGEntry, IMGVersion, format_file_size
+from components.img_core_classes import (
+    IMGFile, IMGEntry, IMGVersion, Platform, format_file_size,
+    IMGEntriesTable, FilterPanel, IMGFileInfoPanel,
+    TabFilterWidget, integrate_filtering, create_entries_table_panel
+)
 from components.img_formats import GameSpecificIMGDialog, EnhancedIMGCreator
-from components.img_manager import IMGFile, IMGVersion, Platform
-from components.table_filter import IMGEntriesTable, TabFilterWidget, integrate_filtering
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_validator import IMGValidator
-#from imgfactory_col_integration import setup_col_integration
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.menu import IMGFactoryMenuBar
 
+# COL integration - this import is already clean, no conflicts
 try:
     from imgfactory_col_integration import setup_col_integration
 except ImportError:

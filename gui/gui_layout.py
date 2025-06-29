@@ -556,6 +556,38 @@ class IMGFactoryGUILayout:
 
         self.log_message(f"Connected {connected_count} IMG buttons")
 
+    def _connect_col_buttons(self):
+        """Connect COL functionality buttons"""
+        if not hasattr(self, 'col_buttons'):
+            return
+
+        button_map = {
+            "Col Edit": self.main_window.open_col_editor,
+            "Txd Edit": self.main_window.open_txd_editor,
+            "Dff Edit": self.main_window.open_dff_editor,
+            "Ipf Edit": self.main_window.open_ipf_editor,
+            "IPL Edit": self.main_window.open_ipl_editor,
+            "IDE Edit": self.main_window.open_ide_editor,
+            "Dat Edit": self.main_window.open_dat_editor,
+            "Zons Edit": self.main_window.open_zons_editor,
+            "Weap Edit": self.main_window.open_weap_editor,
+            "Vehi Edit": self.main_window.open_vehi_editor,
+            "Radar Map": self.main_window.open_radar_map,
+            "Paths Map": self.main_window.open_paths_map,
+            "Waterpro": self.main_window.open_waterpro
+        }
+
+        connected_count = 0
+        for button in self.col_buttons:
+            if hasattr(button, 'full_text'):
+                func = button_map.get(button.full_text)
+                if func:
+                    button.clicked.connect(func)
+                    connected_count += 1
+                    print(f"Connected COL button: {button.full_text} -> {func.__name__}")
+
+        self.log_message(f"Connected {connected_count} COL buttons")
+
     def _connect_entry_buttons(self):
         """Connect entry operation buttons to their functions"""
         button_map = {
