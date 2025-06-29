@@ -213,7 +213,7 @@ class IMGFactoryGUILayout:
         self.table = QTableWidget()
         self.table.setColumnCount(7)
         self.table.setHorizontalHeaderLabels([
-            "", "Filename", "Type", "Size", "Offset", "Version", "Compression", "Status"
+            "Filename", "Type", "Size", "Offset", "Version", "Compression", "Status"," "
         ])
         
         # Configure table appearance
@@ -229,7 +229,7 @@ class IMGFactoryGUILayout:
         file_layout.addWidget(self.tab_widget)
         
         # Add sample data
-        self._add_sample_data()
+        #self._add_sample_data()
         
         return file_window
     
@@ -821,10 +821,10 @@ class IMGFactoryGUILayout:
     def _add_sample_data(self):
         """Add sample data to show the interface"""
         sample_entries = [
-            ("1", "player.dff", "DFF", "245 KB", "0x2000", "3.6.0.3", "None", "Ready"),
-            ("2", "player.txd", "TXD", "512 KB", "0x42000", "3.6.0.3", "None", "Ready"),
-            ("3", "vehicle.col", "COL", "128 KB", "0x84000", "COL 2", "None", "Ready"),
-            ("4", "dance.ifp", "IFP", "1.2 MB", "0xA4000", "IFP 1", "ZLib", "Ready"),
+            ("test.dff", "DFF", "245 KB", "0x2000", "3.4.0.2", "None", ""),
+            ("test.txd", "TXD", "512 KB", "0x42000", "3.4.0.2", "None", ""),
+            ("test.col", "COL", "128 KB", "0x84000", "COL 2", "None", ""),
+            ("test.txd", "txd", "1.2 MB", "0xA4000", "3.4.0.2", "None", ""),
         ]
         
         self.table.setRowCount(len(sample_entries))

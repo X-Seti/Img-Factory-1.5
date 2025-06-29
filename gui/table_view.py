@@ -44,8 +44,8 @@ class IMGEntriesTable(QTableWidget):
         # Column widths
         header = self.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)  # ID
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)  # Type
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)  # Name
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Name
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)  # Type
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)  # Offset
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)  # Size
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)  # Version
@@ -54,7 +54,8 @@ class IMGEntriesTable(QTableWidget):
         
         # Set specific column widths
         self.setColumnWidth(0, 60)   # ID
-        self.setColumnWidth(1, 80)   # Type
+        self.setColumnWidth(1, 200)  # Name
+        self.setColumnWidth(2, 80)   # Type
         self.setColumnWidth(3, 100)  # Offset
         self.setColumnWidth(4, 100)  # Size
         self.setColumnWidth(5, 100)  # Version

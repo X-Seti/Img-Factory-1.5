@@ -19,54 +19,158 @@ class IMGEntriesTable(QTableWidget):
         self._setup_table()
     
     def _setup_table(self):
-        """Setup table configuration"""
-        self.setColumnCount(7)
-        self.setHorizontalHeaderLabels([
-            "#", "Filename", "Type", "Size", "Offset", "Version", "Status"
-        ])
-        
-        # Set column widths
-        self.setColumnWidth(0, 40)   # ID
-        self.setColumnWidth(1, 200)  # Filename
+        """Setup table properties"""
+        # Column setup
+        columns = ["ID", "Type", "Name", "Offset", "Size", "Version", "Compression", "Status"]
+        self.setColumnCount(len(columns))
+        self.setHorizontalHeaderLabels(columns)
+
+        # Table properties
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.setAlternatingRowColors(True)
+        self.setShowGrid(True)
+        self.setSortingEnabled(True)
+        self.verticalHeader().setVisible(False)
+
+        # Column widths
+        header = self.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)  # ID
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Name
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)  # Type
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)  # Offset
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)  # Size
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)  # Version
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.Fixed)  # Compression
+        header.setSectionResizeMode(7, QHeaderView.ResizeMode.Fixed)  # Status
+
+        # Set specific column widths
+        self.setColumnWidth(0, 60)   # ID
+        self.setColumnWidth(1, 200)  # Name
         self.setColumnWidth(2, 80)   # Type
-        self.setColumnWidth(3, 100)  # Size
-        self.setColumnWidth(4, 100)  # Offset
-        self.setColumnWidth(5, 120)  # Version
-        self.setColumnWidth(6, 80)   # Status
-    
+        self.setColumnWidth(3, 100)  # Offset
+        self.setColumnWidth(4, 100)  # Size
+        self.setColumnWidth(5, 100)  # Version
+        self.setColumnWidth(6, 100)  # Compression
+        self.setColumnWidth(7, 80)   # Status
+
+        # Table styling
+        self.setStyleSheet("""
+            QTableWidget {
+                gridline-color: #d0d0d0;
+                background-color: white;
+                alternate-background-color: #f5f5f5;
+                selection-background-color: #3daee9;
+                selection-color: white;
+            }
+
+            QTableWidget::item {
+                padding: 4px;
+                border: none;
+            }
+
+            QTableWidget::item:selected {
+                background-color: #3daee9;
+                color: white;
+            }
+
+            QHeaderView::section {
+                background-color: #e0e0e0;
+                padding: 4px;
+                border: 1px solid #c0c0c0;
+                font-weight: bold;
+            }
+        """)
+
+    """
     def populate_entries(self, entries, img_file=None):
-        """Populate table with entries and detect versions"""
+        #Populate table with entries and detect versions
         self.current_entries = entries
         self.setRowCount(len(entries))
         
         for row, entry in enumerate(entries):
-            # ID
-            self.setItem(row, 0, self._create_readonly_item(str(row + 1)))
+            # ID - needs to be added in it's own section
+            #self.setItem(row, 0, self._create_readonly_item(str(row + 1)))
             
+            #i've offset the entries so they match the file window title bar
+            # Filename | Type | Size | Offset | Version | Compression | Status
+
             # Filename
-            self.setItem(row, 1, self._create_readonly_item(entry.name))
+            self.setItem(row, 0, self._create_readonly_item(entry.name))
             
             # Type (extension)
             file_type = entry.name.split('.')[-1].upper() if '.' in entry.name else "Unknown"
-            self.setItem(row, 2, self._create_readonly_item(file_type))
+            self.setItem(row, 1, self._create_readonly_item(file_type))
             
             # Size
             size_text = self._format_file_size(entry.size)
-            self.setItem(row, 3, self._create_readonly_item(size_text))
+            self.setItem(row, 2, self._create_readonly_item(size_text))
             
             # Offset
-            self.setItem(row, 4, self._create_readonly_item(f"0x{entry.offset:X}"))
+            self.setItem(row, 3, self._create_readonly_item(f"0x{entry.offset:X}"))
             
             # Version - Enhanced detection
             version = self._detect_version(entry, img_file)
-            self.setItem(row, 5, self._create_readonly_item(version))
-            
+            self.setItem(row, 4, self._create_readonly_item(version))
+
+            # Compression
+            self.setItem(row, 5, self._create_readonly_item("Compression"))
+
             # Status
             self.setItem(row, 6, self._create_readonly_item("Ready"))
         
         # Apply current filters
         self._apply_all_filters()
-    
+    """
+
+
+    def populate_entries(self, entries):
+        """Populate table with IMG entries"""
+        self.setRowCount(len(entries))
+
+        for row, entry in enumerate(entries):
+            # ID
+            id_item = QTableWidgetItem(str(row + 1))
+            id_item.setFlags(id_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.setItem(row, 0, id_item)
+
+            # Type (file extension)
+            type_item = QTableWidgetItem(entry.extension or "Unknown")
+            type_item.setFlags(type_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.setItem(row, 1, type_item)
+
+            # Name
+            name_item = QTableWidgetItem(entry.name)
+            name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.setItem(row, 2, name_item)
+
+            # Offset
+            offset_item = QTableWidgetItem(f"0x{entry.offset:X}")
+            offset_item.setFlags(offset_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.setItem(row, 3, offset_item)
+
+            # Size
+            size_text = self._format_file_size(entry.size)
+            size_item = QTableWidgetItem(size_text)
+            size_item.setFlags(size_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.setItem(row, 4, size_item)
+
+            # Version
+            version_item = QTableWidgetItem(entry.get_version_text())
+            version_item.setFlags(version_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.setItem(row, 5, version_item)
+
+            # Compression
+            compression_text = entry.compression.name if hasattr(entry, 'compression') else "None"
+            compression_item = QTableWidgetItem(compression_text)
+            compression_item.setFlags(compression_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.setItem(row, 6, compression_item)
+
+            # Status
+            status_text = "Modified" if getattr(entry, 'is_modified', False) else "Ready"
+            status_item = QTableWidgetItem(status_text)
+            status_item.setFlags(status_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.setItem(row, 7, status_item)
+
     def _detect_version(self, entry, img_file):
         """Detect proper RenderWare or file version"""
         if not img_file:
