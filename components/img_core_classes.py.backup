@@ -1,4 +1,4 @@
-#this belongs in components/ img_core_classes.py - version 9
+#this belongs in components/ img_core_classes.py - version 8
 # X-Seti - June29 2025 - Img Factory 1.5
 # Credit MexUK 2007 Img Factory 1.2
 
@@ -12,10 +12,9 @@ Consolidated from table_filter.py and table_view.py
 import struct
 import os
 import zlib
-import hashlib
 
 from enum import Enum
-from typing import List, Optional, BinaryIO, Dict, Tuple
+from typing import List, Optional, BinaryIO
 from pathlib import Path
 
 from PyQt6.QtWidgets import (
@@ -74,13 +73,21 @@ class CompressionType(Enum):
     LZO_1X_999 = 3
     UNKNOWN = 255
 
+#@dataclass
 class IMGValidationResult:
     """Results from IMG file validation"""
-    def __init__(self):
-        self.is_valid: bool = True
-        self.errors: List[str] = []
-        self.warnings: List[str] = []
-        self.corrupt_entries: List[str] = []
+    is_valid: bool = True
+    errors: List[str] = None
+    warnings: List[str] = None
+    corrupt_entries: List[str] = None
+
+    def __post_init__(self):
+        if self.errors is None:
+            self.errors = []
+        if self.warnings is None:
+            self.warnings = []
+        if self.corrupt_entries is None:
+            self.corrupt_entries = []
 
     def get_summary(self) -> str:
         """Get validation summary"""
@@ -226,24 +233,6 @@ class IMGEntry:
             result.is_valid = False
 
         return result
-
-    def get_version_text(self) -> str:
-        """Get human-readable version information"""
-        if self.get_file_type() == FileType.MODEL or self.get_file_type() == FileType.TEXTURE:
-            # RW version mapping (simplified)
-            rw_versions = {
-                0x0800FFFF: "3.0.0.0",
-                0x1003FFFF: "3.1.0.1", 
-                0x1005FFFF: "3.2.0.0",
-                0x1400FFFF: "3.4.0.3",
-                0x1803FFFF: "3.6.0.3"
-            }
-            return rw_versions.get(self.rw_version, f"RW {hex(self.rw_version)}")
-        elif self.get_file_type() == FileType.COLLISION:
-            return f"COL {self.rw_version}"
-        elif self.get_file_type() == FileType.ANIMATION:
-            return f"IFP {self.rw_version}"
-        return "Unknown"
 
 
 class IMGFile:
@@ -694,9 +683,10 @@ class IMGFile:
             elif self.version == IMGVersion.FASTMAN92:
                 return self._rebuild_fastman92(output_path)
             else:
+                print(f"Rebuild not supported for version: {self.version}")
                 return False
         except Exception as e:
-            print(f"Error rebuilding IMG file: {e}")
+            print(f"Error rebuilding IMG: {e}")
             return False
 
     def _rebuild_version1(self, output_path: str) -> bool:
@@ -733,14 +723,25 @@ class IMGFile:
                     if len(data) < padded_size:
                         img_file.write(b'\x00' * (padded_size - len(data)))
 
+                    current_offset = entry.offset + padded_size
+
+            # Write DIR file
+            with open(dir_path, 'wb') as dir_file:
+                for entry in self.entries:
+                    dir_entry = struct.pack('<II',
+                                          entry.get_offset_in_sectors(),
+                                          entry.get_size_in_sectors())
+                    dir_entry += entry.name.encode('ascii')[:24].ljust(24, b'\x00')
+                    dir_file.write(dir_entry)
+
             self.is_modified = False
             return True
 
         except Exception as e:
-            print(f"Error rebuilding Version 2: {e}")
+            print(f"Error rebuilding Version 1: {e}")
             return False
 
-   def _rebuild_version2(self, output_path: str) -> bool:
+    def _rebuild_version2(self, output_path: str) -> bool:
         """Rebuild IMG Version 2"""
         try:
             # Create backup if overwriting
@@ -786,7 +787,16 @@ class IMGFile:
                     img_file.write(data)
 
                     # Pad to sector boundary
-                    padded_size = entry
+                    padded_size = entry.get_padded_size()
+                    if len(data) < padded_size:
+                        img_file.write(b'\x00' * (padded_size - len(data)))
+
+            self.is_modified = False
+            return True
+
+        except Exception as e:
+            print(f"Error rebuilding Version 2: {e}")
+            return False
 
     def _rebuild_version3(self, output_path: str) -> bool:
         """Rebuild IMG Version 3"""
@@ -1093,7 +1103,7 @@ class IMGEntriesTable(QTableWidget):
             self.setItem(row, 4, QTableWidgetItem(version_text))
             
             # Compression
-            comp_text = "None" if entry.compression_type == CompressionType.NONE else entry.compression_type.name
+            comp_text = "None" if entry.compression == CompressionType.NONE else entry.compression.name
             self.setItem(row, 5, QTableWidgetItem(comp_text))
             
             # Status
@@ -1244,8 +1254,7 @@ class IMGFileInfoPanel(QWidget):
         
         # Statistics
         entry_count = len(img_file.entries)
-        total_size = sum(entry.size for entry in img_file.entries)
-        file_size = format_file_size(total_size)
+        file_size = format_file_size(img_file.total_size)
         self.stats_label.setText(f"Entries: {entry_count} | Size: {file_size}")
         
         # Version
@@ -1325,7 +1334,7 @@ def populate_table_with_sample_data(table):
             self._version = data["version"]
             self.is_new_entry = False
             self.is_replaced = False
-            self.compression_type = CompressionType.NONE
+            self.compression = CompressionType.NONE
             
         def get_version_text(self):
             return self._version
@@ -1366,71 +1375,3 @@ def integrate_filtering(main_window, table_widget, filter_widget=None):
         filter_widget.filter_changed.connect(table_widget.apply_filter)
     
     return filter_widget
-
-
-# Additional UI Components for compatibility
-class IMGTableWidget(QTableWidget):
-    """Basic table widget for IMG entries - compatibility class"""
-    
-    entries_selected = pyqtSignal(list)
-    entry_double_clicked = pyqtSignal(int)
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.current_img: Optional[IMGFile] = None
-    
-    def populate_entries(self, entries: List[IMGEntry]):
-        """Populate table with entries"""
-        self.setRowCount(len(entries))
-        self.setColumnCount(7)
-        self.setHorizontalHeaderLabels(["Name", "Type", "Size", "Offset", "Version", "Compression", "Status"])
-        
-        for row, entry in enumerate(entries):
-            self.setItem(row, 0, QTableWidgetItem(entry.name))
-            self.setItem(row, 1, QTableWidgetItem(entry.extension))
-            self.setItem(row, 2, QTableWidgetItem(format_file_size(entry.size)))
-            self.setItem(row, 3, QTableWidgetItem(f"0x{entry.offset:08X}"))
-            self.setItem(row, 4, QTableWidgetItem(entry.get_version_text()))
-            self.setItem(row, 5, QTableWidgetItem("None" if entry.compression_type == CompressionType.NONE else entry.compression_type.name))
-            self.setItem(row, 6, QTableWidgetItem("Modified" if entry.is_new_entry or entry.is_replaced else "Original"))
-    
-    def get_selected_entries(self) -> List[int]:
-        """Get selected entry indices"""
-        selected_rows = set()
-        for item in self.selectedItems():
-            selected_rows.add(item.row())
-        return list(selected_rows)
-    
-    def apply_filter(self, filter_type: str, filter_value: str):
-        """Apply filter to entries"""
-        for row in range(self.rowCount()):
-            show_row = True
-            if filter_value and filter_type != "All":
-                name_item = self.item(row, 0)
-                if name_item and filter_value.lower() not in name_item.text().lower():
-                    show_row = False
-            self.setRowHidden(row, not show_row)
-
-
-class IMGFilterWidget(QWidget):
-    """Basic filter widget - compatibility class"""
-    
-    filter_changed = pyqtSignal(str, str)
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        layout = QHBoxLayout(self)
-        
-        self.filter_type = QComboBox()
-        self.filter_type.addItems(["All", "Name", "Type"])
-        layout.addWidget(self.filter_type)
-        
-        self.filter_value = QLineEdit()
-        self.filter_value.setPlaceholderText("Filter...")
-        layout.addWidget(self.filter_value)
-        
-        self.filter_type.currentTextChanged.connect(self._emit_filter)
-        self.filter_value.textChanged.connect(self._emit_filter)
-    
-    def _emit_filter(self):
-    self.filter_changed.emit(self.filter_type.currentText(), self.filter_value.text())
