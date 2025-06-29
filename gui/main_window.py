@@ -17,7 +17,6 @@ from PyQt6.QtCore import Qt
 
 # Import our GUI modules
 from .status_bar import create_status_bar
-from .table_view import create_entries_table_panel
 from .control_panels import create_control_panel
 from .log_panel import create_log_panel
 

@@ -138,6 +138,45 @@ class IMGEntry:
         self._cached_data: Optional[bytes] = None
         self._img_file_ref: Optional['IMGFile'] = None
 
+    def _populate_entry_details_after_load(img_file):
+        """Call this after loading entries to populate RW versions"""
+        for entry in img_file.entries:
+            try:
+                entry.populate_entry_details()
+            except Exception as e:
+                print(f"Warning: Could not detect details for {entry.name}: {e}")
+
+    # Enhanced get_version_text with better RW version mapping
+    def get_version_text_enhanced(self) -> str:
+        """Enhanced version text with better RW version mapping"""
+        if self.file_type == FileType.MODEL or self.file_type == FileType.TEXTURE:
+            # Enhanced RW version mapping
+            rw_versions = {
+                0x0800FFFF: "3.0.0.0",
+                0x1003FFFF: "3.1.0.1",
+                0x1005FFFF: "3.2.0.0",
+                0x1400FFFF: "3.4.0.3",
+                0x1803FFFF: "3.6.0.3",
+                0x1C020037: "3.7.0.2"
+            }
+
+            if self.rw_version == 0:
+                # Try to detect version if not cached
+                self.rw_version = self.detect_rw_version()
+
+            if self.rw_version in rw_versions:
+                return rw_versions[self.rw_version]
+            elif self.rw_version > 0:
+                return f"RW {hex(self.rw_version)}"
+            else:
+                return "RW Unknown"
+        elif self.file_type == FileType.COLLISION:
+            return f"COL {self.rw_version}" if self.rw_version > 0 else "COL Unknown"
+        elif self.file_type == FileType.ANIMATION:
+            return f"IFP {self.rw_version}" if self.rw_version > 0 else "IFP Unknown"
+        return "Unknown"
+
+
     def _extract_extension(self) -> str:
         """Extract file extension from name"""
         if '.' in self.name:
@@ -245,6 +284,56 @@ class IMGEntry:
             return f"IFP {self.rw_version}"
         return "Unknown"
 
+def detect_rw_version(self) -> int:
+    """Detect RenderWare version from entry data"""
+    if not self._img_file or not self.is_rw_file():
+        return 0
+
+    try:
+        # Read first 12 bytes to get RW header
+        data = self.get_data()
+        if len(data) < 12:
+            return 0
+
+        # Parse RW chunk header: chunk_type, chunk_size, rw_version
+        chunk_type, chunk_size, rw_version = struct.unpack('<III', data[:12])
+
+        # Validate it's a proper RW chunk
+        if self.file_type == FileType.MODEL and chunk_type not in [0x10, 0x0E]:  # Clump or Atomic
+            return 0
+        elif self.file_type == FileType.TEXTURE and chunk_type != 0x16:  # Texture Dictionary
+            return 0
+
+        return rw_version
+
+    except Exception:
+        return 0
+
+def populate_entry_details(self):
+    """Populate additional entry details like RW version and file type"""
+    # Detect file type from extension
+    self.file_type = self._detect_file_type()
+
+    # For RW files, detect version from data
+    if self.is_rw_file():
+        self.rw_version = self.detect_rw_version()
+
+def _detect_file_type(self) -> FileType:
+    """Detect file type from extension"""
+    if not self.extension:
+        return FileType.UNKNOWN
+
+    ext_upper = self.extension.upper()
+    file_type_map = {
+        'DFF': FileType.MODEL,
+        'TXD': FileType.TEXTURE,
+        'COL': FileType.COLLISION,
+        'IFP': FileType.ANIMATION,
+        'WAV': FileType.AUDIO,
+        'SCM': FileType.SCRIPT
+    }
+
+    return file_type_map.get(ext_upper, FileType.UNKNOWN)
 
 class IMGFile:
     """Main IMG file handler supporting all versions"""
@@ -740,7 +829,8 @@ class IMGFile:
             print(f"Error rebuilding Version 2: {e}")
             return False
 
-   def _rebuild_version2(self, output_path: str) -> bool:
+
+    def _rebuild_version2(self, output_path: str) -> bool:
         """Rebuild IMG Version 2"""
         try:
             # Create backup if overwriting
@@ -767,8 +857,8 @@ class IMGFile:
                     entry.offset = current_offset
 
                     dir_entry = struct.pack('<II',
-                                          entry.get_offset_in_sectors(),
-                                          entry.get_size_in_sectors())
+                        entry.get_offset_in_sectors(),
+                        entry.get_size_in_sectors())
                     dir_entry += entry.name.encode('ascii')[:24].ljust(24, b'\x00')
                     img_file.write(dir_entry)
 
@@ -786,7 +876,16 @@ class IMGFile:
                     img_file.write(data)
 
                     # Pad to sector boundary
-                    padded_size = entry
+                    padded_size = entry.get_padded_size()
+                    if len(data) < padded_size:
+                        img_file.write(b'\x00' * (padded_size - len(data)))
+
+            self.is_modified = False
+            return True
+
+        except Exception as e:
+            print(f"Error rebuilding Version 2: {e}")
+            return False
 
     def _rebuild_version3(self, output_path: str) -> bool:
         """Rebuild IMG Version 3"""
@@ -1414,23 +1513,23 @@ class IMGTableWidget(QTableWidget):
 
 class IMGFilterWidget(QWidget):
     """Basic filter widget - compatibility class"""
-    
+
     filter_changed = pyqtSignal(str, str)
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         layout = QHBoxLayout(self)
-        
+
         self.filter_type = QComboBox()
         self.filter_type.addItems(["All", "Name", "Type"])
         layout.addWidget(self.filter_type)
-        
+
         self.filter_value = QLineEdit()
         self.filter_value.setPlaceholderText("Filter...")
         layout.addWidget(self.filter_value)
-        
+
         self.filter_type.currentTextChanged.connect(self._emit_filter)
         self.filter_value.textChanged.connect(self._emit_filter)
-    
+
     def _emit_filter(self):
-    self.filter_changed.emit(self.filter_type.currentText(), self.filter_value.text())
+        self.filter_changed.emit(self.filter_type.currentText(), self.filter_value.text())

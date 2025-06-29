@@ -10,7 +10,7 @@ Modular GUI components for IMG Factory 1.5
 
 # Import main GUI components
 from .main_window import IMGFactoryMainWindow, create_main_window
-from .table_view import create_entries_table_panel, IMGEntriesTable, populate_table_with_sample_data
+#from .table_view import create_entries_table_panel, IMGEntriesTable, populate_table_with_sample_data
 from .control_panels import create_control_panel, update_button_states
 from .log_panel import create_log_panel, setup_logging_for_main_window
 from .status_bar import create_status_bar, create_enhanced_status_bar
