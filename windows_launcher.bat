@@ -28,7 +28,7 @@ if not exist "Imgfactory.py" (
     if not exist "imgfactory.py" (
         echo ERROR: IMG Factory main file not found
         echo Make sure you're running this from the IMG Factory directory
-        echo Looking for: Imgfactory_Demo.py or imgfactory_demo.py
+        echo Looking for: Imgfactory.py or imgfactory.py
         echo.
         pause
         exit /b 1
@@ -47,16 +47,16 @@ if exist "startup_cleanup.py" (
     echo Running manual cache cleanup...
     python -c "from img_cache_manager import auto_cleanup; auto_cleanup()"
     if exist "Imgfactory.py" (
-        python Imgfactory_Demo.py
+        python Imgfactory.py
     ) else (
-        python imgfactory_demo.py
+        python imgfactory.py
     )
 ) else (
     echo Cache cleanup not available, starting normally...
     if exist "Imgfactory.py" (
-        python Imgfactory_Demo.py
+        python Imgfactory.py
     ) else (
-        python imgfactory_demo.py
+        python imgfactory.py
     )
 )
 

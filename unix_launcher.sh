@@ -97,7 +97,7 @@ if [[ $EXIT_CODE -ne 0 ]]; then
     echo "2. Check that PyQt6 is installed: pip install PyQt6"
     echo "3. Try running: $PYTHON_CMD -m pip install --upgrade PyQt6"
     echo "4. Check the console output above for specific errors"
-    echo "5. Try running with: $PYTHON_CMD -v Imgfactory_Demo.py (verbose mode)"
+    echo "5. Try running with: $PYTHON_CMD -v Imgfactory.py (verbose mode)"
     echo ""
 else
     echo ""

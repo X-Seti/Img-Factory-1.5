@@ -84,7 +84,7 @@ def setup_paths():
 def check_files():
     """Check if required IMG Factory files exist"""
     required_files = [
-        "imgfactory.py",  # FIXED: Changed from imgfactory_main.py
+        "imgfactory.py",  # FIXED: Changed from imgfactory.py
         "app_settings_system.py",
     ]
     

@@ -112,8 +112,6 @@ class COLListWidget(QWidget):
         self.save_col_btn.clicked.connect(self.save_selected_col)
         self.remove_col_btn.clicked.connect(self.remove_selected_col)
         
-        self.col_table.itemSelectionChanged.connect(self.on_selection_changed)
-        self.col_table.itemDoubleClicked.connect(self.on_item_double_clicked)
         self.col_table.customContextMenuRequested.connect(self.show_context_menu)
     
     def load_col_file(self):
@@ -250,19 +248,7 @@ class COLListWidget(QWidget):
                 self.refresh_table()
                 self.status_label.setText(f"Loaded: {len(self.col_files)} COL files")
     
-    def on_selection_changed(self):
-        """Handle selection change"""
-        col_file = self.get_selected_col()
-        if col_file:
-            self.col_selected.emit(col_file)
-    
-    def on_item_double_clicked(self, item):
-        """Handle item double click"""
-        col_file = self.get_selected_col()
-        if col_file:
-            self.col_double_clicked.emit(col_file)
-            self.edit_selected_col()
-    
+
     def show_context_menu(self, position):
         """Show context menu"""
         if self.col_table.itemAt(position) is None:

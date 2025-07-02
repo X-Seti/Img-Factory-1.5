@@ -35,7 +35,7 @@ from PyQt6.QtWidgets import (
     QGridLayout, QMenu, QButtonGroup, QRadioButton
 )
 print("PyQt6.QtCore imported successfully")
-from PyQt6.QtCore import Qt, QThread, pyqtSignal,  QTimer, QSettings, QMimeData
+from PyQt6.QtCore import Qt, QThread, pyqtSignal,  QTimer, QSettings, QMimeData, QTimer
 from PyQt6.QtGui import QAction, QFont, QIcon, QPixmap, QDragEnterEvent, QDropEvent, QContextMenuEvent
 
 from app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
@@ -53,14 +53,10 @@ from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.menu import IMGFactoryMenuBar
 
 # COL integration - this import is already clean, no conflicts
-try:
-    from imgfactory_col_integration import setup_col_integration
-except ImportError:
-    print("Warning: COL integration not available")
-    def setup_col_integration(main_window):
-        return False
+#from main_col_integration import setup_col_integration
 
 print("Components imported successfully")
+
 
 def populate_img_table(table: QTableWidget, img_file: IMGFile):
     """Populate table with IMG file entries - module level function"""
@@ -258,6 +254,11 @@ class IMGFactory(QMainWindow):
         self.gui_layout = IMGFactoryGUILayout(self)
         self.menu_bar_system = IMGFactoryMenuBar(self)
 
+        # Add selection timer for debouncing
+        self.selection_timer = QTimer()
+        self.selection_timer.setSingleShot(True)
+        self.selection_timer.timeout.connect(self._update_selection_status)
+
         callbacks = {
             "about": self.show_about,
             "open_img": self.open_img_file,
@@ -271,7 +272,6 @@ class IMGFactory(QMainWindow):
 
         # Initialize UI (but without menu creation in gui_layout)
         self._create_ui()
-        self._connect_signals()
         self._restore_settings()
         
         # Apply theme
@@ -289,37 +289,54 @@ class IMGFactory(QMainWindow):
     
     def _create_ui(self):
         """Create the main user interface"""
-        # Central widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
         # Main layout
         main_layout = QVBoxLayout(central_widget)
         main_layout.setContentsMargins(5, 5, 5, 5)
-        #self._create_status_bar()
-        # Create UI - no fallback, just works
-        self._create_advanced_ui(main_layout)
-    
-    def _create_advanced_ui(self, main_layout):
-        """Create advanced UI with all features"""
-        # Create GUI layout using the gui_layout class
+
         self.gui_layout.create_main_ui_with_splitters(main_layout)
 
-        # Create menu and status bars
         #self.gui_layout.create_menu_bar()
         self.gui_layout.create_status_bar()
 
         # Apply theme to table
         self.gui_layout.apply_table_theme()
 
-        # Connect table signals
-        self.gui_layout.connect_table_signals()
-
         # ADD THIS LINE: Connect button signals
         self.gui_layout.connect_button_signals()
 
         # Add sample data for demonstration
         self.gui_layout.add_sample_data()
+
+        # Connect signals manually (add this line)
+        print("GUI Layout attributes:", [attr for attr in dir(self.gui_layout) if 'table' in attr.lower()])
+
+    def _update_selection_status(self):
+        """Actually update the selection status (called after debounce)"""
+        print("DEBUG: _update_selection_status called")
+
+        # Find the table - it's called 'table' not 'entries_table'
+        table = getattr(self, 'entries_table', None) or getattr(self.gui_layout, 'table', None)
+        print(f"DEBUG: Found table: {table}")
+
+        if table:
+            selected_rows = len(table.selectionModel().selectedRows())
+            print(f"DEBUG: Selected rows: {selected_rows}")
+            if selected_rows > 0:
+                # Find the status label
+                status_label = getattr(self, 'status_label', None) or getattr(self.gui_layout, 'status_label', None)
+                if status_label:
+                    status_label.setText(f"{selected_rows} entries selected")
+                else:
+                    print("DEBUG: No status_label found")
+            else:
+                status_label = getattr(self, 'status_label', None) or getattr(self.gui_layout, 'status_label', None)
+                if status_label:
+                    status_label.setText("Ready")
+        else:
+            print("DEBUG: No table found!")
 
 
     def resizeEvent(self, event):
@@ -328,26 +345,12 @@ class IMGFactory(QMainWindow):
         # Delegate to GUI layout
         self.gui_layout.handle_resize_event(event)
 
-    def _connect_signals(self):
-        """Connect signals for table interactions"""
-        # Delegate to GUI layout
-        self.gui_layout.connect_table_signals()
-
-    def on_selection_changed(self):
-        """Handle table selection change"""
-        # Delegate to GUI layout but keep in main for business logic
-        self.gui_layout.on_selection_changed()
-
-    def on_item_double_clicked(self, item):
-        """Handle double-click on table item"""
-        # Delegate to GUI layout but keep in main for business logic
-        self.gui_layout.on_item_double_clicked(item)
 
     def log_message(self, message):
         """Log a message using GUI layout's log method"""
         self.gui_layout.log_message(message)
 
-    def _create_adaptive_button(self, label, action_type=None, icon=None, callback=None, bold=False):
+    def create_adaptive_button(self, label, action_type=None, icon=None, callback=None, bold=False):
         """Create adaptive button with theme support"""
         btn = QPushButton(label)
         
@@ -371,13 +374,13 @@ class IMGFactory(QMainWindow):
     
     def themed_button(self, label, action_type=None, icon=None, bold=False):
         """Legacy method for compatibility"""
-        return self._create_adaptive_button(label, action_type, icon, None, bold)
+        return self.create_adaptive_button(label, action_type, icon, None, bold)
 
     # =============================================================================
     # IMG FILE OPERATIONS - KEEP 100% OF FUNCTIONALITY
     # =============================================================================
 
-    def _update_ui_for_loaded_col(self):
+    def update_ui_for_loaded_col(self):
         """Update UI when COL file is loaded"""
         # Enable COL-specific buttons
         if hasattr(self, 'gui_layout'):
@@ -1348,12 +1351,14 @@ def main():
     # Create main window
     window = IMGFactory(settings)
     
+    """
     # COL integration setup
     if setup_col_integration(window):
         window.log_message("COL functionality integrated successfully")
     else:
         window.log_message("COL functionality not available")
-    
+    """
+
     # Show window
     window.show()
     
