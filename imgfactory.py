@@ -51,9 +51,7 @@ from components.img_validator import IMGValidator
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.menu import IMGFactoryMenuBar
-
-# COL integration - this import is already clean, no conflicts
-#from main_col_integration import setup_col_integration
+from components.col_main_integration import setup_col_integration
 
 print("Components imported successfully")
 

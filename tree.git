@@ -1,10 +1,10 @@
 .
 ├── app_settings_system.py
-├── cleanup_conflicts.sh
 ├── components
 │   ├── col_core_classes.py
 │   ├── col_editor.py
 │   ├── col_integration.py
+│   ├── col_main_integration.py
 │   ├── col_utilities.py
 │   ├── img_combined_open_dialog.py
 │   ├── img_compression.py
@@ -16,9 +16,17 @@
 │   ├── img_templates.json
 │   ├── img_templates.py
 │   ├── img_validator.py
+│   ├── __pycache__
+│   │   ├── col_core_classes.cpython-312.pyc
+│   │   ├── col_editor.cpython-312.pyc
+│   │   ├── img_core_classes.cpython-312.pyc
+│   │   ├── img_creator.cpython-312.pyc
+│   │   ├── img_formats.cpython-312.pyc
+│   │   ├── img_templates.cpython-312.pyc
+│   │   ├── img_validator.cpython-312.pyc
+│   │   └── unified_signal_handler.cpython-312.pyc
 │   ├── txd_converter.py
 │   └── unified_signal_handler.py
-├── findwithin.sh
 ├── gui
 │   ├── button_panel.py
 │   ├── buttons.py
@@ -26,7 +34,6 @@
 │   ├── control_panels.py
 │   ├── dialogs.py
 │   ├── gui_layout.py
-│   ├── gui_layout.zip
 │   ├── gui_settings.py
 │   ├── __init__.py
 │   ├── log_panel.py
@@ -34,14 +41,29 @@
 │   ├── menu.py
 │   ├── panels.py
 │   ├── pastel_button_theme.py
+│   ├── __pycache__
+│   │   ├── buttons.cpython-312.pyc
+│   │   ├── control_panels.cpython-312.pyc
+│   │   ├── dialogs.cpython-312.pyc
+│   │   ├── gui_layout.cpython-312.pyc
+│   │   ├── gui_settings.cpython-312.pyc
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── log_panel.cpython-312.pyc
+│   │   ├── main_window.cpython-312.pyc
+│   │   ├── menu.cpython-312.pyc
+│   │   ├── panels.cpython-312.pyc
+│   │   ├── pastel_button_theme.cpython-312.pyc
+│   │   └── status_bar.cpython-312.pyc
 │   └── status_bar.py
 ├── gui_layout_rules.md
 ├── Img Factory1.3 -> /home/x2/code base/Img Factory1.3
 ├── imgfactory.py
 ├── imgfactory.settings.json
+├── Important Readme
 ├── launch_imgfactory.py
-├── main_col_integration.py
-├── signal_cleanup_script.py
+├── __pycache__
+│   ├── app_settings_system.cpython-312.pyc
+│   └── main_col_integration.cpython-312.pyc
 ├── templates
 │   └── new_templates.json
 ├── themer_settings.json
@@ -74,7 +96,12 @@
 ├── tree.git
 ├── unix_launcher.sh
 ├── utils
+│   ├── cleanup_conflicts.sh
+│   ├── findwithin.sh
+│   ├── generated_signal_cleanup.py
+│   ├── signal_analysis_script.py
+│   ├── signal_cleanup_script.py
 │   └── update_themes_script.py
 └── windows_launcher.bat
 
-7 directories, 71 files
+10 directories, 95 files

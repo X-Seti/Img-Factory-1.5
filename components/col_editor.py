@@ -19,7 +19,14 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread
 from PyQt6.QtGui import QAction, QIcon, QFont, QPainter, QPen, QBrush, QColor
-from PyQt6.QtOpenGL import QOpenGLWidget
+
+try:
+    from PyQt6.QtOpenGL import QOpenGLWidget
+except ImportError:
+    # OpenGL not available - use regular widget as fallback
+    from PyQt6.QtWidgets import QWidget as QOpenGLWidget
+    print("Warning: PyQt6 OpenGL not available - COL 3D features disabled")
+
 from col_core_classes import (
     COLFile, COLModel, COLSphere, COLBox, COLVertex, COLFace, COLFaceGroup,
     COLVersion, COLMaterial, Vector3, BoundingBox

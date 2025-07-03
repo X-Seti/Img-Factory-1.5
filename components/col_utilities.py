@@ -803,7 +803,7 @@ if __name__ == "__main__":
     dialog = COLBatchDialog()
     dialog.show()
     
-    sys.exit(app.exec())):
+    sys.exit(app.exec()):
             pos_key = (round(vertex.position.x, 6), 
                       round(vertex.position.y, 6), 
                       round(vertex.position.z, 6))
