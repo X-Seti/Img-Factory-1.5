@@ -310,6 +310,36 @@ class IMGFactory(QMainWindow):
         from components.unified_signal_handler import signal_handler
         signal_handler.status_update_requested.connect(self._update_status_from_signal)
 
+    def _unified_double_click_handler(self, row, filename, item):
+        """Handle double-click through unified system"""
+        # Get the actual filename from the first column (index 0)
+        if row < self.gui_layout.table.rowCount():
+            name_item = self.gui_layout.table.item(row, 0)
+            if name_item:
+                actual_filename = name_item.text()
+                self.log_message(f"Double-clicked: {actual_filename}")
+
+                # Show file info if IMG is loaded
+                if self.current_img and row < len(self.current_img.entries):
+                    entry = self.current_img.entries[row]
+                    from components.img_core_classes import format_file_size
+                    self.log_message(f"File info: {entry.name} ({format_file_size(entry.size)})")
+            else:
+                self.log_message(f"Double-clicked row {row} (no filename found)")
+        else:
+            self.log_message(f"Double-clicked: {filename}")
+
+    def _unified_double_click_handler(self, row, filename, item):
+        """Handle double-click through unified system"""
+        self.log_message(f"Double-clicked: {filename}")
+
+        # TODO: Add double-click functionality (preview, extract, etc.)
+        # For now, show info about the item if IMG is loaded
+        if self.current_img and row < len(self.current_img.entries):
+            entry = self.current_img.entries[row]
+            from components.img_core_classes import format_file_size
+            self.log_message(f"File info: {entry.name} ({format_file_size(entry.size)})")
+
     def _unified_selection_handler(self, selected_rows, selection_count):
         """Handle selection changes through unified system"""
         # Update button states based on selection
@@ -331,16 +361,38 @@ class IMGFactory(QMainWindow):
         else:
             self.log_message(f"Selected {selection_count} entries")
 
-    def _unified_double_click_handler(self, row, filename, item):
-        """Handle double-click through unified system"""
-        self.log_message(f"Double-clicked: {filename}")
+    def _update_button_states(self, has_selection):
+        """Update button enabled/disabled states based on selection"""
+        # Enable/disable buttons based on selection and loaded IMG
+        has_img = self.current_img is not None
 
-        # TODO: Add double-click functionality (preview, extract, etc.)
-        # For now, show info about the item if IMG is loaded
-        if self.current_img and row < len(self.current_img.entries):
-            entry = self.current_img.entries[row]
-            from components.img_core_classes import format_file_size
-            self.log_message(f"File info: {entry.name} ({format_file_size(entry.size)})")
+        # Log the button state changes for debugging
+        self.log_message(f"Button states updated: selection={has_selection}, img_loaded={has_img}")
+
+        # Find buttons in GUI layout and update their states
+        # These buttons need both an IMG and selection
+        selection_dependent_buttons = [
+            'export_btn', 'export_selected_btn', 'remove_btn', 'remove_selected_btn',
+            'extract_btn', 'quick_export_btn'
+        ]
+
+        for btn_name in selection_dependent_buttons:
+            if hasattr(self.gui_layout, btn_name):
+                button = getattr(self.gui_layout, btn_name)
+                if hasattr(button, 'setEnabled'):
+                    button.setEnabled(has_selection and has_img)
+
+        # These buttons only need an IMG (no selection required)
+        img_dependent_buttons = [
+            'import_btn', 'import_files_btn', 'rebuild_btn', 'close_btn',
+            'validate_btn', 'refresh_btn'
+        ]
+
+        for btn_name in img_dependent_buttons:
+            if hasattr(self.gui_layout, btn_name):
+                button = getattr(self.gui_layout, btn_name)
+                if hasattr(button, 'setEnabled'):
+                    button.setEnabled(has_img)
 
     def _update_status_from_signal(self, message):
         """Update status from unified signal system"""
@@ -382,19 +434,39 @@ class IMGFactory(QMainWindow):
                 if hasattr(button, 'setEnabled'):
                     button.setEnabled(has_img)
 
+
     def show_search_dialog(self):
-        """Show search dialog and connect to unified system"""
-        from gui.dialogs import show_search_dialog
+        """Handle search button/menu"""
+        self.log_message("🔍 Search dialog requested")
+        # TODO: Implement search dialog
 
-        # Create and show search dialog
-        self.search_dialog = show_search_dialog(self)
+    def import_files(self):
+        """Handle import button"""
+        self.log_message("📥 Import files requested")
 
-        # Connect the search_requested signal to our search handler
-        if hasattr(self.search_dialog, 'search_requested'):
-            self.search_dialog.search_requested.connect(self.perform_search)
-            self.log_message("Search dialog opened")
-        else:
-            self.log_message("Search dialog error - signal not found")
+    def export_selected(self):
+        """Handle export button"""
+        self.log_message("📤 Export selected requested")
+
+    def remove_selected(self):
+        """Handle remove button"""
+        self.log_message("🗑️ Remove selected requested")
+
+    def refresh_table(self):
+        """Handle refresh/update button"""
+        self.log_message("🔄 Refresh table requested")
+
+    def create_new_img(self):
+        """Handle new IMG button"""
+        self.log_message("🆕 Create new IMG requested")
+
+    def open_img_file(self):
+        """Handle open IMG button"""
+        self.log_message("📂 Open IMG file requested")
+
+    def close_img_file(self):
+        """Handle close IMG button"""
+        self.log_message("❌ Close IMG file requested")
 
     def perform_search(self, search_text, options):
         """Perform search in current IMG entries using unified system"""
@@ -469,7 +541,6 @@ class IMGFactory(QMainWindow):
         self.gui_layout.apply_table_theme()
         self.gui_layout.add_sample_data()
 
-        # REPLACE any old signal connection calls with:
         # Setup unified signal system
         self.setup_unified_signals()
 
@@ -488,8 +559,20 @@ class IMGFactory(QMainWindow):
 
 
     def log_message(self, message):
-        """Log a message using GUI layout's log method"""
-        self.gui_layout.log_message(message)
+        """Log a message to the activity log"""
+        print(f"LOG: {message}")  # Temporary - shows in console
+
+        # Try different log methods
+        if hasattr(self.gui_layout, 'log_message'):
+            self.gui_layout.log_message(message)
+        elif hasattr(self.gui_layout, 'log') and hasattr(self.gui_layout.log, 'append'):
+            from PyQt6.QtCore import QDateTime
+            timestamp = QDateTime.currentDateTime().toString("hh:mm:ss")
+            self.gui_layout.log.append(f"[{timestamp}] {message}")
+        else:
+            # Fallback - create a simple log in status bar
+            if hasattr(self, 'statusBar'):
+                self.statusBar().showMessage(message)
 
     def create_adaptive_button(self, label, action_type=None, icon=None, callback=None, bold=False):
         """Create adaptive button with theme support"""
