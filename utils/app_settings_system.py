@@ -60,7 +60,23 @@ class DebugSettings:
 
 class AppSettings:
     def __init__(self):
-        self.settings_file = Path("imgfactory.settings.json")  # Use correct settings file
+        # Get the directory where this file is located
+        current_file_dir = Path(__file__).parent
+
+        # FIXED: Set paths based on where we are
+        if current_file_dir.name == "utils":
+            # We're in utils/, so themes are in ../themes/
+            self.themes_dir = current_file_dir.parent / "themes"
+            self.settings_file = current_file_dir.parent / "imgfactory.settings.json"
+        else:
+            # We're in root, so themes are in ./themes/
+            self.themes_dir = current_file_dir / "themes"
+            self.settings_file = current_file_dir / "imgfactory.settings.json"
+
+        # Debug: Show what we found
+        print(f"🎨 Themes folder: {self.themes_dir}")
+        print(f"📁 Exists: {self.themes_dir.exists()}")
+
         self.themes = {}
 
         # Load themes from JSON files in themes/ folder
@@ -69,6 +85,8 @@ class AppSettings:
         # Fallback hardcoded themes if no files found
         if not self.themes:
             self._load_default_themes()
+
+        print(f"📊 Total themes loaded: {len(self.themes)}")
 
         # Default settings
         self.defaults = {
@@ -126,7 +144,11 @@ class AppSettings:
             "compression_enabled_by_default": False,
             "remember_dialog_positions": True,
             "show_creation_tips": True,
-            "validate_before_creation": True
+            "validate_before_creation": True,
+             # Debug settings
+            "debug_mode": False,
+            "debug_level": "INFO",
+            "debug_categories": ["IMG_LOADING", "TABLE_POPULATION", "BUTTON_ACTIONS"]
         }
 
         self.current_settings = self.defaults.copy()
@@ -229,9 +251,9 @@ class AppSettings:
 
     # Just add this method:
 
-    def get_available_themes(self):
-        """Get list of available theme names"""
-        return list(self.themes.keys())
+    def get_available_themes(self) -> dict:
+        """Get all available themes with refresh option"""
+        return self.themes
 
 # ALSO UPDATE your get_theme method to handle missing themes:
 
@@ -390,28 +412,57 @@ class AppSettings:
         self.current_settings = self.load_settings()
 
     def _load_all_themes(self):
-        """Load themes from themes folder and built-in themes"""
+        """Unified theme loading method"""
         themes = {}
-        
-        # Load themes from files in themes/ folder
-        if self.themes_dir.exists():
-            for theme_file in self.themes_dir.glob("*.json"):
+
+        print(f"🔍 Looking for themes in: {self.themes_dir}")
+
+        # Check if themes directory exists
+        if self.themes_dir.exists() and self.themes_dir.is_dir():
+            print(f"📁 Found themes directory")
+
+            # Load all .json files from themes directory
+            theme_files = list(self.themes_dir.glob("*.json"))
+            print(f"🎨 Found {len(theme_files)} theme files")
+
+            for theme_file in theme_files:
                 try:
+                    print(f"   📂 Loading: {theme_file.name}")
                     with open(theme_file, 'r', encoding='utf-8') as f:
                         theme_data = json.load(f)
-                        theme_name = theme_file.stem
-                        themes[theme_name] = theme_data
+
+                    # Use filename without extension as theme key
+                    theme_name = theme_file.stem
+                    themes[theme_name] = theme_data
+
+                    # Show theme info
+                    display_name = theme_data.get('name', theme_name)
+                    print(f"   ✅ Loaded: {theme_name} -> '{display_name}'")
+
+                except json.JSONDecodeError as e:
+                    print(f"   ❌ JSON error in {theme_file.name}: {e}")
                 except Exception as e:
-                    print(f"Error loading theme {theme_file}: {e}")
-        
-        # Add built-in fallback themes if no files found
+                    print(f"   ❌ Error loading {theme_file.name}: {e}")
+        else:
+            print(f"⚠️  Themes directory not found: {self.themes_dir}")
+
+        # Add built-in fallback themes if no themes loaded
         if not themes:
+            print("🔄 No themes loaded from files, using built-in themes")
             themes = self._get_builtin_themes()
-        
+        else:
+            print(f"📊 Successfully loaded {len(themes)} themes from files")
+            # Add a few essential built-in themes as fallbacks
+            builtin = self._get_builtin_themes()
+            for name, data in builtin.items():
+                if name not in themes:
+                    themes[name] = data
+                    print(f"   ➕ Added built-in fallback: {name}")
+
         return themes
 
     def _get_builtin_themes(self):
-        """Get built-in themes as fallback"""
+        """Essential built-in themes as fallbacks"""
         return {
             "IMG_Factory": {
                 "name": "IMG Factory Professional",
@@ -436,9 +487,6 @@ class AppSettings:
                     "success": "#4caf50",
                     "warning": "#ff9800",
                     "error": "#f44336",
-                    "grid": "#f0f0f0",
-                    "pin_default": "#757575",
-                    "pin_highlight": "#2196f3",
                     "action_import": "#2196f3",
                     "action_export": "#4caf50",
                     "action_remove": "#f44336",
@@ -446,70 +494,34 @@ class AppSettings:
                     "action_convert": "#9c27b0"
                 }
             },
-            "IMG_Factory_Dark": {
-                "name": "IMG Factory Dark Mode",
-                "description": "Dark version of the IMG Factory theme 🌙📁",
-                "category": "🏢 Professional",
+            "lightgreen": {
+                "name": "Light Green Theme",
+                "description": "Clean light green theme 💚",
+                "category": "🌿 Nature",
                 "author": "X-Seti",
                 "version": "1.0",
                 "colors": {
-                    "bg_primary": "#1e1e1e",
-                    "bg_secondary": "#2d2d30",
-                    "bg_tertiary": "#3e3e42",
-                    "panel_bg": "#383838",
-                    "accent_primary": "#0078d4",
-                    "accent_secondary": "#106ebe",
-                    "text_primary": "#ffffff",
-                    "text_secondary": "#cccccc",
-                    "text_accent": "#0078d4",
-                    "button_normal": "#404040",
-                    "button_hover": "#505050",
-                    "button_pressed": "#606060",
-                    "border": "#555555",
+                    "bg_primary": "#f8fff8",
+                    "bg_secondary": "#f0f8f0",
+                    "bg_tertiary": "#e8f5e8",
+                    "panel_bg": "#f1f8f1",
+                    "accent_primary": "#4caf50",
+                    "accent_secondary": "#388e3c",
+                    "text_primary": "#1b5e20",
+                    "text_secondary": "#2e7d32",
+                    "text_accent": "#388e3c",
+                    "button_normal": "#e8f5e8",
+                    "button_hover": "#c8e6c9",
+                    "button_pressed": "#a5d6a7",
+                    "border": "#a5d6a7",
                     "success": "#4caf50",
                     "warning": "#ff9800",
                     "error": "#f44336",
-                    "grid": "#333333",
-                    "pin_default": "#888888",
-                    "pin_highlight": "#0078d4",
-                    "action_import": "#0078d4",
+                    "action_import": "#2196f3",
                     "action_export": "#4caf50",
                     "action_remove": "#f44336",
                     "action_update": "#ff9800",
                     "action_convert": "#9c27b0"
-                }
-            },
-            "LCARS": {
-                "name": "LCARS Interface",
-                "description": "Inspired by Star Trek computer interfaces 🖖",
-                "category": "🎬 Pop Culture",
-                "author": "X-Seti",
-                "version": "1.0",
-                "colors": {
-                    "bg_primary": "#1a1a2e",
-                    "bg_secondary": "#16213e",
-                    "bg_tertiary": "#0f3460",
-                    "panel_bg": "#2d2d44",
-                    "accent_primary": "#ff6600",
-                    "accent_secondary": "#9d4edd",
-                    "text_primary": "#e0e1dd",
-                    "text_secondary": "#c9ada7",
-                    "text_accent": "#f2cc8f",
-                    "button_normal": "#3a86ff",
-                    "button_hover": "#4895ff",
-                    "button_pressed": "#2563eb",
-                    "border": "#577590",
-                    "success": "#06ffa5",
-                    "warning": "#ffb700",
-                    "error": "#ff006e",
-                    "grid": "#403d58",
-                    "pin_default": "#c0c0c0",
-                    "pin_highlight": "#f9e71e",
-                    "action_import": "#3a86ff",
-                    "action_export": "#06ffa5",
-                    "action_remove": "#ff006e",
-                    "action_update": "#ffb700",
-                    "action_convert": "#9d4edd"
                 }
             }
         }
@@ -532,9 +544,37 @@ class AppSettings:
             print(f"Error saving theme {theme_name}: {e}")
             return False
 
+    def save_theme(self, theme_name: str, theme_data: dict) -> bool:
+        """Save a theme to file and immediately reload themes"""
+        try:
+            # Ensure themes directory exists
+            self.themes_dir.mkdir(exist_ok=True)
+
+            # Save theme file
+            theme_file = self.themes_dir / f"{theme_name}.json"
+            with open(theme_file, 'w', encoding='utf-8') as f:
+                json.dump(theme_data, f, indent=2, ensure_ascii=False)
+
+            print(f"💾 Saved theme: {theme_name} -> {theme_file}")
+
+            # IMPORTANT: Immediately reload themes so the new theme is available
+            self.refresh_themes()
+
+            return True
+
+        except Exception as e:
+            print(f"❌ Error saving theme {theme_name}: {e}")
+            return False
+
     def refresh_themes(self):
-        """Refresh themes from folder"""
+        """Reload themes from disk - HOT RELOAD functionality"""
+        print("🔄 Refreshing themes from disk...")
+        old_count = len(self.themes)
         self.themes = self._load_all_themes()
+        new_count = len(self.themes)
+
+        print(f"📊 Theme refresh complete: {old_count} -> {new_count} themes")
+        return self.themes
 
     def load_settings(self):
         """Load settings from file"""
@@ -542,34 +582,90 @@ class AppSettings:
             if self.settings_file.exists():
                 with open(self.settings_file, 'r', encoding='utf-8') as f:
                     loaded_settings = json.load(f)
-                    
+
                 # Merge with defaults (in case new settings were added)
                 settings = self.default_settings.copy()
                 settings.update(loaded_settings)
+
+                # Validate theme exists
+                theme_name = settings.get("theme")
+                if theme_name and theme_name not in self.themes:
+                    print(f"⚠️  Theme '{theme_name}' not found, using default")
+                    settings["theme"] = "IMG_Factory"
+
                 return settings
         except Exception as e:
             print(f"Error loading settings: {e}")
-        
+
         return self.default_settings.copy()
+
+    def refresh_themes_in_dialog(self):
+        """Refresh themes in settings dialog"""
+        if hasattr(self, 'demo_theme_combo'):
+            current_theme = self.demo_theme_combo.currentText()
+
+            # Refresh themes from disk
+            self.app_settings.refresh_themes()
+
+            # Update combo box
+            self.demo_theme_combo.clear()
+            for theme_name, theme_data in self.app_settings.themes.items():
+                display_name = theme_data.get("name", theme_name)
+                self.demo_theme_combo.addItem(f"{display_name}", theme_name)
+
+            # Try to restore previous selection
+            index = self.demo_theme_combo.findData(current_theme)
+            if index >= 0:
+                self.demo_theme_combo.setCurrentIndex(index)
+
+            if hasattr(self, 'demo_log'):
+                self.demo_log.append(f"🔄 Refreshed themes: {len(self.app_settings.themes)} available")
 
     def save_settings(self):
         """Save current settings to file"""
         try:
+            # Ensure parent directory exists
+            self.settings_file.parent.mkdir(exist_ok=True)
+
             with open(self.settings_file, 'w', encoding='utf-8') as f:
-                json.dump(self.current_settings, f, indent=2)
+                json.dump(self.current_settings, f, indent=2, ensure_ascii=False)
+            print(f"💾 Settings saved to: {self.settings_file}")
             return True
         except Exception as e:
-            print(f"Error saving settings: {e}")
+            print(f"❌ Error saving settings: {e}")
             return False
+
+    def get_theme_info(self, theme_name: str) -> dict:
+        """Get detailed info about a specific theme"""
+        if theme_name in self.themes:
+            theme = self.themes[theme_name]
+            return {
+                "name": theme.get("name", theme_name),
+                "description": theme.get("description", "No description"),
+                "category": theme.get("category", "Uncategorized"),
+                "author": theme.get("author", "Unknown"),
+                "version": theme.get("version", "1.0"),
+                "color_count": len(theme.get("colors", {}))
+            }
+        return {}
 
     def get_theme_colors(self, theme_name=None):
         """Get colors for specified theme"""
         if theme_name is None:
             theme_name = self.current_settings.get("theme", "IMG_Factory")
-        
-        return self.themes.get(theme_name, {}).get("colors", {})
 
-
+        if theme_name in self.themes:
+            return self.themes[theme_name].get("colors", {})
+        else:
+            print(f"⚠️  Theme '{theme_name}' not found, using fallback")
+            # Try to find any available theme
+            if self.themes:
+                fallback_name = list(self.themes.keys())[0]
+                print(f"   Using fallback theme: {fallback_name}")
+                return self.themes[fallback_name].get("colors", {})
+            else:
+                print("   No themes available!")
+                return {}
 
 
     def get_stylesheet(self):
@@ -1103,8 +1199,12 @@ class SettingsDialog(QDialog):
         self.demo_theme_combo = QComboBox()
         available_themes = list(self.app_settings.themes.keys())
         self.demo_theme_combo.addItems(available_themes)
+        refresh_themes_btn = QPushButton("🔄 Refresh Themes")
+        refresh_themes_btn.setToolTip("Reload themes from themes/ folder")
+        refresh_themes_btn.clicked.connect(self.refresh_themes_in_dialog)
         self.demo_theme_combo.setCurrentText(self.app_settings.current_settings["theme"])
         self.demo_theme_combo.currentTextChanged.connect(self._preview_theme_instantly)
+
         preview_layout.addWidget(self.demo_theme_combo)
         theme_layout.addLayout(preview_layout)
 

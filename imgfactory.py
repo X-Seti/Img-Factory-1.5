@@ -1623,8 +1623,23 @@ class IMGFactory(QMainWindow):
         else:
             self.log_message("GUI Layout not available")
 
-        # ADD THIS TO YOUR MENU CREATION (in your _create_menu or create_menu_bar method):
-        # Find where you create the Settings menu and add:
+    def debug_theme_system(self):
+        """Debug method to check theme system status"""
+        if hasattr(self, 'app_settings'):
+            settings = self.app_settings
+            self.log_message(f"🎨 Theme System Debug:")
+            self.log_message(f"   Settings file: {settings.settings_file}")
+            self.log_message(f"   Themes directory: {settings.themes_dir}")
+            self.log_message(f"   Themes dir exists: {settings.themes_dir.exists()}")
+            self.log_message(f"   Available themes: {list(settings.themes.keys())}")
+            self.log_message(f"   Current theme: {settings.current_settings.get('theme')}")
+
+            # Check if themes directory has files
+            if settings.themes_dir.exists():
+                theme_files = list(settings.themes_dir.glob("*.json"))
+                self.log_message(f"   Theme files found: {[f.name for f in theme_files]}")
+            else:
+                self.log_message(f"   ⚠️  Themes directory does not exist!")
 
     def show_settings(self):
         """Show settings dialog"""
