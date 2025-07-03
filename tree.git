@@ -19,6 +19,8 @@
 │   ├── __pycache__
 │   │   ├── col_core_classes.cpython-312.pyc
 │   │   ├── col_editor.cpython-312.pyc
+│   │   ├── col_integration.cpython-312.pyc
+│   │   ├── col_main_integration.cpython-312.pyc
 │   │   ├── img_core_classes.cpython-312.pyc
 │   │   ├── img_creator.cpython-312.pyc
 │   │   ├── img_formats.cpython-312.pyc
@@ -55,11 +57,9 @@
 │   │   ├── pastel_button_theme.cpython-312.pyc
 │   │   └── status_bar.cpython-312.pyc
 │   └── status_bar.py
-├── gui_layout_rules.md
 ├── Img Factory1.3 -> /home/x2/code base/Img Factory1.3
 ├── imgfactory.py
 ├── imgfactory.settings.json
-├── Important Readme
 ├── launch_imgfactory.py
 ├── __pycache__
 │   ├── app_settings_system.cpython-312.pyc
