@@ -306,9 +306,6 @@ class IMGFactory(QMainWindow):
         # Apply theme to table
         self.gui_layout.apply_table_theme()
 
-        # ADD THIS LINE: Connect button signals
-        self.gui_layout.connect_button_signals()
-
         # Add sample data for demonstration
         self.gui_layout.add_sample_data()
 

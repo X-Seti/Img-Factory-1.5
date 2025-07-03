@@ -76,8 +76,6 @@ class ResponsiveButtonPanel(QWidget):
         button.setMinimumHeight(28)
         
         # Connect callback
-        if callback:
-            button.clicked.connect(callback)
         
         # Store reference
         self.button_widgets.append(button)
@@ -203,14 +201,14 @@ def create_enhanced_right_panel(parent):
     parent.filter_combo = QComboBox()
     parent.filter_combo.addItems(["All Files", "Models (DFF)", "Textures (TXD)", 
                                  "Collision (COL)", "Animation (IFP)", "Audio (WAV)", "Scripts (SCM)"])
-    parent.filter_combo.currentTextChanged.connect(parent.apply_filter)
+
     filter_layout.addWidget(parent.filter_combo)
     
     # Search box with button
     search_layout = QHBoxLayout()
     parent.filter_input = QLineEdit()
     parent.filter_input.setPlaceholderText("Search...")
-    parent.filter_input.textChanged.connect(parent.apply_filter)
+
     search_layout.addWidget(parent.filter_input)
     
     filter_btn = QPushButton("🔍")

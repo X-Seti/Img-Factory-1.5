@@ -447,24 +447,6 @@ class COLBatchDialog(QDialog):
         
         layout.addLayout(buttons_layout)
     
-    def connect_signals(self):
-        """Connect UI signals"""
-        self.add_files_btn.clicked.connect(self.add_files)
-        self.add_folder_btn.clicked.connect(self.add_folder)
-        self.clear_files_btn.clicked.connect(self.clear_files)
-        
-        self.output_dir_btn.clicked.connect(self.browse_output_dir)
-        self.output_dir_cb.toggled.connect(self.output_dir_edit.setEnabled)
-        self.output_dir_cb.toggled.connect(self.output_dir_btn.setEnabled)
-        
-        self.start_btn.clicked.connect(self.start_processing)
-        self.cancel_btn.clicked.connect(self.cancel_processing)
-        self.close_btn.clicked.connect(self.close)
-        
-        # Initially disable output directory controls
-        self.output_dir_edit.setEnabled(False)
-        self.output_dir_btn.setEnabled(False)
-    
     def add_files(self):
         """Add COL files to the list"""
         files, _ = QFileDialog.getOpenFileNames(

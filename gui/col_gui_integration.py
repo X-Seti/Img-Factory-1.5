@@ -94,12 +94,6 @@ class COLToolsButtonGroup(QWidget):
         
         layout.addWidget(col_group)
     
-    def connect_signals(self):
-        """Connect button signals"""
-        self.col_editor_btn.col_editor_requested.connect(self.col_editor_requested.emit)
-        self.batch_btn.clicked.connect(self.col_batch_requested.emit)
-        self.analyzer_btn.clicked.connect(self.col_analyzer_requested.emit)
-
 class COLMenuBuilder:
     """Helper class to build COL menu items"""
     

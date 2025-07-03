@@ -265,13 +265,6 @@ def create_action_button(text, action_type, main_window, method_name):
     btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
     btn.setMinimumHeight(28)
     
-    # Connect to method if it exists
-    if hasattr(main_window, method_name):
-        btn.clicked.connect(getattr(main_window, method_name))
-    else:
-        # Create placeholder method
-        btn.clicked.connect(lambda: print(f"TODO: Implement {method_name}"))
-    
     return btn
 
 
@@ -300,8 +293,6 @@ def create_responsive_button_section(title, buttons_data, parent_layout):
         btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         btn.setMinimumHeight(26)
         
-        if callback:
-            btn.clicked.connect(callback)
         
         current_row.addWidget(btn)
     
@@ -512,7 +503,7 @@ def create_canvas_settings_panel(main_window):
     bg_btn.setToolTip("Choose background color")
     bg_btn.setMaximumWidth(40)
     if hasattr(main_window, 'choose_background_color'):
-        bg_btn.clicked.connect(main_window.choose_background_color)
+
     bg_layout.addWidget(bg_btn)
     bg_layout.addStretch()
     colors_layout.addLayout(bg_layout)
@@ -523,8 +514,7 @@ def create_canvas_settings_panel(main_window):
     grid_color_btn = QPushButton("🎨")
     grid_color_btn.setToolTip("Choose grid color")
     grid_color_btn.setMaximumWidth(40)
-    if hasattr(main_window, 'choose_grid_color'):
-        grid_color_btn.clicked.connect(main_window.choose_grid_color)
+
     grid_color_layout.addWidget(grid_color_btn)
     grid_color_layout.addStretch()
     colors_layout.addLayout(grid_color_layout)
