@@ -24,6 +24,40 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
 
 
+class DebugSettings:
+    """Debug mode settings and utilities"""
+
+    def __init__(self, app_settings):
+        self.app_settings = app_settings
+        self.debug_enabled = app_settings.current_settings.get('debug_mode', False)
+        self.debug_level = app_settings.current_settings.get('debug_level', 'INFO')
+        self.debug_categories = app_settings.current_settings.get('debug_categories', [
+            'IMG_LOADING', 'TABLE_POPULATION', 'BUTTON_ACTIONS', 'FILE_OPERATIONS'
+        ])
+
+    def is_debug_enabled(self, category='GENERAL'):
+        """Check if debug is enabled for specific category"""
+        return self.debug_enabled and category in self.debug_categories
+
+    def debug_log(self, message, category='GENERAL', level='INFO'):
+        """Log debug message if debug mode is enabled"""
+        if self.is_debug_enabled(category):
+            timestamp = QDateTime.currentDateTime().toString("hh:mm:ss.zzz")
+            debug_msg = f"[DEBUG-{category}] [{timestamp}] {message}"
+
+            # Send to main window log if available
+            if hasattr(self.app_settings, 'main_window') and hasattr(self.app_settings.main_window, 'log_message'):
+                self.app_settings.main_window.log_message(debug_msg)
+            else:
+                print(debug_msg)
+
+    def toggle_debug_mode(self):
+        """Toggle debug mode on/off"""
+        self.debug_enabled = not self.debug_enabled
+        self.app_settings.current_settings['debug_mode'] = self.debug_enabled
+        self.app_settings.save_settings()
+        return self.debug_enabled
+
 class AppSettings:
     def __init__(self):
         self.settings_file = Path("imgfactory.settings.json")  # Use correct settings file
@@ -1459,6 +1493,9 @@ class SettingsDialog(QDialog):
         self.demo_tab = self._create_demo_tab()
         self.tabs.addTab(self.demo_tab, "🎭 Demo")
 
+        self.debug_tab = self._create_debug_tab()
+        self.tabs.addTab(self.debug_tab, "🐛 Debug")
+
         # Interface tab
         self.interface_tab = self._create_interface_tab()
         self.tabs.addTab(self.interface_tab, "⚙️ Interface")
@@ -1488,6 +1525,141 @@ class SettingsDialog(QDialog):
         
         layout.addLayout(button_layout)
     
+    def _create_debug_tab(self):
+        """Create debug settings tab"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        # Debug Mode Group
+        debug_group = QGroupBox("🐛 Debug Mode")
+        debug_layout = QVBoxLayout(debug_group)
+
+        self.debug_enabled_check = QCheckBox("Enable debug mode")
+        self.debug_enabled_check.setChecked(self.app_settings.current_settings.get('debug_mode', False))
+        self.debug_enabled_check.setToolTip("Enable detailed debug logging throughout the application")
+        debug_layout.addWidget(self.debug_enabled_check)
+
+        # Debug Level
+        level_layout = QHBoxLayout()
+        level_layout.addWidget(QLabel("Debug Level:"))
+        self.debug_level_combo = QComboBox()
+        self.debug_level_combo.addItems(["ERROR", "WARNING", "INFO", "DEBUG", "VERBOSE"])
+        self.debug_level_combo.setCurrentText(self.app_settings.current_settings.get('debug_level', 'INFO'))
+        self.debug_level_combo.setToolTip("Set the verbosity level for debug output")
+        level_layout.addWidget(self.debug_level_combo)
+        level_layout.addStretch()
+        debug_layout.addLayout(level_layout)
+
+        layout.addWidget(debug_group)
+
+        # Debug Categories Group
+        categories_group = QGroupBox("📋 Debug Categories")
+        categories_layout = QGridLayout(categories_group)
+
+        self.debug_categories = {}
+        default_categories = [
+            ('IMG_LOADING', 'IMG file loading and parsing'),
+            ('TABLE_POPULATION', 'Table display and entry population'),
+            ('BUTTON_ACTIONS', 'Button clicks and UI actions'),
+            ('FILE_OPERATIONS', 'File read/write operations'),
+            ('FILTERING', 'Table filtering and search'),
+            ('SIGNAL_SYSTEM', 'Unified signal system')
+        ]
+
+        enabled_categories = self.app_settings.current_settings.get('debug_categories', [cat[0] for cat in default_categories])
+
+        for i, (category, description) in enumerate(default_categories):
+            checkbox = QCheckBox(category.replace('_', ' ').title())
+            checkbox.setChecked(category in enabled_categories)
+            checkbox.setToolTip(description)
+            self.debug_categories[category] = checkbox
+
+            row = i // 2
+            col = i % 2
+            categories_layout.addWidget(checkbox, row, col)
+
+        layout.addWidget(categories_group)
+
+        # Debug Actions Group
+        actions_group = QGroupBox("🔧 Debug Actions")
+        actions_layout = QVBoxLayout(actions_group)
+
+        # Quick debug buttons
+        buttons_layout = QHBoxLayout()
+
+        test_debug_btn = QPushButton("🧪 Test Debug")
+        test_debug_btn.setToolTip("Send a test debug message")
+        test_debug_btn.clicked.connect(self._test_debug_output)
+        buttons_layout.addWidget(test_debug_btn)
+
+        debug_img_btn = QPushButton("📁 Debug IMG")
+        debug_img_btn.setToolTip("Debug current IMG file (if loaded)")
+        debug_img_btn.clicked.connect(self._debug_current_img)
+        buttons_layout.addWidget(debug_img_btn)
+
+        clear_log_btn = QPushButton("🗑️ Clear Log")
+        clear_log_btn.setToolTip("Clear the activity log")
+        clear_log_btn.clicked.connect(self._clear_debug_log)
+        buttons_layout.addWidget(clear_log_btn)
+
+        actions_layout.addLayout(buttons_layout)
+        layout.addWidget(actions_group)
+        layout.addStretch()
+
+        return widget
+
+    def _test_debug_output(self):
+        """Test debug output"""
+        if hasattr(self.parent(), 'log_message'):
+            self.parent().log_message("🧪 Debug test message - debug system working!")
+            self.parent().log_message(f"🐛 [DEBUG-TEST] Debug enabled: {self.debug_enabled_check.isChecked()}")
+            self.parent().log_message(f"🐛 [DEBUG-TEST] Debug level: {self.debug_level_combo.currentText()}")
+
+            enabled_categories = [cat for cat, cb in self.debug_categories.items() if cb.isChecked()]
+            self.parent().log_message(f"🐛 [DEBUG-TEST] Active categories: {', '.join(enabled_categories)}")
+        else:
+            QMessageBox.information(self, "Debug Test", "Debug test completed!\nCheck the activity log for output.")
+
+    def _debug_current_img(self):
+        """Debug current IMG file"""
+        if hasattr(self.parent(), 'current_img') and self.parent().current_img:
+            img = self.parent().current_img
+            self.parent().log_message(f"🐛 [DEBUG-IMG] Current IMG: {img.file_path}")
+            self.parent().log_message(f"🐛 [DEBUG-IMG] Entries: {len(img.entries)}")
+
+            # Count file types
+            file_types = {}
+            for entry in img.entries:
+                ext = entry.name.split('.')[-1].upper() if '.' in entry.name else "NO_EXT"
+                file_types[ext] = file_types.get(ext, 0) + 1
+
+            self.parent().log_message(f"🐛 [DEBUG-IMG] File types found:")
+            for ext, count in sorted(file_types.items()):
+                self.parent().log_message(f"🐛 [DEBUG-IMG]   {ext}: {count} files")
+
+            # Check table rows
+            if hasattr(self.parent(), 'gui_layout') and hasattr(self.parent().gui_layout, 'table'):
+                table = self.parent().gui_layout.table
+                table_rows = table.rowCount()
+                hidden_rows = sum(1 for row in range(table_rows) if table.isRowHidden(row))
+                self.parent().log_message(f"🐛 [DEBUG-IMG] Table: {table_rows} rows, {hidden_rows} hidden")
+
+        elif hasattr(self.parent(), 'log_message'):
+            self.parent().log_message("🐛 [DEBUG-IMG] No IMG file currently loaded")
+        else:
+            QMessageBox.information(self, "Debug IMG", "No IMG file loaded or no debug function available.")
+
+    def _clear_debug_log(self):
+        """Clear the activity log"""
+        if hasattr(self.parent(), 'gui_layout') and hasattr(self.parent().gui_layout, 'log'):
+            self.parent().gui_layout.log.clear()
+            self.parent().log_message("🗑️ Debug log cleared")
+        else:
+            QMessageBox.information(self, "Clear Log", "Activity log cleared (if available).")
+
+    # keep
+
+
     def _create_theme_tab(self):
         """Create theme selection tab"""
         widget = QWidget()
@@ -1579,9 +1751,10 @@ class SettingsDialog(QDialog):
 
         # If demo theme is different, use it
         if hasattr(self, 'demo_theme_combo'):
-            demo_theme = self.demo_theme_combo.currentText()
-            if demo_theme != self.app_settings.current_settings["theme"]:
-                new_settings["theme"] = demo_theme
+            theme_name = self.demo_theme_combo.currentText()
+            new_settings["theme"] = theme_name
+            self.app_settings.current_settings["theme"] = theme_name
+            print(f"🎨\n\nActive theme: {theme_name}")
 
         old_theme = self.app_settings.current_settings["theme"]
 
@@ -1596,18 +1769,47 @@ class SettingsDialog(QDialog):
         QMessageBox.information(self, "Applied", f"Settings applied successfully! 🎨\n\nActive theme: {new_settings['theme']}")
 
         # Apply interface settings
-        self.app_settings.current_settings["font_family"] = self.font_family_combo.currentText()
-        self.app_settings.current_settings["font_size"] = self.font_size_spin.value()
-        self.app_settings.current_settings["show_tooltips"] = self.tooltips_check.isChecked()
-        self.app_settings.current_settings["show_menu_icons"] = self.menu_icons_check.isChecked()
-        self.app_settings.current_settings["show_button_icons"] = self.button_icons_check.isChecked()
+        self.app_settings.current_settings['debug_mode'] = self.debug_enabled_check.isChecked()
+        self.app_settings.current_settings['debug_level'] = self.debug_level_combo.currentText()
+
+        enabled_categories = []
+        for category, checkbox in self.debug_categories.items():
+            if checkbox.isChecked():
+                enabled_categories.append(category)
+        self.app_settings.current_settings['debug_categories'] = enabled_categories
         
+
+        if hasattr(self, 'font_family_combo'):
+            self.app_settings.current_settings["font_family"] = self.font_family_combo.currentText()
+        if hasattr(self, 'font_size_spin'):
+            self.app_settings.current_settings["font_size"] = self.font_size_spin.value()
+        if hasattr(self, 'tooltips_check'):
+            self.app_settings.current_settings["show_tooltips"] = self.tooltips_check.isChecked()
+        if hasattr(self, 'menu_icons_check'):
+            self.app_settings.current_settings["show_menu_icons"] = self.menu_icons_check.isChecked()
+        if hasattr(self, 'button_icons_check'):
+            self.app_settings.current_settings["show_button_icons"] = self.button_icons_check.isChecked()
+
+        # FIXED: Debug settings with safety checks
+        if hasattr(self, 'debug_enabled_check'):
+            self.app_settings.current_settings['debug_mode'] = self.debug_enabled_check.isChecked()
+        if hasattr(self, 'debug_level_combo'):
+            self.app_settings.current_settings['debug_level'] = self.debug_level_combo.currentText()
+        if hasattr(self, 'debug_categories'):
+            enabled_categories = []
+            for category, checkbox in self.debug_categories.items():
+                if checkbox.isChecked():
+                    enabled_categories.append(category)
+            self.app_settings.current_settings['debug_categories'] = enabled_categories
+
         # Save settings
         self.app_settings.save_settings()
         
         # Emit signals
-        self.themeChanged.emit(self.app_settings.current_settings["theme"])
-        self.settingsChanged.emit()
+        if hasattr(self, 'themeChanged'):
+            self.themeChanged.emit(self.app_settings.current_settings["theme"])
+        if hasattr(self, 'settingsChanged'):
+            self.settingsChanged.emit()
     
     def _ok_clicked(self):
         """OK button clicked"""
@@ -1619,6 +1821,141 @@ class SettingsDialog(QDialog):
         self.app_settings.current_settings = self.app_settings.default_settings.copy()
         self._load_current_settings()
 
+
+def _create_debug_tab(self):
+    """Create debug settings tab"""
+    widget = QWidget()
+    layout = QVBoxLayout(widget)
+
+    # Debug Mode Group
+    debug_group = QGroupBox("🐛 Debug Mode")
+    debug_layout = QVBoxLayout(debug_group)
+
+    self.debug_enabled_check = QCheckBox("Enable debug mode")
+    self.debug_enabled_check.setChecked(self.app_settings.current_settings.get('debug_mode', False))
+    self.debug_enabled_check.setToolTip("Enable detailed debug logging throughout the application")
+    debug_layout.addWidget(self.debug_enabled_check)
+
+    # Debug Level
+    level_layout = QHBoxLayout()
+    level_layout.addWidget(QLabel("Debug Level:"))
+    self.debug_level_combo = QComboBox()
+    self.debug_level_combo.addItems(["ERROR", "WARNING", "INFO", "DEBUG", "VERBOSE"])
+    self.debug_level_combo.setCurrentText(self.app_settings.current_settings.get('debug_level', 'INFO'))
+    self.debug_level_combo.setToolTip("Set the verbosity level for debug output")
+    level_layout.addWidget(self.debug_level_combo)
+    level_layout.addStretch()
+    debug_layout.addLayout(level_layout)
+
+    layout.addWidget(debug_group)
+
+    # Debug Categories Group
+    categories_group = QGroupBox("📋 Debug Categories")
+    categories_layout = QGridLayout(categories_group)
+
+    self.debug_categories = {}
+    default_categories = [
+        ('IMG_LOADING', 'IMG file loading and parsing'),
+        ('TABLE_POPULATION', 'Table display and entry population'),
+        ('BUTTON_ACTIONS', 'Button clicks and UI actions'),
+        ('FILE_OPERATIONS', 'File read/write operations'),
+        ('FILTERING', 'Table filtering and search'),
+        ('SIGNAL_SYSTEM', 'Unified signal system')
+    ]
+
+    enabled_categories = self.app_settings.current_settings.get('debug_categories', [cat[0] for cat in default_categories])
+
+    for i, (category, description) in enumerate(default_categories):
+        checkbox = QCheckBox(category.replace('_', ' ').title())
+        checkbox.setChecked(category in enabled_categories)
+        checkbox.setToolTip(description)
+        self.debug_categories[category] = checkbox
+
+        row = i // 2
+        col = i % 2
+        categories_layout.addWidget(checkbox, row, col)
+
+    layout.addWidget(categories_group)
+
+    # Debug Actions Group
+    actions_group = QGroupBox("🔧 Debug Actions")
+    actions_layout = QVBoxLayout(actions_group)
+
+    # Quick debug buttons
+    buttons_layout = QHBoxLayout()
+
+    test_debug_btn = QPushButton("🧪 Test Debug")
+    test_debug_btn.setToolTip("Send a test debug message")
+    test_debug_btn.clicked.connect(self._test_debug_output)
+    buttons_layout.addWidget(test_debug_btn)
+
+    debug_img_btn = QPushButton("📁 Debug IMG")
+    debug_img_btn.setToolTip("Debug current IMG file (if loaded)")
+    debug_img_btn.clicked.connect(self._debug_current_img)
+    buttons_layout.addWidget(debug_img_btn)
+
+    clear_log_btn = QPushButton("🗑️ Clear Log")
+    clear_log_btn.setToolTip("Clear the activity log")
+    clear_log_btn.clicked.connect(self._clear_debug_log)
+    buttons_layout.addWidget(clear_log_btn)
+
+    actions_layout.addLayout(buttons_layout)
+    layout.addWidget(actions_group)
+    layout.addStretch()
+
+    return widget
+
+def _test_debug_output(self):
+    """Test debug output"""
+    if hasattr(self.parent(), 'log_message'):
+        self.parent().log_message("🧪 Debug test message - debug system working!")
+        self.parent().log_message(f"🐛 [DEBUG-TEST] Debug enabled: {self.debug_enabled_check.isChecked()}")
+        self.parent().log_message(f"🐛 [DEBUG-TEST] Debug level: {self.debug_level_combo.currentText()}")
+
+        enabled_categories = [cat for cat, cb in self.debug_categories.items() if cb.isChecked()]
+        self.parent().log_message(f"🐛 [DEBUG-TEST] Active categories: {', '.join(enabled_categories)}")
+    else:
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.information(self, "Debug Test", "Debug test completed!\nCheck the activity log for output.")
+
+def _debug_current_img(self):
+    """Debug current IMG file"""
+    if hasattr(self.parent(), 'current_img') and self.parent().current_img:
+        img = self.parent().current_img
+        self.parent().log_message(f"🐛 [DEBUG-IMG] Current IMG: {img.file_path}")
+        self.parent().log_message(f"🐛 [DEBUG-IMG] Entries: {len(img.entries)}")
+
+        # Count file types
+        file_types = {}
+        for entry in img.entries:
+            ext = entry.name.split('.')[-1].upper() if '.' in entry.name else "NO_EXT"
+            file_types[ext] = file_types.get(ext, 0) + 1
+
+        self.parent().log_message(f"🐛 [DEBUG-IMG] File types found:")
+        for ext, count in sorted(file_types.items()):
+            self.parent().log_message(f"🐛 [DEBUG-IMG]   {ext}: {count} files")
+
+        # Check table rows
+        if hasattr(self.parent(), 'gui_layout') and hasattr(self.parent().gui_layout, 'table'):
+            table = self.parent().gui_layout.table
+            table_rows = table.rowCount()
+            hidden_rows = sum(1 for row in range(table_rows) if table.isRowHidden(row))
+            self.parent().log_message(f"🐛 [DEBUG-IMG] Table: {table_rows} rows, {hidden_rows} hidden")
+
+    elif hasattr(self.parent(), 'log_message'):
+        self.parent().log_message("🐛 [DEBUG-IMG] No IMG file currently loaded")
+    else:
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.information(self, "Debug IMG", "No IMG file loaded or no debug function available.")
+
+def _clear_debug_log(self):
+    """Clear the activity log"""
+    if hasattr(self.parent(), 'gui_layout') and hasattr(self.parent().gui_layout, 'log'):
+        self.parent().gui_layout.log.clear()
+        self.parent().log_message("🗑️ Debug log cleared")
+    else:
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.information(self, "Clear Log", "Activity log cleared (if available).")
 
 def apply_theme_to_app(app, app_settings):
     """Apply theme to entire application"""

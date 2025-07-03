@@ -1,198 +1,213 @@
 #!/usr/bin/env python3
 """
-#this belongs in root /launch_imgfactory.py - version 2
-X-Seti - June28 2025 - IMG Factory 1.5 Launch Script
-Entry point for the IMG Factory application with error handling and setup
+#this belongs in root /launch_imgfactory.py - version 3
+IMG Factory 1.5 - Modern Launcher Script
+X-Seti - July03 2025 - Clean, reliable startup with comprehensive diagnostics
 """
 
 import sys
 import os
+import subprocess
 from pathlib import Path
+from typing import List, Tuple, Optional
+import importlib.util
 
-def check_dependencies():
-    """Check if all required dependencies are available"""
-    missing_deps = []
+def print_header():
+    """Print application header"""
+    print("=" * 60)
+    print("🎮 IMG Factory 1.5 - Python Edition")
+    print("   Advanced IMG Archive Management Tool")
+    print("   X-Seti - 2025")
+    print("=" * 60)
+
+def check_python_version() -> bool:
+    """Check Python version compatibility"""
+    print("🐍 Checking Python version...")
     
-    # Check PyQt6
-    try:
-        from PyQt6 import QtCore, QtWidgets, QtGui
-        try:
-            version = QtCore.PYQT_VERSION_STR
-            print(f"✓ PyQt6 {version} found")
-        except AttributeError:
-            print("✓ PyQt6 found (version unknown)")
-    except ImportError as e:
-        missing_deps.append("PyQt6")
-        print(f"❌ PyQt6 not found: {e}")
+    version = sys.version_info
+    required = (3, 8)
     
-    # Check Python version
-    if sys.version_info < (3, 8):
-        print(f"❌ Python 3.8+ required, found {sys.version}")
-        missing_deps.append("Python 3.8+")
+    print(f"   Current: Python {version.major}.{version.minor}.{version.micro}")
+    print(f"   Required: Python {required[0]}.{required[1]}+")
+    
+    if version >= required:
+        print("   ✅ Python version OK")
+        return True
     else:
-        print(f"✓ Python {sys.version.split()[0]} found")
-    
-    # Check optional dependencies
-    optional_deps = {
-        'zlib': 'Built-in compression support',
-        'lz4': 'LZ4 compression support (optional)',
-    }
-    
-    for dep, description in optional_deps.items():
-        try:
-            if dep == 'zlib':
-                import zlib
-            elif dep == 'lz4':
-                import lz4.frame
-            print(f"✓ {dep} - {description}")
-        except ImportError:
-            print(f"⚠ {dep} - {description} (not available)")
-    
-    if missing_deps:
-        print(f"\n❌ Missing required dependencies: {', '.join(missing_deps)}")
-        print("\nTo install missing dependencies:")
-        print("pip install PyQt6")
-        if "Python 3.8+" in missing_deps:
-            print("Please upgrade to Python 3.8 or newer")
+        print(f"   ❌ Python {required[0]}.{required[1]}+ required")
+        print(f"   Please upgrade Python to {required[0]}.{required[1]} or newer")
         return False
-    
-    return True
 
-def setup_paths():
-    """Setup Python paths for module imports"""
-    # Add current directory to Python path
+def check_dependencies() -> Tuple[bool, List[str]]:
+    """Check required Python dependencies"""
+    print("📦 Checking dependencies...")
+    
+    dependencies = [
+        ("PyQt6", "PyQt6.QtWidgets"),
+        ("PyQt6.QtCore", "PyQt6.QtCore"), 
+        ("PyQt6.QtGui", "PyQt6.QtGui")
+    ]
+    
+    missing = []
+    
+    for name, module in dependencies:
+        try:
+            spec = importlib.util.find_spec(module)
+            if spec is not None:
+                print(f"   ✅ {name}")
+            else:
+                print(f"   ❌ {name} (not found)")
+                missing.append(name)
+        except ImportError:
+            print(f"   ❌ {name} (import error)")
+            missing.append(name)
+    
+    if not missing:
+        print("   ✅ All dependencies satisfied")
+        return True, []
+    else:
+        print(f"   ❌ Missing: {', '.join(missing)}")
+        return False, missing
+
+def check_project_structure() -> Tuple[bool, List[str]]:
+    """Check project file structure"""
+    print("📁 Checking project structure...")
+    
     current_dir = Path(__file__).parent
-    if str(current_dir) not in sys.path:
-        sys.path.insert(0, str(current_dir))
-    
-    # Add components directory if it exists
-    components_dir = current_dir / "components"
-    if components_dir.exists() and str(components_dir) not in sys.path:
-        sys.path.insert(0, str(components_dir))
-    
-    # Add gui directory if it exists
-    gui_dir = current_dir / "gui"
-    if gui_dir.exists() and str(gui_dir) not in sys.path:
-        sys.path.insert(0, str(gui_dir))
-    
-    print(f"✓ Added {current_dir} to Python path")
-    if components_dir.exists():
-        print(f"✓ Added {components_dir} to Python path")
-    if gui_dir.exists():
-        print(f"✓ Added {gui_dir} to Python path")
-
-def check_files():
-    """Check if required IMG Factory files exist"""
     required_files = [
-        "imgfactory.py",  # FIXED: Changed from imgfactory.py
-        "app_settings_system.py",
+        "imgfactory.py",
+        "components/img_core_classes.py", 
+        "gui/gui_layout.py"
     ]
     
-    # Check for component files
-    component_files = [
-        "components/img_core_classes.py",
+    optional_files = [
+        "utils/app_settings_system.py",
+        "app_settings_system.py",  # Fallback location
         "components/img_creator.py",
-        "components/img_templates.py",
-        "components/img_validator.py"
+        "components/img_validator.py",
+        "gui/menu.py"
     ]
     
-    # Check for GUI files
-    gui_files = [
-        "gui/gui_layout.py",
-        "gui/menu_system.py"
-    ]
-    
-    current_dir = Path(__file__).parent
-    missing_files = []
+    missing_required = []
+    found_optional = []
     
     # Check required files
-    for file_name in required_files:
-        file_path = current_dir / file_name
-        if file_path.exists():
-            print(f"✓ {file_name} found")
+    for file_path in required_files:
+        full_path = current_dir / file_path
+        if full_path.exists():
+            print(f"   ✅ {file_path}")
         else:
-            missing_files.append(file_name)
-            print(f"❌ {file_name} missing")
+            print(f"   ❌ {file_path} (required)")
+            missing_required.append(file_path)
     
-    # Check component files
-    for file_name in component_files:
-        file_path = current_dir / file_name
-        if file_path.exists():
-            print(f"✓ {file_name} found")
+    # Check optional files
+    for file_path in optional_files:
+        full_path = current_dir / file_path
+        if full_path.exists():
+            print(f"   ✅ {file_path}")
+            found_optional.append(file_path)
         else:
-            print(f"⚠ {file_name} missing (optional)")
+            print(f"   ⚠️  {file_path} (optional)")
     
-    # Check GUI files
-    for file_name in gui_files:
-        file_path = current_dir / file_name
-        if file_path.exists():
-            print(f"✓ {file_name} found")
+    # Check directories
+    directories = ["components", "gui", "themes"]
+    for dir_name in directories:
+        dir_path = current_dir / dir_name
+        if dir_path.exists() and dir_path.is_dir():
+            file_count = len(list(dir_path.glob("*.py")))
+            print(f"   ✅ {dir_name}/ ({file_count} Python files)")
         else:
-            print(f"⚠ {file_name} missing (optional)")
+            print(f"   ❌ {dir_name}/ (missing directory)")
     
-    if missing_files:
-        print(f"\n❌ Missing required files: {', '.join(missing_files)}")
-        print("Please ensure all IMG Factory modules are in the same directory.")
+    if not missing_required:
+        print("   ✅ Project structure OK")
+        return True, found_optional
+    else:
+        print(f"   ❌ Missing required files: {missing_required}")
+        return False, missing_required
+
+def setup_python_path():
+    """Setup Python import paths"""
+    print("🛠️  Setting up Python paths...")
+    
+    current_dir = Path(__file__).parent
+    paths_to_add = [
+        current_dir,
+        current_dir / "components",
+        current_dir / "gui",
+        current_dir / "utils"
+    ]
+    
+    for path in paths_to_add:
+        if path.exists() and str(path) not in sys.path:
+            sys.path.insert(0, str(path))
+            print(f"   ✅ Added {path}")
+        elif str(path) in sys.path:
+            print(f"   ✅ Already in path: {path}")
+        else:
+            print(f"   ⚠️  Skipped missing: {path}")
+
+def install_missing_dependencies(missing: List[str]) -> bool:
+    """Attempt to install missing dependencies"""
+    print("🔧 Attempting to install missing dependencies...")
+    
+    # Map package names to pip install names
+    pip_packages = {
+        "PyQt6": "PyQt6",
+        "PyQt6.QtCore": "PyQt6", 
+        "PyQt6.QtGui": "PyQt6"
+    }
+    
+    unique_packages = set()
+    for pkg in missing:
+        if pkg in pip_packages:
+            unique_packages.add(pip_packages[pkg])
+    
+    if not unique_packages:
+        print("   ❌ No packages to install")
         return False
     
+    for package in unique_packages:
+        print(f"   📦 Installing {package}...")
+        try:
+            result = subprocess.run([
+                sys.executable, "-m", "pip", "install", package
+            ], capture_output=True, text=True, timeout=120)
+            
+            if result.returncode == 0:
+                print(f"   ✅ {package} installed successfully")
+            else:
+                print(f"   ❌ {package} installation failed")
+                print(f"      Error: {result.stderr.strip()}")
+                return False
+                
+        except subprocess.TimeoutExpired:
+            print(f"   ❌ {package} installation timed out")
+            return False
+        except Exception as e:
+            print(f"   ❌ {package} installation error: {e}")
+            return False
+    
+    print("   ✅ All packages installed successfully")
     return True
 
-def main():
-    """Main entry point"""
-    print("🎮 IMG Factory 1.5 - Python Edition")
-    print("=" * 40)
-    
-    # Check dependencies
-    print("Checking dependencies...")
-    if not check_dependencies():
-        print("\n❌ Cannot start due to missing dependencies")
-        input("Press Enter to exit...")
-        sys.exit(1)
-    
-    print("\nChecking required files...")
-    if not check_files():
-        print("\n❌ Cannot start due to missing files")
-        input("Press Enter to exit...")
-        sys.exit(1)
-    
-    # Setup paths
-    print("\nSetting up paths...")
-    setup_paths()
+def launch_application() -> int:
+    """Launch the main application"""
+    print("🚀 Launching IMG Factory...")
     
     try:
-        # Import and run the main application
-        print("\n🚀 Starting IMG Factory...")
+        # Try to import the main module
+        import imgfactory
+        print("   ✅ Main module imported successfully")
         
-        # Test import before running
-        try:
-            import imgfactory  # FIXED: Changed from imgfactory_main
-            print("✓ Main application module imported successfully")
-        except ImportError as e:
-            print(f"❌ Failed to import main application: {e}")
-            print("\nTrying to import individual components for diagnosis...")
-            
-            # Test component imports
-            components = {
-                "app_settings_system": "Application settings",
-                "components.img_core_classes": "IMG core classes",
-                "components.img_creator": "IMG creator",
-                "gui.gui_layout": "GUI layout system"
-            }
-            
-            for module, description in components.items():
-                try:
-                    __import__(module)
-                    print(f"✓ {module} - {description}")
-                except ImportError as import_err:
-                    print(f"❌ {module} - {description}: {import_err}")
-            
-            raise e
-        
-        # Run the application - Get the main function from imgfactory
+        # Check if main function exists
         if hasattr(imgfactory, 'main'):
-            imgfactory.main()
+            print("   ✅ Using main() function")
+            return imgfactory.main()
         else:
-            # Create and run the application directly
+            print("   ✅ Creating application directly")
+            
+            # Create application instance
             from PyQt6.QtWidgets import QApplication
             
             app = QApplication(sys.argv)
@@ -201,37 +216,115 @@ def main():
             app.setOrganizationName("IMG Factory")
             
             # Create main window
-            window = imgfactory.IMGFactory(imgfactory.AppSettings())
+            if hasattr(imgfactory, 'AppSettings'):
+                settings = imgfactory.AppSettings()
+            else:
+                # Try utils location
+                try:
+                    from utils.app_settings_system import AppSettings
+                    settings = AppSettings()
+                except ImportError:
+                    try:
+                        from app_settings_system import AppSettings
+                        settings = AppSettings()
+                    except ImportError:
+                        print("   ⚠️  Settings system not available, using defaults")
+                        settings = None
+            
+            window = imgfactory.IMGFactory(settings)
             window.show()
             
-            print("✓ IMG Factory started successfully")
-            sys.exit(app.exec())
-        
+            print("   ✅ IMG Factory started successfully")
+            return app.exec()
+            
     except ImportError as e:
-        print(f"\n❌ Import error: {e}")
-        print("Make sure all IMG Factory modules are in the correct location.")
-        print(f"Current working directory: {os.getcwd()}")
-        print(f"Script directory: {Path(__file__).parent}")
-        input("Press Enter to exit...")
-        sys.exit(1)
-        
+        print(f"   ❌ Import error: {e}")
+        print("   💡 This usually means missing dependencies or file structure issues")
+        return 1
     except Exception as e:
-        print(f"\n💥 Unexpected error: {e}")
+        print(f"   ❌ Launch error: {e}")
         import traceback
-        print("Full traceback:")
+        print("   📝 Full traceback:")
         traceback.print_exc()
-        input("Press Enter to exit...")
-        sys.exit(1)
+        return 1
+
+def show_help():
+    """Show help information"""
+    print("\n📚 Troubleshooting Help:")
+    print("─" * 40)
+    print("If IMG Factory won't start:")
+    print("1. Ensure Python 3.8+ is installed")
+    print("2. Install PyQt6: pip install PyQt6")
+    print("3. Check all files are in the correct locations")
+    print("4. Try running: python -m pip install --upgrade PyQt6")
+    print("5. Run with verbose output: python -v imgfactory.py")
+    print("\n📧 For support: Check project documentation")
+    print("🐛 Report bugs: Include the full error output above")
+
+def main() -> int:
+    """Main launcher function"""
+    print_header()
+    
+    # Step 1: Check Python version
+    if not check_python_version():
+        show_help()
+        return 1
+    
+    print()
+    
+    # Step 2: Check dependencies
+    deps_ok, missing_deps = check_dependencies()
+    if not deps_ok:
+        print(f"\n🔧 Attempting to install missing dependencies...")
+        if install_missing_dependencies(missing_deps):
+            print("   ✅ Dependencies installed, please restart the launcher")
+            return 0
+        else:
+            print("   ❌ Failed to install dependencies")
+            print("\n💡 Manual installation:")
+            print("   pip install PyQt6")
+            show_help()
+            return 1
+    
+    print()
+    
+    # Step 3: Check project structure  
+    structure_ok, found_files = check_project_structure()
+    if not structure_ok:
+        print("   ❌ Project structure issues detected")
+        show_help()
+        return 1
+    
+    print()
+    
+    # Step 4: Setup Python paths
+    setup_python_path()
+    
+    print()
+    
+    # Step 5: Launch application
+    exit_code = launch_application()
+    
+    # Step 6: Handle exit
+    if exit_code == 0:
+        print("\n✅ IMG Factory closed normally")
+    else:
+        print(f"\n❌ IMG Factory exited with error code: {exit_code}")
+        show_help()
+    
+    return exit_code
 
 if __name__ == "__main__":
     try:
-        main()
+        exit_code = main()
+        sys.exit(exit_code)
     except KeyboardInterrupt:
-        print("\n\n👋 Goodbye!")
-        sys.exit(0)
+        print("\n\n🛑 Cancelled by user")
+        sys.exit(130)  # Standard exit code for Ctrl+C
     except Exception as e:
-        print(f"\n💥 Fatal error during startup: {e}")
+        print(f"\n💥 Unexpected launcher error: {e}")
         import traceback
         traceback.print_exc()
-        input("Press Enter to exit...")
+        print("\n" + "="*60)
+        show_help()
         sys.exit(1)

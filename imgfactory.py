@@ -14,6 +14,7 @@ print("Starting application...")
 current_dir = Path(__file__).parent
 components_dir = current_dir / "components"
 gui_dir = current_dir / "gui"
+utils_dir = current_dir / "utils"
 
 # Add directories to Python path
 if str(current_dir) not in sys.path:
@@ -22,6 +23,8 @@ if components_dir.exists() and str(components_dir) not in sys.path:
     sys.path.insert(0, str(components_dir))
 if gui_dir.exists() and str(gui_dir) not in sys.path:
     sys.path.insert(0, str(gui_dir))
+if utils_dir.exists() and str(utils_dir) not in sys.path:  # ADD THESE LINES
+    sys.path.insert(0, str(utils_dir))
 
 # Now continue with other imports
 
@@ -38,7 +41,9 @@ print("PyQt6.QtCore imported successfully")
 from PyQt6.QtCore import Qt, QThread, pyqtSignal,  QTimer, QSettings, QMimeData
 from PyQt6.QtGui import QAction, QFont, QIcon, QPixmap, QDragEnterEvent, QDropEvent, QContextMenuEvent
 
-from app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
+# OR use the full path:
+from utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
+
 from components.img_creator import NewIMGDialog
 from components.img_core_classes import (
     IMGFile, IMGEntry, IMGVersion, Platform, format_file_size,
@@ -56,13 +61,16 @@ from gui.menu import IMGFactoryMenuBar
 print("Components imported successfully")
 
 
+# Replace the populate_img_table function in imgfactory.py with this improved version:
+
 def populate_img_table(table: QTableWidget, img_file: IMGFile):
-    """Populate table with IMG file entries - module level function"""
+    """Populate table with IMG file entries - FIXED VERSION"""
     if not img_file or not img_file.entries:
         table.setRowCount(0)
         return
 
     entries = img_file.entries
+    print(f"DEBUG: Populating table with {len(entries)} entries")
 
     # Clear existing data first
     table.setRowCount(0)
@@ -72,8 +80,13 @@ def populate_img_table(table: QTableWidget, img_file: IMGFile):
         # Name
         table.setItem(row, 0, QTableWidgetItem(entry.name))
 
-        # Type (file extension)
-        file_type = entry.name.split('.')[-1].upper() if '.' in entry.name else "Unknown"
+        # Type (file extension) - FIXED: Always use name-based detection
+        if '.' in entry.name:
+            file_type = entry.name.split('.')[-1].upper()
+        else:
+            file_type = "NO_EXT"
+
+        print(f"DEBUG: Row {row}: {entry.name} -> Type: {file_type}")
         table.setItem(row, 1, QTableWidgetItem(file_type))
 
         # Size (formatted)
@@ -92,40 +105,38 @@ def populate_img_table(table: QTableWidget, img_file: IMGFile):
         try:
             if hasattr(entry, 'get_version_text') and callable(entry.get_version_text):
                 version = entry.get_version_text()
-            elif hasattr(img_file, 'version'):
-                # Use IMG file version to provide better info
-                if img_file.version.name == 'IMG_1':
-                    # For GTA III/VC files, try to detect from file types
-                    if file_type in ['DFF', 'TXD']:
-                        version = "RW 3.6.0.3"  # Common version for GTA III/VC
-                    elif file_type == 'COL':
-                        version = "COL 2"
-                    elif file_type == 'IFP':
-                        version = "IFP 1"
-                    else:
-                        version = "GTA III/VC"
-                elif img_file.version.name == 'IMG_2':
-                    version = "GTA SA"
-                elif img_file.version.name == 'IMG_3':
-                    version = "GTA IV"
+            elif hasattr(entry, 'version') and entry.version:
+                version = str(entry.version)
+            else:
+                # Provide sensible defaults based on file type
+                if file_type in ['DFF', 'TXD']:
+                    version = "RenderWare"
+                elif file_type == 'COL':
+                    version = "COL"
+                elif file_type == 'IFP':
+                    version = "IFP"
+                elif file_type == 'WAV':
+                    version = "Audio"
+                elif file_type == 'SCM':
+                    version = "Script"
                 else:
-                    version = img_file.version.name
-        except:
+                    version = "Unknown"
+        except Exception as e:
+            print(f"DEBUG: Version detection error for {entry.name}: {e}")
             version = "Unknown"
+
         table.setItem(row, 4, QTableWidgetItem(version))
 
         # Compression
         compression = "None"
         try:
-            if hasattr(entry, 'compression') and hasattr(entry.compression, 'name'):
-                if entry.compression.name != 'NONE':
-                    compression = entry.compression.name
+            if hasattr(entry, 'compression_type') and entry.compression_type:
+                compression = str(entry.compression_type)
             elif hasattr(entry, 'compressed') and entry.compressed:
-                compression = "ZLib"
-            elif hasattr(entry, 'is_compressed') and callable(entry.is_compressed) and entry.is_compressed():
                 compression = "Compressed"
         except:
             compression = "None"
+
         table.setItem(row, 5, QTableWidgetItem(compression))
 
         # Status
@@ -137,6 +148,7 @@ def populate_img_table(table: QTableWidget, img_file: IMGFile):
                 status = "Modified"
         except:
             status = "Ready"
+
         table.setItem(row, 6, QTableWidgetItem(status))
 
         # Make items read-only
@@ -145,6 +157,104 @@ def populate_img_table(table: QTableWidget, img_file: IMGFile):
             if item:
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
 
+    print(f"DEBUG: Table population complete. Table now has {table.rowCount()} rows")
+
+    # IMPORTANT: Clear any filters that might be hiding rows
+    for row in range(table.rowCount()):
+        table.setRowHidden(row, False)
+
+    print(f"DEBUG: All rows made visible")
+
+def setup_debug_mode(self):
+    """Setup debug mode integration"""
+    self.debug = DebugSettings(self.app_settings)
+
+    # Add debug menu item
+    if hasattr(self, 'menu_bar_system'):
+        debug_action = QAction("🐛 Debug Mode", self)
+        debug_action.setCheckable(True)
+        debug_action.setChecked(self.debug.debug_enabled)
+        debug_action.triggered.connect(self.toggle_debug_mode)
+
+        # Add to Settings menu
+        if hasattr(self.menu_bar_system, 'settings_menu'):
+            self.menu_bar_system.settings_menu.addSeparator()
+            self.menu_bar_system.settings_menu.addAction(debug_action)
+
+def toggle_debug_mode(self):
+    """Toggle debug mode with user feedback"""
+    enabled = self.debug.toggle_debug_mode()
+    status = "enabled" if enabled else "disabled"
+    self.log_message(f"🐛 Debug mode {status}")
+
+    if enabled:
+        self.log_message("Debug categories: " + ", ".join(self.debug.debug_categories))
+        # Run immediate debug check
+        self.debug_img_entries()
+
+def debug_img_entries(self):
+    """Enhanced debug function with categories"""
+    if not self.debug.is_debug_enabled('TABLE_POPULATION'):
+        return
+
+    if not self.current_img or not self.current_img.entries:
+        self.debug.debug_log("No IMG loaded or no entries found", 'TABLE_POPULATION', 'WARNING')
+        return
+
+    self.debug.debug_log(f"IMG file has {len(self.current_img.entries)} entries", 'TABLE_POPULATION')
+
+    # Count file types
+    file_types = {}
+    all_extensions = set()
+    extension_mismatches = []
+
+    for i, entry in enumerate(self.current_img.entries):
+        # Extract extension both ways
+        name_ext = entry.name.split('.')[-1].upper() if '.' in entry.name else "NO_EXT"
+        attr_ext = getattr(entry, 'extension', 'NO_ATTR').upper() if hasattr(entry, 'extension') and entry.extension else "NO_ATTR"
+
+        all_extensions.add(name_ext)
+        file_types[name_ext] = file_types.get(name_ext, 0) + 1
+
+        # Check for extension mismatches
+        if name_ext != attr_ext and attr_ext != "NO_ATTR":
+            extension_mismatches.append(f"{entry.name}: name='{name_ext}' vs attr='{attr_ext}'")
+
+        # Detailed debug for first 5 entries
+        if i < 5:
+            self.debug.debug_log(f"Entry {i}: {entry.name} -> {name_ext}", 'TABLE_POPULATION')
+
+    # Summary
+    self.debug.debug_log("File type summary:", 'TABLE_POPULATION')
+    for ext, count in sorted(file_types.items()):
+        self.debug.debug_log(f"  {ext}: {count} files", 'TABLE_POPULATION')
+
+    self.debug.debug_log(f"All extensions found: {sorted(all_extensions)}", 'TABLE_POPULATION')
+
+    # Extension mismatches
+    if extension_mismatches:
+        self.debug.debug_log(f"Extension mismatches found: {len(extension_mismatches)}", 'TABLE_POPULATION', 'WARNING')
+        for mismatch in extension_mismatches[:10]:  # Show first 10
+            self.debug.debug_log(f"  {mismatch}", 'TABLE_POPULATION', 'WARNING')
+
+    # Table analysis
+    table_rows = self.gui_layout.table.rowCount()
+    hidden_count = sum(1 for row in range(table_rows) if self.gui_layout.table.isRowHidden(row))
+
+    self.debug.debug_log(f"Table: {table_rows} rows, {hidden_count} hidden", 'TABLE_POPULATION')
+
+    if hidden_count > 0:
+        self.debug.debug_log("Some rows are hidden! Checking filter settings...", 'TABLE_POPULATION', 'WARNING')
+
+        # Check filter combo if it exists
+        try:
+            # Look for filter combo in right panel
+            filter_combo = self.findChild(QComboBox)
+            if filter_combo:
+                current_filter = filter_combo.currentText()
+                self.debug.debug_log(f"Current filter: '{current_filter}'", 'TABLE_POPULATION')
+        except:
+            pass
 
 
 class IMGLoadThread(QThread):
@@ -309,6 +419,58 @@ class IMGFactory(QMainWindow):
         # Connect unified signals to status bar updates
         from components.unified_signal_handler import signal_handler
         signal_handler.status_update_requested.connect(self._update_status_from_signal)
+
+
+    def debug_img_entries(self):
+        """Debug function to check what entries are actually loaded"""
+        if not self.current_img or not self.current_img.entries:
+            self.log_message("❌ No IMG loaded or no entries found")
+            return
+
+        self.log_message(f"🔍 DEBUG: IMG file has {len(self.current_img.entries)} entries")
+
+        # Count file types
+        file_types = {}
+        all_extensions = set()
+
+        for i, entry in enumerate(self.current_img.entries):
+            # Debug each entry
+            self.log_message(f"Entry {i}: {entry.name}")
+
+            # Extract extension both ways
+            name_ext = entry.name.split('.')[-1].upper() if '.' in entry.name else "NO_EXT"
+            attr_ext = getattr(entry, 'extension', 'NO_ATTR').upper() if hasattr(entry, 'extension') and entry.extension else "NO_ATTR"
+
+            all_extensions.add(name_ext)
+
+            # Count by name-based extension
+            file_types[name_ext] = file_types.get(name_ext, 0) + 1
+
+            # Log extension differences
+            if name_ext != attr_ext:
+                self.log_message(f"  ⚠️ Extension mismatch: name='{name_ext}' vs attr='{attr_ext}'")
+
+        # Summary
+        self.log_message(f"📊 File type summary:")
+        for ext, count in sorted(file_types.items()):
+            self.log_message(f"  {ext}: {count} files")
+
+        self.log_message(f"🎯 All extensions found: {sorted(all_extensions)}")
+
+        # Check table row count vs entries count
+        table_rows = self.gui_layout.table.rowCount()
+        self.log_message(f"📋 Table has {table_rows} rows, IMG has {len(self.current_img.entries)} entries")
+
+        # Check if any rows are hidden
+        hidden_count = 0
+        for row in range(table_rows):
+            if self.gui_layout.table.isRowHidden(row):
+                hidden_count += 1
+
+        self.log_message(f"👻 Hidden rows: {hidden_count}")
+
+        if hidden_count > 0:
+            self.log_message("⚠️ Some rows are hidden! Check the filter settings.")
 
     def _unified_double_click_handler(self, row, filename, item):
         """Handle double-click through unified system"""

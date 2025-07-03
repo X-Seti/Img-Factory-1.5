@@ -1,5 +1,5 @@
 {
-  "theme": "amiga_workbench",
+  "theme": "lightgreen_theme",
   "font_family": "Segoe UI",
   "font_size": 9,
   "font_weight": "normal",
@@ -67,7 +67,7 @@
   "lazy_loading": true,
   "cache_previews": true,
   "show_progress_notifications": true,
-  "sound_notifications": false,
+  "sound_notifications": true,
   "status_bar_updates": true,
   "enable_animations": true,
   "enable_shadows": true,
