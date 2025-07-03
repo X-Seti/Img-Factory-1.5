@@ -289,6 +289,23 @@ class IMGFactory(QMainWindow):
         # Log startup
         self.log_message("IMG Factory 1.5 initialized")
     
+    def setup_unified_signals(self):
+        """Setup unified signal system"""
+        from components.unified_signal_handler import connect_table_signals
+
+        success = connect_table_signals("main", self.gui_layout.table, self,
+                                    self._on_selection, self._on_double_click)
+        if success:
+            self.log_message("✅ Unified signals connected")
+
+    def _on_selection(self, selected_rows, count):
+        if count > 0:
+            self.log_message(f"{count} entries selected")
+
+    def _on_double_click(self, row, filename, item):
+        self.log_message(f"Double-clicked: {filename}")
+
+
     def _create_ui(self):
         """Create the main user interface"""
         central_widget = QWidget()
