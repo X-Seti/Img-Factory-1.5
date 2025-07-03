@@ -255,9 +255,9 @@ class IMGFactory(QMainWindow):
         self.menu_bar_system = IMGFactoryMenuBar(self)
 
         # Add selection timer for debouncing
-        #self.selection_timer = QTimer()
-        #self.selection_timer.setSingleShot(True)
-        #self.selection_timer.timeout.connect(self._update_selection_status)
+        self.selection_timer = QTimer()
+        self.selection_timer.setSingleShot(True)
+        self.selection_timer.timeout.connect(self._update_selection_status)
 
         callbacks = {
             "about": self.show_about,
@@ -1351,12 +1351,13 @@ def main():
     # Create main window
     window = IMGFactory(settings)
     
-
+    """
     # COL integration setup
     if setup_col_integration(window):
         window.log_message("COL functionality integrated successfully")
     else:
         window.log_message("COL functionality not available")
+    """
 
     # Show window
     window.show()

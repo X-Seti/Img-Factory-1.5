@@ -1,0 +1,33 @@
+Important rules to remember: Project name is Img Factory 1.5
+
+1. To avoid confusion, the file must include #this belongs in [dir]/ [filename] or goes in root /[filename] - Version: "Number of updates to file", Keep the existing file header comments. "X-Seti - $MONTH$DATE 2025 -" rest of the header information.
+
+2. Keep filenames simple and unchanged. Avoid using words like 
+   "Enhanced", "fallback", "improved", "fixed", or "updated" anywhere in the file and the filename. This will avoid confusion and file function duplication.
+ 
+"CRITICAL: When fixing imports or minor bugs, Claude must preserve 100% of existing functionality. If the original file is 39KB and the new file is 15KB, functions were stripped. Always verify file sizes match before and after. Only change what's broken, never simplify unless explicitly asked."
+
+5. On the "Continue" prompt,  only make edits to complete the script.
+
+6. Keep all replies short and to the point, as we have limited data on our pay plan.
+
+7. No Conflicts: keep track of functions in the project files.
+
+No duplicate functions
+
+No fallback code - Works or doesn't work - no middle ground
+
+Each function has its own file
+
+Uses existing UI components
+
+Keep the current theme and GUI layout once it's complete.
+
+Anything related to img, starts with img, like img_creator or img_validater, for example.
+Anything related to txd starts with txd_converter, for example.
+
+I have created a components/ folder so I can clean up the main folder, gui/ for theme functions and themes for .json themes.
+
+Rule: Once GUI and theme are finalized → theme application stays at the end of GUI setup and no individual style overrides.
+
+At the start of the project, confirm you have read this file.
