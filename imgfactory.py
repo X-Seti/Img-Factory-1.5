@@ -279,10 +279,17 @@ class IMGFactory(QMainWindow):
             apply_theme_to_app(QApplication.instance(), self.app_settings)
         
         # Apply COL integration after creating the main interface
-        if setup_col_integration(self):
-            self.log_message("COL functionality integrated successfully")
-        else:
-            self.log_message("Failed to integrate COL functionality")
+        # COL integration setup - with error handling
+        try:
+            from main_col_integration import setup_col_integration
+            if setup_col_integration(self):
+                self.log_message("COL functionality integrated successfully")
+            else:
+                self.log_message("COL functionality not available")
+        except ImportError:
+            self.log_message("COL integration not available - continuing without COL support")
+        except Exception as e:
+            self.log_message(f"COL integration error: {str(e)} - continuing without COL support")
         
         # Log startup
         self.log_message("IMG Factory 1.5 initialized")
@@ -1351,13 +1358,6 @@ def main():
     # Create main window
     window = IMGFactory(settings)
     
-
-    # COL integration setup
-    if setup_col_integration(window):
-        window.log_message("COL functionality integrated successfully")
-    else:
-        window.log_message("COL functionality not available")
-
     # Show window
     window.show()
     
