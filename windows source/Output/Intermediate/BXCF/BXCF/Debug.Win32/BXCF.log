@@ -1,0 +1,71 @@
+﻿  Vec4f.cpp
+  Vec3f.cpp
+  Vec2f.cpp
+  Colour.cpp
+h:\sdks\projects\new-img-factory\bxcf\code\bxcf\type\colour\colour.cpp(39): warning C4244: 'initializing': conversion from 'float' to 'int32', possible loss of data
+h:\sdks\projects\new-img-factory\bxcf\code\bxcf\type\colour\colour.cpp(40): warning C4244: '=': conversion from 'int32' to 'uint8', possible loss of data
+h:\sdks\projects\new-img-factory\bxcf\code\bxcf\type\colour\colour.cpp(41): warning C4244: '=': conversion from 'int32' to 'uint8', possible loss of data
+h:\sdks\projects\new-img-factory\bxcf\code\bxcf\type\colour\colour.cpp(42): warning C4244: '=': conversion from 'int32' to 'uint8', possible loss of data
+h:\sdks\projects\new-img-factory\bxcf\code\bxcf\type\colour\colour.cpp(47): warning C4244: 'initializing': conversion from 'float' to 'int32', possible loss of data
+h:\sdks\projects\new-img-factory\bxcf\code\bxcf\type\colour\colour.cpp(48): warning C4244: '=': conversion from 'int32' to 'uint8', possible loss of data
+h:\sdks\projects\new-img-factory\bxcf\code\bxcf\type\colour\colour.cpp(49): warning C4244: '=': conversion from 'int32' to 'uint8', possible loss of data
+h:\sdks\projects\new-img-factory\bxcf\code\bxcf\type\colour\colour.cpp(50): warning C4244: '=': conversion from 'int32' to 'uint8', possible loss of data
+  Timers.cpp
+  Timer.cpp
+  DataWriter.cpp
+  DataStream.cpp
+  DataReader.cpp
+  Tokens.cpp
+  Timing.cpp
+  String.cpp
+  StdVector.cpp
+  Registry.cpp
+  Process.cpp
+  Path.cpp
+  Number.cpp
+  Memory.cpp
+  Math.cpp
+  Input.cpp
+  Generating Code...
+  Compiling...
+  File.cpp
+  Debug.cpp
+  DataPath.cpp
+  LinkLayer.cpp
+  IP.cpp
+  ICMP.cpp
+  HTTP.cpp
+  VectorPool.cpp
+  UMapContainer.cpp
+  PlatformManager.cpp
+  LocalizationManager.cpp
+  LocalizationFormat.cpp
+  RasterDataFormatManager.cpp
+  RasterDataFormat.cpp
+  ImageManager.cpp
+  ImageFile.cpp
+  URL.cpp
+  INIManager.cpp
+  JSONManager.cpp
+  ICOManager.cpp
+  Generating Code...
+  Compiling...
+  ICOFormat.cpp
+  DDSManager.cpp
+  DDSFormat.cpp
+  CURManager.cpp
+  CURFormat.cpp
+  BMPManager.cpp
+  BMPFormat.cpp
+  FormatManager.cpp
+  Format.cpp
+h:\sdks\projects\new-img-factory\bxcf\code\bxcf\format\format.cpp(100): warning C4101: 'uiErrorCode': unreferenced local variable
+h:\sdks\projects\new-img-factory\bxcf\code\bxcf\format\format.cpp(117): warning C4101: 'uiErrorCode': unreferenced local variable
+  Events.cpp
+  CompressionManager.cpp
+  nsbxcf.cpp
+  ContainerFormat.cpp
+  EncryptionManager.cpp
+  CrashManager.cpp
+  Generating Code...
+  BXCF.vcxproj -> H:\SDKs\Projects\new-img-factory\BXCF\Compiler\Projects\BXCF\../../../../Output/Final/BXCF/Debug.Win32/BXCF.lib
