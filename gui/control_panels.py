@@ -502,7 +502,6 @@ def create_canvas_settings_panel(main_window):
     bg_btn = QPushButton("🎨")
     bg_btn.setToolTip("Choose background color")
     bg_btn.setMaximumWidth(40)
-    if hasattr(main_window, 'choose_background_color'):
 
     bg_layout.addWidget(bg_btn)
     bg_layout.addStretch()
