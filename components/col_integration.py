@@ -53,7 +53,6 @@ class COLListWidget(QWidget):
         super().__init__(parent)
         self.col_files: List[COLFile] = []
         self.setup_ui()
-        self.connect_signals()
     
     def setup_ui(self):
         """Setup the COL list UI"""
@@ -104,16 +103,7 @@ class COLListWidget(QWidget):
         # Status
         self.status_label = QLabel("No COL files loaded")
         layout.addWidget(self.status_label)
-    
-    def connect_signals(self):
-        """Connect UI signals"""
-        self.load_col_btn.clicked.connect(self.load_col_file)
-        self.edit_col_btn.clicked.connect(self.edit_selected_col)
-        self.save_col_btn.clicked.connect(self.save_selected_col)
-        self.remove_col_btn.clicked.connect(self.remove_selected_col)
-        
-        self.col_table.customContextMenuRequested.connect(self.show_context_menu)
-    
+
     def load_col_file(self):
         """Load COL file dialog"""
         file_path, _ = QFileDialog.getOpenFileName(

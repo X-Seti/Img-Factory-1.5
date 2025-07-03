@@ -511,108 +511,6 @@ class IMGFactoryGUILayout:
         self.main_window.setStatusBar(self.status_bar)
 
 
-
-    def connect_button_signals(self):
-        """Public method to connect all button signals - call this after UI creation"""
-        try:
-            self._connect_all_button_signals()
-            self.log_message("Button signals connected successfully")
-        except Exception as e:
-            self.log_message(f"Error connecting button signals: {str(e)}")
-
-    def _connect_all_button_signals(self):
-        """Connect all button signals to their respective functions"""
-        # Connect IMG buttons
-        self._connect_img_buttons()
-        # Connect entry buttons
-        self._connect_entry_buttons()
-        # Connect options buttons if they exist
-        if hasattr(self, 'options_buttons'):
-            self._connect_options_buttons()
-
-    def _connect_img_buttons(self):
-        """Connect IMG operation buttons to their functions"""
-        button_map = {
-            "New": self.main_window.create_new_img,
-            "Open": self.main_window.open_img_file,
-            "Close": self.main_window.close_img_file,
-            "Close All": self.main_window.close_all_img,
-            "Rebuild": self.main_window.rebuild_img,
-            "Rebuild As": self.main_window.rebuild_img_as,
-            "Rebuild All": self.main_window.rebuild_all_img,
-            "Merge": self.main_window.merge_img,
-            "Split": self.main_window.split_img,
-            "Convert": self.main_window.convert_img
-        }
-
-        connected_count = 0
-        for button in self.img_buttons:
-            if hasattr(button, 'full_text'):
-                func = button_map.get(button.full_text)
-                if func:
-                    button.clicked.connect(func)
-                    connected_count += 1
-                    print(f"Connected IMG button: {button.full_text} -> {func.__name__}")
-
-        self.log_message(f"Connected {connected_count} IMG buttons")
-
-    def _connect_col_buttons(self):
-        """Connect COL functionality buttons"""
-        if not hasattr(self, 'col_buttons'):
-            return
-
-        button_map = {
-            "Col Edit": self.main_window.open_col_editor,
-            "Txd Edit": self.main_window.open_txd_editor,
-            "Dff Edit": self.main_window.open_dff_editor,
-            "Ipf Edit": self.main_window.open_ipf_editor,
-            "IPL Edit": self.main_window.open_ipl_editor,
-            "IDE Edit": self.main_window.open_ide_editor,
-            "Dat Edit": self.main_window.open_dat_editor,
-            "Zons Edit": self.main_window.open_zons_editor,
-            "Weap Edit": self.main_window.open_weap_editor,
-            "Vehi Edit": self.main_window.open_vehi_editor,
-            "Radar Map": self.main_window.open_radar_map,
-            "Paths Map": self.main_window.open_paths_map,
-            "Waterpro": self.main_window.open_waterpro
-        }
-
-        connected_count = 0
-        for button in self.col_buttons:
-            if hasattr(button, 'full_text'):
-                func = button_map.get(button.full_text)
-                if func:
-                    button.clicked.connect(func)
-                    connected_count += 1
-                    print(f"Connected COL button: {button.full_text} -> {func.__name__}")
-
-        self.log_message(f"Connected {connected_count} COL buttons")
-
-    def _connect_entry_buttons(self):
-        """Connect entry operation buttons to their functions"""
-        button_map = {
-            "Import": self.main_window.import_files,
-            "Import via": self.main_window.import_via_tool,
-            "Export": self.main_window.export_selected,
-            "Export via": self.main_window.export_via_tool,
-            "Remove": self.main_window.remove_selected,
-            "Remove All": self.main_window.remove_all_entries,
-            "Update list": self.main_window.refresh_table,
-            "Quick Export": self.main_window.quick_export,
-            "Pin selected": self.main_window.pin_selected
-        }
-
-        connected_count = 0
-        for button in self.entry_buttons:
-            if hasattr(button, 'full_text'):
-                func = button_map.get(button.full_text)
-                if func:
-                    button.clicked.connect(func)
-                    connected_count += 1
-                    print(f"Connected Entry button: {button.full_text} -> {func.__name__}")
-
-        self.log_message(f"Connected {connected_count} entry buttons")
-
     def update_file_info(self, filename=None, file_type=None, item_count=0, file_size=0):
         """Update the file information display"""
         if filename:
@@ -758,22 +656,7 @@ class IMGFactoryGUILayout:
                     # Icon only mode
                     button.setText("")
 
-    def connect_table_signals(self):
-        """Connect signals for table interactions"""
-        if self.table:
-            self.table.itemSelectionChanged.connect(self.main_window.on_selection_changed)
-            self.table.itemDoubleClicked.connect(self.main_window.on_item_double_clicked)
 
-    def on_selection_changed(self):
-        """Handle table selection change"""
-        selected_items = self.table.selectedItems()
-        if selected_items:
-            self.log_message(f"Selected: {selected_items[0].text()}")
-
-    def on_item_double_clicked(self, item):
-        """Handle double-click on table item"""
-        filename = self.table.item(item.row(), 0).text()
-        self.log_message(f"Double-clicked: {filename}")
     
     def _get_short_text(self, full_text):
         """Get abbreviated text for buttons when space is limited"""
@@ -845,11 +728,6 @@ class IMGFactoryGUILayout:
                     # Icon only mode
                     button.setText("")
 
-    def _connect_signals(self):
-        """Connect signals for table interactions"""
-        self.table.itemSelectionChanged.connect(self.on_selection_changed)
-        self.table.itemDoubleClicked.connect(self.on_item_double_clicked)
-
     def _add_sample_data(self):
         """Add sample data to show the interface"""
         sample_entries = [
@@ -871,81 +749,6 @@ class IMGFactoryGUILayout:
     def add_sample_data(self):
         """Public method to add sample data - calls private method"""
         self._add_sample_data()
-
-    def _connect_all_button_signals(self):
-        """Connect all button signals to their respective functions - ADD TO create_main_ui_with_splitters"""
-        # Connect IMG buttons
-        self._connect_img_buttons()
-        # Connect entry buttons
-        self._connect_entry_buttons()
-        # Connect options buttons if they exist
-        if hasattr(self, 'options_buttons'):
-            self._connect_options_buttons()
-
-    def _connect_img_buttons(self):
-        """Connect IMG operation buttons to their functions"""
-        button_map = {
-            "New": self.main_window.create_new_img,
-            "Open": self.main_window.open_img_file,
-            "Close": self.main_window.close_img_file,
-            "Close All": self.main_window.close_all_img,
-            "Rebuild": self.main_window.rebuild_img,
-            "Rebuild As": self.main_window.rebuild_img_as,
-            "Rebuild All": self.main_window.rebuild_all_img,
-            "Merge": self.main_window.merge_img,
-            "Split": self.main_window.split_img,
-            "Convert": self.main_window.convert_img
-        }
-
-        for button in self.img_buttons:
-            if hasattr(button, 'full_text'):
-                func = button_map.get(button.full_text)
-                if func:
-                    button.clicked.connect(func)
-
-    def _connect_entry_buttons(self):
-        """Connect entry operation buttons to their functions"""
-        button_map = {
-            "Import": self.main_window.import_files,
-            "Import via": self.main_window.import_via_tool,
-            "Export": self.main_window.export_selected,
-            "Export via": self.main_window.export_via_tool,
-            "Remove": self.main_window.remove_selected,
-            "Remove All": self.main_window.remove_all_entries,
-            "Update list": self.main_window.refresh_table,
-            "Quick Export": self.main_window.quick_export,
-            "Pin selected": self.main_window.pin_selected
-        }
-
-        for button in self.entry_buttons:
-            if hasattr(button, 'full_text'):
-                func = button_map.get(button.full_text)
-                if func:
-                    button.clicked.connect(func)
-
-    def _connect_options_buttons(self):
-        """Connect COL and editor buttons"""
-        button_map = {
-            "Col Edit": self.main_window.open_col_editor,
-            "Txd Edit": self.main_window.open_txd_editor,
-            "Dff Edit": self.main_window.open_dff_editor,
-            "Ipf Edit": self.main_window.open_ipf_editor,
-            "IPL Edit": self.main_window.open_ipl_editor,
-            "IDE Edit": self.main_window.open_ide_editor,
-            "Dat Edit": self.main_window.open_dat_editor,
-            "Zons Cull Ed": self.main_window.open_zons_editor,
-            "Weap Edit": self.main_window.open_weap_editor,
-            "Vehi Edit": self.main_window.open_vehi_editor,
-            "Radar Map": self.main_window.open_radar_map,
-            "Paths Map": self.main_window.open_paths_map,
-            "Waterpro": self.main_window.open_waterpro
-        }
-
-        for button in self.options_buttons:
-            if hasattr(button, 'full_text'):
-                func = button_map.get(button.full_text)
-                if func:
-                    button.clicked.connect(func)
 
     # logging
     def log_message(self, message):
@@ -1138,7 +941,7 @@ class IMGFactoryGUILayout:
             self._apply_right_panel_width(width)
             # Could apply other settings here for preview
         
-        preview_btn.clicked.connect(preview_changes)
+        #preview_btn.clicked.connect(preview_changes)
         button_layout.addWidget(preview_btn)
         
         apply_btn = QPushButton("✅ Apply & Save")
@@ -1169,7 +972,7 @@ class IMGFactoryGUILayout:
             self.log_message(f"GUI settings applied: {width}px panel, {font_combo.currentText()} font")
             dialog.accept()
         
-        apply_btn.clicked.connect(apply_changes)
+        #apply_btn.clicked.connect(apply_changes)
         button_layout.addWidget(apply_btn)
         
         reset_btn = QPushButton("🔄 Reset to Defaults")

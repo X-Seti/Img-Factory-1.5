@@ -515,7 +515,6 @@ class FilterPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._setup_ui()
-        self._connect_signals()
     
     def _setup_ui(self):
         """Setup filter panel UI"""
@@ -565,19 +564,7 @@ class FilterPanel(QWidget):
         filter_layout.addStretch()
         
         layout.addLayout(filter_layout)
-    
-    def _connect_signals(self):
-        """Connect UI signals"""
-        # Use QTimer for search debouncing
-        self.search_timer = QTimer()
-        self.search_timer.setSingleShot(True)
-        self.search_timer.timeout.connect(self._emit_filter_changed)
-        
-        self.search_input.textChanged.connect(self._on_search_changed)
-        self.file_type_combo.currentTextChanged.connect(self._emit_filter_changed)
-        self.clear_button.clicked.connect(self._clear_filters)
-        self.recent_button.clicked.connect(self._show_recent_files)
-    
+
     def _on_search_changed(self):
         """Handle search text changes with debouncing"""
         self.search_timer.stop()
@@ -631,10 +618,9 @@ class IMGEntriesTable(QTableWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._setup_table()
-        self._connect_signals()
         self.entries = []
         
-    def _setup_table(self):
+    def _setup_table(self): #kept
         """Setup table appearance and headers"""
         headers = ["Name", "Type", "Size", "Offset", "Version", "Compression", "Status"]
         self.setColumnCount(len(headers))
@@ -659,73 +645,8 @@ class IMGEntriesTable(QTableWidget):
         # Enable sorting
         self.setSortingEnabled(True)
         
-    def _connect_signals(self):
-        """Connect table signals"""
-        # Only connect double-click, let main application handle selection logging
-        self.itemDoubleClicked.connect(self._on_item_double_clicked)
-        # Do NOT connect selection change signals to prevent duplicates
-    
-    """
-    def _on_selection_changed(self):
-        #Handle selection changes - emit only once per selection change
-        selected_rows = self.get_selected_entries()
-        # Only emit if selection actually changed
-        if hasattr(self, '_last_selection') and self._last_selection == selected_rows:
-            return
-        self._last_selection = selected_rows.copy()
-        self.entries_selected.emit(selected_rows)
-    """
 
-    def _on_selection_changed(self):
-        selected_rows = self.entries_table.selectionModel().selectedRows()
-
-        # Update button states (existing code)
-        has_selection = len(selected_rows) > 0
-        self.export_btn.setEnabled(has_selection and self.current_img)
-        # ... other button updates
-
-        # Log selection ONCE - NOT in a loop
-        if has_selection:
-            if len(selected_rows) == 1:
-                name_item = self.entries_table.item(selected_rows[0].row(), 0)
-                if name_item:
-                    self.log_message(f"Selected: {name_item.text()}")
-            else:
-                self.log_message(f"Selected {len(selected_rows)} entries")
-
-    def _on_item_double_clicked(self, item):
-        """Handle double click on item"""
-        row = item.row()
-        self.entry_double_clicked.emit(row)
-    
-    def connect_selection_handler(self, handler):
-        """Manually connect selection handler to prevent auto-connection duplicates"""
-        # Disconnect any existing selection signals first
-        try:
-            self.selectionModel().selectionChanged.disconnect()
-        except:
-            pass
-        # Connect with proper selection change handling
-        self.selectionModel().selectionChanged.connect(lambda: self._handle_selection_change(handler))
-    
-    def _handle_selection_change(self, handler):
-        """Handle selection change with deduplication"""
-        # Get currently selected rows
-        selected_rows = self.get_selected_entries()
-        
-        # Check if this is actually a new selection
-        if hasattr(self, '_last_selection_state'):
-            if self._last_selection_state == selected_rows:
-                return  # No change, don't call handler
-        
-        # Store current selection state
-        self._last_selection_state = selected_rows.copy()
-        
-        # Call the handler
-        if handler:
-            handler()
-    
-    def populate_entries(self, entries: List[IMGEntry]):
+    def populate_entries(self, entries: List[IMGEntry]): #kept
         """Populate table with IMG entries"""
         self.entries = entries
         self.setRowCount(len(entries))
@@ -758,7 +679,7 @@ class IMGEntriesTable(QTableWidget):
             status = "Modified" if entry.is_new_entry or entry.is_replaced else "Original"
             self.setItem(row, 6, QTableWidgetItem(status))
     
-    def get_selected_entries(self) -> List[int]:
+    def get_selected_entries(self) -> List[int]: #kept
         """Get list of selected entry indices"""
         selected_rows = []
         for item in self.selectedItems():
@@ -802,7 +723,7 @@ class IMGEntriesTable(QTableWidget):
             if row not in current_selection:
                 self.selectRow(row)
     
-    def apply_filter(self, filter_text="", file_type="All Files"):
+    def apply_filter(self, filter_text="", file_type="All Files"): #kept
         """Apply filtering to table entries - FIXED VERSION"""
         if not hasattr(self, 'entries') or not self.entries:
             return
@@ -1093,18 +1014,3 @@ __all__ = [
     'populate_entry_details_after_load'
 ]
 
-# IMPORTANT USAGE NOTES FOR MAIN APPLICATION:
-#
-# To prevent duplicate activity log entries, the main application should:
-#
-# 1. Connect to table selection changes manually in _connect_signals():
-#    self.entries_table.selectionModel().selectionChanged.connect(self._on_selection_changed)
-#
-# 2. In _on_selection_changed(), use get_selection_summary() to log once:
-#    summary = self.entries_table.get_selection_summary()
-#    if "Selected:" in summary:  # Only log actual selections, not "no selection"
-#        self.log_message(summary)
-#
-# 3. Do NOT log individual entries in a loop - use the summary method instead
-#
-# This prevents the multiple "Selected: army.dff" entries shown in the activity log.

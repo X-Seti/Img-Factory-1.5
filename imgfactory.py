@@ -35,7 +35,7 @@ from PyQt6.QtWidgets import (
     QGridLayout, QMenu, QButtonGroup, QRadioButton
 )
 print("PyQt6.QtCore imported successfully")
-from PyQt6.QtCore import Qt, QThread, pyqtSignal,  QTimer, QSettings, QMimeData
+from PyQt6.QtCore import Qt, QThread, pyqtSignal,  QTimer, QSettings, QMimeData, QTimer
 from PyQt6.QtGui import QAction, QFont, QIcon, QPixmap, QDragEnterEvent, QDropEvent, QContextMenuEvent
 
 from app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
@@ -340,13 +340,13 @@ class IMGFactory(QMainWindow):
         # Set icon if provided
         if icon:
             btn.setIcon(QIcon.fromTheme(icon))
-        
+
         # Connect callback if provided
         if callback:
             btn.clicked.connect(callback)
         else:
             btn.setEnabled(False)  # Disable buttons without callbacks
-        
+
         return btn
     
     def themed_button(self, label, action_type=None, icon=None, bold=False):
