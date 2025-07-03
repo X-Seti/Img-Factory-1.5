@@ -289,22 +289,173 @@ class IMGFactory(QMainWindow):
         # Log startup
         self.log_message("IMG Factory 1.5 initialized")
     
+
     def setup_unified_signals(self):
-        """Setup unified signal system"""
+        """Setup unified signal handler for all table interactions"""
         from components.unified_signal_handler import connect_table_signals
 
-        success = connect_table_signals("main", self.gui_layout.table, self,
-                                    self._on_selection, self._on_double_click)
+        # Connect main entries table to unified system
+        success = connect_table_signals(
+            table_name="main_entries",
+            table_widget=self.gui_layout.table,
+            parent_instance=self,
+            selection_callback=self._unified_selection_handler,
+            double_click_callback=self._unified_double_click_handler
+        )
+
         if success:
-            self.log_message("✅ Unified signals connected")
+            self.log_message("✅ Unified signal system connected")
+        else:
+            self.log_message("❌ Failed to connect unified signals")
 
-    def _on_selection(self, selected_rows, count):
-        if count > 0:
-            self.log_message(f"{count} entries selected")
+        # Connect unified signals to status bar updates
+        from components.unified_signal_handler import signal_handler
+        signal_handler.status_update_requested.connect(self._update_status_from_signal)
 
-    def _on_double_click(self, row, filename, item):
+    def _unified_selection_handler(self, selected_rows, selection_count):
+        """Handle selection changes through unified system"""
+        # Update button states based on selection
+        has_selection = selection_count > 0
+        self._update_button_states(has_selection)
+
+        # Log selection (unified approach - no spam)
+        if selection_count == 0:
+            # Don't log "Ready" for empty selection to reduce noise
+            pass
+        elif selection_count == 1:
+            # Get filename of selected item
+            if selected_rows and len(selected_rows) > 0:
+                row = selected_rows[0]
+                if row < self.gui_layout.table.rowCount():
+                    name_item = self.gui_layout.table.item(row, 0)
+                    if name_item:
+                        self.log_message(f"Selected: {name_item.text()}")
+        else:
+            self.log_message(f"Selected {selection_count} entries")
+
+    def _unified_double_click_handler(self, row, filename, item):
+        """Handle double-click through unified system"""
         self.log_message(f"Double-clicked: {filename}")
 
+        # TODO: Add double-click functionality (preview, extract, etc.)
+        # For now, show info about the item if IMG is loaded
+        if self.current_img and row < len(self.current_img.entries):
+            entry = self.current_img.entries[row]
+            from components.img_core_classes import format_file_size
+            self.log_message(f"File info: {entry.name} ({format_file_size(entry.size)})")
+
+    def _update_status_from_signal(self, message):
+        """Update status from unified signal system"""
+        # Update status bar if available
+        if hasattr(self, 'statusBar') and self.statusBar():
+            self.statusBar().showMessage(message)
+
+        # Also update GUI layout status if available
+        if hasattr(self.gui_layout, 'status_label'):
+            self.gui_layout.status_label.setText(message)
+
+    def _update_button_states(self, has_selection):
+        """Update button enabled/disabled states based on selection"""
+        # Enable/disable buttons based on selection and loaded IMG
+        has_img = self.current_img is not None
+
+        # Find buttons in GUI layout and update their states
+        # These buttons need both an IMG and selection
+        selection_dependent_buttons = [
+            'export_btn', 'export_selected_btn', 'remove_btn', 'remove_selected_btn',
+            'extract_btn', 'quick_export_btn'
+        ]
+
+        for btn_name in selection_dependent_buttons:
+            if hasattr(self.gui_layout, btn_name):
+                button = getattr(self.gui_layout, btn_name)
+                if hasattr(button, 'setEnabled'):
+                    button.setEnabled(has_selection and has_img)
+
+        # These buttons only need an IMG (no selection required)
+        img_dependent_buttons = [
+            'import_btn', 'import_files_btn', 'rebuild_btn', 'close_btn',
+            'validate_btn', 'refresh_btn'
+        ]
+
+        for btn_name in img_dependent_buttons:
+            if hasattr(self.gui_layout, btn_name):
+                button = getattr(self.gui_layout, btn_name)
+                if hasattr(button, 'setEnabled'):
+                    button.setEnabled(has_img)
+
+    def show_search_dialog(self):
+        """Show search dialog and connect to unified system"""
+        from gui.dialogs import show_search_dialog
+
+        # Create and show search dialog
+        self.search_dialog = show_search_dialog(self)
+
+        # Connect the search_requested signal to our search handler
+        if hasattr(self.search_dialog, 'search_requested'):
+            self.search_dialog.search_requested.connect(self.perform_search)
+            self.log_message("Search dialog opened")
+        else:
+            self.log_message("Search dialog error - signal not found")
+
+    def perform_search(self, search_text, options):
+        """Perform search in current IMG entries using unified system"""
+        try:
+            if not self.current_img or not self.current_img.entries:
+                self.log_message("No IMG file loaded or no entries to search")
+                if hasattr(self, 'search_dialog'):
+                    self.search_dialog.update_results(0, 0)
+                return
+
+            # Perform search
+            matches = []
+            total_entries = len(self.current_img.entries)
+
+            for i, entry in enumerate(self.current_img.entries):
+                entry_name = entry.name
+
+                # Apply search options
+                if not options.get('case_sensitive', False):
+                    entry_name = entry_name.lower()
+                    search_text = search_text.lower()
+
+                # Check if matches
+                if options.get('whole_word', False):
+                    import re
+                    pattern = r'\b' + re.escape(search_text) + r'\b'
+                    if re.search(pattern, entry_name):
+                        matches.append(i)
+                elif options.get('regex', False):
+                    import re
+                    try:
+                        if re.search(search_text, entry_name):
+                            matches.append(i)
+                    except re.error:
+                        self.log_message("Invalid regular expression")
+                        return
+                else:
+                    # Simple text search
+                    if search_text in entry_name:
+                        matches.append(i)
+
+            # Update search dialog results
+            if hasattr(self, 'search_dialog'):
+                self.search_dialog.update_results(len(matches), total_entries)
+
+            # Select matching entries in table using unified system
+            if matches:
+                from components.unified_signal_handler import signal_handler
+                if signal_handler.select_rows("main_entries", matches):
+                    self.log_message(f"Found {len(matches)} matches for '{search_text}'")
+                else:
+                    self.log_message(f"Found {len(matches)} matches but couldn't select them")
+            else:
+                self.log_message(f"No matches found for '{search_text}'")
+
+        except Exception as e:
+            self.log_message(f"Search error: {str(e)}")
+
+    # MODIFY the _create_ui() method to call setup_unified_signals():
 
     def _create_ui(self):
         """Create the main user interface"""
@@ -316,15 +467,19 @@ class IMGFactory(QMainWindow):
         main_layout.setContentsMargins(5, 5, 5, 5)
 
         self.gui_layout.create_main_ui_with_splitters(main_layout)
-
-        #self.gui_layout.create_menu_bar()
         self.gui_layout.create_status_bar()
-
-        # Apply theme to table
         self.gui_layout.apply_table_theme()
-
-        # Add sample data for demonstration
         self.gui_layout.add_sample_data()
+
+        # REPLACE any old signal connection calls with:
+        # Setup unified signal system
+        self.setup_unified_signals()
+
+    # ALSO ADD a method to handle menu search action:
+
+    def handle_menu_search(self):
+        """Handle search from menu (Ctrl+F)"""
+        self.show_search_dialog()
 
 
     def resizeEvent(self, event):
