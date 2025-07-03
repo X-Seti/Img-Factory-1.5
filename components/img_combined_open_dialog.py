@@ -280,10 +280,6 @@ class CombinedOpenDialog(QDialog):
         
         layout.addLayout(button_layout)
     
-    def _connect_signals(self):
-        """Connect signals"""
-        self.mode_group.buttonClicked.connect(self._on_mode_changed)
-    
     def _on_mode_changed(self, button):
         """Handle mode change"""
         is_multi = button == self.multi_mode
