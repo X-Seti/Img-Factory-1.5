@@ -35,7 +35,7 @@ from PyQt6.QtWidgets import (
     QGridLayout, QMenu, QButtonGroup, QRadioButton
 )
 print("PyQt6.QtCore imported successfully")
-from PyQt6.QtCore import Qt, QThread, pyqtSignal,  QTimer, QSettings, QMimeData, QTimer
+from PyQt6.QtCore import Qt, QThread, pyqtSignal,  QTimer, QSettings, QMimeData
 from PyQt6.QtGui import QAction, QFont, QIcon, QPixmap, QDragEnterEvent, QDropEvent, QContextMenuEvent
 
 from app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
@@ -254,11 +254,6 @@ class IMGFactory(QMainWindow):
         self.gui_layout = IMGFactoryGUILayout(self)
         self.menu_bar_system = IMGFactoryMenuBar(self)
 
-        # Add selection timer for debouncing
-        #self.selection_timer = QTimer()
-        #self.selection_timer.setSingleShot(True)
-        #self.selection_timer.timeout.connect(self._update_selection_status)
-
         callbacks = {
             "about": self.show_about,
             "open_img": self.open_img_file,
@@ -319,31 +314,6 @@ class IMGFactory(QMainWindow):
 
         # Connect signals manually (add this line)
         print("GUI Layout attributes:", [attr for attr in dir(self.gui_layout) if 'table' in attr.lower()])
-
-    def _update_selection_status(self):
-        """Actually update the selection status (called after debounce)"""
-        print("DEBUG: _update_selection_status called")
-
-        # Find the table - it's called 'table' not 'entries_table'
-        table = getattr(self, 'entries_table', None) or getattr(self.gui_layout, 'table', None)
-        print(f"DEBUG: Found table: {table}")
-
-        if table:
-            selected_rows = len(table.selectionModel().selectedRows())
-            print(f"DEBUG: Selected rows: {selected_rows}")
-            if selected_rows > 0:
-                # Find the status label
-                status_label = getattr(self, 'status_label', None) or getattr(self.gui_layout, 'status_label', None)
-                if status_label:
-                    status_label.setText(f"{selected_rows} entries selected")
-                else:
-                    print("DEBUG: No status_label found")
-            else:
-                status_label = getattr(self, 'status_label', None) or getattr(self.gui_layout, 'status_label', None)
-                if status_label:
-                    status_label.setText("Ready")
-        else:
-            print("DEBUG: No table found!")
 
 
     def resizeEvent(self, event):
