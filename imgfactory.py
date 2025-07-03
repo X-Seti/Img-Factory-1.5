@@ -35,7 +35,7 @@ from PyQt6.QtWidgets import (
     QGridLayout, QMenu, QButtonGroup, QRadioButton
 )
 print("PyQt6.QtCore imported successfully")
-from PyQt6.QtCore import Qt, QThread, pyqtSignal,  QTimer, QSettings, QMimeData, QTimer
+from PyQt6.QtCore import Qt, QThread, pyqtSignal,  QTimer, QSettings, QMimeData
 from PyQt6.QtGui import QAction, QFont, QIcon, QPixmap, QDragEnterEvent, QDropEvent, QContextMenuEvent
 
 from app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
@@ -311,9 +311,6 @@ class IMGFactory(QMainWindow):
 
         # Add sample data for demonstration
         self.gui_layout.add_sample_data()
-
-        # Connect signals manually (add this line)
-        print("GUI Layout attributes:", [attr for attr in dir(self.gui_layout) if 'table' in attr.lower()])
 
 
     def resizeEvent(self, event):
