@@ -432,15 +432,15 @@ class IMGFactoryGUILayout:
         return right_panel
     
     def _create_pastel_button(self, label, action_type, icon, bg_color, method_name):
-        """Create a button with pastel coloring and connect to method - FIXED CONNECTIONS"""
+        """Create a button with pastel coloring and connect to method"""
         btn = QPushButton(label)
         btn.setMaximumHeight(22)
         btn.setMinimumHeight(20)
-        
+
         # Set icon if provided
         if icon:
             btn.setIcon(QIcon.fromTheme(icon))
-        
+
         # Apply pastel styling
         btn.setStyleSheet(f"""
             QPushButton {{
@@ -453,28 +453,31 @@ class IMGFactoryGUILayout:
                 color: #333333;
             }}
             QPushButton:hover {{
-                background-color: {self._darken_color(bg_color, 10)};
-                border-color: #999999;
+                background-color: {self._darken_color(bg_color, 0.85)};
+                border: 1px solid #999999;
             }}
             QPushButton:pressed {{
-                background-color: {self._darken_color(bg_color, 20)};
-                border-color: #666666;
-            }}
-            QPushButton:disabled {{
-                background-color: #f0f0f0;
-                color: #999999;
-                border: 1px solid #dddddd;
+                background-color: {self._darken_color(bg_color, 0.7)};
             }}
         """)
-        
-        # FIXED: Connect button to method if it exists
-        if method_name and hasattr(self.main_window, method_name):
-            method = getattr(self.main_window, method_name)
-            btn.clicked.connect(method)
-        else:
-            # Connect to placeholder method that logs the action
-            btn.clicked.connect(lambda: self._handle_button_click(label, method_name))
-        
+
+        # Set action type property
+        btn.setProperty("action-type", action_type)
+
+        # Connect to main window method
+        try:
+            if hasattr(self.main_window, method_name):
+                method = getattr(self.main_window, method_name)
+                btn.clicked.connect(method)
+                print(f"✅ Connected '{label}' to {method_name}")
+            else:
+                # Create placeholder that logs the missing method
+                btn.clicked.connect(lambda: self.main_window.log_message(f"Method '{method_name}' not implemented"))
+                print(f"⚠️ Method '{method_name}' not found for '{label}'")
+        except Exception as e:
+            print(f"❌ Error connecting button '{label}': {e}")
+            btn.clicked.connect(lambda: self.main_window.log_message(f"Button '{label}' connection error"))
+
         return btn
     
     def _handle_button_click(self, button_label, method_name):
@@ -484,24 +487,26 @@ class IMGFactoryGUILayout:
         else:
             print(f"Button clicked: {button_label} -> {method_name}")
     
-    def _darken_color(self, hex_color, percentage):
-        """Darken a hex color by a percentage"""
-        # Remove # if present
-        hex_color = hex_color.lstrip('#')
-        
-        # Convert to RGB
-        r = int(hex_color[0:2], 16)
-        g = int(hex_color[2:4], 16)
-        b = int(hex_color[4:6], 16)
-        
-        # Darken
-        factor = (100 - percentage) / 100
-        r = int(r * factor)
-        g = int(g * factor)
-        b = int(b * factor)
-        
-        # Convert back to hex
-        return f"#{r:02x}{g:02x}{b:02x}"
+    def _darken_color(self, color, factor=0.8):
+        """Darken a color by a factor"""
+        try:
+            # Simple darkening - multiply RGB values
+            if color.startswith('#'):
+                hex_color = color[1:]
+                if len(hex_color) == 6:
+                    r = int(hex_color[0:2], 16)
+                    g = int(hex_color[2:4], 16)
+                    b = int(hex_color[4:6], 16)
+
+                    # Darken each component
+                    r = int(r * factor)
+                    g = int(g * factor)
+                    b = int(b * factor)
+
+                    return f"#{r:02x}{g:02x}{b:02x}"
+            return color
+        except:
+            return color
     
     def _get_short_text(self, text):
         """Get shortened text for responsive buttons"""
