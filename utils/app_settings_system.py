@@ -196,8 +196,8 @@ class AppSettings:
             "validate_before_creation": True
         }
 
-        self.current_settings = self.defaults.copy()
-        self.load_settings()
+        self.themes = self._load_all_themes()
+        self.current_settings = self.load_settings()
 
     def _get_builtin_themes(self):
         """Essential built-in themes as fallbacks"""
@@ -335,8 +335,6 @@ class AppSettings:
 
         print(f"📊 Total themes loaded: {len(self.themes)}")
 
-        self.current_settings = self.load_settings()
-
     def _load_all_themes(self):
         """Unified theme loading method"""
         themes = {}
@@ -448,11 +446,15 @@ class AppSettings:
                 settings = self.default_settings.copy()
                 settings.update(loaded_settings)
 
-                # Validate theme exists
+                # FIXED: Validate theme exists after themes are loaded
                 theme_name = settings.get("theme")
                 if theme_name and theme_name not in self.themes:
                     print(f"⚠️  Theme '{theme_name}' not found, using default")
-                    settings["theme"] = "IMG_Factory"
+                    # Use first available theme or fallback
+                    if self.themes:
+                        settings["theme"] = list(self.themes.keys())[0]
+                    else:
+                        settings["theme"] = "lightgreen"
 
                 return settings
         except Exception as e:
