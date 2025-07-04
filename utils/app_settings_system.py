@@ -59,9 +59,11 @@ class DebugSettings:
         return self.debug_enabled
 
 class AppSettings:
-    def __init__(self):
+    def __init__(self, settings_file="imgfactory.settings.json"):
+    #def __init__(self):
         # Get the directory where this file is located
         current_file_dir = Path(__file__).parent
+        self.settings_file = settings_file
 
         # FIXED: Set paths based on where we are
         if current_file_dir.name == "utils":
@@ -74,23 +76,21 @@ class AppSettings:
             self.settings_file = current_file_dir / "imgfactory.settings.json"
 
         # Debug: Show what we found
-        print(f"🎨 Themes folder: {self.themes_dir}")
-        print(f"📁 Exists: {self.themes_dir.exists()}")
+        print(f"🎨 Looking for themes in: {self.themes_dir}")
+        print(f"📁 Themes directory exists: {self.themes_dir.exists()}")
+        if self.themes_dir.exists():
+            theme_files = list(self.themes_dir.glob("*.json"))
+            print(f"📄 Found {len(theme_files)} theme files")
+            for theme_file in theme_files:
+                print(f"  - {theme_file.name}")
 
-        self.themes = {}
-
-        # Load themes from JSON files in themes/ folder
-        self._load_themes_from_files()
-
-        # Fallback hardcoded themes if no files found
-        if not self.themes:
-            self._load_default_themes()
-
-        print(f"📊 Total themes loaded: {len(self.themes)}")
+        # Load themes first
+        self.themes = self._load_all_themes()
 
         # Default settings
-        self.defaults = {
-            "theme": "lightgreen",  # Default to lightgreen instead of LCARS
+        self.default_settings = {
+            "theme": "lightgreen",
+            "name": "lightgreen",
             "font_family": "Segoe UI",
             "font_size": 9,
             "font_weight": "normal",
@@ -130,7 +130,6 @@ class AppSettings:
             "show_button_icons": False,
             "show_menu_icons": True,
             "show_emoji_in_buttons": False,
-
             # Path remembering settings (from your existing file)
             "remember_img_output_path": True,
             "last_img_output_path": "/home/x2",
@@ -150,136 +149,9 @@ class AppSettings:
             "debug_level": "INFO",
             "debug_categories": ["IMG_LOADING", "TABLE_POPULATION", "BUTTON_ACTIONS"]
         }
-
-        self.current_settings = self.defaults.copy()
-        self.load_settings()
-
-    def _load_themes_from_files(self):
-        """Load themes from JSON files in themes/ directory"""
-        themes_dir = Path("themes")
-        if not themes_dir.exists():
-            print("⚠️ themes/ directory not found - using hardcoded themes")
-            return
-
-        print("🎨 Loading themes from files...")
-        for theme_file in themes_dir.glob("*.json"):
-            try:
-                with open(theme_file, 'r') as f:
-                    theme_data = json.load(f)
-
-                # Use filename without extension as theme key
-                theme_key = theme_file.stem
-                self.themes[theme_key] = theme_data
-
-                print(f"  ✅ Loaded: {theme_key} - {theme_data.get('name', 'Unnamed')}")
-
-            except Exception as e:
-                print(f"  ❌ Failed to load {theme_file}: {e}")
-
-        print(f"📊 Total themes loaded: {len(self.themes)}")
-
-    def _load_default_themes(self):
-        """Load hardcoded fallback themes"""
-        print("🔄 Loading default hardcoded themes...")
-        self.themes = {
-            "LCARS": {
-                "name": "LCARS (Star Trek)",
-                "description": "Inspired by Enterprise computer interfaces 🖖",
-                "colors": {
-                    "bg_primary": "#1a1a2e",
-                    "bg_secondary": "#16213e",
-                    "bg_tertiary": "#0f3460",
-                    "panel_bg": "#2d2d44",
-                    "accent_primary": "#ff6600",
-                    "accent_secondary": "#9d4edd",
-                    "text_primary": "#e0e1dd",
-                    "text_secondary": "#c9ada7",
-                    "text_accent": "#f2cc8f",
-                    "button_normal": "#3a86ff",
-                    "button_hover": "#4895ff",
-                    "button_pressed": "#2563eb",
-                    "border": "#577590",
-                    "success": "#06ffa5",
-                    "warning": "#ffb700",
-                    "error": "#ff006e",
-                    "grid": "#403d58",
-                    "pin_default": "#c0c0c0",
-                    "pin_highlight": "#f9e71e",
-                    "button_text_color": "#ffffff",  # White text for dark theme
-                    "button_text_hover": "#ffffff",
-                    "button_text_pressed": "#ffffff"
-                }
-            },
-            "lightgreen": {
-                "name": "Light Green Garden",
-                "description": "Fresh green theme 🌱",
-                "colors": {
-                    "bg_primary": "#f0fdf4",
-                    "bg_secondary": "#dcfce7",
-                    "bg_tertiary": "#bbf7d0",
-                    "panel_bg": "#f7fee7",
-                    "accent_primary": "#16a34a",
-                    "accent_secondary": "#15803d",
-                    "text_primary": "#14532d",
-                    "text_secondary": "#166534",
-                    "text_accent": "#15803d",
-                    "button_normal": "#dcfce7",
-                    "button_hover": "#bbf7d0",
-                    "button_pressed": "#86efac",
-                    "border": "#d1d5db",
-                    "success": "#16a34a",
-                    "warning": "#d97706",
-                    "error": "#dc2626",
-                    "grid": "#e5e7eb",
-                    "pin_default": "#6b7280",
-                    "pin_highlight": "#16a34a",
-                    "action_import": "#dbeafe",
-                    "action_export": "#dcfce7",
-                    "action_remove": "#fee2e2",
-                    "action_update": "#fef3c7",
-                    "action_convert": "#f3e8ff",
-                    "panel_entries": "#f0fdf4",
-                    "panel_filter": "#fefce8",
-                    "toolbar_bg": "#f9fafb",
-                    "button_text_color": "#000000",  # Black text for light theme
-                    "button_text_hover": "#000000",
-                    "button_text_pressed": "#000000"
-                }
-            }
-        }
-
-
-    # Just add this method:
-
-    def get_available_themes(self) -> dict:
-        """Get all available themes with refresh option"""
-        return self.themes
-
-# ALSO UPDATE your get_theme method to handle missing themes:
-
-    def get_theme(self, theme_name=None):
-        """Get theme colors with fallback"""
-        if theme_name is None:
-            theme_name = self.current_settings["theme"]
-
-        # Handle theme name mismatches (lightyellow_theme -> lightyellow)
-        if theme_name.endswith('_theme'):
-            theme_name = theme_name[:-6]  # Remove '_theme' suffix
-
-        # Return theme or fallback to first available theme
-        if theme_name in self.themes:
-            return self.themes[theme_name]
-        else:
-            print(f"⚠️ Theme '{theme_name}' not found, using fallback")
-            fallback_theme = list(self.themes.keys())[0] if self.themes else "LCARS"
-            return self.themes.get(fallback_theme, {"colors": {}})
-
-class AppSettings:
-    def __init__(self, settings_file="imgfactory.settings.json"):  # Note: .settings not _settings
-        self.settings_file = settings_file
         self.defaults = {
-            # Theme and appearance
-            "theme": "lightgreen",
+            "theme": "just green2",
+            "name": "just green2",
             "font_family": "Segoe UI",
             "font_size": 9,
             "panel_opacity": 95,
@@ -322,13 +194,78 @@ class AppSettings:
             "remember_dialog_positions": True,
             "show_creation_tips": True,
             "validate_before_creation": True
-
         }
 
         self.current_settings = self.defaults.copy()
         self.load_settings()
 
-    # ADD: Path remembering methods
+    def _get_builtin_themes(self):
+        """Essential built-in themes as fallbacks"""
+        return {
+            "IMG_Factory": {
+                "name": "IMG Factory Professional",
+                "theme": "IMG Factory Professional",
+                "description": "Clean, organized interface inspired by IMG Factory 📁",
+                "category": "🏢 Professional",
+                "author": "X-Seti",
+                "version": "1.0",
+                "colors": {
+                    "bg_primary": "#ffffff",
+                    "bg_secondary": "#f8f9fa",
+                    "bg_tertiary": "#e9ecef",
+                    "panel_bg": "#f1f3f4",
+                    "accent_primary": "#1976d2",
+                    "accent_secondary": "#1565c0",
+                    "text_primary": "#212529",
+                    "text_secondary": "#495057",
+                    "text_accent": "#1976d2",
+                    "button_normal": "#e3f2fd",
+                    "button_hover": "#bbdefb",
+                    "button_pressed": "#90caf9",
+                    "border": "#dee2e6",
+                    "success": "#4caf50",
+                    "warning": "#ff9800",
+                    "error": "#f44336",
+                    "action_import": "#2196f3",
+                    "action_export": "#4caf50",
+                    "action_remove": "#f44336",
+                    "action_update": "#ff9800",
+                    "action_convert": "#9c27b0"
+                }
+            },
+            "just green2": {
+                "theme": "just green2",
+                "name": "just green2",
+                "description": "Clean light green theme 💚",
+                "category": "🌿 Nature",
+                "author": "X-Seti",
+                "version": "1.0",
+                "colors": {
+                    "bg_primary": "#f8fff8",
+                    "bg_secondary": "#f0f8f0",
+                    "bg_tertiary": "#e8f5e8",
+                    "panel_bg": "#f1f8f1",
+                    "accent_primary": "#4caf50",
+                    "accent_secondary": "#388e3c",
+                    "text_primary": "#1b5e20",
+                    "text_secondary": "#2e7d32",
+                    "text_accent": "#388e3c",
+                    "button_normal": "#e8f5e8",
+                    "button_hover": "#c8e6c9",
+                    "button_pressed": "#a5d6a7",
+                    "border": "#a5d6a7",
+                    "success": "#4caf50",
+                    "warning": "#ff9800",
+                    "error": "#f44336",
+                    "action_import": "#2196f3",
+                    "action_export": "#4caf50",
+                    "action_remove": "#f44336",
+                    "action_update": "#ff9800",
+                    "action_convert": "#9c27b0"
+                }
+            }
+        }
+
     def get_last_img_output_path(self) -> str:
         """Get the last used IMG output path"""
         if self.current_settings.get("remember_img_output_path", True):
@@ -374,41 +311,30 @@ class AppSettings:
             "compression_enabled": self.current_settings.get("compression_enabled_by_default", False)
         }
 
-class AppSettings:
-    """Application settings manager with extended theme support"""
+    def _load_themes_from_files(self):
+        """Load themes from JSON files in themes/ directory"""
+        themes_dir = Path("themes")
+        if not themes_dir.exists():
+            print("⚠️ themes/ directory not found - using hardcoded themes")
+            return
 
-    def __init__(self):
-        self.settings_file = Path("themer_settings.json")
-        self.themes_dir = Path("themes")
-        self.themes = self._load_all_themes()
-        
-        self.default_settings = {
-            "theme": "IMG_Factory",
-            "font_family": "Segoe UI",
-            "font_size": 9,
-            "font_weight": "normal",
-            "font_style": "normal",
-            "panel_font_family": "Segoe UI",
-            "panel_font_size": 9,
-            "panel_font_weight": "normal",
-            "button_font_family": "Segoe UI",
-            "button_font_size": 9,
-            "button_font_weight": "bold",
-            "panel_opacity": 95,
-            "show_tooltips": True,
-            "auto_save": True,
-            "show_menu_icons": True,
-            "show_button_icons": False,
-            "show_emoji_in_buttons": False,
-            "custom_button_colors": False,
-            "button_import_color": "#2196f3",
-            "button_export_color": "#4caf50",
-            "button_remove_color": "#f44336",
-            "button_update_color": "#ff9800",
-            "button_convert_color": "#9c27b0",
-            "button_default_color": "#0078d4"
-        }
-        
+        print("🎨 Loading themes from files...")
+        for theme_file in themes_dir.glob("*.json"):
+            try:
+                with open(theme_file, 'r') as f:
+                    theme_data = json.load(f)
+
+                # Use filename without extension as theme key
+                theme_key = theme_file.stem
+                self.themes[theme_key] = theme_data
+
+                print(f"  ✅ Loaded: {theme_key} - {theme_data.get('name', 'Unnamed')}")
+
+            except Exception as e:
+                print(f"  ❌ Failed to load {theme_file}: {e}")
+
+        print(f"📊 Total themes loaded: {len(self.themes)}")
+
         self.current_settings = self.load_settings()
 
     def _load_all_themes(self):
@@ -461,85 +387,20 @@ class AppSettings:
 
         return themes
 
-    def _get_builtin_themes(self):
-        """Essential built-in themes as fallbacks"""
-        return {
-            "IMG_Factory": {
-                "name": "IMG Factory Professional",
-                "description": "Clean, organized interface inspired by IMG Factory 📁",
-                "category": "🏢 Professional",
-                "author": "X-Seti",
-                "version": "1.0",
-                "colors": {
-                    "bg_primary": "#ffffff",
-                    "bg_secondary": "#f8f9fa",
-                    "bg_tertiary": "#e9ecef",
-                    "panel_bg": "#f1f3f4",
-                    "accent_primary": "#1976d2",
-                    "accent_secondary": "#1565c0",
-                    "text_primary": "#212529",
-                    "text_secondary": "#495057",
-                    "text_accent": "#1976d2",
-                    "button_normal": "#e3f2fd",
-                    "button_hover": "#bbdefb",
-                    "button_pressed": "#90caf9",
-                    "border": "#dee2e6",
-                    "success": "#4caf50",
-                    "warning": "#ff9800",
-                    "error": "#f44336",
-                    "action_import": "#2196f3",
-                    "action_export": "#4caf50",
-                    "action_remove": "#f44336",
-                    "action_update": "#ff9800",
-                    "action_convert": "#9c27b0"
-                }
-            },
-            "lightgreen": {
-                "name": "Light Green Theme",
-                "description": "Clean light green theme 💚",
-                "category": "🌿 Nature",
-                "author": "X-Seti",
-                "version": "1.0",
-                "colors": {
-                    "bg_primary": "#f8fff8",
-                    "bg_secondary": "#f0f8f0",
-                    "bg_tertiary": "#e8f5e8",
-                    "panel_bg": "#f1f8f1",
-                    "accent_primary": "#4caf50",
-                    "accent_secondary": "#388e3c",
-                    "text_primary": "#1b5e20",
-                    "text_secondary": "#2e7d32",
-                    "text_accent": "#388e3c",
-                    "button_normal": "#e8f5e8",
-                    "button_hover": "#c8e6c9",
-                    "button_pressed": "#a5d6a7",
-                    "border": "#a5d6a7",
-                    "success": "#4caf50",
-                    "warning": "#ff9800",
-                    "error": "#f44336",
-                    "action_import": "#2196f3",
-                    "action_export": "#4caf50",
-                    "action_remove": "#f44336",
-                    "action_update": "#ff9800",
-                    "action_convert": "#9c27b0"
-                }
-            }
-        }
-
     def save_theme_to_file(self, theme_name, theme_data):
         """Save a theme to the themes folder"""
         try:
             # Ensure themes directory exists
             self.themes_dir.mkdir(exist_ok=True)
-            
+
             theme_file = self.themes_dir / f"{theme_name}.json"
             with open(theme_file, 'w', encoding='utf-8') as f:
                 json.dump(theme_data, f, indent=2)
-            
+
             # Update local themes
             self.themes[theme_name] = theme_data
             return True
-            
+
         except Exception as e:
             print(f"Error saving theme {theme_name}: {e}")
             return False
@@ -599,28 +460,6 @@ class AppSettings:
 
         return self.default_settings.copy()
 
-    def refresh_themes_in_dialog(self):
-        """Refresh themes in settings dialog"""
-        if hasattr(self, 'demo_theme_combo'):
-            current_theme = self.demo_theme_combo.currentText()
-
-            # Refresh themes from disk
-            self.app_settings.refresh_themes()
-
-            # Update combo box
-            self.demo_theme_combo.clear()
-            for theme_name, theme_data in self.app_settings.themes.items():
-                display_name = theme_data.get("name", theme_name)
-                self.demo_theme_combo.addItem(f"{display_name}", theme_name)
-
-            # Try to restore previous selection
-            index = self.demo_theme_combo.findData(current_theme)
-            if index >= 0:
-                self.demo_theme_combo.setCurrentIndex(index)
-
-            if hasattr(self, 'demo_log'):
-                self.demo_log.append(f"🔄 Refreshed themes: {len(self.app_settings.themes)} available")
-
     def save_settings(self):
         """Save current settings to file"""
         try:
@@ -667,7 +506,6 @@ class AppSettings:
                 print("   No themes available!")
                 return {}
 
-
     def get_stylesheet(self):
         """Generate complete stylesheet for current theme"""
         colors = self.get_theme_colors()
@@ -680,12 +518,12 @@ class AppSettings:
             background-color: {colors.get('bg_primary', '#ffffff')};
             color: {colors.get('text_primary', '#000000')};
         }}
-        
+
         QWidget {{
             background-color: {colors.get('bg_primary', '#ffffff')};
             color: {colors.get('text_primary', '#000000')};
         }}
-        
+
         QGroupBox {{
             background-color: {colors.get('panel_bg', '#f0f0f0')};
             border: 2px solid {colors.get('border', '#cccccc')};
@@ -694,14 +532,14 @@ class AppSettings:
             padding-top: 10px;
             font-weight: bold;
         }}
-        
+
         QGroupBox::title {{
             subcontrol-origin: margin;
             left: 10px;
             padding: 0 5px 0 5px;
             color: {colors.get('text_accent', '#0078d4')};
         }}
-        
+
         QPushButton {{
             background-color: {colors.get('button_normal', '#e0e0e0')};
             border: 1px solid {colors.get('border', '#cccccc')};
@@ -710,15 +548,15 @@ class AppSettings:
             color: {colors.get('text_primary', '#000000')};
             font-weight: {self.current_settings.get('button_font_weight', 'bold')};
         }}
-        
+
         QPushButton:hover {{
             background-color: {colors.get('button_hover', '#d0d0d0')};
         }}
-        
+
         QPushButton:pressed {{
             background-color: {colors.get('button_pressed', '#c0c0c0')};
         }}
-        
+
         QTableWidget {{
             background-color: {colors.get('bg_secondary', '#f8f9fa')};
             alternate-background-color: {colors.get('bg_tertiary', '#e9ecef')};
@@ -726,12 +564,12 @@ class AppSettings:
             selection-color: white;
             gridline-color: {colors.get('border', '#dee2e6')};
         }}
-        
+
         QMenuBar {{
             background-color: {colors.get('bg_secondary', '#f8f9fa')};
             color: {colors.get('text_primary', '#212529')};
         }}
-        
+
         QStatusBar {{
             background-color: {colors.get('bg_secondary', '#f8f9fa')};
             color: {colors.get('text_secondary', '#495057')};
@@ -767,7 +605,7 @@ class AppSettings:
                 'pressed': self._darken_color(colors.get('action_convert', '#9c27b0'))
             }
         }
-        
+
         for action_type, action_color_set in action_colors.items():
             stylesheet += f"""
             QPushButton[action-type="{action_type}"] {{
@@ -785,7 +623,7 @@ class AppSettings:
 
         return stylesheet
 
-    def _darken_color(self, hex_color, factor=0.8):
+    def _darken_color(self, hex_color, factor=0.8): #keep
         """Darken a hex color by a factor"""
         try:
             hex_color = hex_color.lstrip('#')
@@ -794,7 +632,7 @@ class AppSettings:
             return f"#{darkened[0]:02x}{darkened[1]:02x}{darkened[2]:02x}"
         except:
             return hex_color
-    
+
     def _lighten_color(self, hex_color, factor=1.2):
         """Lighten a hex color by a factor"""
         try:
@@ -805,7 +643,40 @@ class AppSettings:
         except:
             return hex_color
 
+    def get_available_themes(self) -> dict:
+        """Get all available themes with refresh option"""
+        return self.themes
 
+# ALSO UPDATE your get_theme method to handle missing themes:
+
+    def get_theme(self, theme_name=None):
+        """Get theme colors with fallback"""
+        if theme_name is None:
+            theme_name = self.current_settings["theme"]
+
+        # Handle theme name mismatches (lightyellow_theme -> lightyellow)
+        if theme_name.endswith('_theme'):
+            theme_name = theme_name[:-6]  # Remove '_theme' suffix
+
+        # Return theme or fallback to first available theme
+        if theme_name in self.themes:
+            return self.themes[theme_name]
+        else:
+            print(f"⚠️ Theme '{theme_name}' not found, using fallback")
+            fallback_theme = list(self.themes.keys())[0] if self.themes else "LCARS"
+            return self.themes.get(fallback_theme, {"colors": {}})
+
+    def get_theme_data(self, theme_name: str) -> dict:
+        """Get complete theme data"""
+        if theme_name in self.themes:
+            return self.themes[theme_name]
+        else:
+            print(f"⚠️ Theme '{theme_name}' not found, using fallback")
+            fallback_theme = list(self.themes.keys())[0] if self.themes else "IMG_Factory"
+            return self.themes.get(fallback_theme, {"colors": {}})
+
+#
+        
 class SettingsDialog(QDialog):
     """Settings dialog for theme and preference management"""
     
@@ -827,6 +698,29 @@ class SettingsDialog(QDialog):
     def _get_dialog_settings(self) -> dict:
         """Collect all settings from dialog controls"""
         settings = {}
+
+    def refresh_themes_in_dialog(self):
+        """Refresh themes in settings dialog"""
+        if hasattr(self, 'demo_theme_combo'):
+            current_theme = self.demo_theme_combo.currentText()
+
+            # Refresh themes from disk
+            self.app_settings.refresh_themes()
+
+            # Update combo box
+            self.demo_theme_combo.clear()
+            for theme_name, theme_data in self.app_settings.themes.items():
+                display_name = theme_data.get("name", theme_name)
+                self.demo_theme_combo.addItem(f"{display_name}", theme_name)
+
+            # Try to restore previous selection
+            index = self.demo_theme_combo.findData(current_theme)
+            if index >= 0:
+                self.demo_theme_combo.setCurrentIndex(index)
+
+            if hasattr(self, 'demo_log'):
+                self.demo_log.append(f"🔄 Refreshed themes: {len(self.app_settings.themes)} available")
+
 
         # Theme settings (if you have theme controls)
         if hasattr(self, 'theme_combo'):
