@@ -1,6 +1,5 @@
-#this belongs in gui/ log_panel.py - version 2
-# $vers" X-Seti - June26, 2025 - Img Factory 1.5"
-# $hist" Credit MexUK 2007 Img Factory 1.2"
+#this belongs in gui/ log_panel.py - Version: 3
+# X-Seti - JULY04 2025 - IMG Factory 1.5 - Enhanced Log Panel with Copy Button
 
 #!/usr/bin/env python3
 """
@@ -137,6 +136,32 @@ class IMGFactoryLogWidget(QTextEdit):
         self._messages.clear()
         self.clear()
     
+    def get_last_lines(self, count=2):
+        """Get the last N lines of log messages"""
+        if not self._messages:
+            return ""
+        
+        # Get last N messages
+        last_messages = self._messages[-count:] if len(self._messages) >= count else self._messages
+        
+        # Format as text
+        lines = []
+        for msg in last_messages:
+            time_str = msg.timestamp.strftime("%H:%M:%S")
+            lines.append(f"[{time_str}] {msg.level.value}: {msg.message}")
+        
+        return "\n".join(lines)
+
+    def copy_last_lines_to_clipboard(self, count=2):
+        """Copy last N lines to clipboard"""
+        from PyQt6.QtWidgets import QApplication
+        
+        text = self.get_last_lines(count)
+        if text:
+            QApplication.clipboard().setText(text)
+            return True
+        return False
+    
     def save_log(self, filename):
         """Save log to file"""
         try:
@@ -158,6 +183,7 @@ class LogControlPanel(QWidget):
     
     level_filter_changed = pyqtSignal(list)
     clear_requested = pyqtSignal()
+    copy_last_lines_requested = pyqtSignal()
     save_requested = pyqtSignal()
     
     def __init__(self, parent=None):
@@ -190,6 +216,13 @@ class LogControlPanel(QWidget):
         clear_btn.clicked.connect(self.clear_requested.emit)
         layout.addWidget(clear_btn)
         
+        # Copy Last 2 Lines button
+        copy_btn = QPushButton("📋 Copy")
+        copy_btn.setToolTip("Copy last 2 lines to clipboard")
+        copy_btn.setMaximumWidth(80)
+        copy_btn.clicked.connect(self.copy_last_lines_requested.emit)
+        layout.addWidget(copy_btn)
+        
         save_btn = QPushButton("💾 Save")
         save_btn.setToolTip("Save log to file")
         save_btn.setMaximumWidth(80)
@@ -204,57 +237,6 @@ class LogControlPanel(QWidget):
                 hidden_levels.append(level)
         
         self.level_filter_changed.emit(hidden_levels)
-
-
-def create_log_panel(main_window):
-    """Create the complete log panel"""
-    group = QGroupBox("📜 Activity Log")
-    layout = QVBoxLayout(group)
-    layout.setSpacing(5)
-    
-    # Create log widget
-    main_window.log_widget = IMGFactoryLogWidget()
-    layout.addWidget(main_window.log_widget)
-    
-    # Create control panel
-    control_panel = LogControlPanel()
-    layout.addWidget(control_panel)
-    
-    # Connect signals
-    control_panel.level_filter_changed.connect(main_window.log_widget.set_level_filter)
-    control_panel.clear_requested.connect(main_window.log_widget.clear_log)
-    control_panel.save_requested.connect(lambda: _save_log_dialog(main_window))
-    
-    # Add convenience methods to main window
-    main_window.log_message = lambda msg: main_window.log_widget.add_message(msg, LogLevel.INFO)
-    main_window.log_warning = lambda msg: main_window.log_widget.add_message(msg, LogLevel.WARNING)
-    main_window.log_error = lambda msg: main_window.log_widget.add_message(msg, LogLevel.ERROR)
-    main_window.log_success = lambda msg: main_window.log_widget.add_message(msg, LogLevel.SUCCESS)
-    main_window.log_debug = lambda msg: main_window.log_widget.add_message(msg, LogLevel.DEBUG)
-    
-    # Add initial welcome message
-    main_window.log_message("IMG Factory 1.5 initialized")
-    main_window.log_message("Ready to work with IMG archives")
-    
-    return group
-
-
-def _save_log_dialog(main_window):
-    """Show save log dialog"""
-    from PyQt6.QtWidgets import QFileDialog
-    
-    filename, _ = QFileDialog.getSaveFileName(
-        main_window,
-        "Save Activity Log",
-        f"imgfactory_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-        "Text Files (*.txt);;All Files (*)"
-    )
-    
-    if filename:
-        if main_window.log_widget.save_log(filename):
-            main_window.log_success(f"Log saved to: {filename}")
-        else:
-            main_window.log_error("Failed to save log file")
 
 
 class StatusMessageManager:
@@ -319,6 +301,66 @@ class ProgressLogger:
             if item_name:
                 msg += f" - {item_name}"
             self.log_widget.add_message(msg, LogLevel.INFO)
+
+
+def create_log_panel(main_window):
+    """Create the complete log panel"""
+    group = QGroupBox("📜 Activity Log")
+    layout = QVBoxLayout(group)
+    layout.setSpacing(5)
+    
+    # Create log widget
+    main_window.log_widget = IMGFactoryLogWidget()
+    layout.addWidget(main_window.log_widget)
+    
+    # Create control panel
+    control_panel = LogControlPanel()
+    layout.addWidget(control_panel)
+    
+    # Connect signals
+    control_panel.level_filter_changed.connect(main_window.log_widget.set_level_filter)
+    control_panel.clear_requested.connect(main_window.log_widget.clear_log)
+    control_panel.save_requested.connect(lambda: _save_log_dialog(main_window))
+    
+    # Connect copy signal
+    def copy_last_lines():
+        if main_window.log_widget.copy_last_lines_to_clipboard(2):
+            main_window.log_widget.add_message("📋 Last 2 lines copied to clipboard", LogLevel.INFO)
+        else:
+            main_window.log_widget.add_message("❌ No lines to copy", LogLevel.WARNING)
+    
+    control_panel.copy_last_lines_requested.connect(copy_last_lines)
+    
+    # Add convenience methods to main window
+    main_window.log_message = lambda msg: main_window.log_widget.add_message(msg, LogLevel.INFO)
+    main_window.log_warning = lambda msg: main_window.log_widget.add_message(msg, LogLevel.WARNING)
+    main_window.log_error = lambda msg: main_window.log_widget.add_message(msg, LogLevel.ERROR)
+    main_window.log_success = lambda msg: main_window.log_widget.add_message(msg, LogLevel.SUCCESS)
+    main_window.log_debug = lambda msg: main_window.log_widget.add_message(msg, LogLevel.DEBUG)
+    
+    # Add initial welcome message
+    main_window.log_message("IMG Factory 1.5 initialized")
+    main_window.log_message("Ready to work with IMG archives")
+    
+    return group
+
+
+def _save_log_dialog(main_window):
+    """Show save log dialog"""
+    from PyQt6.QtWidgets import QFileDialog
+    
+    filename, _ = QFileDialog.getSaveFileName(
+        main_window,
+        "Save Activity Log",
+        f"imgfactory_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+        "Text Files (*.txt);;All Files (*)"
+    )
+    
+    if filename:
+        if main_window.log_widget.save_log(filename):
+            main_window.log_success(f"Log saved to: {filename}")
+        else:
+            main_window.log_error("Failed to save log file")
 
 
 # Helper functions for integration

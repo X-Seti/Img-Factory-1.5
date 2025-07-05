@@ -349,7 +349,7 @@ class IMGFactory(QMainWindow):
         self.app_settings = settings if hasattr(settings, 'themes') else AppSettings()
         self.setWindowTitle("IMG Factory 1.5")
         self.setGeometry(100, 100, 1200, 800)
-        
+
         # Core data
         self.current_img: Optional[IMGFile] = None
         self.current_col: Optional = None  # For COL file support
@@ -357,35 +357,36 @@ class IMGFactory(QMainWindow):
         self.open_files = {}  # Dict to store open files {tab_index: file_info}
         self.tab_counter = 0  # Counter for unique tab IDs
         self.template_manager = IMGTemplateManager()
-        
+
         # Background threads
         self.load_thread: Optional[IMGLoadThread] = None
-        
+
         # Initialize GUI layout
         self.gui_layout = IMGFactoryGUILayout(self)
+
+        # Setup menu bar system
         self.menu_bar_system = IMGFactoryMenuBar(self)
 
+        # Setup menu callbacks - FIXED TO USE WORKING METHOD
         callbacks = {
             "about": self.show_about,
-            "open_img": self.open_img_file,
+            "open_img": self.open_img_file,  # FIXED: Use method that actually works
             "new_img": self.create_new_img,
             "exit": self.close,
             "img_validate": self.validate_img,
             "customize_interface": self.show_gui_settings,
-            # Add more as your methods exist
-            }
+        }
         self.menu_bar_system.set_callbacks(callbacks)
 
         # Initialize UI (but without menu creation in gui_layout)
         self._create_ui()
         self._restore_settings()
-        
+
         # Apply theme
         if hasattr(self.app_settings, 'themes'):
             apply_theme_to_app(QApplication.instance(), self.app_settings)
-        
+
         # Apply COL integration after creating the main interface
-        # COL integration setup - with error handling
         try:
             from main_col_integration import setup_col_integration
             if setup_col_integration(self):
@@ -396,10 +397,9 @@ class IMGFactory(QMainWindow):
             self.log_message("COL integration not available - continuing without COL support")
         except Exception as e:
             self.log_message(f"COL integration error: {str(e)} - continuing without COL support")
-        
+
         # Log startup
         self.log_message("IMG Factory 1.5 initialized")
-    
 
     def setup_unified_signals(self):
         """Setup unified signal handler for all table interactions"""
@@ -686,11 +686,10 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"Search error: {str(e)}")
 
-    # MODIFY the _create_ui() method to call setup_unified_signals():
-
+    # MODIFIED the _create_ui() method to call setup_unified_signals():
 
     def _create_ui(self):
-        """Create the main user interface - SIMPLIFIED WITHOUT TABS"""
+        """Create the main user interface - WITH TABS FIXED"""
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
@@ -698,13 +697,41 @@ class IMGFactory(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
         main_layout.setContentsMargins(5, 5, 5, 5)
 
-        # Use existing GUI layout system (single instance)
-        self.gui_layout.create_main_ui_with_splitters(main_layout)
+        # Create main tab widget for file handling
+        self.main_tab_widget = QTabWidget()
+        self.main_tab_widget.setTabsClosable(True)
+        self.main_tab_widget.tabCloseRequested.connect(self._close_tab)
+        self.main_tab_widget.currentChanged.connect(self._on_tab_changed)
+
+        # Initialize open files tracking
+        self.open_files = {}
+
+        # Create initial empty tab
+        self._create_initial_tab()
+
+        # Add tab widget to main layout
+        main_layout.addWidget(self.main_tab_widget)
+
+        # Create GUI layout system (single instance)
+        #self.gui_layout.create_main_ui_with_splitters()
         self.gui_layout.create_status_bar()
         self.gui_layout.apply_table_theme()
 
         # Setup unified signal system
         self.setup_unified_signals()
+
+    def _create_initial_tab(self):
+        """Create initial empty tab"""
+        # Create tab widget
+        tab_widget = QWidget()
+        tab_layout = QVBoxLayout(tab_widget)
+        tab_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Create GUI layout for this tab
+        self.gui_layout.create_main_ui_with_splitters(tab_layout)
+
+        # Add tab with "No file" label
+        self.main_tab_widget.addTab(tab_widget, "📁 No File")
 
     def _on_tab_changed(self, index):
         """Handle tab change"""
@@ -886,38 +913,74 @@ class IMGFactory(QMainWindow):
             self.log_message(f"Error creating new IMG: {str(e)}")
             QMessageBox.critical(self, "Error", f"Failed to create new IMG: {str(e)}")
 
-    def open_file(self):
-        """Unified function to open IMG or COL files - MODIFIED for tabs"""
+    def open_img_file(self):
+        """Open IMG file - Simple version without tabs"""
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open IMG or COL File", "",
-            "IMG/COL Files (*.img *.col);;IMG Files (*.img);;COL Files (*.col);;All Files (*)"
+            self, "Open IMG File", "",
+            "IMG Files (*.img);;All Files (*)"
         )
 
         if file_path:
+            self.load_img_file(file_path)
+
+    def open_col_file(self):
+        """Open COL file - Simple version without tabs"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Open COL File", "",
+            "COL Files (*.col);;All Files (*)"
+        )
+
+        if file_path:
+            self.log_message(f"COL file opening: {os.path.basename(file_path)}")
+            # For now, just log - COL loading can be implemented later
+            self.log_message("COL file support coming soon")
+
+    def _detect_and_open_file(self, file_path: str) -> bool:
+        """Detect file type and open with appropriate handler"""
+        try:
+            # First check by extension
             file_ext = os.path.splitext(file_path)[1].lower()
 
             if file_ext == '.img':
-                self.open_img_file(file_path)
+                self.load_img_file(file_path)
+                return True
             elif file_ext == '.col':
-                self.open_col_file(file_path)
-            else:
-                # Try to detect file type by content
-                try:
-                    with open(file_path, 'rb') as f:
-                        header = f.read(8)
+                self._load_col_file(file_path)
+                return True
 
-                    # Check for IMG signatures
-                    if header[:4] in [b'VER2', b'VER3'] or len(header) >= 8:
-                        self.open_img_file(file_path)
-                    # Check for COL signatures
-                    elif header[:4] in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
-                        self.open_col_file(file_path)
-                    else:
-                        # Default to IMG
-                        self.open_img_file(file_path)
+            # If extension is ambiguous, check file content
+            with open(file_path, 'rb') as f:
+                header = f.read(16)
 
-                except Exception as e:
-                    QMessageBox.critical(self, "Error", f"Could not determine file type: {str(e)}")
+            if len(header) < 4:
+                return False
+
+            # Check for IMG signatures
+            if header[:4] in [b'VER2', b'VER3']:
+                self.log_message(f"🔍 Detected IMG file by signature")
+                self.load_img_file(file_path)
+                return True
+
+            # Check for COL signatures
+            elif header[:4] in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
+                self.log_message(f"🔍 Detected COL file by signature")
+                self._load_col_file(file_path)
+                return True
+
+            # Try reading as IMG version 1 (no header signature)
+            elif len(header) >= 8:
+                # Could be IMG v1 or unknown format
+                self.log_message(f"🔍 Attempting to open as IMG file")
+                self.load_img_file(file_path)
+                return True
+
+            return False
+
+        except Exception as e:
+            self.log_message(f"❌ Error detecting file type: {str(e)}")
+            return False
+
+
 
     def _load_img_file_in_new_tab(self, file_path):
         """Load IMG file in new tab"""
@@ -945,25 +1008,6 @@ class IMGFactory(QMainWindow):
         # Update tab name
         self.main_tab_widget.setTabText(current_index, tab_name)
 
-    def open_img_file(self, file_path=None):
-        """Open IMG file"""
-        if file_path is None:
-            file_path, _ = QFileDialog.getOpenFileName(
-                self, "Open IMG File", "", "IMG Files (*.img);;All Files (*)"
-            )
-
-        if file_path:
-            self._load_img_file(file_path)
-
-
-        def open_col_file(self):
-            """Open COL file specifically"""
-            file_path, _ = QFileDialog.getOpenFileName(
-                self, "Open COL File", "", "COL Files (*.col);;All Files (*)"
-            )
-
-            if file_path:
-                self._load_col_file(file_path)
 
     def load_img_file(self, file_path: str):
         """Load IMG file in background thread"""
@@ -1568,24 +1612,6 @@ class IMGFactory(QMainWindow):
     # COL FILE OPERATIONS - KEEP 100% OF FUNCTIONALITY
     # =============================================================================
 
-
-    def open_col_file(self, file_path=None):
-        """Open COL file - MODIFIED for tabs"""
-        if file_path is None:
-            file_path, _ = QFileDialog.getOpenFileName(
-                self, "Open COL File", "", "COL Files (*.col);;All Files (*)"
-            )
-
-        if file_path:
-            # Check if file is already open
-            for index, file_info in self.open_files.items():
-                if file_info['file_path'] == file_path:
-                    # Switch to existing tab
-                    self.main_tab_widget.setCurrentIndex(index)
-                    return
-
-            # Load in new tab
-            self._load_col_file_in_new_tab(file_path)
 
     def _load_col_file_in_new_tab(self, file_path):
         """Load COL file in new tab"""

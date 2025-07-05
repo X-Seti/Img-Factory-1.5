@@ -1,6 +1,6 @@
-#this belongs in gui/ gui_settings.py - version 1
-# $vers" X-Seti - June28 2025 - IMG Factory 1.5"
-# $hist" Credit MexUK 2007 Img Factory 1.2"
+#this belongs in gui/ gui_settings.py - version 2
+# X-Seti - July05 2025 - IMG Factory 1.5 - Complete GUI Settings with Tab Height Controls
+# Credit MexUK 2007 Img Factory 1.2
 
 #!/usr/bin/env python3
 """
@@ -14,10 +14,11 @@ from PyQt6.QtWidgets import (
     QPushButton, QSlider, QColorDialog, QFontDialog,
     QMessageBox, QGridLayout, QFrame, QButtonGroup,
     QRadioButton, QLineEdit, QTextEdit, QListWidget,
-    QListWidgetItem, QSplitter, QScrollArea
+    QListWidgetItem, QSplitter, QScrollArea, QFormLayout
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QColor, QPalette, QIcon
+import os
 
 
 class GUISettingsDialog(QDialog):
@@ -36,6 +37,35 @@ class GUISettingsDialog(QDialog):
         self._create_ui()
         self._load_current_settings()
     
+    def _safe_load_icon(self, icon_name):
+        """Safely load icon with fallback - ADDED TO FIX QIcon.fromTheme issues"""
+        try:
+            # Try theme icon first
+            theme_icon = QIcon.fromTheme(icon_name)
+            if theme_icon and not theme_icon.isNull():
+                return theme_icon
+        except Exception:
+            pass
+        
+        # Try local icon paths
+        try:
+            icon_paths = [
+                f"icons/{icon_name}.png",
+                f"gui/icons/{icon_name}.png",
+                f"resources/icons/{icon_name}.png"
+            ]
+            
+            for path in icon_paths:
+                if os.path.exists(path):
+                    local_icon = QIcon(path)
+                    if local_icon and not local_icon.isNull():
+                        return local_icon
+        except Exception:
+            pass
+        
+        # Return empty icon as fallback
+        return QIcon()
+    
     def _create_ui(self):
         """Create the settings UI with tabs"""
         layout = QVBoxLayout(self)
@@ -46,6 +76,7 @@ class GUISettingsDialog(QDialog):
         # Create tabs
         self.tab_widget.addTab(self._create_appearance_tab(), "🎨 Appearance")
         self.tab_widget.addTab(self._create_layout_tab(), "📐 Layout")
+        self.tab_widget.addTab(self._create_tabs_tab(), "📑 Tabs")
         self.tab_widget.addTab(self._create_fonts_tab(), "🔤 Fonts")
         self.tab_widget.addTab(self._create_icons_tab(), "🖼️ Icons")
         self.tab_widget.addTab(self._create_behavior_tab(), "⚙️ Behavior")
@@ -151,7 +182,7 @@ class GUISettingsDialog(QDialog):
         return widget
     
     def _create_layout_tab(self) -> QWidget:
-        """Create layout settings tab"""
+        """Create layout settings tab - REVERTED to original without tab settings"""
         widget = QWidget()
         layout = QVBoxLayout(widget)
         
@@ -163,6 +194,7 @@ class GUISettingsDialog(QDialog):
         panel_layout.addWidget(QLabel("Left Panel Width:"), 0, 0)
         self.left_panel_spin = QSpinBox()
         self.left_panel_spin.setRange(200, 800)
+        self.left_panel_spin.setValue(600)
         self.left_panel_spin.setSuffix(" px")
         panel_layout.addWidget(self.left_panel_spin, 0, 1)
         
@@ -170,6 +202,7 @@ class GUISettingsDialog(QDialog):
         panel_layout.addWidget(QLabel("Right Panel Width:"), 1, 0)
         self.right_panel_spin = QSpinBox()
         self.right_panel_spin.setRange(180, 600)
+        self.right_panel_spin.setValue(280)
         self.right_panel_spin.setSuffix(" px")
         panel_layout.addWidget(self.right_panel_spin, 1, 1)
         
@@ -177,6 +210,7 @@ class GUISettingsDialog(QDialog):
         panel_layout.addWidget(QLabel("Table Row Height:"), 2, 0)
         self.row_height_spin = QSpinBox()
         self.row_height_spin.setRange(20, 60)
+        self.row_height_spin.setValue(25)
         self.row_height_spin.setSuffix(" px")
         panel_layout.addWidget(self.row_height_spin, 2, 1)
         
@@ -190,6 +224,7 @@ class GUISettingsDialog(QDialog):
         spacing_layout.addWidget(QLabel("Widget Spacing:"), 0, 0)
         self.widget_spacing_spin = QSpinBox()
         self.widget_spacing_spin.setRange(2, 20)
+        self.widget_spacing_spin.setValue(5)
         self.widget_spacing_spin.setSuffix(" px")
         spacing_layout.addWidget(self.widget_spacing_spin, 0, 1)
         
@@ -197,6 +232,7 @@ class GUISettingsDialog(QDialog):
         spacing_layout.addWidget(QLabel("Layout Margins:"), 1, 0)
         self.layout_margins_spin = QSpinBox()
         self.layout_margins_spin.setRange(0, 30)
+        self.layout_margins_spin.setValue(5)
         self.layout_margins_spin.setSuffix(" px")
         spacing_layout.addWidget(self.layout_margins_spin, 1, 1)
         
@@ -217,6 +253,116 @@ class GUISettingsDialog(QDialog):
         window_layout.addWidget(self.always_on_top_check)
         
         layout.addWidget(window_group)
+        layout.addStretch()
+        
+        return widget
+    
+    def _create_tabs_tab(self) -> QWidget:
+        """Create dedicated tabs settings tab"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        # Tab Settings Group - DEDICATED TAB
+        tab_group = QGroupBox("📑 Tab Configuration")
+        tab_layout = QGridLayout(tab_group)
+        
+        # Main tab height
+        tab_layout.addWidget(QLabel("Main Tab Height:"), 0, 0)
+        self.main_tab_height_spin = QSpinBox()
+        self.main_tab_height_spin.setRange(20, 60)
+        self.main_tab_height_spin.setValue(35)
+        self.main_tab_height_spin.setSuffix(" px")
+        self.main_tab_height_spin.setToolTip("Height of the main IMG/COL/TXD tabs")
+        tab_layout.addWidget(self.main_tab_height_spin, 0, 1)
+        
+        # Individual tab height
+        tab_layout.addWidget(QLabel("Individual Tab Height:"), 1, 0)
+        self.individual_tab_height_spin = QSpinBox()
+        self.individual_tab_height_spin.setRange(16, 40)
+        self.individual_tab_height_spin.setValue(24)
+        self.individual_tab_height_spin.setSuffix(" px")
+        self.individual_tab_height_spin.setToolTip("Height of individual tab buttons")
+        tab_layout.addWidget(self.individual_tab_height_spin, 1, 1)
+        
+        # Tab font size
+        tab_layout.addWidget(QLabel("Tab Font Size:"), 2, 0)
+        self.tab_font_size_spin = QSpinBox()
+        self.tab_font_size_spin.setRange(7, 14)
+        self.tab_font_size_spin.setValue(9)
+        self.tab_font_size_spin.setSuffix(" pt")
+        self.tab_font_size_spin.setToolTip("Font size for tab text")
+        tab_layout.addWidget(self.tab_font_size_spin, 2, 1)
+        
+        # Tab padding
+        tab_layout.addWidget(QLabel("Tab Padding:"), 3, 0)
+        self.tab_padding_spin = QSpinBox()
+        self.tab_padding_spin.setRange(2, 12)
+        self.tab_padding_spin.setValue(4)
+        self.tab_padding_spin.setSuffix(" px")
+        self.tab_padding_spin.setToolTip("Padding inside tab buttons")
+        tab_layout.addWidget(self.tab_padding_spin, 3, 1)
+        
+        # Tab container height
+        tab_layout.addWidget(QLabel("Tab Container Height:"), 4, 0)
+        self.tab_container_height_spin = QSpinBox()
+        self.tab_container_height_spin.setRange(30, 80)
+        self.tab_container_height_spin.setValue(40)
+        self.tab_container_height_spin.setSuffix(" px")
+        self.tab_container_height_spin.setToolTip("Total height of the tab container section")
+        tab_layout.addWidget(self.tab_container_height_spin, 4, 1)
+        
+        layout.addWidget(tab_group)
+        
+        # Tab Style Presets
+        style_group = QGroupBox("🎨 Tab Style Presets")
+        style_layout = QVBoxLayout(style_group)
+        
+        # Style selector
+        style_selector_layout = QHBoxLayout()
+        style_selector_layout.addWidget(QLabel("Quick Style:"))
+        self.tab_style_combo = QComboBox()
+        self.tab_style_combo.addItems(["Compact", "Standard", "Large"])
+        self.tab_style_combo.setCurrentText("Compact")
+        self.tab_style_combo.setToolTip("Preset tab size configurations")
+        style_selector_layout.addWidget(self.tab_style_combo)
+        style_selector_layout.addStretch()
+        
+        style_layout.addLayout(style_selector_layout)
+        
+        # Style descriptions
+        style_descriptions = QTextEdit()
+        style_descriptions.setMaximumHeight(80)
+        style_descriptions.setReadOnly(True)
+        style_descriptions.setPlainText(
+            "• Compact: Space-saving tabs (35px height, 9pt font)\n"
+            "• Standard: Balanced appearance (45px height, 10pt font)\n"
+            "• Large: Accessibility-friendly (55px height, 11pt font)"
+        )
+        style_layout.addWidget(style_descriptions)
+        
+        layout.addWidget(style_group)
+        
+        # Preview and Actions
+        actions_group = QGroupBox("🛠️ Actions")
+        actions_layout = QVBoxLayout(actions_group)
+        
+        # Preview button
+        preview_btn = QPushButton("👀 Preview Tab Changes")
+        preview_btn.clicked.connect(self._preview_tab_changes)
+        preview_btn.setMinimumHeight(35)
+        actions_layout.addWidget(preview_btn)
+        
+        # Reset to defaults button
+        reset_tabs_btn = QPushButton("🔄 Reset Tab Settings to Defaults")
+        reset_tabs_btn.clicked.connect(self._reset_tab_settings)
+        reset_tabs_btn.setMinimumHeight(35)
+        actions_layout.addWidget(reset_tabs_btn)
+        
+        layout.addWidget(actions_group)
+        
+        # Connect tab style combo to update spinboxes
+        self.tab_style_combo.currentTextChanged.connect(self._apply_tab_style_preset)
+        
         layout.addStretch()
         
         return widget
@@ -386,13 +532,13 @@ class GUISettingsDialog(QDialog):
         performance_group = QGroupBox("⚡ Performance")
         performance_layout = QVBoxLayout(performance_group)
         
-        self.smooth_scrolling_check = QCheckBox("Enable smooth scrolling")
         self.lazy_loading_check = QCheckBox("Enable lazy loading for large files")
-        self.cache_previews_check = QCheckBox("Cache file previews")
+        self.cache_thumbnails_check = QCheckBox("Cache file thumbnails")
+        self.preload_common_files_check = QCheckBox("Preload common file types")
         
-        performance_layout.addWidget(self.smooth_scrolling_check)
         performance_layout.addWidget(self.lazy_loading_check)
-        performance_layout.addWidget(self.cache_previews_check)
+        performance_layout.addWidget(self.cache_thumbnails_check)
+        performance_layout.addWidget(self.preload_common_files_check)
         
         layout.addWidget(performance_group)
         
@@ -400,144 +546,18 @@ class GUISettingsDialog(QDialog):
         notifications_group = QGroupBox("🔔 Notifications")
         notifications_layout = QVBoxLayout(notifications_group)
         
-        self.show_tooltips_check = QCheckBox("Show tooltips")
-        self.show_progress_check = QCheckBox("Show progress notifications")
-        self.sound_notifications_check = QCheckBox("Enable sound notifications")
-        self.status_bar_updates_check = QCheckBox("Show updates in status bar")
+        self.show_notifications_check = QCheckBox("Show system notifications")
+        self.sound_notifications_check = QCheckBox("Play sound for notifications")
+        self.progress_notifications_check = QCheckBox("Show progress notifications")
         
-        notifications_layout.addWidget(self.show_tooltips_check)
-        notifications_layout.addWidget(self.show_progress_check)
+        notifications_layout.addWidget(self.show_notifications_check)
         notifications_layout.addWidget(self.sound_notifications_check)
-        notifications_layout.addWidget(self.status_bar_updates_check)
+        notifications_layout.addWidget(self.progress_notifications_check)
         
         layout.addWidget(notifications_group)
         layout.addStretch()
         
         return widget
-    
-    def _load_current_settings(self):
-        """Load current settings into the dialog"""
-        settings = self.app_settings.current_settings
-        
-        # Appearance
-        theme = settings.get("theme", "img_factory")
-        self.theme_combo.setCurrentText(self._theme_code_to_name(theme))
-        
-        # Layout
-        self.left_panel_spin.setValue(settings.get("left_panel_width", 400))
-        self.right_panel_spin.setValue(settings.get("right_panel_width", 300))
-        self.row_height_spin.setValue(settings.get("table_row_height", 25))
-        self.widget_spacing_spin.setValue(settings.get("widget_spacing", 5))
-        self.layout_margins_spin.setValue(settings.get("layout_margins", 5))
-        
-        # Window behavior
-        self.remember_size_check.setChecked(settings.get("remember_window_size", True))
-        self.remember_position_check.setChecked(settings.get("remember_window_position", True))
-        self.maximize_on_startup_check.setChecked(settings.get("maximize_on_startup", False))
-        self.always_on_top_check.setChecked(settings.get("always_on_top", False))
-        
-        # Fonts
-        self.font_scale_slider.setValue(int(settings.get("font_scale", 100)))
-        self._update_font_scale_label()
-        self.antialiasing_check.setChecked(settings.get("font_antialiasing", True))
-        self.bold_headers_check.setChecked(settings.get("bold_table_headers", True))
-        self.monospace_numbers_check.setChecked(settings.get("monospace_numbers", False))
-        
-        # Icons
-        self.show_menu_icons_check.setChecked(settings.get("show_menu_icons", True))
-        self.show_toolbar_icons_check.setChecked(settings.get("show_toolbar_icons", True))
-        self.show_button_icons_check.setChecked(settings.get("show_button_icons", True))
-        self.show_file_type_icons_check.setChecked(settings.get("show_file_type_icons", True))
-        
-        # Icon sizes
-        self.menu_icon_size_combo.setCurrentText(f"{settings.get('menu_icon_size', 16)}px")
-        self.toolbar_icon_size_combo.setCurrentText(f"{settings.get('toolbar_icon_size', 24)}px")
-        self.button_icon_size_combo.setCurrentText(f"{settings.get('button_icon_size', 16)}px")
-        
-        # Icon style
-        icon_style = settings.get("icon_style", 0)
-        self.icon_style_group.button(icon_style).setChecked(True)
-        
-        # Behavior
-        self.double_click_open_check.setChecked(settings.get("double_click_open", True))
-        self.single_click_select_check.setChecked(settings.get("single_click_select", False))
-        self.hover_preview_check.setChecked(settings.get("hover_preview", True))
-        self.auto_resize_columns_check.setChecked(settings.get("auto_resize_columns", True))
-        
-        # Performance
-        self.smooth_scrolling_check.setChecked(settings.get("smooth_scrolling", True))
-        self.lazy_loading_check.setChecked(settings.get("lazy_loading", True))
-        self.cache_previews_check.setChecked(settings.get("cache_previews", True))
-        
-        # Notifications
-        self.show_tooltips_check.setChecked(settings.get("show_tooltips", True))
-        self.show_progress_check.setChecked(settings.get("show_progress_notifications", True))
-        self.sound_notifications_check.setChecked(settings.get("sound_notifications", False))
-        self.status_bar_updates_check.setChecked(settings.get("status_bar_updates", True))
-        
-        # Visual effects
-        self.animations_check.setChecked(settings.get("enable_animations", True))
-        self.shadows_check.setChecked(settings.get("enable_shadows", True))
-        self.transparency_check.setChecked(settings.get("enable_transparency", False))
-        self.rounded_corners_check.setChecked(settings.get("rounded_corners", True))
-    
-    def _update_font_scale_label(self):
-        """Update font scale percentage label"""
-        value = self.font_scale_slider.value()
-        self.font_scale_label.setText(f"{value}%")
-    
-    def _choose_color(self, color_type: str):
-        """Open color picker dialog"""
-        color = QColorDialog.getColor(QColor(255, 255, 255), self, f"Choose {color_type.title()} Color")
-        if color.isValid():
-            # Store the color (you'd implement this based on your settings system)
-            pass
-    
-    def _choose_font(self, font_type: str):
-        """Open font picker dialog"""
-        current_font = QFont()
-        font, ok = QFontDialog.getFont(current_font, self, f"Choose {font_type.title()} Font")
-        if ok:
-            # Store the font (you'd implement this based on your settings system)
-            pass
-    
-    def _theme_code_to_name(self, code: str) -> str:
-        """Convert theme code to display name"""
-        theme_map = {
-            "img_factory": "IMG Factory Default",
-            "dark": "Dark Theme",
-            "light_professional": "Light Professional",
-            "gta_san_andreas": "GTA San Andreas",
-            "gta_vice_city": "GTA Vice City",
-            "lcars": "LCARS (Star Trek)",
-            "cyberpunk_2077": "Cyberpunk 2077",
-            "matrix": "Matrix",
-            "synthwave": "Synthwave",
-            "amiga_workbench": "Amiga Workbench"
-        }
-        return theme_map.get(code, "IMG Factory Default")
-    
-    def _theme_name_to_code(self, name: str) -> str:
-        """Convert display name to theme code"""
-        name_map = {
-            "IMG Factory Default": "img_factory",
-            "Dark Theme": "dark",
-            "Light Professional": "light_professional",
-            "GTA San Andreas": "gta_san_andreas",
-            "GTA Vice City": "gta_vice_city",
-            "LCARS (Star Trek)": "lcars",
-            "Cyberpunk 2077": "cyberpunk_2077",
-            "Matrix": "matrix",
-            "Synthwave": "synthwave",
-            "Amiga Workbench": "amiga_workbench"
-        }
-        return name_map.get(name, "img_factory")
-    
-    def _apply_settings(self):
-        """Apply settings without closing dialog"""
-        self._save_settings()
-        self.settings_changed.emit()
-        QMessageBox.information(self, "Settings Applied", "GUI settings have been applied successfully!")
     
     def _save_and_close(self):
         """Save settings and close dialog"""
@@ -549,11 +569,25 @@ class GUISettingsDialog(QDialog):
         """Save all settings to app_settings"""
         settings = self.app_settings.current_settings
         
+        # Tab settings - NEW
+        settings["main_tab_height"] = self.main_tab_height_spin.value()
+        settings["individual_tab_height"] = self.individual_tab_height_spin.value()
+        settings["tab_font_size"] = self.tab_font_size_spin.value()
+        settings["tab_padding"] = self.tab_padding_spin.value()
+        settings["tab_container_height"] = self.tab_container_height_spin.value()
+        settings["tab_style"] = self.tab_style_combo.currentText()
+        
         # Appearance
         theme_code = self._theme_name_to_code(self.theme_combo.currentText())
         if settings.get("theme") != theme_code:
             settings["theme"] = theme_code
             self.theme_changed.emit(theme_code)
+        
+        # Visual effects
+        settings["enable_animations"] = self.animations_check.isChecked()
+        settings["enable_shadows"] = self.shadows_check.isChecked()
+        settings["enable_transparency"] = self.transparency_check.isChecked()
+        settings["rounded_corners"] = self.rounded_corners_check.isChecked()
         
         # Layout
         settings["left_panel_width"] = self.left_panel_spin.value()
@@ -595,45 +629,477 @@ class GUISettingsDialog(QDialog):
         settings["auto_resize_columns"] = self.auto_resize_columns_check.isChecked()
         
         # Performance
-        settings["smooth_scrolling"] = self.smooth_scrolling_check.isChecked()
         settings["lazy_loading"] = self.lazy_loading_check.isChecked()
-        settings["cache_previews"] = self.cache_previews_check.isChecked()
+        settings["cache_thumbnails"] = self.cache_thumbnails_check.isChecked()
+        settings["preload_common_files"] = self.preload_common_files_check.isChecked()
         
         # Notifications
-        settings["show_tooltips"] = self.show_tooltips_check.isChecked()
-        settings["show_progress_notifications"] = self.show_progress_check.isChecked()
+        settings["show_notifications"] = self.show_notifications_check.isChecked()
         settings["sound_notifications"] = self.sound_notifications_check.isChecked()
-        settings["status_bar_updates"] = self.status_bar_updates_check.isChecked()
+        settings["progress_notifications"] = self.progress_notifications_check.isChecked()
         
-        # Visual effects
-        settings["enable_animations"] = self.animations_check.isChecked()
-        settings["enable_shadows"] = self.shadows_check.isChecked()
-        settings["enable_transparency"] = self.transparency_check.isChecked()
-        settings["rounded_corners"] = self.rounded_corners_check.isChecked()
+        # Apply tab settings to main window - NEW
+        self._apply_tab_settings_to_main_window()
         
         # Save to file
-        self.app_settings.save_settings()
+        try:
+            self.app_settings.save_settings()
+            if hasattr(self.app_settings, 'log_message'):
+                self.app_settings.log_message("Settings saved successfully")
+        except Exception as e:
+            if hasattr(self.app_settings, 'log_message'):
+                self.app_settings.log_message(f"Error saving settings: {str(e)}")
+    
+    def _load_current_settings(self):
+        """Load current settings into controls"""
+        settings = self.app_settings.current_settings
+        
+        # Tab settings - NEW
+        self.main_tab_height_spin.setValue(settings.get("main_tab_height", 35))
+        self.individual_tab_height_spin.setValue(settings.get("individual_tab_height", 24))
+        self.tab_font_size_spin.setValue(settings.get("tab_font_size", 9))
+        self.tab_padding_spin.setValue(settings.get("tab_padding", 4))
+        self.tab_container_height_spin.setValue(settings.get("tab_container_height", 40))
+        
+        # Set tab style combo
+        tab_style = settings.get("tab_style", "Compact")
+        self.tab_style_combo.setCurrentText(tab_style)
+        
+        # Theme
+        theme_code = settings.get("theme", "img_factory")
+        theme_name = self._theme_code_to_name(theme_code)
+        self.theme_combo.setCurrentText(theme_name)
+        
+        # Visual effects
+        self.animations_check.setChecked(settings.get("enable_animations", True))
+        self.shadows_check.setChecked(settings.get("enable_shadows", True))
+        self.transparency_check.setChecked(settings.get("enable_transparency", False))
+        self.rounded_corners_check.setChecked(settings.get("rounded_corners", True))
+        
+        # Layout
+        self.left_panel_spin.setValue(settings.get("left_panel_width", 600))
+        self.right_panel_spin.setValue(settings.get("right_panel_width", 280))
+        self.row_height_spin.setValue(settings.get("table_row_height", 25))
+        self.widget_spacing_spin.setValue(settings.get("widget_spacing", 5))
+        self.layout_margins_spin.setValue(settings.get("layout_margins", 5))
+        
+        # Window behavior
+        self.remember_size_check.setChecked(settings.get("remember_window_size", True))
+        self.remember_position_check.setChecked(settings.get("remember_window_position", True))
+        self.maximize_on_startup_check.setChecked(settings.get("maximize_on_startup", False))
+        self.always_on_top_check.setChecked(settings.get("always_on_top", False))
+        
+        # Fonts
+        self.font_scale_slider.setValue(settings.get("font_scale", 100))
+        self.antialiasing_check.setChecked(settings.get("font_antialiasing", True))
+        self.bold_headers_check.setChecked(settings.get("bold_table_headers", True))
+        self.monospace_numbers_check.setChecked(settings.get("monospace_numbers", False))
+        
+        # Icons
+        self.show_menu_icons_check.setChecked(settings.get("show_menu_icons", True))
+        self.show_toolbar_icons_check.setChecked(settings.get("show_toolbar_icons", True))
+        self.show_button_icons_check.setChecked(settings.get("show_button_icons", True))
+        self.show_file_type_icons_check.setChecked(settings.get("show_file_type_icons", True))
+        
+        # Icon sizes
+        self.menu_icon_size_combo.setCurrentText(f"{settings.get('menu_icon_size', 16)}px")
+        self.toolbar_icon_size_combo.setCurrentText(f"{settings.get('toolbar_icon_size', 24)}px")
+        self.button_icon_size_combo.setCurrentText(f"{settings.get('button_icon_size', 16)}px")
+        
+        # Icon style
+        icon_style = settings.get("icon_style", 0)
+        if 0 <= icon_style < self.icon_style_group.buttons().__len__():
+            self.icon_style_group.button(icon_style).setChecked(True)
+        
+        # Behavior
+        self.double_click_open_check.setChecked(settings.get("double_click_open", True))
+        self.single_click_select_check.setChecked(settings.get("single_click_select", False))
+        self.hover_preview_check.setChecked(settings.get("hover_preview", True))
+        self.auto_resize_columns_check.setChecked(settings.get("auto_resize_columns", True))
+        
+        # Performance
+        self.lazy_loading_check.setChecked(settings.get("lazy_loading", True))
+        self.cache_thumbnails_check.setChecked(settings.get("cache_thumbnails", True))
+        self.preload_common_files_check.setChecked(settings.get("preload_common_files", False))
+        
+        # Notifications
+        self.show_notifications_check.setChecked(settings.get("show_notifications", True))
+        self.sound_notifications_check.setChecked(settings.get("sound_notifications", False))
+        self.progress_notifications_check.setChecked(settings.get("progress_notifications", True))
+        
+        # Update font scale label
+        self._update_font_scale_label()
+    
+    def _update_font_scale_label(self):
+        """Update font scale percentage label"""
+        value = self.font_scale_slider.value()
+        self.font_scale_label.setText(f"{value}%")
+    
+    def _choose_color(self, color_type: str):
+        """Open color picker dialog"""
+        color = QColorDialog.getColor(QColor(255, 255, 255), self, f"Choose {color_type.title()} Color")
+        if color.isValid():
+            # Store the color (implement based on your color management system)
+            color_name = color.name()
+            if color_type == 'background':
+                self.bg_color_btn.setStyleSheet(f"background-color: {color_name};")
+            elif color_type == 'text':
+                self.text_color_btn.setStyleSheet(f"background-color: {color_name};")
+            elif color_type == 'accent':
+                self.accent_color_btn.setStyleSheet(f"background-color: {color_name};")
+    
+    def _choose_font(self, font_type: str):
+        """Open font picker dialog"""
+        current_font = QFont()
+        font, ok = QFontDialog.getFont(current_font, self, f"Choose {font_type.title()} Font")
+        if ok:
+            # Update button text to show selected font
+            font_info = f"{font.family()} {font.pointSize()}pt"
+            if font_type == 'main':
+                self.main_font_btn.setText(font_info)
+            elif font_type == 'table':
+                self.table_font_btn.setText(font_info)
+            elif font_type == 'menu':
+                self.menu_font_btn.setText(font_info)
+    
+    def _theme_code_to_name(self, code: str) -> str:
+        """Convert theme code to display name"""
+        theme_map = {
+            "img_factory": "IMG Factory Default",
+            "dark": "Dark Theme",
+            "light_professional": "Light Professional",
+            "gta_san_andreas": "GTA San Andreas",
+            "gta_vice_city": "GTA Vice City",
+            "lcars": "LCARS (Star Trek)",
+            "cyberpunk_2077": "Cyberpunk 2077",
+            "matrix": "Matrix",
+            "synthwave": "Synthwave",
+            "amiga_workbench": "Amiga Workbench"
+        }
+        return theme_map.get(code, "IMG Factory Default")
+    
+    def _theme_name_to_code(self, name: str) -> str:
+        """Convert display name to theme code"""
+        name_map = {
+            "IMG Factory Default": "img_factory",
+            "Dark Theme": "dark",
+            "Light Professional": "light_professional",
+            "GTA San Andreas": "gta_san_andreas",
+            "GTA Vice City": "gta_vice_city",
+            "LCARS (Star Trek)": "lcars",
+            "Cyberpunk 2077": "cyberpunk_2077",
+            "Matrix": "matrix",
+            "Synthwave": "synthwave",
+            "Amiga Workbench": "amiga_workbench"
+        }
+        return name_map.get(name, "img_factory")
+    
+    def _apply_settings(self):
+        """Apply settings without closing dialog"""
+        self._save_settings()
+        self.settings_changed.emit()
+        QMessageBox.information(self, "Settings Applied", "GUI settings have been applied successfully!")
     
     def _reset_to_defaults(self):
-        """Reset all settings to defaults"""
+        """Reset all settings to default values"""
         reply = QMessageBox.question(
-            self,
-            "Reset to Defaults",
-            "This will reset all GUI settings to their default values.\n\nContinue?",
+            self, "Reset to Defaults",
+            "This will reset all GUI settings to their default values.\n\nAre you sure you want to continue?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
         
         if reply == QMessageBox.StandardButton.Yes:
-            # Reset app settings to defaults
-            self.app_settings.reset_to_defaults()
+            # Reset tab settings
+            self.main_tab_height_spin.setValue(35)
+            self.individual_tab_height_spin.setValue(24)
+            self.tab_font_size_spin.setValue(9)
+            self.tab_padding_spin.setValue(4)
+            self.tab_container_height_spin.setValue(40)
+            self.tab_style_combo.setCurrentText("Compact")
             
-            # Reload the dialog with default values
-            self._load_current_settings()
+            # Reset theme
+            self.theme_combo.setCurrentText("IMG Factory Default")
             
-            QMessageBox.information(
-                self,
-                "Reset Complete",
-                "All GUI settings have been reset to defaults!"
-            )
+            # Reset visual effects
+            self.animations_check.setChecked(True)
+            self.shadows_check.setChecked(True)
+            self.transparency_check.setChecked(False)
+            self.rounded_corners_check.setChecked(True)
             
+            # Reset layout
+            self.left_panel_spin.setValue(600)
+            self.right_panel_spin.setValue(280)
+            self.row_height_spin.setValue(25)
+            self.widget_spacing_spin.setValue(5)
+            self.layout_margins_spin.setValue(5)
+            
+            # Reset window behavior
+            self.remember_size_check.setChecked(True)
+            self.remember_position_check.setChecked(True)
+            self.maximize_on_startup_check.setChecked(False)
+            self.always_on_top_check.setChecked(False)
+            
+            # Reset fonts
+            self.font_scale_slider.setValue(100)
+            self.antialiasing_check.setChecked(True)
+            self.bold_headers_check.setChecked(True)
+            self.monospace_numbers_check.setChecked(False)
+            
+            # Reset icons
+            self.show_menu_icons_check.setChecked(True)
+            self.show_toolbar_icons_check.setChecked(True)
+            self.show_button_icons_check.setChecked(True)
+            self.show_file_type_icons_check.setChecked(True)
+            
+            self.menu_icon_size_combo.setCurrentText("16px")
+            self.toolbar_icon_size_combo.setCurrentText("24px")
+            self.button_icon_size_combo.setCurrentText("16px")
+            
+            self.icon_style_group.button(0).setChecked(True)
+            
+            # Reset behavior
+            self.double_click_open_check.setChecked(True)
+            self.single_click_select_check.setChecked(False)
+            self.hover_preview_check.setChecked(True)
+            self.auto_resize_columns_check.setChecked(True)
+            
+            # Reset performance
+            self.lazy_loading_check.setChecked(True)
+            self.cache_thumbnails_check.setChecked(True)
+            self.preload_common_files_check.setChecked(False)
+            
+            # Reset notifications
+            self.show_notifications_check.setChecked(True)
+            self.sound_notifications_check.setChecked(False)
+            self.progress_notifications_check.setChecked(True)
+            
+            # Reset font buttons
+            self.main_font_btn.setText("Select Font...")
+            self.table_font_btn.setText("Select Font...")
+            self.menu_font_btn.setText("Select Font...")
+            
+            # Reset color buttons
+            self.bg_color_btn.setStyleSheet("")
+            self.text_color_btn.setStyleSheet("")
+            self.accent_color_btn.setStyleSheet("")
+            
+            # Update font scale label
+            self._update_font_scale_label()
+            
+            QMessageBox.information(self, "Reset Complete", "All settings have been reset to default values.")
+
+    def _reset_tab_settings(self):
+        """Reset only tab settings to defaults"""
+        reply = QMessageBox.question(
+            self, "Reset Tab Settings",
+            "This will reset all tab settings to their default values.\n\nAre you sure you want to continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            # Reset tab settings only
+            self.main_tab_height_spin.setValue(35)
+            self.individual_tab_height_spin.setValue(24)
+            self.tab_font_size_spin.setValue(9)
+            self.tab_padding_spin.setValue(4)
+            self.tab_container_height_spin.setValue(40)
+            self.tab_style_combo.setCurrentText("Compact")
+            
+            QMessageBox.information(self, "Reset Complete", "Tab settings have been reset to default values.")
+
+    def _apply_tab_style_preset(self, style_name):
+        """Apply preset tab style configurations"""
+        if style_name == "Compact":
+            self.main_tab_height_spin.setValue(35)
+            self.individual_tab_height_spin.setValue(24)
+            self.tab_font_size_spin.setValue(9)
+            self.tab_padding_spin.setValue(4)
+            self.tab_container_height_spin.setValue(40)
+        elif style_name == "Standard":
+            self.main_tab_height_spin.setValue(45)
+            self.individual_tab_height_spin.setValue(28)
+            self.tab_font_size_spin.setValue(10)
+            self.tab_padding_spin.setValue(6)
+            self.tab_container_height_spin.setValue(50)
+        elif style_name == "Large":
+            self.main_tab_height_spin.setValue(55)
+            self.individual_tab_height_spin.setValue(32)
+            self.tab_font_size_spin.setValue(11)
+            self.tab_padding_spin.setValue(8)
+            self.tab_container_height_spin.setValue(60)
+
+    def _preview_tab_changes(self):
+        """Preview tab height changes in real-time"""
+        if hasattr(self.parent(), 'gui_layout'):
+            # Apply changes to the main window tabs
+            self._apply_tab_settings_to_main_window()
+            
+            # Show preview message
+            QMessageBox.information(self, "Preview Applied", 
+                                   "Tab height changes have been applied as preview.\n"
+                                   "Click 'Apply' to save permanently or 'Cancel' to revert.")
+
+    def _apply_tab_settings_to_main_window(self):
+        """Apply tab settings to main window - FIXED"""
+        try:
+            main_window = self.parent()
+            
+            # Check if main window has gui_layout
+            if not hasattr(main_window, 'gui_layout'):
+                return
+                
+            # Get current values
+            main_height = self.main_tab_height_spin.value()
+            tab_height = self.individual_tab_height_spin.value()
+            font_size = self.tab_font_size_spin.value()
+            padding = self.tab_padding_spin.value()
+            container_height = self.tab_container_height_spin.value()
+            
+            # Method 1: Try to call the method if it exists
+            if hasattr(main_window.gui_layout, '_apply_dynamic_tab_styling'):
+                main_window.gui_layout._apply_dynamic_tab_styling(
+                    main_height, tab_height, font_size, padding, container_height
+                )
+            else:
+                # Method 2: Apply styling directly if method doesn't exist
+                self._apply_tab_styling_directly(main_window, main_height, tab_height, font_size, padding, container_height)
+                
+        except Exception as e:
+            # Show error but don't crash
+            QMessageBox.warning(self, "Tab Settings", f"Could not apply tab settings: {str(e)}")
+
+    def _apply_tab_styling_directly(self, main_window, main_height, tab_height, font_size, padding, container_height):
+        """Apply tab styling directly when method doesn't exist"""
+        try:
+            # Look for main type tabs in the GUI layout
+            if hasattr(main_window, 'gui_layout'):
+                gui_layout = main_window.gui_layout
+                
+                # Try to find main tabs
+                main_tabs = None
+                if hasattr(gui_layout, 'main_type_tabs'):
+                    main_tabs = gui_layout.main_type_tabs
+                elif hasattr(gui_layout, 'main_tab_widget'):
+                    main_tabs = gui_layout.main_tab_widget
+                
+                if main_tabs:
+                    # Apply styling directly
+                    main_tabs.setMaximumHeight(main_height)
+                    main_tabs.setStyleSheet(f"""
+                        QTabWidget::pane {{ 
+                            border: 1px solid #cccccc;
+                            border-radius: 3px;
+                            background-color: #ffffff;
+                            margin-top: 0px;
+                        }}
+                        QTabBar {{
+                            qproperty-drawBase: 0;
+                        }}
+                        QTabBar::tab {{
+                            background-color: #f0f0f0;
+                            border: 1px solid #cccccc;
+                            border-bottom: none;
+                            padding: {padding}px 8px;
+                            margin-right: 2px;
+                            border-radius: 3px 3px 0px 0px;
+                            min-width: 80px;
+                            max-height: {tab_height}px;
+                            font-size: {font_size}pt;
+                        }}
+                        QTabBar::tab:selected {{
+                            background-color: #ffffff;
+                            border-bottom: 1px solid #ffffff;
+                            color: #000000;
+                            font-weight: bold;
+                        }}
+                        QTabBar::tab:hover {{
+                            background-color: #e8e8e8;
+                        }}
+                        QTabBar::tab:!selected {{
+                            margin-top: 2px;
+                        }}
+                    """)
+                    
+                    # Update container height if possible
+                    if main_tabs.parent():
+                        main_tabs.parent().setMaximumHeight(container_height)
+                    
+                    # Log success
+                    if hasattr(main_window, 'log_message'):
+                        main_window.log_message(f"Tab styling applied: {main_height}px height, {font_size}pt font")
+                        
+        except Exception as e:
+            # Silent fail for direct styling
+            pass
+                font_size = self.tab_font_size_spin.value()
+                padding = self.tab_padding_spin.value()
+                container_height = self.tab_container_height_spin.value()
+                
+                # Apply to main tabs
+                main_window.gui_layout._apply_dynamic_tab_styling(
+                    main_height, tab_height, font_size, padding, container_height
+                )
+                
+        except Exception as e:
+            print(f"Error applying tab settings: {e}")
+
+
+# Integration method for gui_layout.py
+def _apply_dynamic_tab_styling(self, main_height, tab_height, font_size, padding, container_height):
+    """Apply dynamic tab styling - called from settings"""
+    if hasattr(self, 'main_type_tabs'):
+        # Update tab widget height
+        self.main_type_tabs.setMaximumHeight(main_height)
+        
+        # Update styling
+        self.main_type_tabs.setStyleSheet(f"""
+            QTabWidget::pane {{ 
+                border: 1px solid #cccccc;
+                border-radius: 3px;
+                background-color: #ffffff;
+                margin-top: 0px;
+            }}
+            QTabBar {{
+                qproperty-drawBase: 0;
+            }}
+            QTabBar::tab {{
+                background-color: #f0f0f0;
+                border: 1px solid #cccccc;
+                border-bottom: none;
+                padding: {padding}px 8px;
+                margin-right: 2px;
+                border-radius: 3px 3px 0px 0px;
+                min-width: 80px;
+                max-height: {tab_height}px;
+                font-size: {font_size}pt;
+            }}
+            QTabBar::tab:selected {{
+                background-color: #ffffff;
+                border-bottom: 1px solid #ffffff;
+                color: #000000;
+                font-weight: bold;
+            }}
+            QTabBar::tab:hover {{
+                background-color: #e8e8e8;
+            }}
+            QTabBar::tab:!selected {{
+                margin-top: 2px;
+            }}
+        """)
+        
+        # Update container height
+        if hasattr(self, 'main_type_tabs') and self.main_type_tabs.parent():
+            self.main_type_tabs.parent().setMaximumHeight(container_height)
+        
+        # Update splitter proportions to account for new tab height
+        if hasattr(self, 'left_vertical_splitter'):
+            current_sizes = self.left_vertical_splitter.sizes()
+            if len(current_sizes) >= 3:
+                # Adjust middle section based on tab height change
+                new_sizes = [container_height, current_sizes[1], current_sizes[2]]
+                self.left_vertical_splitter.setSizes(new_sizes)
+        
+        if hasattr(self.main_window, 'log_message'):
+            self.main_window.log_message(f"Tab styling updated: {main_height}px height, {font_size}pt font")

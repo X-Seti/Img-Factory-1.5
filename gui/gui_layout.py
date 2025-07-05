@@ -14,19 +14,93 @@ class IMGFactoryGUILayout:
     """Handles the complete GUI layout for IMG Factory 1.5"""
     
     def __init__(self, main_window):
+        """Initialize GUI layout with tab settings support"""
         self.main_window = main_window
         self.table = None
         self.log = None
         self.main_splitter = None
         self.img_buttons = []
         self.entry_buttons = []
-        self.options_buttons = []  # Add options buttons list
+        self.options_buttons = []
+
         # Status bar components
         self.status_bar = None
         self.status_label = None
         self.progress_bar = None
         self.img_info_label = None
+
+        # Tab-related components
+        self.main_type_tabs = None
+        self.tab_widget = None
+        self.left_vertical_splitter = None
+
+        # Initialize tab settings and button icons after a short delay
+        # This ensures the main window is fully initialized
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(100, self._delayed_initialization)
     
+    def _delayed_initialization(self):
+        """Perform delayed initialization after main window is ready"""
+        try:
+            # Load tab settings from app settings
+            self.load_tab_settings_from_app_settings()
+
+            # Enable button icons based on settings
+            self.enable_button_icons()
+
+        except Exception as e:
+            # Don't crash on initialization issues
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Delayed initialization warning: {str(e)}")
+
+
+    def apply_settings_changes(self, settings):
+        """Apply settings changes to the GUI layout"""
+        try:
+            # Apply tab settings if they exist
+            if any(key.startswith('tab_') or key in ['main_tab_height', 'individual_tab_height', 'tab_font_size', 'tab_padding', 'tab_container_height'] for key in settings.keys()):
+                main_height = settings.get("main_tab_height", 35)
+                tab_height = settings.get("individual_tab_height", 24)
+                font_size = settings.get("tab_font_size", 9)
+                padding = settings.get("tab_padding", 4)
+                container_height = settings.get("tab_container_height", 40)
+
+                self._apply_dynamic_tab_styling(
+                    main_height, tab_height, font_size, padding, container_height
+                )
+
+            # Apply button icon settings
+            if 'show_button_icons' in settings:
+                self._update_button_icons_state(settings['show_button_icons'])
+
+            # Apply other GUI settings as needed
+            if 'table_row_height' in settings:
+                self._update_table_row_height(settings['table_row_height'])
+
+            if 'widget_spacing' in settings:
+                self._update_widget_spacing(settings['widget_spacing'])
+
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Error applying settings changes: {str(e)}")
+
+    def _update_table_row_height(self, height):
+        """Update table row height"""
+        try:
+            if hasattr(self, 'table') and self.table:
+                self.table.verticalHeader().setDefaultSectionSize(height)
+        except Exception:
+            pass
+
+    def _update_widget_spacing(self, spacing):
+        """Update widget spacing"""
+        try:
+            if hasattr(self, 'main_splitter') and self.main_splitter:
+                # Update splitter spacing
+                self.main_splitter.setHandleWidth(max(4, spacing))
+        except Exception:
+            pass
+
     def create_main_ui_with_splitters(self, main_layout):
         """Create the main UI with correct 3-section layout"""
         # Create main horizontal splitter
@@ -83,7 +157,51 @@ class IMGFactoryGUILayout:
         main_layout.addWidget(self.main_splitter)
     
     def _create_left_three_section_panel(self):
-        """Create left panel with 3 sections: Info Bar, File Window, Status Window"""
+        """Create left panel with 3 sections: Main Tabs, File Window, Status Window - UPDATED HEIGHTS"""
+        left_container = QWidget()
+        left_layout = QVBoxLayout(left_container)
+        left_layout.setContentsMargins(3, 3, 3, 3)
+        left_layout.setSpacing(0)  # No spacing - splitter handles this
+
+        # Create vertical splitter for the 3 sections
+        self.left_vertical_splitter = QSplitter(Qt.Orientation.Vertical)
+
+        # 1. TOP: Main Tabs (IMG, COL, TXD) - COMPACT HEIGHT
+        main_tabs = self._create_main_tabs_section()
+        self.left_vertical_splitter.addWidget(main_tabs)
+
+        # 2. MIDDLE: File Window (table with sub-tabs)
+        file_window = self._create_file_window()
+        self.left_vertical_splitter.addWidget(file_window)
+
+        # 3. BOTTOM: Status Window (log and status)
+        status_window = self._create_status_window()
+        self.left_vertical_splitter.addWidget(status_window)
+
+        # Set section proportions: MainTabs(40px), File(720px), Status(200px)
+        # Total height ~960px, tabs take minimal space
+        self.left_vertical_splitter.setSizes([40, 720, 200])
+
+        # Prevent sections from collapsing completely
+        self.left_vertical_splitter.setCollapsible(0, False)  # Main tabs
+        self.left_vertical_splitter.setCollapsible(1, False)  # File window
+        self.left_vertical_splitter.setCollapsible(2, False)  # Status window
+
+        # Apply theme styling to vertical splitter
+        self._apply_vertical_splitter_theme()
+
+        left_layout.addWidget(self.left_vertical_splitter)
+
+        return left_container
+
+    def update_main_tab_info(self, file_type, file_path=None, stats=None):
+        """Update main tab info - called from main window"""
+        if hasattr(self, 'gui_layout'):
+            self.gui_layout.update_ultra_compact_file_info(file_type, file_path, stats)
+
+    """
+    def _create_left_three_section_panel(self):
+        #Create left panel with 3 sections: Info Bar, File Window, Status Window
         left_container = QWidget()
         left_layout = QVBoxLayout(left_container)
         left_layout.setContentsMargins(3, 3, 3, 3)
@@ -118,7 +236,452 @@ class IMGFactoryGUILayout:
         left_layout.addWidget(self.left_vertical_splitter)
         
         return left_container
+    """
     
+    def _create_main_tabs_section(self):
+        """Create main tabs section for IMG/COL/TXD switching - COMPACT HEIGHT"""
+        tabs_container = QWidget()
+        tabs_layout = QVBoxLayout(tabs_container)
+        tabs_layout.setContentsMargins(5, 2, 5, 2)  # Reduced margins
+        tabs_layout.setSpacing(0)
+
+        # Create horizontal tab widget for main file types
+        self.main_type_tabs = QTabWidget()
+        self.main_type_tabs.setTabPosition(QTabWidget.TabPosition.North)
+
+        # COMPACT TAB HEIGHT STYLING
+        self.main_type_tabs.setStyleSheet("""
+            QTabWidget::pane {
+                border: 1px solid #cccccc;
+                border-radius: 3px;
+                background-color: #ffffff;
+                margin-top: 0px;
+            }
+            QTabBar {
+                qproperty-drawBase: 0;
+            }
+            QTabBar::tab {
+                background-color: #f0f0f0;
+                border: 1px solid #cccccc;
+                border-bottom: none;
+                padding: 4px 8px;  /* Reduced padding for compact height */
+                margin-right: 2px;
+                border-radius: 3px 3px 0px 0px;
+                min-width: 80px;
+                max-height: 24px;  /* Maximum tab height */
+                font-size: 9pt;    /* Smaller font for compact look */
+            }
+            QTabBar::tab:selected {
+                background-color: #ffffff;
+                border-bottom: 1px solid #ffffff;
+                color: #000000;
+                font-weight: bold;
+            }
+            QTabBar::tab:hover {
+                background-color: #e8e8e8;
+            }
+            QTabBar::tab:!selected {
+                margin-top: 2px;  /* Makes unselected tabs appear lower */
+            }
+        """)
+
+        # Set maximum height for the entire tab widget
+        self.main_type_tabs.setMaximumHeight(35)  # Compact height
+
+        # IMG Tab
+        img_tab = QWidget()
+        img_layout = QVBoxLayout(img_tab)
+        img_layout.setContentsMargins(0, 0, 0, 0)
+        img_layout.setSpacing(0)
+
+        # IMG status info - ultra compact version
+        self.img_status_widget = self._create_ultra_compact_file_status("IMG")
+        img_layout.addWidget(self.img_status_widget)
+
+        self.main_type_tabs.addTab(img_tab, "📁 IMG")
+
+        # COL Tab
+        col_tab = QWidget()
+        col_layout = QVBoxLayout(col_tab)
+        col_layout.setContentsMargins(0, 0, 0, 0)
+        col_layout.setSpacing(0)
+
+        # COL status info - ultra compact version
+        self.col_status_widget = self._create_ultra_compact_file_status("COL")
+        col_layout.addWidget(self.col_status_widget)
+
+        self.main_type_tabs.addTab(col_tab, "🔧 COL")
+
+        # TXD Tab
+        txd_tab = QWidget()
+        txd_layout = QVBoxLayout(txd_tab)
+        txd_layout.setContentsMargins(0, 0, 0, 0)
+        txd_layout.setSpacing(0)
+
+        # TXD status info - ultra compact version
+        self.txd_status_widget = self._create_ultra_compact_file_status("TXD")
+        txd_layout.addWidget(self.txd_status_widget)
+
+        self.main_type_tabs.addTab(txd_tab, "🖼️ TXD")
+
+        # Connect tab change signal
+        self.main_type_tabs.currentChanged.connect(self._on_main_tab_changed)
+
+        tabs_layout.addWidget(self.main_type_tabs)
+
+        # Set the container to a minimal height
+        tabs_container.setMaximumHeight(40)  # Total container height
+
+        return tabs_container
+
+    def _create_ultra_compact_file_status(self, file_type):
+        """Create ultra compact file status widget - single line"""
+        status_widget = QWidget()
+        status_layout = QHBoxLayout(status_widget)
+        status_layout.setContentsMargins(3, 1, 3, 1)  # Minimal margins
+        status_layout.setSpacing(8)
+
+        # Combined file info in one line
+        file_info_label = QLabel(f"No {file_type} file loaded")
+        file_info_label.setStyleSheet("color: #666; font-size: 8pt;")
+        status_layout.addWidget(file_info_label)
+
+        # Store references for updates
+        if file_type == "IMG":
+            self.img_combined_label = file_info_label
+        elif file_type == "COL":
+            self.col_combined_label = file_info_label
+        elif file_type == "TXD":
+            self.txd_combined_label = file_info_label
+
+        # Add stretch to push everything left
+        status_layout.addStretch()
+
+        # Quick action button (optional)
+        action_btn = QPushButton("...")
+        action_btn.setMaximumSize(16, 16)
+        action_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f0f0f0;
+                border: 1px solid #ccc;
+                border-radius: 2px;
+                font-size: 7pt;
+                padding: 0px;
+            }
+            QPushButton:hover {
+                background-color: #e0e0e0;
+            }
+        """)
+        action_btn.clicked.connect(lambda: self._show_file_actions(file_type))
+        status_layout.addWidget(action_btn)
+
+        status_widget.setMaximumHeight(20)  # Ultra compact height
+
+        return status_widget
+
+    def _show_file_actions(self, file_type):
+        """Show quick actions for file type"""
+        from PyQt6.QtWidgets import QMenu
+
+        menu = QMenu(self.main_window)
+
+        if file_type == "IMG":
+            menu.addAction("📂 Open IMG File", self.main_window.open_img_file)
+            menu.addAction("📋 File Info", lambda: self._show_file_info_popup(file_type))
+            if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
+                menu.addAction("✅ Validate IMG", self.main_window.validate_img)
+        elif file_type == "COL":
+            menu.addAction("📂 Open COL File", self.main_window.open_col_file)
+            menu.addAction("📋 File Info", lambda: self._show_file_info_popup(file_type))
+        elif file_type == "TXD":
+            menu.addAction("📂 Open TXD File", lambda: self._open_txd_file())
+            menu.addAction("📋 File Info", lambda: self._show_file_info_popup(file_type))
+
+        # Show menu at button position
+        button = self.main_window.sender()
+        if button:
+            menu.exec(button.mapToGlobal(button.rect().bottomLeft()))
+
+    def _show_file_info_popup(self, file_type):
+        """Show file info popup for current file"""
+        if file_type == "IMG" and hasattr(self.main_window, 'current_img') and self.main_window.current_img:
+            self._show_detailed_file_info(file_type, self.main_window.current_img.file_path, self.main_window.current_img)
+        elif file_type == "COL" and hasattr(self.main_window, 'current_col') and self.main_window.current_col:
+            self._show_detailed_file_info(file_type, self.main_window.current_col.get('file_path', ''), self.main_window.current_col)
+        else:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(self.main_window, f"{file_type} Info", f"No {file_type} file currently loaded")
+
+    def update_ultra_compact_file_info(self, file_type, file_path=None, stats=None):
+        """Update ultra compact file info display"""
+        if file_type == "IMG":
+            if hasattr(self, 'img_combined_label'):
+                if file_path:
+                    name = os.path.basename(file_path)
+                    count = stats.get('entries', 0) if stats else 0
+                    self.img_combined_label.setText(f"{name} ({count} entries)")
+                else:
+                    self.img_combined_label.setText("No IMG file loaded")
+
+        elif file_type == "COL":
+            if hasattr(self, 'col_combined_label'):
+                if file_path:
+                    name = os.path.basename(file_path)
+                    count = stats.get('models', 0) if stats else 0
+                    self.col_combined_label.setText(f"{name} ({count} models)")
+                else:
+                    self.col_combined_label.setText("No COL file loaded")
+
+        elif file_type == "TXD":
+            if hasattr(self, 'txd_combined_label'):
+                if file_path:
+                    name = os.path.basename(file_path)
+                    count = stats.get('textures', 0) if stats else 0
+                    self.txd_combined_label.setText(f"{name} ({count} textures)")
+                else:
+                    self.txd_combined_label.setText("No TXD file loaded")
+
+
+    def _create_compact_file_status(self, file_type):
+        """Create compact file status widget for a specific file type"""
+        status_widget = QWidget()
+        status_layout = QHBoxLayout(status_widget)
+        status_layout.setContentsMargins(5, 2, 5, 2)
+        status_layout.setSpacing(10)
+
+        # File name
+        file_label = QLabel(f"{file_type} File:")
+        file_label.setStyleSheet("font-weight: bold; color: #333;")
+        status_layout.addWidget(file_label)
+
+        file_name_label = QLabel("No file loaded")
+        file_name_label.setStyleSheet("color: #666;")
+        status_layout.addWidget(file_name_label)
+
+        # Store references for updates
+        if file_type == "IMG":
+            self.img_file_name_label = file_name_label
+        elif file_type == "COL":
+            self.col_file_name_label = file_name_label
+        elif file_type == "TXD":
+            self.txd_file_name_label = file_name_label
+
+        # Add stretch to push everything left
+        status_layout.addStretch()
+
+        # Quick stats
+        stats_label = QLabel("Items: 0")
+        stats_label.setStyleSheet("color: #666; font-size: 9pt;")
+        status_layout.addWidget(stats_label)
+
+        # Store reference for updates
+        if file_type == "IMG":
+            self.img_stats_label = stats_label
+        elif file_type == "COL":
+            self.col_stats_label = stats_label
+        elif file_type == "TXD":
+            self.txd_stats_label = stats_label
+
+        return status_widget
+
+    def _on_main_tab_changed(self, index):
+        """Handle main tab change between IMG/COL/TXD"""
+        tab_names = ["IMG", "COL", "TXD"]
+        if 0 <= index < len(tab_names):
+            current_type = tab_names[index]
+            self.main_window.log_message(f"Switched to {current_type} mode")
+
+            # Update the file window based on current type
+            self._update_file_window_for_type(current_type)
+
+            # Emit signal for main window to handle
+            if hasattr(self.main_window, 'on_main_file_type_changed'):
+                self.main_window.on_main_file_type_changed(current_type)
+
+    def _update_file_window_for_type(self, file_type):
+        """Update file window content based on selected type"""
+        if file_type == "IMG":
+            # Show IMG-specific table columns
+            self._configure_table_for_img()
+        elif file_type == "COL":
+            # Show COL-specific table columns
+            self._configure_table_for_col()
+        elif file_type == "TXD":
+            # Show TXD-specific table columns
+            self._configure_table_for_txd()
+
+    def _configure_table_for_img(self):
+        """Configure table for IMG file display"""
+        if hasattr(self, 'table'):
+            self.table.setColumnCount(7)
+            self.table.setHorizontalHeaderLabels([
+                "Name", "Extension", "Size", "Hash", "Version", "Compression", "Status"
+            ])
+
+    def _configure_table_for_col(self):
+        """Configure table for COL file display"""
+        if hasattr(self, 'table'):
+            self.table.setColumnCount(6)
+            self.table.setHorizontalHeaderLabels([
+                "Model", "Type", "Surfaces", "Vertices", "Collision", "Status"
+            ])
+
+    def _configure_table_for_txd(self):
+        """Configure table for TXD file display"""
+        if hasattr(self, 'table'):
+            self.table.setColumnCount(6)
+            self.table.setHorizontalHeaderLabels([
+                "Texture", "Format", "Width", "Height", "Mipmaps", "Status"
+            ])
+
+    def update_file_info_for_type(self, file_type, file_path=None, stats=None):
+        """Update file info for specific type"""
+        if file_type == "IMG":
+            if hasattr(self, 'img_file_name_label'):
+                name = os.path.basename(file_path) if file_path else "No file loaded"
+                self.img_file_name_label.setText(name)
+            if hasattr(self, 'img_stats_label') and stats:
+                self.img_stats_label.setText(f"Items: {stats.get('entries', 0)}")
+
+        elif file_type == "COL":
+            if hasattr(self, 'col_file_name_label'):
+                name = os.path.basename(file_path) if file_path else "No file loaded"
+                self.col_file_name_label.setText(name)
+            if hasattr(self, 'col_stats_label') and stats:
+                self.col_stats_label.setText(f"Models: {stats.get('models', 0)}")
+
+        elif file_type == "TXD":
+            if hasattr(self, 'txd_file_name_label'):
+                name = os.path.basename(file_path) if file_path else "No file loaded"
+                self.txd_file_name_label.setText(name)
+            if hasattr(self, 'txd_stats_label') and stats:
+                self.txd_stats_label.setText(f"Textures: {stats.get('textures', 0)}")
+
+    # Right-click context menu for detailed file info
+    def create_file_info_popup(self, file_type, file_path, file_object):
+        """Create detailed file info popup (right-click context menu)"""
+        from PyQt6.QtWidgets import QMenu, QAction, QMessageBox
+
+        menu = QMenu(self.main_window)
+
+        # File info action
+        info_action = QAction("📋 Detailed File Information", self.main_window)
+        info_action.triggered.connect(lambda: self._show_detailed_file_info(file_type, file_path, file_object))
+        menu.addAction(info_action)
+
+        # Properties action
+        props_action = QAction("🔍 File Properties", self.main_window)
+        props_action.triggered.connect(lambda: self._show_file_properties(file_type, file_path, file_object))
+        menu.addAction(props_action)
+
+        menu.addSeparator()
+
+        # File operations
+        if file_type == "IMG":
+            validate_action = QAction("✅ Validate IMG", self.main_window)
+            validate_action.triggered.connect(lambda: self.main_window.validate_img())
+            menu.addAction(validate_action)
+
+        return menu
+
+    def _show_detailed_file_info(self, file_type, file_path, file_object):
+        """Show detailed file information dialog"""
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QTextEdit, QDialogButtonBox
+
+        dialog = QDialog(self.main_window)
+        dialog.setWindowTitle(f"{file_type} File Information")
+        dialog.setMinimumSize(500, 400)
+
+        layout = QVBoxLayout(dialog)
+
+        # File path
+        path_label = QLabel(f"<b>File Path:</b> {file_path}")
+        path_label.setWordWrap(True)
+        layout.addWidget(path_label)
+
+        # File details
+        details_text = QTextEdit()
+        details_text.setReadOnly(True)
+
+        # Format details based on file type
+        if file_type == "IMG" and file_object:
+            details = f"""
+    File Format: {file_object.version.name if hasattr(file_object, 'version') else 'Unknown'}
+    Total Entries: {len(file_object.entries) if hasattr(file_object, 'entries') else 0}
+    File Size: {os.path.getsize(file_path) if os.path.exists(file_path) else 0} bytes
+    Creation Date: {os.path.getctime(file_path) if os.path.exists(file_path) else 'Unknown'}
+            """
+            details_text.setPlainText(details)
+
+        layout.addWidget(details_text)
+
+        # Buttons
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+        buttons.accepted.connect(dialog.accept)
+        layout.addWidget(buttons)
+
+        dialog.exec()
+
+    def _show_file_properties(self, file_type, file_path, file_object):
+        """Show file properties dialog"""
+        from PyQt6.QtWidgets import QMessageBox
+
+        if os.path.exists(file_path):
+            stat = os.stat(file_path)
+            size = stat.st_size
+            modified = stat.st_mtime
+
+            from datetime import datetime
+            mod_time = datetime.fromtimestamp(modified).strftime("%Y-%m-%d %H:%M:%S")
+
+            QMessageBox.information(
+                self.main_window,
+                f"{file_type} File Properties",
+                f"File: {os.path.basename(file_path)}\n"
+                f"Path: {file_path}\n"
+                f"Size: {size:,} bytes\n"
+                f"Modified: {mod_time}\n"
+                f"Type: {file_type} Archive"
+            )
+        else:
+            QMessageBox.warning(self.main_window, "File Not Found", f"File not found: {file_path}")
+
+    # Update table context menu to include file info
+    def setup_table_context_menu(self):
+        """Setup context menu for the table"""
+        if hasattr(self, 'table'):
+            self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            self.table.customContextMenuRequested.connect(self._show_table_context_menu)
+
+    def _show_table_context_menu(self, position):
+        """Show context menu for table"""
+        if hasattr(self, 'table'):
+            # Get current file info
+            current_type = self._get_current_file_type()
+            current_file = self._get_current_file()
+
+            if current_file:
+                menu = self.create_file_info_popup(current_type, current_file.get('path', ''), current_file.get('object'))
+                menu.exec(self.table.mapToGlobal(position))
+
+    def _get_current_file_type(self):
+        """Get currently selected file type"""
+        if hasattr(self, 'main_type_tabs'):
+            index = self.main_type_tabs.currentIndex()
+            return ["IMG", "COL", "TXD"][index] if 0 <= index < 3 else "IMG"
+        return "IMG"
+
+    def _get_current_file(self):
+        """Get current file information"""
+        # Return current file info from main window
+        if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
+            return {
+                'path': self.main_window.current_img.file_path,
+                'object': self.main_window.current_img
+            }
+        return None
+
+
     def _create_information_bar(self):
         """Create information bar with file details"""
         info_bar = QWidget()
