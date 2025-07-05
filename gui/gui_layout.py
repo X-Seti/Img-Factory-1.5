@@ -199,45 +199,6 @@ class IMGFactoryGUILayout:
         if hasattr(self, 'gui_layout'):
             self.gui_layout.update_ultra_compact_file_info(file_type, file_path, stats)
 
-    """
-    def _create_left_three_section_panel(self):
-        #Create left panel with 3 sections: Info Bar, File Window, Status Window
-        left_container = QWidget()
-        left_layout = QVBoxLayout(left_container)
-        left_layout.setContentsMargins(3, 3, 3, 3)
-        left_layout.setSpacing(0)  # No spacing - splitter handles this
-        
-        # Create vertical splitter for the 3 sections
-        self.left_vertical_splitter = QSplitter(Qt.Orientation.Vertical)
-        
-        # 1. TOP: Information Bar (file details)
-        info_bar = self._create_information_bar()
-        self.left_vertical_splitter.addWidget(info_bar)
-        
-        # 2. MIDDLE: File Window (table with tabs)
-        file_window = self._create_file_window()
-        self.left_vertical_splitter.addWidget(file_window)
-        
-        # 3. BOTTOM: Status Window (log and status)
-        status_window = self._create_status_window()
-        self.left_vertical_splitter.addWidget(status_window)
-        
-        # Set section proportions: Info(80px), File(700px), Status(200px)
-        self.left_vertical_splitter.setSizes([80, 700, 200])
-        
-        # Prevent sections from collapsing completely
-        self.left_vertical_splitter.setCollapsible(0, False)  # Info bar
-        self.left_vertical_splitter.setCollapsible(1, False)  # File window
-        self.left_vertical_splitter.setCollapsible(2, False)  # Status window
-        
-        # Apply theme styling to vertical splitter
-        self._apply_vertical_splitter_theme()
-        
-        left_layout.addWidget(self.left_vertical_splitter)
-        
-        return left_container
-    """
-    
     def _create_main_tabs_section(self):
         """Create main tabs section for IMG/COL/TXD switching - COMPACT HEIGHT"""
         tabs_container = QWidget()

@@ -278,7 +278,7 @@ class GUISettingsDialog(QDialog):
         # Individual tab height
         tab_layout.addWidget(QLabel("Individual Tab Height:"), 1, 0)
         self.individual_tab_height_spin = QSpinBox()
-        self.individual_tab_height_spin.setRange(16, 40)
+        self.individual_tab_height_spin.setRange(16, 30)
         self.individual_tab_height_spin.setValue(24)
         self.individual_tab_height_spin.setSuffix(" px")
         self.individual_tab_height_spin.setToolTip("Height of individual tab buttons")
@@ -306,7 +306,7 @@ class GUISettingsDialog(QDialog):
         tab_layout.addWidget(QLabel("Tab Container Height:"), 4, 0)
         self.tab_container_height_spin = QSpinBox()
         self.tab_container_height_spin.setRange(30, 80)
-        self.tab_container_height_spin.setValue(40)
+        self.tab_container_height_spin.setValue(30)
         self.tab_container_height_spin.setSuffix(" px")
         self.tab_container_height_spin.setToolTip("Total height of the tab container section")
         tab_layout.addWidget(self.tab_container_height_spin, 4, 1)
@@ -1021,27 +1021,27 @@ class GUISettingsDialog(QDialog):
                             margin-top: 2px;
                         }}
                     """)
-                    
+
                     # Update container height if possible
                     if main_tabs.parent():
                         main_tabs.parent().setMaximumHeight(container_height)
-                    
+
                     # Log success
                     if hasattr(main_window, 'log_message'):
                         main_window.log_message(f"Tab styling applied: {main_height}px height, {font_size}pt font")
-                        
+
         except Exception as e:
             # Silent fail for direct styling
             pass
-                font_size = self.tab_font_size_spin.value()
-                padding = self.tab_padding_spin.value()
-                container_height = self.tab_container_height_spin.value()
-                
-                # Apply to main tabs
-                main_window.gui_layout._apply_dynamic_tab_styling(
-                    main_height, tab_height, font_size, padding, container_height
-                )
-                
+            font_size = self.tab_font_size_spin.value()
+            padding = self.tab_padding_spin.value()
+            container_height = self.tab_container_height_spin.value()
+
+            # Apply to main tabs
+            main_window.gui_layout._apply_dynamic_tab_styling(
+            main_height, tab_height, font_size, padding, container_height
+            )
+
         except Exception as e:
             print(f"Error applying tab settings: {e}")
 
@@ -1052,10 +1052,10 @@ def _apply_dynamic_tab_styling(self, main_height, tab_height, font_size, padding
     if hasattr(self, 'main_type_tabs'):
         # Update tab widget height
         self.main_type_tabs.setMaximumHeight(main_height)
-        
+
         # Update styling
         self.main_type_tabs.setStyleSheet(f"""
-            QTabWidget::pane {{ 
+            QTabWidget::pane {{
                 border: 1px solid #cccccc;
                 border-radius: 3px;
                 background-color: #ffffff;
@@ -1088,11 +1088,11 @@ def _apply_dynamic_tab_styling(self, main_height, tab_height, font_size, padding
                 margin-top: 2px;
             }}
         """)
-        
+
         # Update container height
         if hasattr(self, 'main_type_tabs') and self.main_type_tabs.parent():
             self.main_type_tabs.parent().setMaximumHeight(container_height)
-        
+
         # Update splitter proportions to account for new tab height
         if hasattr(self, 'left_vertical_splitter'):
             current_sizes = self.left_vertical_splitter.sizes()
@@ -1100,6 +1100,6 @@ def _apply_dynamic_tab_styling(self, main_height, tab_height, font_size, padding
                 # Adjust middle section based on tab height change
                 new_sizes = [container_height, current_sizes[1], current_sizes[2]]
                 self.left_vertical_splitter.setSizes(new_sizes)
-        
+
         if hasattr(self.main_window, 'log_message'):
             self.main_window.log_message(f"Tab styling updated: {main_height}px height, {font_size}pt font")
