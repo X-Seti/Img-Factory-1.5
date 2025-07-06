@@ -50,7 +50,7 @@ from components.img_core_classes import (
     IMGEntriesTable, FilterPanel, IMGFileInfoPanel,
     TabFilterWidget, integrate_filtering, create_entries_table_panel
 )
-from components.img_formats import GameSpecificIMGDialog, EnhancedIMGCreator
+from components.img_formats import GameSpecificIMGDialog, IMGCreator
 from components.img_close_functions import install_close_functions, setup_close_manager
 from components.img_creator import GameType, NewIMGDialog, IMGCreationThread
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
@@ -61,7 +61,6 @@ from gui.menu import IMGFactoryMenuBar
 #from components.col_main_integration import setup_col_integration
 
 print("Components imported successfully")
-
 
 # Replace the populate_img_table function in imgfactory.py with this improved version:
 
@@ -438,7 +437,6 @@ class IMGFactory(QMainWindow):
         from components.unified_signal_handler import signal_handler
         signal_handler.status_update_requested.connect(self._update_status_from_signal)
 
-
     def debug_img_entries(self):
         """Debug function to check what entries are actually loaded"""
         if not self.current_img or not self.current_img.entries:
@@ -489,6 +487,46 @@ class IMGFactory(QMainWindow):
 
         if hidden_count > 0:
             self.log_message("⚠️ Some rows are hidden! Check the filter settings.")
+
+    def manage_templates(self):
+        """Show template manager dialog"""
+        dialog = TemplateManagerDialog(self.template_manager, self)
+        dialog.template_selected.connect(self._apply_template)
+        dialog.exec()
+
+    def _apply_template(self, template_data):
+        """Apply template to create new IMG - FIXED VERSION"""
+        try:
+            self.log_message(f"Applying template: {template_data.get('name', 'Unknown')}")
+
+            # Get output path from user
+            output_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save New IMG Archive",
+                f"{template_data.get('name', 'new_archive').replace(' ', '_').lower()}.img",
+                "IMG Archives (*.img);;All Files (*)"
+            )
+
+            if not output_path:
+                self.log_message("Template application cancelled")
+                return
+
+            # Add output path to template data
+            template_data['output_path'] = output_path
+
+            # Use IMGCreator with FIXED signature (no instantiation needed - static method)
+            if IMGCreator.create_from_template(template_data):
+                self.log_message("✅ Template applied successfully")
+                # Load the created IMG
+                self.load_img_file(output_path)
+            else:
+                self.log_message("❌ Failed to apply template")
+
+        except Exception as e:
+            error_msg = f"Error applying template: {str(e)}"
+            self.log_message(error_msg)
+            QMessageBox.critical(self, "Template Error", error_msg)
+
 
     def _unified_double_click_handler(self, row, filename, item):
         """Handle double-click through unified system"""
@@ -1806,9 +1844,8 @@ class IMGFactory(QMainWindow):
             self.gui_layout.show_progress(-1, "Validation error")
             QMessageBox.critical(self, "Validation Error", error_msg)
 
-    # =============================================================================
+
     # COL FILE OPERATIONS - KEEP 100% OF FUNCTIONALITY
-    # =============================================================================
 
     def _load_col_file_in_new_tab(self, file_path):
         """Load COL file in new tab"""
@@ -1841,39 +1878,7 @@ class IMGFactory(QMainWindow):
 
         self.log_message(f"✅ Loaded COL: {file_name}")
 
-    # =============================================================================
-    # TEMPLATE MANAGEMENT - KEEP 100% OF FUNCTIONALITY  
-    # =============================================================================
-
-    def manage_templates(self):
-        """Show template manager dialog"""
-        dialog = TemplateManagerDialog(self.template_manager, self)
-        dialog.template_selected.connect(self._apply_template)
-        dialog.exec()
-
-    def _apply_template(self, template_data):
-        """Apply template to create new IMG"""
-        try:
-            self.log_message(f"Applying template: {template_data.get('name', 'Unknown')}")
-            
-            # Template application logic
-            creator = EnhancedIMGCreator()
-            if creator.create_from_template(template_data):
-                self.log_message("Template applied successfully")
-                # Optionally load the created IMG
-                if 'output_path' in template_data:
-                    self.load_img_file(template_data['output_path'])
-            else:
-                self.log_message("Failed to apply template")
-                
-        except Exception as e:
-            error_msg = f"Error applying template: {str(e)}"
-            self.log_message(error_msg)
-            QMessageBox.critical(self, "Template Error", error_msg)
-
-    # =============================================================================
     # SETTINGS AND DIALOGS - KEEP 100% OF FUNCTIONALITY
-    # =============================================================================
 
     def show_theme_settings(self):
         """Show theme settings dialog"""
@@ -2035,19 +2040,6 @@ class IMGFactory(QMainWindow):
         """Show theme settings dialog"""
         print("show_theme_settings called!")  # Debug
         self.show_settings()
-
-    def manage_templates(self):
-        """Show template manager dialog"""
-        try:
-            dialog = TemplateManagerDialog(self.template_manager, self)
-            dialog.template_selected.connect(self._apply_template)
-            dialog.exec()
-        except Exception as e:
-            self.log_message(f"Template manager not available: {str(e)}")
-
-    def _apply_template(self, template_data):
-        """Apply template to create new IMG"""
-        self.log_message(f"Template applied: {template_data.get('name', 'Unknown')}")
 
     def show_gui_layout_settings(self):
         """Show GUI Layout settings - called from menu"""

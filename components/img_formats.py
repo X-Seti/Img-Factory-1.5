@@ -1,5 +1,5 @@
-#this belongs in /components/img_formats.py - version 8
-# X-Seti - June29 2025 - Img Factory 1.5  
+#this belongs in components/ img_formats.py - version 9
+# X-Seti - July06 2025 - Img Factory 1.5  
 # Credit MexUK 2007 Img Factory 1.2
 
 #!/usr/bin/env python3
@@ -35,7 +35,6 @@ class GameType(Enum):
     GTA3 = "gta3"
     GTAVC = "gtavc" 
     GTASA = "gtasa"
-    # GTAIV removed - not RenderWare based
     BULLY = "bully"
     MANHUNT = "manhunt"
     MANHUNT2 = "manhunt2"
@@ -141,11 +140,41 @@ class GameConfigurations:
             common_files=['world.img', 'chars.img'],
             file_extensions=['.dff', '.txd', '.col', '.ifp'],
             description="Modified V2 format for Bully game engine"
+        ),
+        
+        GameType.MANHUNT: GameConfiguration(
+            name="Manhunt",
+            code="manhunt",
+            img_version=IMGVersion.VERSION_1,
+            platform=PlatformType.PC,
+            default_size_mb=80,
+            max_size_mb=800,
+            max_entries=9000,
+            supports_compression=False,
+            supports_encryption=False,
+            common_files=['manhunt.img'],
+            file_extensions=['.dff', '.txd', '.col'],
+            description="Manhunt-specific V1 format"
+        ),
+        
+        GameType.MANHUNT2: GameConfiguration(
+            name="Manhunt 2",
+            code="manhunt2",
+            img_version=IMGVersion.VERSION_2,
+            platform=PlatformType.PC,
+            default_size_mb=120,
+            max_size_mb=1200,
+            max_entries=14000,
+            supports_compression=True,
+            supports_encryption=False,
+            common_files=['manhunt2.img'],
+            file_extensions=['.dff', '.txd', '.col', '.wav'],
+            description="Manhunt 2 enhanced V2 format"
         )
     }
     
     @classmethod
-    def get_configuration(cls, game_type: GameType) -> GameConfiguration:
+    def get_configuration(cls, game_type: GameType) -> Optional[GameConfiguration]:
         """Get configuration for specific game type"""
         return cls.CONFIGURATIONS.get(game_type)
     
@@ -153,6 +182,153 @@ class GameConfigurations:
     def get_all_games(cls) -> List[GameType]:
         """Get list of all supported games"""
         return list(cls.CONFIGURATIONS.keys())
+
+
+class IMGCreator:
+    """IMG creation with advanced options - CONSOLIDATED VERSION"""
+    
+    @staticmethod
+    def create_from_template(template_data: Dict[str, Any]) -> bool:
+        """Create IMG from template data - FIXED SIGNATURE"""
+        try:
+            # Extract required data from template
+            output_path = template_data.get('output_path')
+            if not output_path:
+                print("❌ No output path in template data")
+                return False
+            
+            game_type_str = template_data.get('game_type', 'gtasa')
+            
+            # Convert string to GameType enum
+            try:
+                game_type = GameType(game_type_str)
+            except ValueError:
+                print(f"❌ Unknown game type: {game_type_str}")
+                return False
+            
+            config = GameConfigurations.get_configuration(game_type)
+            if not config:
+                print(f"❌ No configuration for game type: {game_type}")
+                return False
+            
+            # Extract settings
+            settings = template_data.get('settings', {})
+            
+            img = IMGFile()
+            creation_options = {
+                'initial_size_mb': settings.get('initial_size_mb', config.default_size_mb),
+                'compression_enabled': settings.get('compression_enabled', False),
+                'encryption_enabled': settings.get('encryption_enabled', False)
+            }
+            
+            if img.create_new(output_path, config.img_version, **creation_options):
+                # Add template entries if specified
+                entries = template_data.get('entries', [])
+                for entry_info in entries:
+                    # Create placeholder entries
+                    entry_name = entry_info.get('name', '')
+                    if entry_name:
+                        img.add_entry(entry_name, b'')
+                
+                success = img.rebuild() if entries else True
+                print(f"✅ Template applied: {template_data.get('name', 'Unknown')}")
+                return success
+            else:
+                print("❌ Failed to create IMG file")
+                return False
+            
+        except Exception as e:
+            print(f"❌ Error creating from template: {e}")
+            return False
+    
+    @staticmethod
+    def create_game_specific(output_path: str, game_type: GameType, **options) -> bool:
+        """Create game-specific IMG file"""
+        try:
+            config = GameConfigurations.get_configuration(game_type)
+            if not config:
+                return False
+            
+            img = IMGFile()
+            
+            creation_options = {
+                'initial_size_mb': options.get('initial_size_mb', config.default_size_mb),
+                'compression_enabled': options.get('compression_enabled', config.supports_compression),
+                'encryption_enabled': options.get('encryption_enabled', config.supports_encryption),
+                'sector_size': config.sector_size,
+                'alignment_required': config.alignment_required
+            }
+            
+            return img.create_new(output_path, config.img_version, **creation_options)
+            
+        except Exception as e:
+            print(f"❌ Error creating game-specific IMG: {e}")
+            return False
+    
+    @staticmethod
+    def validate_game_compatibility(img_path: str, target_game: GameType) -> Dict[str, Any]:
+        """Validate IMG compatibility with target game"""
+        result = {
+            'compatible': False,
+            'issues': [],
+            'recommendations': []
+        }
+        
+        try:
+            img = IMGFile(img_path)
+            if img.open():
+                config = GameConfigurations.get_configuration(target_game)
+                if not config:
+                    result['issues'].append("Unknown target game type")
+                    return result
+                
+                # Check version compatibility
+                if img.version != config.img_version:
+                    result['issues'].append(f"Version mismatch: IMG is {img.version.name}, game expects {config.img_version.name}")
+                
+                # Check file count
+                if len(img.entries) > config.max_entries:
+                    result['issues'].append(f"Too many entries: {len(img.entries)} > {config.max_entries}")
+                
+                # Check file types
+                unsupported_extensions = []
+                for entry in img.entries:
+                    if hasattr(entry, 'extension') and entry.extension:
+                        if entry.extension.lower() not in [ext.lower() for ext in config.file_extensions]:
+                            unsupported_extensions.append(entry.extension)
+                
+                if unsupported_extensions:
+                    result['issues'].append(f"Unsupported file types: {', '.join(set(unsupported_extensions))}")
+                
+                result['compatible'] = len(result['issues']) == 0
+                img.close()
+        
+        except Exception as e:
+            result['issues'].append(f"Error analyzing file: {str(e)}")
+        
+        return result
+    
+    @staticmethod
+    def get_creation_templates() -> List[Dict[str, Any]]:
+        """Get available creation templates"""
+        templates = []
+        
+        for game_type in GameConfigurations.get_all_games():
+            config = GameConfigurations.get_configuration(game_type)
+            if config:
+                template = {
+                    'name': f"{config.name} - Standard",
+                    'game_type': game_type.value,
+                    'description': config.description,
+                    'settings': {
+                        'initial_size_mb': config.default_size_mb,
+                        'compression_enabled': config.supports_compression,
+                        'encryption_enabled': False
+                    }
+                }
+                templates.append(template)
+        
+        return templates
 
 
 class GameSpecificIMGDialog(QDialog):
@@ -182,7 +358,8 @@ class GameSpecificIMGDialog(QDialog):
         self.game_combo = QComboBox()
         for game_type in GameConfigurations.get_all_games():
             config = GameConfigurations.get_configuration(game_type)
-            self.game_combo.addItem(config.name, game_type)
+            if config:
+                self.game_combo.addItem(config.name, game_type)
         game_layout.addWidget(QLabel("Game:"))
         game_layout.addWidget(self.game_combo)
         
@@ -214,47 +391,50 @@ class GameSpecificIMGDialog(QDialog):
         
         layout.addWidget(config_group)
         
-        # File settings
-        settings_group = QGroupBox("File Settings")
-        settings_layout = QFormLayout(settings_group)
-        
-        # Output path
-        path_layout = QHBoxLayout()
-        self.path_edit = QLineEdit()
-        path_browse_btn = QPushButton("Browse...")
-        path_browse_btn.clicked.connect(self._browse_output_path)
-        path_layout.addWidget(self.path_edit)
-        path_layout.addWidget(path_browse_btn)
-        settings_layout.addRow("Output Path:", path_layout)
+        # Creation options
+        options_group = QGroupBox("Creation Options")
+        options_layout = QFormLayout(options_group)
         
         # Size
         self.size_spin = QSpinBox()
         self.size_spin.setRange(1, 4096)
         self.size_spin.setSuffix(" MB")
-        settings_layout.addRow("Initial Size:", self.size_spin)
+        options_layout.addRow("Initial Size:", self.size_spin)
         
-        # Options
-        self.compression_check = QCheckBox("Enable Compression")
-        self.encryption_check = QCheckBox("Enable Encryption")
-        options_layout = QHBoxLayout()
-        options_layout.addWidget(self.compression_check)
-        options_layout.addWidget(self.encryption_check)
-        settings_layout.addRow("Options:", options_layout)
+        # Compression
+        self.compression_check = QCheckBox("Enable compression")
+        options_layout.addRow("Compression:", self.compression_check)
         
-        layout.addWidget(settings_group)
+        # Encryption
+        self.encryption_check = QCheckBox("Enable encryption")
+        options_layout.addRow("Encryption:", self.encryption_check)
+        
+        layout.addWidget(options_group)
+        
+        # Output path
+        path_group = QGroupBox("Output Path")
+        path_layout = QHBoxLayout(path_group)
+        
+        self.path_edit = QLineEdit()
+        path_layout.addWidget(self.path_edit)
+        
+        self.browse_btn = QPushButton("Browse...")
+        self.browse_btn.clicked.connect(self._browse_output_path)
+        path_layout.addWidget(self.browse_btn)
+        
+        layout.addWidget(path_group)
         
         # Buttons
         button_layout = QHBoxLayout()
-        create_btn = QPushButton("Create IMG")
-        create_btn.setDefault(True)
-        create_btn.clicked.connect(self._create_img)
-        
-        cancel_btn = QPushButton("Cancel")
-        cancel_btn.clicked.connect(self.reject)
-        
         button_layout.addStretch()
-        button_layout.addWidget(create_btn)
-        button_layout.addWidget(cancel_btn)
+        
+        self.cancel_btn = QPushButton("Cancel")
+        self.cancel_btn.clicked.connect(self.reject)
+        button_layout.addWidget(self.cancel_btn)
+        
+        self.create_btn = QPushButton("Create IMG")
+        self.create_btn.clicked.connect(self._create_img)
+        button_layout.addWidget(self.create_btn)
         
         layout.addLayout(button_layout)
         
@@ -324,17 +504,14 @@ class GameSpecificIMGDialog(QDialog):
             return
         
         try:
-            img = IMGFile()
-            
             creation_options = {
                 'initial_size_mb': self.size_spin.value(),
                 'compression_enabled': self.compression_check.isChecked(),
-                'encryption_enabled': self.encryption_check.isChecked(),
-                'sector_size': self.selected_config.sector_size,
-                'alignment_required': self.selected_config.alignment_required
+                'encryption_enabled': self.encryption_check.isChecked()
             }
             
-            if img.create_new(self.output_path, self.selected_config.img_version, **creation_options):
+            game_type = self.game_combo.currentData()
+            if IMGCreator.create_game_specific(self.output_path, game_type, **creation_options):
                 QMessageBox.information(
                     self,
                     "Success",
@@ -349,74 +526,6 @@ class GameSpecificIMGDialog(QDialog):
                 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error creating IMG archive:\n{str(e)}")
-
-
-class EnhancedIMGCreator:
-    """Enhanced IMG creation with advanced options"""
-    
-    @staticmethod
-    def create_from_template(template_path: str, output_path: str, game_type: GameType) -> bool:
-        """Create IMG from template file"""
-        try:
-            config = GameConfigurations.get_configuration(game_type)
-            if not config:
-                return False
-            
-            img = IMGFile()
-            if img.create_new(output_path, config.img_version):
-                # Load template and populate
-                with open(template_path, 'r') as f:
-                    template_data = json.load(f)
-                
-                for entry_info in template_data.get('entries', []):
-                    # Create placeholder entries
-                    img.add_entry(entry_info['name'], b'')
-                
-                return img.rebuild()
-            
-        except Exception as e:
-            print(f"Error creating from template: {e}")
-        
-        return False
-    
-    @staticmethod
-    def validate_game_compatibility(img_path: str, target_game: GameType) -> Dict[str, Any]:
-        """Validate IMG compatibility with target game"""
-        result = {
-            'compatible': False,
-            'issues': [],
-            'recommendations': []
-        }
-        
-        try:
-            img = IMGFile(img_path)
-            if img.open():
-                config = GameConfigurations.get_configuration(target_game)
-                
-                # Check version compatibility
-                if img.version != config.img_version:
-                    result['issues'].append(f"Version mismatch: IMG is {img.version.name}, game expects {config.img_version.name}")
-                
-                # Check file count
-                if len(img.entries) > config.max_entries:
-                    result['issues'].append(f"Too many entries: {len(img.entries)} > {config.max_entries}")
-                
-                # Check file types
-                unsupported_extensions = []
-                for entry in img.entries:
-                    if entry.extension.lower() not in [ext.lower() for ext in config.file_extensions]:
-                        unsupported_extensions.append(entry.extension)
-                
-                if unsupported_extensions:
-                    result['issues'].append(f"Unsupported file types: {', '.join(set(unsupported_extensions))}")
-                
-                result['compatible'] = len(result['issues']) == 0
-                img.close()
-        
-        except Exception as e:
-            result['issues'].append(f"Error analyzing file: {str(e)}")
-        
-        return result
 
 
 # Factory functions
