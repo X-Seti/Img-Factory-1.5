@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""
-#this belongs in components/col_editor.py - version 5
-X-Seti - June27 2025 - COL Editor for Img Factory 1.5
-Complete COL editing functionality based on Steve's COL Editor II
-"""
-
+#!/usr/bin/env python3
 import sys
 import os
 import math
@@ -15,7 +10,8 @@ from PyQt6.QtWidgets import (
     QTextEdit, QLabel, QPushButton, QComboBox, QSpinBox, QDoubleSpinBox,
     QCheckBox, QGroupBox, QTabWidget, QStatusBar, QMenuBar, QMenu,
     QHeaderView, QAbstractItemView, QMessageBox, QFileDialog, QProgressBar,
-    QSlider, QFrame, QListWidget, QListWidgetItem, QFormLayout
+    QSlider, QFrame, QListWidget, QListWidgetItem, QFormLayout,
+    QLineEdit, QApplication
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread
 from PyQt6.QtGui import QAction, QIcon, QFont, QPainter, QPen, QBrush, QColor
@@ -23,14 +19,21 @@ from PyQt6.QtGui import QAction, QIcon, QFont, QPainter, QPen, QBrush, QColor
 try:
     from PyQt6.QtOpenGL import QOpenGLWidget
 except ImportError:
-    # OpenGL not available - use regular widget as fallback
     from PyQt6.QtWidgets import QWidget as QOpenGLWidget
     print("Warning: PyQt6 OpenGL not available - COL 3D features disabled")
 
-from col_core_classes import (
-    COLFile, COLModel, COLSphere, COLBox, COLVertex, COLFace, COLFaceGroup,
-    COLVersion, COLMaterial, Vector3, BoundingBox
-)
+# Import COL core classes
+try:
+    from components.col_core_classes import (
+        COLFile, COLModel, COLSphere, COLBox, COLVertex, COLFace, COLFaceGroup,
+        COLVersion, COLMaterial, Vector3, BoundingBox
+    )
+except ImportError:
+    from col_core_classes import (
+        COLFile, COLModel, COLSphere, COLBox, COLVertex, COLFace, COLFaceGroup,
+        COLVersion, COLMaterial, Vector3, BoundingBox
+    )
+
 
 class COLModelTreeWidget(QTreeWidget):
     """Tree widget for displaying COL models and their elements"""
@@ -507,25 +510,46 @@ class COLEditorDialog(QDialog):
         self.setup_ui()
         self.connect_signals()
     
+    def add_separator_to_layout(layout):
+        """Add a visual separator to a layout"""
+        from PyQt6.QtWidgets import QFrame
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.VLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
+        separator.setMaximumWidth(2)
+        layout.addWidget(separator)
+
+    # Option 2: Add some spacing
+    def add_spacing_to_layout(layout, spacing=10):
+        """Add spacing to a layout"""
+        layout.addSpacing(spacing)
+
     def setup_ui(self):
         """Setup the main UI"""
         layout = QVBoxLayout(self)
-        
+
         # Toolbar
         toolbar_layout = QHBoxLayout()
-        
+
         self.open_btn = QPushButton("📂 Open COL")
         self.save_btn = QPushButton("💾 Save COL")
         self.export_btn = QPushButton("📤 Export")
         self.import_btn = QPushButton("📥 Import")
-        
+
         toolbar_layout.addWidget(self.open_btn)
         toolbar_layout.addWidget(self.save_btn)
-        toolbar_layout.addSeparator()
+
+        # Add a visual separator (FIXED)
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.VLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
+        separator.setMaximumWidth(2)
+        toolbar_layout.addWidget(separator)
+
         toolbar_layout.addWidget(self.export_btn)
         toolbar_layout.addWidget(self.import_btn)
         toolbar_layout.addStretch()
-        
+
         # View options
         self.show_spheres_cb = QCheckBox("Spheres")
         self.show_spheres_cb.setChecked(True)

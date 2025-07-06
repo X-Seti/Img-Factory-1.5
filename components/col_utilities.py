@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-#this belongs in components/col_utilities.py - version 6
-X-Seti - June27 2025 - COL Utilities for Img Factory 1.5
+#this belongs in components/col_utilities.py - version 7
+X-Seti - July06 2025 - COL Utilities for Img Factory 1.5
 Batch processing, optimization, and conversion utilities for COL files
 """
 
@@ -20,10 +20,16 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont
-from col_core_classes import (
-    COLFile, COLModel, COLSphere, COLBox, COLVertex, COLFace,
-    COLVersion, Vector3, BoundingBox
-)
+try:
+    from components.col_core_classes import (
+        COLFile, COLModel, COLSphere, COLBox, COLVertex, COLFace,
+        COLVersion, Vector3, BoundingBox
+    )
+except ImportError:
+    from col_core_classes import (
+        COLFile, COLModel, COLSphere, COLBox, COLVertex, COLFace,
+        COLVersion, Vector3, BoundingBox
+    )
 
 class COLBatchProcessor(QThread):
     """Background thread for batch processing COL files"""
@@ -66,7 +72,7 @@ class COLBatchProcessor(QThread):
             except Exception as e:
                 self.file_processed.emit(file_path, False, f"Error: {str(e)}")
         
-        self.progress.emit(100, "Batch processing complete")
+        self.progress.emit(100, "Processing complete")
         self.finished_all.emit(total_files, successful_files)
     
     def process_single_file(self, file_path: str) -> Tuple[bool, str]:
@@ -77,52 +83,41 @@ class COLBatchProcessor(QThread):
             if not col_file.load():
                 return False, "Failed to load COL file"
             
+            # Get original stats
             original_stats = col_file.get_total_stats()
-            modified = False
             
             # Apply operations
+            optimizer = COLOptimizer()
+            
             for model in col_file.models:
-                if self.operations.get('optimize_geometry', False):
-                    if self.optimize_model_geometry(model):
-                        modified = True
+                # Apply selected operations
+                if self.operations.get('remove_duplicates', False):
+                    optimizer.remove_duplicate_vertices(model)
                 
-                if self.operations.get('remove_duplicate_vertices', False):
-                    if self.remove_duplicate_vertices(model):
-                        modified = True
+                if self.operations.get('remove_unused', False):
+                    optimizer.remove_unused_vertices(model)
+                
+                if self.operations.get('merge_nearby', False):
+                    threshold = self.operations.get('merge_threshold', 0.01)
+                    optimizer.merge_nearby_vertices(model, threshold)
                 
                 if self.operations.get('convert_version', False):
-                    target_version = self.operations.get('target_version', COLVersion.COL_3)
-                    if self.convert_model_version(model, target_version):
-                        modified = True
-                
-                if self.operations.get('calculate_face_groups', False):
-                    if self.calculate_face_groups(model):
-                        modified = True
-                
-                if self.operations.get('fix_materials', False):
-                    if self.fix_material_assignments(model):
-                        modified = True
+                    target_version = self.operations.get('target_version', COLVersion.COL_2)
+                    optimizer.convert_model_version(model, target_version)
             
-            # Save if modified
-            if modified:
-                output_path = file_path
-                if self.operations.get('backup_original', True):
-                    backup_path = file_path + '.backup'
-                    import shutil
-                    shutil.copy2(file_path, backup_path)
-                
-                if self.operations.get('output_directory'):
-                    output_path = os.path.join(
-                        self.operations['output_directory'],
-                        os.path.basename(file_path)
-                    )
-                
+            # Save if output directory specified
+            output_dir = self.operations.get('output_dir')
+            if output_dir:
+                output_path = os.path.join(output_dir, os.path.basename(file_path))
                 if not col_file.save(output_path):
                     return False, "Failed to save processed file"
-            
-            new_stats = col_file.get_total_stats()
+            else:
+                # Save in place
+                if not col_file.save():
+                    return False, "Failed to save file"
             
             # Generate report
+            new_stats = col_file.get_total_stats()
             changes = []
             for key in original_stats:
                 if original_stats[key] != new_stats[key]:
@@ -135,6 +130,9 @@ class COLBatchProcessor(QThread):
                 
         except Exception as e:
             return False, f"Processing error: {str(e)}"
+
+class COLOptimizer:
+    """Class for optimizing COL models"""
     
     def optimize_model_geometry(self, model: COLModel) -> bool:
         """Optimize model geometry"""
@@ -191,38 +189,113 @@ class COLBatchProcessor(QThread):
         new_vertices = []
         
         for i, vertex in enumerate(model.vertices):
+            pos_key = (round(vertex.position.x, 6),
+                       round(vertex.position.y, 6),
+                       round(vertex.position.z, 6))
+            
+            if pos_key in vertex_map:
+                # Duplicate found
+                index_map[i] = vertex_map[pos_key]
+            else:
+                # New vertex
+                vertex_map[pos_key] = len(new_vertices)
+                index_map[i] = len(new_vertices)
+                new_vertices.append(vertex)
+        
+        # Update faces if vertices were removed
+        if len(new_vertices) < len(model.vertices):
+            for face in model.faces:
+                face.a = index_map[face.a]
+                face.b = index_map[face.b]
+                face.c = index_map[face.c]
+            
+            model.vertices = new_vertices
+            return True
+        
+        return False
+    
+    def remove_unused_vertices(self, model: COLModel) -> bool:
+        """Remove vertices not used by any face"""
+        if not model.faces:
+            return False
+        
+        # Find used vertices
+        used_vertices = set()
+        for face in model.faces:
+            used_vertices.add(face.a)
+            used_vertices.add(face.b)
+            used_vertices.add(face.c)
+        
+        # Create mapping from old to new indices
+        old_vertices = model.vertices
+        new_vertices = []
+        index_map = {}
+        
+        for old_index in sorted(used_vertices):
+            if old_index < len(old_vertices):
+                index_map[old_index] = len(new_vertices)
+                new_vertices.append(old_vertices[old_index])
+        
+        # Update faces if vertices were removed
+        if len(new_vertices) < len(old_vertices):
+            for face in model.faces:
+                face.a = index_map.get(face.a, 0)
+                face.b = index_map.get(face.b, 0)
+                face.c = index_map.get(face.c, 0)
+            
+            model.vertices = new_vertices
+            return True
+        
+        return False
+    
+    def merge_nearby_vertices(self, model: COLModel, threshold: float = 0.01) -> bool:
+        """Merge vertices that are very close together"""
+        if not model.vertices:
+            return False
+        
+        # Find vertices to merge
+        vertex_groups = []
+        processed = set()
+        
+        for i, vertex in enumerate(model.vertices):
             if i in processed:
                 continue
             
+            # Start new group
             group = [i]
             processed.add(i)
             
             # Find nearby vertices
             for j, other_vertex in enumerate(model.vertices):
-                if j in processed:
+                if j in processed or i == j:
                     continue
                 
-                distance = (vertex.position - other_vertex.position).magnitude()
+                # Calculate distance
+                dx = vertex.position.x - other_vertex.position.x
+                dy = vertex.position.y - other_vertex.position.y
+                dz = vertex.position.z - other_vertex.position.z
+                distance = (dx*dx + dy*dy + dz*dz) ** 0.5
+                
                 if distance < threshold:
                     group.append(j)
                     processed.add(j)
             
-            vertex_groups.append(group)
+            if len(group) > 1:
+                vertex_groups.append(group)
         
-        # Merge groups if any contain multiple vertices
-        if len(vertex_groups) < len(model.vertices):
-            new_vertices = []
+        # Merge vertices
+        if vertex_groups:
+            # Create index mapping
             index_map = {}
+            for i in range(len(model.vertices)):
+                index_map[i] = i
             
+            # Update mapping for merged vertices
             for group in vertex_groups:
-                # Use first vertex as representative
-                representative_idx = group[0]
-                new_index = len(new_vertices)
-                new_vertices.append(model.vertices[representative_idx])
-                
-                # Map all group members to the new index
-                for old_idx in group:
-                    index_map[old_idx] = new_index
+                # Keep first vertex, map others to it
+                keep_index = group[0]
+                for merge_index in group[1:]:
+                    index_map[merge_index] = keep_index
             
             # Update faces
             for face in model.faces:
@@ -230,7 +303,6 @@ class COLBatchProcessor(QThread):
                 face.b = index_map[face.b]
                 face.c = index_map[face.c]
             
-            model.vertices = new_vertices
             return True
         
         return False
@@ -300,7 +372,11 @@ class COLBatchProcessor(QThread):
                         max_z = max(max_z, pos.z)
             
             # Create face group
-            from col_core_classes import COLFaceGroup
+            try:
+                from components.col_core_classes import COLFaceGroup
+            except ImportError:
+                from col_core_classes import COLFaceGroup
+            
             face_group = COLFaceGroup(
                 min=Vector3(min_x, min_y, min_z),
                 max=Vector3(max_x, max_y, max_z),
@@ -317,20 +393,20 @@ class COLBatchProcessor(QThread):
         
         # Fix face materials
         for face in model.faces:
-            if face.material > 17:  # Max material ID
+            if face.material > 17:  # Max material ID is 17
                 face.material = 0  # Default material
                 modified = True
         
-        # Fix sphere materials
+        # Fix sphere materials if they exist
         for sphere in model.spheres:
-            if sphere.surface.material > 17:
-                sphere.surface.material = 0
+            if hasattr(sphere, 'material') and sphere.material > 17:
+                sphere.material = 0
                 modified = True
         
-        # Fix box materials
+        # Fix box materials if they exist
         for box in model.boxes:
-            if box.surface.material > 17:
-                box.surface.material = 0
+            if hasattr(box, 'material') and box.material > 17:
+                box.material = 0
                 modified = True
         
         return modified
@@ -342,103 +418,153 @@ class COLBatchDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("COL Batch Processor")
         self.setMinimumSize(800, 600)
-        self.file_paths: List[str] = []
-        self.processor: Optional[COLBatchProcessor] = None
+        self.file_paths = []
+        self.processor_thread = None
         self.setup_ui()
-        self.connect_signals()
     
     def setup_ui(self):
-        """Setup the batch dialog UI"""
+        """Setup the user interface"""
         layout = QVBoxLayout(self)
         
-        # File selection
-        file_group = QGroupBox("Files")
-        file_layout = QVBoxLayout(file_group)
+        # Files section
+        files_group = QGroupBox("🗂️ Files")
+        files_layout = QVBoxLayout(files_group)
         
+        # File buttons
         file_buttons_layout = QHBoxLayout()
-        self.add_files_btn = QPushButton("📁 Add Files")
-        self.add_folder_btn = QPushButton("📂 Add Folder")
-        self.clear_files_btn = QPushButton("🗑️ Clear")
         
+        self.add_files_btn = QPushButton("📄 Add Files")
+        self.add_files_btn.clicked.connect(self.add_files)
         file_buttons_layout.addWidget(self.add_files_btn)
+        
+        self.add_folder_btn = QPushButton("📁 Add Folder")
+        self.add_folder_btn.clicked.connect(self.add_folder)
         file_buttons_layout.addWidget(self.add_folder_btn)
+        
+        self.clear_files_btn = QPushButton("🗑️ Clear")
+        self.clear_files_btn.clicked.connect(self.clear_files)
         file_buttons_layout.addWidget(self.clear_files_btn)
+        
         file_buttons_layout.addStretch()
+        files_layout.addLayout(file_buttons_layout)
         
-        file_layout.addLayout(file_buttons_layout)
-        
+        # Files table
         self.files_table = QTableWidget()
         self.files_table.setColumnCount(3)
         self.files_table.setHorizontalHeaderLabels(["File", "Status", "Message"])
         self.files_table.horizontalHeader().setStretchLastSection(True)
-        file_layout.addWidget(self.files_table)
+        self.files_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        files_layout.addWidget(self.files_table)
         
-        layout.addWidget(file_group)
+        layout.addWidget(files_group)
         
-        # Operations
-        ops_group = QGroupBox("Operations")
-        ops_layout = QGridLayout(ops_group)
+        # Operations section
+        operations_group = QGroupBox("⚙️ Operations")
+        operations_layout = QGridLayout(operations_group)
         
-        self.optimize_cb = QCheckBox("Optimize Geometry")
-        self.optimize_cb.setChecked(True)
-        self.remove_duplicates_cb = QCheckBox("Remove Duplicate Vertices")
+        row = 0
+        
+        # Remove duplicates
+        self.remove_duplicates_cb = QCheckBox("Remove duplicate vertices")
         self.remove_duplicates_cb.setChecked(True)
-        self.convert_version_cb = QCheckBox("Convert Version")
-        self.version_combo = QComboBox()
-        self.version_combo.addItems(["Version 1", "Version 2", "Version 3"])
-        self.version_combo.setCurrentIndex(2)  # Default to COL3
+        operations_layout.addWidget(self.remove_duplicates_cb, row, 0, 1, 2)
+        row += 1
         
-        self.face_groups_cb = QCheckBox("Calculate Face Groups")
-        self.face_groups_cb.setChecked(True)
-        self.fix_materials_cb = QCheckBox("Fix Material Assignments")
+        # Remove unused
+        self.remove_unused_cb = QCheckBox("Remove unused vertices")
+        self.remove_unused_cb.setChecked(True)
+        operations_layout.addWidget(self.remove_unused_cb, row, 0, 1, 2)
+        row += 1
+        
+        # Merge nearby
+        self.merge_nearby_cb = QCheckBox("Merge nearby vertices")
+        operations_layout.addWidget(self.merge_nearby_cb, row, 0)
+        
+        self.merge_threshold_spin = QDoubleSpinBox()
+        self.merge_threshold_spin.setRange(0.001, 1.0)
+        self.merge_threshold_spin.setValue(0.01)
+        self.merge_threshold_spin.setSuffix(" units")
+        operations_layout.addWidget(self.merge_threshold_spin, row, 1)
+        row += 1
+        
+        # Optimize geometry
+        self.optimize_geometry_cb = QCheckBox("Optimize geometry")
+        self.optimize_geometry_cb.setChecked(True)
+        operations_layout.addWidget(self.optimize_geometry_cb, row, 0, 1, 2)
+        row += 1
+        
+        # Calculate face groups
+        self.face_groups_cb = QCheckBox("Calculate face groups")
+        operations_layout.addWidget(self.face_groups_cb, row, 0, 1, 2)
+        row += 1
+        
+        # Fix materials
+        self.fix_materials_cb = QCheckBox("Fix material assignments")
         self.fix_materials_cb.setChecked(True)
+        operations_layout.addWidget(self.fix_materials_cb, row, 0, 1, 2)
+        row += 1
         
-        ops_layout.addWidget(self.optimize_cb, 0, 0)
-        ops_layout.addWidget(self.remove_duplicates_cb, 0, 1)
-        ops_layout.addWidget(self.convert_version_cb, 1, 0)
-        ops_layout.addWidget(self.version_combo, 1, 1)
-        ops_layout.addWidget(self.face_groups_cb, 2, 0)
-        ops_layout.addWidget(self.fix_materials_cb, 2, 1)
+        # Version conversion
+        self.convert_version_cb = QCheckBox("Convert version")
+        operations_layout.addWidget(self.convert_version_cb, row, 0)
         
-        layout.addWidget(ops_group)
+        self.target_version_combo = QComboBox()
+        self.target_version_combo.addItems(["COL 1", "COL 2", "COL 3"])
+        self.target_version_combo.setCurrentIndex(1)  # COL 2
+        operations_layout.addWidget(self.target_version_combo, row, 1)
+        row += 1
         
-        # Output options
-        output_group = QGroupBox("Output Options")
-        output_layout = QFormLayout(output_group)
+        layout.addWidget(operations_group)
         
-        self.backup_cb = QCheckBox("Backup Original Files")
-        self.backup_cb.setChecked(True)
+        # Output section
+        output_group = QGroupBox("📤 Output")
+        output_layout = QVBoxLayout(output_group)
         
-        self.output_dir_cb = QCheckBox("Use Output Directory")
-        self.output_dir_edit = QLineEdit()
-        self.output_dir_btn = QPushButton("📁 Browse")
+        # Backup option
+        self.backup_original_cb = QCheckBox("Backup original files")
+        self.backup_original_cb.setChecked(True)
+        output_layout.addWidget(self.backup_original_cb)
         
+        # Output directory option
         output_dir_layout = QHBoxLayout()
-        output_dir_layout.addWidget(self.output_dir_edit)
-        output_dir_layout.addWidget(self.output_dir_btn)
+        output_dir_layout.addWidget(QLabel("Output Directory:"))
         
-        output_layout.addRow(self.backup_cb)
-        output_layout.addRow(self.output_dir_cb)
-        output_layout.addRow("Output Directory:", output_dir_layout)
+        self.output_dir_edit = QLineEdit()
+        self.output_dir_edit.setPlaceholderText("Leave empty to save in place")
+        output_dir_layout.addWidget(self.output_dir_edit)
+        
+        self.browse_output_btn = QPushButton("📁 Browse")
+        self.browse_output_btn.clicked.connect(self.browse_output_dir)
+        output_dir_layout.addWidget(self.browse_output_btn)
+        
+        output_layout.addLayout(output_dir_layout)
         
         layout.addWidget(output_group)
         
-        # Progress
-        self.progress_bar = QProgressBar()
-        self.status_label = QLabel("Ready")
+        # Progress section
+        progress_group = QGroupBox("📊 Progress")
+        progress_layout = QVBoxLayout(progress_group)
         
-        layout.addWidget(self.progress_bar)
-        layout.addWidget(self.status_label)
+        self.progress_bar = QProgressBar()
+        progress_layout.addWidget(self.progress_bar)
+        
+        self.status_label = QLabel("Ready")
+        progress_layout.addWidget(self.status_label)
+        
+        layout.addWidget(progress_group)
         
         # Buttons
         buttons_layout = QHBoxLayout()
         
         self.start_btn = QPushButton("▶️ Start Processing")
-        self.start_btn.setProperty("action-type", "export")
+        self.start_btn.clicked.connect(self.start_processing)
+        
         self.cancel_btn = QPushButton("⏹️ Cancel")
-        self.cancel_btn.setProperty("action-type", "remove")
+        self.cancel_btn.clicked.connect(self.cancel_processing)
         self.cancel_btn.setEnabled(False)
+        
         self.close_btn = QPushButton("❌ Close")
+        self.close_btn.clicked.connect(self.close)
         
         buttons_layout.addWidget(self.start_btn)
         buttons_layout.addWidget(self.cancel_btn)
@@ -505,55 +631,55 @@ class COLBatchDialog(QDialog):
             QMessageBox.warning(self, "No Files", "Please add some COL files to process.")
             return
         
-        # Prepare operations
+        # Prepare operations dict
         operations = {
-            'optimize_geometry': self.optimize_cb.isChecked(),
-            'remove_duplicate_vertices': self.remove_duplicates_cb.isChecked(),
-            'convert_version': self.convert_version_cb.isChecked(),
-            'target_version': [COLVersion.COL_1, COLVersion.COL_2, COLVersion.COL_3][self.version_combo.currentIndex()],
+            'remove_duplicates': self.remove_duplicates_cb.isChecked(),
+            'remove_unused': self.remove_unused_cb.isChecked(),
+            'merge_nearby': self.merge_nearby_cb.isChecked(),
+            'merge_threshold': self.merge_threshold_spin.value(),
+            'optimize_geometry': self.optimize_geometry_cb.isChecked(),
             'calculate_face_groups': self.face_groups_cb.isChecked(),
             'fix_materials': self.fix_materials_cb.isChecked(),
-            'backup_original': self.backup_cb.isChecked(),
-            'output_directory': self.output_dir_edit.text() if self.output_dir_cb.isChecked() else None
+            'convert_version': self.convert_version_cb.isChecked(),
+            'target_version': [COLVersion.COL_1, COLVersion.COL_2, COLVersion.COL_3][self.target_version_combo.currentIndex()],
+            'backup_original': self.backup_original_cb.isChecked(),
+            'output_dir': self.output_dir_edit.text().strip() or None
         }
         
-        # Create output directory if needed
-        if operations['output_directory']:
-            os.makedirs(operations['output_directory'], exist_ok=True)
-        
         # Start processing thread
-        self.processor = COLBatchProcessor(self.file_paths, operations)
-        self.processor.progress.connect(self.on_progress)
-        self.processor.file_processed.connect(self.on_file_processed)
-        self.processor.finished_all.connect(self.on_finished)
+        self.processor_thread = COLBatchProcessor(self.file_paths, operations)
+        self.processor_thread.progress.connect(self.on_progress)
+        self.processor_thread.file_processed.connect(self.on_file_processed)
+        self.processor_thread.finished_all.connect(self.on_finished)
         
-        self.processor.start()
-        
-        # Update UI
         self.start_btn.setEnabled(False)
         self.cancel_btn.setEnabled(True)
         self.progress_bar.setValue(0)
-        self.status_label.setText("Processing...")
+        self.status_label.setText("Starting...")
+        
+        self.processor_thread.start()
     
     def cancel_processing(self):
         """Cancel batch processing"""
-        if self.processor:
-            self.processor.cancel()
+        if self.processor_thread:
+            self.processor_thread.cancel()
             self.status_label.setText("Cancelling...")
     
-    def on_progress(self, value: int, status: str):
+    def on_progress(self, progress: int, status: str):
         """Update progress"""
-        self.progress_bar.setValue(value)
+        self.progress_bar.setValue(progress)
         self.status_label.setText(status)
     
     def on_file_processed(self, file_path: str, success: bool, message: str):
         """Update file status"""
         try:
             row = self.file_paths.index(file_path)
-            status = "Success" if success else "Failed"
             
-            self.files_table.setItem(row, 1, QTableWidgetItem(status))
-            self.files_table.setItem(row, 2, QTableWidgetItem(message))
+            status_item = QTableWidgetItem("Success" if success else "Failed")
+            message_item = QTableWidgetItem(message)
+            
+            self.files_table.setItem(row, 1, status_item)
+            self.files_table.setItem(row, 2, message_item)
             
             # Color code the row
             if success:
@@ -799,137 +925,8 @@ if __name__ == "__main__":
     # Test the batch processor
     from PyQt6.QtWidgets import QApplication
     app = QApplication(sys.argv)
-
+    
     dialog = COLBatchDialog()
     dialog.show()
-
+    
     sys.exit(app.exec())
-
-    def remove_duplicate_vertices(self, model: COLModel) -> bool:
-        """Remove duplicate vertices and update face indices"""
-        if not model.vertices:
-            return False
-
-        # Find duplicate vertices
-        vertex_map = {}
-        new_vertices = []
-        index_map = {}
-
-        for i, vertex in enumerate(model.vertices):
-            pos_key = (round(vertex.position.x, 6),
-                       round(vertex.position.y, 6),
-                       round(vertex.position.z, 6))
-
-            if pos_key in vertex_map:
-                # Duplicate found
-                index_map[i] = vertex_map[pos_key]
-            else:
-                # New vertex
-                vertex_map[pos_key] = len(new_vertices)
-                index_map[i] = len(new_vertices)
-                new_vertices.append(vertex)
-
-        # Update faces if vertices were removed
-        if len(new_vertices) < len(model.vertices):
-            for face in model.faces:
-                face.a = index_map[face.a]
-                face.b = index_map[face.b]
-                face.c = index_map[face.c]
-
-            model.vertices = new_vertices
-            return True
-
-        return False
-
-    def remove_unused_vertices(self, model: COLModel) -> bool:
-        """Remove vertices not used by any face"""
-        if not model.faces:
-            return False
-
-        # Find used vertices
-        used_vertices = set()
-        for face in model.faces:
-            used_vertices.add(face.a)
-            used_vertices.add(face.b)
-            used_vertices.add(face.c)
-
-        # Create mapping from old to new indices
-        old_vertices = model.vertices
-        new_vertices = []
-        index_map = {}
-
-        for old_index in sorted(used_vertices):
-            if old_index < len(old_vertices):
-                index_map[old_index] = len(new_vertices)
-                new_vertices.append(old_vertices[old_index])
-
-        # Update faces if vertices were removed
-        if len(new_vertices) < len(old_vertices):
-            for face in model.faces:
-                face.a = index_map.get(face.a, 0)
-                face.b = index_map.get(face.b, 0)
-                face.c = index_map.get(face.c, 0)
-
-            model.vertices = new_vertices
-            return True
-
-        return False
-
-    def merge_nearby_vertices(self, model: COLModel, threshold: float = 0.01) -> bool:
-        """Merge vertices that are very close together"""
-        if not model.vertices:
-            return False
-
-        # Find vertices to merge
-        vertex_groups = []
-        processed = set()
-
-        for i, vertex in enumerate(model.vertices):
-            if i in processed:
-                continue
-
-            # Start new group
-            group = [i]
-            processed.add(i)
-
-            # Find nearby vertices
-            for j, other_vertex in enumerate(model.vertices):
-                if j in processed or i == j:
-                    continue
-
-                # Calculate distance
-                dx = vertex.position.x - other_vertex.position.x
-                dy = vertex.position.y - other_vertex.position.y
-                dz = vertex.position.z - other_vertex.position.z
-                distance = (dx*dx + dy*dy + dz*dz) ** 0.5
-
-                if distance < threshold:
-                    group.append(j)
-                    processed.add(j)
-
-            if len(group) > 1:
-                vertex_groups.append(group)
-
-        # Merge vertices
-        if vertex_groups:
-            # Create index mapping
-            index_map = {}
-            for i in range(len(model.vertices)):
-                index_map[i] = i
-
-            # Update mapping for merged vertices
-            for group in vertex_groups:
-                # Keep first vertex, map others to it
-                keep_index = group[0]
-                for merge_index in group[1:]:
-                    index_map[merge_index] = keep_index
-
-            # Update faces
-            for face in model.faces:
-                face.a = index_map[face.a]
-                face.b = index_map[face.b]
-                face.c = index_map[face.c]
-
-            return True
-
-        return False

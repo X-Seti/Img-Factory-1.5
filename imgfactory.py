@@ -61,13 +61,19 @@ from gui.menu import IMGFactoryMenuBar
 #from components.col_main_integration import setup_col_integration
 
 print("Components imported successfully")
+COL_INTEGRATION_AVAILABLE = False
+COL_SETUP_FUNCTION = None
+
 try:
-    from components.col_main_integration import setup_col_integration
+    from components.col_integration import setup_col_integration_full
     COL_INTEGRATION_AVAILABLE = True
-except ImportError:
+    COL_SETUP_FUNCTION = setup_col_integration_full
+    print("✅ COL integration module loaded successfully")
+except ImportError as e:
+    print(f"❌ COL integration import failed: {e}")
     COL_INTEGRATION_AVAILABLE = False
-    def setup_col_integration(self):
-        return False
+    COL_SETUP_FUNCTION = None
+
 
 # Replace the populate_img_table function in imgfactory.py with this improved version:
 
@@ -402,6 +408,20 @@ class IMGFactory(QMainWindow):
         # Initialize UI (but without menu creation in gui_layout)
         self._create_ui()
         self._restore_settings()
+
+        try:
+            from components.col_integration import setup_col_integration_full
+            col_integration_result = setup_col_integration_full(self)
+            if col_integration_result:
+                self.log_message("✅ COL functionality integrated successfully")
+            else:
+                self.log_message("⚠️ COL functionality setup failed")
+        except ImportError as e:
+            self.log_message(f"COL integration not available: {e}")
+
+        # Log startup
+        self.log_message("IMG Factory 1.5 initialized")
+
 
         # Apply theme
         if hasattr(self.app_settings, 'themes'):
@@ -1022,24 +1042,18 @@ class IMGFactory(QMainWindow):
     def open_img_file(self):
         """Open IMG file dialog - FIXED to use new tab method"""
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open IMG Archive", "",
-            "IMG Archives (*.img);;All Files (*)"
+            self, "Open IMG /COL Archive", "",
+            "IMG /COL Archives (*.img, *.col);;All Files (*)"
         )
 
-        if file_path:
-            self._load_img_file_in_new_tab(file_path)  # FIXED: Use new tab method
+    #if "DFF" file_path:
+        self.log_message(f"DFF file opening: {os.path.basename(file_path)}")
+        self._load_img_file_in_new_tab(file_path)
 
-    def open_col_file(self):
-        """Open COL file - Simple version without tabs"""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open COL File", "",
-            "COL Files (*.col);;All Files (*)"
-        )
-
-        if file_path:
-            self.log_message(f"COL file opening: {os.path.basename(file_path)}")
-            # For now, just log - COL loading can be implemented later
-            self.log_message("COL file support coming soon")
+    #if "COL" file_path:
+        self.log_message(f"COL file opening: {os.path.basename(file_path)}")
+        self._load_col_file_in_new_tab(file_path)
+        #_detect_and_open_file()
 
     def _detect_and_open_file(self, file_path: str) -> bool:
         """Detect file type and open with appropriate handler"""
