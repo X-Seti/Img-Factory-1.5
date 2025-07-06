@@ -31,7 +31,7 @@ if utils_dir.exists() and str(utils_dir) not in sys.path:  # ADD THESE LINES
 from typing import Optional, List, Dict, Any
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QSplitter, QTableWidget, QTableWidgetItem, QTextEdit, QLabel,
+    QSplitter, QTableWidget, QTableWidgetItem, QTextEdit, QLabel, QDialog,
     QPushButton, QFileDialog, QMessageBox, QMenuBar, QStatusBar,
     QProgressBar, QHeaderView, QGroupBox, QComboBox, QLineEdit,
     QAbstractItemView, QTreeWidget, QTreeWidgetItem, QTabWidget,
@@ -52,6 +52,7 @@ from components.img_core_classes import (
 )
 from components.img_formats import GameSpecificIMGDialog, EnhancedIMGCreator
 from components.img_close_functions import install_close_functions, setup_close_manager
+from components.img_creator import GameType, NewIMGDialog, IMGCreationThread
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_validator import IMGValidator
 from gui.gui_layout import IMGFactoryGUILayout
@@ -350,6 +351,19 @@ class IMGFactory(QMainWindow):
         self.app_settings = settings if hasattr(settings, 'themes') else AppSettings()
         self.setWindowTitle("IMG Factory 1.5")
         self.setGeometry(100, 100, 1200, 800)
+        # Initialize template manager - FIXED INDENTATION
+        try:
+            from components.img_templates import IMGTemplateManager
+            self.template_manager = IMGTemplateManager()
+            print("✅ Template manager initialized")
+        except Exception as e:
+            print(f"❌ Template manager initialization failed: {str(e)}")
+            # Create dummy template manager as fallback
+            class DummyTemplateManager:
+                def get_all_templates(self): return []
+                def get_default_templates(self): return []
+                def get_user_templates(self): return []
+            self.template_manager = DummyTemplateManager()
 
         # Core data
         self.current_img: Optional[IMGFile] = None
@@ -621,10 +635,6 @@ class IMGFactory(QMainWindow):
     def refresh_table(self):
         """Handle refresh/update button"""
         self.log_message("🔄 Refresh table requested")
-
-    def create_new_img(self):
-        """Handle new IMG button"""
-        self.log_message("🆕 Create new IMG requested")
 
     def perform_search(self, search_text, options):
         """Perform search in current IMG entries using unified system"""
@@ -987,16 +997,22 @@ class IMGFactory(QMainWindow):
 
 
     def create_new_img(self):
-        """Show new IMG creation dialog"""
-        try:
-            dialog = GameSpecificIMGDialog(self)
+        """Show new IMG creation dialog - FIXED: No signal connections"""
+        dialog = GameSpecificIMGDialog(self)
+        dialog.template_manager = self.template_manager
+        # Set template manager if dialog supports it
+        if hasattr(dialog, 'template_manager'):
             dialog.template_manager = self.template_manager
-            dialog.img_created.connect(self._load_img_file)  # ✅ CORRECT
-            dialog.img_created.connect(lambda path: self.log_message(f"Created: {os.path.basename(path)}"))
-            dialog.exec()
-        except Exception as e:
-            self.log_message(f"Error creating new IMG: {str(e)}")
-            QMessageBox.critical(self, "Error", f"Failed to create new IMG: {str(e)}")
+
+            # Execute dialog and check result
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                # Get the output path from the dialog
+                if hasattr(dialog, 'output_path') and dialog.output_path:
+                    output_path = dialog.output_path
+                    self.log_message(f"✅ Created: {os.path.basename(output_path)}")
+
+                    # Load the created IMG file in a new tab
+                    self._load_img_file_in_new_tab(output_path)
 
     def open_img_file(self):
         """Open IMG file dialog - FIXED to use new tab method"""
