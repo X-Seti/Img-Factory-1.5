@@ -55,13 +55,19 @@ from components.img_close_functions import install_close_functions, setup_close_
 from components.img_creator import GameType, NewIMGDialog, IMGCreationThread
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_validator import IMGValidator
-from components.col_main_integration import setup_col_integration
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.menu import IMGFactoryMenuBar
 #from components.col_main_integration import setup_col_integration
 
 print("Components imported successfully")
+try:
+    from components.col_main_integration import setup_col_integration
+    COL_INTEGRATION_AVAILABLE = True
+except ImportError:
+    COL_INTEGRATION_AVAILABLE = False
+    def setup_col_integration(self):
+        return False
 
 # Replace the populate_img_table function in imgfactory.py with this improved version:
 
@@ -397,11 +403,6 @@ class IMGFactory(QMainWindow):
         self._create_ui()
         self._restore_settings()
 
-        if setup_col_integration(self):
-            self.log_message("✅ COL functionality integrated")
-        else:
-            self.log_message("⚠️ COL integration failed")
-
         # Apply theme
         if hasattr(self.app_settings, 'themes'):
             apply_theme_to_app(QApplication.instance(), self.app_settings)
@@ -493,46 +494,6 @@ class IMGFactory(QMainWindow):
 
         if hidden_count > 0:
             self.log_message("⚠️ Some rows are hidden! Check the filter settings.")
-
-    def manage_templates(self):
-        """Show template manager dialog"""
-        dialog = TemplateManagerDialog(self.template_manager, self)
-        dialog.template_selected.connect(self._apply_template)
-        dialog.exec()
-
-    def _apply_template(self, template_data):
-        """Apply template to create new IMG - FIXED VERSION"""
-        try:
-            self.log_message(f"Applying template: {template_data.get('name', 'Unknown')}")
-
-            # Get output path from user
-            output_path, _ = QFileDialog.getSaveFileName(
-                self,
-                "Save New IMG Archive",
-                f"{template_data.get('name', 'new_archive').replace(' ', '_').lower()}.img",
-                "IMG Archives (*.img);;All Files (*)"
-            )
-
-            if not output_path:
-                self.log_message("Template application cancelled")
-                return
-
-            # Add output path to template data
-            template_data['output_path'] = output_path
-
-            # Use IMGCreator with FIXED signature (no instantiation needed - static method)
-            if IMGCreator.create_from_template(template_data):
-                self.log_message("✅ Template applied successfully")
-                # Load the created IMG
-                self.load_img_file(output_path)
-            else:
-                self.log_message("❌ Failed to apply template")
-
-        except Exception as e:
-            error_msg = f"Error applying template: {str(e)}"
-            self.log_message(error_msg)
-            QMessageBox.critical(self, "Template Error", error_msg)
-
 
     def _unified_double_click_handler(self, row, filename, item):
         """Handle double-click through unified system"""
@@ -1850,8 +1811,8 @@ class IMGFactory(QMainWindow):
             self.gui_layout.show_progress(-1, "Validation error")
             QMessageBox.critical(self, "Validation Error", error_msg)
 
-
     # COL FILE OPERATIONS - KEEP 100% OF FUNCTIONALITY
+
 
     def _load_col_file_in_new_tab(self, file_path):
         """Load COL file in new tab"""

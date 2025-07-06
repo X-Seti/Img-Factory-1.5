@@ -799,15 +799,27 @@ if __name__ == "__main__":
     # Test the batch processor
     from PyQt6.QtWidgets import QApplication
     app = QApplication(sys.argv)
-    
+
     dialog = COLBatchDialog()
     dialog.show()
-    
-    sys.exit(app.exec()):
-            pos_key = (round(vertex.position.x, 6), 
-                      round(vertex.position.y, 6), 
-                      round(vertex.position.z, 6))
-            
+
+    sys.exit(app.exec())
+
+    def remove_duplicate_vertices(self, model: COLModel) -> bool:
+        """Remove duplicate vertices and update face indices"""
+        if not model.vertices:
+            return False
+
+        # Find duplicate vertices
+        vertex_map = {}
+        new_vertices = []
+        index_map = {}
+
+        for i, vertex in enumerate(model.vertices):
+            pos_key = (round(vertex.position.x, 6),
+                       round(vertex.position.y, 6),
+                       round(vertex.position.z, 6))
+
             if pos_key in vertex_map:
                 # Duplicate found
                 index_map[i] = vertex_map[pos_key]
@@ -816,60 +828,108 @@ if __name__ == "__main__":
                 vertex_map[pos_key] = len(new_vertices)
                 index_map[i] = len(new_vertices)
                 new_vertices.append(vertex)
-        
+
         # Update faces if vertices were removed
         if len(new_vertices) < len(model.vertices):
             for face in model.faces:
                 face.a = index_map[face.a]
                 face.b = index_map[face.b]
                 face.c = index_map[face.c]
-            
+
             model.vertices = new_vertices
             return True
-        
+
         return False
-    
+
     def remove_unused_vertices(self, model: COLModel) -> bool:
         """Remove vertices not used by any face"""
         if not model.faces:
             return False
-        
+
         # Find used vertices
         used_vertices = set()
         for face in model.faces:
             used_vertices.add(face.a)
             used_vertices.add(face.b)
             used_vertices.add(face.c)
-        
+
         # Create mapping from old to new indices
         old_vertices = model.vertices
         new_vertices = []
         index_map = {}
-        
+
         for old_index in sorted(used_vertices):
             if old_index < len(old_vertices):
                 index_map[old_index] = len(new_vertices)
                 new_vertices.append(old_vertices[old_index])
-        
+
         # Update faces if vertices were removed
         if len(new_vertices) < len(old_vertices):
             for face in model.faces:
                 face.a = index_map.get(face.a, 0)
                 face.b = index_map.get(face.b, 0)
                 face.c = index_map.get(face.c, 0)
-            
+
             model.vertices = new_vertices
             return True
-        
+
         return False
-    
+
     def merge_nearby_vertices(self, model: COLModel, threshold: float = 0.01) -> bool:
         """Merge vertices that are very close together"""
         if not model.vertices:
             return False
-        
+
         # Find vertices to merge
         vertex_groups = []
         processed = set()
-        
-        for i, vertex in enumerate(model.vertices
+
+        for i, vertex in enumerate(model.vertices):
+            if i in processed:
+                continue
+
+            # Start new group
+            group = [i]
+            processed.add(i)
+
+            # Find nearby vertices
+            for j, other_vertex in enumerate(model.vertices):
+                if j in processed or i == j:
+                    continue
+
+                # Calculate distance
+                dx = vertex.position.x - other_vertex.position.x
+                dy = vertex.position.y - other_vertex.position.y
+                dz = vertex.position.z - other_vertex.position.z
+                distance = (dx*dx + dy*dy + dz*dz) ** 0.5
+
+                if distance < threshold:
+                    group.append(j)
+                    processed.add(j)
+
+            if len(group) > 1:
+                vertex_groups.append(group)
+
+        # Merge vertices
+        if vertex_groups:
+            # Create index mapping
+            index_map = {}
+            for i in range(len(model.vertices)):
+                index_map[i] = i
+
+            # Update mapping for merged vertices
+            for group in vertex_groups:
+                # Keep first vertex, map others to it
+                keep_index = group[0]
+                for merge_index in group[1:]:
+                    index_map[merge_index] = keep_index
+
+            # Update faces
+            for face in model.faces:
+                face.a = index_map[face.a]
+                face.b = index_map[face.b]
+                face.c = index_map[face.c]
+
+            return True
+
+        return False
