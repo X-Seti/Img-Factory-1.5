@@ -51,6 +51,7 @@ from components.img_core_classes import (
     TabFilterWidget, integrate_filtering, create_entries_table_panel
 )
 from components.img_formats import GameSpecificIMGDialog, EnhancedIMGCreator
+from components.img_close_functions import install_close_functions, setup_close_manager
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_validator import IMGValidator
 from gui.gui_layout import IMGFactoryGUILayout
@@ -625,10 +626,6 @@ class IMGFactory(QMainWindow):
         """Handle new IMG button"""
         self.log_message("🆕 Create new IMG requested")
 
-    def close_img_file(self):
-        """Handle close IMG button"""
-        self.log_message("❌ Close IMG file requested")
-
     def perform_search(self, search_text, options):
         """Perform search in current IMG entries using unified system"""
         try:
@@ -700,8 +697,8 @@ class IMGFactory(QMainWindow):
         # Create main tab widget for file handling
         self.main_tab_widget = QTabWidget()
         self.main_tab_widget.setTabsClosable(True)
-        self.main_tab_widget.tabCloseRequested.connect(self._close_tab)
-        self.main_tab_widget.currentChanged.connect(self._on_tab_changed)
+        #self.main_tab_widget.tabCloseRequested.connect(self._close_tab)
+        #self.main_tab_widget.currentChanged.connect(self._on_tab_changed)
 
         # Initialize open files tracking
         self.open_files = {}
@@ -709,6 +706,8 @@ class IMGFactory(QMainWindow):
         # Create initial empty tab
         self._create_initial_tab()
 
+        self.close_manager = install_close_functions(self)
+        self.main_tab_widget.tabCloseRequested.connect(self.close_manager.close_tab)
         # Add tab widget to main layout
         main_layout.addWidget(self.main_tab_widget)
 
@@ -761,50 +760,6 @@ class IMGFactory(QMainWindow):
             self.current_col = None
             self._update_ui_for_no_img()
 
-
-    def _close_tab(self, index):
-        """Close tab at index"""
-        if self.main_tab_widget.count() <= 1:
-            # Don't close the last tab, just clear it
-            self._clear_current_tab()
-            return
-
-        # Remove from open files
-        if index in self.open_files:
-            del self.open_files[index]
-
-        # Remove tab
-        self.main_tab_widget.removeTab(index)
-
-        # Update open_files dict indices
-        self._reindex_open_files()
-
-    def _reindex_open_files(self):
-        """Reindex open_files dict after tab removal"""
-        new_open_files = {}
-        for i in range(self.main_tab_widget.count()):
-            # Find matching file in old dict
-            for old_index, file_info in self.open_files.items():
-                if self.main_tab_widget.tabText(i) == file_info.get('tab_name', ''):
-                    new_open_files[i] = file_info
-                    break
-        self.open_files = new_open_files
-
-    def _clear_current_tab(self):
-        """Clear current tab"""
-        current_index = self.main_tab_widget.currentIndex()
-        if current_index in self.open_files:
-            del self.open_files[current_index]
-
-        # Update tab name
-        self.main_tab_widget.setTabText(current_index, "📁 No File")
-
-        # Clear current file
-        self.current_img = None
-        self.current_col = None
-        self._update_ui_for_no_img()
-        # FIXED: was _update_ui_for_no_file
-
     def _update_ui_for_current_file(self):
         """Update UI for currently selected file - FIXED"""
         if self.current_img:
@@ -843,6 +798,82 @@ class IMGFactory(QMainWindow):
                 self.gui_layout.update_img_info(f"IMG: {file_name}")
 
         self.log_message("✅ IMG UI updated successfully")
+
+    def handle_action(self, action_name):
+        """Handle unified action signals - UPDATED with missing methods"""
+        try:
+            action_map = {
+                # File operations
+                'open_img_file': self.open_img_file,
+                'close_img_file': self.close_manager.close_img_file if hasattr(self, 'close_manager') else lambda: self.log_message("Close manager not available"),
+                'close_all': self.close_manager.close_all_tabs if hasattr(self, 'close_manager') else lambda: self.log_message("Close manager not available"),
+                'close_all_img': self.close_all_img,  # Added
+                'create_new_img': self.create_new_img,
+                'refresh_table': self.refresh_table,
+
+                # Entry operations
+                'import_files': self.import_files,
+                'export_selected': self.export_selected,
+                'remove_selected': self.remove_selected,
+                'select_all_entries': self.select_all_entries,
+
+                # IMG operations
+                'rebuild_img': self.rebuild_img,
+                'rebuild_img_as': self.rebuild_img_as,
+                'rebuild_all_img': self.rebuild_all_img,  # Added
+                'merge_img': self.merge_img,              # Added
+                'split_img': self.split_img,              # Added
+                'convert_img_format': self.convert_img_format,  # Added
+
+                # System
+                'show_search_dialog': self.show_search_dialog,
+            }
+
+            if action_name in action_map:
+                self.log_message(f"🎯 Action: {action_name}")
+                action_map[action_name]()
+            else:
+                self.log_message(f"⚠️ Method '{action_name}' not implemented")
+
+        except Exception as e:
+            self.log_message(f"❌ Action error ({action_name}): {str(e)}")
+
+
+    # Update the setup_menu_connections method:
+    def setup_menu_connections(self):
+        """Setup menu connections for IMG Factory - UPDATED with close manager"""
+        try:
+            # File menu connections
+            menu_callbacks = {
+                'new_img': self.create_new_img,
+                'open_img': self.open_img_file,
+                'close_img': self.close_manager.close_img_file,   # Updated
+                'close_all': self.close_manager.close_all_tabs,   # Updated
+                'exit': self.close,
+
+                # Edit menu connections
+                'select_all': self.select_all_entries,
+                'find': self.show_search_dialog,
+
+                # Entry menu connections
+                'entry_import': self.import_files,
+                'entry_export': self.export_selected,
+                'entry_remove': self.remove_selected,
+
+                # IMG menu connections
+                'img_rebuild': self.rebuild_img,
+                'img_rebuild_as': self.rebuild_img_as,
+            }
+
+            # Connect menu callbacks if menu system exists
+            if hasattr(self, 'menu_bar_system') and hasattr(self.menu_bar_system, 'set_callbacks'):
+                self.menu_bar_system.set_callbacks(menu_callbacks)
+
+            self.log_message("✅ Menu connections established (using close manager)")
+
+        except Exception as e:
+            self.log_message(f"❌ Menu connection error: {str(e)}")
+
 
     def _update_ui_for_loaded_col(self):
         """Update UI when COL file is loaded - FIXED: Method name"""
@@ -1035,7 +1066,7 @@ class IMGFactory(QMainWindow):
             return False
 
     def _load_img_file_in_new_tab(self, file_path):
-        """Load IMG file in new tab - FIXED logic"""
+        """Load IMG file in new tab - FIXED logic using close manager"""
         current_index = self.main_tab_widget.currentIndex()
 
         # Check if current tab is empty (no file loaded)
@@ -1043,9 +1074,9 @@ class IMGFactory(QMainWindow):
             # Current tab is empty, use it
             self.log_message(f"Using current empty tab for: {os.path.basename(file_path)}")
         else:
-            # Current tab has a file, create new tab
+            # Current tab has a file, create new tab using close manager
             self.log_message(f"Creating new tab for: {os.path.basename(file_path)}")
-            self._create_new_tab()
+            self.close_manager.create_new_tab()  # Updated to use close manager
             current_index = self.main_tab_widget.currentIndex()
 
         # Store file info BEFORE loading
@@ -1069,7 +1100,6 @@ class IMGFactory(QMainWindow):
 
         # Start loading
         self.load_img_file(file_path)
-
 
     def load_img_file(self, file_path: str):
         """Load IMG file in background thread"""
@@ -1135,20 +1165,6 @@ class IMGFactory(QMainWindow):
         """Handle loading progress updates"""
         self.gui_layout.show_progress(progress, status)
     
-    def _create_new_tab(self):
-        """Create new empty tab - FIXED: Use correct method"""
-        # Create tab widget
-        tab_widget = QWidget()
-        tab_layout = QVBoxLayout(tab_widget)
-        tab_layout.setContentsMargins(0, 0, 0, 0)
-
-        # Use the same method as _create_initial_tab
-        self.gui_layout.create_main_ui_with_splitters(tab_layout)
-
-        # Add tab
-        self.main_tab_widget.addTab(tab_widget, "📁 No File")
-        self.main_tab_widget.setCurrentIndex(self.main_tab_widget.count() - 1)
-
 
     def _on_img_loaded(self, img_file):
         """Handle IMG file loaded - FIXED for tabs"""
@@ -1179,7 +1195,7 @@ class IMGFactory(QMainWindow):
 
 
     def _populate_real_img_table(self, img_file: IMGFile):
-        """Populate table with real IMG file entries"""
+        """Populate table with real IMG file entries - FIXED for SA format display"""
         if not img_file or not img_file.entries:
             self.gui_layout.table.setRowCount(0)
             return
@@ -1192,61 +1208,167 @@ class IMGFactory(QMainWindow):
         table.setRowCount(len(entries))
 
         for row, entry in enumerate(entries):
-            # Name
-            table.setItem(row, 0, QTableWidgetItem(entry.name))
+            try:
+                # Name - should now be clean from fixed parsing
+                clean_name = str(entry.name).strip()
+                table.setItem(row, 0, QTableWidgetItem(clean_name))
 
-            # Type (file extension)
-            file_type = entry.extension if entry.extension else "Unknown"
-            table.setItem(row, 1, QTableWidgetItem(file_type))
+                # Extension - Use the cleaned extension from populate_entry_details
+                if hasattr(entry, 'extension') and entry.extension:
+                    extension = entry.extension
+                else:
+                    # Fallback extraction
+                    if '.' in clean_name:
+                        extension = clean_name.split('.')[-1].upper()
+                        extension = ''.join(c for c in extension if c.isalpha())
+                    else:
+                        extension = "NO_EXT"
+                table.setItem(row, 1, QTableWidgetItem(extension))
 
-            # Size (formatted)
-            from components.img_core_classes import format_file_size
-            size_text = format_file_size(entry.size)
-            table.setItem(row, 2, QTableWidgetItem(size_text))
+                # Size - Format properly
+                try:
+                    if hasattr(entry, 'size') and entry.size:
+                        size_bytes = int(entry.size)
+                        if size_bytes < 1024:
+                            size_text = f"{size_bytes} B"
+                        elif size_bytes < 1024 * 1024:
+                            size_text = f"{size_bytes / 1024:.1f} KB"
+                        else:
+                            size_text = f"{size_bytes / (1024 * 1024):.1f} MB"
+                    else:
+                        size_text = "0 B"
+                except:
+                    size_text = "Unknown"
+                table.setItem(row, 2, QTableWidgetItem(size_text))
 
-            # Offset (hex format)
-            offset_text = f"0x{entry.offset:X}"
-            table.setItem(row, 3, QTableWidgetItem(offset_text))
+                # Hash/Offset - Show as hex
+                try:
+                    if hasattr(entry, 'offset') and entry.offset is not None:
+                        offset_text = f"0x{int(entry.offset):X}"
+                    else:
+                        offset_text = "0x0"
+                except:
+                    offset_text = "0x0"
+                table.setItem(row, 3, QTableWidgetItem(offset_text))
 
-            # Version
-            version_text = entry.get_version_text() if hasattr(entry, 'get_version_text') else "Unknown"
-            table.setItem(row, 4, QTableWidgetItem(version_text))
+                # Version - Use proper RW version parsing
+                try:
+                    if extension in ['DFF', 'TXD']:
+                        if hasattr(entry, 'get_version_text') and callable(entry.get_version_text):
+                            version_text = entry.get_version_text()
+                        elif hasattr(entry, 'rw_version') and entry.rw_version > 0:
+                            # FIXED: Use proper RW version mapping
+                            rw_versions = {
+                                0x0800FFFF: "3.0.0.0",
+                                0x1003FFFF: "3.1.0.1",
+                                0x1005FFFF: "3.2.0.0",
+                                0x1400FFFF: "3.4.0.3",
+                                0x1803FFFF: "3.6.0.3",
+                                0x1C020037: "3.7.0.2",
+                                # Additional common SA versions
+                                0x34003: "3.4.0.3",
+                                0x35002: "3.5.0.2",
+                                0x36003: "3.6.0.3",
+                                0x37002: "3.7.0.2",
+                                0x1801: "3.6.0.3",  # Common SA version
+                                0x1400: "3.4.0.3",  # Common SA version
+                            }
 
-            # Compression
-            if hasattr(entry, 'is_compressed') and callable(entry.is_compressed):
-                comp_text = "Compressed" if entry.is_compressed() else "None"
-            else:
-                comp_text = "None"
-            table.setItem(row, 5, QTableWidgetItem(comp_text))
+                            if entry.rw_version in rw_versions:
+                                version_text = f"RW {rw_versions[entry.rw_version]}"
+                            else:
+                                # Show hex for unknown versions
+                                version_text = f"RW 0x{entry.rw_version:X}"
+                        else:
+                            version_text = "Unknown"
+                    elif extension == 'COL':
+                        version_text = "COL"
+                    elif extension == 'IFP':
+                        version_text = "IFP"
+                    else:
+                        version_text = "Unknown"
+                except:
+                    version_text = "Unknown"
+                table.setItem(row, 4, QTableWidgetItem(version_text))
 
-            # Status
-            if hasattr(entry, 'is_new_entry') and entry.is_new_entry:
-                status_text = "New"
-            elif hasattr(entry, 'is_replaced') and entry.is_replaced:
-                status_text = "Modified"
-            else:
-                status_text = "Ready"
-            table.setItem(row, 6, QTableWidgetItem(status_text))
+                # Compression
+                try:
+                    if hasattr(entry, 'compression_type') and entry.compression_type:
+                        if str(entry.compression_type).upper() != 'NONE':
+                            compression_text = str(entry.compression_type)
+                        else:
+                            compression_text = "None"
+                    else:
+                        compression_text = "None"
+                except:
+                    compression_text = "None"
+                table.setItem(row, 5, QTableWidgetItem(compression_text))
 
-            # Make all items read-only
-            for col in range(7):
-                item = table.item(row, col)
-                if item:
-                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                # Status
+                try:
+                    if hasattr(entry, 'is_new_entry') and entry.is_new_entry:
+                        status_text = "New"
+                    elif hasattr(entry, 'is_replaced') and entry.is_replaced:
+                        status_text = "Modified"
+                    else:
+                        status_text = "Ready"
+                except:
+                    status_text = "Ready"
+                table.setItem(row, 6, QTableWidgetItem(status_text))
 
+                # Make all items read-only
+                for col in range(7):
+                    item = table.item(row, col)
+                    if item:
+                        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
 
-    def _on_load_error(self, error_message: str):
-        """Handle IMG loading error"""
-        self.log_message(f"Error: {error_message}")
-        self.gui_layout.show_progress(-1, "Error")
-        QMessageBox.critical(self, "Loading Error", error_message)
+            except Exception as e:
+                self.log_message(f"❌ Error populating row {row}: {str(e)}")
+                # Create minimal fallback row
+                table.setItem(row, 0, QTableWidgetItem(f"Entry_{row}"))
+                table.setItem(row, 1, QTableWidgetItem("UNKNOWN"))
+                table.setItem(row, 2, QTableWidgetItem("0 B"))
+                table.setItem(row, 3, QTableWidgetItem("0x0"))
+                table.setItem(row, 4, QTableWidgetItem("Unknown"))
+                table.setItem(row, 5, QTableWidgetItem("None"))
+                table.setItem(row, 6, QTableWidgetItem("Error"))
+
+        self.log_message(f"📋 Table populated with {len(entries)} entries (SA format parser fixed)")
+
+    def _on_load_error(self, error_message):
+        """Handle loading error from background thread"""
+        try:
+            self.log_message(f"❌ Loading error: {error_message}")
+
+            # Hide progress
+            if hasattr(self, 'gui_layout'):
+                self.gui_layout.show_progress(-1, "Error loading file")
+
+            # Reset UI to no-file state
+            self._update_ui_for_no_img()
+
+            # Show error dialog
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.critical(
+                self,
+                "Loading Error",
+                f"Failed to load IMG file:\n\n{error_message}"
+            )
+
+        except Exception as e:
+            self.log_message(f"❌ Error in _on_load_error: {str(e)}")
+
 
     def close_all_img(self):
-        """Close all open IMG files"""
-        self.current_img = None
-        self.current_col = None
-        self._update_ui_for_no_img()
-        self.log_message("All IMG files closed")
+        """Close all IMG files - Wrapper for close_all_tabs"""
+        try:
+            if hasattr(self, 'close_manager') and self.close_manager:
+                self.close_manager.close_all_tabs()
+            else:
+                self.log_message("❌ Close manager not available")
+        except Exception as e:
+            self.log_message(f"❌ Error in close_all_img: {str(e)}")
+
 
     def rebuild_all_img(self):
         """Rebuild all IMG files in directory"""
@@ -1301,6 +1423,11 @@ class IMGFactory(QMainWindow):
             return
 
         self.log_message("IMG conversion functionality coming soon")
+
+    def convert_img_format(self):
+        """Convert IMG format - Placeholder"""
+        self.log_message("🔄 Convert IMG format requested")
+        # TODO: Implement format conversion
 
     def import_via_tool(self):
         """Import files using external tool"""
@@ -1404,16 +1531,6 @@ class IMGFactory(QMainWindow):
     def open_waterpro(self):
         """Open water properties editor"""
         self.log_message("Water properties functionality coming soon")
-
-
-    def close_img_file(self):
-        """Close current IMG file"""
-        if self.current_img:
-            self.log_message(f"Closed: {os.path.basename(self.current_img.file_path)}")
-            self.current_img = None
-            self.gui_layout.table.setRowCount(0)
-            self.gui_layout.update_img_info("No IMG loaded")
-            self.setWindowTitle("IMG Factory 1.5")
 
     def rebuild_img(self):
         """Rebuild current IMG file"""
@@ -1676,7 +1793,6 @@ class IMGFactory(QMainWindow):
     # =============================================================================
     # COL FILE OPERATIONS - KEEP 100% OF FUNCTIONALITY
     # =============================================================================
-
 
     def _load_col_file_in_new_tab(self, file_path):
         """Load COL file in new tab"""

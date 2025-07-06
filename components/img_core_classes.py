@@ -437,26 +437,44 @@ class IMGFile:
             return False
     
     def _open_version_2(self) -> bool:
-        """Open IMG version 2 (single file)"""
+        """Open IMG version 2 (single file) - FIXED SA format parsing"""
         try:
             with open(self.file_path, 'rb') as f:
                 # Skip VER2 header (4 bytes)
                 f.seek(4)
-                
+
                 # Read entry count
                 entry_count = struct.unpack('<I', f.read(4))[0]
-                
+
                 # Read entries (32 bytes each)
                 for _ in range(entry_count):
                     entry_data = f.read(32)
                     if len(entry_data) < 32:
                         break
-                    
+
                     # Parse entry: offset(4), size(4), name(24)
                     entry_offset, entry_size = struct.unpack('<II', entry_data[:8])
-                    entry_name = entry_data[8:32].rstrip(b'\x00').decode('ascii', errors='ignore')
-                    
-                    if entry_name:
+
+                    # FIXED: Proper name parsing for SA format
+                    name_bytes = entry_data[8:32]
+
+                    # Find first null byte (proper C-string termination)
+                    null_pos = name_bytes.find(b'\x00')
+                    if null_pos >= 0:
+                        name_bytes = name_bytes[:null_pos]
+
+                    # Decode with proper error handling
+                    try:
+                        entry_name = name_bytes.decode('ascii')
+                    except UnicodeDecodeError:
+                        # Fallback for corrupted names
+                        entry_name = name_bytes.decode('ascii', errors='replace')
+                        entry_name = ''.join(c if c.isprintable() else '_' for c in entry_name)
+
+                    # Additional cleaning
+                    entry_name = entry_name.strip()
+
+                    if entry_name and len(entry_name) > 0:
                         entry = IMGEntry()
                         entry.name = entry_name
                         entry.offset = entry_offset * 2048
@@ -464,10 +482,11 @@ class IMGFile:
                         entry.set_img_file(self)
                         entry.populate_entry_details()
                         self.entries.append(entry)
-            
+
             return True
-            
-        except Exception:
+
+        except Exception as e:
+            print(f"ERROR: Failed to parse SA IMG format: {e}")
             return False
     
     def _open_version_3(self) -> bool:
@@ -984,16 +1003,29 @@ def integrate_filtering(main_window, table_widget, filter_widget=None):
     
     return filter_widget
 
+def populate_entry_details(self):
+    """Populate additional entry details like RW version and file type - FIXED"""
+    # Extract extension from name using safe parsing
+    if '.' in self.name:
+        parts = self.name.split('.')
+        if len(parts) >= 2:
+            self.extension = parts[-1].upper()
+            # Clean extension of any non-alphabetic characters
+            self.extension = ''.join(c for c in self.extension if c.isalpha())
+        else:
+            self.extension = ""
+    else:
+        self.extension = ""
 
-# Function to populate entry details after loading
-def populate_entry_details_after_load(img_file):
-    """Call this after loading entries to populate RW versions"""
-    for entry in img_file.entries:
+    # Set file type based on extension
+    self.file_type = self.get_file_type()
+
+    # Try to detect RW version for DFF/TXD files
+    if self.extension in ['DFF', 'TXD']:
         try:
-            entry.populate_entry_details()
-        except Exception as e:
-            print(f"Warning: Could not detect details for {entry.name}: {e}")
-
+            self.rw_version = self.detect_rw_version()
+        except:
+            self.rw_version = 0
 
 # Export main classes for import
 __all__ = [
