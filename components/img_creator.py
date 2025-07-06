@@ -412,3 +412,20 @@ def get_available_presets() -> Dict[str, Dict[str, Any]]:
 def create_basic_img(output_path: str, preset_code: str = 'gtasa') -> bool:
     """Quick function to create basic IMG file"""
     return BasicIMGCreator.create_with_preset(output_path, preset_code)
+
+
+# Backward compatibility aliases for existing imports
+GameType = GamePreset  # For old imports that expect GameType
+
+
+# Export list for external imports
+__all__ = [
+    'NewIMGDialog',
+    'GamePreset', 
+    'GameType',  # Backward compatibility alias
+    'IMGCreationThread',
+    'BasicIMGCreator',
+    'create_new_img_dialog',
+    'get_available_presets', 
+    'create_basic_img'
+]

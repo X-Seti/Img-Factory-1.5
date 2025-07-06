@@ -1,0 +1,1128 @@
+.
+├── AudioExtra
+│   ├── GTASOL-Start.exe
+│   ├── sfx00422.wav
+│   ├── sfx00423.wav
+│   └── SOLcore.dll
+├── cleo
+│   └── spawn.cs
+├── cleo.asi
+├── core.dll
+├── data
+│   ├── animviewer.dat
+│   ├── carcols.dat
+│   ├── carcols.dat.original
+│   ├── carcols_sol.dat
+│   ├── Cullzone.dat
+│   ├── Cullzoneempty.dat
+│   ├── debug.sc
+│   ├── default.dat
+│   ├── fistfite.dat
+│   ├── GTArchive.sh
+│   ├── GTArchive-WIP.sh
+│   ├── gta_sample.dat
+│   ├── gtasol.dat
+│   ├── handling.cfg
+│   ├── handling.cfg.original
+│   ├── ipl-ide-sortutility.py
+│   ├── main.sc
+│   ├── MAIN.scm
+│   ├── main.txt
+│   ├── Maps
+│   │   └── cull.ipl
+│   ├── map.zon
+│   ├── maskwater.bmp
+│   ├── object.dat
+│   ├── occlu.ipl
+│   ├── oldfiles
+│   │   ├── gta3.dat
+│   │   └── gta_vc.dat
+│   ├── particle.cfg
+│   ├── paths
+│   │   ├── CHASE0.DAT
+│   │   ├── CHASE10.DAT
+│   │   ├── CHASE11.DAT
+│   │   ├── CHASE14.DAT
+│   │   ├── CHASE16.DAT
+│   │   ├── CHASE18.DAT
+│   │   ├── CHASE19.DAT
+│   │   ├── CHASE1.DAT
+│   │   ├── CHASE2.DAT
+│   │   ├── CHASE3.DAT
+│   │   ├── CHASE4.DAT
+│   │   ├── CHASE5.DAT
+│   │   ├── CHASE6.DAT
+│   │   ├── CHASE7.DAT
+│   │   ├── cull.ipl
+│   │   ├── flight2.dat
+│   │   ├── flight3.dat
+│   │   ├── flight4.dat
+│   │   ├── flight.dat
+│   │   ├── flightold.dat
+│   │   ├── NODES0.DAT
+│   │   ├── NODES10.DAT
+│   │   ├── NODES11.DAT
+│   │   ├── NODES12.DAT
+│   │   ├── NODES13.DAT
+│   │   ├── NODES14.DAT
+│   │   ├── NODES15.DAT
+│   │   ├── NODES16.DAT
+│   │   ├── NODES17.DAT
+│   │   ├── NODES18.DAT
+│   │   ├── NODES19.DAT
+│   │   ├── NODES1.DAT
+│   │   ├── NODES20.DAT
+│   │   ├── NODES21.DAT
+│   │   ├── NODES22.DAT
+│   │   ├── NODES23.DAT
+│   │   ├── NODES24.DAT
+│   │   ├── NODES25.DAT
+│   │   ├── NODES26.DAT
+│   │   ├── NODES27.DAT
+│   │   ├── NODES28.DAT
+│   │   ├── NODES29.DAT
+│   │   ├── NODES2.DAT
+│   │   ├── NODES30.DAT
+│   │   ├── NODES31.DAT
+│   │   ├── NODES32.DAT
+│   │   ├── NODES33.DAT
+│   │   ├── NODES34.DAT
+│   │   ├── NODES35.DAT
+│   │   ├── NODES36.DAT
+│   │   ├── NODES37.DAT
+│   │   ├── NODES38.DAT
+│   │   ├── NODES39.DAT
+│   │   ├── NODES3.DAT
+│   │   ├── NODES40.DAT
+│   │   ├── NODES41.DAT
+│   │   ├── NODES42.DAT
+│   │   ├── NODES43.DAT
+│   │   ├── NODES44.DAT
+│   │   ├── NODES45.DAT
+│   │   ├── NODES46.DAT
+│   │   ├── NODES47.DAT
+│   │   ├── NODES48.DAT
+│   │   ├── NODES49.DAT
+│   │   ├── NODES4.DAT
+│   │   ├── NODES50.DAT
+│   │   ├── NODES51.DAT
+│   │   ├── NODES52.DAT
+│   │   ├── NODES53.DAT
+│   │   ├── NODES54.DAT
+│   │   ├── NODES55.DAT
+│   │   ├── NODES56.DAT
+│   │   ├── NODES57.DAT
+│   │   ├── NODES58.DAT
+│   │   ├── NODES59.DAT
+│   │   ├── NODES5.DAT
+│   │   ├── NODES60.DAT
+│   │   ├── NODES61.DAT
+│   │   ├── NODES62.DAT
+│   │   ├── NODES63.DAT
+│   │   ├── NODES6.DAT
+│   │   ├── NODES7.DAT
+│   │   ├── NODES8.DAT
+│   │   ├── NODES9.DAT
+│   │   ├── occlu.ipl
+│   │   ├── pathslc.ipl
+│   │   ├── pathsLS.ipl
+│   │   ├── pathsLV.ipl
+│   │   ├── pathsSA.ipl
+│   │   ├── pathsSF.ipl
+│   │   ├── pathsVC.ipl
+│   │   ├── ROADBLOX.DAT
+│   │   ├── spath0.dat
+│   │   ├── spath1.dat
+│   │   ├── spath2.dat
+│   │   ├── tracks2.dat
+│   │   ├── tracks3.dat
+│   │   ├── tracks4.dat
+│   │   ├── tracks.dat
+│   │   ├── train2.dat
+│   │   └── train.dat
+│   ├── ped.dat
+│   ├── pedgrp.dat
+│   ├── peds.ide
+│   ├── pedstats.dat
+│   ├── special.dat
+│   ├── spec.txt
+│   ├── surface.dat
+│   ├── timecyc.dat
+│   ├── timecyc_lc.dat
+│   ├── timecyc_lcs.dat
+│   ├── timecyc_sa.dat
+│   ├── timecyc_sol.dat
+│   ├── timecyc_vc.dat
+│   ├── train2.dat
+│   ├── train.dat
+│   ├── VICESCM.INI
+│   ├── viswater.bmp
+│   ├── water.dat
+│   ├── waterpro.dat
+│   ├── weapon.dat
+│   └── zones
+│       ├── info.zon
+│       ├── map_sol.zon
+│       ├── map.zon
+│       ├── naviglc.zon
+│       └── navig.zon
+├── flags.html
+├── GTAfile-Analyzer.py
+├── GTASOL-Start.exe
+├── icons
+│   ├── app.ico
+│   ├── app.jpg
+│   ├── banner for the site.png
+│   ├── banner.png
+│   ├── bin.ico
+│   ├── form_profile.jpg
+│   ├── gta3.ico
+│   ├── image5.png
+│   ├── images5a.jpg
+│   ├── logo2.gif
+│   ├── logo.gif
+│   ├── SOL.ico
+│   ├── SOLVistaapp.jpg
+│   ├── SOLVistaapp.png
+│   └── Thumbs.db
+├── IMGlimitAdjuster.asi
+├── IMGlimitAdjuster.ini
+├── libpng15.dll
+├── limit_adjuster_gta3vcsa.asi
+├── limit_adjuster_gta3vcsa.ini
+├── models
+│   ├── coll
+│   │   ├── generic.col
+│   │   ├── peds.col
+│   │   ├── special.col
+│   │   ├── vehicles.col
+│   │   └── weapons.col
+│   ├── fonts.txd
+│   ├── fronten1.txd
+│   ├── fronten2.txd
+│   ├── fronten3.txd
+│   ├── generic
+│   │   ├── air_vlo.DFF
+│   │   ├── arrow.DFF
+│   │   ├── loplyguy.dff
+│   │   ├── newwheels.dff
+│   │   ├── newwheels.txd
+│   │   ├── peds.dff
+│   │   ├── player.bmp
+│   │   ├── qsphere.DFF
+│   │   ├── sphere.DFF
+│   │   ├── weapons.dff
+│   │   ├── wheels.DFF
+│   │   ├── wheels.TXD
+│   │   ├── zonecyla.DFF
+│   │   ├── zonecylb.DFF
+│   │   └── zonesphr.DFF
+│   ├── generics.txd
+│   ├── generic.txd
+│   ├── gta3.dir
+│   ├── gta3.ide
+│   ├── gta3.img
+│   ├── hud.txd
+│   ├── INTRO.TXD
+│   ├── iv_hud.txd
+│   ├── MISC.TXD
+│   ├── particle.txd
+│   ├── radar
+│   │   ├── batch_build.bat
+│   │   ├── gtatxd.exe
+│   │   ├── libpng16.dll
+│   │   ├── libsquish.dll
+│   │   ├── RadarGenerator.exe
+│   │   ├── README.txt
+│   │   ├── texmap.tex
+│   │   └── Thumbs.db
+│   ├── Radartex.dir
+│   ├── Radartex.img
+│   ├── sahud.txd
+│   ├── vchud.txd
+│   └── ZIMG EditorB.exe
+├── mss
+│   ├── 2dfx_vc.asi
+│   ├── 2dfx_vc.dat
+│   ├── 2dfx_vc.ini
+│   ├── AlphaObjects.asi
+│   ├── Fastloader.asi
+│   ├── Mp3dec.asi
+│   ├── Mssa3d2.m3d
+│   ├── Mssa3d.m3d
+│   ├── Msscoro.asi
+│   ├── Mssds3dh.m3d
+│   ├── Mssds3ds.m3d
+│   ├── msseax3.m3d
+│   ├── Msseax.m3d
+│   ├── Mssfast.m3d
+│   ├── Mssrsx.m3d
+│   ├── reffix.flt
+│   ├── reffix.ini
+│   ├── Reverb3.flt
+│   ├── SOLcore.asi
+│   ├── SOLcore.pdb
+│   ├── vc_carref.flt
+│   ├── VCDebug.asi
+│   ├── vc_gfx.ini
+│   ├── vc_speclight.asi
+│   ├── vctrails.asi
+│   ├── ViceMips.asi
+│   ├── ViceMips.ini
+│   └── window.flt
+├── Mss32.dll
+├── mvl
+│   ├── bullethole.png
+│   ├── errorlog.txt
+│   ├── globalm.xml
+│   ├── Help
+│   │   ├── flags.html
+│   │   ├── hats
+│   │   │   ├── hat_icon.png
+│   │   │   ├── hat.xml
+│   │   │   └── README.txt
+│   │   ├── sample_globalm.xml
+│   │   ├── samplescripts
+│   │   │   ├── animcancel.py
+│   │   │   ├── animinfo.py
+│   │   │   ├── animintercept.py
+│   │   │   ├── animnewcallback.py
+│   │   │   ├── animremove.py
+│   │   │   ├── animreplacer.py
+│   │   │   ├── animstopper.py
+│   │   │   ├── animtrigger.py
+│   │   │   ├── destroypolice.py
+│   │   │   ├── extraopcodes.py
+│   │   │   ├── keysample.py
+│   │   │   ├── moveground.py
+│   │   │   ├── renderware.py
+│   │   │   ├── taxilights.py
+│   │   │   ├── terminatepeds.py
+│   │   │   ├── tuningswitcher.py
+│   │   │   └── xkeypress.py
+│   │   ├── samplewepxmls
+│   │   │   ├── baseballbat.xml
+│   │   │   ├── brassknuckle.xml
+│   │   │   ├── camera.xml
+│   │   │   ├── chainsaw.xml
+│   │   │   ├── cleaver.xml
+│   │   │   ├── colt45.xml
+│   │   │   ├── detonategrenade.xml
+│   │   │   ├── detonator.xml
+│   │   │   ├── flamethrower.xml
+│   │   │   ├── golfclub.xml
+│   │   │   ├── grenade.xml
+│   │   │   ├── hammer.xml
+│   │   │   ├── helicannon.xml
+│   │   │   ├── katana.xml
+│   │   │   ├── knife.xml
+│   │   │   ├── laserscope.xml
+│   │   │   ├── m4.xml
+│   │   │   ├── m60.xml
+│   │   │   ├── machete.xml
+│   │   │   ├── minigun.xml
+│   │   │   ├── molotov.xml
+│   │   │   ├── mp5.xml
+│   │   │   ├── nightstick.xml
+│   │   │   ├── python.xml
+│   │   │   ├── rocketlauncher.xml
+│   │   │   ├── rocket.xml
+│   │   │   ├── ruger.xml
+│   │   │   ├── screwdriver.xml
+│   │   │   ├── shotgun.xml
+│   │   │   ├── silencedingram.xml
+│   │   │   ├── sniperrifle.xml
+│   │   │   ├── spas12shotgun.xml
+│   │   │   ├── stubbyshotgun.xml
+│   │   │   ├── teargas.xml
+│   │   │   ├── tec9.xml
+│   │   │   ├── unarmed.xml
+│   │   │   └── uzi.xml
+│   │   ├── samplexmls
+│   │   │   ├── admiral.xml
+│   │   │   ├── aeropl.xml
+│   │   │   ├── ambulan.xml
+│   │   │   ├── angel.xml
+│   │   │   ├── baggage.xml
+│   │   │   ├── banshee.xml
+│   │   │   ├── barrcks.xml
+│   │   │   ├── benson.xml
+│   │   │   ├── bfinjc.xml
+│   │   │   ├── blistac.xml
+│   │   │   ├── bloodra.xml
+│   │   │   ├── bloodrb.xml
+│   │   │   ├── bobcat.xml
+│   │   │   ├── boxvill.xml
+│   │   │   ├── burrito.xml
+│   │   │   ├── bus.xml
+│   │   │   ├── cabbie.xml
+│   │   │   ├── caddy.xml
+│   │   │   ├── cheetah.xml
+│   │   │   ├── coach.xml
+│   │   │   ├── coastg.xml
+│   │   │   ├── comet.xml
+│   │   │   ├── commented
+│   │   │   │   ├── angel.xml
+│   │   │   │   ├── coastg.xml
+│   │   │   │   ├── comet_with_weapons.xml
+│   │   │   │   ├── inferns.xml
+│   │   │   │   ├── rcgobli.xml
+│   │   │   │   ├── sample_globalv.xml
+│   │   │   │   ├── sample_global.xml
+│   │   │   │   └── skimmer.xml
+│   │   │   ├── cuban.xml
+│   │   │   ├── cubjet.xml
+│   │   │   ├── deluxo.xml
+│   │   │   ├── dinghy.xml
+│   │   │   ├── dodo.xml
+│   │   │   ├── enforcr.xml
+│   │   │   ├── esperan.xml
+│   │   │   ├── faggio.xml
+│   │   │   ├── fbicar.xml
+│   │   │   ├── fbiranc.xml
+│   │   │   ├── firetrk.xml
+│   │   │   ├── flatbed.xml
+│   │   │   ├── freeway.xml
+│   │   │   ├── gangbur.xml
+│   │   │   ├── glendal.xml
+│   │   │   ├── greenwo.xml
+│   │   │   ├── heli.xml
+│   │   │   ├── hermes.xml
+│   │   │   ├── hotrina.xml
+│   │   │   ├── hotrinb.xml
+│   │   │   ├── hotring.xml
+│   │   │   ├── hunter.xml
+│   │   │   ├── idaho.xml
+│   │   │   ├── inferns.xml
+│   │   │   ├── kaufman.xml
+│   │   │   ├── landstk.xml
+│   │   │   ├── linerun.xml
+│   │   │   ├── lovefis.xml
+│   │   │   ├── manana.xml
+│   │   │   ├── marquis.xml
+│   │   │   ├── maveric.xml
+│   │   │   ├── mesa.xml
+│   │   │   ├── moonbm.xml
+│   │   │   ├── mule.xml
+│   │   │   ├── oceanic.xml
+│   │   │   ├── packer.xml
+│   │   │   ├── patriot.xml
+│   │   │   ├── pcj600.xml
+│   │   │   ├── peren.xml
+│   │   │   ├── phoenix.xml
+│   │   │   ├── pizzabo.xml
+│   │   │   ├── policar.xml
+│   │   │   ├── polmav.xml
+│   │   │   ├── pony.xml
+│   │   │   ├── predatr.xml
+│   │   │   ├── rancher.xml
+│   │   │   ├── rcbandt.xml
+│   │   │   ├── rcbaron.xml
+│   │   │   ├── rcgobli.xml
+│   │   │   ├── rcraide.xml
+│   │   │   ├── reefer.xml
+│   │   │   ├── regina.xml
+│   │   │   ├── rhino.xml
+│   │   │   ├── rio.xml
+│   │   │   ├── romero.xml
+│   │   │   ├── rumpo.xml
+│   │   │   ├── sabretu.xml
+│   │   │   ├── sabre.xml
+│   │   │   ├── sanchez.xml
+│   │   │   ├── sandkin.xml
+│   │   │   ├── seaspar.xml
+│   │   │   ├── securi.xml
+│   │   │   ├── sentinl.xml
+│   │   │   ├── sentxs.xml
+│   │   │   ├── skimmer.xml
+│   │   │   ├── spand.xml
+│   │   │   ├── sparrow.xml
+│   │   │   ├── speeder.xml
+│   │   │   ├── squalo.xml
+│   │   │   ├── stalion.xml
+│   │   │   ├── stinger.xml
+│   │   │   ├── stretch.xml
+│   │   │   ├── taxi.xml
+│   │   │   ├── topfun.xml
+│   │   │   ├── trashm.xml
+│   │   │   ├── tropic.xml
+│   │   │   ├── vcnmav.xml
+│   │   │   ├── vicechee.xml
+│   │   │   ├── virgo.xml
+│   │   │   ├── voodoo.xml
+│   │   │   ├── walton.xml
+│   │   │   ├── washing.xml
+│   │   │   ├── whoopee.xml
+│   │   │   ├── yankee.xml
+│   │   │   └── zebra.xml
+│   │   └── script_functions.txt
+│   ├── libpng15.dll
+│   ├── messagelog.txt
+│   ├── README.txt
+│   ├── samplescripts
+│   │   ├── animcancel.py
+│   │   ├── animinfo.py
+│   │   ├── animintercept.py
+│   │   ├── animnewcallback.py
+│   │   ├── animremove.py
+│   │   ├── animreplacer.py
+│   │   ├── animstopper.py
+│   │   ├── animtrigger.py
+│   │   ├── destroypolice.py
+│   │   ├── keysample.py
+│   │   ├── moveground.py
+│   │   ├── renderware.py
+│   │   ├── taxilights.py
+│   │   ├── terminatepeds.py
+│   │   ├── tuningswitcher.py
+│   │   └── xkeypress.py
+│   ├── samplexmls
+│   │   ├── admiral.xml
+│   │   ├── aeropl.xml
+│   │   ├── ambulan.xml
+│   │   ├── angel.xml
+│   │   ├── baggage.xml
+│   │   ├── banshee.xml
+│   │   ├── barrcks.xml
+│   │   ├── benson.xml
+│   │   ├── bfinjc.xml
+│   │   ├── blistac.xml
+│   │   ├── bloodra.xml
+│   │   ├── bloodrb.xml
+│   │   ├── bobcat.xml
+│   │   ├── boxvill.xml
+│   │   ├── burrito.xml
+│   │   ├── bus.xml
+│   │   ├── cabbie.xml
+│   │   ├── caddy.xml
+│   │   ├── cheetah.xml
+│   │   ├── coach.xml
+│   │   ├── coastg.xml
+│   │   ├── comet.xml
+│   │   ├── commented
+│   │   │   ├── angel.xml
+│   │   │   ├── coastg.xml
+│   │   │   ├── comet_with_weapons.xml
+│   │   │   ├── inferns.xml
+│   │   │   ├── rcgobli.xml
+│   │   │   ├── sample_global.xml
+│   │   │   └── skimmer.xml
+│   │   ├── cuban.xml
+│   │   ├── cubjet.xml
+│   │   ├── deluxo.xml
+│   │   ├── dinghy.xml
+│   │   ├── dodo.xml
+│   │   ├── enforcr.xml
+│   │   ├── esperan.xml
+│   │   ├── faggio.xml
+│   │   ├── fbicar.xml
+│   │   ├── fbiranc.xml
+│   │   ├── firetrk.xml
+│   │   ├── flatbed.xml
+│   │   ├── freeway.xml
+│   │   ├── gangbur.xml
+│   │   ├── glendal.xml
+│   │   ├── greenwo.xml
+│   │   ├── heli.xml
+│   │   ├── hermes.xml
+│   │   ├── hotrina.xml
+│   │   ├── hotrinb.xml
+│   │   ├── hotring.xml
+│   │   ├── hunter.xml
+│   │   ├── idaho.xml
+│   │   ├── inferns.xml
+│   │   ├── kaufman.xml
+│   │   ├── landstk.xml
+│   │   ├── linerun.xml
+│   │   ├── lovefis.xml
+│   │   ├── manana.xml
+│   │   ├── marquis.xml
+│   │   ├── maveric.xml
+│   │   ├── mesa.xml
+│   │   ├── moonbm.xml
+│   │   ├── mule.xml
+│   │   ├── oceanic.xml
+│   │   ├── packer.xml
+│   │   ├── patriot.xml
+│   │   ├── pcj600.xml
+│   │   ├── peren.xml
+│   │   ├── phoenix.xml
+│   │   ├── pizzabo.xml
+│   │   ├── policar.xml
+│   │   ├── polmav.xml
+│   │   ├── pony.xml
+│   │   ├── predatr.xml
+│   │   ├── rancher.xml
+│   │   ├── rcbandt.xml
+│   │   ├── rcbaron.xml
+│   │   ├── rcgobli.xml
+│   │   ├── rcraide.xml
+│   │   ├── reefer.xml
+│   │   ├── regina.xml
+│   │   ├── rhino.xml
+│   │   ├── rio.xml
+│   │   ├── romero.xml
+│   │   ├── rumpo.xml
+│   │   ├── sabretu.xml
+│   │   ├── sabre.xml
+│   │   ├── sanchez.xml
+│   │   ├── sandkin.xml
+│   │   ├── seaspar.xml
+│   │   ├── securi.xml
+│   │   ├── sentinl.xml
+│   │   ├── sentxs.xml
+│   │   ├── skimmer.xml
+│   │   ├── spand.xml
+│   │   ├── sparrow.xml
+│   │   ├── speeder.xml
+│   │   ├── squalo.xml
+│   │   ├── stalion.xml
+│   │   ├── stinger.xml
+│   │   ├── stretch.xml
+│   │   ├── taxi.xml
+│   │   ├── topfun.xml
+│   │   ├── trashm.xml
+│   │   ├── tropic.xml
+│   │   ├── vcnmav.xml
+│   │   ├── vicechee.xml
+│   │   ├── virgo.xml
+│   │   ├── voodoo.xml
+│   │   ├── walton.xml
+│   │   ├── washing.xml
+│   │   ├── whoopee.xml
+│   │   ├── yankee.xml
+│   │   └── zebra.xml
+│   ├── vehicles
+│   │   ├── A610-MVL_3seteret.7z
+│   │   ├── A610-MVL-Alpha.7z
+│   │   ├── A610-MVL-cougar.7z
+│   │   ├── A610-MVL_DFT30.7z
+│   │   ├── A610-MVL-Impaler.7z
+│   │   ├── A610-MVL_Kerbau.7z
+│   │   ├── A610-MVL-Oceanic-Cop.7z
+│   │   ├── A610-MVL_Premier.7z
+│   │   ├── A610-MVL-RancherXL.7z
+│   │   ├── A610-MVL-Regal-Cab.7z
+│   │   ├── A610-MVL-Regal-Civil.7z
+│   │   ├── A610-MVL-SA_Admiral.7z
+│   │   ├── A610-MVL-SA_Banshee.7z
+│   │   ├── A610-MVL-SA_Bobcat.7z
+│   │   ├── A610-MVL-SA_Bravura.7z
+│   │   ├── A610-MVL-SA_Buffalo.7z
+│   │   ├── A610-MVL-SA_Cheetah.7z
+│   │   ├── A610-MVL-SA_Esperant.7z
+│   │   ├── A610-MVL-SA_Infernus.7z
+│   │   ├── A610-MVL-SA_Landstal.7z
+│   │   ├── A610-MVL-SA_Linerun.7z
+│   │   ├── A610-MVL-SA_Manana.7z
+│   │   ├── A610-MVL-SA_Peren.7z
+│   │   ├── A610-MVL-SA_Premier.7z
+│   │   ├── A610-MVL-SA_Previon.7z
+│   │   ├── A610-MVL-SA_Romero.7z
+│   │   ├── A610-MVL-SA_Romeroute.7z
+│   │   ├── A610-MVL-SA_Sentinel.7z
+│   │   ├── A610-MVL-SA_Stallion.7z
+│   │   ├── A610-MVL-SA_Stretch.7z
+│   │   ├── A610-MVL-SA_Turismo.7z
+│   │   ├── A610-MVL-SA_Voodoo.7z
+│   │   ├── A610-MVL-SA_Washinton.7z
+│   │   ├── A610-MVL_STINGER-t.7z
+│   │   ├── A610-MVL_Sweeper.7z
+│   │   ├── A610-MVL_Tug.7z
+│   │   ├── A610-MVL-VC-Ambulance.7z
+│   │   ├── A610-MVL_VC_belmont.7z
+│   │   ├── Baggage.7z
+│   │   ├── banshee_TP.7z
+│   │   ├── bf400.7z
+│   │   ├── bmwm3.7z
+│   │   ├── CivilianAmbulan.7z
+│   │   ├── CivilianCabbie.7z
+│   │   ├── coastguard.7z
+│   │   ├── copbike.7z
+│   │   ├── CorpseM.7z
+│   │   ├── death runnermvl.7z
+│   │   ├── Deluxo_TP.7z
+│   │   ├── Dodo-V27.7z
+│   │   ├── FBIrancher.7z
+│   │   ├── fcr-mvl.7z
+│   │   ├── globalv.xml
+│   │   ├── Grenwood Lowrider.7z
+│   │   ├── III-Ambulance.7z
+│   │   ├── III-Banshee.7z
+│   │   ├── III-Barracks.7z
+│   │   ├── III-Belly Up.7z
+│   │   ├── III-BF Injection.7z
+│   │   ├── III-Blista.7z
+│   │   ├── III-Bobcat.7z
+│   │   ├── III-Borgnine.7z
+│   │   ├── III-Bus.7z
+│   │   ├── III-Cabbie.7z
+│   │   ├── III-Cheetah.7z
+│   │   ├── III-Coach.7z
+│   │   ├── III-Columb (Cartel Cruiser).7z
+│   │   ├── III-Corpse (Manana).7z
+│   │   ├── III-Diablos.7z
+│   │   ├── III-Enforcer.7z
+│   │   ├── III-Esperanto.7z
+│   │   ├── III-FBI Car.7z
+│   │   ├── III-Firetruck.7z
+│   │   ├── III_fishvan.7z
+│   │   ├── III-Flatbed.7z
+│   │   ├── III-Hoods (Rumpo XL).7z
+│   │   ├── III-Idaho.7z
+│   │   ├── III-Infernus.7z
+│   │   ├── III-Kuruma.7z
+│   │   ├── III-Landstalker.7z
+│   │   ├── III-Linerunner.7z
+│   │   ├── III-Mafia Sentinel.7z
+│   │   ├── III-Manana.7z
+│   │   ├── III-Moonbeam.7z
+│   │   ├── III-Mr Whoop.7z
+│   │   ├── III-Mr Wongs.7z
+│   │   ├── III-Mule.7z
+│   │   ├── III-Panlantic.7z
+│   │   ├── III-Patriot.7z
+│   │   ├── III-Pony.7z
+│   │   ├── III-Rhino.7z
+│   │   ├── III-Rumpo.7z
+│   │   ├── III-Securica.7z
+│   │   ├── III-Sentinel.7z
+│   │   ├── III-SpandExpress.7z
+│   │   ├── III-Stallion.7z
+│   │   ├── III-Stinger.7z
+│   │   ├── III-Stretch.7z
+│   │   ├── III-Taxi.7z
+│   │   ├── III-Toyz n Hood.7z
+│   │   ├── III-Trashmaster.7z
+│   │   ├── III-Yakuza Stinger.7z
+│   │   ├── III-Yankee.7z
+│   │   ├── III-Yardie Lobo.7z
+│   │   ├── KenR-AlPHA.7z
+│   │   ├── KenR-bandito.7z
+│   │   ├── KenR-Banshee.7z
+│   │   ├── KenR-Blistac.7z
+│   │   ├── KenR-Buffalo.7z
+│   │   ├── KenR-Cheetah.7z
+│   │   ├── KenR-Club.7z
+│   │   ├── KenR-Duster.7z
+│   │   ├── KenR-Euros.7z
+│   │   ├── KenR-Flash.7z
+│   │   ├── KenR-Infernus.7z
+│   │   ├── KenR-jester.7z
+│   │   ├── KenR-Quad Bike.7z
+│   │   ├── KenR-Sabre.7z
+│   │   ├── KenR-SA Bullet.7z
+│   │   ├── KenR-Super GT.7z
+│   │   ├── KenR-Turismo.7z
+│   │   ├── KenR-Ursnus.7z
+│   │   ├── KenR-ZR350.7z
+│   │   ├── Krzer-SupaComet.7z
+│   │   ├── Krzer-SUPPCJ.7z
+│   │   ├── kuruma custom_vck.7z
+│   │   ├── kuruma_vck.7z
+│   │   ├── lamborghini.7z
+│   │   ├── LC-2001blista.7z
+│   │   ├── LC-cartel.7z
+│   │   ├── LC-diablostall.7z
+│   │   ├── LC-leone_sentinel.7z
+│   │   ├── LC-lobo.7z
+│   │   ├── LCSEnforcer.7z
+│   │   ├── LCS_NPCchopper.7z
+│   │   ├── LCSRumpo.7z
+│   │   ├── LCSTaxi.7z
+│   │   ├── LC-yakauza.7z
+│   │   ├── mazdamz5.7z
+│   │   ├── mercedes.7z
+│   │   ├── nissans13silvia.7z
+│   │   ├── SA-elegant_taxi.7z
+│   │   ├── SA-nrg500.2.7z
+│   │   ├── SA-nrg500.7z
+│   │   ├── sa_vehicle.txd
+│   │   ├── STM-audia8.7z
+│   │   ├── STM-minimetro.7z
+│   │   ├── STM-voodoopol.7z
+│   │   ├── streetfighter.7z
+│   │   ├── Taxi - Super Kaufman.7z
+│   │   ├── Taxi - Super Taxi.7z
+│   │   ├── TG458_FBIAdmiral.7z
+│   │   ├── VC-Firetruck.7z
+│   │   ├── VC-Idaho.7z
+│   │   ├── VC-Infernus.7z
+│   │   ├── VC-landstal.7z
+│   │   ├── VC-Linerun.7z
+│   │   ├── VC-Manana.7z
+│   │   ├── VC-Mule.7z
+│   │   ├── VC-NPCchopper.7z
+│   │   ├── vcpdwintergreen.7z
+│   │   ├── VC-Peren.7z
+│   │   ├── VC-Pony.7z
+│   │   ├── VCS-Admiral.7z
+│   │   ├── VCS-Admiral_unkown.7z
+│   │   ├── VCS-AnGeL.7z
+│   │   ├── VCS_CholoSabre.7z
+│   │   ├── VC-Sentinel.7z
+│   │   ├── VCSPCJ-600.7z
+│   │   ├── VC-Stinger.7z
+│   │   ├── VCS_toyz.7z
+│   │   ├── VC-Stretch.7z
+│   │   ├── VC-Trash.7z
+│   │   ├── VC-Voodoo.7z
+│   │   ├── Vehicles-Changelog.txt
+│   │   ├── Vehicles Included.txt
+│   │   ├── vice kuruma vc_k.7z
+│   │   ├── wintergreen.7z
+│   │   ├── x6103_avn.7z
+│   │   ├── x6105_hydra.7z
+│   │   └── Xkuruma.7z
+│   ├── vehmod_game.dll
+│   ├── vehmod_retail_.dll
+│   ├── vehmod_steam.dll
+│   ├── weapons
+│   │   ├── a610_cricketbat.7z
+│   │   ├── a610_nailgun.7z
+│   │   ├── Auto9.7z
+│   │   ├── AutoShot.7z
+│   │   ├── KenR-IV PickAxe.7z
+│   │   ├── KenR-Sledge hammer.7z
+│   │   ├── pickups.xml
+│   │   ├── PipeBomb.7z
+│   │   ├── [SOL] MH Guns.zip
+│   │   ├── [SOL] MH Unique Guns.zip
+│   │   ├── w102_pike_by_frank.s.7z
+│   │   ├── w103_AK47.7z
+│   │   ├── w103_spikes.7z
+│   │   ├── w104_AK.7z
+│   │   ├── w104_BBB.7z
+│   │   ├── w105_carbine.7z
+│   │   ├── w105_desert_eagle.7z
+│   │   ├── w106_Deagle.7z
+│   │   ├── w106_dildo.7z
+│   │   ├── w106_P90.7z
+│   │   ├── w106_pool_cue.7z
+│   │   ├── w106_Sawnoff.7z
+│   │   ├── w107_pumpaction.7z
+│   │   ├── w108_PSG1.7z
+│   │   ├── w109_IVGren.7z
+│   │   ├── w110_IVknife.7z
+│   │   ├── w111_MicroSMG.7z
+│   │   ├── w112_IVmolo.7z
+│   │   ├── w113_Glock22.7z
+│   │   ├── w114_IVpoolcue.7z
+│   │   ├── w115_IVshot.7z
+│   │   ├── w116_IVrock.7z
+│   │   ├── w117_IVsmg.7z
+│   │   ├── w118_IVsnipe.7z
+│   │   ├── w120_Scissors_Closed.7z
+│   │   ├── w121_Scissors_Open.7z
+│   │   ├── w122_Glock_17.7z
+│   │   └── w124_PM-9_Glauberyt_Short.7z
+│   └── wlist
+│       ├── baseballbat.xml
+│       ├── brassknuckle.xml
+│       ├── camera.xml
+│       ├── chainsaw.xml
+│       ├── cleaver.xml
+│       ├── colt45.xml
+│       ├── detonategrenade.xml
+│       ├── detonator.xml
+│       ├── flamethrower.xml
+│       ├── golfclub.xml
+│       ├── grenade.xml
+│       ├── hammer.xml
+│       ├── helicannon.xml
+│       ├── katana.xml
+│       ├── knife.xml
+│       ├── laserscope.xml
+│       ├── m4.xml
+│       ├── m60.xml
+│       ├── machete.xml
+│       ├── minigun.xml
+│       ├── molotov.xml
+│       ├── mp5.xml
+│       ├── nightstick.xml
+│       ├── python.xml
+│       ├── rocketlauncher.xml
+│       ├── rocket.xml
+│       ├── ruger.xml
+│       ├── screwdriver.xml
+│       ├── shotgun.xml
+│       ├── silencedingram.xml
+│       ├── sniperrifle.xml
+│       ├── spas12shotgun.xml
+│       ├── stubbyshotgun.xml
+│       ├── teargas.xml
+│       ├── tec9.xml
+│       ├── unarmed.xml
+│       └── uzi.xml
+├── ReadMe_Credits
+│   ├── IMGEditorC.txt
+│   ├── Install Readme.rtf
+│   └── TBA.txt
+├── Release.tar.gz
+├── saweapons.txt
+├── skins
+│   ├── player.bmp
+│   └── texture_guide.jpg
+├── sol
+│   ├── CDimages
+│   │   ├── generics.bat
+│   │   ├── generics.col
+│   │   ├── generics.dir
+│   │   ├── generics.ide
+│   │   ├── generics.img
+│   │   ├── ID Key (usage).ide
+│   │   ├── LA
+│   │   │   ├── game_la.bat
+│   │   │   ├── game_la.col
+│   │   │   ├── game_la.dir
+│   │   │   ├── game_la.ide
+│   │   │   └── game_la.img
+│   │   ├── LC
+│   │   │   ├── game_lc.bat
+│   │   │   ├── game_lc.col
+│   │   │   ├── game_lc.dir
+│   │   │   ├── game_lc.ide
+│   │   │   └── game_lc.img
+│   │   ├── LV
+│   │   │   ├── game_lv.bat
+│   │   │   ├── game_lv.col
+│   │   │   ├── game_lv.dir
+│   │   │   ├── game_lv.ide
+│   │   │   └── game_lv.img
+│   │   ├── MLL
+│   │   │   ├── game_ext.bat
+│   │   │   ├── game_ext.col
+│   │   │   ├── game_ext.dir
+│   │   │   ├── game_ext.ide
+│   │   │   ├── game_ext.img
+│   │   │   ├── game_mll.col
+│   │   │   ├── game_mll.dir
+│   │   │   ├── game_mll.ide
+│   │   │   └── game_mll.img
+│   │   ├── Mods
+│   │   │   ├── skyeffects.col
+│   │   │   ├── skyeffects.dir
+│   │   │   ├── skyeffects.ide
+│   │   │   └── skyeffects.img
+│   │   ├── SA
+│   │   │   ├── game_sa.bat
+│   │   │   ├── game_sa.col
+│   │   │   ├── game_sa.dir
+│   │   │   ├── game_sa.ide
+│   │   │   └── game_sa.img
+│   │   ├── Sea
+│   │   │   ├── seabed.col
+│   │   │   ├── seabed.dir
+│   │   │   ├── seabed.ide
+│   │   │   └── seabed.img
+│   │   ├── SF
+│   │   │   ├── game_sf.bat
+│   │   │   ├── game_sf.col
+│   │   │   ├── game_sf.dir
+│   │   │   ├── game_sf.ide
+│   │   │   └── game_sf.img
+│   │   ├── special.col
+│   │   ├── special.dir
+│   │   ├── special.ide
+│   │   ├── special.img
+│   │   └── VC
+│   │       ├── game_vc.bat
+│   │       ├── game_vc.col
+│   │       ├── game_vc.db
+│   │       ├── game_vc.dir
+│   │       ├── game_vc.ide
+│   │       └── game_vc.img
+│   ├── game.scm
+│   ├── GAME.txt
+│   ├── gta_sol.dat
+│   ├── maps
+│   │   ├── IFX
+│   │   │   ├── Generic.iFX
+│   │   │   ├── ISLighting.IFX
+│   │   │   ├── LCLighting.IFX
+│   │   │   ├── Lighting.ipl
+│   │   │   ├── SALighting.IFX
+│   │   │   └── VCLighting.IFX
+│   │   ├── Int
+│   │   │   ├── bank.ipl
+│   │   │   ├── beachcafe.ipl
+│   │   │   ├── bistro.ipl
+│   │   │   ├── club.ipl
+│   │   │   ├── concerth.ipl
+│   │   │   ├── hotel.ipl
+│   │   │   ├── int_mansion.ipl
+│   │   │   ├── lawyers.ipl
+│   │   │   ├── mall.ipl
+│   │   │   ├── prison.IPL
+│   │   │   ├── stadint.ipl
+│   │   │   ├── stripclb.ipl
+│   │   │   └── washpolice.IPL
+│   │   ├── LA
+│   │   │   ├── LAE_Generics.ipl
+│   │   │   ├── LAE.ipl
+│   │   │   ├── LAHills_Generics.ipl
+│   │   │   ├── LAHills.ipl
+│   │   │   ├── LAN_Generics.ipl
+│   │   │   ├── LAN.ipl
+│   │   │   ├── LAS_Generics.ipl
+│   │   │   ├── LAS.ipl
+│   │   │   ├── LAW_Generics.ipl
+│   │   │   ├── LAW.ipl
+│   │   │   ├── LAWn_Generics.ipl
+│   │   │   └── LAWn.ipl
+│   │   ├── LC
+│   │   │   ├── commer.ipl
+│   │   │   ├── commer.obj.ipl
+│   │   │   ├── Future_Gta3.ipl
+│   │   │   ├── indust.ipl
+│   │   │   ├── indust.obj.ipl
+│   │   │   ├── LC_A_Generics.ipl
+│   │   │   ├── LC_B_Generics.ipl
+│   │   │   ├── suburb.ipl
+│   │   │   └── suburb.obj.ipl
+│   │   ├── LV
+│   │   │   ├── Vegase_Generics.ipl
+│   │   │   ├── Vegase.ipl
+│   │   │   ├── vegasn_Generics.ipl
+│   │   │   ├── vegasn.ipl
+│   │   │   ├── vegass_Generics.ipl
+│   │   │   ├── vegass.ipl
+│   │   │   ├── vegasw_Generics.ipl
+│   │   │   ├── vegasw.ipl
+│   │   │   ├── vegasx.ipl
+│   │   │   └── vegax_Generics.ipl
+│   │   ├── MLL
+│   │   │   ├── airbase_Generics.ipl
+│   │   │   ├── airbase.ipl
+│   │   │   ├── islandmllvc.ipl
+│   │   │   ├── libmainland.ipl
+│   │   │   ├── MainlandLib2.IPL
+│   │   │   ├── MainlandLib3.IPL
+│   │   │   ├── MainlandLib_Gen.ipl
+│   │   │   ├── MainlandLib.ipl
+│   │   │   ├── midway_build.ipl
+│   │   │   ├── midway_land.ipl
+│   │   │   ├── midway_tunnels.ipl
+│   │   │   ├── misslib.ipl
+│   │   │   └── seabridge.ipl
+│   │   ├── Mods
+│   │   │   └── topgear.ipl
+│   │   ├── SA
+│   │   │   ├── Countrye_Generics.ipl
+│   │   │   ├── Countrye.ipl
+│   │   │   ├── Countryn_Generics.ipl
+│   │   │   ├── Countryn.ipl
+│   │   │   ├── Countrys_Generics.ipl
+│   │   │   ├── Countrys.ipl
+│   │   │   ├── Countryw_Generics.ipl
+│   │   │   └── Countryw.ipl
+│   │   ├── SACars.CARS
+│   │   ├── SACars.ipl
+│   │   ├── Sea
+│   │   │   └── seabed.ipl
+│   │   ├── SF
+│   │   │   ├── SFE_Generics.ipl
+│   │   │   ├── SFE.ipl
+│   │   │   ├── SFN_Generics.ipl
+│   │   │   ├── SFN.ipl
+│   │   │   ├── Sfse_Generics.ipl
+│   │   │   ├── Sfs_Generics.ipl
+│   │   │   ├── Sfs.ipl
+│   │   │   ├── SfsS.ipl
+│   │   │   ├── Sfw_Generics.ipl
+│   │   │   └── Sfw.ipl
+│   │   ├── sky
+│   │   │   └── skyeffects.ipl
+│   │   ├── VC
+│   │   │   ├── Airport_Gen.IPL
+│   │   │   ├── airport.ipl
+│   │   │   ├── bridge.ipl
+│   │   │   ├── Dockyards_Gen.ipl
+│   │   │   ├── Dockyards.IPL
+│   │   │   ├── downtown.ipl
+│   │   │   ├── export.ipl
+│   │   │   ├── haiti.ipl
+│   │   │   ├── Islands.ipl
+│   │   │   ├── LeafLinks.ipl
+│   │   │   ├── LittleHavana_Gen.ipl
+│   │   │   ├── LittleHavana.ipl
+│   │   │   ├── Lowerdocks.IPL
+│   │   │   ├── NorthBeach.ipl
+│   │   │   ├── OceanDrive.ipl
+│   │   │   ├── Prawnisland.ipl
+│   │   │   ├── remember.txt
+│   │   │   ├── southbeach.IPL
+│   │   │   ├── starfish.IPL
+│   │   │   ├── VC_A_Generics.ipl
+│   │   │   ├── VC_B_Generics.ipl
+│   │   │   ├── VC_map_ipl.rar
+│   │   │   ├── VCTunNorth.ipl
+│   │   │   └── Washington.ipl
+│   │   └── VCS
+│   │       ├── airport.ipl
+│   │       ├── Dockyards.IPL
+│   │       └── Floatrest.IPL
+│   ├── paths
+│   │   ├── cull.ipl
+│   │   ├── occlu.ipl
+│   │   ├── pathslc.ipl
+│   │   ├── pathsLS.ipl
+│   │   ├── pathsLV.ipl
+│   │   ├── pathsSA.ipl
+│   │   ├── pathsSF.ipl
+│   │   └── pathsVC.ipl
+│   ├── Scene.dat
+│   ├── SOL_IPL Sorter.exe
+│   ├── special.dat
+│   ├── water
+│   │   ├── maskwater.bmp
+│   │   ├── OffSet+2000
+│   │   │   ├── pyswater.bmp
+│   │   │   └── viswater.bmp
+│   │   ├── viswater.bmp
+│   │   └── WaterproGen1.2.exe
+│   └── zones
+│       ├── info.zon
+│       ├── map_sol.zon
+│       ├── map.zon
+│       ├── naviglc.zon
+│       └── navig.zon
+├── solcore.exe
+├── sol_log.txt
+├── text
+│   ├── american.gxt
+│   ├── french.gxt
+│   ├── german.gxt
+│   ├── italian.gxt
+│   ├── sol_log.txt
+│   └── spanish.gxt
+├── todo.txt
+├── tree-sol.git
+├── txd
+│   ├── image1080p.TXD
+│   ├── intro1.txd
+│   ├── intro2.txd
+│   ├── INTRO3.TXD
+│   ├── intro4.txd
+│   ├── Loadsc0.txd
+│   ├── LOADSC10.TXD
+│   ├── LOADSC11.TXD
+│   ├── LOADSC12.TXD
+│   ├── LOADSC13.TXD
+│   ├── LOADSC1.TXD
+│   ├── LOADSC2.TXD
+│   ├── LOADSC3.TXD
+│   ├── LOADSC4.TXD
+│   ├── LOADSC5.TXD
+│   ├── LOADSC6.TXD
+│   ├── LOADSC7.TXD
+│   ├── LOADSC8.TXD
+│   ├── LOADSC9.TXD
+│   ├── NEWS.TXD
+│   ├── outro.txd
+│   ├── SPLASH1.TXD
+│   ├── SPLASH2.TXD
+│   └── SPLASH3.TXD
+└── vehmod_retail_.dll
+
+60 directories, 1066 files

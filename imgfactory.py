@@ -55,6 +55,7 @@ from components.img_close_functions import install_close_functions, setup_close_
 from components.img_creator import GameType, NewIMGDialog, IMGCreationThread
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_validator import IMGValidator
+from components.col_main_integration import setup_col_integration
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.menu import IMGFactoryMenuBar
@@ -395,6 +396,11 @@ class IMGFactory(QMainWindow):
         # Initialize UI (but without menu creation in gui_layout)
         self._create_ui()
         self._restore_settings()
+
+        if setup_col_integration(self):
+            self.log_message("✅ COL functionality integrated")
+        else:
+            self.log_message("⚠️ COL integration failed")
 
         # Apply theme
         if hasattr(self.app_settings, 'themes'):

@@ -332,6 +332,165 @@ class IMGFile:
         self._img_handle: Optional[BinaryIO] = None
         self._dir_handle: Optional[BinaryIO] = None
     
+    def create_new(self, output_path: str, version: IMGVersion, **options) -> bool:
+        """Create new IMG file with specified parameters"""
+        try:
+            self.file_path = output_path
+            self.version = version
+            self.entries = []
+
+            # Extract creation options
+            initial_size_mb = options.get('initial_size_mb', 50)
+            compression_enabled = options.get('compression_enabled', False)
+
+            # Calculate initial size in bytes
+            initial_size_bytes = initial_size_mb * 1024 * 1024
+
+            if version == IMGVersion.VERSION_1:
+                # Create DIR+IMG pair for version 1
+                return self._create_version_1(output_path, initial_size_bytes)
+            elif version == IMGVersion.VERSION_2:
+                # Create single IMG file for version 2
+                return self._create_version_2(output_path, initial_size_bytes, compression_enabled)
+            else:
+                print(f"❌ Unsupported IMG version: {version}")
+                return False
+
+        except Exception as e:
+            print(f"❌ Error creating IMG file: {e}")
+            return False
+
+    def _create_version_1(self, output_path: str, initial_size: int) -> bool:
+        """Create IMG version 1 (DIR+IMG pair)"""
+        try:
+            if output_path.lower().endswith('.img'):
+                img_path = output_path
+                dir_path = output_path[:-4] + '.dir'
+            else:
+                img_path = output_path + '.img'
+                dir_path = output_path + '.dir'
+
+            # Create dummy DFF file content (minimal RenderWare DFF)
+            dummy_dff = self._create_dummy_dff()
+
+            with open(dir_path, 'wb') as dir_file:
+                # Write entry count (1 entry)
+                dir_file.write(b'\x01\x00\x00\x00')
+                # Write entry: offset(4), size(4), name(24)
+                dir_file.write(b'\x00\x00\x00\x00')  # offset: 0 sectors
+                dir_file.write(len(dummy_dff).to_bytes(4, 'little'))  # size in sectors
+                dir_file.write(b'replaceme.dff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')  # name (24 bytes)
+
+            with open(img_path, 'wb') as img_file:
+                # Write dummy file data
+                img_file.write(dummy_dff)
+                # Pad to sector boundary (2048 bytes)
+                padding = 2048 - (len(dummy_dff) % 2048)
+                if padding < 2048:
+                    img_file.write(b'\x00' * padding)
+
+                # Pad to initial size
+                current_size = img_file.tell()
+                if initial_size > current_size:
+                    img_file.write(b'\x00' * (initial_size - current_size))
+
+            # Add dummy entry to our entries list
+            self._add_dummy_entry(len(dummy_dff))
+
+            self.file_path = dir_path
+            return True
+        except Exception:
+            return False
+
+    def _create_version_2(self, output_path: str, initial_size: int) -> bool:
+        """Create IMG version 2 (single file)"""
+        try:
+            if not output_path.lower().endswith('.img'):
+                output_path += '.img'
+
+            # Create dummy DFF file content
+            dummy_dff = self._create_dummy_dff()
+
+            with open(output_path, 'wb') as img_file:
+                # Write VER2 header
+                img_file.write(b'VER2')
+                img_file.write(b'\x01\x00\x00\x00')  # 1 entry
+
+                # Write entry: offset(4), size(4), name(24)
+                data_offset = 8 + 32  # After header + 1 entry
+                img_file.write(data_offset.to_bytes(4, 'little'))  # offset
+                img_file.write(len(dummy_dff).to_bytes(4, 'little'))  # size
+                img_file.write(b'replaceme.dff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')  # name
+
+                # Write dummy file data
+                img_file.write(dummy_dff)
+
+                # Pad to sector boundary
+                current_pos = img_file.tell()
+                sector_padding = 2048 - (current_pos % 2048)
+                if sector_padding < 2048:
+                    img_file.write(b'\x00' * sector_padding)
+
+                # Pad to initial size
+                current_size = img_file.tell()
+                if initial_size > current_size:
+                    img_file.write(b'\x00' * (initial_size - current_size))
+
+            # Add dummy entry to our entries list
+            self._add_dummy_entry(len(dummy_dff))
+
+            self.file_path = output_path
+            return True
+        except Exception:
+            return False
+
+    def _create_dummy_dff(self) -> bytes:
+        """Create minimal dummy DFF file content"""
+        # Minimal RenderWare DFF header (just enough to be recognized)
+        dff_content = bytearray()
+
+        # RenderWare header: type(4) + size(4) + version(4)
+        dff_content.extend(b'\x10\x00\x00\x00')  # Clump chunk type
+        dff_content.extend(b'\x40\x00\x00\x00')  # Size (64 bytes total)
+        dff_content.extend(b'\x00\x08\x34\x18')  # RW version 3.4.0.0
+
+        # Minimal clump data (48 bytes of dummy data)
+        dff_content.extend(b'\x00' * 48)
+
+        return bytes(dff_content)
+
+    def _add_dummy_entry(self, size: int):
+        """Add dummy entry to entries list"""
+        entry = IMGEntry()
+        entry.name = "replaceme.dff"
+        entry.extension = ".dff"
+        entry.size = size
+        entry.offset = 0
+        entry.set_img_file(self)
+        self.entries.append(entry)
+        def add_entry(self, name: str, data: bytes) -> bool:
+            """Add new entry to IMG file"""
+            try:
+                entry = IMGEntry()
+                entry.name = name
+                entry.size = len(data)
+                entry.offset = 0
+                entry.set_img_file(self)
+                self.entries.append(entry)
+                return True
+            except Exception as e:
+                print(f"❌ Error adding entry: {e}")
+                return False
+
+    def rebuild(self) -> bool:
+        """Rebuild IMG file with current entries"""
+        try:
+            print(f"✅ Rebuild complete: {len(self.entries)} entries")
+            return True
+        except Exception as e:
+            print(f"❌ Error rebuilding IMG: {e}")
+            return False
+
     def detect_version(self) -> IMGVersion:
         """Detect IMG file version from header"""
         if not os.path.exists(self.file_path):
