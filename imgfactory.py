@@ -875,57 +875,79 @@ class IMGFactory(QMainWindow):
 
 
     # Update the setup_menu_connections method:
+
     def setup_menu_connections(self):
-        """Setup menu connections for IMG Factory - UPDATED with close manager"""
+        """Setup menu connections - UPDATED for unified file loading"""
         try:
-            # File menu connections
             menu_callbacks = {
                 'new_img': self.create_new_img,
-                'open_img': self.open_img_file,
-                'close_img': self.close_manager.close_img_file,   # Updated
-                'close_all': self.close_manager.close_all_tabs,   # Updated
+                'open_img': self.open_file_dialog,  # UPDATED: Use unified loader
+                'close_img': self.close_manager.close_img_file,
+                'close_all': self.close_manager.close_all_tabs,
                 'exit': self.close,
-
-                # Edit menu connections
                 'select_all': self.select_all_entries,
                 'find': self.show_search_dialog,
-
-                # Entry menu connections
                 'entry_import': self.import_files,
                 'entry_export': self.export_selected,
                 'entry_remove': self.remove_selected,
-
-                # IMG menu connections
                 'img_rebuild': self.rebuild_img,
                 'img_rebuild_as': self.rebuild_img_as,
             }
 
-            # Connect menu callbacks if menu system exists
             if hasattr(self, 'menu_bar_system') and hasattr(self.menu_bar_system, 'set_callbacks'):
                 self.menu_bar_system.set_callbacks(menu_callbacks)
 
-            self.log_message("✅ Menu connections established (using close manager)")
+            self.log_message("✅ Menu connections established (unified file loading)")
 
         except Exception as e:
             self.log_message(f"❌ Menu connection error: {str(e)}")
 
-
     def _update_ui_for_loaded_col(self):
-        """Update UI when COL file is loaded - FIXED: Method name"""
+        """Update UI when COL file is loaded - FIXED"""
         if not self.current_col:
             return
 
-        # Update window title
-        file_name = os.path.basename(self.current_col.file_path)
-        self.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
+        try:
+            # Update window title
+            file_name = os.path.basename(self.current_col.file_path)
+            self.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
 
-        # Update status
-        if hasattr(self, 'gui_layout'):
-            self.gui_layout.show_progress(-1, "COL file loaded")
-            if hasattr(self.gui_layout, 'update_img_info'):
-                self.gui_layout.update_img_info(f"COL: {file_name}")
+            # Update table with COL models info
+            if hasattr(self, 'gui_layout') and self.gui_layout.table:
+                models = self.current_col.models if hasattr(self.current_col, 'models') else []
+                self.gui_layout.table.setRowCount(len(models))
 
-        self.log_message("COL interface updated")
+                for row, model in enumerate(models):
+                    items = [
+                        (model.name if hasattr(model, 'name') else f"Model_{row}",
+                        "COL",
+                        f"v{model.version.value}" if hasattr(model, 'version') else "Unknown",
+                        f"{len(model.spheres) if hasattr(model, 'spheres') else 0}S/"
+                        f"{len(model.boxes) if hasattr(model, 'boxes') else 0}B/"
+                        f"{len(model.meshes) if hasattr(model, 'meshes') else 0}M",
+                        "COL",
+                        "None",
+                        "Loaded")
+                    ]
+
+                    for col, value in enumerate(items[0]):
+                        item = QTableWidgetItem(str(value))
+                        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                        self.gui_layout.table.setItem(row, col, item)
+
+            # Update status
+            if hasattr(self, 'gui_layout'):
+                model_count = len(self.current_col.models) if hasattr(self.current_col, 'models') else 0
+                self.gui_layout.show_progress(-1, f"COL loaded: {model_count} models")
+
+                if hasattr(self.gui_layout, 'update_img_info'):
+                    self.gui_layout.update_img_info(f"COL: {file_name}")
+
+            self.log_message("✅ COL UI updated successfully")
+
+        except Exception as e:
+            self.log_message(f"❌ Error updating COL UI: {str(e)}")
+
 
     def _create_initial_tab(self):
         """Create initial empty tab"""
@@ -1040,19 +1062,8 @@ class IMGFactory(QMainWindow):
                     self._load_img_file_in_new_tab(output_path)
 
     def open_img_file(self):
-        """Open IMG file dialog - FIXED to use new tab method"""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open IMG /COL Archive", "",
-            "IMG /COL Archives (*.img, *.col);;All Files (*)")
-
-    #if "DFF" file_path:
-        self.log_message(f"DFF file opening: {os.path.basename(file_path)}")
-        self._load_img_file_in_new_tab(file_path)
-
-    #if "COL" file_path:
-        self.log_message(f"COL file opening: {os.path.basename(file_path)}")
-        self._load_col_file_in_new_tab(file_path)
-        #_detect_and_open_file()
+        """Open file dialog - REDIRECTS to unified loader"""
+        self.open_file_dialog()
 
     def _detect_and_open_file(self, file_path: str) -> bool:
         """Detect file type and open with appropriate handler"""
@@ -1099,9 +1110,122 @@ class IMGFactory(QMainWindow):
             self.log_message(f"❌ Error detecting file type: {str(e)}")
             return False
 
+    def open_file_dialog(self):
+        """Unified file dialog for IMG and COL files - IMPROVED"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Open IMG/COL Archive", "",
+            "All Supported (*.img *.col);;IMG Archives (*.img);;COL Archives (*.col);;All Files (*)")
+
+    if file_path:
+        self.load_file_unified(file_path)
+
+    def _detect_file_type(self, file_path: str) -> str:
+        """Detect file type by extension and content - IMPROVED"""
+        try:
+            # Check extension first
+            file_ext = os.path.splitext(file_path)[1].lower()
+
+            if file_ext == '.img':
+                return "IMG"
+            elif file_ext == '.col':
+                return "COL"
+
+            # If extension is ambiguous, check file content
+            with open(file_path, 'rb') as f:
+                header = f.read(16)
+
+            if len(header) < 4:
+                return "UNKNOWN"
+
+            # Check for IMG signatures
+            if header[:4] in [b'VER2', b'VER3']:
+                self.log_message(f"🔍 Detected IMG file by signature")
+                return "IMG"
+
+            # Check for COL signatures
+            elif header[:4] in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
+                self.log_message(f"🔍 Detected COL file by signature")
+                return "COL"
+
+            # Try reading as IMG version 1 (no header signature)
+            elif len(header) >= 8:
+                # Could be IMG v1 - let IMG loader try
+                self.log_message(f"🔍 Attempting as IMG v1 file")
+                return "IMG"
+
+            return "UNKNOWN"
+
+        except Exception as e:
+            self.log_message(f"❌ Error detecting file type: {str(e)}")
+            return "UNKNOWN"
+
+
+    def load_file_unified(self, file_path: str):
+        """Unified file loader with proper type detection - IMPROVED"""
+        try:
+            # Detect file type
+            file_type = self._detect_file_type(file_path)
+
+            if file_type == "IMG":
+                self.log_message(f"📁 Loading IMG: {os.path.basename(file_path)}")
+                self._load_img_file_in_new_tab(file_path)
+            elif file_type == "COL":
+                self.log_message(f"🔧 Loading COL: {os.path.basename(file_path)}")
+                self._load_col_file_in_new_tab(file_path)
+            else:
+                self.log_message(f"❌ Unsupported file type: {file_path}")
+                QMessageBox.warning(self, "Unsupported File",
+                                f"File type not supported: {os.path.basename(file_path)}")
+
+        except Exception as e:
+            error_msg = f"Error loading file: {str(e)}"
+            self.log_message(f"❌ {error_msg}")
+            QMessageBox.critical(self, "File Load Error", error_msg)
+
     def _load_col_file_in_new_tab(self, file_path):
-        """Load COL file in new tab - logic using close manager"""
-        current_index = self.main_tab_widget.currentIndex()
+        """Load COL file in new tab - FIXED to use proper COL objects"""
+        try:
+            # Import COL classes
+            from components.col_core_classes import COLFile
+
+            # Create new tab if current tab has a file
+            current_index = self.main_tab_widget.currentIndex()
+            if current_index in self.open_files:
+                self.close_manager.create_new_tab()
+                current_index = self.main_tab_widget.currentIndex()
+
+            # Create proper COL file object
+            col_file = COLFile(file_path)
+            if not col_file.load():
+                raise Exception(f"Failed to load COL file: {file_path}")
+
+            # Set current COL
+            self.current_col = col_file
+
+            # Store file info with proper structure
+            file_name = os.path.basename(file_path)
+            tab_name = f"🔧 {file_name}"
+
+            self.open_files[current_index] = {
+                'type': 'COL',
+                'file_path': file_path,
+                'file_object': col_file,
+                'tab_name': tab_name
+            }
+
+            # Update tab name
+            self.main_tab_widget.setTabText(current_index, tab_name)
+
+            # Update UI
+            self._update_ui_for_loaded_col()
+
+            self.log_message(f"✅ Loaded COL: {file_name} ({len(col_file.models)} models)")
+
+        except Exception as e:
+            error_msg = f"Error loading COL file: {str(e)}"
+            self.log_message(f"❌ {error_msg}")
+            QMessageBox.critical(self, "COL Load Error", error_msg)
+
 
     def _load_img_file_in_new_tab(self, file_path):
         """Load IMG file in new tab - logic using close manager"""
