@@ -1043,8 +1043,7 @@ class IMGFactory(QMainWindow):
         """Open IMG file dialog - FIXED to use new tab method"""
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Open IMG /COL Archive", "",
-            "IMG /COL Archives (*.img, *.col);;All Files (*)"
-        )
+            "IMG /COL Archives (*.img, *.col);;All Files (*)")
 
     #if "DFF" file_path:
         self.log_message(f"DFF file opening: {os.path.basename(file_path)}")
@@ -1100,8 +1099,12 @@ class IMGFactory(QMainWindow):
             self.log_message(f"❌ Error detecting file type: {str(e)}")
             return False
 
+    def _load_col_file_in_new_tab(self, file_path):
+        """Load COL file in new tab - logic using close manager"""
+        current_index = self.main_tab_widget.currentIndex()
+
     def _load_img_file_in_new_tab(self, file_path):
-        """Load IMG file in new tab - FIXED logic using close manager"""
+        """Load IMG file in new tab - logic using close manager"""
         current_index = self.main_tab_widget.currentIndex()
 
         # Check if current tab is empty (no file loaded)
