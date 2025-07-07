@@ -1318,15 +1318,31 @@ class IMGFactory(QMainWindow):
         self.load_img_file(file_path)
 
     def load_img_file(self, file_path: str):
-        """Load IMG file in background thread"""
+        """Load IMG file in background thread - FIXED recursion issue"""
         if self.load_thread and self.load_thread.isRunning():
             return
-        
+
         self.log_message(f"Loading: {os.path.basename(file_path)}")
-        
+
         # Show progress
         self.gui_layout.show_progress(0, "Loading IMG file...")
-        self.load_img_file(file_path)
+
+        # Create and start the loading thread (FIXED - was calling itself recursively)
+        self.load_thread = IMGLoadThread(file_path)
+        self.load_thread.progress_updated.connect(self._on_img_load_progress)
+        self.load_thread.loading_finished.connect(self._on_img_loaded)
+        self.load_thread.loading_error.connect(self._on_img_load_error)
+        self.load_thread.start()
+
+    def _on_img_load_progress(self, progress: int, status: str):
+        """Handle IMG loading progress updates"""
+        self.gui_layout.show_progress(progress, status)
+
+    def _on_img_load_error(self, error_message: str):
+        """Handle IMG loading error"""
+        self.log_message(f"❌ {error_message}")
+        self.gui_layout.hide_progress()
+        QMessageBox.critical(self, "IMG Load Error", error_message)
 
     def open_img_file(self):
         """Open file dialog - REDIRECTS to unified loader"""
@@ -1690,32 +1706,32 @@ class IMGFactory(QMainWindow):
         self.gui_layout.show_progress(progress, status)
     
 
-    def _on_img_loaded(self, img_file):
-        """Handle IMG file loaded - FIXED for tabs"""
+    def _on_img_loaded(self, img_file: IMGFile):
+        """Handle successful IMG loading"""
         try:
-            self.current_img = img_file
+            # Store the loaded IMG file
             current_index = self.main_tab_widget.currentIndex()
 
-            # Update file info in open_files
             if current_index in self.open_files:
                 self.open_files[current_index]['file_object'] = img_file
-                self.log_message(f"✅ Updated tab {current_index} with loaded IMG")
-            else:
-                self.log_message(f"⚠️ Tab {current_index} not found in open_files")
 
-            # Update UI for loaded IMG
+            # Set current IMG reference
+            self.current_img = img_file
+
+            # Update UI
             self._update_ui_for_loaded_img()
 
-            # Update window title to show current file
-            file_name = os.path.basename(img_file.file_path)
-            self.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
+            # Hide progress
+            self.gui_layout.hide_progress()
 
-            self.log_message(f"✅ Loaded: {file_name} ({len(img_file.entries)} entries)")
+            # Log success
+            self.log_message(f"✅ Loaded: {os.path.basename(img_file.file_path)} ({len(img_file.entries)} entries)")
 
         except Exception as e:
-            self.log_message(f"❌ Error in _on_img_loaded: {str(e)}")
-            if hasattr(self, 'gui_layout'):
-                self.gui_layout.show_progress(-1, "Error loading IMG")
+            error_msg = f"Error processing loaded IMG: {str(e)}"
+            self.log_message(f"❌ {error_msg}")
+            self.gui_layout.hide_progress()
+            QMessageBox.critical(self, "IMG Processing Error", error_msg)
 
     def _populate_real_img_table(self, img_file: IMGFile):
         """Populate table with real IMG file entries - FIXED for SA format display"""
