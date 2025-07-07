@@ -7,7 +7,8 @@ Clean Qt6-based implementation for IMG archive management
 import sys
 import os
 import mimetypes
-from pathlib import Path  # Move this up here
+from typing import Optional, List, Dict, Any
+from pathlib import Path
 print("Starting application...")
 
 # Setup paths FIRST - before any other imports
@@ -35,11 +36,12 @@ from PyQt6.QtWidgets import (
     QPushButton, QFileDialog, QMessageBox, QMenuBar, QStatusBar,
     QProgressBar, QHeaderView, QGroupBox, QComboBox, QLineEdit,
     QAbstractItemView, QTreeWidget, QTreeWidgetItem, QTabWidget,
-    QGridLayout, QMenu, QButtonGroup, QRadioButton
+    QGridLayout, QMenu, QButtonGroup, QRadioButton, QToolBar
+
 )
 print("PyQt6.QtCore imported successfully")
-from PyQt6.QtCore import Qt, QThread, pyqtSignal,  QTimer, QSettings, QMimeData
-from PyQt6.QtGui import QAction, QFont, QIcon, QPixmap, QDragEnterEvent, QDropEvent, QContextMenuEvent
+from PyQt6.QtCore import pyqtSignal, QMimeData, Qt, QThread, QTimer, QSettings
+from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent, QFont, QIcon, QPixmap, QShortcut
 
 # OR use the full path:
 from utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
@@ -50,29 +52,49 @@ from components.img_core_classes import (
     IMGEntriesTable, FilterPanel, IMGFileInfoPanel,
     TabFilterWidget, integrate_filtering, create_entries_table_panel
 )
-from components.img_formats import GameSpecificIMGDialog, IMGCreator
 from components.img_close_functions import install_close_functions, setup_close_manager
 from components.img_creator import GameType, NewIMGDialog, IMGCreationThread
+from components.img_formats import GameSpecificIMGDialog, IMGCreator
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
+#from components.img_threads import IMGLoadThread, IMGSaveThread
 from components.img_validator import IMGValidator
+#from components.tab_manager import TabManager
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.menu import IMGFactoryMenuBar
-#from components.col_main_integration import setup_col_integration
+
 
 print("Components imported successfully")
 COL_INTEGRATION_AVAILABLE = False
 COL_SETUP_FUNCTION = None
 
+# FIXED COL INTEGRATION IMPORTS
+print("Attempting COL integration...")
+COL_INTEGRATION_AVAILABLE = False
+COL_SETUP_FUNCTION = None
+
 try:
+    # Check if the COL integration module exists
     from components.col_integration import setup_col_integration_full
     COL_INTEGRATION_AVAILABLE = True
     COL_SETUP_FUNCTION = setup_col_integration_full
-    print("✅ COL integration module loaded successfully")
+    print("✅ COL integration loaded successfully")
 except ImportError as e:
-    print(f"❌ COL integration import failed: {e}")
+    print(f"⚠️ COL integration not available: {e}")
+    # Create a dummy function to prevent errors
+    def setup_col_integration_full(main_window):
+        print("COL integration not available")
+        return False
+    COL_SETUP_FUNCTION = setup_col_integration_full
     COL_INTEGRATION_AVAILABLE = False
-    COL_SETUP_FUNCTION = None
+except Exception as e:
+    print(f"❌ COL integration error: {e}")
+    # Create a dummy function to prevent errors
+    def setup_col_integration_full(main_window):
+        print("COL integration failed to load")
+        return False
+    COL_SETUP_FUNCTION = setup_col_integration_full
+    COL_INTEGRATION_AVAILABLE = False
 
 
 # Replace the populate_img_table function in imgfactory.py with this improved version:
@@ -1111,18 +1133,17 @@ class IMGFactory(QMainWindow):
             return False
 
     def open_file_dialog(self):
-        """Unified file dialog for IMG and COL files - IMPROVED"""
+        """Unified file dialog for IMG and COL files"""
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Open IMG/COL Archive", "",
             "All Supported (*.img *.col);;IMG Archives (*.img);;COL Archives (*.col);;All Files (*)")
 
-    if file_path:
-        self.load_file_unified(file_path)
+        if file_path:
+            self.load_file_unified(file_path)
 
     def _detect_file_type(self, file_path: str) -> str:
-        """Detect file type by extension and content - IMPROVED"""
+        """Detect file type by extension and content"""
         try:
-            # Check extension first
             file_ext = os.path.splitext(file_path)[1].lower()
 
             if file_ext == '.img':
@@ -1130,7 +1151,7 @@ class IMGFactory(QMainWindow):
             elif file_ext == '.col':
                 return "COL"
 
-            # If extension is ambiguous, check file content
+            # Check file content if extension is ambiguous
             with open(file_path, 'rb') as f:
                 header = f.read(16)
 
@@ -1139,31 +1160,69 @@ class IMGFactory(QMainWindow):
 
             # Check for IMG signatures
             if header[:4] in [b'VER2', b'VER3']:
-                self.log_message(f"🔍 Detected IMG file by signature")
                 return "IMG"
 
             # Check for COL signatures
             elif header[:4] in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
-                self.log_message(f"🔍 Detected COL file by signature")
                 return "COL"
 
-            # Try reading as IMG version 1 (no header signature)
-            elif len(header) >= 8:
-                # Could be IMG v1 - let IMG loader try
-                self.log_message(f"🔍 Attempting as IMG v1 file")
-                return "IMG"
-
-            return "UNKNOWN"
+            # Default to IMG for unknown formats
+            return "IMG"
 
         except Exception as e:
             self.log_message(f"❌ Error detecting file type: {str(e)}")
             return "UNKNOWN"
 
+    def _load_col_file_safely(self, file_path):
+        """Load COL file safely without breaking if COL classes don't exist"""
+        try:
+            # Try to import COL classes
+            from components.col_core_classes import COLFile
+
+            # Create COL file object
+            col_file = COLFile(file_path)
+            if not col_file.load():
+                raise Exception(f"Failed to load COL file: {file_path}")
+
+            # Set current COL
+            self.current_col = col_file
+
+            # Update UI for COL file
+            self._update_ui_for_loaded_col_safe()
+
+            self.log_message(f"✅ Loaded COL: {os.path.basename(file_path)}")
+
+        except ImportError:
+            self.log_message("❌ COL classes not available - loading as generic file")
+            # Fallback to basic handling
+            self._load_col_as_generic_file(file_path)
+        except Exception as e:
+            error_msg = f"Error loading COL file: {str(e)}"
+            self.log_message(f"❌ {error_msg}")
+            QMessageBox.critical(self, "COL Load Error", error_msg)
+
+    def _load_col_as_generic_file(self, file_path):
+        """Load COL as generic file when COL classes aren't available"""
+        try:
+            # Create simple COL representation
+            self.current_col = {
+                "file_path": file_path,
+                "type": "COL",
+                "size": os.path.getsize(file_path)
+            }
+
+            # Update UI
+            self._update_ui_for_loaded_col_safe()
+
+            self.log_message(f"✅ Loaded COL (generic): {os.path.basename(file_path)}")
+
+        except Exception as e:
+            self.log_message(f"❌ Error loading COL as generic: {str(e)}")
+
 
     def load_file_unified(self, file_path: str):
-        """Unified file loader with proper type detection - IMPROVED"""
+        """Unified file loader with proper type detection"""
         try:
-            # Detect file type
             file_type = self._detect_file_type(file_path)
 
             if file_type == "IMG":
@@ -1171,11 +1230,11 @@ class IMGFactory(QMainWindow):
                 self._load_img_file_in_new_tab(file_path)
             elif file_type == "COL":
                 self.log_message(f"🔧 Loading COL: {os.path.basename(file_path)}")
-                self._load_col_file_in_new_tab(file_path)
+                self._load_col_file_safely(file_path)
             else:
                 self.log_message(f"❌ Unsupported file type: {file_path}")
                 QMessageBox.warning(self, "Unsupported File",
-                                f"File type not supported: {os.path.basename(file_path)}")
+                                  f"File type not supported: {os.path.basename(file_path)}")
 
         except Exception as e:
             error_msg = f"Error loading file: {str(e)}"
@@ -1284,6 +1343,56 @@ class IMGFactory(QMainWindow):
         """Internal method that calls the public load_img_file method"""
         self.load_img_file(file_path)
 
+    def _update_ui_for_loaded_col_safe(self):
+        """Update UI when COL file is loaded - SAFE VERSION"""
+        if not self.current_col:
+            return
+
+        try:
+            # Handle both COL object and dictionary formats
+            if hasattr(self.current_col, 'file_path'):
+                file_path = self.current_col.file_path
+            elif isinstance(self.current_col, dict):
+                file_path = self.current_col.get('file_path', 'Unknown')
+            else:
+                file_path = str(self.current_col)
+
+            file_name = os.path.basename(file_path)
+
+            # Update window title
+            self.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
+
+            # Update table with basic COL info
+            if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
+                table = self.gui_layout.table
+                table.setRowCount(1)
+
+                # Create basic COL entry
+                items = [
+                    (file_name, "COL", "COL File", "0x0", "COL", "None", "Loaded")
+                ]
+
+                for row, item_data in enumerate(items):
+                    for col, value in enumerate(item_data):
+                        if col < table.columnCount():
+                            item = QTableWidgetItem(str(value))
+                            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                            table.setItem(row, col, item)
+
+            # Update status
+            if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'show_progress'):
+                self.gui_layout.show_progress(-1, f"COL loaded")
+
+            self.log_message("✅ COL UI updated successfully")
+
+        except Exception as e:
+            self.log_message(f"❌ Error updating COL UI: {str(e)}")
+
+    # REPLACE THE EXISTING open_img_file method
+    def open_img_file(self):
+        """Open file dialog - REDIRECTS to unified loader"""
+        self.open_file_dialog()
+
     def _update_ui_for_no_img(self):
         """Update UI when no IMG file is loaded"""
         # Clear current data
@@ -1322,6 +1431,20 @@ class IMGFactory(QMainWindow):
                 getattr(self, button_name).setEnabled(False)
 
         self.log_message("IMG interface reset")
+
+    def _setup_col_integration_safely(self):
+        """Setup COL integration safely"""
+        try:
+            if COL_SETUP_FUNCTION:
+                result = COL_SETUP_FUNCTION(self)
+                if result:
+                    self.log_message("✅ COL functionality integrated")
+                else:
+                    self.log_message("⚠️ COL integration returned False")
+            else:
+                self.log_message("⚠️ COL integration function not available")
+        except Exception as e:
+            self.log_message(f"❌ COL integration error: {str(e)}")
 
     def _on_load_progress(self, progress: int, status: str):
         """Handle loading progress updates"""
