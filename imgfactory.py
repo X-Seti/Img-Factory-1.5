@@ -1279,7 +1279,6 @@ class IMGFactory(QMainWindow):
             self.log_message(f"❌ {error_msg}")
             QMessageBox.critical(self, "COL Load Error", error_msg)
 
-
     def _load_img_file_in_new_tab(self, file_path):
         """Load IMG file in new tab - logic using close manager"""
         current_index = self.main_tab_widget.currentIndex()
@@ -1325,19 +1324,8 @@ class IMGFactory(QMainWindow):
         
         # Show progress
         self.gui_layout.show_progress(0, "Loading IMG file...")
-        
-        # Start loading thread
-        self.load_thread = IMGLoadThread(file_path)
-        self.load_thread.progress_updated.connect(self._on_load_progress)
-        self.load_thread.loading_finished.connect(self._on_img_loaded)
-        self.load_thread.loading_error.connect(self._on_load_error)
-        self.load_thread.start()
-    
-    def _load_img_file(self, file_path: str):
-        """Internal method that calls the public load_img_file method"""
         self.load_img_file(file_path)
 
-    # REPLACE THE EXISTING open_img_file method
     def open_img_file(self):
         """Open file dialog - REDIRECTS to unified loader"""
         self.open_file_dialog()
@@ -1382,7 +1370,7 @@ class IMGFactory(QMainWindow):
         self.log_message("IMG interface reset")
 
     def _update_ui_for_loaded_col_safe(self):
-        """Update UI when COL file is loaded - USES SAME FORMAT AS IMG"""
+        """Update UI when COL file is loaded"""
         if not self.current_col:
             return
 
@@ -1727,7 +1715,6 @@ class IMGFactory(QMainWindow):
             if hasattr(self, 'gui_layout'):
                 self.gui_layout.show_progress(-1, "Error loading IMG")
 
-
     def _populate_real_img_table(self, img_file: IMGFile):
         """Populate table with real IMG file entries - FIXED for SA format display"""
         if not img_file or not img_file.entries:
@@ -1902,7 +1889,6 @@ class IMGFactory(QMainWindow):
                 self.log_message("❌ Close manager not available")
         except Exception as e:
             self.log_message(f"❌ Error in close_all_img: {str(e)}")
-
 
     def rebuild_all_img(self):
         """Rebuild all IMG files in directory"""
@@ -2533,11 +2519,8 @@ def _apply_col_tab_styling(self, tab_index):
                         file_info = self.open_files[index]
                         if file_info.get('type') == 'COL':
                             self._apply_individual_col_tab_style(index)
-
-                # Replace the handler
-                self._on_tab_changed = enhanced_tab_changed
-
-            self.log_message("✅ COL tab styling system setup complete")
+                            self._on_tab_changed = enhanced_tab_changed
+                            self.log_message("✅ COL tab styling system setup complete")
 
         except Exception as e:
             self.log_message(f"❌ Error setting up COL tab styling: {str(e)}")
@@ -2603,7 +2586,6 @@ def _apply_col_tab_styling(self, tab_index):
 
     def show_theme_settings(self):
         """Show theme settings dialog"""
-        # This would open a dedicated theme settings dialog
         self.show_settings()  # For now, use general settings
 
     def show_about(self):
@@ -2769,9 +2751,9 @@ def _apply_col_tab_styling(self, tab_index):
         else:
             self.log_message("GUI Layout not available")
 
-    # =============================================================================
+
     # SETTINGS PERSISTENCE - KEEP 100% OF FUNCTIONALITY
-    # =============================================================================
+
 
     def _restore_settings(self):
         """Restore application settings"""
