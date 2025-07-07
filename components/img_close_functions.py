@@ -18,36 +18,45 @@ class IMGCloseManager:
         """Initialize with reference to main window"""
         self.main_window = main_window
         self.log_message = main_window.log_message
-    
+
     def close_img_file(self):
-        """Close current IMG file - FIXED: Proper tab name reset"""
+        """Close current file (IMG or COL) - UPDATED for both file types"""
         current_index = self.main_window.main_tab_widget.currentIndex()
-        
+
         # Clear the current file data
+        old_img = self.main_window.current_img
+        old_col = self.main_window.current_col
         self.main_window.current_img = None
         self.main_window.current_col = None
-        
+
         # Remove from open_files if exists
         if current_index in self.main_window.open_files:
             file_info = self.main_window.open_files[current_index]
-            self.log_message(f"🗂️ Closing: {file_info.get('file_path', 'Unknown file')}")
+            file_path = file_info.get('file_path', 'Unknown file')
+            file_type = file_info.get('type', 'Unknown')
+            self.log_message(f"🗂️ Closing {file_type}: {os.path.basename(file_path)}")
             del self.main_window.open_files[current_index]
-        
+
         # Reset tab name to "No File"
         self.main_window.main_tab_widget.setTabText(current_index, "📁 No File")
-        
+
         # Update UI for no file state
         self.main_window._update_ui_for_no_img()
-        
-        self.log_message("✅ IMG file closed")
+
+        # Log what was closed
+        if old_img:
+            self.log_message("✅ IMG file closed")
+        elif old_col:
+            self.log_message("✅ COL file closed")
+        else:
+            self.log_message("✅ Tab cleared")
 
     def close_all_tabs(self):
-        """Close all tabs - FIXED: Use working close_tab function for each tab"""
+        """Close all tabs - UPDATED to handle both IMG and COL"""
         try:
             tab_count = self.main_window.main_tab_widget.count()
-            self.log_message(f"🗂️ Closing all {tab_count} tabs using individual close")
+            self.log_message(f"🗂️ Closing all {tab_count} tabs")
 
-            # FIXED: Use the working close_tab function for each tab
             # Close from highest index to lowest to avoid index shifting issues
             for i in range(tab_count - 1, -1, -1):
                 if self.main_window.main_tab_widget.count() > 1:
@@ -62,13 +71,13 @@ class IMGCloseManager:
             if self.main_window.main_tab_widget.count() == 0:
                 self.create_new_tab()
 
-            self.log_message("✅ All tabs closed using individual close method")
+            self.log_message("✅ All tabs closed")
 
         except Exception as e:
             self.log_message(f"❌ Error closing all tabs: {str(e)}")
 
     def close_tab(self, index):
-        """Close tab at index - FIXED: Proper tab name handling"""
+        """Close tab at index - UPDATED for both IMG and COL"""
         if self.main_window.main_tab_widget.count() <= 1:
             # Don't close the last tab, just clear it
             self._clear_current_tab()
@@ -77,24 +86,25 @@ class IMGCloseManager:
         try:
             # Get file info before removal for logging
             file_info = self.main_window.open_files.get(index, {})
-            file_name = file_info.get('file_path', 'Unknown file')
-            
+            file_path = file_info.get('file_path', 'Unknown file')
+            file_type = file_info.get('type', 'Unknown')
+
             # Clear table data in this tab before removing
             tab_widget = self.main_window.main_tab_widget.widget(index)
             if tab_widget:
                 self._clear_all_tables_in_tab(tab_widget)
-            
+
             # Remove from open files
             if index in self.main_window.open_files:
                 del self.main_window.open_files[index]
-                self.log_message(f"🗂️ Closing tab {index}: {os.path.basename(file_name)}")
+                self.log_message(f"🗂️ Closing tab {index}: {file_type} - {os.path.basename(file_path)}")
 
             # Remove tab
             self.main_window.main_tab_widget.removeTab(index)
 
             # Update open_files dict indices
             self._reindex_open_files()
-            
+
             # Update current file references based on new current tab
             current_index = self.main_window.main_tab_widget.currentIndex()
             if current_index in self.main_window.open_files:
@@ -108,36 +118,40 @@ class IMGCloseManager:
             else:
                 self.main_window.current_img = None
                 self.main_window.current_col = None
-                
+
             # Update UI for current state
-            self.main_window._update_ui_for_current_file()
-            
+            if hasattr(self.main_window, '_update_ui_for_current_file'):
+                self.main_window._update_ui_for_current_file()
+
         except Exception as e:
             self.log_message(f"❌ Error closing tab {index}: {str(e)}")
 
     def _clear_current_tab(self):
-        """Clear current tab - FIXED: Proper tab name reset"""
+        """Clear current tab - UPDATED for both IMG and COL"""
         current_index = self.main_window.main_tab_widget.currentIndex()
-        
+
         # Clear table data in current tab
         tab_widget = self.main_window.main_tab_widget.widget(current_index)
         if tab_widget:
             self._clear_all_tables_in_tab(tab_widget)
-        
+
         # Remove from open_files
         if current_index in self.main_window.open_files:
+            file_info = self.main_window.open_files[current_index]
+            file_type = file_info.get('type', 'Unknown')
+            self.log_message(f"🗂️ Clearing {file_type} from current tab")
             del self.main_window.open_files[current_index]
 
-        # FIXED: Reset tab name properly
+        # Reset tab name properly
         self.main_window.main_tab_widget.setTabText(current_index, "📁 No File")
 
         # Clear current file references
         self.main_window.current_img = None
         self.main_window.current_col = None
-        
+
         # Update UI for no file state
         self.main_window._update_ui_for_no_img()
-        
+
         self.log_message("🗂️ Tab cleared")
 
     def _clear_all_tables_in_tab(self, tab_widget):
