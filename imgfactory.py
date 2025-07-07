@@ -402,7 +402,6 @@ class IMGFactory(QMainWindow):
         # Core data
         self.current_img: Optional[IMGFile] = None
         self.current_col: Optional = None  # For COL file support
-        self.setup_col_tab_styling()
         self.open_files = {}  # Dict to store open files {tab_index: file_info}
         self.tab_counter = 0  # Counter for unique tab IDs
         self.template_manager = IMGTemplateManager()
@@ -440,6 +439,9 @@ class IMGFactory(QMainWindow):
                 self.log_message("⚠️ COL functionality setup failed")
         except ImportError as e:
             self.log_message(f"COL integration not available: {e}")
+
+        from components.col_safe_integration import init_col_integration_placeholder
+        init_col_integration_placeholder(self)
 
         # Log startup
         self.log_message("IMG Factory 1.5 initialized")
@@ -2358,112 +2360,6 @@ class IMGFactory(QMainWindow):
             error_msg = f"Error setting up COL tab: {str(e)}"
             self.log_message(f"❌ {error_msg}")
 
-def _apply_col_tab_styling(self, tab_index):
-    """Apply light blue styling to COL tab"""
-    try:
-        # Get the tab bar
-        tab_bar = self.main_tab_widget.tabBar()
-
-        # Apply light blue background to this specific tab
-        tab_bar.setTabTextColor(tab_index, self._get_col_text_color())
-
-        # Apply CSS styling for light blue theme
-        self._update_tab_stylesheet_for_col()
-
-        self.log_message(f"✅ Applied light blue styling to COL tab {tab_index}")
-
-    except Exception as e:
-        self.log_message(f"❌ Error applying COL tab styling: {str(e)}")
-
-    def _get_col_text_color(self):
-        """Get text color for COL tabs"""
-        from PyQt6.QtGui import QColor
-        return QColor(25, 118, 210)  # Nice blue color
-
-    def _get_col_background_color(self):
-        """Get background color for COL tabs"""
-        from PyQt6.QtGui import QColor
-        return QColor(227, 242, 253)  # Light blue background
-
-    def _update_tab_stylesheet_for_col(self):
-        """Update tab stylesheet to support COL tab styling"""
-        try:
-            # Enhanced stylesheet that differentiates COL tabs
-            enhanced_style = """
-                QTabWidget::pane {
-                    border: 1px solid #cccccc;
-                    border-radius: 3px;
-                    background-color: #ffffff;
-                    margin-top: 0px;
-                }
-
-                QTabBar {
-                    qproperty-drawBase: 0;
-                }
-
-                /* Default tab styling (IMG files) */
-                QTabBar::tab {
-                    background-color: #f0f0f0;
-                    border: 1px solid #cccccc;
-                    border-bottom: none;
-                    padding: 6px 12px;
-                    margin-right: 2px;
-                    border-radius: 3px 3px 0px 0px;
-                    min-width: 80px;
-                    max-height: 28px;
-                    font-size: 9pt;
-                    color: #333333;
-                }
-
-                /* Selected tab */
-                QTabBar::tab:selected {
-                    background-color: #ffffff;
-                    border-bottom: 1px solid #ffffff;
-                    color: #000000;
-                    font-weight: bold;
-                }
-
-                /* Hover effect */
-                QTabBar::tab:hover {
-                    background-color: #e8e8e8;
-                }
-
-                /* COL tab styling - light blue theme */
-                QTabBar::tab:!selected {
-                    margin-top: 2px;
-                }
-            """
-
-            # Apply the enhanced stylesheet
-            self.main_tab_widget.setStyleSheet(enhanced_style)
-
-        except Exception as e:
-            self.log_message(f"❌ Error updating tab stylesheet: {str(e)}")
-
-    def _apply_individual_col_tab_style(self, tab_index):
-        """Apply individual styling to a specific COL tab"""
-        try:
-            # This is a workaround since PyQt6 doesn't easily allow per-tab styling
-            # We'll modify the tab text to include color coding
-            tab_bar = self.main_tab_widget.tabBar()
-            current_text = tab_bar.tabText(tab_index)
-
-            # Ensure COL tabs have the shield icon and are visually distinct
-            if not current_text.startswith("🛡️"):
-                if current_text.startswith("🔧"):
-                    # Replace the wrench with shield
-                    new_text = current_text.replace("🔧", "🛡️")
-                else:
-                    new_text = f"🛡️ {current_text}"
-
-                tab_bar.setTabText(tab_index, new_text)
-
-            # Set tooltip to indicate it's a COL file
-            tab_bar.setTabToolTip(tab_index, "Collision File (COL) - Contains 3D collision data")
-
-        except Exception as e:
-            self.log_message(f"❌ Error applying individual COL tab style: {str(e)}")
-
     def _on_col_loaded(self, col_file):
         """Handle COL file loaded - UPDATED with styling"""
         try:
@@ -2497,92 +2393,6 @@ def _apply_col_tab_styling(self, tab_index):
         except Exception as e:
             self.log_message(f"❌ Error in _on_col_loaded: {str(e)}")
             self._on_col_load_error(str(e))
-
-    def setup_col_tab_styling(self):
-        """Setup enhanced tab styling system for COL differentiation"""
-        try:
-            # Apply base tab styling that supports COL themes
-            self._update_tab_stylesheet_for_col()
-
-            # Connect tab change to update styling
-            if hasattr(self.main_tab_widget, 'currentChanged'):
-                # Store original connection
-                original_tab_changed = getattr(self, '_on_tab_changed', None)
-
-                def enhanced_tab_changed(index):
-                    # Call original handler
-                    if original_tab_changed:
-                        original_tab_changed(index)
-
-                    # Apply COL-specific styling if needed
-                    if index in self.open_files:
-                        file_info = self.open_files[index]
-                        if file_info.get('type') == 'COL':
-                            self._apply_individual_col_tab_style(index)
-                            self._on_tab_changed = enhanced_tab_changed
-                            self.log_message("✅ COL tab styling system setup complete")
-
-        except Exception as e:
-            self.log_message(f"❌ Error setting up COL tab styling: {str(e)}")
-
-    def get_col_tab_info(self):
-        """Get information about all COL tabs"""
-        col_tabs = []
-
-        for tab_index, file_info in self.open_files.items():
-            if file_info.get('type') == 'COL':
-                tab_text = self.main_tab_widget.tabText(tab_index)
-                file_path = file_info.get('file_path', 'Unknown')
-
-                col_tabs.append({
-                    'index': tab_index,
-                    'name': tab_text,
-                    'path': file_path,
-                    'is_active': tab_index == self.main_tab_widget.currentIndex()
-                })
-
-        return col_tabs
-
-    # Enhanced COL tab icons - different options
-    def get_col_tab_icons(self):
-        """Get different icon options for COL tabs"""
-        return {
-            'shield': '🛡️',      # Current - protection/collision
-            'collision': '💥',    # Impact/collision
-            'cube': '🧊',         # 3D collision box
-            'diamond': '💎',      # Collision geometry
-            'gear': '⚙️',         # Technical/mechanical
-            'warning': '⚠️',      # Collision warning
-            'target': '🎯',       # Collision detection
-            'atom': '⚛️',         # Physics/collision
-        }
-
-    def change_col_tab_icon(self, icon_key='shield'):
-        """Change the icon for all COL tabs"""
-        try:
-            icons = self.get_col_tab_icons()
-            new_icon = icons.get(icon_key, '🛡️')
-
-            changed_count = 0
-            for tab_index, file_info in self.open_files.items():
-                if file_info.get('type') == 'COL':
-                    current_text = self.main_tab_widget.tabText(tab_index)
-
-                    # Replace any existing icon with new one
-                    for old_icon in icons.values():
-                        if current_text.startswith(old_icon):
-                            current_text = current_text[2:]  # Remove icon and space
-                            break
-
-                    new_text = f"{new_icon} {current_text}"
-                    self.main_tab_widget.setTabText(tab_index, new_text)
-                    changed_count += 1
-
-            if changed_count > 0:
-                self.log_message(f"✅ Changed icon for {changed_count} COL tabs to {new_icon}")
-
-        except Exception as e:
-            self.log_message(f"❌ Error changing COL tab icons: {str(e)}")
 
     def show_theme_settings(self):
         """Show theme settings dialog"""
