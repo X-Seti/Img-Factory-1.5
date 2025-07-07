@@ -400,6 +400,7 @@ class IMGFactory(QMainWindow):
             self.template_manager = DummyTemplateManager()
 
         # Core data
+        self.setup_col_tab_styling()
         self.current_img: Optional[IMGFile] = None
         self.current_col: Optional = None  # For COL file support
 
@@ -755,7 +756,7 @@ class IMGFactory(QMainWindow):
         self.main_tab_widget = QTabWidget()
         self.main_tab_widget.setTabsClosable(True)
         #self.main_tab_widget.tabCloseRequested.connect(self._close_tab)
-        #self.main_tab_widget.currentChanged.connect(self._on_tab_changed)
+        self.main_tab_widget.currentChanged.connect(self._on_tab_changed)
 
         # Initialize open files tracking
         self.open_files = {}
@@ -788,8 +789,6 @@ class IMGFactory(QMainWindow):
 
         # Add tab with "No file" label
         self.main_tab_widget.addTab(tab_widget, "📁 No File")
-
-
 
     def _update_ui_for_loaded_img(self):
         """Update UI when IMG file is loaded - FIXED: Complete implementation"""
@@ -857,47 +856,6 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Action error ({action_name}): {str(e)}")
 
-    def _load_col_file_in_new_tab(self, file_path):
-        """Load COL file in new tab - FIXED to work exactly like IMG loading"""
-        try:
-            current_index = self.main_tab_widget.currentIndex()
-
-            # Check if current tab is empty (no file loaded)
-            if current_index not in self.open_files:
-                # Current tab is empty, use it
-                self.log_message(f"Using current empty tab for: {os.path.basename(file_path)}")
-            else:
-                # Current tab has a file, create new tab using close manager
-                self.log_message(f"Creating new tab for: {os.path.basename(file_path)}")
-                self.close_manager.create_new_tab()
-                current_index = self.main_tab_widget.currentIndex()
-
-            # Store file info BEFORE loading (same as IMG)
-            file_name = os.path.basename(file_path)
-            # Remove .col extension for cleaner tab name
-            if file_name.lower().endswith('.col'):
-                file_name_clean = file_name[:-4]
-            else:
-                file_name_clean = file_name
-            tab_name = f"🔧 {file_name_clean}"
-
-            self.open_files[current_index] = {
-                'type': 'COL',
-                'file_path': file_path,
-                'file_object': None,  # Will be set when loaded
-                'tab_name': tab_name
-            }
-
-            # Update tab name immediately (same as IMG)
-            self.main_tab_widget.setTabText(current_index, tab_name)
-
-            # Start loading COL file
-            self.load_col_file(file_path)
-
-        except Exception as e:
-            error_msg = f"Error setting up COL tab: {str(e)}"
-            self.log_message(f"❌ {error_msg}")
-
     def load_col_file(self, file_path: str):
         """Load COL file - similar to load_img_file"""
         try:
@@ -919,8 +877,160 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self._on_col_load_error(str(e))
 
+    def _load_col_file_in_new_tab(self, file_path):
+        """Load COL file in new tab with proper styling - UPDATED"""
+        try:
+            current_index = self.main_tab_widget.currentIndex()
+
+            # Check if current tab is empty (no file loaded)
+            if current_index not in self.open_files:
+                # Current tab is empty, use it
+                self.log_message(f"Using current empty tab for: {os.path.basename(file_path)}")
+            else:
+                # Current tab has a file, create new tab using close manager
+                self.log_message(f"Creating new tab for: {os.path.basename(file_path)}")
+                self.close_manager.create_new_tab()
+                current_index = self.main_tab_widget.currentIndex()
+
+            # Store file info BEFORE loading (same as IMG)
+            file_name = os.path.basename(file_path)
+            # Remove .col extension for cleaner tab name
+            if file_name.lower().endswith('.col'):
+                file_name_clean = file_name[:-4]
+            else:
+                file_name_clean = file_name
+
+            # Use collision/shield icon for COL files
+            tab_name = f"🛡️ {file_name_clean}"
+
+            self.open_files[current_index] = {
+                'type': 'COL',
+                'file_path': file_path,
+                'file_object': None,  # Will be set when loaded
+                'tab_name': tab_name
+            }
+
+            # Update tab name with icon
+            self.main_tab_widget.setTabText(current_index, tab_name)
+
+            # Apply light blue styling to this COL tab
+            self._apply_col_tab_styling(current_index)
+
+            # Start loading COL file
+            self.load_col_file(file_path)
+
+        except Exception as e:
+            error_msg = f"Error setting up COL tab: {str(e)}"
+            self.log_message(f"❌ {error_msg}")
+
+    def _apply_col_tab_styling(self, tab_index):
+        """Apply light blue styling to COL tab"""
+        try:
+            # Get the tab bar
+            tab_bar = self.main_tab_widget.tabBar()
+
+            # Apply light blue background to this specific tab
+            tab_bar.setTabTextColor(tab_index, self._get_col_text_color())
+
+            # Apply CSS styling for light blue theme
+            self._update_tab_stylesheet_for_col()
+
+            self.log_message(f"✅ Applied light blue styling to COL tab {tab_index}")
+
+        except Exception as e:
+            self.log_message(f"❌ Error applying COL tab styling: {str(e)}")
+
+    def _get_col_text_color(self):
+        """Get text color for COL tabs"""
+        from PyQt6.QtGui import QColor
+        return QColor(25, 118, 210)  # Nice blue color
+
+    def _get_col_background_color(self):
+        """Get background color for COL tabs"""
+        from PyQt6.QtGui import QColor
+        return QColor(227, 242, 253)  # Light blue background
+
+    def _update_tab_stylesheet_for_col(self):
+        """Update tab stylesheet to support COL tab styling"""
+        try:
+            # Enhanced stylesheet that differentiates COL tabs
+            enhanced_style = """
+                QTabWidget::pane {
+                    border: 1px solid #cccccc;
+                    border-radius: 3px;
+                    background-color: #ffffff;
+                    margin-top: 0px;
+                }
+
+                QTabBar {
+                    qproperty-drawBase: 0;
+                }
+
+                /* Default tab styling (IMG files) */
+                QTabBar::tab {
+                    background-color: #f0f0f0;
+                    border: 1px solid #cccccc;
+                    border-bottom: none;
+                    padding: 6px 12px;
+                    margin-right: 2px;
+                    border-radius: 3px 3px 0px 0px;
+                    min-width: 80px;
+                    max-height: 28px;
+                    font-size: 9pt;
+                    color: #333333;
+                }
+
+                /* Selected tab */
+                QTabBar::tab:selected {
+                    background-color: #ffffff;
+                    border-bottom: 1px solid #ffffff;
+                    color: #000000;
+                    font-weight: bold;
+                }
+
+                /* Hover effect */
+                QTabBar::tab:hover {
+                    background-color: #e8e8e8;
+                }
+
+                /* COL tab styling - light blue theme */
+                QTabBar::tab:!selected {
+                    margin-top: 2px;
+                }
+            """
+
+            # Apply the enhanced stylesheet
+            self.main_tab_widget.setStyleSheet(enhanced_style)
+
+        except Exception as e:
+            self.log_message(f"❌ Error updating tab stylesheet: {str(e)}")
+
+    def _apply_individual_col_tab_style(self, tab_index):
+        """Apply individual styling to a specific COL tab"""
+        try:
+            # This is a workaround since PyQt6 doesn't easily allow per-tab styling
+            # We'll modify the tab text to include color coding
+            tab_bar = self.main_tab_widget.tabBar()
+            current_text = tab_bar.tabText(tab_index)
+
+            # Ensure COL tabs have the shield icon and are visually distinct
+            if not current_text.startswith("🛡️"):
+                if current_text.startswith("🔧"):
+                    # Replace the wrench with shield
+                    new_text = current_text.replace("🔧", "🛡️")
+                else:
+                    new_text = f"🛡️ {current_text}"
+
+                tab_bar.setTabText(tab_index, new_text)
+
+            # Set tooltip to indicate it's a COL file
+            tab_bar.setTabToolTip(tab_index, "Collision File (COL) - Contains 3D collision data")
+
+        except Exception as e:
+            self.log_message(f"❌ Error applying individual COL tab style: {str(e)}")
+
     def _on_col_loaded(self, col_file):
-        """Handle COL file loaded - similar to _on_img_loaded"""
+        """Handle COL file loaded - UPDATED with styling"""
         try:
             self.current_col = col_file
             current_index = self.main_tab_widget.currentIndex()
@@ -932,6 +1042,9 @@ class IMGFactory(QMainWindow):
             else:
                 self.log_message(f"⚠️ Tab {current_index} not found in open_files")
 
+            # Apply enhanced COL tab styling after loading
+            self._apply_individual_col_tab_style(current_index)
+
             # Update UI for loaded COL
             self._update_ui_for_loaded_col_safe()
 
@@ -942,13 +1055,102 @@ class IMGFactory(QMainWindow):
             model_count = len(col_file.models) if hasattr(col_file, 'models') else 0
             self.log_message(f"✅ Loaded: {file_name} ({model_count} models)")
 
-            # Hide progress
+            # Hide progress and show COL-specific status
             if hasattr(self, 'gui_layout'):
-                self.gui_layout.show_progress(-1, f"Loaded: {model_count} models")
+                self.gui_layout.show_progress(-1, f"COL loaded: {model_count} models")
 
         except Exception as e:
             self.log_message(f"❌ Error in _on_col_loaded: {str(e)}")
             self._on_col_load_error(str(e))
+
+    def setup_col_tab_styling(self):
+        """Setup enhanced tab styling system for COL differentiation"""
+        try:
+            # Apply base tab styling that supports COL themes
+            self._update_tab_stylesheet_for_col()
+
+            # Connect tab change to update styling
+            if hasattr(self.main_tab_widget, 'currentChanged'):
+                # Store original connection
+                original_tab_changed = getattr(self, '_on_tab_changed', None)
+
+                def enhanced_tab_changed(index):
+                    # Call original handler
+                    if original_tab_changed:
+                        original_tab_changed(index)
+
+                    # Apply COL-specific styling if needed
+                    if index in self.open_files:
+                        file_info = self.open_files[index]
+                        if file_info.get('type') == 'COL':
+                            self._apply_individual_col_tab_style(index)
+
+                # Replace the handler
+                self._on_tab_changed = enhanced_tab_changed
+
+            self.log_message("✅ COL tab styling system setup complete")
+
+        except Exception as e:
+            self.log_message(f"❌ Error setting up COL tab styling: {str(e)}")
+
+    def get_col_tab_info(self):
+        """Get information about all COL tabs"""
+        col_tabs = []
+
+        for tab_index, file_info in self.open_files.items():
+            if file_info.get('type') == 'COL':
+                tab_text = self.main_tab_widget.tabText(tab_index)
+                file_path = file_info.get('file_path', 'Unknown')
+
+                col_tabs.append({
+                    'index': tab_index,
+                    'name': tab_text,
+                    'path': file_path,
+                    'is_active': tab_index == self.main_tab_widget.currentIndex()
+                })
+
+        return col_tabs
+
+    # Enhanced COL tab icons - different options
+    def get_col_tab_icons(self):
+        """Get different icon options for COL tabs"""
+        return {
+            'shield': '🛡️',      # Current - protection/collision
+            'collision': '💥',    # Impact/collision
+            'cube': '🧊',         # 3D collision box
+            'diamond': '💎',      # Collision geometry
+            'gear': '⚙️',         # Technical/mechanical
+            'warning': '⚠️',      # Collision warning
+            'target': '🎯',       # Collision detection
+            'atom': '⚛️',         # Physics/collision
+        }
+
+    def change_col_tab_icon(self, icon_key='shield'):
+        """Change the icon for all COL tabs"""
+        try:
+            icons = self.get_col_tab_icons()
+            new_icon = icons.get(icon_key, '🛡️')
+
+            changed_count = 0
+            for tab_index, file_info in self.open_files.items():
+                if file_info.get('type') == 'COL':
+                    current_text = self.main_tab_widget.tabText(tab_index)
+
+                    # Replace any existing icon with new one
+                    for old_icon in icons.values():
+                        if current_text.startswith(old_icon):
+                            current_text = current_text[2:]  # Remove icon and space
+                            break
+
+                    new_text = f"{new_icon} {current_text}"
+                    self.main_tab_widget.setTabText(tab_index, new_text)
+                    changed_count += 1
+
+            if changed_count > 0:
+                self.log_message(f"✅ Changed icon for {changed_count} COL tabs to {new_icon}")
+
+        except Exception as e:
+            self.log_message(f"❌ Error changing COL tab icons: {str(e)}")
 
     def _on_col_load_error(self, error_message):
         """Handle COL file load error"""
@@ -1212,7 +1414,6 @@ class IMGFactory(QMainWindow):
         if hasattr(self, 'statusBar') and self.statusBar():
             self.statusBar().showMessage(f"COL file loaded: {os.path.basename(self.current_col)}")
 
-
     def create_new_img(self):
         """Show new IMG creation dialog - FIXED: No signal connections"""
         dialog = GameSpecificIMGDialog(self)
@@ -1418,8 +1619,7 @@ class IMGFactory(QMainWindow):
             'type': 'IMG',
             'file_path': file_path,
             'file_object': None,  # Will be set when loaded
-            'tab_name': tab_name
-        }
+            'tab_name': tab_name }
 
         # Update tab name immediately
         self.main_tab_widget.setTabText(current_index, tab_name)
