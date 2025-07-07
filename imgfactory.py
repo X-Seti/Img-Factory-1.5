@@ -842,7 +842,7 @@ class IMGFactory(QMainWindow):
             action_map = {
                 # File operations
                 'open_img_file': self.open_img_file,
-                'close_img_file': self.close_manager.close_img_file if hasattr(self, 'close_manager') else lambda: self.log_message("Close manager not available"),
+                'close_img_file': self.close_img_file,
                 'close_all': self.close_manager.close_all_tabs if hasattr(self, 'close_manager') else lambda: self.log_message("Close manager not available"),
                 'close_all_img': self.close_all_img,
                 'create_new_img': self.create_new_img,
@@ -1740,6 +1740,52 @@ class IMGFactory(QMainWindow):
 
         except Exception as e:
             self.log_message(f"❌ Error in _on_load_error: {str(e)}")
+
+    def close_img_file(self):
+        """Close current IMG/COL file - DIRECT implementation if close_manager fails"""
+        try:
+            # Try to use close manager first
+            if hasattr(self, 'close_manager') and self.close_manager:
+                self.close_manager.close_img_file()
+                return
+        except Exception as e:
+            self.log_message(f"❌ Close manager error: {str(e)}")
+
+        # Fallback: Direct implementation
+        try:
+            current_index = self.main_tab_widget.currentIndex()
+
+            # Log what we're closing
+            if hasattr(self, 'current_img') and self.current_img:
+                file_path = getattr(self.current_img, 'file_path', 'Unknown IMG')
+                self.log_message(f"🗂️ Closing IMG: {os.path.basename(file_path)}")
+            elif hasattr(self, 'current_col') and self.current_col:
+                file_path = getattr(self.current_col, 'file_path', 'Unknown COL')
+                self.log_message(f"🗂️ Closing COL: {os.path.basename(file_path)}")
+            else:
+                self.log_message("🗂️ Closing current tab")
+
+            # Clear the current file data
+            self.current_img = None
+            self.current_col = None
+
+            # Remove from open_files if exists
+            if hasattr(self, 'open_files') and current_index in self.open_files:
+                del self.open_files[current_index]
+
+            # Reset tab name to "No File"
+            if hasattr(self, 'main_tab_widget'):
+                self.main_tab_widget.setTabText(current_index, "📁 No File")
+
+            # Update UI for no file state
+            self._update_ui_for_no_img()
+
+            self.log_message("✅ File closed successfully")
+
+        except Exception as e:
+            error_msg = f"Error closing file: {str(e)}"
+            self.log_message(f"❌ {error_msg}")
+            # Don't show error dialog, just log it
 
     def close_all_img(self):
         """Close all IMG files - Wrapper for close_all_tabs"""
