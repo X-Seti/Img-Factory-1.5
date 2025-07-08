@@ -31,6 +31,11 @@ class COLParser:
             
             self.log(f"Parsing COL file: {os.path.basename(file_path)} ({len(data)} bytes)")
             
+            # CRITICAL FIX: First check if this is a multi-model COL archive
+            if self._is_multi_model_archive(data):
+                return self._parse_multi_model_archive(data)
+            
+            # Single model parsing (original approach)
             models = []
             offset = 0
             model_index = 0
@@ -61,12 +66,82 @@ class COLParser:
                 model_index += 1
                 
                 self.log(f"Model {model_index - 1} parsed successfully, next offset: {offset}")
+                
+                # Safety check - don't parse more than 200 models
+                if model_index > 200:
+                    self.log("Safety limit reached (200 models), stopping")
+                    break
             
             self.log(f"\nParsing complete: {len(models)} models found")
             return models
             
         except Exception as e:
             self.log(f"Error parsing COL file: {str(e)}")
+            return []
+    
+    def _is_multi_model_archive(self, data):
+        """Check if this is a multi-model COL archive"""
+        try:
+            # Look for multiple COL signatures
+            signature_count = 0
+            offset = 0
+            
+            while offset < len(data) - 4:
+                if data[offset:offset+4] in [b'COLL', b'COL2', b'COL3', b'COL4']:
+                    signature_count += 1
+                    if signature_count > 1:
+                        self.log(f"Detected multi-model archive ({signature_count} signatures found)")
+                        return True
+                    # Skip to avoid counting the same signature multiple times
+                    offset += 100
+                else:
+                    offset += 1
+            
+            return False
+            
+        except Exception:
+            return False
+    
+    def _parse_multi_model_archive(self, data):
+        """Parse multi-model COL archive with different structure"""
+        try:
+            self.log("Parsing as multi-model archive...")
+            models = []
+            
+            # Find all COL signatures in the file
+            signatures = []
+            offset = 0
+            
+            while offset < len(data) - 4:
+                sig = data[offset:offset+4]
+                if sig in [b'COLL', b'COL2', b'COL3', b'COL4']:
+                    signatures.append(offset)
+                    self.log(f"Found {sig} at offset {offset}")
+                offset += 1
+            
+            self.log(f"Found {len(signatures)} model signatures")
+            
+            # Parse each model starting from its signature
+            for i, sig_offset in enumerate(signatures):
+                try:
+                    self.log(f"\n--- Archive Model {i} at offset {sig_offset} ---")
+                    model_info, _ = self.parse_single_model(data, sig_offset, i)
+                    
+                    if model_info:
+                        models.append(model_info)
+                        self.log(f"Archive model {i} parsed successfully")
+                    else:
+                        self.log(f"Failed to parse archive model {i}")
+                        
+                except Exception as e:
+                    self.log(f"Error parsing archive model {i}: {str(e)}")
+                    continue
+            
+            self.log(f"Archive parsing complete: {len(models)} models found")
+            return models
+            
+        except Exception as e:
+            self.log(f"Error parsing multi-model archive: {str(e)}")
             return []
     
     def parse_single_model(self, data, offset, model_index):
@@ -166,35 +241,85 @@ class COLParser:
             return None, offset
     
     def parse_collision_data(self, data, offset, is_col1):
-        """Parse collision data counts from model"""
+        """Parse collision data counts from model - FIXED VERSION"""
         stats = {'sphere_count': 0, 'box_count': 0, 'vertex_count': 0, 'face_count': 0}
         
         try:
-            # Read sphere count
+            original_offset = offset
+            self.log(f"Starting collision data parsing at offset {offset}")
+            
+            # Read sphere count - VALIDATE IT'S REASONABLE
             if offset + 4 <= len(data):
-                stats['sphere_count'] = struct.unpack('<I', data[offset:offset+4])[0]
+                sphere_count = struct.unpack('<I', data[offset:offset+4])[0]
+                
+                # SANITY CHECK: Sphere count should be reasonable
+                if sphere_count > 50000:  # More than 50k spheres is unrealistic
+                    self.log(f"⚠️ Unrealistic sphere count: {sphere_count}, data may be corrupted")
+                    # Try to find the actual collision data by scanning ahead
+                    return self._scan_for_collision_data(data, original_offset, is_col1)
+                
+                stats['sphere_count'] = sphere_count
                 self.log(f"Spheres: {stats['sphere_count']}")
                 offset += 4
-                offset += stats['sphere_count'] * 20  # Skip sphere data
+                
+                # Skip sphere data (20 bytes per sphere)
+                sphere_data_size = stats['sphere_count'] * 20
+                if offset + sphere_data_size > len(data):
+                    self.log(f"⚠️ Not enough data for spheres ({sphere_data_size} bytes needed)")
+                    return self._scan_for_collision_data(data, original_offset, is_col1)
+                offset += sphere_data_size
             
             # Read box count
             if offset + 4 <= len(data):
-                stats['box_count'] = struct.unpack('<I', data[offset:offset+4])[0]
+                box_count = struct.unpack('<I', data[offset:offset+4])[0]
+                
+                # SANITY CHECK: Box count should be reasonable  
+                if box_count > 10000:  # More than 10k boxes is unrealistic
+                    self.log(f"⚠️ Unrealistic box count: {box_count}")
+                    return stats  # Return what we have so far
+                
+                stats['box_count'] = box_count
                 self.log(f"Boxes: {stats['box_count']}")
                 offset += 4
-                offset += stats['box_count'] * 28  # Skip box data
+                
+                # Skip box data (28 bytes per box)
+                box_data_size = stats['box_count'] * 28
+                if offset + box_data_size > len(data):
+                    self.log(f"⚠️ Not enough data for boxes ({box_data_size} bytes needed)")
+                    return stats
+                offset += box_data_size
             
             # Read vertex count
             if offset + 4 <= len(data):
-                stats['vertex_count'] = struct.unpack('<I', data[offset:offset+4])[0]
+                vertex_count = struct.unpack('<I', data[offset:offset+4])[0]
+                
+                # SANITY CHECK: Vertex count should be reasonable
+                if vertex_count > 100000:  # More than 100k vertices is unrealistic for collision
+                    self.log(f"⚠️ Unrealistic vertex count: {vertex_count}")
+                    return stats  # Return what we have so far
+                
+                stats['vertex_count'] = vertex_count
                 self.log(f"Vertices: {stats['vertex_count']}")
                 offset += 4
+                
+                # Skip vertex data
                 vertex_size = 12 if is_col1 else 6
-                offset += stats['vertex_count'] * vertex_size
+                vertex_data_size = stats['vertex_count'] * vertex_size
+                if offset + vertex_data_size > len(data):
+                    self.log(f"⚠️ Not enough data for vertices ({vertex_data_size} bytes needed)")
+                    return stats
+                offset += vertex_data_size
             
             # Read face count
             if offset + 4 <= len(data):
-                stats['face_count'] = struct.unpack('<I', data[offset:offset+4])[0]
+                face_count = struct.unpack('<I', data[offset:offset+4])[0]
+                
+                # SANITY CHECK: Face count should be reasonable
+                if face_count > 200000:  # More than 200k faces is unrealistic
+                    self.log(f"⚠️ Unrealistic face count: {face_count}")
+                    return stats  # Return what we have so far
+                
+                stats['face_count'] = face_count
                 self.log(f"Faces: {stats['face_count']}")
             
         except Exception as e:
@@ -202,58 +327,117 @@ class COLParser:
         
         return stats
     
-    def calculate_model_end_offset(self, data, offset, stats, is_col1):
-        """Calculate where this model ends in the file"""
+    def _scan_for_collision_data(self, data, start_offset, is_col1):
+        """Scan for reasonable collision data when initial parsing fails"""
         try:
-            # Start from collision data offset
+            self.log(f"Scanning for reasonable collision data from offset {start_offset}")
+            
+            # Try different offsets near the start position
+            for test_offset in range(start_offset, min(start_offset + 200, len(data) - 16), 4):
+                if test_offset + 16 > len(data):
+                    break
+                
+                # Try reading sphere count at this offset
+                try:
+                    sphere_count = struct.unpack('<I', data[test_offset:test_offset+4])[0]
+                    box_count = struct.unpack('<I', data[test_offset+4:test_offset+8])[0]
+                    vertex_count = struct.unpack('<I', data[test_offset+8:test_offset+12])[0]
+                    face_count = struct.unpack('<I', data[test_offset+12:test_offset+16])[0]
+                    
+                    # Check if these look reasonable
+                    if (sphere_count < 50000 and box_count < 10000 and 
+                        vertex_count < 100000 and face_count < 200000):
+                        
+                        self.log(f"✅ Found reasonable data at offset {test_offset}")
+                        self.log(f"Spheres: {sphere_count}, Boxes: {box_count}, Vertices: {vertex_count}, Faces: {face_count}")
+                        
+                        return {
+                            'sphere_count': sphere_count,
+                            'box_count': box_count,
+                            'vertex_count': vertex_count,
+                            'face_count': face_count
+                        }
+                
+                except:
+                    continue
+            
+            self.log("⚠️ Could not find reasonable collision data")
+            return {'sphere_count': 0, 'box_count': 0, 'vertex_count': 0, 'face_count': 0}
+            
+        except Exception as e:
+            self.log(f"Error scanning for collision data: {str(e)}")
+            return {'sphere_count': 0, 'box_count': 0, 'vertex_count': 0, 'face_count': 0}
+    
+    def calculate_model_end_offset(self, data, offset, stats, is_col1):
+        """Calculate where this model ends in the file - FIXED VERSION"""
+        try:
+            original_offset = offset
+            
+            # If collision data looks corrupted, use declared model size
+            total_elements = stats['sphere_count'] + stats['box_count'] + stats['vertex_count'] + stats['face_count']
+            
+            if total_elements > 500000:  # Unrealistic total
+                self.log(f"⚠️ Corrupted collision data detected, using fallback size calculation")
+                return original_offset + 800  # Reasonable fallback size
+            
+            # Calculate actual data size
             end_offset = offset
             
-            # Skip remaining collision data
-            # Spheres already skipped in parse_collision_data
-            # Boxes already skipped in parse_collision_data
-            # Vertices already skipped in parse_collision_data
+            # Add sphere data size (if reasonable)
+            if stats['sphere_count'] < 50000:
+                sphere_size = 4 + (stats['sphere_count'] * 20)
+                end_offset += sphere_size
+                self.log(f"Added spheres: {sphere_size} bytes")
+            else:
+                self.log("⚠️ Skipping unrealistic sphere data")
+                end_offset += 4  # Just the count
             
-            # Skip faces
-            face_size = 16 if is_col1 else 8
-            end_offset += 4 + (stats['face_count'] * face_size)
+            # Add box data size (if reasonable)
+            if stats['box_count'] < 10000:
+                box_size = 4 + (stats['box_count'] * 28)
+                end_offset += box_size
+                self.log(f"Added boxes: {box_size} bytes")
+            else:
+                self.log("⚠️ Skipping unrealistic box data")
+                end_offset += 4  # Just the count
             
-            # For COL2/3, skip additional data
-            if not is_col1:
-                # Skip face groups (if present)
-                if end_offset + 4 <= len(data):
-                    try:
-                        face_group_count = struct.unpack('<I', data[end_offset:end_offset+4])[0]
-                        if face_group_count < 1000:  # Sanity check
-                            self.log(f"Face groups: {face_group_count}")
-                            end_offset += 4 + (face_group_count * 28)
-                    except:
-                        pass
-                
-                # Skip shadow mesh (COL3)
-                if end_offset + 8 <= len(data):
-                    try:
-                        shadow_vertex_count = struct.unpack('<I', data[end_offset:end_offset+4])[0]
-                        if 0 < shadow_vertex_count < 10000:  # Sanity check
-                            self.log(f"Shadow vertices: {shadow_vertex_count}")
-                            end_offset += 4 + (shadow_vertex_count * 6)
-                            
-                            if end_offset + 4 <= len(data):
-                                shadow_face_count = struct.unpack('<I', data[end_offset:end_offset+4])[0]
-                                if 0 < shadow_face_count < 10000:  # Sanity check
-                                    self.log(f"Shadow faces: {shadow_face_count}")
-                                    end_offset += 4 + (shadow_face_count * 8)
-                    except:
-                        pass
+            # Add vertex data size (if reasonable)
+            if stats['vertex_count'] < 100000:
+                vertex_size = 12 if is_col1 else 6
+                vertex_data_size = 4 + (stats['vertex_count'] * vertex_size)
+                end_offset += vertex_data_size
+                self.log(f"Added vertices: {vertex_data_size} bytes")
+            else:
+                self.log("⚠️ Skipping unrealistic vertex data")
+                end_offset += 4  # Just the count
             
-            # Align to 4-byte boundary (common in binary formats)
-            while end_offset % 4 != 0 and end_offset < len(data):
-                end_offset += 1
+            # Add face data size (if reasonable)
+            if stats['face_count'] < 200000:
+                face_size = 16 if is_col1 else 8
+                face_data_size = 4 + (stats['face_count'] * face_size)
+                end_offset += face_data_size
+                self.log(f"Added faces: {face_data_size} bytes")
+            else:
+                self.log("⚠️ Skipping unrealistic face data")
+                end_offset += 4  # Just the count
+            
+            # Ensure we don't go beyond file bounds
+            if end_offset > len(data):
+                self.log(f"⚠️ Calculated end ({end_offset}) exceeds file size ({len(data)})")
+                end_offset = min(original_offset + 1000, len(data))
+            
+            # Ensure minimum progress
+            if end_offset <= original_offset:
+                end_offset = original_offset + 100
+            
+            calculated_size = end_offset - original_offset
+            self.log(f"Final model size: {calculated_size} bytes, end offset: {end_offset}")
             
             return end_offset
             
         except Exception as e:
             self.log(f"Error calculating model end: {str(e)}")
-            return offset + 100  # Fallback
+            return offset + 800  # Safe fallback
     
     def get_model_stats_by_index(self, file_path, model_index):
         """Get statistics for a specific model by index"""
