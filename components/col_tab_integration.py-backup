@@ -1,0 +1,266 @@
+#this belongs in components/ col_tab_integration.py - Version: 5
+# X-Seti - July08 2025 - COL Tab Integration for IMG Factory 1.5 (Updated)
+
+import os
+from PyQt6.QtWidgets import QMessageBox
+
+def setup_col_integration_safe(main_window):
+    """Setup COL integration safely after GUI is ready - UPDATED"""
+    try:
+        # Only setup after GUI is fully initialized
+        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window, 'log_message'):
+            print("GUI not ready for COL integration - will retry later")
+            return False
+        
+        # Use new integration manager for setup
+        from components.col_integration_manager import setup_col_integration
+        success = setup_col_integration(main_window)
+        
+        if success:
+            main_window.log_message("✅ COL integration setup complete")
+        else:
+            main_window.log_message("⚠️ COL integration setup failed")
+        
+        return success
+        
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ COL integration error: {str(e)}")
+        else:
+            print(f"COL integration error: {str(e)}")
+        return False
+
+def load_col_file_safely(main_window, file_path):
+    """Load COL file safely - UPDATED to use new components"""
+    try:
+        main_window.log_message(f"🔧 Setting up COL tab for: {os.path.basename(file_path)}")
+        
+        # Check if current tab is empty (no file loaded) 
+        current_index = main_window.main_tab_widget.currentIndex()
+        
+        if current_index not in main_window.open_files:
+            # Current tab is empty, use it
+            main_window.log_message(f"Using current empty tab for COL file")
+        else:
+            # Current tab has a file, create new tab
+            main_window.log_message(f"Creating new tab for COL file")
+            main_window.close_manager.create_new_tab()
+            current_index = main_window.main_tab_widget.currentIndex()
+        
+        # Store file info BEFORE loading
+        file_name = os.path.basename(file_path)
+        # Remove .col extension for cleaner tab names
+        if file_name.lower().endswith('.col'):
+            file_name_clean = file_name[:-4]  # Remove .col extension
+        else:
+            file_name_clean = file_name
+
+        # Use shield icon for COL files
+        tab_name = f"🛡️ {file_name_clean}"
+
+        main_window.open_files[current_index] = {
+            'type': 'COL',
+            'file_path': file_path,
+            'file_object': None,  # Will be set when loaded
+            'tab_name': tab_name
+        }
+
+        # Update tab name with icon
+        main_window.main_tab_widget.setTabText(current_index, tab_name)
+
+        # Use new integration manager for loading
+        from components.col_integration_manager import load_col_file_safely as load_with_manager
+        success = load_with_manager(main_window, file_path)
+        
+        if not success:
+            # Clean up on failure
+            if current_index in main_window.open_files:
+                del main_window.open_files[current_index]
+            main_window.main_tab_widget.setTabText(current_index, "New Tab")
+        
+        return success
+
+    except Exception as e:
+        error_msg = f"Error setting up COL tab: {str(e)}"
+        main_window.log_message(f"❌ {error_msg}")
+        QMessageBox.critical(main_window, "COL Setup Error", error_msg)
+        return False
+
+def apply_col_tab_styling(main_window, tab_index):
+    """Apply styling to COL tab - KEPT for tab-specific functionality"""
+    try:
+        # Set tab tooltip
+        tab_bar = main_window.main_tab_widget.tabBar()
+        tab_bar.setTabToolTip(tab_index, "Collision File (COL) - Contains 3D collision data")
+        
+        # Apply COL-specific styling through safe integration
+        if hasattr(main_window, '_col_integration_ready'):
+            apply_individual_col_tab_style(main_window, tab_index)
+        
+        main_window.log_message(f"✅ Applied COL styling to tab {tab_index}")
+
+    except Exception as e:
+        main_window.log_message(f"⚠️ Error applying COL tab styling: {str(e)}")
+
+def apply_individual_col_tab_style(main_window, tab_index):
+    """Apply individual styling to COL tab - KEPT for styling"""
+    try:
+        tab_bar = main_window.main_tab_widget.tabBar()
+        tab_bar.setTabToolTip(tab_index, "Collision File (COL) - Contains 3D collision data")
+        main_window.log_message(f"✅ Applied COL styling to tab {tab_index}")
+
+    except Exception as e:
+        main_window.log_message(f"⚠️ Error applying COL tab styling: {e}")
+
+def update_tab_stylesheet_for_col(main_window):
+    """Update tab stylesheet to support COL themes - KEPT for styling"""
+    try:
+        # Base stylesheet that supports dynamic tab coloring
+        stylesheet = """
+        QTabWidget::pane {
+            border: 1px solid #c0c0c0;
+            background-color: white;
+        }
+        QTabBar::tab {
+            background-color: #f0f0f0;
+            border: 1px solid #c0c0c0;
+            padding: 6px 12px;
+            margin-right: 2px;
+        }
+        QTabBar::tab:selected {
+            background-color: #e3f2fd;
+            border-bottom: 2px solid #2196f3;
+        }
+        QTabBar::tab:hover {
+            background-color: #e8e8e8;
+        }
+        """
+        
+        if hasattr(main_window, 'main_tab_widget'):
+            main_window.main_tab_widget.setStyleSheet(stylesheet)
+            main_window.log_message("✅ Updated tab stylesheet for COL support")
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error updating tab stylesheet: {e}")
+
+def add_col_methods_to_main_window(main_window):
+    """Add COL-specific methods to main window - KEPT for compatibility"""
+    try:
+        # Color methods
+        main_window.get_col_text_color = lambda: "#1565c0"
+        main_window.get_col_background_color = lambda: "#e3f2fd"
+        
+        # Tab info method
+        def get_col_tab_info(tab_index):
+            if tab_index in main_window.open_files:
+                file_info = main_window.open_files[tab_index]
+                if file_info.get('type') == 'COL':
+                    return {
+                        'is_col': True,
+                        'file_path': file_info.get('file_path'),
+                        'tab_name': file_info.get('tab_name')
+                    }
+            return {'is_col': False}
+        
+        main_window.get_col_tab_info = get_col_tab_info
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error adding COL methods: {e}")
+
+def setup_col_tab_styling_safe(main_window):
+    """Setup COL tab styling safely - KEPT for styling"""
+    try:
+        # Only proceed if we have main_tab_widget
+        if not hasattr(main_window, 'main_tab_widget'):
+            main_window.log_message("⚠️ main_tab_widget not available for COL styling")
+            return
+
+        # Apply base tab styling that supports COL themes
+        update_tab_stylesheet_for_col(main_window)
+
+        # Connect tab change to update styling
+        if hasattr(main_window.main_tab_widget, 'currentChanged'):
+            def enhanced_tab_changed(index):
+                # Apply COL-specific styling if needed
+                if hasattr(main_window, 'open_files') and index in main_window.open_files:
+                    file_info = main_window.open_files[index]
+                    if file_info.get('type') == 'COL':
+                        apply_individual_col_tab_style(main_window, index)
+
+            main_window.main_tab_widget.currentChanged.connect(enhanced_tab_changed)
+            main_window.log_message("✅ COL tab styling system setup complete")
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error setting up COL tab styling: {str(e)}")
+
+# SETUP FUNCTION TO REPLACE init_col_integration_placeholder
+def setup_complete_col_integration(main_window):
+    """Complete COL integration setup - UPDATED to use new components"""
+    try:
+        # Mark integration as ready
+        main_window._col_integration_ready = True
+        
+        # Add COL loading method to main window (for backward compatibility)
+        main_window.load_col_file_safely = lambda file_path: load_col_file_safely(main_window, file_path)
+        
+        # Setup delayed integration
+        setup_delayed_col_integration(main_window)
+        
+        main_window.log_message("✅ Complete COL integration setup finished")
+        return True
+        
+    except Exception as e:
+        main_window.log_message(f"❌ COL integration setup failed: {str(e)}")
+        return False
+
+# Function to call from main imgfactory.py after GUI is ready
+def setup_delayed_col_integration(main_window):
+    """Setup COL integration after GUI is fully ready - UPDATED"""
+    try:
+        # Use a timer to delay until GUI is ready
+        from PyQt6.QtCore import QTimer
+        
+        def try_setup():
+            if setup_col_integration_safe(main_window):
+                # Success - stop trying
+                return
+            else:
+                # Retry in 100ms
+                QTimer.singleShot(100, try_setup)
+        
+        # Start the retry process
+        QTimer.singleShot(100, try_setup)
+        
+    except Exception as e:
+        print(f"Error setting up delayed COL integration: {str(e)}")
+
+# DEPRECATED - keeping for compatibility but should not be used
+def init_col_integration_placeholder(main_window):
+    """Placeholder for COL integration during init - DEPRECATED"""
+    # Just set a flag that COL integration is needed
+    main_window._col_integration_needed = True
+    print("COL integration marked for later setup - use setup_complete_col_integration instead")
+
+# LEGACY FUNCTIONS - Redirect to new components but keep interface
+def load_col_file_content(main_window, file_path):
+    """Legacy function - redirects to new integration manager"""
+    from components.col_integration_manager import load_col_file_safely as load_with_manager
+    return load_with_manager(main_window, file_path)
+
+def populate_table_with_col_data(main_window, col_file):
+    """Legacy function - redirects to new display manager"""
+    try:
+        from components.col_display import populate_col_table
+        return populate_col_table(main_window, col_file)
+    except ImportError:
+        main_window.log_message("⚠️ New COL display component not available")
+        return False
+
+def update_info_bar_for_col(main_window, col_file, file_path):
+    """Legacy function - redirects to new display manager"""
+    try:
+        from components.col_display import update_col_info_bar
+        return update_col_info_bar(main_window, col_file, file_path)
+    except ImportError:
+        main_window.log_message("⚠️ New COL display component not available")
+        return False

@@ -57,6 +57,9 @@ from components.img_formats import GameSpecificIMGDialog, IMGCreator
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 #from components.img_threads import IMGLoadThread, IMGSaveThread
 from components.img_validator import IMGValidator
+from components.col_tab_integration import setup_complete_col_integration
+from components.col_integration_manager import setup_col_integration
+from components.col_integration import setup_col_integration_full
 #from components.tab_manager import TabManager
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
@@ -71,31 +74,6 @@ print("Attempting COL integration...")
 COL_INTEGRATION_AVAILABLE = False
 COL_SETUP_FUNCTION = None
 
-try:
-    # Check if the COL integration module exists
-    from components.col_integration import setup_col_integration_full
-    COL_INTEGRATION_AVAILABLE = True
-    COL_SETUP_FUNCTION = setup_col_integration_full
-    print("✅ COL integration loaded successfully")
-except ImportError as e:
-    print(f"⚠️ COL integration not available: {e}")
-    # Create a dummy function to prevent errors
-    def setup_col_integration_full(main_window):
-        print("COL integration not available")
-        return False
-    COL_SETUP_FUNCTION = setup_col_integration_full
-    COL_INTEGRATION_AVAILABLE = False
-except Exception as e:
-    print(f"❌ COL integration error: {e}")
-    # Create a dummy function to prevent errors
-    def setup_col_integration_full(main_window):
-        print("COL integration failed to load")
-        return False
-    COL_SETUP_FUNCTION = setup_col_integration_full
-    COL_INTEGRATION_AVAILABLE = False
-
-
-# Replace the populate_img_table function in imgfactory.py with this improved version:
 
 def populate_img_table(table: QTableWidget, img_file: IMGFile):
     """Populate table with IMG file entries - FIXED VERSION"""

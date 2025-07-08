@@ -1,8 +1,9 @@
-#this belongs in components/ col_tab_integration.py - version 1
-# X-Seti - July07 2025 - COL Tab Integration for IMG Factory 1.5
+#this belongs in components/ col_tab_integration.py - Version: 4
+# X-Seti - July08 2025 - COL Tab Integration for IMG Factory 1.5 (DEBUG VERSION)
 
 import os
-from PyQt6.QtWidgets import QMessageBox, QVBoxLayout, QGroupBox, QFormLayout, QLabel, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
+from PyQt6.QtWidgets import QMessageBox, QTableWidgetItem
+from PyQt6.QtCore import Qt
 
 def setup_col_integration_safe(main_window):
     """Setup COL integration safely after GUI is ready"""
@@ -11,9 +12,6 @@ def setup_col_integration_safe(main_window):
         if not hasattr(main_window, 'gui_layout') or not hasattr(main_window, 'log_message'):
             print("GUI not ready for COL integration - will retry later")
             return False
-        
-        # Setup COL tab styling
-        setup_col_tab_styling_safe(main_window)
         
         # Add COL methods to main window
         add_col_methods_to_main_window(main_window)
@@ -28,191 +26,51 @@ def setup_col_integration_safe(main_window):
             print(f"COL integration error: {str(e)}")
         return False
 
-def setup_col_tab_styling_safe(main_window):
-    """Setup COL tab styling safely"""
-    try:
-        # Only proceed if we have main_tab_widget
-        if not hasattr(main_window, 'main_tab_widget'):
-            main_window.log_message("⚠️ main_tab_widget not available for COL styling")
-            return
-
-        # Apply base tab styling that supports COL themes
-        update_tab_stylesheet_for_col(main_window)
-
-        # Connect tab change to update styling
-        if hasattr(main_window.main_tab_widget, 'currentChanged'):
-            def enhanced_tab_changed(index):
-                # Apply COL-specific styling if needed
-                if hasattr(main_window, 'open_files') and index in main_window.open_files:
-                    file_info = main_window.open_files[index]
-                    if file_info.get('type') == 'COL':
-                        apply_individual_col_tab_style(main_window, index)
-
-            main_window.main_tab_widget.currentChanged.connect(enhanced_tab_changed)
-            main_window.log_message("✅ COL tab styling system setup complete")
-
-    except Exception as e:
-        main_window.log_message(f"❌ Error setting up COL tab styling: {str(e)}")
-
-def update_tab_stylesheet_for_col(main_window):
-    """Update tab stylesheet to support COL tab styling"""
-    try:
-        # Only proceed if we have main_tab_widget
-        if not hasattr(main_window, 'main_tab_widget'):
-            return
-
-        # Enhanced stylesheet that differentiates COL tabs
-        enhanced_style = """
-            QTabWidget::pane {
-                border: 1px solid #cccccc;
-                border-radius: 3px;
-                background-color: #ffffff;
-                margin-top: 0px;
-            }
-
-            QTabBar {
-                qproperty-drawBase: 0;
-            }
-
-            /* Default tab styling (IMG files) */
-            QTabBar::tab {
-                background-color: #f0f0f0;
-                border: 1px solid #cccccc;
-                border-bottom: none;
-                padding: 6px 12px;
-                margin-right: 2px;
-                border-radius: 3px 3px 0px 0px;
-                min-width: 80px;
-                max-height: 28px;
-                font-size: 9pt;
-                color: #333333;
-            }
-
-            /* Selected tab */
-            QTabBar::tab:selected {
-                background-color: #ffffff;
-                border-bottom: 1px solid #ffffff;
-                color: #000000;
-                font-weight: bold;
-            }
-
-            /* Hover effect */
-            QTabBar::tab:hover {
-                background-color: #e8e8e8;
-            }
-
-            /* COL tab styling - light blue theme */
-            QTabBar::tab:!selected {
-                margin-top: 2px;
-            }
-        """
-
-        # Apply the enhanced stylesheet
-        main_window.main_tab_widget.setStyleSheet(enhanced_style)
-
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error updating tab stylesheet: {str(e)}")
-
-def apply_individual_col_tab_style(main_window, tab_index):
-    """Apply individual styling to a specific COL tab"""
-    try:
-        # This is a workaround since PyQt6 doesn't easily allow per-tab styling
-        # We'll modify the tab text to include color coding
-        tab_bar = main_window.main_tab_widget.tabBar()
-        current_text = tab_bar.tabText(tab_index)
-
-        # Ensure COL tabs have the shield icon and are visually distinct
-        if not current_text.startswith("🛡️"):
-            if current_text.startswith("🔧"):
-                # Replace the wrench with shield
-                new_text = current_text.replace("🔧", "🛡️")
-            else:
-                new_text = f"🛡️ {current_text}"
-
-            tab_bar.setTabText(tab_index, new_text)
-
-        # Set tooltip to indicate it's a COL file
-        tab_bar.setTabToolTip(tab_index, "Collision File (COL) - Contains 3D collision data")
-
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error applying individual COL tab style: {str(e)}")
-
 def add_col_methods_to_main_window(main_window):
     """Add COL-specific methods to main window"""
-    
-    def get_col_text_color():
-        """Get text color for COL tabs"""
-        try:
-            from PyQt6.QtGui import QColor
-            return QColor(25, 118, 210)  # Nice blue color
-        except ImportError:
-            return None
-
-    def get_col_background_color():
-        """Get background color for COL tabs"""
-        try:
-            from PyQt6.QtGui import QColor
-            return QColor(227, 242, 253)  # Light blue background
-        except ImportError:
-            return None
-
-    def get_col_tab_info(tab_index):
-        """Get COL tab information"""
-        try:
+    try:
+        # Color methods
+        main_window.get_col_text_color = lambda: "#1565c0"
+        main_window.get_col_background_color = lambda: "#e3f2fd"
+        
+        # Tab info method
+        def get_col_tab_info(tab_index):
             if tab_index in main_window.open_files:
                 file_info = main_window.open_files[tab_index]
                 if file_info.get('type') == 'COL':
                     return {
-                        'type': 'COL',
-                        'path': file_info.get('file_path', ''),
-                        'name': file_info.get('tab_name', ''),
-                        'object': file_info.get('file_object', None)
+                        'is_col': True,
+                        'file_path': file_info.get('file_path'),
+                        'tab_name': file_info.get('tab_name')
                     }
-            return None
-        except Exception as e:
-            main_window.log_message(f"❌ Error getting COL tab info: {str(e)}")
-            return None
+            return {'is_col': False}
+        
+        main_window.get_col_tab_info = get_col_tab_info
 
-    def change_col_tab_icon(new_icon="🛡️"):
-        """Change icon for all COL tabs"""
-        try:
-            changed_count = 0
-            icon_map = {"🔧": "wrench", "🛡️": "shield", "⚔️": "sword"}
+    except Exception as e:
+        main_window.log_message(f"❌ Error adding COL methods: {str(e)}")
 
-            for tab_index in range(main_window.main_tab_widget.count()):
-                if tab_index in main_window.open_files:
-                    file_info = main_window.open_files[tab_index]
-                    if file_info.get('type') == 'COL':
-                        current_text = main_window.main_tab_widget.tabText(tab_index)
-
-                        # Remove existing icon
-                        for old_icon in icon_map.keys():
-                            if current_text.startswith(old_icon):
-                                current_text = current_text[2:]  # Remove icon and space
-                                break
-
-                        new_text = f"{new_icon} {current_text}"
-                        main_window.main_tab_widget.setTabText(tab_index, new_text)
-                        changed_count += 1
-
-            if changed_count > 0:
-                main_window.log_message(f"✅ Changed icon for {changed_count} COL tabs to {new_icon}")
-
-        except Exception as e:
-            main_window.log_message(f"❌ Error changing COL tab icons: {str(e)}")
-
-    # Add methods to main window
-    main_window.get_col_text_color = get_col_text_color
-    main_window.get_col_background_color = get_col_background_color
-    main_window.get_col_tab_info = get_col_tab_info
-    main_window.change_col_tab_icon = change_col_tab_icon
-
-# NEW COL TAB CREATION FUNCTIONS
+def get_model_stats_with_estimates(model):
+    """Get model statistics including estimates if available"""
+    if hasattr(model, '_has_estimates') and model._has_estimates:
+        return {
+            "spheres": getattr(model, '_estimated_spheres', 0),
+            "boxes": getattr(model, '_estimated_boxes', 0),
+            "vertices": getattr(model, '_estimated_vertices', 0), 
+            "faces": getattr(model, '_estimated_faces', 0),
+            "face_groups": 0,  # Not estimated
+            "shadow_vertices": 0,  # COL1 doesn't have shadow mesh
+            "shadow_faces": 0,  # COL1 doesn't have shadow mesh
+            "total_elements": (getattr(model, '_estimated_spheres', 0) + 
+                             getattr(model, '_estimated_boxes', 0) + 
+                             getattr(model, '_estimated_faces', 0))
+        }
+    else:
+        # Use original method
+        return model.get_stats() if hasattr(model, 'get_stats') else {}
 
 def load_col_file_safely(main_window, file_path):
-    """Load COL file safely - FIXED method name and logic"""
+    """Load COL file safely - DEBUG VERSION with detailed logging"""
     try:
         main_window.log_message(f"🔧 Setting up COL tab for: {os.path.basename(file_path)}")
         
@@ -249,21 +107,18 @@ def load_col_file_safely(main_window, file_path):
         # Update tab name with icon
         main_window.main_tab_widget.setTabText(current_index, tab_name)
 
-        # Apply COL tab styling
-        apply_col_tab_styling(main_window, current_index)
-
         # Start loading COL file
-        load_col_file_content(main_window, file_path)
+        load_col_file_content_debug(main_window, file_path)
 
     except Exception as e:
         error_msg = f"Error setting up COL tab: {str(e)}"
         main_window.log_message(f"❌ {error_msg}")
         QMessageBox.critical(main_window, "COL Setup Error", error_msg)
 
-def load_col_file_content(main_window, file_path):
-    """Load COL file content - ROBUST version with error handling"""
+def load_col_file_content_debug(main_window, file_path):
+    """Load COL file content - DEBUG VERSION with inline estimation"""
     try:
-        main_window.log_message(f"Loading COL file: {os.path.basename(file_path)}")
+        main_window.log_message(f"🔍 Loading COL file: {os.path.basename(file_path)}")
         
         # Show progress
         if hasattr(main_window.gui_layout, 'show_progress'):
@@ -276,32 +131,37 @@ def load_col_file_content(main_window, file_path):
         if not os.access(file_path, os.R_OK):
             raise Exception(f"Cannot read COL file: {file_path}")
 
+        # File size info
+        file_size = os.path.getsize(file_path)
+        main_window.log_message(f"📊 File size: {file_size:,} bytes")
+
         # Try to import COL classes with fallback
         try:
-            from components.col_core_classes import COLFile
+            from components.col_core_classes import COLFile, diagnose_col_file
             main_window.log_message("✅ COL core classes imported successfully")
         except ImportError as e:
             raise Exception(f"COL core classes not available: {str(e)}")
 
-        # Diagnose file first
+        # Diagnose file first - DETAILED
         try:
-            from components.col_core_classes import diagnose_col_file
             diagnosis = diagnose_col_file(file_path)
+            main_window.log_message(f"🔬 COL Diagnosis:")
+            main_window.log_message(f"   Signature: {diagnosis.get('header_ascii', 'Unknown')}")
+            main_window.log_message(f"   Version: {diagnosis.get('detected_version', 'Unknown')}")
+            main_window.log_message(f"   Valid: {diagnosis.get('signature_valid', False)}")
+            main_window.log_message(f"   Declared size: {diagnosis.get('declared_size', 'Unknown')}")
             
-            if not diagnosis.get('signature_valid', False):
-                main_window.log_message(f"⚠️ COL file warning: {diagnosis.get('error', 'Unknown format')}")
-                # Continue anyway - might still be loadable
-            else:
-                main_window.log_message(f"✅ COL file format: {diagnosis.get('detected_version', 'Unknown')}")
+            if diagnosis.get('error'):
+                main_window.log_message(f"⚠️ Diagnosis error: {diagnosis.get('error')}")
                 
         except Exception as e:
             main_window.log_message(f"⚠️ Could not diagnose COL file: {str(e)}")
 
         # Create and load COL file object
-        main_window.log_message("Creating COL file object...")
+        main_window.log_message("🔧 Creating COL file object...")
         col_file = COLFile(file_path)
         
-        main_window.log_message("Loading COL file data...")
+        main_window.log_message("📖 Loading COL file data...")
         if not col_file.load():
             # Try to get more specific error info
             error_details = "Unknown loading error"
@@ -309,13 +169,95 @@ def load_col_file_content(main_window, file_path):
                 error_details = col_file.load_error
             raise Exception(f"Failed to load COL file: {error_details}")
 
-        # Verify loaded data
+        # INLINE ESTIMATION: Add estimates to models after loading
+        main_window.log_message("🔧 Adding collision estimates to models...")
+        
+        # Read raw file data to calculate remaining bytes for each model
+        with open(file_path, 'rb') as f:
+            raw_data = f.read()
+        
+        offset = 0
+        import struct
+        for i, model in enumerate(col_file.models):
+            try:
+                # Find this model's position and calculate remaining data
+                if offset < len(raw_data) - 8:
+                    # Read model size
+                    model_size = struct.unpack('<I', raw_data[offset+4:offset+8])[0]
+                    header_size = 26  # COLL(4) + size(4) + name(22) = 30, but we start after 4
+                    remaining_bytes = model_size - 22  # Subtract name(22) + ID(4)
+                    
+                    if remaining_bytes > 0:
+                        # Estimate collision data from remaining bytes
+                        # Rough estimates based on typical GTA COL structure
+                        estimated_spheres = max(0, min(remaining_bytes // 40, 20))  # Conservative estimate
+                        estimated_boxes = max(0, min(remaining_bytes // 60, 15))   # Conservative estimate
+                        
+                        # Estimate mesh data from remaining space
+                        mesh_bytes = remaining_bytes - (estimated_spheres * 20) - (estimated_boxes * 32)
+                        if mesh_bytes > 50:  # Need minimum space for vertices/faces
+                            estimated_vertices = max(0, min(mesh_bytes // 20, 100))  # Conservative
+                            estimated_faces = max(0, min(estimated_vertices // 3, estimated_vertices))
+                        else:
+                            estimated_vertices = 0
+                            estimated_faces = 0
+                        
+                        # Store estimates in model
+                        model._estimated_spheres = estimated_spheres
+                        model._estimated_boxes = estimated_boxes
+                        model._estimated_vertices = estimated_vertices
+                        model._estimated_faces = estimated_faces
+                        model._remaining_bytes = remaining_bytes
+                        model._has_estimates = True
+                        
+                        main_window.log_message(f"   Model '{model.name}': {remaining_bytes}B -> S:{estimated_spheres} B:{estimated_boxes} V:{estimated_vertices} F:{estimated_faces}")
+                    else:
+                        model._estimated_spheres = 0
+                        model._estimated_boxes = 0
+                        model._estimated_vertices = 0
+                        model._estimated_faces = 0
+                        model._remaining_bytes = 0
+                        model._has_estimates = True
+                    
+                    # Move to next model
+                    offset += model_size + 8
+                
+            except Exception as e:
+                main_window.log_message(f"⚠️ Error estimating model {i}: {e}")
+                # Set minimal estimates
+                model._estimated_spheres = 0
+                model._estimated_boxes = 0 
+                model._estimated_vertices = 0
+                model._estimated_faces = 0
+                model._remaining_bytes = 0
+                model._has_estimates = True
+
+        # Verify loaded data - DETAILED DEBUG
         if not hasattr(col_file, 'models'):
             main_window.log_message("⚠️ COL file has no models attribute")
             col_file.models = []  # Create empty models list
         
         model_count = len(col_file.models) if col_file.models else 0
         main_window.log_message(f"✅ COL loaded with {model_count} models")
+
+        # DEBUG: Analyze each model in detail
+        if col_file.models:
+            main_window.log_message(f"🔍 Analyzing {model_count} models:")
+            for i, model in enumerate(col_file.models[:5]):  # Show first 5 models
+                # Use custom get_stats that includes estimates
+                stats = get_model_stats_with_estimates(model)
+                model_name = getattr(model, 'name', f"Model_{i+1}")
+                has_estimates = getattr(model, '_has_estimates', False)
+                remaining = getattr(model, '_remaining_bytes', 0)
+                main_window.log_message(f"   Model {i+1}: '{model_name}' (Est: {has_estimates}, {remaining}B)")
+                main_window.log_message(f"      Spheres: {stats.get('spheres', 0)}")
+                main_window.log_message(f"      Boxes: {stats.get('boxes', 0)}")
+                main_window.log_message(f"      Vertices: {stats.get('vertices', 0)}")
+                main_window.log_message(f"      Faces: {stats.get('faces', 0)}")
+                main_window.log_message(f"      Total Elements: {stats.get('total_elements', 0)}")
+            
+            if model_count > 5:
+                main_window.log_message(f"   ... and {model_count - 5} more models")
 
         # Update current COL reference
         main_window.current_col = col_file
@@ -326,8 +268,11 @@ def load_col_file_content(main_window, file_path):
             main_window.open_files[current_index]['file_object'] = col_file
             main_window.log_message(f"✅ Updated tab {current_index} with COL object")
 
-        # Update UI for loaded COL
-        update_ui_for_loaded_col(main_window)
+        # CORRECT: Populate the main table with COL data (like IMG files do)
+        populate_table_with_col_data_debug(main_window, col_file)
+
+        # Update info bar with COL information
+        update_info_bar_for_col(main_window, col_file, file_path)
 
         # Hide progress
         if hasattr(main_window.gui_layout, 'hide_progress'):
@@ -337,7 +282,7 @@ def load_col_file_content(main_window, file_path):
         file_name = os.path.basename(file_path)
         main_window.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
 
-        main_window.log_message(f"✅ Loaded COL: {file_name} ({model_count} models)")
+        main_window.log_message(f"✅ COL Load Complete: {file_name} ({model_count} models)")
 
     except Exception as e:
         if hasattr(main_window.gui_layout, 'hide_progress'):
@@ -353,223 +298,178 @@ def load_col_file_content(main_window, file_path):
         
         QMessageBox.critical(main_window, "COL Load Error", error_msg)
 
-def apply_col_tab_styling(main_window, tab_index):
-    """Apply styling to COL tab - NEW method"""
+def calculate_model_size(model, stats):
+    """Calculate estimated size of a COL model in bytes"""
     try:
-        # Set tab tooltip
-        tab_bar = main_window.main_tab_widget.tabBar()
-        tab_bar.setTabToolTip(tab_index, "Collision File (COL) - Contains 3D collision data")
+        # Check if we have better estimation available
+        try:
+            from components.col_estimation_patch import estimate_col_size_from_stats
+            return estimate_col_size_from_stats(stats)
+        except ImportError:
+            pass
         
-        # Apply COL-specific styling through safe integration
-        if hasattr(main_window, '_col_integration_ready'):
-            apply_individual_col_tab_style(main_window, tab_index)
+        # Fallback calculation
+        size = 60  # Basic model header
         
-        main_window.log_message(f"✅ Applied COL styling to tab {tab_index}")
-
+        # Spheres: each sphere is typically 16-20 bytes (center + radius + material)
+        size += stats.get('spheres', 0) * 20
+        
+        # Boxes: each box is typically 24-32 bytes (min + max + material)  
+        size += stats.get('boxes', 0) * 32
+        
+        # Vertices: each vertex is typically 12-16 bytes (x, y, z coordinates)
+        size += stats.get('vertices', 0) * 16
+        
+        # Faces: each face is typically 8-12 bytes (3 vertex indices + material)
+        size += stats.get('faces', 0) * 12
+        
+        # Face groups: if present, add extra overhead
+        size += stats.get('face_groups', 0) * 8
+        
+        # Shadow mesh (COL3 only)
+        size += stats.get('shadow_vertices', 0) * 16
+        size += stats.get('shadow_faces', 0) * 12
+        
+        return max(size, 60)  # Minimum 60 bytes (header)
+        
     except Exception as e:
-        main_window.log_message(f"⚠️ Error applying COL tab styling: {str(e)}")
+        return 60  # Fallback to header size
 
-def update_ui_for_loaded_col(main_window):
-    """Update UI when COL file is loaded - FIXED method"""
+def populate_table_with_col_data_debug(main_window, col_file):
+    """Populate the main table with COL model data - DEBUG VERSION"""
     try:
-        if not hasattr(main_window, 'current_col') or not main_window.current_col:
-            main_window.log_message("⚠️ No COL file to display")
+        # Access the main table (same as IMG files use)
+        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
+            main_window.log_message("⚠️ Main table not available")
             return
 
-        # Clear current display
-        clear_current_display(main_window)
-
-        # Create COL-specific UI elements
-        create_col_display_ui(main_window)
-
-        main_window.log_message(f"✅ Updated UI for COL file")
-
-    except Exception as e:
-        main_window.log_message(f"❌ Error updating UI for COL: {str(e)}")
-
-def create_col_display_ui(main_window):
-    """Create UI elements for displaying COL file - NEW method"""
-    try:
-        if not hasattr(main_window, 'current_col') or not main_window.current_col:
-            return
-
-        # Get current tab content widget
-        current_index = main_window.main_tab_widget.currentIndex()
-        current_widget = main_window.main_tab_widget.widget(current_index)
+        table = main_window.gui_layout.table
         
-        if not current_widget:
-            main_window.log_message("⚠️ No current widget for COL display")
-            return
+        # Configure table for COL data (7 columns to include size)
+        table.setColumnCount(7)
+        table.setHorizontalHeaderLabels([
+            "Model", "Type", "Size", "Surfaces", "Vertices", "Collision", "Status"
+        ])
 
-        # Clear existing layout
-        if current_widget.layout():
-            clear_layout(current_widget.layout())
+        # Clear existing table data
+        table.setRowCount(0)
+        main_window.log_message(f"🔧 Configuring table for {len(col_file.models)} COL models")
 
-        # Create new layout for COL display
-        col_layout = QVBoxLayout(current_widget)
-        col_layout.setContentsMargins(5, 5, 5, 5)
-
-        # Add COL file info panel
-        add_col_info_panel(main_window, col_layout)
-
-        # Add COL models table
-        add_col_models_table(main_window, col_layout)
-
-        main_window.log_message(f"✅ Created COL display UI")
-
-    except Exception as e:
-        main_window.log_message(f"❌ Error creating COL display UI: {str(e)}")
-
-def update_ui_for_loaded_col(main_window):
-    """Update UI when COL file is loaded - FIXED method"""
-    try:
-        if not hasattr(main_window, 'current_col') or not main_window.current_col:
-            main_window.log_message("⚠️ No COL file to display")
-            return
-
-        # Clear current display
-        clear_current_display(main_window)
-
-        # Create COL-specific UI elements
-        create_col_display_ui(main_window)
-
-        main_window.log_message(f"✅ Updated UI for COL file")
-
-    except Exception as e:
-        main_window.log_message(f"❌ Error updating UI for COL: {str(e)}")
-
-def create_col_display_ui(main_window):
-    """Create UI elements for displaying COL file - NEW method"""
-    try:
-        if not hasattr(main_window, 'current_col') or not main_window.current_col:
-            return
-
-        # Get current tab content widget
-        current_index = main_window.main_tab_widget.currentIndex()
-        current_widget = main_window.main_tab_widget.widget(current_index)
-        
-        if not current_widget:
-            main_window.log_message("⚠️ No current widget for COL display")
-            return
-
-        # Clear existing layout
-        if current_widget.layout():
-            clear_layout(current_widget.layout())
-
-        # Create new layout for COL display
-        col_layout = QVBoxLayout(current_widget)
-        col_layout.setContentsMargins(5, 5, 5, 5)
-
-        # Add COL file info panel
-        add_col_info_panel(main_window, col_layout)
-
-        # Add COL models table
-        add_col_models_table(main_window, col_layout)
-
-        main_window.log_message(f"✅ Created COL display UI")
-
-    except Exception as e:
-        main_window.log_message(f"❌ Error creating COL display UI: {str(e)}")
-
-def add_col_info_panel(main_window, layout):
-    """Add COL file information panel - NEW method"""
-    try:
-        info_group = QGroupBox("COL File Information")
-        info_layout = QFormLayout(info_group)
-        
-        col_file = main_window.current_col
-        
-        # File name
-        info_layout.addRow("File:", QLabel(os.path.basename(col_file.file_path)))
-        
-        # File size
-        file_size = os.path.getsize(col_file.file_path)
-        from components.img_core_classes import format_file_size
-        info_layout.addRow("Size:", QLabel(format_file_size(file_size)))
-        
-        # Model count
-        model_count = len(col_file.models) if hasattr(col_file, 'models') else 0
-        info_layout.addRow("Models:", QLabel(str(model_count)))
-        
-        # Version info
-        if hasattr(col_file, 'version'):
-            info_layout.addRow("Version:", QLabel(str(col_file.version)))
-        
-        layout.addWidget(info_group)
-
-    except Exception as e:
-        main_window.log_message(f"⚠️ Error adding COL info panel: {str(e)}")
-
-def add_col_models_table(main_window, layout):
-    """Add COL models table - NEW method"""
-    try:
-        models_group = QGroupBox("Collision Models")
-        models_layout = QVBoxLayout(models_group)
-        
-        # Create table
-        models_table = QTableWidget()
-        models_table.setColumnCount(4)
-        models_table.setHorizontalHeaderLabels(["Model Name", "Faces", "Vertices", "Material"])
-        
-        # Populate table
-        col_file = main_window.current_col
+        # Populate with COL models
         if hasattr(col_file, 'models') and col_file.models:
-            models_table.setRowCount(len(col_file.models))
+            table.setRowCount(len(col_file.models))
             
             for row, model in enumerate(col_file.models):
-                # Model name/identifier
-                name_item = QTableWidgetItem(getattr(model, 'name', f"Model {row+1}"))
-                models_table.setItem(row, 0, name_item)
+                # Get model statistics using estimates if available
+                stats = get_model_stats_with_estimates(model)
                 
-                # Face count
-                face_count = getattr(model, 'face_count', 0)
-                models_table.setItem(row, 1, QTableWidgetItem(str(face_count)))
+                # DEBUG: Log stats for first few models
+                if row < 3:
+                    main_window.log_message(f"📊 Model {row+1} stats: {stats}")
                 
-                # Vertex count  
-                vertex_count = getattr(model, 'vertex_count', 0)
-                models_table.setItem(row, 2, QTableWidgetItem(str(vertex_count)))
+                # Model name/index
+                model_name = getattr(model, 'name', f"Model_{row+1}")
+                if not model_name or model_name.strip() == "":
+                    model_name = f"Model_{row+1}"
+                table.setItem(row, 0, QTableWidgetItem(str(model_name)))
                 
-                # Material info
-                material = getattr(model, 'material', 'Default')
-                models_table.setItem(row, 3, QTableWidgetItem(str(material)))
+                # Model type - show COL version
+                version = getattr(model, 'version', None)
+                if version and hasattr(version, 'name'):
+                    model_type = f"COL {version.name.replace('COL_', '')}"
+                else:
+                    model_type = "Collision"
+                table.setItem(row, 1, QTableWidgetItem(model_type))
+                
+                # Calculate estimated model size in bytes
+                model_size = calculate_model_size(model, stats)
+                if model_size < 1024:
+                    size_str = f"{model_size} B"
+                elif model_size < 1024*1024:
+                    size_str = f"{model_size/1024:.1f} KB"
+                else:
+                    size_str = f"{model_size/(1024*1024):.1f} MB"
+                table.setItem(row, 2, QTableWidgetItem(size_str))
+                
+                # Surface count (total collision elements)
+                surface_count = stats.get('total_elements', 0)
+                table.setItem(row, 3, QTableWidgetItem(str(surface_count)))
+                
+                # Vertex count
+                vertex_count = stats.get('vertices', 0)
+                table.setItem(row, 4, QTableWidgetItem(str(vertex_count)))
+                
+                # Collision breakdown (S:spheres B:boxes F:faces)
+                spheres = stats.get('spheres', 0)
+                boxes = stats.get('boxes', 0) 
+                faces = stats.get('faces', 0)
+                collision_info = f"S:{spheres} B:{boxes} F:{faces}"
+                table.setItem(row, 5, QTableWidgetItem(collision_info))
+                
+                # Status
+                status = "Loaded"
+                table.setItem(row, 6, QTableWidgetItem(status))
+                
+                # Make all items read-only
+                for col in range(7):
+                    item = table.item(row, col)
+                    if item:
+                        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        else:
+            # No models found
+            table.setRowCount(1)
+            table.setItem(0, 0, QTableWidgetItem("No models found"))
+            for col in range(1, 7):
+                table.setItem(0, col, QTableWidgetItem("-"))
+
+        # Resize columns to content
+        table.resizeColumnsToContents()
         
-        # Configure table
-        models_table.setAlternatingRowColors(True)
-        models_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        models_table.horizontalHeader().setStretchLastSection(True)
-        models_table.resizeColumnsToContents()
+        # Update table selection behavior
+        table.selectRow(0)  # Select first row
         
-        models_layout.addWidget(models_table)
-        layout.addWidget(models_group)
-        
-        # Store reference for later use
-        main_window.col_models_table = models_table
+        main_window.log_message(f"✅ Populated table with {table.rowCount()} COL models")
 
     except Exception as e:
-        main_window.log_message(f"⚠️ Error adding COL models table: {str(e)}")
+        main_window.log_message(f"❌ Error populating table with COL data: {str(e)}")
 
-def clear_current_display(main_window):
-    """Clear current tab display - HELPER method"""
+def update_info_bar_for_col(main_window, col_file, file_path):
+    """Update the info bar with COL file information - LIKE IMG FILES DO"""
     try:
-        current_index = main_window.main_tab_widget.currentIndex()
-        current_widget = main_window.main_tab_widget.widget(current_index)
+        # Access the info bar labels (same as IMG files use)
+        gui_layout = main_window.gui_layout
         
-        if current_widget and current_widget.layout():
-            clear_layout(current_widget.layout())
+        # Update file name
+        if hasattr(gui_layout, 'file_name_label'):
+            file_name = os.path.basename(file_path)
+            gui_layout.file_name_label.setText(f"File: {file_name}")
+        
+        # Update entry count (models for COL)
+        if hasattr(gui_layout, 'entry_count_label'):
+            model_count = len(col_file.models) if hasattr(col_file, 'models') else 0
+            gui_layout.entry_count_label.setText(f"Models: {model_count}")
+        
+        # Update file size
+        if hasattr(gui_layout, 'file_size_label'):
+            file_size = os.path.getsize(file_path)
+            # Simple file size formatting
+            if file_size < 1024:
+                size_str = f"{file_size} bytes"
+            elif file_size < 1024*1024:
+                size_str = f"{file_size/1024:.1f} KB"
+            else:
+                size_str = f"{file_size/(1024*1024):.1f} MB"
+            gui_layout.file_size_label.setText(f"Size: {size_str}")
+        
+        # Update format version
+        if hasattr(gui_layout, 'format_version_label'):
+            version = getattr(col_file, 'version', 'Unknown')
+            gui_layout.format_version_label.setText(f"Format: COL v{version}")
+        
+        main_window.log_message("✅ Updated info bar for COL file")
 
     except Exception as e:
-        main_window.log_message(f"⚠️ Error clearing display: {str(e)}")
-
-def clear_layout(layout):
-    """Clear all widgets from layout - HELPER method"""
-    try:
-        while layout.count():
-            child = layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
-
-    except Exception as e:
-        print(f"⚠️ Error clearing layout: {str(e)}")
+        main_window.log_message(f"⚠️ Error updating info bar: {str(e)}")
 
 # SETUP FUNCTION TO REPLACE init_col_integration_placeholder
 def setup_complete_col_integration(main_window):
