@@ -58,7 +58,7 @@ from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 #from components.img_threads import IMGLoadThread, IMGSaveThread
 from components.img_validator import IMGValidator
 from components.col_tab_integration import setup_complete_col_integration
-from components.col_integration_manager import setup_col_integration
+#from components.col_integration_manager import setup_col_integration
 from components.col_integration import setup_col_integration_full
 #from components.tab_manager import TabManager
 from gui.gui_layout import IMGFactoryGUILayout
