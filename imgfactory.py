@@ -65,10 +65,6 @@ from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.menu import IMGFactoryMenuBar
 
-print("Components imported successfully")
-COL_INTEGRATION_AVAILABLE = False
-COL_SETUP_FUNCTION = None
-
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
 COL_INTEGRATION_AVAILABLE = False
