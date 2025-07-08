@@ -57,10 +57,7 @@ from components.img_formats import GameSpecificIMGDialog, IMGCreator
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 #from components.img_threads import IMGLoadThread, IMGSaveThread
 from components.img_validator import IMGValidator
-from components.col_tab_integration import setup_complete_col_integration
-#from components.col_integration_manager import setup_col_integration
-from components.col_integration import setup_col_integration_full
-#from components.tab_manager import TabManager
+from components.col_tabs_integration import setup_col_tab_integration
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.menu import IMGFactoryMenuBar
@@ -264,7 +261,6 @@ def debug_img_entries(self):
         except:
             pass
 
-
 class IMGLoadThread(QThread):
     """Background thread for loading IMG files"""
     progress_updated = pyqtSignal(int, str)  # progress, status
@@ -401,9 +397,10 @@ class IMGFactory(QMainWindow):
         install_close_functions(self)
 
         # COL Integration - FIXED: Move to end and use correct import
+
         try:
-            from components.col_tab_integration import setup_complete_col_integration
-            if setup_complete_col_integration(self):
+            from components.col_tabs_integration import setup_col_tab_integration
+            if setup_col_tab_integration(self):
                 self.log_message("✅ COL tab integration setup complete")
             else:
                 self.log_message("⚠️ COL tab integration setup failed")

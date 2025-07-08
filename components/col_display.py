@@ -1,171 +1,302 @@
 #this belongs in components/ col_display.py - Version: 1
-# X-Seti - July08 2025 - COL Display Component for IMG Factory 1.5
+# X-Seti - July08 2025 - COL Display Functions for IMG Factory 1.5
 
-from PyQt6.QtWidgets import QTableWidgetItem
-from PyQt6.QtCore import Qt
+"""
+COL Display Manager
+Handles displaying COL data in IMG Factory table with accurate statistics
+"""
+
 import os
+import struct
+from PyQt6.QtWidgets import QTableWidgetItem
 
 class COLDisplayManager:
-    """Manages COL data display in IMG Factory table"""
+    """Manages COL data display in IMG Factory"""
     
     def __init__(self, main_window):
         self.main_window = main_window
-        self.debug = True
     
     def populate_col_table(self, col_file):
-        """Populate the main table with COL model data"""
+        """Populate table with COL models using enhanced statistics"""
         try:
-            # Access the main table
             if not hasattr(self.main_window, 'gui_layout') or not hasattr(self.main_window.gui_layout, 'table'):
-                self._log("⚠️ Main table not available")
-                return False
-
+                self.main_window.log_message("⚠️ Main table not available")
+                return
+            
             table = self.main_window.gui_layout.table
             
-            # Configure table for COL data
-            self._setup_col_table_headers(table)
-
+            # Configure table for COL data (7 columns)
+            table.setColumnCount(7)
+            table.setHorizontalHeaderLabels([
+                "Model", "Type", "Size", "Surfaces", "Vertices", "Collision", "Status"
+            ])
+            
             # Clear existing data
             table.setRowCount(0)
             
             if not hasattr(col_file, 'models') or not col_file.models:
-                self._show_no_models_message(table)
-                return True
-
-            # Populate with COL models
+                self.main_window.log_message("⚠️ No models found in COL file")
+                return
+            
             table.setRowCount(len(col_file.models))
-            self._log(f"🔧 Populating table with {len(col_file.models)} COL models")
-
+            self.main_window.log_message(f"🔧 Populating table with {len(col_file.models)} COL models")
+            
             for row, model in enumerate(col_file.models):
-                self._populate_model_row(table, row, model)
-
-            # Finalize table
-            self._finalize_table_display(table)
+                # Get enhanced model statistics
+                stats = self._get_enhanced_model_stats(model, col_file, row)
+                
+                # Model name/index
+                model_name = getattr(model, 'name', f"Model_{row+1}")
+                if not model_name or model_name.strip() == "":
+                    model_name = f"Model_{row+1}"
+                table.setItem(row, 0, QTableWidgetItem(str(model_name)))
+                
+                # Model type - show COL version
+                version = getattr(model, 'version', None)
+                if version and hasattr(version, 'name'):
+                    model_type = f"COL {version.name.replace('COL_', '')}"
+                else:
+                    model_type = "Collision"
+                table.setItem(row, 1, QTableWidgetItem(model_type))
+                
+                # Calculate model size
+                model_size = stats.get('estimated_size', 64)
+                size_str = self._format_file_size(model_size)
+                table.setItem(row, 2, QTableWidgetItem(size_str))
+                
+                # Surface count (total collision elements)
+                surface_count = stats.get('total_elements', 0)
+                table.setItem(row, 3, QTableWidgetItem(str(surface_count)))
+                
+                # Vertex count
+                vertex_count = stats.get('vertex_count', 0)
+                table.setItem(row, 4, QTableWidgetItem(str(vertex_count)))
+                
+                # Collision types
+                collision_types = stats.get('collision_types', 'None')
+                table.setItem(row, 5, QTableWidgetItem(collision_types))
+                
+                # Status
+                status = "✅ Loaded" if stats.get('total_elements', 0) > 0 else "⚠️ Empty"
+                table.setItem(row, 6, QTableWidgetItem(status))
             
-            self._log(f"✅ COL table populated successfully")
-            return True
-
+            self.main_window.log_message("✅ COL table populated with enhanced data")
+            
         except Exception as e:
-            self._log(f"❌ Error populating COL table: {str(e)}")
-            return False
+            self.main_window.log_message(f"⚠️ Error populating COL table: {str(e)}")
     
-    def _setup_col_table_headers(self, table):
-        """Setup table headers for COL display"""
-        table.setColumnCount(7)
-        table.setHorizontalHeaderLabels([
-            "Model", "Type", "Size", "Surfaces", "Vertices", "Collision", "Status"
-        ])
-    
-    def _populate_model_row(self, table, row, model):
-        """Populate a single model row in the table"""
+    def _get_enhanced_model_stats(self, model, col_file, model_index):
+        """Get enhanced model statistics using centralized parser"""
         try:
-            # Get model statistics
-            stats = self._get_model_stats(model)
+            # Try using the centralized COL parser first
+            try:
+                from components.col_parser import get_model_collision_stats, format_model_collision_types
+                
+                # Get stats from centralized parser with debug
+                stats = get_model_collision_stats(col_file.file_path, model_index, debug=True)
+                
+                # Add collision types formatting
+                stats['collision_types'] = format_model_collision_types(stats)
+                
+                self.main_window.log_message(f"📊 Model {model_index}: Enhanced stats from parser")
+                return stats
+                
+            except ImportError:
+                self.main_window.log_message("⚠️ Centralized COL parser not available")
+                
+            # Fallback to basic stats from model attributes
+            stats = {
+                'sphere_count': getattr(model, 'num_spheres', 0),
+                'box_count': getattr(model, 'num_boxes', 0),
+                'vertex_count': getattr(model, 'num_vertices', 0),
+                'face_count': getattr(model, 'num_faces', 0)
+            }
             
-            # Debug log for first few models
-            if row < 3 and self.debug:
-                self._log(f"📊 Model {row+1} '{model.name}': {stats}")
-
-            # Model name
-            model_name = self._format_model_name(model, row)
-            table.setItem(row, 0, QTableWidgetItem(model_name))
+            # If stats are all zeros, try direct binary reading
+            if all(v == 0 for v in stats.values()) and hasattr(col_file, 'file_path'):
+                self.main_window.log_message(f"🔍 Model {model_index}: Using direct binary reading")
+                stats = self._read_model_collision_stats_direct(col_file.file_path, model_index, model)
             
-            # Model type (COL version)
-            model_type = self._format_model_type(model)
-            table.setItem(row, 1, QTableWidgetItem(model_type))
+            # Calculate totals and types
+            stats['total_elements'] = stats['sphere_count'] + stats['box_count'] + stats['face_count']
             
-            # Model size
-            model_size = self._calculate_model_size(model, stats)
-            size_str = self._format_file_size(model_size)
-            table.setItem(row, 2, QTableWidgetItem(size_str))
+            # Generate collision types string
+            types = []
+            if stats['sphere_count'] > 0:
+                types.append(f"Spheres({stats['sphere_count']})")
+            if stats['box_count'] > 0:
+                types.append(f"Boxes({stats['box_count']})")
+            if stats['face_count'] > 0:
+                types.append(f"Mesh({stats['face_count']})")
             
-            # Surface count (total collision elements)
-            surface_count = stats.get('total_elements', 0)
-            table.setItem(row, 3, QTableWidgetItem(str(surface_count)))
+            stats['collision_types'] = ", ".join(types) if types else "None"
             
-            # Vertex count
-            vertex_count = stats.get('vertices', 0)
-            table.setItem(row, 4, QTableWidgetItem(str(vertex_count)))
+            # Estimate size
+            stats['estimated_size'] = self._estimate_model_size(stats)
             
-            # Collision breakdown
-            collision_info = self._format_collision_breakdown(stats)
-            table.setItem(row, 5, QTableWidgetItem(collision_info))
+            return stats
             
-            # Status
-            table.setItem(row, 6, QTableWidgetItem("Loaded"))
-            
-            # Make all items read-only
-            for col in range(7):
-                item = table.item(row, col)
-                if item:
-                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-
         except Exception as e:
-            self._log(f"⚠️ Error populating row {row}: {e}")
-            # Set error row
-            table.setItem(row, 0, QTableWidgetItem(f"Error_Model_{row+1}"))
-            for col in range(1, 7):
-                table.setItem(row, col, QTableWidgetItem("-"))
-    
-    def _get_model_stats(self, model):
-        """Get model statistics (works with both original and enhanced models)"""
-        if hasattr(model, 'get_stats') and callable(getattr(model, 'get_stats')):
-            # Use existing get_stats method
-            return model.get_stats()
-        else:
-            # Manual calculation for compatibility
+            self.main_window.log_message(f"⚠️ Error getting model stats: {str(e)}")
             return {
-                "spheres": len(getattr(model, 'spheres', [])),
-                "boxes": len(getattr(model, 'boxes', [])), 
-                "vertices": len(getattr(model, 'vertices', [])),
-                "faces": len(getattr(model, 'faces', [])),
-                "face_groups": len(getattr(model, 'face_groups', [])),
-                "shadow_vertices": len(getattr(model, 'shadow_vertices', [])),
-                "shadow_faces": len(getattr(model, 'shadow_faces', [])),
-                "total_elements": (len(getattr(model, 'spheres', [])) + 
-                                 len(getattr(model, 'boxes', [])) + 
-                                 len(getattr(model, 'faces', [])))
+                'sphere_count': 0,
+                'box_count': 0,
+                'vertex_count': 0,
+                'face_count': 0,
+                'total_elements': 0,
+                'collision_types': 'Error',
+                'estimated_size': 64
             }
     
-    def _format_model_name(self, model, row):
-        """Format model name for display"""
-        model_name = getattr(model, 'name', f"Model_{row+1}")
-        if not model_name or model_name.strip() == "":
-            model_name = f"Model_{row+1}"
-        return str(model_name)
-    
-    def _format_model_type(self, model):
-        """Format model type (COL version) for display"""
-        version = getattr(model, 'version', None)
-        if version and hasattr(version, 'name'):
-            return f"COL {version.name.replace('COL_', '')}"
-        elif version and hasattr(version, 'value'):
-            return f"COL {version.value}"
-        else:
-            return "Collision"
-    
-    def _calculate_model_size(self, model, stats):
-        """Calculate estimated model size in bytes"""
+    def _read_model_collision_stats_direct(self, file_path, model_index, model):
+        """Direct binary reading as fallback (legacy method)"""
         try:
-            size = 60  # Basic header
+            self.main_window.log_message(f"🔍 Direct reading model {model_index} from {os.path.basename(file_path)}")
             
-            # Accurate GTA COL format sizes
-            size += stats.get('spheres', 0) * 20      # Spheres: center(12) + radius(4) + material(4)
-            size += stats.get('boxes', 0) * 32        # Boxes: min(12) + max(12) + material(4) + flags(4)
-            size += stats.get('vertices', 0) * 12     # Vertices: x,y,z coordinates (4 bytes each)
-            size += stats.get('faces', 0) * 12        # Faces: 3 indices(6) + material(4) + flags(2)
-            size += stats.get('face_groups', 0) * 8   # Face groups overhead
-            size += stats.get('shadow_vertices', 0) * 12  # Shadow mesh (COL3)
-            size += stats.get('shadow_faces', 0) * 12     # Shadow faces (COL3)
+            with open(file_path, 'rb') as f:
+                data = f.read()
             
-            return max(size, 60)  # Minimum header size
+            # Simple approach: try to find model by signature pattern
+            offset = 0
+            current_model = 0
+            
+            while offset < len(data) and current_model <= model_index:
+                # Look for COL signature
+                sig_pos = data.find(b'COL', offset)
+                if sig_pos == -1:
+                    break
+                
+                # Validate it's a proper signature
+                if sig_pos + 4 <= len(data):
+                    full_sig = data[sig_pos:sig_pos+4]
+                    if full_sig in [b'COLL', b'COL2', b'COL3', b'COL4']:
+                        
+                        if current_model == model_index:
+                            # Found our target model
+                            stats = self._extract_collision_stats_at_offset(data, sig_pos)
+                            self.main_window.log_message(f"📊 Direct stats for model {model_index}: {stats}")
+                            return stats
+                        
+                        current_model += 1
+                        offset = sig_pos + 4
+                    else:
+                        offset = sig_pos + 1
+                else:
+                    break
+            
+            self.main_window.log_message(f"⚠️ Could not find model {model_index} in file")
+            return {'sphere_count': 0, 'box_count': 0, 'vertex_count': 0, 'face_count': 0}
             
         except Exception as e:
-            self._log(f"⚠️ Error calculating model size: {e}")
-            return 60
+            self.main_window.log_message(f"⚠️ Direct reading error: {str(e)}")
+            return {'sphere_count': 0, 'box_count': 0, 'vertex_count': 0, 'face_count': 0}
+    
+    def _extract_collision_stats_at_offset(self, data, sig_offset):
+        """Extract collision stats starting from signature offset"""
+        try:
+            offset = sig_offset
+            
+            # Read signature to determine version
+            signature = data[offset:offset+4]
+            is_col1 = (signature == b'COLL')
+            offset += 4
+            
+            # Skip file size, name, ID, bounds
+            offset += 4 + 22 + 2  # size + name + id
+            offset += 40 if is_col1 else 28  # bounds
+            
+            # Skip unknown data for COL1
+            if is_col1 and offset + 4 <= len(data):
+                unknown_count = struct.unpack('<I', data[offset:offset+4])[0]
+                offset += 4 + (unknown_count * 8)
+            
+            # Read collision counts
+            stats = {'sphere_count': 0, 'box_count': 0, 'vertex_count': 0, 'face_count': 0}
+            
+            # Spheres
+            if offset + 4 <= len(data):
+                stats['sphere_count'] = struct.unpack('<I', data[offset:offset+4])[0]
+                offset += 4 + (stats['sphere_count'] * 20)
+            
+            # Boxes
+            if offset + 4 <= len(data):
+                stats['box_count'] = struct.unpack('<I', data[offset:offset+4])[0]
+                offset += 4 + (stats['box_count'] * 28)
+            
+            # Vertices
+            if offset + 4 <= len(data):
+                stats['vertex_count'] = struct.unpack('<I', data[offset:offset+4])[0]
+                vertex_size = 12 if is_col1 else 6
+                offset += 4 + (stats['vertex_count'] * vertex_size)
+            
+            # Faces
+            if offset + 4 <= len(data):
+                stats['face_count'] = struct.unpack('<I', data[offset:offset+4])[0]
+            
+            return stats
+            
+        except Exception as e:
+            return {'sphere_count': 0, 'box_count': 0, 'vertex_count': 0, 'face_count': 0}
+    
+    def _skip_model_collision_data(self, data, offset, is_col1):
+        """Skip a model's collision data and return new offset"""
+        try:
+            # Skip spheres
+            if offset + 4 <= len(data):
+                sphere_count = struct.unpack('<I', data[offset:offset+4])[0]
+                offset += 4 + (sphere_count * 20)
+            
+            # Skip boxes  
+            if offset + 4 <= len(data):
+                box_count = struct.unpack('<I', data[offset:offset+4])[0]
+                offset += 4 + (box_count * 28)
+            
+            # Skip vertices
+            if offset + 4 <= len(data):
+                vertex_count = struct.unpack('<I', data[offset:offset+4])[0]
+                vertex_size = 12 if is_col1 else 6
+                offset += 4 + (vertex_count * vertex_size)
+            
+            # Skip faces
+            if offset + 4 <= len(data):
+                face_count = struct.unpack('<I', data[offset:offset+4])[0]
+                face_size = 16 if is_col1 else 8
+                offset += 4 + (face_count * face_size)
+            
+            # Skip face groups for COL2/3 (if present)
+            if not is_col1 and offset + 4 <= len(data):
+                face_group_count = struct.unpack('<I', data[offset:offset+4])[0]
+                offset += 4 + (face_group_count * 28)  # Face group size
+            
+            # Skip shadow mesh for COL3 (if present)
+            if not is_col1 and offset + 4 <= len(data):
+                # Try to detect shadow mesh by checking remaining data
+                remaining = len(data) - offset
+                if remaining > 8:  # Enough for shadow vertex/face counts
+                    shadow_vertex_count = struct.unpack('<I', data[offset:offset+4])[0]
+                    if shadow_vertex_count < 10000:  # Sanity check
+                        offset += 4 + (shadow_vertex_count * 6)  # Shadow vertices
+                        if offset + 4 <= len(data):
+                            shadow_face_count = struct.unpack('<I', data[offset:offset+4])[0]
+                            if shadow_face_count < 10000:  # Sanity check
+                                offset += 4 + (shadow_face_count * 8)  # Shadow faces
+            
+            return offset
+            
+        except Exception:
+            return offset
+    
+    def _estimate_model_size(self, stats):
+        """Estimate model size in bytes from statistics"""
+        size = 64  # Base model overhead
+        size += stats['sphere_count'] * 20  # Sphere data
+        size += stats['box_count'] * 28  # Box data  
+        size += stats['vertex_count'] * 12  # Vertex data (average)
+        size += stats['face_count'] * 12  # Face data (average)
+        return max(size, 64)
     
     def _format_file_size(self, size_bytes):
-        """Format file size in human readable format"""
+        """Format file size for display"""
         if size_bytes < 1024:
             return f"{size_bytes} B"
         elif size_bytes < 1024*1024:
@@ -173,43 +304,15 @@ class COLDisplayManager:
         else:
             return f"{size_bytes/(1024*1024):.1f} MB"
     
-    def _format_collision_breakdown(self, stats):
-        """Format collision breakdown (S:spheres B:boxes F:faces)"""
-        spheres = stats.get('spheres', 0)
-        boxes = stats.get('boxes', 0)
-        faces = stats.get('faces', 0)
-        return f"S:{spheres} B:{boxes} F:{faces}"
-    
-    def _show_no_models_message(self, table):
-        """Show message when no models are found"""
-        table.setRowCount(1)
-        table.setItem(0, 0, QTableWidgetItem("No models found"))
-        for col in range(1, 7):
-            table.setItem(0, col, QTableWidgetItem("-"))
-    
-    def _finalize_table_display(self, table):
-        """Finalize table display settings"""
-        # Resize columns to content
-        table.resizeColumnsToContents()
-        
-        # Select first row
-        if table.rowCount() > 0:
-            table.selectRow(0)
-    
     def update_col_info_bar(self, col_file, file_path):
-        """Update the info bar with COL file information"""
+        """Update info bar with COL file information"""
         try:
             gui_layout = self.main_window.gui_layout
             
-            # Update file name
-            if hasattr(gui_layout, 'file_name_label'):
-                file_name = os.path.basename(file_path)
-                gui_layout.file_name_label.setText(f"File: {file_name}")
-            
-            # Update model count
-            if hasattr(gui_layout, 'entry_count_label'):
+            # Update file count
+            if hasattr(gui_layout, 'file_count_label'):
                 model_count = len(col_file.models) if hasattr(col_file, 'models') else 0
-                gui_layout.entry_count_label.setText(f"Models: {model_count}")
+                gui_layout.file_count_label.setText(f"Models: {model_count}")
             
             # Update file size
             if hasattr(gui_layout, 'file_size_label'):
@@ -219,103 +322,21 @@ class COLDisplayManager:
             
             # Update format version
             if hasattr(gui_layout, 'format_version_label'):
-                # Determine predominant COL version
-                versions = []
-                if hasattr(col_file, 'models'):
-                    for model in col_file.models:
-                        version = getattr(model, 'version', None)
-                        if version:
-                            if hasattr(version, 'value'):
-                                versions.append(version.value)
-                            elif hasattr(version, 'name'):
-                                versions.append(int(version.name.replace('COL_', '')))
-                
-                if versions:
-                    most_common_version = max(set(versions), key=versions.count)
-                    gui_layout.format_version_label.setText(f"Format: COL v{most_common_version}")
-                else:
-                    gui_layout.format_version_label.setText(f"Format: COL")
+                version = getattr(col_file, 'version', 'Unknown')
+                gui_layout.format_version_label.setText(f"Format: COL v{version}")
             
-            self._log("✅ Updated info bar for COL file")
-            return True
-
+            self.main_window.log_message("✅ Info bar updated for COL file")
+            
         except Exception as e:
-            self._log(f"⚠️ Error updating info bar: {e}")
-            return False
-    
-    def _log(self, message):
-        """Log message to main window"""
-        if hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(message)
-        elif self.debug:
-            print(message)
+            self.main_window.log_message(f"⚠️ Error updating info bar: {str(e)}")
 
-class COLTableFormatter:
-    """Utility class for formatting COL data for table display"""
-    
-    @staticmethod
-    def format_collision_summary(model):
-        """Create a summary string of collision data"""
-        stats = COLDisplayManager._get_model_stats(None, model) if hasattr(COLDisplayManager, '_get_model_stats') else {}
-        
-        total = stats.get('total_elements', 0)
-        if total == 0:
-            return "No collision data"
-        
-        parts = []
-        if stats.get('spheres', 0) > 0:
-            parts.append(f"{stats['spheres']} spheres")
-        if stats.get('boxes', 0) > 0:
-            parts.append(f"{stats['boxes']} boxes")
-        if stats.get('faces', 0) > 0:
-            parts.append(f"{stats['faces']} faces")
-        
-        return ", ".join(parts) if parts else f"{total} elements"
-    
-    @staticmethod
-    def get_collision_complexity_level(model):
-        """Get collision complexity level (Simple/Medium/Complex)"""
-        try:
-            stats = COLDisplayManager._get_model_stats(None, model) if hasattr(COLDisplayManager, '_get_model_stats') else {}
-            total = stats.get('total_elements', 0)
-            
-            if total == 0:
-                return "None"
-            elif total <= 10:
-                return "Simple"
-            elif total <= 50:
-                return "Medium"
-            else:
-                return "Complex"
-                
-        except Exception:
-            return "Unknown"
-    
-    @staticmethod
-    def format_bounding_info(model):
-        """Format bounding box information"""
-        try:
-            if hasattr(model, 'bounding_box') and model.bounding_box:
-                center = model.bounding_box.center
-                radius = model.bounding_box.radius
-                return f"Center: ({center.x:.1f}, {center.y:.1f}, {center.z:.1f}), Radius: {radius:.1f}"
-            else:
-                return "No bounding data"
-        except Exception:
-            return "Invalid bounding data"
-
-# Factory function for easy integration
-def create_col_display_manager(main_window):
-    """Create a COL display manager for the given main window"""
-    return COLDisplayManager(main_window)
-
-# Convenience functions for backward compatibility
-def populate_col_table(main_window, col_file):
-    """Convenience function to populate COL table"""
+# Standalone functions for use without class
+def populate_col_table_with_enhanced_data(main_window, col_file):
+    """Standalone function to populate COL table with enhanced data"""
     display_manager = COLDisplayManager(main_window)
-    return display_manager.populate_col_table(col_file)
+    display_manager.populate_col_table(col_file)
 
-def update_col_info_bar(main_window, col_file, file_path):
-    """Convenience function to update COL info bar"""
+def update_col_info_bar_enhanced(main_window, col_file, file_path):
+    """Standalone function to update info bar with enhanced COL data"""
     display_manager = COLDisplayManager(main_window)
-    return display_manager.update_col_info_bar(col_file, file_path)
+    display_manager.update_col_info_bar(col_file, file_path)
