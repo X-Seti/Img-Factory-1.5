@@ -45,7 +45,6 @@ from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent,
 # OR use the full path:
 from utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
 
-from components.img_creator import NewIMGDialog
 from components.img_core_classes import (
     IMGFile, IMGEntry, IMGVersion, Platform, format_file_size,
     IMGEntriesTable, FilterPanel, IMGFileInfoPanel,
