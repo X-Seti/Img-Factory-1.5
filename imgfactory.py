@@ -58,6 +58,7 @@ from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 #from components.img_threads import IMGLoadThread, IMGSaveThread
 from components.img_validator import IMGValidator
 from components.col_tabs_integration import setup_col_tab_integration
+from components.file_extraction_integration import setup_complete_extraction_integration
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.menu import IMGFactoryMenuBar
@@ -395,7 +396,6 @@ class IMGFactory(QMainWindow):
 
         # Setup close manager for tab handling
         install_close_functions(self)
-
         # COL Integration - FIXED: Move to end and use correct import
 
         try:
@@ -408,6 +408,12 @@ class IMGFactory(QMainWindow):
             self.log_message(f"COL integration not available: {e}")
         except Exception as e:
             self.log_message(f"COL integration error: {str(e)}")
+
+        try:
+            from components.file_extraction_integration import setup_complete_extraction_integration
+            setup_complete_extraction_integration(self)
+        except Exception as e:
+            self.log_message(f"⚠️ Failed to setup extraction integration: {str(e)}")
 
         # Apply theme
         if hasattr(self.app_settings, 'themes'):

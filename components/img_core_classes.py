@@ -231,17 +231,76 @@ class IMGEntry:
             return 0
     
     def populate_entry_details(self):
-        """Populate additional entry details like RW version and file type"""
-        # Extract extension from name
-        if '.' in self.name:
-            self.extension = self.name.split('.')[-1].upper()
-        
-        # Detect file type from extension
+        """Populate additional entry details like RW version and file type - FIXED for Vice City"""
+        import re
+
+        # FIXED: Vice City filename parsing with corruption handling
+        if hasattr(self, 'name') and self.name:
+            original_name = str(self.name).strip()
+
+            # Pattern 1: Extension embedded without dot (e.g., "playerDFF" → "player.DFF")
+            extension_patterns = [
+                (r'(.+)(DFF)$', r'\1', 'DFF'),
+                (r'(.+)(TXD)$', r'\1', 'TXD'),
+                (r'(.+)(COL)$', r'\1', 'COL'),
+                (r'(.+)(IFP)$', r'\1', 'IFP'),
+                (r'(.+)(WAV)$', r'\1', 'WAV'),
+                (r'(.+)(SCM)$', r'\1', 'SCM'),
+                (r'(.+)(IPL)$', r'\1', 'IPL'),
+                (r'(.+)(IDE)$', r'\1', 'IDE'),
+                (r'(.+)(DAT)$', r'\1', 'DAT')
+            ]
+
+            fixed_name = original_name
+            extension = ""
+
+            # Try pattern matching for embedded extensions
+            for pattern, name_replace, ext in extension_patterns:
+                match = re.match(pattern, original_name, re.IGNORECASE)
+                if match:
+                    fixed_name = match.group(1)
+                    extension = ext
+                    # Update the actual name if it was corrupted
+                    if fixed_name != original_name:
+                        self.name = f"{fixed_name}.{ext}"
+                    break
+
+            # Pattern 2: Normal extension parsing
+            if not extension and '.' in original_name:
+                parts = original_name.split('.')
+                if len(parts) >= 2:
+                    fixed_name = '.'.join(parts[:-1])
+                    extension = parts[-1].upper()
+                    # Clean extension of any non-alphabetic characters
+                    extension = ''.join(c for c in extension if c.isalpha())
+
+            # Pattern 3: Multiple extensions or corruption (e.g., "player.dff.txt")
+            if '.' in original_name:
+                parts = original_name.split('.')
+                if len(parts) > 2:
+                    # Look for valid extensions in the parts
+                    valid_extensions = ['DFF', 'TXD', 'COL', 'IFP', 'WAV', 'SCM', 'IPL', 'IDE', 'DAT']
+                    for part in parts[1:]:
+                        clean_part = re.sub(r'[^a-zA-Z]', '', part).upper()
+                        if clean_part in valid_extensions:
+                            fixed_name = parts[0]
+                            extension = clean_part
+                            self.name = f"{fixed_name}.{clean_part}"
+                            break
+
+            self.extension = extension
+        else:
+            self.extension = ""
+
+        # Set file type based on extension
         self.file_type = self.get_file_type()
 
-        # For RW files, detect version from data
-        if self.is_rw_file():
-            self.rw_version = self.detect_rw_version()
+        # Try to detect RW version for DFF/TXD files
+        if self.extension in ['DFF', 'TXD']:
+            try:
+                self.rw_version = self.detect_rw_version()
+            except:
+                self.rw_version = 0
     
     def get_version_text(self) -> str:
         """Get human-readable version information"""

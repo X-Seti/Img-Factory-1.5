@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-#this belongs in components/col_integration.py - version 10
-X-Seti - July07 2025 - COL Integration for Img Factory 1.5
-Complete COL functionality integration - clean version without fallbacks
+#this belongs in components/col_integration.py - version 11
+# X-Seti - July10 2025 - Img Factory 1.5
+# Complete COL functionality integration - Updated with threaded loading
 """
 
 import os
@@ -15,13 +15,296 @@ from PyQt6.QtWidgets import (
     QMenu, QMenuBar, QCheckBox, QSpinBox, QTextEdit, QDialog,
     QFrame, QLineEdit, QApplication
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QThread
+from PyQt6.QtCore import Qt, pyqtSignal, QThread, QTimer
 from PyQt6.QtGui import QAction, QIcon, QContextMenuEvent, QShortcut, QKeySequence
 
 # Import COL components
 from components.col_core_classes import COLFile, COLModel, COLVersion
 from components.col_editor import COLEditorDialog, open_col_editor
 from components.col_utilities import open_col_batch_processor, analyze_col_file_dialog
+from components.col_debug_settings import col_debug_log, is_col_debug_enabled, setup_col_debug_for_main_window
+from components.col_robust_parser import patch_col_parsing_for_robustness, estimate_gtasa_model, format_parsing_result
+
+# =======================
+# THREADED LOADING SYSTEM  
+# =======================
+
+class COLBackgroundLoader(QThread):
+    """Background thread for loading COL files without freezing UI"""
+    
+    # Signals for UI updates
+    progress_update = pyqtSignal(int, str)  # progress %, status text
+    model_loaded = pyqtSignal(int, str)     # model count, model name
+    load_complete = pyqtSignal(object)      # COLFile object
+    load_error = pyqtSignal(str)            # error message
+    
+    def __init__(self, file_path: str, parent=None):
+        super().__init__(parent)
+        self.file_path = file_path
+        self.should_cancel = False
+        self.col_file = None
+        
+    def cancel_load(self):
+        """Cancel the loading operation"""
+        self.should_cancel = True
+        
+    def run(self):
+        """Run the background loading process"""
+        try:
+            col_debug_log(self.parent(), "Starting background COL loading", 'COL_THREADING')
+            
+            self.progress_update.emit(0, "Initializing COL loader...")
+            QApplication.processEvents()
+            
+            # Check file exists
+            if not os.path.exists(self.file_path):
+                col_debug_log(self.parent(), f"File not found: {self.file_path}", 'COL_LOADING', 'ERROR')
+                self.load_error.emit(f"File not found: {self.file_path}")
+                return
+                
+            file_size = os.path.getsize(self.file_path)
+            col_debug_log(self.parent(), f"Loading COL file: {file_size:,} bytes", 'COL_LOADING')
+            self.progress_update.emit(5, f"Loading COL file ({file_size:,} bytes)...")
+            
+            # Create COL file object
+            self.col_file = COLFile(self.file_path)
+            
+            self.progress_update.emit(10, "Reading COL header...")
+            col_debug_log(self.parent(), "Created COL file object, starting parse", 'COL_PARSING')
+            
+            # Start the actual loading with progress monitoring
+            if not self._load_with_progress():
+                col_debug_log(self.parent(), "COL loading failed", 'COL_LOADING', 'ERROR')
+                self.load_error.emit("Failed to load COL file - see log for details")
+                return
+                
+            col_debug_log(self.parent(), "COL loading completed successfully", 'COL_LOADING')
+            self.progress_update.emit(100, "COL loading complete")
+            self.load_complete.emit(self.col_file)
+            
+        except Exception as e:
+            col_debug_log(self.parent(), f"COL loading exception: {str(e)}", 'COL_LOADING', 'ERROR')
+            self.load_error.emit(f"COL loading error: {str(e)}")
+    
+    def _load_with_progress(self) -> bool:
+        """Load COL file with progress updates"""
+        try:
+            # Hook into the COL loading process
+            original_load = self.col_file.load
+            
+            def progress_load():
+                # Start loading
+                self.progress_update.emit(20, "Parsing COL data...")
+                
+                # Let UI update
+                self.msleep(10)
+                if self.should_cancel:
+                    return False
+                
+                # Call original load method
+                result = original_load()
+                
+                if result and hasattr(self.col_file, 'models'):
+                    # Report model loading progress
+                    model_count = len(self.col_file.models)
+                    self.progress_update.emit(80, f"Loaded {model_count} collision models")
+                    
+                    # Process each model for UI feedback
+                    for i, model in enumerate(self.col_file.models):
+                        if self.should_cancel:
+                            return False
+                            
+                        progress = 80 + int((i / model_count) * 15)
+                        model_name = getattr(model, 'name', f'Model {i+1}')
+                        self.progress_update.emit(progress, f"Processing {model_name}...")
+                        self.model_loaded.emit(i+1, model_name)
+                        
+                        # Small delay to prevent UI lockup
+                        self.msleep(5)
+                
+                return result
+            
+            # Replace the load method temporarily
+            self.col_file.load = progress_load
+            return self.col_file.load()
+            
+        except Exception as e:
+            self.progress_update.emit(0, f"Loading error: {str(e)}")
+            return False
+
+def load_col_file_async(main_window, file_path: str):
+    """Load COL file asynchronously with progress feedback"""
+    
+    # Create progress dialog
+    if hasattr(main_window.gui_layout, 'show_progress'):
+        main_window.gui_layout.show_progress(0, "Loading COL file...")
+    
+    # Create background loader
+    loader = COLBackgroundLoader(file_path, main_window)
+    
+    # Connect signals
+    def on_progress(progress, status):
+        """Update progress display"""
+        if hasattr(main_window.gui_layout, 'update_progress'):
+            main_window.gui_layout.update_progress(progress, status)
+        main_window.log_message(f"COL Load: {status}")
+    
+    def on_model_loaded(count, name):
+        """Report model loading"""
+        main_window.log_message(f"📦 Loaded model {count}: {name}")
+    
+    def on_load_complete(col_file):
+        """Handle successful load completion"""
+        try:
+            # Hide progress
+            if hasattr(main_window.gui_layout, 'hide_progress'):
+                main_window.gui_layout.hide_progress()
+            
+            # Update main window with loaded COL
+            main_window.current_col = col_file
+            
+            # Populate table with COL data
+            try:
+                from components.col_tab_integration import populate_table_with_col_data_debug
+                populate_table_with_col_data_debug(main_window, col_file)
+            except ImportError:
+                # Fallback to local population function
+                populate_col_table_fallback(main_window, col_file)
+            
+            # Update info bar
+            try:
+                from components.col_tab_integration import update_info_bar_for_col
+                update_info_bar_for_col(main_window, col_file, file_path)
+            except ImportError:
+                # Fallback to local info update
+                update_col_info_fallback(main_window, col_file, file_path)
+            
+            # Update window title
+            file_name = os.path.basename(file_path)
+            main_window.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
+            
+            model_count = len(col_file.models) if hasattr(col_file, 'models') else 0
+            main_window.log_message(f"✅ COL Load Complete: {file_name} ({model_count} models)")
+            
+        except Exception as e:
+            main_window.log_message(f"❌ Error updating UI after COL load: {str(e)}")
+    
+    def on_load_error(error_msg):
+        """Handle load errors"""
+        # Hide progress
+        if hasattr(main_window.gui_layout, 'hide_progress'):
+            main_window.gui_layout.hide_progress()
+        
+        main_window.log_message(f"❌ COL Load Error: {error_msg}")
+        
+        # Show error dialog
+        QMessageBox.critical(main_window, "COL Load Error", 
+                           f"Failed to load COL file:\n{error_msg}")
+    
+    # Connect all signals
+    loader.progress_update.connect(on_progress)
+    loader.model_loaded.connect(on_model_loaded)
+    loader.load_complete.connect(on_load_complete)
+    loader.load_error.connect(on_load_error)
+    
+    # Store loader reference to prevent garbage collection
+    main_window._col_loader = loader
+    
+    # Start loading
+    loader.start()
+    
+    main_window.log_message(f"🔄 Started background COL loading: {os.path.basename(file_path)}")
+    
+    return loader
+
+def cancel_col_loading(main_window):
+    """Cancel any ongoing COL loading operation"""
+    try:
+        if hasattr(main_window, '_col_loader') and main_window._col_loader:
+            if main_window._col_loader.isRunning():
+                main_window._col_loader.cancel_load()
+                main_window._col_loader.wait(3000)  # Wait up to 3 seconds
+                main_window.log_message("🛑 COL loading cancelled")
+                return True
+        return False
+    except Exception as e:
+        main_window.log_message(f"⚠️ Error cancelling COL load: {str(e)}")
+        return False
+
+def populate_col_table_fallback(main_window, col_file):
+    """Fallback function to populate table with COL data using robust parsing"""
+    try:
+        col_debug_log(main_window, f"Populating table with {len(col_file.models)} COL models", 'COL_DISPLAY')
+        
+        if not hasattr(main_window.gui_layout, 'table'):
+            return
+            
+        table = main_window.gui_layout.table
+        table.setRowCount(len(col_file.models))
+        
+        for i, model in enumerate(col_file.models):
+            # Model name
+            model_name = getattr(model, 'name', f'Model {i+1}')
+            name_item = QTableWidgetItem(model_name)
+            table.setItem(i, 0, name_item)
+            
+            # Type
+            type_item = QTableWidgetItem("COL Model")
+            table.setItem(i, 1, type_item)
+            
+            # Get robust stats
+            try:
+                stats = model.get_stats() if hasattr(model, 'get_stats') else {}
+                
+                # If stats look corrupted, use GTA SA heuristics
+                total_elements = stats.get('total_elements', 0)
+                if total_elements == 0 or total_elements > 50000:
+                    col_debug_log(main_window, f"Using heuristic estimation for model {model_name}", 'COL_ESTIMATION')
+                    model_size = getattr(model, 'size', 0)
+                    heuristic_stats = estimate_gtasa_model(model_name, model_size)
+                    stats.update(heuristic_stats)
+                    total_elements = sum(heuristic_stats.values())
+                
+                # Size estimate with validation
+                size_estimate = max(total_elements * 20, 60)  # Minimum 60 bytes
+                size_item = QTableWidgetItem(f"{size_estimate:,} bytes")
+                table.setItem(i, 2, size_item)
+                
+                col_debug_log(main_window, format_parsing_result(stats, model_name), 'COL_DISPLAY')
+                
+            except Exception as e:
+                col_debug_log(main_window, f"Error getting stats for model {model_name}: {str(e)}", 'COL_DISPLAY', 'WARNING')
+                # Fallback size
+                size_item = QTableWidgetItem("Unknown")
+                table.setItem(i, 2, size_item)
+            
+    except Exception as e:
+        col_debug_log(main_window, f"Error in fallback table population: {str(e)}", 'COL_DISPLAY', 'ERROR')
+        main_window.log_message(f"⚠️ Error in fallback table population: {str(e)}")
+
+def update_col_info_fallback(main_window, col_file, file_path):
+    """Fallback function to update info bar"""
+    try:
+        if hasattr(main_window.gui_layout, 'file_name_label'):
+            file_name = os.path.basename(file_path)
+            main_window.gui_layout.file_name_label.setText(f"File: {file_name}")
+        
+        if hasattr(main_window.gui_layout, 'file_size_label'):
+            file_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+            if file_size < 1024:
+                size_str = f"{file_size} bytes"
+            elif file_size < 1024*1024:
+                size_str = f"{file_size/1024:.1f} KB"
+            else:
+                size_str = f"{file_size/(1024*1024):.1f} MB"
+            main_window.gui_layout.file_size_label.setText(f"Size: {size_str}")
+        
+    except Exception as e:
+        main_window.log_message(f"⚠️ Error in fallback info update: {str(e)}")
+
+# =======================
+# EXISTING COL WIDGETS
+# =======================
 
 class COLFileLoadThread(QThread):
     """Background thread for loading COL files"""
@@ -73,33 +356,27 @@ class COLListWidget(QWidget):
         self.load_btn.clicked.connect(self.load_col_file)
         header_layout.addWidget(self.load_btn)
         
-        header_layout.addStretch()
         layout.addLayout(header_layout)
         
         # COL files table
         self.col_table = QTableWidget()
         self.col_table.setColumnCount(4)
         self.col_table.setHorizontalHeaderLabels(["Name", "Models", "Version", "Size"])
-        self.col_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.col_table.setAlternatingRowColors(True)
-        self.col_table.horizontalHeader().setStretchLastSection(True)
         
-        # Connect signals
+        header = self.col_table.horizontalHeader()
+        header.setStretchLastSection(True)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        
+        self.col_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.col_table.itemSelectionChanged.connect(self.on_selection_changed)
-        self.col_table.itemDoubleClicked.connect(self.on_double_clicked)
-        self.col_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.col_table.customContextMenuRequested.connect(self.show_context_menu)
+        self.col_table.itemDoubleClicked.connect(self.on_double_click)
         
         layout.addWidget(self.col_table)
-        
-        # Status
-        self.status_label = QLabel("No COL files loaded")
-        layout.addWidget(self.status_label)
     
     def load_col_file(self):
-        """Load COL file"""
+        """Load COL file dialog"""
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Load COL File", "", "COL Files (*.col);;All Files (*)"
+            self, "Open COL File", "", "COL Files (*.col);;All Files (*)"
         )
         
         if file_path:
@@ -110,13 +387,16 @@ class COLListWidget(QWidget):
         try:
             col_file = COLFile(file_path)
             if col_file.load():
-                self.col_files.append(col_file)
-                self.refresh_table()
-                self.status_label.setText(f"Loaded: {len(self.col_files)} COL files")
+                self.add_col_file(col_file)
             else:
-                QMessageBox.warning(self, "Error", f"Failed to load COL file: {file_path}")
+                QMessageBox.warning(self, "Load Error", f"Failed to load COL file: {file_path}")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error loading COL file: {str(e)}")
+    
+    def add_col_file(self, col_file: COLFile):
+        """Add COL file to the list"""
+        self.col_files.append(col_file)
+        self.refresh_table()
     
     def refresh_table(self):
         """Refresh the COL files table"""
@@ -125,76 +405,46 @@ class COLListWidget(QWidget):
         for row, col_file in enumerate(self.col_files):
             # Name
             name = os.path.basename(col_file.file_path) if col_file.file_path else "Unknown"
-            name_item = QTableWidgetItem(name)
-            name_item.setToolTip(col_file.file_path or "No file path")
-            self.col_table.setItem(row, 0, name_item)
+            self.col_table.setItem(row, 0, QTableWidgetItem(name))
             
             # Models count
-            models_item = QTableWidgetItem(str(len(col_file.models)) if hasattr(col_file, 'models') else "0")
-            self.col_table.setItem(row, 1, models_item)
+            model_count = len(col_file.models) if hasattr(col_file, 'models') else 0
+            self.col_table.setItem(row, 1, QTableWidgetItem(str(model_count)))
             
             # Version
-            version_text = "Unknown"
-            if hasattr(col_file, 'models') and col_file.models:
-                try:
-                    version_text = f"v{col_file.models[0].version.value}"
-                    if len(set(m.version for m in col_file.models)) > 1:
-                        version_text += " (mixed)"
-                except:
-                    version_text = "Unknown"
-            version_item = QTableWidgetItem(version_text)
-            self.col_table.setItem(row, 2, version_item)
+            version = getattr(col_file, 'version', 'Unknown')
+            self.col_table.setItem(row, 2, QTableWidgetItem(str(version)))
             
             # Size
             try:
                 size = os.path.getsize(col_file.file_path) if col_file.file_path else 0
-                size_text = f"{size:,} bytes"
+                size_str = self.format_file_size(size)
             except:
-                size_text = "Unknown"
-            size_item = QTableWidgetItem(size_text)
-            self.col_table.setItem(row, 3, size_item)
+                size_str = "Unknown"
+            self.col_table.setItem(row, 3, QTableWidgetItem(size_str))
+    
+    def format_file_size(self, size: int) -> str:
+        """Format file size for display"""
+        if size < 1024:
+            return f"{size} B"
+        elif size < 1024 * 1024:
+            return f"{size / 1024:.1f} KB"
+        else:
+            return f"{size / (1024 * 1024):.1f} MB"
     
     def on_selection_changed(self):
         """Handle selection change"""
         current_row = self.col_table.currentRow()
         if 0 <= current_row < len(self.col_files):
-            self.col_selected.emit(self.col_files[current_row])
+            col_file = self.col_files[current_row]
+            self.col_selected.emit(col_file)
     
-    def on_double_clicked(self, item):
+    def on_double_click(self, item):
         """Handle double click"""
         row = item.row()
         if 0 <= row < len(self.col_files):
-            self.col_double_clicked.emit(self.col_files[row])
-    
-    def show_context_menu(self, position):
-        """Show context menu"""
-        if self.col_table.itemAt(position) is None:
-            return
-        
-        menu = QMenu(self)
-        
-        edit_action = QAction("✏️ Edit COL", self)
-        edit_action.triggered.connect(self.edit_selected_col)
-        menu.addAction(edit_action)
-        
-        analyze_action = QAction("🔍 Analyze COL", self)
-        analyze_action.triggered.connect(self.analyze_selected_col)
-        menu.addAction(analyze_action)
-        
-        menu.exec(self.col_table.mapToGlobal(position))
-    
-    def edit_selected_col(self):
-        """Edit selected COL file"""
-        current_row = self.col_table.currentRow()
-        if 0 <= current_row < len(self.col_files):
-            col_file = self.col_files[current_row]
-            open_col_editor(self, col_file.file_path)
-    
-    def analyze_selected_col(self):
-        """Analyze selected COL file"""
-        current_row = self.col_table.currentRow()
-        if 0 <= current_row < len(self.col_files):
-            analyze_col_file_dialog(self)
+            col_file = self.col_files[row]
+            self.col_double_clicked.emit(col_file)
 
 class COLModelDetailsWidget(QWidget):
     """Widget for displaying COL model details"""
@@ -209,111 +459,59 @@ class COLModelDetailsWidget(QWidget):
         layout = QVBoxLayout(self)
         
         # Header
-        self.header_label = QLabel("📊 COL Model Details")
-        self.header_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
-        layout.addWidget(self.header_label)
+        layout.addWidget(QLabel("📋 COL Model Details"))
         
-        # Model info
-        info_group = QGroupBox("Model Information")
-        info_layout = QVBoxLayout(info_group)
+        # Details text
+        self.details_text = QTextEdit()
+        self.details_text.setReadOnly(True)
+        layout.addWidget(self.details_text)
         
-        self.info_text = QTextEdit()
-        self.info_text.setMaximumHeight(100)
-        self.info_text.setReadOnly(True)
-        info_layout.addWidget(self.info_text)
-        
-        layout.addWidget(info_group)
-        
-        # Statistics
-        stats_group = QGroupBox("Statistics")
-        stats_layout = QVBoxLayout(stats_group)
-        
-        self.stats_text = QTextEdit()
-        self.stats_text.setMaximumHeight(150)
-        self.stats_text.setReadOnly(True)
-        stats_layout.addWidget(self.stats_text)
-        
-        layout.addWidget(stats_group)
-        
-        # Actions
-        actions_group = QGroupBox("Actions")
-        actions_layout = QHBoxLayout(actions_group)
+        # Control buttons
+        buttons_layout = QHBoxLayout()
         
         self.edit_btn = QPushButton("✏️ Edit")
         self.edit_btn.clicked.connect(self.edit_current_model)
-        actions_layout.addWidget(self.edit_btn)
+        buttons_layout.addWidget(self.edit_btn)
         
         self.analyze_btn = QPushButton("🔍 Analyze")
         self.analyze_btn.clicked.connect(self.analyze_current_model)
-        actions_layout.addWidget(self.analyze_btn)
+        buttons_layout.addWidget(self.analyze_btn)
         
-        actions_layout.addStretch()
-        layout.addWidget(actions_group)
+        layout.addLayout(buttons_layout)
         
-        layout.addStretch()
+        self.update_display()
     
     def set_col_file(self, col_file: COLFile):
-        """Set the COL file to display"""
+        """Set the current COL file"""
         self.current_col_file = col_file
         self.update_display()
     
     def update_display(self):
-        """Update the display"""
+        """Update the details display"""
         if not self.current_col_file:
-            self.info_text.setPlainText("No COL file selected")
-            self.stats_text.setPlainText("No statistics available")
+            self.details_text.setText("No COL file selected")
             self.edit_btn.setEnabled(False)
             self.analyze_btn.setEnabled(False)
             return
         
+        details = []
+        details.append(f"File: {os.path.basename(self.current_col_file.file_path)}")
+        
+        if hasattr(self.current_col_file, 'models'):
+            details.append(f"Models: {len(self.current_col_file.models)}")
+            
+            for i, model in enumerate(self.current_col_file.models):
+                details.append(f"\nModel {i+1}:")
+                details.append(f"  Name: {getattr(model, 'name', 'Unnamed')}")
+                
+                if hasattr(model, 'get_stats'):
+                    stats = model.get_stats()
+                    for key, value in stats.items():
+                        details.append(f"  {key.title()}: {value}")
+        
+        self.details_text.setText("\n".join(details))
         self.edit_btn.setEnabled(True)
         self.analyze_btn.setEnabled(True)
-        
-        # Update info
-        try:
-            info_lines = []
-            info_lines.append(f"File: {os.path.basename(self.current_col_file.file_path)}")
-            
-            if hasattr(self.current_col_file, 'models'):
-                info_lines.append(f"Models: {len(self.current_col_file.models)}")
-                
-                if self.current_col_file.models:
-                    versions = set(m.version for m in self.current_col_file.models)
-                    if len(versions) == 1:
-                        info_lines.append(f"Version: {list(versions)[0].value}")
-                    else:
-                        info_lines.append(f"Versions: {', '.join(str(v.value) for v in versions)}")
-            
-            self.info_text.setPlainText("\n".join(info_lines))
-        except Exception as e:
-            self.info_text.setPlainText(f"Error loading info: {str(e)}")
-        
-        # Update statistics
-        try:
-            if hasattr(self.current_col_file, 'get_total_stats'):
-                stats = self.current_col_file.get_total_stats()
-                stats_text = []
-                
-                for key, value in stats.items():
-                    stats_text.append(f"{key.title()}: {value}")
-                
-                # Calculate additional statistics
-                total_elements = stats.get('spheres', 0) + stats.get('boxes', 0) + stats.get('meshes', 0)
-                stats_text.append(f"Total Elements: {total_elements}")
-                
-                if stats.get('vertices', 0) > 0 and stats.get('faces', 0) > 0:
-                    vertex_face_ratio = stats['vertices'] / stats['faces']
-                    stats_text.append(f"Vertex/Face Ratio: {vertex_face_ratio:.2f}")
-                
-                if total_elements > 0:
-                    complexity = "Low" if total_elements < 100 else "Medium" if total_elements < 500 else "High"
-                    stats_text.append(f"Complexity: {complexity}")
-                
-                self.stats_text.setPlainText("\n".join(stats_text))
-            else:
-                self.stats_text.setPlainText("Statistics not available")
-        except Exception as e:
-            self.stats_text.setPlainText(f"Error loading statistics: {str(e)}")
     
     def edit_current_model(self):
         """Edit current model"""
@@ -337,31 +535,66 @@ class COLModelDetailsWidget(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Analysis failed: {str(e)}")
 
-# Main Integration Functions
+# =======================
+# INTEGRATION FUNCTIONS
+# =======================
 
 def setup_col_integration_full(main_window):
-    """Main COL integration entry point"""
+    """Main COL integration entry point with threaded loading"""
     try:
-        print("Starting COL integration for IMG interface...")
+        col_debug_log(main_window, "Starting COL integration for IMG interface", 'COL_INTEGRATION')
+
+        # Setup COL debug functionality first
+        setup_col_debug_for_main_window(main_window)
+
+        # Setup threaded loading first
+        setup_threaded_col_loading(main_window)
 
         # Add COL tools menu to existing menu bar
         if hasattr(main_window, 'menuBar') and main_window.menuBar():
             add_col_tools_menu(main_window)
-            print("✓ COL tools menu added")
+            col_debug_log(main_window, "COL tools menu added", 'COL_INTEGRATION')
 
         # Add COL context menu items to existing entries table
         if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
             add_col_context_menu_to_entries_table(main_window)
-            print("✓ COL context menu added to entries table")
+            col_debug_log(main_window, "COL context menu added to entries table", 'COL_INTEGRATION')
 
         # Mark integration as completed
         main_window._col_integration_active = True
         
-        print("✅ COL integration completed successfully")
+        col_debug_log(main_window, "COL integration completed successfully", 'COL_INTEGRATION')
         return True
         
     except Exception as e:
-        print(f"❌ COL integration failed: {e}")
+        col_debug_log(main_window, f"COL integration failed: {e}", 'COL_INTEGRATION', 'ERROR')
+        return False
+
+def setup_threaded_col_loading(main_window):
+    """Setup threaded COL loading functionality"""
+    try:
+        # Apply robust parsing patches first
+        patch_col_parsing_for_robustness()
+        col_debug_log(main_window, "Applied robust COL parsing patches", 'COL_PARSING')
+        
+        # Add async loading method to main window
+        main_window.load_col_file_async = lambda file_path: load_col_file_async(main_window, file_path)
+        
+        # Update existing COL loading to use async version
+        if hasattr(main_window, 'load_col_file_safely'):
+            # Replace synchronous loader with async version
+            main_window.load_col_file_safely = main_window.load_col_file_async
+        
+        # Add cancel method
+        main_window.cancel_col_loading = lambda: cancel_col_loading(main_window)
+        
+        main_window.log_message("✅ COL integration with threading enabled")
+        col_debug_log(main_window, "Threaded COL loading setup complete", 'COL_THREADING')
+        return True
+        
+    except Exception as e:
+        col_debug_log(main_window, f"Error setting up threaded COL integration: {str(e)}", 'COL_INTEGRATION', 'ERROR')
+        main_window.log_message(f"❌ Error setting up threaded COL integration: {str(e)}")
         return False
 
 def add_col_tools_menu(main_window):
@@ -388,78 +621,65 @@ def add_col_tools_menu(main_window):
         batch_action.triggered.connect(lambda: open_col_batch_processor(main_window))
         col_submenu.addAction(batch_action)
         
+        # COL Editor
+        editor_action = QAction("✏️ COL Editor", main_window)
+        editor_action.setStatusTip("Open COL file editor")
+        editor_action.triggered.connect(lambda: open_col_editor(main_window))
+        col_submenu.addAction(editor_action)
+        
         # Analyzer
-        analyze_action = QAction("🔍 Analyze COL File", main_window)
-        analyze_action.setStatusTip("Analyze a COL file for issues")
+        analyze_action = QAction("🔍 Analyze COL", main_window)
+        analyze_action.setStatusTip("Analyze COL file structure")
         analyze_action.triggered.connect(lambda: analyze_col_file_dialog(main_window))
         col_submenu.addAction(analyze_action)
         
-        col_submenu.addSeparator()
-        
-        # IMG integration tools
-        import_col_action = QAction("📥 Import COL to IMG", main_window)
-        import_col_action.triggered.connect(lambda: import_col_to_current_img(main_window))
-        col_submenu.addAction(import_col_action)
-        
-        export_all_action = QAction("📤 Export All COL from IMG", main_window)
-        export_all_action.triggered.connect(lambda: export_all_col_from_img(main_window))
-        col_submenu.addAction(export_all_action)
-        
-        col_submenu.addSeparator()
-        
-        # Help
-        help_action = QAction("❓ COL Help", main_window)
-        help_action.triggered.connect(lambda: show_col_help_dialog(main_window))
-        col_submenu.addAction(help_action)
-        
+        print("✓ COL tools menu created")
         return True
         
     except Exception as e:
-        print(f"Error adding COL tools menu: {e}")
+        print(f"❌ Error creating COL tools menu: {e}")
         return False
 
 def add_col_context_menu_to_entries_table(main_window):
-    """Add COL context menu items to the existing IMG entries table"""
+    """Add COL-specific context menu items to entries table"""
     try:
+        if not hasattr(main_window.gui_layout, 'table'):
+            return False
+        
         entries_table = main_window.gui_layout.table
+        original_context_menu = entries_table.contextMenuEvent
         
-        # Store original context menu method
-        original_context_menu = getattr(entries_table, 'contextMenuEvent', None)
-        
-        def enhanced_context_menu_event(event):
-            # Get the item under cursor
+        def enhanced_context_menu_event(event: QContextMenuEvent):
+            """Enhanced context menu with COL support"""
+            # Get selected row
             item = entries_table.itemAt(event.pos())
             if not item:
                 return
             
             row = item.row()
-            if row < 0:
-                return
-            
-            # Get entry name from first column
-            name_item = entries_table.item(row, 0)
-            if not name_item:
-                return
-            
-            entry_name = name_item.text()
-            is_col_file = entry_name.lower().endswith('.col')
             
             # Create context menu
             menu = QMenu(entries_table)
             
-            # Add COL-specific actions if this is a COL file
-            if is_col_file:
-                # Edit COL
-                edit_action = QAction("✏️ Edit COL", entries_table)
-                edit_action.triggered.connect(lambda: edit_col_from_img_entry(main_window, row))
-                menu.addAction(edit_action)
-                
-                # Analyze COL
-                analyze_action = QAction("🔍 Analyze COL", entries_table)
-                analyze_action.triggered.connect(lambda: analyze_col_from_img_entry(main_window, row))
-                menu.addAction(analyze_action)
-                
-                menu.addSeparator()
+            # Check if selected entry might be a COL file
+            try:
+                name_item = entries_table.item(row, 0)
+                if name_item:
+                    entry_name = name_item.text().lower()
+                    if entry_name.endswith('.col'):
+                        # Add COL-specific actions
+                        edit_action = QAction("✏️ Edit COL", entries_table)
+                        edit_action.triggered.connect(lambda: edit_col_from_img_entry(main_window, row))
+                        menu.addAction(edit_action)
+                        
+                        # Analyze COL
+                        analyze_action = QAction("🔍 Analyze COL", entries_table)
+                        analyze_action.triggered.connect(lambda: analyze_col_from_img_entry(main_window, row))
+                        menu.addAction(analyze_action)
+                        
+                        menu.addSeparator()
+            except:
+                pass
             
             # Add standard actions
             export_action = QAction("📤 Export", entries_table)
@@ -483,7 +703,9 @@ def add_col_context_menu_to_entries_table(main_window):
         print(f"Error adding COL context menu: {e}")
         return False
 
-# COL Operations
+# =======================
+# COL OPERATIONS
+# =======================
 
 def import_col_to_current_img(main_window):
     """Import COL file to current IMG"""
@@ -519,41 +741,24 @@ def export_all_col_from_img(main_window):
             QMessageBox.warning(main_window, "No IMG", "Please open an IMG file first")
             return
         
-        # Find COL entries
-        col_entries = [entry for entry in main_window.current_img.entries 
-                      if entry.name.lower().endswith('.col')]
-        
-        if not col_entries:
-            QMessageBox.information(main_window, "No COL Files", "No COL files found in current IMG")
-            return
-        
-        # Select output directory
         output_dir = QFileDialog.getExistingDirectory(main_window, "Select Output Directory")
         if not output_dir:
             return
         
-        # Export each COL file
         exported_count = 0
-        for entry in col_entries:
-            try:
-                col_data = entry.get_data()
+        
+        for entry in main_window.current_img.entries:
+            if entry.name.lower().endswith('.col'):
                 output_path = os.path.join(output_dir, entry.name)
                 
                 with open(output_path, 'wb') as f:
-                    f.write(col_data)
+                    f.write(entry.data)
                 
                 exported_count += 1
-                main_window.log_message(f"Exported: {entry.name}")
-                
-            except Exception as e:
-                main_window.log_message(f"Failed to export {entry.name}: {str(e)}")
         
-        QMessageBox.information(
-            main_window, "Export Complete",
-            f"Exported {exported_count}/{len(col_entries)} COL files to:\n{output_dir}"
-        )
-        main_window.log_message(f"Exported {exported_count} COL files to {output_dir}")
-        
+        QMessageBox.information(main_window, "Export Complete", 
+                              f"Exported {exported_count} COL files to {output_dir}")
+                              
     except Exception as e:
         QMessageBox.critical(main_window, "Error", f"Failed to export COL files: {str(e)}")
 
@@ -561,33 +766,42 @@ def edit_col_from_img_entry(main_window, row: int):
     """Edit COL file from IMG entry"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
-            QMessageBox.warning(main_window, "No IMG", "No IMG file is currently open")
+            QMessageBox.warning(main_window, "No IMG", "No IMG file loaded")
             return
-
-        if row < 0 or row >= len(main_window.current_img.entries):
+        
+        # Get entry from table
+        name_item = main_window.gui_layout.table.item(row, 0)
+        if not name_item:
             return
-
-        entry = main_window.current_img.entries[row]
-        col_data = entry.get_data()
-
-        # Create temporary file
-        with tempfile.NamedTemporaryFile(suffix='.col', delete=False) as temp_file:
-            temp_file.write(col_data)
-            temp_path = temp_file.name
-
-        # Open editor
+        
+        entry_name = name_item.text()
+        
+        # Find entry in IMG
+        entry = None
+        for img_entry in main_window.current_img.entries:
+            if img_entry.name == entry_name:
+                entry = img_entry
+                break
+        
+        if not entry:
+            QMessageBox.warning(main_window, "Not Found", f"Entry {entry_name} not found")
+            return
+        
+        # Extract COL data to temporary file
+        temp_file = tempfile.NamedTemporaryFile(suffix='.col', delete=False)
+        temp_file.write(entry.data)
+        temp_file.close()
+        
+        # Open COL editor
         try:
-            editor = COLEditorDialog(main_window)
-            editor.load_col_file(temp_path)
-            result = editor.exec()
-
-            if result == QDialog.DialogCode.Accepted:
-                main_window.log_message(f"COL file '{entry.name}' edited successfully")
-
+            open_col_editor(main_window, temp_file.name)
         finally:
             # Clean up temp file
-            os.unlink(temp_path)
-
+            try:
+                os.unlink(temp_file.name)
+            except:
+                pass
+                
     except Exception as e:
         QMessageBox.critical(main_window, "Error", f"Failed to edit COL: {str(e)}")
 
@@ -595,147 +809,270 @@ def analyze_col_from_img_entry(main_window, row: int):
     """Analyze COL file from IMG entry"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
+            QMessageBox.warning(main_window, "No IMG", "No IMG file loaded")
             return
-
-        if row < 0 or row >= len(main_window.current_img.entries):
+        
+        # Get entry from table
+        name_item = main_window.gui_layout.table.item(row, 0)
+        if not name_item:
             return
-
-        entry = main_window.current_img.entries[row]
-        col_data = entry.get_data()
-
-        # Create temporary COL file for analysis
-        with tempfile.NamedTemporaryFile(suffix='.col', delete=False) as temp_file:
-            temp_file.write(col_data)
-            temp_path = temp_file.name
-
+        
+        entry_name = name_item.text()
+        
+        # Find entry in IMG
+        entry = None
+        for img_entry in main_window.current_img.entries:
+            if img_entry.name == entry_name:
+                entry = img_entry
+                break
+        
+        if not entry:
+            QMessageBox.warning(main_window, "Not Found", f"Entry {entry_name} not found")
+            return
+        
+        # Extract COL data to temporary file
+        temp_file = tempfile.NamedTemporaryFile(suffix='.col', delete=False)
+        temp_file.write(entry.data)
+        temp_file.close()
+        
+        # Analyze COL file
         try:
-            # Analyze using COL utilities
-            col_file = COLFile(temp_path)
-            if col_file.load():
-                from components.col_utilities import COLAnalyzer
-                analysis = COLAnalyzer.analyze_col_file(col_file)
-                report = COLAnalyzer.generate_report(analysis)
-
-                # Show analysis dialog
-                dialog = QDialog(main_window)
-                dialog.setWindowTitle(f"COL Analysis - {entry.name}")
-                dialog.setMinimumSize(600, 400)
-
-                layout = QVBoxLayout(dialog)
-
-                text_edit = QTextEdit()
-                text_edit.setPlainText(report)
-                text_edit.setReadOnly(True)
-                layout.addWidget(text_edit)
-
-                close_btn = QPushButton("Close")
-                close_btn.clicked.connect(dialog.close)
-                layout.addWidget(close_btn)
-
-                dialog.exec()
-            else:
-                QMessageBox.warning(main_window, "Error", "Failed to load COL data for analysis")
-
+            analyze_col_file_dialog(main_window, temp_file.name)
         finally:
             # Clean up temp file
-            os.unlink(temp_path)
-
+            try:
+                os.unlink(temp_file.name)
+            except:
+                pass
+                
     except Exception as e:
         QMessageBox.critical(main_window, "Error", f"Failed to analyze COL: {str(e)}")
 
-def show_col_help_dialog(parent):
-    """Show COL help dialog"""
-    help_text = """
-<h2>🔧 COL Functionality Help</h2>
-
-<h3>What are COL files?</h3>
-<p>COL files contain collision data for GTA games. They define invisible boundaries that prevent players and vehicles from passing through solid objects.</p>
-
-<h3>Available Operations:</h3>
-<ul>
-<li><b>📦 Batch Processor</b> - Process multiple COL files at once</li>
-<li><b>🔍 Analyze COL File</b> - Analyze collision geometry for issues</li>
-<li><b>📥 Import COL to IMG</b> - Add COL files to IMG archives</li>
-<li><b>📤 Export All COL from IMG</b> - Extract all COL files from IMG</li>
-</ul>
-
-<h3>Context Menu (Right-click COL entries):</h3>
-<ul>
-<li><b>✏️ Edit COL</b> - Open COL file in editor</li>
-<li><b>🔍 Analyze COL</b> - Analyze individual COL from IMG</li>
-</ul>
-
-<h3>Supported Operations:</h3>
-<ul>
-<li>Loading and viewing COL files</li>
-<li>Extracting COL data from IMG archives</li>
-<li>Basic collision analysis</li>
-<li>Batch processing workflows</li>
-</ul>
-    """
-    
-    dialog = QDialog(parent)
-    dialog.setWindowTitle("COL Help")
-    dialog.setMinimumSize(500, 400)
-    
-    layout = QVBoxLayout(dialog)
-    
-    text_edit = QTextEdit()
-    text_edit.setHtml(help_text)
-    text_edit.setReadOnly(True)
-    layout.addWidget(text_edit)
-    
-    close_btn = QPushButton("Close")
-    close_btn.clicked.connect(dialog.accept)
-    layout.addWidget(close_btn)
-    
-    dialog.exec()
-
-# Legacy compatibility functions
-def load_col_from_img_entry(img_entry, parent=None):
+def load_col_from_img_entry(main_window, entry_name: str) -> Optional[COLFile]:
     """Load COL file from IMG entry"""
     try:
-        col_data = img_entry.get_data()
+        if not hasattr(main_window, 'current_img') or not main_window.current_img:
+            return None
         
-        with tempfile.NamedTemporaryFile(suffix='.col', delete=False) as temp_file:
-            temp_file.write(col_data)
-            temp_path = temp_file.name
+        # Find entry in IMG
+        entry = None
+        for img_entry in main_window.current_img.entries:
+            if img_entry.name == entry_name:
+                entry = img_entry
+                break
         
-        try:
-            editor = COLEditorDialog(parent)
-            editor.load_col_file(temp_path)
-            result = editor.exec()
-        finally:
-            os.unlink(temp_path)
+        if not entry:
+            return None
         
-        return result
+        # Extract COL data to temporary file
+        temp_file = tempfile.NamedTemporaryFile(suffix='.col', delete=False)
+        temp_file.write(entry.data)
+        temp_file.close()
         
+        # Load COL file
+        col_file = COLFile(temp_file.name)
+        if col_file.load():
+            # Clean up temp file
+            try:
+                os.unlink(temp_file.name)
+            except:
+                pass
+            return col_file
+        else:
+            # Clean up temp file
+            try:
+                os.unlink(temp_file.name)
+            except:
+                pass
+            return None
+            
     except Exception as e:
-        QMessageBox.critical(parent, "Error", f"Failed to load COL from IMG entry: {str(e)}")
-        return False
+        print(f"Error loading COL from IMG entry: {e}")
+        return None
 
-def export_col_to_img(col_file: COLFile, img_file, entry_name: str) -> bool:
-    """Export COL file to IMG entry"""
+def export_col_to_img(main_window, col_file: COLFile, entry_name: str) -> bool:
+    """Export COL file back to IMG entry"""
     try:
-        if hasattr(col_file, '_build_col_data'):
-            col_data = col_file._build_col_data()
-        elif hasattr(col_file, 'save'):
-            with tempfile.NamedTemporaryFile(suffix='.col') as temp_file:
-                if col_file.save(temp_file.name):
-                    with open(temp_file.name, 'rb') as f:
-                        col_data = f.read()
-                else:
-                    return False
-        else:
+        if not hasattr(main_window, 'current_img') or not main_window.current_img:
             return False
-
-        # Add to IMG file
-        if hasattr(img_file, 'add_entry'):
-            img_file.add_entry(entry_name, col_data)
-            return True
-        else:
+        
+        # Save COL to temporary file
+        temp_file = tempfile.NamedTemporaryFile(suffix='.col', delete=False)
+        temp_file.close()
+        
+        if not col_file.save(temp_file.name):
+            os.unlink(temp_file.name)
             return False
-
+        
+        # Read COL data
+        with open(temp_file.name, 'rb') as f:
+            col_data = f.read()
+        
+        # Clean up temp file
+        os.unlink(temp_file.name)
+        
+        # Find existing entry or create new one
+        entry = None
+        for img_entry in main_window.current_img.entries:
+            if img_entry.name == entry_name:
+                entry = img_entry
+                break
+        
+        if entry:
+            # Update existing entry
+            entry.data = col_data
+        else:
+            # Create new entry
+            main_window.current_img.add_entry(entry_name, col_data)
+        
+        return True
+        
     except Exception as e:
         print(f"Error exporting COL to IMG: {e}")
         return False
+
+# =======================
+# HELPER FUNCTIONS
+# =======================
+
+def detect_col_version_from_data(data: bytes) -> Optional[dict]:
+    """Detect COL version and basic info from raw data"""
+    if len(data) < 8:
+        return None
+    
+    try:
+        # Check signature
+        signature = data[:4]
+        version = 0
+        models = 0
+        
+        if signature == b'COLL':
+            version = 1
+        elif signature == b'COL\x02':
+            version = 2
+        elif signature == b'COL\x03':
+            version = 3
+        elif signature == b'COL\x04':
+            version = 4
+        else:
+            return None
+        
+        # Count models (simplified)
+        offset = 0
+        while offset < len(data) - 8:
+            if data[offset:offset+4] in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
+                models += 1
+                # Skip to next potential model
+                try:
+                    import struct
+                    size = struct.unpack('<I', data[offset+4:offset+8])[0]
+                    offset += size + 8
+                except:
+                    break
+            else:
+                break
+        
+        return {
+            'version': version,
+            'models': max(1, models),  # At least 1 model
+            'size': len(data)
+        }
+        
+    except Exception:
+        return None
+
+def open_col_file_dialog(main_window):
+    """Open COL file dialog with threaded loading"""
+    file_path, _ = QFileDialog.getOpenFileName(
+        main_window, "Open COL File", "", "COL Files (*.col);;All Files (*)"
+    )
+    
+    if file_path:
+        # Use threaded loading if available
+        if hasattr(main_window, 'load_col_file_async'):
+            main_window.load_col_file_async(file_path)
+        else:
+            # Fallback to synchronous loading
+            try:
+                col_file = COLFile(file_path)
+                if col_file.load():
+                    main_window.current_col = col_file
+                    main_window.log_message(f"✅ COL file loaded: {os.path.basename(file_path)}")
+                else:
+                    QMessageBox.warning(main_window, "Load Error", f"Failed to load COL file: {file_path}")
+            except Exception as e:
+                QMessageBox.critical(main_window, "Error", f"Error loading COL file: {str(e)}")
+
+def create_new_col_file(main_window):
+    """Create new COL file"""
+    QMessageBox.information(main_window, "New COL", "New COL file creation coming soon!")
+
+# =======================
+# COMPATIBILITY FUNCTIONS
+# =======================
+
+def setup_complete_col_integration(main_window):
+    """Complete COL integration setup - main entry point"""
+    try:
+        # Call the full integration function
+        success = setup_col_integration_full(main_window)
+        
+        if success:
+            main_window.log_message("✅ Complete COL integration setup finished")
+        else:
+            main_window.log_message("⚠️ COL integration setup had issues")
+            
+        return success
+        
+    except Exception as e:
+        main_window.log_message(f"❌ COL integration setup failed: {str(e)}")
+        return False
+
+# =======================
+# DEPRECATED FUNCTIONS (kept for compatibility)
+# =======================
+
+def init_col_integration_placeholder(main_window):
+    """Placeholder for COL integration during init - DEPRECATED"""
+    # Just set a flag that COL integration is needed
+    main_window._col_integration_needed = True
+    print("COL integration marked for later setup - use setup_complete_col_integration instead")
+
+def setup_delayed_col_integration(main_window):
+    """Setup COL integration after GUI is fully ready"""
+    try:
+        # Use a timer to delay until GUI is ready
+        def try_setup():
+            if setup_col_integration_full(main_window):
+                # Success - stop trying
+                return
+            else:
+                # Retry in 100ms
+                QTimer.singleShot(100, try_setup)
+        
+        # Start the retry process
+        QTimer.singleShot(100, try_setup)
+        
+    except Exception as e:
+        print(f"Error setting up delayed COL integration: {str(e)}")
+
+# Module exports
+__all__ = [
+    'COLBackgroundLoader',
+    'load_col_file_async',
+    'cancel_col_loading',
+    'COLListWidget', 
+    'COLModelDetailsWidget',
+    'setup_col_integration_full',
+    'setup_complete_col_integration',
+    'add_col_tools_menu',
+    'add_col_context_menu_to_entries_table',
+    'import_col_to_current_img',
+    'export_all_col_from_img',
+    'edit_col_from_img_entry',
+    'analyze_col_from_img_entry',
+    'load_col_from_img_entry',
+    'export_col_to_img',
+    'open_col_file_dialog',
+    'create_new_col_file'
+]
