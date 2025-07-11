@@ -56,6 +56,7 @@ from components.img_formats import GameSpecificIMGDialog, IMGCreator
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 #from components.img_threads import IMGLoadThread, IMGSaveThread
 from components.img_validator import IMGValidator
+from components.img_import_export_integration import setup_complete_import_export_integration
 from components.col_tabs_integration import setup_col_tab_integration
 from components.integration_patch import apply_search_and_performance_fixes
 from components.unified_debug_integration import integrate_all_improvements
@@ -425,6 +426,8 @@ class IMGFactory(QMainWindow):
 
         # Setup search functionality
         self.setup_search_functionality()
+
+        setup_complete_import_export_integration(self)
 
         # Apply theme
         if hasattr(self.app_settings, 'themes'):

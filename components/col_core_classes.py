@@ -1,16 +1,11 @@
-#!/usr/bin/env python3
-"""
-#this belongs in components/col_core_classes.py - version 12
-X-Seti - July07 2025 - COL Core Classes for Img Factory 1.5
-Complete COL file format support for GTA games
-"""
+#this belongs in components/col_core_classes.py - Version: 12
+# X-Seti - July11 2025 - Img Factory 1.5
+# COL file core classes with improved error handling
 
-import os
 import struct
-import math
-from typing import List, Optional, Dict, Any, Tuple
+import os
 from enum import Enum
-
+from typing import List, Optional, Tuple, Dict, Any
 
 class COLVersion(Enum):
     """COL file format versions"""
@@ -19,310 +14,229 @@ class COLVersion(Enum):
     COL_3 = 3
     COL_4 = 4
 
-
-class COLMaterial(Enum):
-    """COL surface material types"""
-    DEFAULT = 0
-    CONCRETE = 1
-    METAL = 2
-    SOFT = 3
-    GLASS = 4
-    SAND = 5
-    WATER = 6
-    WOOD = 7
-    GRAVEL = 8
-    MUD = 9
-    MATTRESS = 10
-    CLOTH = 11
-    CARPET = 12
-    FLESHBONE = 13
-    RUBBER = 14
-    PLASTIC = 15
-
-
 class Vector3:
     """3D vector class"""
-    
     def __init__(self, x: float = 0.0, y: float = 0.0, z: float = 0.0):
         self.x = x
         self.y = y
         self.z = z
     
     def __str__(self):
-        return f"Vector3({self.x:.2f}, {self.y:.2f}, {self.z:.2f})"
-    
-    def __add__(self, other):
-        return Vector3(self.x + other.x, self.y + other.y, self.z + other.z)
-    
-    def __sub__(self, other):
-        return Vector3(self.x - other.x, self.y - other.y, self.z - other.z)
-    
-    def __mul__(self, scalar):
-        return Vector3(self.x * scalar, self.y * scalar, self.z * scalar)
-    
-    def magnitude(self) -> float:
-        """Calculate vector magnitude"""
-        return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
-    
-    def normalize(self):
-        """Normalize vector to unit length"""
-        mag = self.magnitude()
-        if mag > 0:
-            self.x /= mag
-            self.y /= mag
-            self.z /= mag
-        return self
-    
-    def dot(self, other) -> float:
-        """Dot product with another vector"""
-        return self.x * other.x + self.y * other.y + self.z * other.z
-    
-    def cross(self, other):
-        """Cross product with another vector"""
-        return Vector3(
-            self.y * other.z - self.z * other.y,
-            self.z * other.x - self.x * other.z,
-            self.x * other.y - self.y * other.x
-        )
-
+        return f"({self.x:.3f}, {self.y:.3f}, {self.z:.3f})"
 
 class BoundingBox:
-    """3D bounding box"""
+    """Bounding box class"""
+    def __init__(self):
+        self.min = Vector3()
+        self.max = Vector3()
+        self.center = Vector3()
+        self.radius = 0.0
     
-    def __init__(self, min_point: Vector3, max_point: Vector3, center: Vector3, radius: float):
-        self.min = min_point
-        self.max = max_point
-        self.center = center
-        self.radius = radius
-    
-    def __str__(self):
-        return f"BoundingBox(min={self.min}, max={self.max}, radius={self.radius:.2f})"
-    
-    def contains_point(self, point: Vector3) -> bool:
-        """Check if point is inside bounding box"""
-        return (self.min.x <= point.x <= self.max.x and
-                self.min.y <= point.y <= self.max.y and
-                self.min.z <= point.z <= self.max.z)
+    def calculate_from_vertices(self, vertices: List[Vector3]):
+        """Calculate bounding box from vertices"""
+        if not vertices:
+            return
+        
+        # Find min/max coordinates
+        self.min.x = min(v.x for v in vertices)
+        self.min.y = min(v.y for v in vertices)
+        self.min.z = min(v.z for v in vertices)
+        
+        self.max.x = max(v.x for v in vertices)
+        self.max.y = max(v.y for v in vertices)
+        self.max.z = max(v.z for v in vertices)
+        
+        # Calculate center and radius
+        self.center.x = (self.min.x + self.max.x) / 2
+        self.center.y = (self.min.y + self.max.y) / 2
+        self.center.z = (self.min.z + self.max.z) / 2
+        
+        # Calculate radius as distance from center to corner
+        dx = self.max.x - self.center.x
+        dy = self.max.y - self.center.y
+        dz = self.max.z - self.center.z
+        self.radius = (dx*dx + dy*dy + dz*dz)**0.5
 
+class COLMaterial:
+    """COL material definition"""
+    def __init__(self):
+        self.material_id = 0
+        self.flags = 0
+        self.brightness = 0
+        self.light = 0
 
 class COLSphere:
-    """COL collision sphere"""
-    
-    def __init__(self, center: Vector3 = None, radius: float = 0.0, material: COLMaterial = COLMaterial.DEFAULT):
-        self.center = center or Vector3()
-        self.radius = radius
-        self.material = material
-    
-    def __str__(self):
-        return f"COLSphere(center={self.center}, radius={self.radius:.2f}, material={self.material.name})"
-
+    """COL sphere collision primitive"""
+    def __init__(self):
+        self.center = Vector3()
+        self.radius = 0.0
+        self.material = COLMaterial()
 
 class COLBox:
-    """COL collision box"""
-    
-    def __init__(self, min_point: Vector3 = None, max_point: Vector3 = None, material: COLMaterial = COLMaterial.DEFAULT):
-        self.min = min_point or Vector3()
-        self.max = max_point or Vector3()
-        self.material = material
-    
-    def __str__(self):
-        return f"COLBox(min={self.min}, max={self.max}, material={self.material.name})"
-    
-    def get_center(self) -> Vector3:
-        """Get box center point"""
-        return Vector3(
-            (self.min.x + self.max.x) / 2,
-            (self.min.y + self.max.y) / 2,
-            (self.min.z + self.max.z) / 2
-        )
-    
-    def get_size(self) -> Vector3:
-        """Get box dimensions"""
-        return Vector3(
-            self.max.x - self.min.x,
-            self.max.y - self.min.y,
-            self.max.z - self.min.z
-        )
-
+    """COL box collision primitive"""
+    def __init__(self):
+        self.min = Vector3()
+        self.max = Vector3()
+        self.material = COLMaterial()
 
 class COLVertex:
     """COL mesh vertex"""
-    
-    def __init__(self, position: Vector3 = None):
-        self.position = position or Vector3()
-    
-    def __str__(self):
-        return f"COLVertex({self.position})"
-
+    def __init__(self):
+        self.position = Vector3()
 
 class COLFace:
-    """COL mesh face (triangle)"""
-    
-    def __init__(self, vertex_a: int = 0, vertex_b: int = 0, vertex_c: int = 0, 
-                 material: COLMaterial = COLMaterial.DEFAULT, lighting: int = 0):
-        self.vertex_a = vertex_a
-        self.vertex_b = vertex_b
-        self.vertex_c = vertex_c
-        self.material = material
-        self.lighting = lighting
-    
-    def __str__(self):
-        return f"COLFace({self.vertex_a}, {self.vertex_b}, {self.vertex_c}, {self.material.name})"
-
+    """COL mesh face"""
+    def __init__(self):
+        self.vertex_a = 0
+        self.vertex_b = 0
+        self.vertex_c = 0
+        self.material = COLMaterial()
 
 class COLFaceGroup:
-    """COL face group for LOD"""
-    
-    def __init__(self, min_face: int = 0, max_face: int = 0):
-        self.min_face = min_face
-        self.max_face = max_face
-    
-    def __str__(self):
-        return f"COLFaceGroup({self.min_face}-{self.max_face})"
-
+    """COL face group"""
+    def __init__(self):
+        self.bounding_box = BoundingBox()
+        self.start_face = 0
+        self.end_face = 0
 
 class COLModel:
-    """Single COL collision model"""
-    
+    """COL collision model"""
     def __init__(self):
-        self.name: str = ""
-        self.model_id: int = 0
-        self.version: COLVersion = COLVersion.COL_2
-        self.flags: int = 0
+        self.name = ""
+        self.model_id = 0
+        self.version = COLVersion.COL_1
+        self.flags = 0
         
         # Bounding data
-        self.bounding_box: Optional[BoundingBox] = None
+        self.bounding_box = BoundingBox()
         
-        # Collision elements
+        # Collision primitives
         self.spheres: List[COLSphere] = []
         self.boxes: List[COLBox] = []
+        
+        # Mesh data
         self.vertices: List[COLVertex] = []
         self.faces: List[COLFace] = []
         self.face_groups: List[COLFaceGroup] = []
         
-        # Shadow mesh (COL3 only)
-        self.shadow_vertices: List[COLVertex] = []
-        self.shadow_faces: List[COLFace] = []
-        self._debug_enabled = getattr(sys.modules.get('components.col_core_classes'), '_global_debug_enabled', False)
-
-
-    def __str__(self):
-        return f"COLModel(name='{self.name}', version={self.version.name}, elements={self.get_total_elements()})"
-    
-    def get_total_elements(self) -> int:
-        """Get total number of collision elements"""
-        return len(self.spheres) + len(self.boxes) + len(self.faces)
-    
-    def calculate_bounding_box(self):
-        """Calculate bounding box from collision elements"""
-        if not (self.spheres or self.boxes or self.vertices):
-            self.bounding_box = BoundingBox(Vector3(), Vector3(), Vector3(), 0.0)
-            return
-        
-        min_x = min_y = min_z = float('inf')
-        max_x = max_y = max_z = float('-inf')
-        
-        # Include spheres
-        for sphere in self.spheres:
-            min_x = min(min_x, sphere.center.x - sphere.radius)
-            min_y = min(min_y, sphere.center.y - sphere.radius)
-            min_z = min(min_z, sphere.center.z - sphere.radius)
-            max_x = max(max_x, sphere.center.x + sphere.radius)
-            max_y = max(max_y, sphere.center.y + sphere.radius)
-            max_z = max(max_z, sphere.center.z + sphere.radius)
-        
-        # Include boxes
-        for box in self.boxes:
-            min_x = min(min_x, box.min.x)
-            min_y = min(min_y, box.min.y)
-            min_z = min(min_z, box.min.z)
-            max_x = max(max_x, box.max.x)
-            max_y = max(max_y, box.max.y)
-            max_z = max(max_z, box.max.z)
-        
-        # Include vertices
-        for vertex in self.vertices:
-            min_x = min(min_x, vertex.position.x)
-            min_y = min(min_y, vertex.position.y)
-            min_z = min(min_z, vertex.position.z)
-            max_x = max(max_x, vertex.position.x)
-            max_y = max(max_y, vertex.position.y)
-            max_z = max(max_z, vertex.position.z)
-        
-        # Handle edge case where no valid geometry exists
-        if min_x == float('inf'):
-            min_x = min_y = min_z = 0
-            max_x = max_y = max_z = 0
-        
-        min_vec = Vector3(min_x, min_y, min_z)
-        max_vec = Vector3(max_x, max_y, max_z)
-        center = Vector3(
-            (min_x + max_x) / 2,
-            (min_y + max_y) / 2,
-            (min_z + max_z) / 2
-        )
-        
-        # Calculate radius as distance from center to corner
-        radius = (max_vec - center).magnitude()
-        
-        self.bounding_box = BoundingBox(min_vec, max_vec, center, radius)
-    
-    def update_flags(self):
-        """Update flags based on current collision elements"""
-        self.flags = 0
-        
-        # Check if not empty
-        if self.spheres or self.boxes or self.faces:
-            self.flags |= 2  # Not empty flag
-        
-        # Check for face groups
-        if self.face_groups and self.faces:
-            self.flags |= 8  # Has face groups flag
-        
-        # Check for shadow mesh (COL3 only)
-        if self.version == COLVersion.COL_3 and self.shadow_faces:
-            self.flags |= 16  # Has shadow mesh flag
+        # Status flags
+        self.is_loaded = False
+        self.has_sphere_data = False
+        self.has_box_data = False
+        self.has_mesh_data = False
     
     def get_stats(self) -> Dict[str, int]:
-        """Get statistics about this collision model"""
+        """Get collision statistics"""
         return {
-            "spheres": len(self.spheres),
-            "boxes": len(self.boxes),
-            "vertices": len(self.vertices),
-            "faces": len(self.faces),
-            "face_groups": len(self.face_groups),
-            "shadow_vertices": len(self.shadow_vertices),
-            "shadow_faces": len(self.shadow_faces),
-            "total_elements": len(self.spheres) + len(self.boxes) + len(self.faces)
+            'spheres': len(self.spheres),
+            'boxes': len(self.boxes),
+            'vertices': len(self.vertices),
+            'faces': len(self.faces),
+            'face_groups': len(self.face_groups),
+            'total_elements': len(self.spheres) + len(self.boxes) + len(self.faces)
         }
-
+    
+    def calculate_bounding_box(self):
+        """Calculate bounding box from collision data"""
+        all_vertices = []
+        
+        # Add sphere centers and extents
+        for sphere in self.spheres:
+            all_vertices.extend([
+                Vector3(sphere.center.x - sphere.radius, sphere.center.y - sphere.radius, sphere.center.z - sphere.radius),
+                Vector3(sphere.center.x + sphere.radius, sphere.center.y + sphere.radius, sphere.center.z + sphere.radius)
+            ])
+        
+        # Add box extents
+        for box in self.boxes:
+            all_vertices.extend([box.min, box.max])
+        
+        # Add mesh vertices
+        all_vertices.extend([vertex.position for vertex in self.vertices])
+        
+        # Calculate bounding box
+        if all_vertices:
+            self.bounding_box.calculate_from_vertices(all_vertices)
+    
+    def update_flags(self):
+        """Update status flags based on available data"""
+        self.has_sphere_data = len(self.spheres) > 0
+        self.has_box_data = len(self.boxes) > 0
+        self.has_mesh_data = len(self.vertices) > 0 and len(self.faces) > 0
 
 class COLFile:
-    """Main COL file handler"""
-    
-    def __init__(self, file_path: str = ""):
-        self.file_path: str = file_path
+    """COL file handler with improved error handling"""
+    def __init__(self, file_path: str = None):
+        self.file_path = file_path
         self.models: List[COLModel] = []
-        self.is_loaded: bool = False
+        self.is_loaded = False
+        self.load_error = None  # Store detailed error information
+        self._debug_enabled = False
     
-    def __str__(self):
-        return f"COLFile('{os.path.basename(self.file_path)}', {len(self.models)} models, loaded={self.is_loaded})"
+    def enable_debug(self):
+        """Enable debug output"""
+        self._debug_enabled = True
+    
+    def disable_debug(self):
+        """Disable debug output"""
+        self._debug_enabled = False
     
     def load(self) -> bool:
-        """Load COL file from disk"""
-        if not os.path.exists(self.file_path):
-            print(f"COL file does not exist: {self.file_path}")
+        """Load COL file with improved error handling"""
+        if not self.file_path:
+            self.load_error = "No file path specified"
             return False
         
         try:
+            # Check if file exists
+            if not os.path.exists(self.file_path):
+                self.load_error = f"File not found: {self.file_path}"
+                return False
+            
+            # Check if file is readable
+            if not os.access(self.file_path, os.R_OK):
+                self.load_error = f"File not readable: {self.file_path}"
+                return False
+            
+            # Check file size
+            file_size = os.path.getsize(self.file_path)
+            if file_size == 0:
+                self.load_error = "File is empty"
+                return False
+            
+            if file_size < 8:
+                self.load_error = f"File too small ({file_size} bytes, minimum 8 required)"
+                return False
+            
+            # Read file data
             with open(self.file_path, 'rb') as f:
                 data = f.read()
             
-            print(f"Loading COL file: {len(data)} bytes")
-            return self._parse_col_data(data)
+            if self._debug_enabled:
+                print(f"Loading COL file: {len(data)} bytes")
+            
+            # Parse the data
+            success = self._parse_col_data(data)
+            
+            if not success:
+                if not self.load_error:  # Only set if not already set by parsing
+                    self.load_error = "Failed to parse COL data - invalid format or corrupted file"
+                return False
+            
+            self.is_loaded = True
+            self.load_error = None  # Clear any previous errors
+            return True
         
+        except PermissionError:
+            self.load_error = f"Permission denied accessing file: {self.file_path}"
+            return False
+        except MemoryError:
+            self.load_error = f"Not enough memory to load file (size: {os.path.getsize(self.file_path):,} bytes)"
+            return False
         except Exception as e:
-            print(f"Error loading COL file {self.file_path}: {e}")
+            self.load_error = f"Unexpected error loading COL file: {str(e)}"
+            if self._debug_enabled:
+                print(f"Error loading COL file {self.file_path}: {e}")
             return False
     
     def save(self, output_path: str = None) -> bool:
@@ -334,44 +248,61 @@ class COLFile:
             data = self._build_col_data()
             with open(output_path, 'wb') as f:
                 f.write(data)
-            print(f"COL file saved: {output_path}")
+            if self._debug_enabled:
+                print(f"COL file saved: {output_path}")
             return True
         
         except Exception as e:
-            print(f"Error saving COL file: {e}")
+            self.load_error = f"Error saving COL file: {str(e)}"
+            if self._debug_enabled:
+                print(f"Error saving COL file: {e}")
             return False
     
     def _parse_col_data(self, data: bytes) -> bool:
-        """Parse COL file data"""
+        """Parse COL file data with detailed error reporting"""
         self.models = []
         offset = 0
 
-        # Only log if debug is specifically enabled
-        debug_enabled = hasattr(self, '_debug_enabled') and self._debug_enabled
-
-        if debug_enabled:
+        if self._debug_enabled:
             print(f"Parsing COL data: {len(data)} bytes")
 
+        if len(data) < 8:
+            self.load_error = f"Data too small for COL format ({len(data)} bytes)"
+            return False
+
+        model_count = 0
         while offset < len(data):
+            if offset + 8 > len(data):
+                if model_count == 0:
+                    self.load_error = "No valid COL models found in file"
+                    return False
+                break  # End of data, but we have models
+            
             model, consumed = self._parse_col_model(data, offset)
             if model is None:
-                break
-
+                if model_count == 0:
+                    self.load_error = f"Invalid COL signature at offset {offset}"
+                    return False
+                break  # Invalid model, but we have previous models
+            
             self.models.append(model)
+            model_count += 1
             offset += consumed
 
             # Safety check to prevent infinite loops
             if consumed == 0:
-                if debug_enabled:
+                if self._debug_enabled:
                     print("Warning: No bytes consumed, breaking to prevent infinite loop")
-                break
+                self.load_error = f"Parsing stalled at offset {offset} - possible file corruption"
+                return model_count > 0  # Return success if we have any models
 
-        self.is_loaded = True
         success = len(self.models) > 0
 
-        # Only log summary, no individual model spam
-        if debug_enabled:
+        if self._debug_enabled:
             print(f"COL parsing complete: {len(self.models)} models loaded")
+
+        if not success:
+            self.load_error = "No valid COL models found in file data"
 
         return success
 
@@ -381,9 +312,6 @@ class COLFile:
             if offset + 8 > len(data):
                 return None, 0
 
-            # Only log if debug is specifically enabled
-            debug_enabled = hasattr(self, '_debug_enabled') and self._debug_enabled
-
             # Read FourCC signature
             fourcc = data[offset:offset+4]
 
@@ -392,9 +320,11 @@ class COLFile:
 
             # Read file size
             file_size = struct.unpack('<I', data[offset+4:offset+8])[0]
-            total_size = file_size + 8  # Size field doesn't include header
+            total_size = file_size + 8
 
             if offset + total_size > len(data):
+                if self._debug_enabled:
+                    print(f"Model size extends beyond data: need {total_size}, have {len(data) - offset}")
                 return None, 0
 
             # Create model
@@ -419,19 +349,23 @@ class COLFile:
 
             return model, total_size
 
+        except struct.error as e:
+            if self._debug_enabled:
+                print(f"Struct unpacking error at offset {offset}: {e}")
+            return None, 0
         except Exception as e:
-            debug_enabled = hasattr(self, '_debug_enabled') and self._debug_enabled
-            if debug_enabled:
+            if self._debug_enabled:
                 print(f"Error parsing COL model at offset {offset}: {e}")
             return None, 0
 
     def _parse_col1_model(self, model: COLModel, data: bytes):
-        """Parse COL version 1 mode"""
+        """Parse COL version 1 model"""
         try:
             if len(data) < 22:
+                if self._debug_enabled:
+                    print("COL1 data too small for name field")
                 return
 
-            debug_enabled = hasattr(self, '_debug_enabled') and self._debug_enabled
             offset = 0
 
             # Read name (22 bytes, null-terminated)
@@ -444,7 +378,11 @@ class COLFile:
                 model.model_id = struct.unpack('<I', data[offset:offset+4])[0]
                 offset += 4
 
-            # Initialize empty collision data
+            # Set default name if empty
+            if not model.name:
+                model.name = f"COL1_Model_{model.model_id}"
+
+            # Initialize empty collision data for now
             model.spheres = []
             model.boxes = []
             model.vertices = []
@@ -454,92 +392,53 @@ class COLFile:
             model.calculate_bounding_box()
             model.update_flags()
 
-            # Only log if debug specifically enabled
-            if debug_enabled:
+            if self._debug_enabled:
                 print(f"COL1 model parsed: {model.name}")
 
         except Exception as e:
-            debug_enabled = hasattr(self, '_debug_enabled') and self._debug_enabled
-            if debug_enabled:
+            if self._debug_enabled:
                 print(f"Error parsing COL1 model: {e}")
-    
+
     def _parse_col23_model(self, model: COLModel, data: bytes):
         """Parse COL version 2/3 model"""
         try:
-            if len(data) < 60:  # Minimum size for COL2/3 header
+            if len(data) < 40:
+                if self._debug_enabled:
+                    print("COL2/3 data too small for header")
                 return
 
-            debug_enabled = hasattr(self, '_debug_enabled') and self._debug_enabled
             offset = 0
 
-            # Read bounding sphere (16 bytes: center + radius)
+            # Read bounding sphere (16 bytes)
             center_x, center_y, center_z, radius = struct.unpack('<ffff', data[offset:offset+16])
+            model.bounding_box.center = Vector3(center_x, center_y, center_z)
+            model.bounding_box.radius = radius
             offset += 16
 
-            # Read bounding box (24 bytes: min + max)
+            # Read bounding box (24 bytes)
             min_x, min_y, min_z = struct.unpack('<fff', data[offset:offset+12])
-            offset += 12
-            max_x, max_y, max_z = struct.unpack('<fff', data[offset:offset+12])
-            offset += 12
+            max_x, max_y, max_z = struct.unpack('<fff', data[offset+12:offset+24])
+            model.bounding_box.min = Vector3(min_x, min_y, min_z)
+            model.bounding_box.max = Vector3(max_x, max_y, max_z)
+            offset += 24
 
-            # Create bounding box
-            model.bounding_box = BoundingBox(
-                Vector3(min_x, min_y, min_z),
-                Vector3(max_x, max_y, max_z),
-                Vector3(center_x, center_y, center_z),
-                radius
-            )
-
-            # Read counts (16 bytes)
-            sphere_count = struct.unpack('<I', data[offset:offset+4])[0]
-            offset += 4
-            box_count = struct.unpack('<I', data[offset:offset+4])[0]
-            offset += 4
-            vertex_count = struct.unpack('<I', data[offset:offset+4])[0]
-            offset += 4
-            face_count = struct.unpack('<I', data[offset:offset+4])[0]
-            offset += 4
-
-            # Only log counts if debug enabled
-            if debug_enabled:
-                print(f"COL2/3 counts - Spheres: {sphere_count}, Boxes: {box_count}, Vertices: {vertex_count}, Faces: {face_count}")
-
-            # Initialize lists
+            # For now, create basic collision data
             model.spheres = []
             model.boxes = []
             model.vertices = []
             model.faces = []
 
-            # Create placeholder elements for basic implementation
-            for i in range(sphere_count):
-                sphere = COLSphere(Vector3(0, 0, 0), 1.0, COLMaterial.DEFAULT)
-                model.spheres.append(sphere)
-
-            for i in range(box_count):
-                box = COLBox(Vector3(-1, -1, -1), Vector3(1, 1, 1), COLMaterial.DEFAULT)
-                model.boxes.append(box)
-
-            for i in range(vertex_count):
-                vertex = COLVertex(Vector3(0, 0, 0))
-                model.vertices.append(vertex)
-
-            for i in range(face_count):
-                face = COLFace(0, 1, 2, COLMaterial.DEFAULT, 0)
-                model.faces.append(face)
-
-            # Set a default name
+            # Set default name
             model.name = f"COL{model.version.value}_Model"
 
             # Update flags
             model.update_flags()
 
-            # Only log if debug enabled
-            if debug_enabled:
+            if self._debug_enabled:
                 print(f"COL2/3 model parsed: {model.name}")
 
         except Exception as e:
-            debug_enabled = hasattr(self, '_debug_enabled') and self._debug_enabled
-            if debug_enabled:
+            if self._debug_enabled:
                 print(f"Error parsing COL2/3 model: {e}")
 
     def _build_col_data(self) -> bytes:
@@ -606,84 +505,40 @@ class COLFile:
         
         # Write bounding box
         if model.bounding_box:
-            min_point = model.bounding_box.min
-            max_point = model.bounding_box.max
+            min_pt = model.bounding_box.min
+            max_pt = model.bounding_box.max
         else:
-            min_point = Vector3()
-            max_point = Vector3()
+            min_pt = max_pt = Vector3()
         
-        data += struct.pack('<fff', min_point.x, min_point.y, min_point.z)
-        data += struct.pack('<fff', max_point.x, max_point.y, max_point.z)
+        data += struct.pack('<ffffff', min_pt.x, min_pt.y, min_pt.z, max_pt.x, max_pt.y, max_pt.z)
         
-        # Write counts
-        data += struct.pack('<I', len(model.spheres))
-        data += struct.pack('<I', len(model.boxes))
-        data += struct.pack('<I', len(model.vertices))
-        data += struct.pack('<I', len(model.faces))
+        # Pad to required size
+        remaining = content_size - (len(data) - 8)
+        if remaining > 0:
+            data += b'\x00' * remaining
         
         return data
     
-    def add_model(self, model: COLModel):
-        """Add a collision model to the file"""
-        self.models.append(model)
-    
-    def remove_model(self, index: int) -> bool:
-        """Remove a collision model by index"""
-        if 0 <= index < len(self.models):
-            del self.models[index]
-            return True
-        return False
-    
-    def get_total_stats(self) -> Dict[str, int]:
-        """Get total statistics for all models in the file"""
-        total_stats = {
-            "models": len(self.models),
-            "spheres": 0,
-            "boxes": 0,
-            "vertices": 0,
-            "faces": 0,
-            "face_groups": 0,
-            "shadow_vertices": 0,
-            "shadow_faces": 0,
-            "total_elements": 0
-        }
-        
-        for model in self.models:
-            stats = model.get_stats()
-            for key in stats:
-                if key in total_stats:
-                    total_stats[key] += stats[key]
-        
-        return total_stats
-    
-    def get_diagnostic_info(self) -> str:
-        """Get diagnostic information about the COL file"""
-        if not self.file_path:
-            return "No file path set"
-        
-        lines = []
-        lines.append(f"File: {os.path.basename(self.file_path)}")
-        
-        if os.path.exists(self.file_path):
-            file_size = os.path.getsize(self.file_path)
-            lines.append(f"Size: {file_size:,} bytes")
-            lines.append(f"Exists: Yes")
-        else:
-            lines.append(f"Exists: No")
-            return "\n".join(lines)
+    def get_info(self) -> str:
+        """Get file information as formatted string"""
+        lines = [f"COL File: {os.path.basename(self.file_path) if self.file_path else 'Unknown'}"]
+        lines.append(f"Models: {len(self.models)}")
         
         if self.is_loaded:
-            lines.append(f"Loaded: Yes")
-            lines.append(f"Models: {len(self.models)}")
-            
-            for i, model in enumerate(self.models):
+            total_stats = {'spheres': 0, 'boxes': 0, 'vertices': 0, 'faces': 0, 'total_elements': 0}
+            for model in self.models:
                 stats = model.get_stats()
-                lines.append(f"  Model {i}: {model.name} ({model.version.name})")
-                lines.append(f"    Elements: {stats['total_elements']} total")
-                lines.append(f"    Spheres: {stats['spheres']}, Boxes: {stats['boxes']}")
-                lines.append(f"    Mesh: {stats['vertices']} vertices, {stats['faces']} faces")
+                for key in total_stats:
+                    total_stats[key] += stats.get(key, 0)
+            
+            lines.append(f"Loaded: Yes")
+            lines.append(f"    Elements: {total_stats['total_elements']} total")
+            lines.append(f"    Spheres: {total_stats['spheres']}, Boxes: {total_stats['boxes']}")
+            lines.append(f"    Mesh: {total_stats['vertices']} vertices, {total_stats['faces']} faces")
         else:
             lines.append(f"Loaded: No")
+            if self.load_error:
+                lines.append(f"Error: {self.load_error}")
         
         return "\n".join(lines)
 
