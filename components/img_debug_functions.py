@@ -1,4 +1,4 @@
-# this belongs in components/img_debug.py - version 2
+# this belongs in components/img_debug_functions.py - version 2
 #!/usr/bin/env python3
 """
 X-Seti - June26 2025 - IMG Debug - Debugging utilities for IMG Factory
@@ -12,7 +12,6 @@ import inspect
 import time
 from typing import Any, Dict, List, Optional
 from pathlib import Path
-
 
 class IMGDebugger:
     """Advanced debugging system for IMG Factory operations"""
