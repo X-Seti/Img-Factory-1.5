@@ -24,11 +24,12 @@ def apply_all_fixes_and_improvements(main_window):
             main_window.log_message("✅ Search dialog functionality fixed")
         
         # 2. Install comprehensive debug control system
+        from components.unified_debug_functions import debug_controller
         debug_system_success = install_debug_control_system(main_window)
         
         if debug_system_success:
             main_window.log_message("✅ Debug control system installed")
-        
+
         # 3. Patch COL files to stop print spam
         from components.col_print_patcher import install_col_print_patcher
         
@@ -164,8 +165,8 @@ def add_status_indicators(main_window):
             return
         
         from PyQt6.QtWidgets import QLabel
-        from components.debug_control_system import debug_controller
-        
+        #
+
         # Create debug status label
         debug_status_label = QLabel()
         
@@ -204,7 +205,7 @@ def create_debug_keyboard_shortcuts(main_window):
         
         # F12 - Quick performance mode toggle
         def toggle_performance():
-            from components.debug_control_system import debug_controller
+            from components.unified_debug_functions import debug_controller
             if debug_controller.performance_mode:
                 main_window.minimal_debug_mode()
             else:
@@ -331,6 +332,7 @@ def setup_col_debug_integration():
     except Exception as e:
         print(f"❌ COL debug integration failed: {e}")
         return False
+
 
 # Call this from imgfactory.py after imports
 if __name__ != "__main__":

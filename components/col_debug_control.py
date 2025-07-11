@@ -95,6 +95,27 @@ def col_debug_log(main_window, message: str, category: str = 'COL_GENERAL', leve
     col_debug_controller.debug_log(main_window, message, category, level)
 
 
+def patch_settings_dialog_for_col_debug(settings_dialog):
+    """Add COL debug settings to existing settings dialog"""
+    try:
+        # Simple approach - just add a checkbox for COL debug
+        from PyQt6.QtWidgets import QCheckBox, QVBoxLayout
+
+        if hasattr(settings_dialog, 'debug_layout'):
+            col_debug_check = QCheckBox("Enable COL Debug Output")
+            col_debug_check.setChecked(False)  # Default to off for performance
+
+            settings_dialog.debug_layout.addWidget(col_debug_check)
+            settings_dialog.col_debug_check = col_debug_check
+
+            return True
+
+        return False
+
+    except Exception as e:
+        print(f"❌ Failed to patch settings dialog: {e}")
+        return False
+
 def patch_col_classes_for_performance():
     """Patch COL classes to disable debug output"""
     try:

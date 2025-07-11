@@ -335,6 +335,43 @@ class AppSettings:
 
         print(f"📊 Total themes loaded: {len(self.themes)}")
 
+    def _get_default_settings(self):
+        """Get default settings - FIXED: This method was missing"""
+        return {
+            "theme": "img_factory",
+            "font_family": "Arial",
+            "font_size": 9,
+            "show_tooltips": True,
+            "auto_save": True,
+            "panel_opacity": 95,
+            "remember_img_output_path": True,
+            "remember_import_path": True,
+            "remember_export_path": True,
+            "last_img_output_path": "",
+            "last_import_path": "",
+            "last_export_path": "",
+            "default_img_version": "VER2",
+            "default_initial_size_mb": 100,
+            "auto_create_directory_structure": False,
+            "compression_enabled_by_default": False,
+            "debug_mode": False,
+            "debug_level": "INFO",
+            "debug_categories": [
+                "IMG_LOADING",
+                "TABLE_POPULATION",
+                "BUTTON_ACTIONS",
+                "FILE_OPERATIONS",
+                "COL_LOADING",
+                "COL_PARSING",
+                "COL_THREADING",
+                "COL_DISPLAY",
+                "COL_INTEGRATION"
+            ],
+            "col_debug_enabled": False,
+            "search_enabled": True,
+            "performance_mode": True
+        }
+
     def _load_all_themes(self):
         """Unified theme loading method"""
         themes = {}

@@ -56,7 +56,6 @@ from components.img_formats import GameSpecificIMGDialog, IMGCreator
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 #from components.img_threads import IMGLoadThread, IMGSaveThread
 from components.img_import_export_functions import setup_complete_import_export_integration
-from components.img_integration_patch import apply_search_and_performance_fixes
 from components.img_validator import IMGValidator
 from components.col_debug_control import COLDebugController
 
@@ -420,7 +419,8 @@ class IMGFactory(QMainWindow):
             self.log_message(f"⚠️ Failed to setup extraction integration: {str(e)}")
 
         integrate_all_improvements(self)
-        apply_search_and_performance_fixes(self)
+        #apply_search_and_performance_fixes(self)
+        self.apply_search_and_performance_fixes()
         #apply_search_and_performance_fixes(main_window)
 
         # Setup debug controls
@@ -437,6 +437,61 @@ class IMGFactory(QMainWindow):
 
         # Log startup
         self.log_message("IMG Factory 1.5 initialized")
+
+        integrate_all_improvements(self)
+
+    def apply_search_and_performance_fixes(self):
+        """Apply simple fixes without complex dependencies"""
+        try:
+            self.log_message("🔧 Applying simple fixes...")
+
+            # 1. Simple COL debug control
+            try:
+                def toggle_col_debug():
+                    """Simple COL debug toggle"""
+                    try:
+                        import components.col_core_classes as col_module
+                        current = getattr(col_module, '_global_debug_enabled', False)
+                        col_module._global_debug_enabled = not current
+
+                        if col_module._global_debug_enabled:
+                            self.log_message("🔊 COL debug enabled")
+                        else:
+                            self.log_message("🔇 COL debug disabled")
+
+                    except Exception as e:
+                        self.log_message(f"❌ COL debug toggle error: {e}")
+
+                # Add to main window
+                self.toggle_col_debug = toggle_col_debug
+
+                # Start with debug disabled for performance
+                import components.col_core_classes as col_module
+                col_module._global_debug_enabled = False
+
+                self.log_message("✅ COL performance mode enabled")
+
+            except Exception as e:
+                self.log_message(f"⚠️ COL setup issue: {e}")
+
+            # 2. Simple keyboard shortcut
+            try:
+                from PyQt6.QtGui import QShortcut, QKeySequence
+
+                debug_shortcut = QShortcut(QKeySequence("Ctrl+Shift+D"), self)
+                debug_shortcut.activated.connect(self.toggle_col_debug)
+
+                self.log_message("✅ Debug shortcut ready (Ctrl+Shift+D)")
+
+            except Exception as e:
+                self.log_message(f"⚠️ Shortcut setup issue: {e}")
+
+            self.log_message("✅ Simple fixes applied successfully")
+            return True
+
+        except Exception as e:
+            self.log_message(f"❌ Simple fixes failed: {e}")
+            return False
 
     def setup_unified_signals(self):
         """Setup unified signal handler for all table interactions"""
@@ -2951,47 +3006,81 @@ class IMGFactory(QMainWindow):
 
 
 def main():
-    """Main application entry point"""
-    try:
-        app = QApplication(sys.argv)
-        app.setApplicationName("IMG Factory")
-        app.setApplicationVersion("1.5")
-        app.setOrganizationName("X-Seti")
+   """Main application entry point"""
+   try:
+       app = QApplication(sys.argv)
+       app.setApplicationName("IMG Factory")
+       app.setApplicationVersion("1.5")
+       app.setOrganizationName("X-Seti")
 
-        # Load settings
-        try:
-            # Try different import paths for settings
-            try:
-                from utils.app_settings_system import AppSettings
-            except ImportError:
-                from app_settings_system import AppSettings
+       # Load settings
+       try:
+           # Try different import paths for settings
+           try:
+               from utils.app_settings_system import AppSettings
+           except ImportError:
+               from app_settings_system import AppSettings
 
-            settings = AppSettings()
-            if hasattr(settings, 'load_settings'):
-                settings.load_settings()
-        except Exception as e:
-            print(f"Warning: Could not load settings: {str(e)}")
-            # Create minimal settings object
-            class DummySettings:
-                def __init__(self):
-                    self.current_settings = {}
-                    self.themes = {}
-            settings = DummySettings()
+           settings = AppSettings()
+           if hasattr(settings, 'load_settings'):
+               settings.load_settings()
 
-        # Create main window
-        window = IMGFactory(settings)
+           # Test if settings actually work
+           if not hasattr(settings, 'get_stylesheet'):
+               raise AttributeError("AppSettings missing get_stylesheet method")
 
-        # Show window
-        window.show()
+       except Exception as e:
+           print(f"Warning: Could not load settings: {str(e)}")
+           # Only use DummySettings as last resort
+           class DummySettings:
+               def __init__(self):
+                   self.current_settings = {
+                       "theme": "img_factory",
+                       "font_family": "Arial",
+                       "font_size": 9,
+                       "show_tooltips": True,
+                       "auto_save": True,
+                       "debug_mode": False
+                   }
+                   self.themes = {
+                       "img_factory": {
+                           "colors": {
+                               "background": "#f0f0f0",
+                               "text": "#000000",
+                               "button_text_color": "#000000"
+                           }
+                       }
+                   }
 
-        return app.exec()
+               def get_stylesheet(self):
+                   return "QMainWindow { background-color: #f0f0f0; }"
 
-    except Exception as e:
-        print(f"Fatal error in main(): {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return 1
+               def get_theme(self, theme_name=None):
+                   return self.themes.get("img_factory", {"colors": {}})
+
+               def load_settings(self):
+                   pass
+
+               def save_settings(self):
+                   pass
+
+           settings = DummySettings()
+           print("Using DummySettings - theme system may be limited")
+
+       # Create main window
+       window = IMGFactory(settings)
+
+       # Show window
+       window.show()
+
+       return app.exec()
+
+   except Exception as e:
+       print(f"Fatal error in main(): {str(e)}")
+       import traceback
+       traceback.print_exc()
+       return 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+   sys.exit(main())
