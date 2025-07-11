@@ -199,6 +199,29 @@ class IMGFactoryGUILayout:
         if hasattr(self, 'gui_layout'):
             self.gui_layout.update_ultra_compact_file_info(file_type, file_path, stats)
 
+    def load_tab_settings_from_app_settings(self, app_settings):
+        """Load tab settings from app settings - MISSING METHOD FIX"""
+        try:
+            if hasattr(app_settings, 'current_settings'):
+                # Load tab-related settings
+                tab_height = app_settings.current_settings.get('main_tab_height', 20)
+                tab_style = app_settings.current_settings.get('tab_style', 'Compact')
+
+                # Apply tab settings if main_tab_widget exists
+                if hasattr(self, 'main_tab_widget'):
+                    # Apply basic tab styling
+                    self.main_tab_widget.setStyleSheet(f"""
+                    QTabWidget::tab-bar {{
+                        height: {tab_height}px;
+                    }}
+                    """)
+
+            return True
+
+        except Exception as e:
+            print(f"Error loading tab settings: {e}")
+            return False
+
     def _create_main_tabs_section(self):
         """Create main tabs section for IMG/COL/TXD switching - COMPACT HEIGHT"""
         tabs_container = QWidget()

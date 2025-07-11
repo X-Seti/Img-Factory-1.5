@@ -1,11 +1,24 @@
-#this belongs in components/col_core_classes.py - Version: 12
+#this belongs in components/ col_core_classes.py - Version: 13
 # X-Seti - July11 2025 - Img Factory 1.5
-# COL file core classes with improved error handling
+# COL file core classes - CLEAN VERSION with debug control
 
 import struct
 import os
 from enum import Enum
 from typing import List, Optional, Tuple, Dict, Any
+
+# Global debug flag - controlled by settings (same as IMG loading)
+_global_debug_enabled = False
+
+def set_col_debug_enabled(enabled: bool):
+    """Set global COL debug flag"""
+    global _global_debug_enabled
+    _global_debug_enabled = enabled
+
+def is_col_debug_enabled() -> bool:
+    """Check if COL debug is enabled"""
+    global _global_debug_enabled
+    return _global_debug_enabled
 
 class COLVersion(Enum):
     """COL file format versions"""
@@ -165,171 +178,119 @@ class COLModel:
         self.has_mesh_data = len(self.vertices) > 0 and len(self.faces) > 0
 
 class COLFile:
-    """COL file handler with improved error handling"""
+    """COL file handler with debug control"""
     def __init__(self, file_path: str = None):
         self.file_path = file_path
         self.models: List[COLModel] = []
         self.is_loaded = False
-        self.load_error = None  # Store detailed error information
-        self._debug_enabled = False
+        self.load_error = None
+        self.file_size = 0
     
-    def enable_debug(self):
-        """Enable debug output"""
-        self._debug_enabled = True
-    
-    def disable_debug(self):
-        """Disable debug output"""
-        self._debug_enabled = False
-    
+
     def load(self) -> bool:
-        """Load COL file with improved error handling"""
+        """Load COL file - MISSING METHOD FIX"""
         if not self.file_path:
             self.load_error = "No file path specified"
             return False
-        
+
+        return self.load_from_file(self.file_path)
+
+    def load_from_file(self, file_path: str) -> bool:
+        """Load COL file from disk with debug control"""
         try:
-            # Check if file exists
-            if not os.path.exists(self.file_path):
-                self.load_error = f"File not found: {self.file_path}"
+            self.file_path = file_path
+            self.load_error = None
+
+            if not os.path.exists(file_path):
+                self.load_error = "File not found"
                 return False
-            
-            # Check if file is readable
-            if not os.access(self.file_path, os.R_OK):
-                self.load_error = f"File not readable: {self.file_path}"
-                return False
-            
-            # Check file size
-            file_size = os.path.getsize(self.file_path)
-            if file_size == 0:
-                self.load_error = "File is empty"
-                return False
-            
-            if file_size < 8:
-                self.load_error = f"File too small ({file_size} bytes, minimum 8 required)"
-                return False
-            
-            # Read file data
-            with open(self.file_path, 'rb') as f:
+
+            with open(file_path, 'rb') as f:
                 data = f.read()
+
+            self.file_size = len(data)
+
+            if is_col_debug_enabled():
+                print(f"Loading COL file: {os.path.basename(file_path)} ({self.file_size} bytes)")
+
+            return self.load_from_data(data)
+
+        except Exception as e:
+            self.load_error = str(e)
+            if is_col_debug_enabled():
+                print(f"Error loading COL file: {e}")
+            return False
+
+    def load_from_data(self, data: bytes) -> bool:
+        """Load COL data from bytes with debug control"""
+        try:
+            self.models.clear()
+            self.is_loaded = False
             
-            if self._debug_enabled:
-                print(f"Loading COL file: {len(data)} bytes")
-            
-            # Parse the data
-            success = self._parse_col_data(data)
-            
-            if not success:
-                if not self.load_error:  # Only set if not already set by parsing
-                    self.load_error = "Failed to parse COL data - invalid format or corrupted file"
+            if len(data) < 8:
+                self.load_error = "File too small"
                 return False
             
-            self.is_loaded = True
-            self.load_error = None  # Clear any previous errors
-            return True
-        
-        except PermissionError:
-            self.load_error = f"Permission denied accessing file: {self.file_path}"
-            return False
-        except MemoryError:
-            self.load_error = f"Not enough memory to load file (size: {os.path.getsize(self.file_path):,} bytes)"
-            return False
+            return self._parse_col_data(data)
+            
         except Exception as e:
-            self.load_error = f"Unexpected error loading COL file: {str(e)}"
-            if self._debug_enabled:
-                print(f"Error loading COL file {self.file_path}: {e}")
-            return False
-    
-    def save(self, output_path: str = None) -> bool:
-        """Save COL file to disk"""
-        if not output_path:
-            output_path = self.file_path
-        
-        try:
-            data = self._build_col_data()
-            with open(output_path, 'wb') as f:
-                f.write(data)
-            if self._debug_enabled:
-                print(f"COL file saved: {output_path}")
-            return True
-        
-        except Exception as e:
-            self.load_error = f"Error saving COL file: {str(e)}"
-            if self._debug_enabled:
-                print(f"Error saving COL file: {e}")
+            self.load_error = str(e)
+            if is_col_debug_enabled():
+                print(f"Error parsing COL data: {e}")
             return False
     
     def _parse_col_data(self, data: bytes) -> bool:
-        """Parse COL file data with detailed error reporting"""
+        """Parse COL data - CLEAN with debug control"""
         self.models = []
         offset = 0
-
-        if self._debug_enabled:
+        
+        # Only log if debug is enabled
+        if is_col_debug_enabled():
             print(f"Parsing COL data: {len(data)} bytes")
-
-        if len(data) < 8:
-            self.load_error = f"Data too small for COL format ({len(data)} bytes)"
-            return False
-
-        model_count = 0
+        
         while offset < len(data):
-            if offset + 8 > len(data):
-                if model_count == 0:
-                    self.load_error = "No valid COL models found in file"
-                    return False
-                break  # End of data, but we have models
-            
             model, consumed = self._parse_col_model(data, offset)
             if model is None:
-                if model_count == 0:
-                    self.load_error = f"Invalid COL signature at offset {offset}"
-                    return False
-                break  # Invalid model, but we have previous models
+                break
             
             self.models.append(model)
-            model_count += 1
             offset += consumed
-
+            
             # Safety check to prevent infinite loops
             if consumed == 0:
-                if self._debug_enabled:
-                    print("Warning: No bytes consumed, breaking to prevent infinite loop")
-                self.load_error = f"Parsing stalled at offset {offset} - possible file corruption"
-                return model_count > 0  # Return success if we have any models
-
+                break
+        
+        self.is_loaded = True
         success = len(self.models) > 0
-
-        if self._debug_enabled:
+        
+        # Only log summary if debug enabled
+        if is_col_debug_enabled():
             print(f"COL parsing complete: {len(self.models)} models loaded")
-
-        if not success:
-            self.load_error = "No valid COL models found in file data"
-
+        
         return success
-
+    
     def _parse_col_model(self, data: bytes, offset: int) -> Tuple[Optional[COLModel], int]:
-        """Parse a single COL model from data"""
+        """Parse single COL model - CLEAN with debug control"""
         try:
             if offset + 8 > len(data):
                 return None, 0
-
+            
             # Read FourCC signature
             fourcc = data[offset:offset+4]
-
+            
             if fourcc not in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
                 return None, 0
-
+            
             # Read file size
             file_size = struct.unpack('<I', data[offset+4:offset+8])[0]
             total_size = file_size + 8
-
+            
             if offset + total_size > len(data):
-                if self._debug_enabled:
-                    print(f"Model size extends beyond data: need {total_size}, have {len(data) - offset}")
                 return None, 0
-
+            
             # Create model
             model = COLModel()
-
+            
             # Determine version
             if fourcc == b'COLL':
                 model.version = COLVersion.COL_1
@@ -339,108 +300,124 @@ class COLFile:
                 model.version = COLVersion.COL_3
             elif fourcc == b'COL\x04':
                 model.version = COLVersion.COL_4
-
+            
             # Parse model data based on version
             model_data = data[offset + 8:offset + total_size]
             if model.version == COLVersion.COL_1:
                 self._parse_col1_model(model, model_data)
             else:
                 self._parse_col23_model(model, model_data)
-
+            
+            # Only log if debug enabled
+            if is_col_debug_enabled():
+                print(f"Parsed COL model: {model.name} (version {model.version.value})")
+            
             return model, total_size
-
-        except struct.error as e:
-            if self._debug_enabled:
-                print(f"Struct unpacking error at offset {offset}: {e}")
-            return None, 0
+            
         except Exception as e:
-            if self._debug_enabled:
+            if is_col_debug_enabled():
                 print(f"Error parsing COL model at offset {offset}: {e}")
             return None, 0
-
+    
     def _parse_col1_model(self, model: COLModel, data: bytes):
-        """Parse COL version 1 model"""
+        """Parse COL version 1 model - CLEAN with debug control"""
         try:
             if len(data) < 22:
-                if self._debug_enabled:
-                    print("COL1 data too small for name field")
                 return
-
+            
             offset = 0
-
+            
             # Read name (22 bytes, null-terminated)
             name_bytes = data[offset:offset+22]
             model.name = name_bytes.split(b'\x00')[0].decode('ascii', errors='ignore')
             offset += 22
-
+            
             # Read model ID (4 bytes)
             if offset + 4 <= len(data):
                 model.model_id = struct.unpack('<I', data[offset:offset+4])[0]
                 offset += 4
-
+            
             # Set default name if empty
             if not model.name:
-                model.name = f"COL1_Model_{model.model_id}"
-
+                model.name = f"Model_{model.model_id}"
+            
             # Initialize empty collision data for now
             model.spheres = []
             model.boxes = []
             model.vertices = []
             model.faces = []
-
+            
             # Calculate basic bounding box
             model.calculate_bounding_box()
             model.update_flags()
-
-            if self._debug_enabled:
+            
+            if is_col_debug_enabled():
                 print(f"COL1 model parsed: {model.name}")
-
+                
         except Exception as e:
-            if self._debug_enabled:
+            if is_col_debug_enabled():
                 print(f"Error parsing COL1 model: {e}")
-
+    
     def _parse_col23_model(self, model: COLModel, data: bytes):
-        """Parse COL version 2/3 model"""
+        """Parse COL version 2/3 model - CLEAN with debug control"""
         try:
             if len(data) < 40:
-                if self._debug_enabled:
+                if is_col_debug_enabled():
                     print("COL2/3 data too small for header")
                 return
-
+            
             offset = 0
-
+            
             # Read bounding sphere (16 bytes)
             center_x, center_y, center_z, radius = struct.unpack('<ffff', data[offset:offset+16])
             model.bounding_box.center = Vector3(center_x, center_y, center_z)
             model.bounding_box.radius = radius
             offset += 16
-
+            
             # Read bounding box (24 bytes)
             min_x, min_y, min_z = struct.unpack('<fff', data[offset:offset+12])
             max_x, max_y, max_z = struct.unpack('<fff', data[offset+12:offset+24])
             model.bounding_box.min = Vector3(min_x, min_y, min_z)
             model.bounding_box.max = Vector3(max_x, max_y, max_z)
             offset += 24
-
+            
             # For now, create basic collision data
             model.spheres = []
             model.boxes = []
             model.vertices = []
             model.faces = []
-
+            
             # Set default name
             model.name = f"COL{model.version.value}_Model"
-
+            
             # Update flags
             model.update_flags()
-
-            if self._debug_enabled:
+            
+            if is_col_debug_enabled():
                 print(f"COL2/3 model parsed: {model.name}")
-
+                
         except Exception as e:
-            if self._debug_enabled:
+            if is_col_debug_enabled():
                 print(f"Error parsing COL2/3 model: {e}")
-
+    
+    def save_to_file(self, file_path: str) -> bool:
+        """Save COL file to disk"""
+        try:
+            data = self._build_col_data()
+            
+            with open(file_path, 'wb') as f:
+                f.write(data)
+            
+            if is_col_debug_enabled():
+                print(f"COL file saved: {os.path.basename(file_path)} ({len(data)} bytes)")
+            
+            return True
+            
+        except Exception as e:
+            if is_col_debug_enabled():
+                print(f"Error saving COL file: {e}")
+            return False
+    
     def _build_col_data(self) -> bytes:
         """Build COL file data from models"""
         data = b''
@@ -607,5 +584,6 @@ def diagnose_col_file(file_path: str) -> dict:
 __all__ = [
     'COLFile', 'COLModel', 'COLVersion', 'COLMaterial',
     'COLSphere', 'COLBox', 'COLVertex', 'COLFace', 'COLFaceGroup',
-    'Vector3', 'BoundingBox', 'diagnose_col_file'
+    'Vector3', 'BoundingBox', 'diagnose_col_file',
+    'set_col_debug_enabled', 'is_col_debug_enabled'
 ]

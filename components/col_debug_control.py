@@ -145,7 +145,7 @@ def patch_col_classes_for_performance():
 def patch_col_parser_for_performance():
     """Patch COL parser to disable verbose output"""
     try:
-        from components import col_parser
+        from components import col_parsing_functions
         
         # Disable debug in COL parser
         if hasattr(col_parser, 'COLParser'):

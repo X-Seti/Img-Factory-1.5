@@ -58,7 +58,6 @@ from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_import_export_functions import setup_complete_import_export_integration
 from components.img_validator import IMGValidator
 from components.col_debug_control import COLDebugController
-
 from components.unified_debug_functions import integrate_all_improvements
 from components.file_extraction_functions import setup_complete_extraction_integration
 #gui-layout
