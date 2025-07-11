@@ -1,4 +1,4 @@
-#this belongs in components/ unified_debug_integration.py - Version: 1
+#this belongs in components/ unified_debug_functions.py - Version: 1
 # X-Seti - July10 2025 - IMG Factory 1.5 - Unified Debug Integration
 
 """

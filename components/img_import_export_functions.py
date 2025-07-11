@@ -1,4 +1,4 @@
-#this belongs in components/img_import_export_integration.py - Version: 2
+#this belongs in components/img_import_export_functions.py - Version: 2
 # X-Seti - July11 2025 - Img Factory 1.5
 # Main integration module for import/export functionality
 

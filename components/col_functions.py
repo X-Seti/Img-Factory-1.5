@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-#this belongs in components/col_integration.py - version 11
+#this belongs in components/col_functions.py - version 11
 # X-Seti - July10 2025 - Img Factory 1.5
 # Complete COL functionality integration - Updated with threaded loading
 """

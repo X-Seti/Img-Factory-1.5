@@ -1,4 +1,4 @@
-#this belongs in components/ img_search_fix.py - Version: 1
+#this belongs in components/ img_search_function.py - Version: 1
 # X-Seti - July10 2025 - IMG Factory 1.5 - Search Box Fix
 
 """

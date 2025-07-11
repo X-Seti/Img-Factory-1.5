@@ -1,4 +1,4 @@
-#this belongs in components/debug_settings_integration.py - version 1
+#this belongs in components/debug_settings_functions.py - version 1
 # X-Seti - July10 2025 - Img Factory 1.5
 # Integration patch for existing debug settings
 

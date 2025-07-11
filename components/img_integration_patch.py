@@ -1,4 +1,4 @@
-#this belongs in components/ integration_patch.py - Version: 1
+#this belongs in components/ img_integration_patch.py - Version: 1
 # X-Seti - July10 2025 - IMG Factory 1.5 - Integration Patch
 
 """
@@ -10,7 +10,7 @@ def apply_search_and_performance_fixes(main_window):
     """Apply both search fix and COL performance improvements"""
     try:
         # Apply search fix
-        from components.img_search_fix import install_search_manager, fix_search_dialog
+        from components.img_search_function import IMGSearchManager, install_search_manager
         
         search_success = install_search_manager(main_window)
         dialog_success = fix_search_dialog(main_window)

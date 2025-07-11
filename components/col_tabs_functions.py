@@ -1,4 +1,4 @@
-#this belongs in components/ col_tabs_integration.py - Version: 3  
+#this belongs in components/ col_tabs_function.py - Version: 3
 # X-Seti - July08 2025 - COL Tabs Integration for IMG Factory 1.5
 
 """

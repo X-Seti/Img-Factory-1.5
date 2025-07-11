@@ -20,8 +20,9 @@ from PyQt6.QtGui import QAction, QIcon, QShortcut, QKeySequence, QFont
 # Import COL components
 from components.col_core_classes import COLFile, COLModel, COLVersion
 from components.col_editor import COLEditorDialog, open_col_editor
-from components.col_integration import COLListWidget, COLModelDetailsWidget, load_col_from_img_entry, export_col_to_img
+from components.col_functions import COLListWidget, COLModelDetailsWidget, load_col_from_img_entry, export_col_to_img
 from components.col_utilities import open_col_batch_processor, analyze_col_file_dialog
+from components.col_threaded_loader import COLBackgroundLoader
 
 def integrate_col_functionality(img_factory_instance):
     """

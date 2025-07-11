@@ -1,4 +1,4 @@
-#this belongs in components/file_extraction_integration.py - version 1
+#this belongs in components/file_extraction_functions.py - version 1
 # X-Seti - July10 2025 - Img Factory 1.5
 # Integration for enhanced file filtering and extraction
 

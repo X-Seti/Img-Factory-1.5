@@ -50,17 +50,19 @@ from components.img_core_classes import (
     IMGEntriesTable, FilterPanel, IMGFileInfoPanel,
     TabFilterWidget, integrate_filtering, create_entries_table_panel
 )
-from components.img_close_functions import install_close_functions, setup_close_manager
 from components.img_creator import GameType, NewIMGDialog, IMGCreationThread
+from components.img_close_functions import install_close_functions, setup_close_manager
 from components.img_formats import GameSpecificIMGDialog, IMGCreator
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 #from components.img_threads import IMGLoadThread, IMGSaveThread
+from components.img_import_export_functions import setup_complete_import_export_integration
+from components.img_integration_patch import apply_search_and_performance_fixes
 from components.img_validator import IMGValidator
-from components.img_import_export_integration import setup_complete_import_export_integration
-from components.col_tabs_integration import setup_col_tab_integration
-from components.integration_patch import apply_search_and_performance_fixes
-from components.unified_debug_integration import integrate_all_improvements
-from components.file_extraction_integration import setup_complete_extraction_integration
+from components.col_debug_control import COLDebugController
+
+from components.unified_debug_functions import integrate_all_improvements
+from components.file_extraction_functions import setup_complete_extraction_integration
+#gui-layout
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.menu import IMGFactoryMenuBar
@@ -401,7 +403,7 @@ class IMGFactory(QMainWindow):
         # COL Integration - FIXED: Move to end and use correct import
 
         try:
-            from components.col_tabs_integration import setup_col_tab_integration
+            from components.col_tabs_functions import setup_col_tab_integration
             if setup_col_tab_integration(self):
                 self.log_message("✅ COL tab integration setup complete")
             else:
@@ -412,7 +414,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"COL integration error: {str(e)}")
 
         try:
-            from components.file_extraction_integration import setup_complete_extraction_integration
+            from components.file_extraction_functions import setup_complete_extraction_integration
             setup_complete_extraction_integration(self)
         except Exception as e:
             self.log_message(f"⚠️ Failed to setup extraction integration: {str(e)}")
@@ -1104,11 +1106,11 @@ class IMGFactory(QMainWindow):
         try:
             if hasattr(self, 'load_col_file_safely'):
                 # Use the method provided by col_tab_integration
-                from components.col_tab_integration import update_ui_for_loaded_col
+                from components.col_tabs_function import update_ui_for_loaded_col
                 update_ui_for_loaded_col(self)
             else:
                 # Fallback implementation
-                self.log_message("⚠️ COL integration not fully loaded, using fallback")
+                self.log_message("⚠️ COL Fintegration not fully loaded, using fallback")
                 if hasattr(self, 'gui_layout') and self.gui_layout.table:
                     self.gui_layout.table.setRowCount(1)
                     col_name = os.path.basename(self.current_col.file_path) if hasattr(self.current_col, 'file_path') else "Unknown"
