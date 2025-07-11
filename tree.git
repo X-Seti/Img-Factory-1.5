@@ -1,63 +1,48 @@
 .
 ├── button_functions_status.md
+├── chat-july-11-2025
 ├── col_architecture_plan.py
 ├── components
 │   ├── col_core_classes.py
+│   ├── col_debug_control.py
 │   ├── col_display.py
 │   ├── col_editor.py
-│   ├── col_integration.py
+│   ├── col_functions.py
 │   ├── col_main_integration.py
 │   ├── col_parser.py
+│   ├── col_print_patcher.py
 │   ├── col_robust_parser.py
 │   ├── col_structure_manager.py
-│   ├── col_tabs_integration.py
+│   ├── col_tabs_functions.py
 │   ├── col_threaded_loader.py
 │   ├── col_utilities.py
-│   ├── debug_settings_integration.py
-│   ├── file_extraction_integration.py
+│   ├── file_extraction_functions.py
 │   ├── file_type_filter.py
 │   ├── gta_file_editors.py
 │   ├── img_close_functions.py
-│   ├── img_combined_open_dialog.py
 │   ├── img_compression.py
+│   ├── img_core_classes_addon.py
 │   ├── img_core_classes.py
 │   ├── img_creator.py
-│   ├── img_debug.py
+│   ├── img_debug_functions.py
 │   ├── img_formats.py
+│   ├── img_import_export_functions.py
+│   ├── img_import_export.py
+│   ├── img_integration_main.py
+│   ├── img_integration_patch.py
 │   ├── img_manager.py
-│   ├── img_parsing_integration.py
+│   ├── img_open_functions_dialog.py
+│   ├── img_parsing_functions.py
 │   ├── img_project_manager.py
+│   ├── img_search_function.py
 │   ├── img_table_styling.py
 │   ├── img_templates.json
 │   ├── img_templates.py
 │   ├── img_validator.py
-│   ├── __pycache__
-│   │   ├── col_core_classes.cpython-312.pyc
-│   │   ├── col_display.cpython-312.pyc
-│   │   ├── col_editor.cpython-312.pyc
-│   │   ├── col_fix.cpython-312.pyc
-│   │   ├── col_integration.cpython-312.pyc
-│   │   ├── col_integration_manager.cpython-312.pyc
-│   │   ├── col_loader.cpython-312.pyc
-│   │   ├── col_main_integration.cpython-312.pyc
-│   │   ├── col_parser.cpython-312.pyc
-│   │   ├── col_safe_integration.cpython-312.pyc
-│   │   ├── col_simple_patch.cpython-312.pyc
-│   │   ├── col_tab_integration.cpython-312.pyc
-│   │   ├── col_tabs_integration.cpython-312.pyc
-│   │   ├── col_utilities.cpython-312.pyc
-│   │   ├── file_extraction_integration.cpython-312.pyc
-│   │   ├── file_type_filter.cpython-312.pyc
-│   │   ├── gta_file_editors.cpython-312.pyc
-│   │   ├── img_close_functions.cpython-312.pyc
-│   │   ├── img_core_classes.cpython-312.pyc
-│   │   ├── img_creator.cpython-312.pyc
-│   │   ├── img_formats.cpython-312.pyc
-│   │   ├── img_templates.cpython-312.pyc
-│   │   ├── img_validator.cpython-312.pyc
-│   │   └── unified_signal_handler.cpython-312.pyc
 │   ├── txd_converter.py
+│   ├── unified_debug_functions.py
 │   └── unified_signal_handler.py
+├── core
 ├── gui
 │   ├── button_panel.py
 │   ├── buttons.py
@@ -74,27 +59,11 @@
 │   ├── menu.py
 │   ├── panels.py
 │   ├── pastel_button_theme.py
-│   ├── __pycache__
-│   │   ├── buttons.cpython-312.pyc
-│   │   ├── control_panels.cpython-312.pyc
-│   │   ├── dialogs.cpython-312.pyc
-│   │   ├── gui_layout.cpython-312.pyc
-│   │   ├── gui_settings.cpython-312.pyc
-│   │   ├── __init__.cpython-312.pyc
-│   │   ├── log_panel.cpython-312.pyc
-│   │   ├── main_window.cpython-312.pyc
-│   │   ├── menu.cpython-312.pyc
-│   │   ├── panels.cpython-312.pyc
-│   │   ├── pastel_button_theme.cpython-312.pyc
-│   │   └── status_bar.cpython-312.pyc
 │   └── status_bar.py
 ├── Img Factory1.3 -> /home/x2/code base/Img Factory1.3
 ├── imgfactory.py
 ├── imgfactory.settings.json
 ├── launch_imgfactory.py
-├── __pycache__
-│   ├── app_settings_system.cpython-312.pyc
-│   └── main_col_integration.cpython-312.pyc
 ├── templates
 │   └── new_templates.json
 ├── themes
@@ -1174,4 +1143,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-943 directories, 232 files
+941 directories, 203 files
