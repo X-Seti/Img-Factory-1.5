@@ -57,6 +57,8 @@ from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 #from components.img_threads import IMGLoadThread, IMGSaveThread
 from components.img_validator import IMGValidator
 from components.col_tabs_integration import setup_col_tab_integration
+from components.integration_patch import apply_search_and_performance_fixes
+from components.unified_debug_integration import integrate_all_improvements
 from components.file_extraction_integration import setup_complete_extraction_integration
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
@@ -414,6 +416,16 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"⚠️ Failed to setup extraction integration: {str(e)}")
 
+        integrate_all_improvements(self)
+        apply_search_and_performance_fixes(self)
+        #apply_search_and_performance_fixes(main_window)
+
+        # Setup debug controls
+        self.setup_debug_controls()
+
+        # Setup search functionality
+        self.setup_search_functionality()
+
         # Apply theme
         if hasattr(self.app_settings, 'themes'):
             apply_theme_to_app(QApplication.instance(), self.app_settings)
@@ -635,12 +647,10 @@ class IMGFactory(QMainWindow):
                          "IMG Factory 1.5\nAdvanced IMG Archive Management\nX-Seti 2025")
 
     def perform_search(self, search_text, options):
-        """Perform search in current IMG entries using unified system"""
+        """Perform search in current IMG entries - FIXED VERSION"""
         try:
             if not self.current_img or not self.current_img.entries:
                 self.log_message("No IMG file loaded or no entries to search")
-                if hasattr(self, 'search_dialog'):
-                    self.search_dialog.update_results(0, 0)
                 return
 
             # Perform search
@@ -654,6 +664,21 @@ class IMGFactory(QMainWindow):
                 if not options.get('case_sensitive', False):
                     entry_name = entry_name.lower()
                     search_text = search_text.lower()
+
+                # Check file type filter
+                file_type = options.get('file_type', 'All Files')
+                if file_type != 'All Files':
+                    entry_ext = entry.name.split('.')[-1].upper() if '.' in entry.name else ''
+                    type_mapping = {
+                        'Models (DFF)': 'DFF',
+                        'Textures (TXD)': 'TXD',
+                        'Collision (COL)': 'COL',
+                        'Animation (IFP)': 'IFP',
+                        'Audio (WAV)': 'WAV',
+                        'Scripts (SCM)': 'SCM'
+                    }
+                    if file_type in type_mapping and entry_ext != type_mapping[file_type]:
+                        continue
 
                 # Check if matches
                 if options.get('whole_word', False):
@@ -674,22 +699,163 @@ class IMGFactory(QMainWindow):
                     if search_text in entry_name:
                         matches.append(i)
 
-            # Update search dialog results
-            if hasattr(self, 'search_dialog'):
-                self.search_dialog.update_results(len(matches), total_entries)
-
-            # Select matching entries in table using unified system
+            # Select matching entries in table
             if matches:
-                from components.unified_signal_handler import signal_handler
-                if signal_handler.select_rows("main_entries", matches):
-                    self.log_message(f"Found {len(matches)} matches for '{search_text}'")
-                else:
-                    self.log_message(f"Found {len(matches)} matches but couldn't select them")
+                table = self.gui_layout.table
+                table.clearSelection()
+                for row in matches:
+                    if row < table.rowCount():
+                        table.selectRow(row)
+
+                # Scroll to first match
+                table.scrollToItem(table.item(matches[0], 0))
+
+                self.log_message(f"🔍 Found {len(matches)} matches for '{search_text}'")
             else:
-                self.log_message(f"No matches found for '{search_text}'")
+                self.log_message(f"🔍 No matches found for '{search_text}'")
 
         except Exception as e:
-            self.log_message(f"Search error: {str(e)}")
+            self.log_message(f"❌ Search error: {str(e)}")
+
+    def setup_search_functionality(self):
+        """Setup search box functionality - new"""
+        try:
+            # Find the search input widget
+            search_input = None
+
+            # Try different possible locations
+            if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'search_input'):
+                search_input = self.gui_layout.search_input
+            elif hasattr(self, 'filter_input'):
+                search_input = self.filter_input
+            elif hasattr(self.gui_layout, 'filter_input'):
+                search_input = self.gui_layout.filter_input
+
+            if search_input:
+                # Connect search functionality
+                from PyQt6.QtCore import QTimer
+
+                self.search_timer = QTimer()
+                self.search_timer.setSingleShot(True)
+                self.search_timer.timeout.connect(self._perform_live_search)
+
+                # Connect signals
+                search_input.textChanged.connect(self._on_search_text_changed)
+                search_input.returnPressed.connect(self._perform_live_search)
+
+                self.log_message("✅ Search functionality connected")
+                return True
+            else:
+                self.log_message("⚠️ Search input widget not found")
+                return False
+
+        except Exception as e:
+            self.log_message(f"❌ Search setup error: {e}")
+            return False
+
+    def _on_search_text_changed(self, text):
+        """Handle search text changes with debouncing"""
+        self.search_timer.stop()
+        if text.strip():
+            self.search_timer.start(300)  # 300ms delay
+        else:
+            self._clear_search()
+
+    def _perform_live_search(self):
+        """Perform live search"""
+        try:
+            # Get search text
+            search_text = ""
+            if hasattr(self, 'filter_input'):
+                search_text = self.filter_input.text().strip()
+            elif hasattr(self.gui_layout, 'search_input'):
+                search_text = self.gui_layout.search_input.text().strip()
+
+            if not search_text:
+                self._clear_search()
+                return
+
+            # Get file type filter
+            file_type = "All Files"
+            if hasattr(self, 'filter_combo'):
+                file_type = self.filter_combo.currentText()
+
+            # Create search options
+            options = {
+                'case_sensitive': False,
+                'whole_word': False,
+                'regex': False,
+                'file_type': file_type
+            }
+
+            # Perform search
+            self.perform_search(search_text, options)
+
+        except Exception as e:
+            self.log_message(f"❌ Live search error: {e}")
+
+    def _clear_search(self):
+        """Clear search results"""
+        try:
+            if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
+                self.gui_layout.table.clearSelection()
+        except Exception as e:
+            self.log_message(f"❌ Clear search error: {e}")
+
+    def enable_col_debug(self):
+        """Enable COL debug output"""
+        # Set debug flag on all loaded COL files
+        if hasattr(self, 'current_col') and self.current_col:
+            self.current_col._debug_enabled = True
+
+        # Set global flag for future COL files
+        import components.col_core_classes as col_module
+        col_module._global_debug_enabled = True
+
+        self.log_message("🔊 COL debug output enabled")
+
+    def disable_col_debug(self):
+        """Disable COL debug output"""
+        # Set debug flag on all loaded COL files
+        if hasattr(self, 'current_col') and self.current_col:
+            self.current_col._debug_enabled = False
+
+        # Set global flag for future COL files
+        import components.col_core_classes as col_module
+        col_module._global_debug_enabled = False
+
+        self.log_message("🔇 COL debug output disabled")
+
+    def toggle_col_debug(self):
+        """Toggle COL debug output"""
+        try:
+            import components.col_core_classes as col_module
+            debug_enabled = getattr(col_module, '_global_debug_enabled', False)
+
+            if debug_enabled:
+                self.disable_col_debug()
+            else:
+                self.enable_col_debug()
+
+        except Exception as e:
+            self.log_message(f"❌ Debug toggle error: {e}")
+
+    def setup_debug_controls(self):
+        """Setup debug control shortcuts - ADD THIS TO __init__"""
+        try:
+            from PyQt6.QtGui import QShortcut, QKeySequence
+
+            # Ctrl+Shift+D for debug toggle
+            debug_shortcut = QShortcut(QKeySequence("Ctrl+Shift+D"), self)
+            debug_shortcut.activated.connect(self.toggle_col_debug)
+
+            # Start with debug disabled for performance
+            self.disable_col_debug()
+
+            self.log_message("✅ Debug controls ready (Ctrl+Shift+D to toggle COL debug)")
+
+        except Exception as e:
+            self.log_message(f"❌ Debug controls error: {e}")
 
     def _create_ui(self):
         """Create the main user interface - WITH TABS FIXED"""

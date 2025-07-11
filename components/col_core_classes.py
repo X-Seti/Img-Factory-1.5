@@ -203,7 +203,9 @@ class COLModel:
         # Shadow mesh (COL3 only)
         self.shadow_vertices: List[COLVertex] = []
         self.shadow_faces: List[COLFace] = []
-    
+        self._debug_enabled = getattr(sys.modules.get('components.col_core_classes'), '_global_debug_enabled', False)
+
+
     def __str__(self):
         return f"COLModel(name='{self.name}', version={self.version.name}, elements={self.get_total_elements()})"
     
@@ -343,58 +345,61 @@ class COLFile:
         """Parse COL file data"""
         self.models = []
         offset = 0
-        
-        print(f"Parsing COL data: {len(data)} bytes")
-        
+
+        # Only log if debug is specifically enabled
+        debug_enabled = hasattr(self, '_debug_enabled') and self._debug_enabled
+
+        if debug_enabled:
+            print(f"Parsing COL data: {len(data)} bytes")
+
         while offset < len(data):
-            print(f"Parsing model at offset {offset}")
             model, consumed = self._parse_col_model(data, offset)
             if model is None:
-                print(f"No more models found at offset {offset}")
                 break
-            
-            print(f"Parsed model: {model.name}, consumed {consumed} bytes")
+
             self.models.append(model)
             offset += consumed
-            
+
             # Safety check to prevent infinite loops
             if consumed == 0:
-                print("Warning: No bytes consumed, breaking to prevent infinite loop")
+                if debug_enabled:
+                    print("Warning: No bytes consumed, breaking to prevent infinite loop")
                 break
-        
+
         self.is_loaded = True
         success = len(self.models) > 0
-        print(f"COL parsing complete: {len(self.models)} models loaded, success={success}")
+
+        # Only log summary, no individual model spam
+        if debug_enabled:
+            print(f"COL parsing complete: {len(self.models)} models loaded")
+
         return success
-    
+
     def _parse_col_model(self, data: bytes, offset: int) -> Tuple[Optional[COLModel], int]:
         """Parse a single COL model from data"""
         try:
             if offset + 8 > len(data):
-                print(f"Not enough data for header at offset {offset}")
                 return None, 0
-            
+
+            # Only log if debug is specifically enabled
+            debug_enabled = hasattr(self, '_debug_enabled') and self._debug_enabled
+
             # Read FourCC signature
             fourcc = data[offset:offset+4]
-            print(f"Found signature: {fourcc} at offset {offset}")
-            
+
             if fourcc not in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
-                print(f"Invalid signature: {fourcc}")
                 return None, 0
-            
+
             # Read file size
             file_size = struct.unpack('<I', data[offset+4:offset+8])[0]
             total_size = file_size + 8  # Size field doesn't include header
-            
-            print(f"Model size: {file_size}, total size: {total_size}")
-            
+
             if offset + total_size > len(data):
-                print(f"Model extends beyond file: need {offset + total_size}, have {len(data)}")
                 return None, 0
-            
+
             # Create model
             model = COLModel()
-            
+
             # Determine version
             if fourcc == b'COLL':
                 model.version = COLVersion.COL_1
@@ -404,83 +409,79 @@ class COLFile:
                 model.version = COLVersion.COL_3
             elif fourcc == b'COL\x04':
                 model.version = COLVersion.COL_4
-            
-            print(f"Model version: {model.version}")
-            
+
             # Parse model data based on version
             model_data = data[offset + 8:offset + total_size]
             if model.version == COLVersion.COL_1:
                 self._parse_col1_model(model, model_data)
             else:
                 self._parse_col23_model(model, model_data)
-            
+
             return model, total_size
-            
+
         except Exception as e:
-            print(f"Error parsing COL model at offset {offset}: {e}")
+            debug_enabled = hasattr(self, '_debug_enabled') and self._debug_enabled
+            if debug_enabled:
+                print(f"Error parsing COL model at offset {offset}: {e}")
             return None, 0
-    
+
     def _parse_col1_model(self, model: COLModel, data: bytes):
-        """Parse COL version 1 model"""
+        """Parse COL version 1 mode"""
         try:
             if len(data) < 22:
-                print("COL1 data too short for name")
                 return
-            
+
+            debug_enabled = hasattr(self, '_debug_enabled') and self._debug_enabled
             offset = 0
-            
+
             # Read name (22 bytes, null-terminated)
             name_bytes = data[offset:offset+22]
             model.name = name_bytes.split(b'\x00')[0].decode('ascii', errors='ignore')
             offset += 22
-            
-            print(f"COL1 model name: '{model.name}'")
-            
+
             # Read model ID (4 bytes)
             if offset + 4 <= len(data):
                 model.model_id = struct.unpack('<I', data[offset:offset+4])[0]
                 offset += 4
-                print(f"COL1 model ID: {model.model_id}")
-            
-            # For COL1, we'll do a simplified parse
-            # Real implementation would parse all collision data
-            remaining_size = len(data) - offset
-            print(f"COL1 remaining data: {remaining_size} bytes")
-            
+
             # Initialize empty collision data
             model.spheres = []
             model.boxes = []
             model.vertices = []
             model.faces = []
-            
+
             # Calculate basic bounding box
             model.calculate_bounding_box()
             model.update_flags()
-            
-            print(f"COL1 model parsed: {model.name}")
-            
+
+            # Only log if debug specifically enabled
+            if debug_enabled:
+                print(f"COL1 model parsed: {model.name}")
+
         except Exception as e:
-            print(f"Error parsing COL1 model: {e}")
+            debug_enabled = hasattr(self, '_debug_enabled') and self._debug_enabled
+            if debug_enabled:
+                print(f"Error parsing COL1 model: {e}")
     
     def _parse_col23_model(self, model: COLModel, data: bytes):
         """Parse COL version 2/3 model"""
         try:
             if len(data) < 60:  # Minimum size for COL2/3 header
-                print(f"COL2/3 data too short: {len(data)} bytes")
                 return
-            
+
+            debug_enabled = hasattr(self, '_debug_enabled') and self._debug_enabled
             offset = 0
-            
+
             # Read bounding sphere (16 bytes: center + radius)
             center_x, center_y, center_z, radius = struct.unpack('<ffff', data[offset:offset+16])
             offset += 16
-            
+
             # Read bounding box (24 bytes: min + max)
             min_x, min_y, min_z = struct.unpack('<fff', data[offset:offset+12])
             offset += 12
             max_x, max_y, max_z = struct.unpack('<fff', data[offset:offset+12])
             offset += 12
-            
+
             # Create bounding box
             model.bounding_box = BoundingBox(
                 Vector3(min_x, min_y, min_z),
@@ -488,7 +489,7 @@ class COLFile:
                 Vector3(center_x, center_y, center_z),
                 radius
             )
-            
+
             # Read counts (16 bytes)
             sphere_count = struct.unpack('<I', data[offset:offset+4])[0]
             offset += 4
@@ -498,44 +499,49 @@ class COLFile:
             offset += 4
             face_count = struct.unpack('<I', data[offset:offset+4])[0]
             offset += 4
-            
-            print(f"COL2/3 counts - Spheres: {sphere_count}, Boxes: {box_count}, Vertices: {vertex_count}, Faces: {face_count}")
-            
+
+            # Only log counts if debug enabled
+            if debug_enabled:
+                print(f"COL2/3 counts - Spheres: {sphere_count}, Boxes: {box_count}, Vertices: {vertex_count}, Faces: {face_count}")
+
             # Initialize lists
             model.spheres = []
             model.boxes = []
             model.vertices = []
             model.faces = []
-            
-            # For this basic implementation, create placeholder elements
-            # Real implementation would parse actual collision data
+
+            # Create placeholder elements for basic implementation
             for i in range(sphere_count):
                 sphere = COLSphere(Vector3(0, 0, 0), 1.0, COLMaterial.DEFAULT)
                 model.spheres.append(sphere)
-            
+
             for i in range(box_count):
                 box = COLBox(Vector3(-1, -1, -1), Vector3(1, 1, 1), COLMaterial.DEFAULT)
                 model.boxes.append(box)
-            
+
             for i in range(vertex_count):
                 vertex = COLVertex(Vector3(0, 0, 0))
                 model.vertices.append(vertex)
-            
+
             for i in range(face_count):
                 face = COLFace(0, 1, 2, COLMaterial.DEFAULT, 0)
                 model.faces.append(face)
-            
+
             # Set a default name
             model.name = f"COL{model.version.value}_Model"
-            
+
             # Update flags
             model.update_flags()
-            
-            print(f"COL2/3 model parsed: {model.name}")
-            
+
+            # Only log if debug enabled
+            if debug_enabled:
+                print(f"COL2/3 model parsed: {model.name}")
+
         except Exception as e:
-            print(f"Error parsing COL2/3 model: {e}")
-    
+            debug_enabled = hasattr(self, '_debug_enabled') and self._debug_enabled
+            if debug_enabled:
+                print(f"Error parsing COL2/3 model: {e}")
+
     def _build_col_data(self) -> bytes:
         """Build COL file data from models"""
         data = b''
