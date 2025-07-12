@@ -34,6 +34,10 @@ class IMGFactoryGUILayout:
         self.tab_widget = None
         self.left_vertical_splitter = None
 
+        # Fix button mappings and connections
+        self.add_button_methods()
+        self.button_connections()
+
         # Initialize tab settings and button icons after a short delay
         # This ensures the main window is fully initialized
         from PyQt6.QtCore import QTimer
@@ -167,8 +171,8 @@ class IMGFactoryGUILayout:
         self.left_vertical_splitter = QSplitter(Qt.Orientation.Vertical)
 
         # 1. TOP: Main Tabs (IMG, COL, TXD) - COMPACT HEIGHT
-        main_tabs = self._create_main_tabs_section()
-        self.left_vertical_splitter.addWidget(main_tabs)
+        #main_tabs = self._create_main_tabs_section()
+        #self.left_vertical_splitter.addWidget(main_tabs)
 
         # 2. MIDDLE: File Window (table with sub-tabs)
         file_window = self._create_file_window()
@@ -180,10 +184,9 @@ class IMGFactoryGUILayout:
 
         # Set section proportions: MainTabs(40px), File(720px), Status(200px)
         # Total height ~960px, tabs take minimal space
-        self.left_vertical_splitter.setSizes([40, 720, 200])
+        self.left_vertical_splitter.setSizes([ 760, 200])
 
         # Prevent sections from collapsing completely
-        self.left_vertical_splitter.setCollapsible(0, False)  # Main tabs
         self.left_vertical_splitter.setCollapsible(1, False)  # File window
         self.left_vertical_splitter.setCollapsible(2, False)  # Status window
 
@@ -221,102 +224,6 @@ class IMGFactoryGUILayout:
         except Exception as e:
             print(f"Error loading tab settings: {e}")
             return False
-
-    def _create_main_tabs_section(self):
-        """Create main tabs section for IMG/COL/TXD switching - COMPACT HEIGHT"""
-        tabs_container = QWidget()
-        tabs_layout = QVBoxLayout(tabs_container)
-        tabs_layout.setContentsMargins(5, 2, 5, 2)  # Reduced margins
-        tabs_layout.setSpacing(0)
-
-        # Create horizontal tab widget for main file types
-        self.main_type_tabs = QTabWidget()
-        self.main_type_tabs.setTabPosition(QTabWidget.TabPosition.North)
-
-        # COMPACT TAB HEIGHT STYLING
-        self.main_type_tabs.setStyleSheet("""
-            QTabWidget::pane {
-                border: 1px solid #cccccc;
-                border-radius: 3px;
-                background-color: #ffffff;
-                margin-top: 0px;
-            }
-            QTabBar {
-                qproperty-drawBase: 0;
-            }
-            QTabBar::tab {
-                background-color: #f0f0f0;
-                border: 1px solid #cccccc;
-                border-bottom: none;
-                padding: 4px 8px;  /* Reduced padding for compact height */
-                margin-right: 2px;
-                border-radius: 3px 3px 0px 0px;
-                min-width: 80px;
-                max-height: 24px;  /* Maximum tab height */
-                font-size: 9pt;    /* Smaller font for compact look */
-            }
-            QTabBar::tab:selected {
-                background-color: #ffffff;
-                border-bottom: 1px solid #ffffff;
-                color: #000000;
-                font-weight: bold;
-            }
-            QTabBar::tab:hover {
-                background-color: #e8e8e8;
-            }
-            QTabBar::tab:!selected {
-                margin-top: 2px;  /* Makes unselected tabs appear lower */
-            }
-        """)
-
-        # Set maximum height for the entire tab widget
-        self.main_type_tabs.setMaximumHeight(35)  # Compact height
-
-        # IMG Tab
-        img_tab = QWidget()
-        img_layout = QVBoxLayout(img_tab)
-        img_layout.setContentsMargins(0, 0, 0, 0)
-        img_layout.setSpacing(0)
-
-        # IMG status info - ultra compact version
-        self.img_status_widget = self._create_ultra_compact_file_status("IMG")
-        img_layout.addWidget(self.img_status_widget)
-
-        self.main_type_tabs.addTab(img_tab, "📁 IMG")
-
-        # COL Tab
-        col_tab = QWidget()
-        col_layout = QVBoxLayout(col_tab)
-        col_layout.setContentsMargins(0, 0, 0, 0)
-        col_layout.setSpacing(0)
-
-        # COL status info - ultra compact version
-        self.col_status_widget = self._create_ultra_compact_file_status("COL")
-        col_layout.addWidget(self.col_status_widget)
-
-        self.main_type_tabs.addTab(col_tab, "🔧 COL")
-
-        # TXD Tab
-        txd_tab = QWidget()
-        txd_layout = QVBoxLayout(txd_tab)
-        txd_layout.setContentsMargins(0, 0, 0, 0)
-        txd_layout.setSpacing(0)
-
-        # TXD status info - ultra compact version
-        self.txd_status_widget = self._create_ultra_compact_file_status("TXD")
-        txd_layout.addWidget(self.txd_status_widget)
-
-        self.main_type_tabs.addTab(txd_tab, "🖼️ TXD")
-
-        # Connect tab change signal
-        self.main_type_tabs.currentChanged.connect(self._on_main_tab_changed)
-
-        tabs_layout.addWidget(self.main_type_tabs)
-
-        # Set the container to a minimal height
-        tabs_container.setMaximumHeight(40)  # Total container height
-
-        return tabs_container
 
     def _create_ultra_compact_file_status(self, file_type):
         """Create ultra compact file status widget - single line"""
@@ -850,6 +757,99 @@ class IMGFactoryGUILayout:
         
         return status_window
     
+    def add_button_methods(main_window):
+        """Add any missing button method names that GUI might be calling"""
+        try:
+            # Import the functions we need
+            from components.img_import_export_functions import (
+                import_files_function, import_via_function, export_selected_function,
+                export_via_function, quick_export_function, export_all_function,
+                remove_selected_function, dump_all_function
+            )
+
+            # Add all possible method names that buttons might call
+            method_mappings = {
+                # Import methods
+                'import_files': lambda: import_files_function(main_window),
+                'import_files_via': lambda: import_via_function(main_window),
+                'import_files_advanced': lambda: import_via_function(main_window),
+
+                # Export methods
+                'export_selected': lambda: export_selected_function(main_window),
+                'export_selected_via': lambda: export_via_function(main_window),
+                'export_selected_advanced': lambda: export_via_function(main_window),
+                'export_selected_entries': lambda: export_selected_function(main_window),
+                'quick_export_selected': lambda: quick_export_function(main_window),
+                'quick_export': lambda: quick_export_function(main_window),
+                'export_all_entries': lambda: export_all_function(main_window),
+                'export_all': lambda: export_all_function(main_window),
+
+                # Remove methods
+                'remove_selected': lambda: remove_selected_function(main_window),
+                'remove_selected_entries': lambda: remove_selected_function(main_window),
+                'remove_all_entries': lambda: remove_selected_function(main_window),
+
+                # Other methods
+                'dump_entries': lambda: dump_all_function(main_window),
+                'dump_all_entries': lambda: dump_all_function(main_window),
+                'refresh_table': main_window.refresh_table if hasattr(main_window, 'refresh_table') else lambda: main_window.log_message("Refresh requested"),
+            }
+
+            # Add all method names to main_window
+            for method_name, method_func in method_mappings.items():
+                setattr(main_window, method_name, method_func)
+
+            main_window.log_message(f"✅ Added {len(method_mappings)} button method mappings")
+            return True
+
+        except Exception as e:
+            main_window.log_message(f"❌ Error adding button methods: {str(e)}")
+            return False
+
+    def button_connections(self):
+        """all button connections"""
+        try:
+            from PyQt6.QtWidgets import QPushButton
+
+            # Find all buttons and fix their connections
+            all_buttons = self.findChildren(QPushButton)
+
+            for btn in all_buttons:
+                btn_text = btn.text()
+
+                # Change "Update List" to "Refresh"
+                if any(text in btn_text.lower() for text in ["update list", "update lst"]):
+                    btn.setText("🔄 Refresh")
+                    try:
+                        btn.clicked.disconnect()
+                    except:
+                        pass
+                    btn.clicked.connect(self.refresh_table)
+                    self.log_message(f"🔧 Changed '{btn_text}' to 'Refresh'")
+
+                # Fix export button connections
+                elif "Export via" in btn_text:
+                    try:
+                        btn.clicked.disconnect()
+                    except:
+                        pass
+                    btn.clicked.connect(self.export_selected_via)
+                    self.log_message(f"🔧 Fixed '{btn_text}' button")
+
+                elif "Quick" in btn_text and "Export" in btn_text:
+                    try:
+                        btn.clicked.disconnect()
+                    except:
+                        pass
+                    btn.clicked.connect(self.quick_export_selected)
+                    self.log_message(f"🔧 Fixed '{btn_text}' button")
+
+            return True
+
+        except Exception as e:
+            self.log_message(f"❌ Error fixing buttons: {str(e)}")
+            return False
+
     def _create_right_panel_with_pastel_buttons(self):
         """Create right panel with pastel colored buttons - FIXED BUTTON CONNECTIONS"""
         right_panel = QWidget()
@@ -897,7 +897,7 @@ class IMGFactoryGUILayout:
             ("Quick Export", "quick_export", "document-send", "#E8F5E8", "quick_export_selected"),
             ("Remove", "remove", "edit-delete", "#FFEBEE", "remove_selected"),
             ("Remove All", "remove_all", "edit-delete", "#FFEBEE", "remove_all_entries"),
-            ("Dump", "dump", "document-save", "#F3E5F5", "dump_entries"),
+            ("Dump", "dump", "document-dump", "#F3E5F5", "dump_entries"),
             ("Rename", "rename", "edit-rename", "#FFF8E1", "rename_selected"),
             ("Replace", "replace", "edit-copy", "#FFF8E1", "replace_selected"),
             ("Select All", "select_all", "edit-select-all", "#F1F8E9", "select_all_entries"),
@@ -1262,28 +1262,6 @@ class IMGFactoryGUILayout:
                 else:
                     # Icon only mode
                     button.setText("")
-
-    def _add_sample_data(self):
-        """Add sample data to show the interface"""
-        sample_entries = [
-            ("test.dff", "DFF", "245 KB", "0x2000", "3.4.0.2", "None", ""),
-            ("test.txd", "TXD", "512 KB", "0x42000", "3.4.0.2", "None", ""),
-            ("test.col", "COL", "128 KB", "0x84000", "COL 2", "None", ""),
-            ("test.txd", "txd", "1.2 MB", "0xA4000", "3.4.0.2", "None", ""),
-        ]
-        
-        self.table.setRowCount(len(sample_entries))
-        for row, entry_data in enumerate(sample_entries):
-            for col, value in enumerate(entry_data):
-                item = QTableWidgetItem(str(value))
-                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                self.table.setItem(row, col, item)
-        
-        self.log_message("Interface loaded with sample data. Open an IMG file to see real content.")
-
-    def add_sample_data(self):
-        """Public method to add sample data - calls private method"""
-        self._add_sample_data()
 
     # logging
     def log_message(self, message):
