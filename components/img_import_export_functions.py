@@ -384,8 +384,9 @@ def remove_selected_function(main_window):
         main_window.log_message(f"❌ Remove error: {str(e)}")
         QMessageBox.critical(main_window, "Remove Error", f"Remove failed: {str(e)}")
 
+
 def remove_via_entries_function(main_window):
-    """Remove entries using IDE file reference"""
+    """Remove entries using IDE file reference - COMPLETE IMPLEMENTATION"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
             QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
@@ -404,15 +405,103 @@ def remove_via_entries_function(main_window):
 
         main_window.log_message(f"🚮 Remove Via IDE: {ide_file}")
 
+        # Parse IDE file to get entry names to remove
+        entries_to_remove = []
+        try:
+            with open(ide_file, 'r', encoding='utf-8', errors='ignore') as f:
+                for line_num, line in enumerate(f, 1):
+                    line = line.strip()
+                    if not line or line.startswith('#') or line.startswith('//'):
+                        continue
+
+                    # Extract filename from IDE line
+                    # Common IDE formats:
+                    # filename.dff, texdict, 100, 0, 0, 0
+                    # filename.txd, texdict, 100, 0, 0, 0
+                    parts = line.split(',')
+                    if parts:
+                        filename = parts[0].strip()
+                        # Remove quotes if present
+                        filename = filename.strip('"\'')
+                        if filename:
+                            entries_to_remove.append(filename)
+
+        except Exception as e:
+            main_window.log_message(f"❌ Error reading IDE file: {str(e)}")
+            QMessageBox.critical(main_window, "IDE Parse Error", f"Could not parse IDE file:\n{str(e)}")
+            return
+
+        if not entries_to_remove:
+            QMessageBox.information(main_window, "No Entries Found", "No valid entries found in IDE file.")
+            return
+
+        main_window.log_message(f"📋 Found {len(entries_to_remove)} entries in IDE file")
+
+        # Find matching entries in current IMG
+        img_entries_to_remove = []
+        for entry_name in entries_to_remove:
+            # Try exact match first
+            found_entry = None
+            for img_entry in main_window.current_img.entries:
+                img_entry_name = getattr(img_entry, 'name', '')
+                if img_entry_name.lower() == entry_name.lower():
+                    found_entry = img_entry
+                    break
+
+            if found_entry:
+                img_entries_to_remove.append(found_entry)
+                main_window.log_message(f"✅ Found match: {entry_name}")
+            else:
+                main_window.log_message(f"⚠️ Not found in IMG: {entry_name}")
+
+        if not img_entries_to_remove:
+            QMessageBox.information(main_window, "No Matches", "No entries from IDE file were found in the current IMG.")
+            return
+
+        # Confirm removal
+        reply = QMessageBox.question(
+            main_window,
+            "Confirm Remove Via IDE",
+            f"Remove {len(img_entries_to_remove)} entries found in IDE file?\n\n" +
+            f"IDE file: {os.path.basename(ide_file)}\n" +
+            f"Entries to remove: {len(img_entries_to_remove)}/{len(entries_to_remove)} found",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        # Remove the entries
+        removed_count = 0
+        for entry in img_entries_to_remove:
+            try:
+                if hasattr(main_window.current_img, 'remove_entry'):
+                    if main_window.current_img.remove_entry(entry):
+                        removed_count += 1
+                        entry_name = getattr(entry, 'name', 'unknown')
+                        main_window.log_message(f"🗑️ Removed: {entry_name}")
+
+            except Exception as e:
+                entry_name = getattr(entry, 'name', 'unknown')
+                main_window.log_message(f"❌ Failed to remove {entry_name}: {str(e)}")
+
+        # Update table
+        if hasattr(main_window, 'populate_entries_table'):
+            main_window.populate_entries_table()
+        elif hasattr(main_window, '_update_ui_for_loaded_img'):
+            main_window._update_ui_for_loaded_img()
+
+        # Show results
+        main_window.log_message(f"✅ Remove Via IDE complete: {removed_count} entries removed")
         QMessageBox.information(
             main_window,
-            "Remove Via",
-            f"Remove Via function called with IDE file:\n{ide_file}\n\nImplementation pending."
+            "Remove Via IDE Complete",
+            f"Successfully removed {removed_count} entries based on IDE file."
         )
 
     except Exception as e:
-        main_window.log_message(f"❌ Remove Via error: {str(e)}")
-        QMessageBox.critical(main_window, "Remove Via Error", f"Remove Via failed: {str(e)}")
+        main_window.log_message(f"❌ Remove Via IDE error: {str(e)}")
+        QMessageBox.critical(main_window, "Remove Via IDE Error", f"Remove Via IDE failed:\n{str(e)}")
 
 def dump_all_function(main_window):
     """Dump all entries from IMG - Clean version"""
@@ -608,14 +697,13 @@ def import_directory_function(main_window, directory):
     except Exception as e:
         main_window.log_message(f"❌ Directory import error: {str(e)}")
 
-
 def export_via_function(main_window):
-    """Export via existing IDE file"""
+    """Export via existing IDE file - FIXED IDE PARSER"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
             QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
             return
-        
+
         # Select IDE file
         ide_file, _ = QFileDialog.getOpenFileName(
             main_window,
@@ -623,61 +711,175 @@ def export_via_function(main_window):
             "",
             "IDE Files (*.ide);;All Files (*)"
         )
-        
+
         if not ide_file:
             return
-        
+
         # Select export directory
         export_dir = QFileDialog.getExistingDirectory(main_window, "Export Matching Files To")
         if not export_dir:
             return
-        
-        # Parse IDE and export matching files
+
+        main_window.log_message(f"📋 Export Via IDE: {os.path.basename(ide_file)}")
+        main_window.log_message(f"📁 Export to: {export_dir}")
+
+        # Parse IDE file correctly
+        ide_entries = []
+        try:
+            with open(ide_file, 'r', encoding='utf-8', errors='ignore') as f:
+                for line_num, line in enumerate(f, 1):
+                    line = line.strip()
+
+                    # Skip empty lines and comments
+                    if not line or line.startswith('#') or line.startswith('//') or line.startswith(';'):
+                        continue
+
+                    # Parse different IDE formats
+                    filename = None
+
+                    # Method 1: Comma-separated (most common)
+                    if ',' in line:
+                        parts = [p.strip().strip('"\'') for p in line.split(',')]
+                        if parts[0]:
+                            filename = parts[0]
+
+                    # Method 2: Tab-separated
+                    elif '\t' in line:
+                        parts = [p.strip().strip('"\'') for p in line.split('\t')]
+                        if parts[0]:
+                            filename = parts[0]
+
+                    # Method 3: Space-separated (less common)
+                    elif ' ' in line:
+                        parts = line.split()
+                        if parts[0]:
+                            filename = parts[0].strip('"\'')
+
+                    # Method 4: Single filename per line
+                    else:
+                        filename = line.strip('"\'')
+
+                    if filename and filename not in ide_entries:
+                        ide_entries.append(filename)
+                        main_window.log_message(f"📋 IDE entry: {filename}")
+
+        except Exception as e:
+            main_window.log_message(f"❌ Error reading IDE file: {str(e)}")
+            QMessageBox.critical(main_window, "IDE Parse Error", f"Could not parse IDE file:\n{str(e)}")
+            return
+
+        if not ide_entries:
+            QMessageBox.information(main_window, "No Entries Found", "No valid entries found in IDE file.")
+            return
+
+        main_window.log_message(f"📋 Found {len(ide_entries)} entries in IDE file")
+
+        # Find matching entries in IMG and export them
         exported_count = 0
         failed_count = 0
-        
-        with open(ide_file, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#'):
-                    parts = line.split('\t')
-                    if len(parts) >= 1:
-                        file_name = parts[0]
-                        
-                        # Find matching entry in IMG
-                        for entry in main_window.current_img.entries:
-                            if getattr(entry, 'name', '') == file_name:
-                                try:
-                                    output_path = os.path.join(export_dir, file_name)
-                                    
-                                    if hasattr(entry, 'get_data'):
-                                        entry_data = entry.get_data()
-                                        with open(output_path, 'wb') as out_f:
-                                            out_f.write(entry_data)
-                                        exported_count += 1
-                                        main_window.log_message(f"📋 IDE Export: {file_name}")
-                                    elif hasattr(main_window.current_img, 'export_entry'):
-                                        if main_window.current_img.export_entry(entry, output_path):
-                                            exported_count += 1
-                                            main_window.log_message(f"📋 IDE Export: {file_name}")
-                                    else:
-                                        failed_count += 1
-                                except:
-                                    failed_count += 1
-                                break
-                        else:
-                            failed_count += 1
-                            main_window.log_message(f"❌ Not found in IMG: {file_name}")
-        
-        QMessageBox.information(
-            main_window,
-            "IDE Export Complete",
-            f"Exported {exported_count} files matching IDE.\n{failed_count} files failed/not found."
-        )
-        
-    except Exception as e:
-        main_window.log_message(f"❌ IDE export error: {str(e)}")
+        not_found_count = 0
 
+        for ide_filename in ide_entries:
+            # Find matching entry in IMG (try different matching strategies)
+            found_entry = None
+
+            # Strategy 1: Exact match
+            for entry in main_window.current_img.entries:
+                entry_name = getattr(entry, 'name', '')
+                if entry_name == ide_filename:
+                    found_entry = entry
+                    break
+
+            # Strategy 2: Case-insensitive match
+            if not found_entry:
+                for entry in main_window.current_img.entries:
+                    entry_name = getattr(entry, 'name', '')
+                    if entry_name.lower() == ide_filename.lower():
+                        found_entry = entry
+                        break
+
+            # Strategy 3: Without extension match
+            if not found_entry:
+                ide_basename = os.path.splitext(ide_filename)[0]
+                for entry in main_window.current_img.entries:
+                    entry_name = getattr(entry, 'name', '')
+                    entry_basename = os.path.splitext(entry_name)[0]
+                    if entry_basename.lower() == ide_basename.lower():
+                        found_entry = entry
+                        break
+
+            if found_entry:
+                # Export the found entry
+                try:
+                    entry_name = getattr(found_entry, 'name', ide_filename)
+                    output_path = os.path.join(export_dir, entry_name)
+
+                    # Create subdirectories if needed
+                    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+                    # Try multiple export methods
+                    exported = False
+
+                    # Method 1: Use IMG file's export_entry method
+                    if hasattr(main_window.current_img, 'export_entry'):
+                        try:
+                            if main_window.current_img.export_entry(found_entry, output_path):
+                                exported = True
+                        except Exception as e:
+                            main_window.log_message(f"⚠️ Export method 1 failed for {entry_name}: {str(e)}")
+
+                    # Method 2: Use entry's get_data method
+                    if not exported and hasattr(found_entry, 'get_data'):
+                        try:
+                            entry_data = found_entry.get_data()
+                            if entry_data:
+                                with open(output_path, 'wb') as out_f:
+                                    out_f.write(entry_data)
+                                exported = True
+                        except Exception as e:
+                            main_window.log_message(f"⚠️ Export method 2 failed for {entry_name}: {str(e)}")
+
+                    # Method 3: Direct file reading from IMG
+                    if not exported:
+                        try:
+                            # Try to read data directly from IMG file
+                            if hasattr(main_window.current_img, 'read_entry_data'):
+                                entry_data = main_window.current_img.read_entry_data(found_entry)
+                                if entry_data:
+                                    with open(output_path, 'wb') as out_f:
+                                        out_f.write(entry_data)
+                                    exported = True
+                        except Exception as e:
+                            main_window.log_message(f"⚠️ Export method 3 failed for {entry_name}: {str(e)}")
+
+                    if exported:
+                        exported_count += 1
+                        main_window.log_message(f"✅ Exported: {entry_name}")
+                    else:
+                        failed_count += 1
+                        main_window.log_message(f"❌ Failed to export: {entry_name}")
+
+                except Exception as e:
+                    failed_count += 1
+                    main_window.log_message(f"❌ Export error for {ide_filename}: {str(e)}")
+            else:
+                not_found_count += 1
+                main_window.log_message(f"⚠️ Not found in IMG: {ide_filename}")
+
+        # Show results
+        result_msg = f"Export Via IDE Complete:\n\n"
+        result_msg += f"✅ Exported: {exported_count} files\n"
+        result_msg += f"❌ Failed: {failed_count} files\n"
+        result_msg += f"⚠️ Not found: {not_found_count} files\n"
+        result_msg += f"📁 Total IDE entries: {len(ide_entries)}"
+
+        main_window.log_message(f"✅ Export Via IDE complete: {exported_count}/{len(ide_entries)} exported")
+
+        QMessageBox.information(main_window, "Export Via IDE Complete", result_msg)
+
+    except Exception as e:
+        main_window.log_message(f"❌ Export Via IDE error: {str(e)}")
+        QMessageBox.critical(main_window, "Export Via IDE Error", f"Export Via IDE failed:\n{str(e)}")
 
 def export_all_function(main_window):
     """Export all entries with dialog"""
