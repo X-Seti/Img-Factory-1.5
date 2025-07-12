@@ -1,8 +1,10 @@
-#this belongs in gui/ panel_manager.py - Version: 5
+#this belongs in gui/ panel_manager.py - Version: 6
+# X-Seti - July12 2025 - Img Factory 1.5
 
 #!/usr/bin/env python3
 """
-X-Seti - June28 2025 - IMG Factory 1.5
+Panel Manager for IMG Factory 1.5
+Manages all panels and their layouts
 """
 
 import json
@@ -17,12 +19,19 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QRect, QTimer
 from PyQt6.QtGui import QDrag, QPixmap, QPainter, QCursor, QIcon, QAction
 
+# Import required classes
+from .tear_off import TearOffPanel
+from .panel_controls import ButtonPanel, FilterSearchPanel, ButtonPresetManager
+
+
 class PanelManager:
     """Manages all panels and their layouts"""
     
     def __init__(self, main_window):
         self.main_window = main_window
+        self.panels = {}  # Initialize panels dict
         self.panel_settings_path = Path.home() / ".imgfactory" / "panel_layout.json"
+        self.preset_manager = ButtonPresetManager()  # Initialize preset manager
         
         self._load_panel_settings()
     
@@ -86,6 +95,13 @@ class PanelManager:
         panel = self.panels.get(panel_id)
         if panel and panel.is_torn_off:
             panel.dock_panel()
+    
+    def reset_layout(self):
+        """Reset panel layout to default"""
+        for panel in self.panels.values():
+            if panel.is_torn_off:
+                panel.dock_panel()
+            panel.setVisible(True)
     
     def _on_panel_closed(self, panel_id: str):
         """Handle panel closed"""
@@ -162,3 +178,7 @@ class PanelManager:
                     )
 
 
+# Export main classes
+__all__ = [
+    'PanelManager'
+]

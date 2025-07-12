@@ -1168,7 +1168,7 @@ class IMGFactory(QMainWindow):
         try:
             if hasattr(self, 'load_col_file_safely'):
                 # Use the method provided by col_tab_integration
-                from components.col_tabs_function import update_ui_for_loaded_col
+                from components.col_tabs_functions import update_ui_for_loaded_col
                 update_ui_for_loaded_col(self)
             else:
                 # Fallback implementation

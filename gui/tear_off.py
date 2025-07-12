@@ -1,4 +1,4 @@
-#this belongs in gui/ tear-off.py - Version: 1
+#this belongs in gui/ tear_off.py - Version: 2
 # X-Seti - July12 2025 - Img Factory 1.5
 # Credit MexUK 2007 Img Factory 1.2
 
@@ -19,6 +19,45 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QRect, QTimer
 from PyQt6.QtGui import QDrag, QPixmap, QPainter, QCursor, QIcon, QAction
+
+
+class TearOffPanel(QFrame):
+    """Panel that can be torn off from main window"""
+    
+    panel_closed = pyqtSignal(str)  # panel_id
+    panel_moved = pyqtSignal(str, QPoint)  # panel_id, position
+    panel_resized = pyqtSignal(str, tuple)  # panel_id, (width, height)
+    
+    def __init__(self, panel_id: str, title: str, parent=None):
+        super().__init__(parent)
+        self.panel_id = panel_id
+        self.title = title
+        self.is_torn_off = False
+        self.original_parent = parent
+        self.original_layout_position = None
+        
+        # Setup frame
+        self.setFrameStyle(QFrame.Shape.StyledPanel)
+        self.setLineWidth(1)
+        self.setMinimumSize(200, 100)
+        
+        # Create layout
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(5, 5, 5, 5)
+        self.main_layout.setSpacing(3)
+        
+        # Title bar
+        self._create_title_bar()
+        
+        # Content area
+        self.content_widget = QWidget()
+        self.content_layout = QVBoxLayout(self.content_widget)
+        self.content_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.addWidget(self.content_widget)
+        
+        # Drag handling
+        self.drag_start_position = QPoint()
+        self.setAcceptDrops(True)
     
     def _create_title_bar(self):
         """Create title bar with controls"""
@@ -92,9 +131,22 @@ from PyQt6.QtGui import QDrag, QPixmap, QPainter, QCursor, QIcon, QAction
     def _show_customization_dialog(self):
         """Show customization dialog"""
         if hasattr(self, 'preset_manager'):
-            dialog = ButtonCustomizationDialog(self.preset_manager, self)
-            dialog.preset_changed.connect(self.apply_preset)
-            dialog.exec()
+            # Import here to avoid circular imports
+            try:
+                from .panel_controls import ButtonCustomizationDialog
+                dialog = ButtonCustomizationDialog(self.preset_manager, self)
+                dialog.preset_changed.connect(self.apply_preset)
+                dialog.exec()
+            except ImportError:
+                pass
+    
+    def apply_preset(self, preset_name: str):
+        """Apply preset (to be overridden by subclasses)"""
+        pass
+    
+    def reset_to_default(self):
+        """Reset to default (to be overridden by subclasses)"""
+        pass
     
     def toggle_tear_off(self):
         """Toggle tear off state"""
@@ -273,17 +325,8 @@ class TearOffPanelManager:
         panel.panel_moved.connect(self._on_panel_moved)
         panel.panel_resized.connect(self._on_panel_resized)
     
-    def unregister_panel(self, panel_id: str):
-        """Unregister a panel"""
-        if panel_id in self.panels:
-            del self.panels[panel_id]
-    
-    def get_panel(self, panel_id: str) -> Optional[TearOffPanel]:
-        """Get panel by ID"""
-        return self.panels.get(panel_id)
-    
     def show_panel(self, panel_id: str):
-        """Show a panel (create if needed)"""
+        """Show a panel"""
         panel = self.panels.get(panel_id)
         if panel:
             if panel.is_torn_off:
@@ -311,30 +354,25 @@ class TearOffPanelManager:
             panel.dock_panel()
     
     def dock_all_panels(self):
-        """Dock all torn-off panels"""
+        """Dock all panels"""
         for panel in self.panels.values():
             if panel.is_torn_off:
                 panel.dock_panel()
     
-    def get_torn_off_panels(self) -> List[str]:
-        """Get list of torn-off panel IDs"""
-        return [panel_id for panel_id, panel in self.panels.items() if panel.is_torn_off]
-    
     def _on_panel_closed(self, panel_id: str):
         """Handle panel closed"""
-        # For now, just hide it
         self.hide_panel(panel_id)
     
     def _on_panel_moved(self, panel_id: str, position: QPoint):
         """Handle panel moved"""
         self._save_panel_settings()
     
-    def _on_panel_resized(self, panel_id: str, size: Tuple):
+    def _on_panel_resized(self, panel_id: str, size: tuple):
         """Handle panel resized"""
         self._save_panel_settings()
     
     def _load_panel_settings(self):
-        """Load panel settings from file"""
+        """Load panel settings"""
         try:
             if self.panel_settings_path.exists():
                 with open(self.panel_settings_path, 'r') as f:
@@ -466,6 +504,27 @@ def add_panel_menu_to_menubar(menu_bar, panel_manager: TearOffPanelManager):
     panels_menu.addAction(save_action)
 
 
+def setup_tear_off_system(main_window):
+    """Setup tear-off system for main window"""
+    try:
+        # Create tear-off panel manager
+        tearoff_manager = TearOffPanelManager(main_window)
+        main_window.tearoff_manager = tearoff_manager
+        
+        # Setup default panels if needed
+        # This can be expanded later when panel creation is implemented
+        
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message("✅ Tear-off system setup complete")
+        
+        return tearoff_manager
+        
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Error setting up tear-off system: {str(e)}")
+        return None
+
+
 # ============================================================================
 # EXPORTS
 # ============================================================================
@@ -473,5 +532,6 @@ def add_panel_menu_to_menubar(menu_bar, panel_manager: TearOffPanelManager):
 __all__ = [
     'TearOffPanel',
     'TearOffPanelManager',
-    'add_panel_menu_to_menubar'
+    'add_panel_menu_to_menubar',
+    'setup_tear_off_system'
 ]
