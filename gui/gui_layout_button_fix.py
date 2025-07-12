@@ -108,50 +108,6 @@ def fix_gui_layout_buttons(main_window):
         main_window.log_message(f"❌ Traceback: {traceback.format_exc()}")
         return False
 
-
-def add_missing_button_methods(main_window):
-    """Add any missing button method names that GUI might be calling"""
-    try:
-        # Add all possible method names that buttons might call
-        method_mappings = {
-            # Import methods
-            'import_files': lambda: import_files_function(main_window),
-            'import_files_via': lambda: import_via_function(main_window),
-            'import_files_advanced': lambda: import_via_function(main_window),
-            
-            # Export methods  
-            'export_selected': lambda: export_selected_function(main_window),
-            'export_selected_via': lambda: export_via_function(main_window),
-            'export_selected_advanced': lambda: export_via_function(main_window),
-            'export_selected_entries': lambda: export_selected_function(main_window),
-            'quick_export_selected': lambda: quick_export_function(main_window),
-            'quick_export': lambda: quick_export_function(main_window),
-            'export_all_entries': lambda: export_all_function(main_window),
-            'export_all': lambda: export_all_function(main_window),
-            
-            # Remove methods
-            'remove_selected': lambda: remove_selected_function(main_window),
-            'remove_selected_entries': lambda: remove_selected_function(main_window),
-            'remove_all_entries': lambda: remove_selected_function(main_window),
-            
-            # Other methods
-            'dump_entries': lambda: dump_all_function(main_window),
-            'dump_all_entries': lambda: dump_all_function(main_window),
-            'refresh_table': main_window.refresh_table if hasattr(main_window, 'refresh_table') else lambda: main_window.log_message("Refresh requested"),
-        }
-        
-        # Add all method names to main_window
-        for method_name, method_func in method_mappings.items():
-            setattr(main_window, method_name, method_func)
-            
-        main_window.log_message(f"✅ Added {len(method_mappings)} button method mappings")
-        return True
-        
-    except Exception as e:
-        main_window.log_message(f"❌ Error adding button methods: {str(e)}")
-        return False
-
-
 def fix_gui_button_conflicts(main_window):
     """Main function to fix all GUI button conflicts"""
     try:
@@ -160,7 +116,8 @@ def fix_gui_button_conflicts(main_window):
         # Import the functions we need
         from components.img_import_export_functions import (
             import_files_function, import_via_function, export_selected_function,
-            export_via_function, quick_export_function, export_all_function,
+            export_via_function, quick_export_function, export_all_function, remove_via_entries_function, dump_all_function
+
             remove_selected_function, dump_all_function
         )
         
@@ -197,5 +154,4 @@ def fix_gui_button_conflicts(main_window):
 __all__ = [
     'fix_gui_button_conflicts',
     'fix_gui_layout_buttons', 
-    'add_missing_button_methods'
 ]

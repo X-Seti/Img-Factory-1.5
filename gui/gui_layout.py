@@ -764,7 +764,7 @@ class IMGFactoryGUILayout:
             from components.img_import_export_functions import (
                 import_files_function, import_via_function, export_selected_function,
                 export_via_function, quick_export_function, export_all_function,
-                remove_selected_function, dump_all_function
+                remove_selected_function, remove_via_entries_function, dump_all_function  # ADD THIS
             )
 
             # Add all possible method names that buttons might call
@@ -788,6 +788,7 @@ class IMGFactoryGUILayout:
                 'remove_selected': lambda: remove_selected_function(main_window),
                 'remove_selected_entries': lambda: remove_selected_function(main_window),
                 'remove_all_entries': lambda: remove_selected_function(main_window),
+                'remove_via_entries': lambda: remove_via_entries_function(main_window),  # ADD THIS LINE
 
                 # Other methods
                 'dump_entries': lambda: dump_all_function(main_window),
@@ -896,7 +897,7 @@ class IMGFactoryGUILayout:
             ("Export via", "export_via", "document-export", "#E8F5E8", "export_selected_via"),
             ("Quick Export", "quick_export", "document-send", "#E8F5E8", "quick_export_selected"),
             ("Remove", "remove", "edit-delete", "#FFEBEE", "remove_selected"),
-            ("Remove All", "remove_all", "edit-delete", "#FFEBEE", "remove_all_entries"),
+            ("Remove via", "remove_via", "document-remvia", "#FFEBEE", "remove_via_entries"),
             ("Dump", "dump", "document-dump", "#F3E5F5", "dump_entries"),
             ("Rename", "rename", "edit-rename", "#FFF8E1", "rename_selected"),
             ("Replace", "replace", "edit-copy", "#FFF8E1", "replace_selected"),

@@ -384,6 +384,35 @@ def remove_selected_function(main_window):
         main_window.log_message(f"❌ Remove error: {str(e)}")
         QMessageBox.critical(main_window, "Remove Error", f"Remove failed: {str(e)}")
 
+def remove_via_entries_function(main_window):
+    """Remove entries using IDE file reference"""
+    try:
+        if not hasattr(main_window, 'current_img') or not main_window.current_img:
+            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
+            return
+
+        # Get IDE file for removal reference
+        ide_file, _ = QFileDialog.getOpenFileName(
+            main_window,
+            "Select IDE file for removal reference",
+            "",
+            "IDE Files (*.ide);;All Files (*)"
+        )
+
+        if not ide_file:
+            return
+
+        main_window.log_message(f"🚮 Remove Via IDE: {ide_file}")
+
+        QMessageBox.information(
+            main_window,
+            "Remove Via",
+            f"Remove Via function called with IDE file:\n{ide_file}\n\nImplementation pending."
+        )
+
+    except Exception as e:
+        main_window.log_message(f"❌ Remove Via error: {str(e)}")
+        QMessageBox.critical(main_window, "Remove Via Error", f"Remove Via failed: {str(e)}")
 
 def dump_all_function(main_window):
     """Dump all entries from IMG - Clean version"""
@@ -797,22 +826,22 @@ def integrate_clean_import_export(main_window):
         main_window.export_selected_via = lambda: export_via_function(main_window)
         main_window.quick_export_selected = lambda: quick_export_function(main_window)
         main_window.export_all_entries = lambda: export_all_function(main_window)
+        main_window.remove_via_entries = lambda: remove_via_entries_function(main_window)
         main_window.remove_selected = lambda: remove_selected_function(main_window)
         main_window.dump_all_entries = lambda: dump_all_function(main_window)
-        
+
         # Add convenience method for getting selected entries
         main_window.get_selected_entries = lambda: get_selected_entries(main_window)
-        
+
         # Add menus
         add_import_export_menus(main_window)
-        
+
         main_window.log_message("✅ Clean import/export functions integrated")
         return True
-        
+
     except Exception as e:
         main_window.log_message(f"❌ Integration error: {str(e)}")
         return False
-
 
 # Export functions for external use
 __all__ = [
@@ -820,11 +849,12 @@ __all__ = [
     'import_via_function',
     'import_from_ide_file',
     'import_directory_function',
-    'export_selected_function', 
+    'export_selected_function',
     'export_via_function',
     'export_all_function',
     'quick_export_function',
     'remove_selected_function',
+    'remove_via_entries_function',
     'dump_all_function',
     'get_selected_entries',
     'add_import_export_menus',
