@@ -1,0 +1,63 @@
+nop, not working, I have an idea before I go to bed, check if the table (buttons) in gui.gui_layout.py is conflicting, i'm setting not yet implemented on export, export via and quick export, and I'd like to change [update list] button to [refresh]EditSearched project for “gui_layout.py buttons export export_via quick_export update list refresh”5 resultsgui/control_panels.py2 relevant sectionstextgui/gui_layout.pytextcomponents/img_import_export_functions.py2 relevant sectionstextgui/button_panel.pytextgui/buttons.py2 relevant sectionstextPerfect! I found the conflicts! Looking at the GUI files, I can see several issues:
+
+Button names don't match function names
+Multiple files defining conflicting button actions
+"Update List" should be "Refresh"
+GUI Layout Button FixesCode #this belongs in gui/ gui_layout.py - Version: Fix
+# X-Seti - July12 2025 - Img Factory 1.5
+
+"""
+GUI Layout Button Fixes - Fix button naming conflicts and change "Update List" to "Refresh"
+"""
+
+def fix_gui_layout_buttons(main_window):
+    """Fix buttPerfect! I've found the root cause and created a comprehensive fix:
+🔍 Problems Identified:
+
+Button Method Mismatches:
+
+GUI calls: export_selected_entries
+Our function: export_selected_function
+
+
+Multiple Button Definitions:
+
+gui_layout.py defines buttons with one method name
+control_panels.py defines same buttons with different names
+button_panel.py has yet another naming convention
+
+
+"Update List" Button:
+
+Should be "Refresh" as requested
+
+
+
+✅ Fix Applied:
+The fix_gui_button_conflicts() function:
+
+Adds ALL possible method names that buttons might call
+Reconnects buttons to the correct functions
+Changes "Update List" to "Refresh"
+Logs which methods are available for debugging
+
+🚀 Integration:
+Add this to your main IMG Factory file after loading the import/export functions:
+pythonfrom components.img_import_export_functions import integrate_clean_import_export
+from gui_layout_button_fix import fix_gui_button_conflicts
+
+# First integrate the functions
+integrate_clean_import_export(self)
+
+# Then fix the button conflicts
+fix_gui_button_conflicts(self)
+This should resolve all the button conflicts and make Export Via and Quick Export work properly! The fix creates multiple method names for each function to handle all the different naming conventions used across your GUI files.RetryMnop, and the update list button is stilll there, should be refresh, so tomorrow is another day.EditYou're absolutely right - the button conflicts are deeper in the GUI system and the "Update List" → "Refresh" change isn't taking effect.
+The issue is that the button text and connections are likely hardcoded in multiple places across the GUI files (gui_layout.py, control_panels.py, button_panel.py, etc.) and my runtime fixes aren't overriding the original definitions.
+For tomorrow, we'll need to:
+
+Find the exact file where "Update List" is defined and change it directly
+Locate the specific button connection code that's calling the wrong method names
+Update the source files instead of trying to patch at runtime
+
+The GUI system has multiple layers of button definitions that are conflicting with each other. A clean approach would be to consolidate the button definitions in one place and ensure consistent naming.
+Get some rest - we'll tackle this systematically tomorrow by tracking down exactly where these buttons are created and fixing them at the source! 🌙

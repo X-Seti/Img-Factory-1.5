@@ -19,7 +19,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QRect, QTimer
 from PyQt6.QtGui import QDrag, QPixmap, QPainter, QCursor, QIcon, QAction
 
 from gui.buttons import (
-    DraggableButton, ButtonFactory, ButtonPresetManager, 
+    DraggableButton, ButtonFactory, ButtonPresetManager,
     ButtonCustomizationDialog, ButtonPreset
 )
 

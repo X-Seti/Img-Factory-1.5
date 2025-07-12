@@ -891,7 +891,7 @@ class IMGFactoryGUILayout:
         entry_buttons_data = [
             ("Import", "import", "document-import", "#E1F5FE", "import_files"),
             ("Import via", "import_via", "document-import", "#E1F5FE", "import_files_via"),
-            ("Update list", "update", "view-refresh", "#F9FBE7", "refresh_table"),
+            ("Refresh", "update", "view-refresh", "#F9FBE7", "refresh_table"),
             ("Export", "export", "document-export", "#E8F5E8", "export_selected"),
             ("Export via", "export_via", "document-export", "#E8F5E8", "export_selected_via"),
             ("Quick Export", "quick_export", "document-send", "#E8F5E8", "quick_export_selected"),
