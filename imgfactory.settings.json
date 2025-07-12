@@ -51,7 +51,7 @@
   "remember_dialog_positions": true,
   "show_creation_tips": true,
   "validate_before_creation": true,
-  "debug_mode": false,
+  "debug_mode": true,
   "debug_level": "INFO",
   "debug_categories": [
     "IMG_LOADING",

@@ -55,8 +55,9 @@ from components.img_close_functions import install_close_functions, setup_close_
 from components.img_formats import GameSpecificIMGDialog, IMGCreator
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 #from components.img_threads import IMGLoadThread, IMGSaveThread
-from components.img_import_export_functions import setup_complete_import_export_integration
 from components.img_validator import IMGValidator
+from components.img_import_export_functions import integrate_clean_import_export
+from gui_layout_button_fix import fix_gui_button_conflicts
 from components.col_debug_control import COLDebugController
 from components.unified_debug_functions import integrate_all_improvements
 from components.file_extraction_functions import setup_complete_extraction_integration
@@ -400,6 +401,13 @@ class IMGFactory(QMainWindow):
         install_close_functions(self)
         # COL Integration - FIXED: Move to end and use correct import
 
+
+        # First integrate the functions
+        integrate_clean_import_export(self)
+
+        # Then fix the button conflicts
+        fix_gui_button_conflicts(self)
+
         try:
             from components.col_tabs_functions import setup_col_tab_integration
             if setup_col_tab_integration(self):
@@ -428,7 +436,7 @@ class IMGFactory(QMainWindow):
         # Setup search functionality
         self.setup_search_functionality()
 
-        setup_complete_import_export_integration(self)
+        #OLD -setup_complete_import_export_integration(self)
 
         # Apply theme
         if hasattr(self.app_settings, 'themes'):
