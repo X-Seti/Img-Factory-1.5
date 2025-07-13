@@ -24,15 +24,6 @@ gui_dir = current_dir / "gui"
 utils_dir = current_dir / "utils"
 
 # Add directories to Python path
-if str(current_dir) not in sys.path:
-    sys.path.insert(0, str(current_dir))
-if components_dir.exists() and str(components_dir) not in sys.path:
-    sys.path.insert(0, str(components_dir))
-if gui_dir.exists() and str(gui_dir) not in sys.path:
-    sys.path.insert(0, str(gui_dir))
-if utils_dir.exists() and str(utils_dir) not in sys.path:
-    sys.path.insert(0, str(utils_dir))
-
 current_dir = Path(__file__).parent
 sys.path.insert(0, str(current_dir))
 sys.path.insert(0, str(current_dir / "components"))
@@ -92,33 +83,7 @@ try:
 except ImportError as e:
     print(f"⚠️ COL integration not available: {e}")
 
-_theme_loading_guard = False
-
-def safe_apply_theme_to_app(app_settings, app_or_widget):
-    """Safe theme application that prevents loops"""
-    global _theme_loading_guard
-
-    if _theme_loading_guard:
-        print("⚠️ Theme loading loop detected - skipping")
-        return
-
-    try:
-        _theme_loading_guard = True
-
-        if hasattr(app_settings, 'get_stylesheet'):
-            stylesheet = app_settings.get_stylesheet()
-        else:
-            stylesheet = "QMainWindow { background-color: #f0f0f0; color: #000000; }"
-
-        if hasattr(app_or_widget, 'setStyleSheet'):
-            app_or_widget.setStyleSheet(stylesheet)
-            print("✅ Theme applied safely")
-
-    except Exception as e:
-        print(f"❌ Theme application error: {e}")
-    finally:
-        _theme_loading_guard = False
-
+#_theme_loading_guard = False
 
 def populate_img_table(table: QTableWidget, img_file: IMGFile):
     """Populate table with IMG file entries - FIXED VERSION"""
@@ -3406,111 +3371,8 @@ Version 1.2.0 (Original):
         except Exception as e:
             self.log_message(f"❌ Error updating UI for no IMG: {str(e)}")
 
-class MinimalSettings:
-    def __init__(self):
-        self.current_settings = {
-            "theme": "img_factory",
-            "font_family": "Arial",
-            "font_size": 9,
-            "debug_mode": False
-        }
-        self.themes = {
-            "img_factory": {
-                "name": "IMG Factory Default",
-                "colors": {
-                    "background": "#f0f0f0",
-                    "text": "#000000"
-                }
-            }
-        }
-        self._loading = False
-
-    def get_stylesheet(self):
-        """Return basic stylesheet without recursion"""
-        if self._loading:
-            return "QWidget { background-color: #f0f0f0; }"
-
-        try:
-            self._loading = True
-            theme_name = self.current_settings.get("theme", "img_factory")
-            theme = self.themes.get(theme_name, self.themes["img_factory"])
-            colors = theme.get("colors", {})
-
-            bg = colors.get("background", "#f0f0f0")
-            text = colors.get("text", "#000000")
-
-            return f"""
-            QMainWindow {{
-                background-color: {bg};
-                color: {text};
-            }}
-            QPushButton {{
-                background-color: #e0e0e0;
-                border: 1px solid #c0c0c0;
-                padding: 4px;
-                color: {text};
-            }}
-            QTableWidget {{
-                background-color: {bg};
-                color: {text};
-                gridline-color: #c0c0c0;
-            }}
-            """
-        finally:
-            self._loading = False
-
-    def load_settings(self):
-        pass
-
-    def save_settings(self):
-        pass
-
-    def get_setting(self, key, default=None):
-        return self.current_settings.get(key, default)
-
-    def set_setting(self, key, value):
-        self.current_settings[key] = value
-
-print("🛡️ Theme loop protection enabled")
-
-# NOW import the rest normally...
-from PyQt6.QtWidgets import QApplication, QMainWindow
-from PyQt6.QtCore import Qt
-
-# Test that PyQt works
-print("✅ PyQt6 import successful")
-
-# Create a simple test to check for segfaults
-def test_basic_qt():
-    """Test basic Qt functionality"""
-    try:
-        # Create minimal app
-        app = QApplication([])
-
-        # Create minimal window
-        window = QMainWindow()
-        window.setWindowTitle("IMG Factory 1.5 - Safe Mode")
-        window.setMinimumSize(400, 300)
-
-        # Apply minimal theme
-        window.setStyleSheet("QMainWindow { background-color: #f0f0f0; }")
-
-        print("✅ Basic Qt test passed")
-        return True
-
-    except Exception as e:
-        print(f"❌ Basic Qt test failed: {e}")
-        return False
-
 # Run the test
 if __name__ == "__main__":
-    if test_basic_qt():
-        print("🚀 Safe to proceed with full application")
-    else:
-        print("💥 Basic Qt test failed - check Qt installation")
-        sys.exit(1)
-
-
 # Application Entry Point and Main Function
 def main():
     """Main application entry point"""
@@ -3523,7 +3385,6 @@ def main():
         app.setApplicationVersion("1.5.0")
         app.setOrganizationName("X-Seti")
 
-        settings = MinimalSettings()
 
         # Set application icon if available
         try:
@@ -3689,12 +3550,6 @@ if __name__ == "__main__":
     if not check_dependencies():
         print("💥 Dependency check failed - cannot start")
         sys.exit(1)
-
-if test_basic_qt():
-    print("🚀 Safe to proceed with full application")
-else:
-    print("💥 Basic Qt test failed - check Qt installation")
-    sys.exit(1)
 
     # Run main application
     sys.exit(main())
