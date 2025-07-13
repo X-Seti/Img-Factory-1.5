@@ -1,1022 +1,1251 @@
-#this belongs in components/ img_import_export_functions.py - Version: 4
-# X-Seti - July12 2025 - Img Factory 1.5
+#this belongs in components/ img_import_export_functions.py - Version: 2
+# X-Seti - July13 2025 - Img Factory 1.5
+# Credit MexUK 2007 Img Factory 1.2
 
+#!/usr/bin/env python3
 """
-Clean Import/Export Functions - Fixed AppSettings usage and COL export issues
-Fixes: AppSettings.get() -> AppSettings.current_settings.get()
+IMG Import/Export Functions - Complete consolidated functionality
+Handles all import/export operations with dialogs and background processing
 """
 
 import os
-from typing import List, Optional
-from PyQt6.QtWidgets import QMessageBox, QFileDialog
+import shutil
+from pathlib import Path
+from typing import List, Dict, Optional, Tuple
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QGridLayout, QFormLayout,
+    QLabel, QPushButton, QLineEdit, QTextEdit, QCheckBox, QComboBox,
+    QFileDialog, QMessageBox, QProgressBar, QListWidget, QListWidgetItem,
+    QGroupBox, QSplitter, QTableWidget, QTableWidgetItem, QHeaderView
+)
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
+from PyQt6.QtGui import QFont, QIcon
 
 
-def get_selected_entries(main_window):
-    """Get currently selected entries from the table - FIXED"""
-    try:
-        selected_entries = []
-        
-        # Try multiple ways to get the table
-        table = None
-        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
-            table = main_window.gui_layout.table
-        elif hasattr(main_window, 'table'):
-            table = main_window.table
-        elif hasattr(main_window, 'entries_table'):
-            table = main_window.entries_table
-        
-        if not table:
-            main_window.log_message("❌ Could not find table widget")
-            return []
-        
-        # Debug: Log table info
-        main_window.log_message(f"🔍 Table found: {type(table).__name__}")
-        
-        # Get selected rows using selection model
-        selection_model = table.selectionModel()
-        if selection_model:
-            selected_indexes = selection_model.selectedRows()
-            selected_rows = [index.row() for index in selected_indexes]
-        else:
-            # Fallback: Use selectedItems
-            selected_rows = set()
-            for item in table.selectedItems():
-                selected_rows.add(item.row())
-            selected_rows = list(selected_rows)
-        
-        main_window.log_message(f"🔍 Selected rows detected: {len(selected_rows)}")
-        
-        # Get entries from IMG file
-        if hasattr(main_window, 'current_img') and main_window.current_img and hasattr(main_window.current_img, 'entries'):
-            for row in selected_rows:
-                if 0 <= row < len(main_window.current_img.entries):
-                    selected_entries.append(main_window.current_img.entries[row])
-        
-        main_window.log_message(f"✅ Found {len(selected_entries)} selected entries")
-        return selected_entries
-        
-    except Exception as e:
-        main_window.log_message(f"❌ Error getting selected entries: {str(e)}")
-        import traceback
-        main_window.log_message(f"❌ Traceback: {traceback.format_exc()}")
-        return []
+# ============================================================================
+# IMPORT/EXPORT DIALOGS
+# ============================================================================
 
-
-def import_files_function(main_window):
-    """Import files into current IMG - Clean version"""
-    try:
-        if not hasattr(main_window, 'current_img') or not main_window.current_img:
-            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
-            return
+class ImportOptionsDialog(QDialog):
+    """Advanced import options dialog"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Import Options - IMG Factory 1.5")
+        self.setMinimumSize(500, 400)
+        self.setModal(True)
         
-        # Get project folder setting - FIXED: Use current_settings.get()
-        try:
-            from utils.app_settings_system import AppSettings
-            settings = AppSettings()
-            project_folder = settings.current_settings.get('project_folder', '')
-        except:
-            project_folder = ''
+        self.selected_files = []
+        self.import_options = {}
         
-        # Set start directory
-        if project_folder and os.path.exists(project_folder):
-            start_dir = project_folder
-            main_window.log_message(f"📁 Using project folder: {project_folder}")
-        else:
-            start_dir = os.path.expanduser("~")
+        self._create_ui()
+        self._connect_signals()
+    
+    def _create_ui(self):
+        """Create the UI components"""
+        layout = QVBoxLayout(self)
         
-        # File selection dialog
+        # File selection section
+        file_group = QGroupBox("File Selection")
+        file_layout = QVBoxLayout(file_group)
+        
+        # File list
+        self.file_list = QListWidget()
+        self.file_list.setMinimumHeight(150)
+        file_layout.addWidget(self.file_list)
+        
+        # File selection buttons
+        file_btn_layout = QHBoxLayout()
+        
+        self.add_files_btn = QPushButton("Add Files...")
+        self.add_files_btn.clicked.connect(self._add_files)
+        file_btn_layout.addWidget(self.add_files_btn)
+        
+        self.add_folder_btn = QPushButton("Add Folder...")
+        self.add_folder_btn.clicked.connect(self._add_folder)
+        file_btn_layout.addWidget(self.add_folder_btn)
+        
+        self.remove_files_btn = QPushButton("Remove Selected")
+        self.remove_files_btn.clicked.connect(self._remove_selected_files)
+        file_btn_layout.addWidget(self.remove_files_btn)
+        
+        file_btn_layout.addStretch()
+        file_layout.addLayout(file_btn_layout)
+        layout.addWidget(file_group)
+        
+        # Import options section
+        options_group = QGroupBox("Import Options")
+        options_layout = QFormLayout(options_group)
+        
+        self.overwrite_cb = QCheckBox("Overwrite existing entries")
+        options_layout.addRow("Conflicts:", self.overwrite_cb)
+        
+        self.validate_cb = QCheckBox("Validate file formats")
+        self.validate_cb.setChecked(True)
+        options_layout.addRow("Validation:", self.validate_cb)
+        
+        self.organize_cb = QCheckBox("Auto-organize by file type")
+        options_layout.addRow("Organization:", self.organize_cb)
+        
+        layout.addWidget(options_group)
+        
+        # Progress section
+        self.progress_label = QLabel("Ready to import")
+        layout.addWidget(self.progress_label)
+        
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        layout.addWidget(self.progress_bar)
+        
+        # Dialog buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        self.import_btn = QPushButton("Import Files")
+        self.import_btn.clicked.connect(self.accept)
+        self.import_btn.setEnabled(False)
+        button_layout.addWidget(self.import_btn)
+        
+        self.cancel_btn = QPushButton("Cancel")
+        self.cancel_btn.clicked.connect(self.reject)
+        button_layout.addWidget(self.cancel_btn)
+        
+        layout.addLayout(button_layout)
+    
+    def _connect_signals(self):
+        """Connect UI signals"""
+        self.file_list.itemSelectionChanged.connect(self._update_buttons)
+    
+    def _add_files(self):
+        """Add files to import list"""
         files, _ = QFileDialog.getOpenFileNames(
-            main_window, 
-            "Import Files", 
-            start_dir,
-            "All Files (*);;DFF Models (*.dff);;TXD Textures (*.txd);;COL Collision (*.col);;IFP Animations (*.ifp)"
+            self,
+            "Select Files to Import",
+            "",
+            "All Files (*);;Models (*.dff);;Textures (*.txd);;Collision (*.col);;Animation (*.ifp);;Audio (*.wav);;Scripts (*.scm)"
         )
         
-        if not files:
+        for file_path in files:
+            if file_path not in self.selected_files:
+                self.selected_files.append(file_path)
+                filename = os.path.basename(file_path)
+                size = os.path.getsize(file_path)
+                
+                item = QListWidgetItem(f"{filename} ({self._format_size(size)})")
+                item.setData(Qt.ItemDataRole.UserRole, file_path)
+                self.file_list.addItem(item)
+        
+        self._update_buttons()
+    
+    def _add_folder(self):
+        """Add folder contents to import list"""
+        folder = QFileDialog.getExistingDirectory(self, "Select Folder to Import")
+        if folder:
+            for filename in os.listdir(folder):
+                file_path = os.path.join(folder, filename)
+                if os.path.isfile(file_path) and file_path not in self.selected_files:
+                    self.selected_files.append(file_path)
+                    size = os.path.getsize(file_path)
+                    
+                    item = QListWidgetItem(f"{filename} ({self._format_size(size)})")
+                    item.setData(Qt.ItemDataRole.UserRole, file_path)
+                    self.file_list.addItem(item)
+        
+        self._update_buttons()
+    
+    def _remove_selected_files(self):
+        """Remove selected files from list"""
+        for item in self.file_list.selectedItems():
+            file_path = item.data(Qt.ItemDataRole.UserRole)
+            if file_path in self.selected_files:
+                self.selected_files.remove(file_path)
+            self.file_list.takeItem(self.file_list.row(item))
+        
+        self._update_buttons()
+    
+    def _update_buttons(self):
+        """Update button states"""
+        has_files = len(self.selected_files) > 0
+        has_selection = len(self.file_list.selectedItems()) > 0
+        
+        self.import_btn.setEnabled(has_files)
+        self.remove_files_btn.setEnabled(has_selection)
+        
+        # Update progress label
+        if has_files:
+            self.progress_label.setText(f"Ready to import {len(self.selected_files)} files")
+        else:
+            self.progress_label.setText("No files selected")
+    
+    def _format_size(self, size: int) -> str:
+        """Format file size"""
+        if size < 1024:
+            return f"{size} B"
+        elif size < 1024 * 1024:
+            return f"{size / 1024:.1f} KB"
+        else:
+            return f"{size / (1024 * 1024):.1f} MB"
+    
+    def get_import_options(self) -> Dict:
+        """Get import options"""
+        return {
+            'files': self.selected_files,
+            'overwrite_existing': self.overwrite_cb.isChecked(),
+            'validate_files': self.validate_cb.isChecked(),
+            'organize_by_type': self.organize_cb.isChecked()
+        }
+
+
+class ExportOptionsDialog(QDialog):
+    """Advanced export options dialog"""
+    
+    def __init__(self, entries: List, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Export Options - IMG Factory 1.5")
+        self.setMinimumSize(600, 500)
+        self.setModal(True)
+        
+        self.entries = entries
+        self.export_options = {}
+        
+        self._create_ui()
+        self._connect_signals()
+        self._populate_entries()
+    
+    def _create_ui(self):
+        """Create the UI components"""
+        layout = QVBoxLayout(self)
+        
+        # Entry selection section
+        entries_group = QGroupBox("Entries to Export")
+        entries_layout = QVBoxLayout(entries_group)
+        
+        # Entry table
+        self.entries_table = QTableWidget()
+        self.entries_table.setColumnCount(4)
+        self.entries_table.setHorizontalHeaderLabels(["Export", "Name", "Type", "Size"])
+        
+        # Adjust column widths
+        header = self.entries_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        
+        entries_layout.addWidget(self.entries_table)
+        
+        # Selection buttons
+        selection_layout = QHBoxLayout()
+        
+        self.select_all_btn = QPushButton("Select All")
+        self.select_all_btn.clicked.connect(self._select_all)
+        selection_layout.addWidget(self.select_all_btn)
+        
+        self.select_none_btn = QPushButton("Select None")
+        self.select_none_btn.clicked.connect(self._select_none)
+        selection_layout.addWidget(self.select_none_btn)
+        
+        self.select_type_combo = QComboBox()
+        self.select_type_combo.addItems(["All Types", "DFF", "TXD", "COL", "IFP", "WAV", "SCM"])
+        selection_layout.addWidget(self.select_type_combo)
+        
+        self.select_type_btn = QPushButton("Select Type")
+        self.select_type_btn.clicked.connect(self._select_by_type)
+        selection_layout.addWidget(self.select_type_btn)
+        
+        selection_layout.addStretch()
+        entries_layout.addLayout(selection_layout)
+        layout.addWidget(entries_group)
+        
+        # Export options section
+        options_group = QGroupBox("Export Options")
+        options_layout = QFormLayout(options_group)
+        
+        # Output directory
+        output_layout = QHBoxLayout()
+        self.output_path_edit = QLineEdit()
+        output_layout.addWidget(self.output_path_edit)
+        
+        self.browse_btn = QPushButton("Browse...")
+        self.browse_btn.clicked.connect(self._browse_output_dir)
+        output_layout.addWidget(self.browse_btn)
+        
+        options_layout.addRow("Output Directory:", output_layout)
+        
+        # Export options
+        self.organize_cb = QCheckBox("Organize by file type")
+        options_layout.addRow("Organization:", self.organize_cb)
+        
+        self.create_ide_cb = QCheckBox("Create IDE file list")
+        options_layout.addRow("IDE File:", self.create_ide_cb)
+        
+        self.overwrite_cb = QCheckBox("Overwrite existing files")
+        options_layout.addRow("Conflicts:", self.overwrite_cb)
+        
+        layout.addWidget(options_group)
+        
+        # Progress section
+        self.progress_label = QLabel("Ready to export")
+        layout.addWidget(self.progress_label)
+        
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        layout.addWidget(self.progress_bar)
+        
+        # Dialog buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        self.export_btn = QPushButton("Export Files")
+        self.export_btn.clicked.connect(self.accept)
+        button_layout.addWidget(self.export_btn)
+        
+        self.cancel_btn = QPushButton("Cancel")
+        self.cancel_btn.clicked.connect(self.reject)
+        button_layout.addWidget(self.cancel_btn)
+        
+        layout.addLayout(button_layout)
+    
+    def _connect_signals(self):
+        """Connect UI signals"""
+        self.entries_table.itemChanged.connect(self._update_export_count)
+    
+    def _populate_entries(self):
+        """Populate entries table"""
+        self.entries_table.setRowCount(len(self.entries))
+        
+        for row, entry in enumerate(self.entries):
+            # Checkbox
+            checkbox = QCheckBox()
+            checkbox.setChecked(True)
+            self.entries_table.setCellWidget(row, 0, checkbox)
+            
+            # Name
+            name_item = QTableWidgetItem(getattr(entry, 'name', f'Entry {row}'))
+            name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.entries_table.setItem(row, 1, name_item)
+            
+            # Type
+            entry_name = getattr(entry, 'name', '')
+            file_type = entry_name.split('.')[-1].upper() if '.' in entry_name else 'Unknown'
+            type_item = QTableWidgetItem(file_type)
+            type_item.setFlags(type_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.entries_table.setItem(row, 2, type_item)
+            
+            # Size
+            size = getattr(entry, 'size', 0)
+            size_item = QTableWidgetItem(self._format_size(size))
+            size_item.setFlags(size_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.entries_table.setItem(row, 3, size_item)
+        
+        self._update_export_count()
+    
+    def _select_all(self):
+        """Select all entries"""
+        for row in range(self.entries_table.rowCount()):
+            checkbox = self.entries_table.cellWidget(row, 0)
+            checkbox.setChecked(True)
+        self._update_export_count()
+    
+    def _select_none(self):
+        """Deselect all entries"""
+        for row in range(self.entries_table.rowCount()):
+            checkbox = self.entries_table.cellWidget(row, 0)
+            checkbox.setChecked(False)
+        self._update_export_count()
+    
+    def _select_by_type(self):
+        """Select entries by file type"""
+        selected_type = self.select_type_combo.currentText()
+        if selected_type == "All Types":
+            self._select_all()
             return
         
-        # Import each file
-        imported_count = 0
-        failed_count = 0
+        for row in range(self.entries_table.rowCount()):
+            type_item = self.entries_table.item(row, 2)
+            checkbox = self.entries_table.cellWidget(row, 0)
+            
+            if type_item and type_item.text() == selected_type:
+                checkbox.setChecked(True)
+            else:
+                checkbox.setChecked(False)
         
-        for file_path in files:
+        self._update_export_count()
+    
+    def _browse_output_dir(self):
+        """Browse for output directory"""
+        directory = QFileDialog.getExistingDirectory(self, "Select Export Directory")
+        if directory:
+            self.output_path_edit.setText(directory)
+    
+    def _update_export_count(self):
+        """Update export count label"""
+        selected_count = 0
+        for row in range(self.entries_table.rowCount()):
+            checkbox = self.entries_table.cellWidget(row, 0)
+            if checkbox.isChecked():
+                selected_count += 1
+        
+        self.progress_label.setText(f"Ready to export {selected_count} of {len(self.entries)} entries")
+        self.export_btn.setEnabled(selected_count > 0 and self.output_path_edit.text().strip() != "")
+    
+    def _format_size(self, size: int) -> str:
+        """Format file size"""
+        if size < 1024:
+            return f"{size} B"
+        elif size < 1024 * 1024:
+            return f"{size / 1024:.1f} KB"
+        else:
+            return f"{size / (1024 * 1024):.1f} MB"
+    
+    def get_selected_entries(self) -> List:
+        """Get selected entries for export"""
+        selected = []
+        for row in range(self.entries_table.rowCount()):
+            checkbox = self.entries_table.cellWidget(row, 0)
+            if checkbox.isChecked():
+                selected.append(self.entries[row])
+        return selected
+    
+    def get_export_options(self) -> Dict:
+        """Get export options"""
+        return {
+            'output_directory': self.output_path_edit.text(),
+            'organize_by_type': self.organize_cb.isChecked(),
+            'create_ide_file': self.create_ide_cb.isChecked(),
+            'overwrite_existing': self.overwrite_cb.isChecked(),
+            'selected_entries': self.get_selected_entries()
+        }
+
+
+# ============================================================================
+# BACKGROUND PROCESSING THREADS
+# ============================================================================
+
+class ImportThread(QThread):
+    """Background thread for importing files"""
+    
+    progress_updated = pyqtSignal(int, str)
+    import_completed = pyqtSignal(int, int)  # success_count, error_count
+    
+    def __init__(self, img_file, import_options):
+        super().__init__()
+        self.img_file = img_file
+        self.import_options = import_options
+        self.success_count = 0
+        self.error_count = 0
+    
+    def run(self):
+        """Run import process"""
+        files = self.import_options.get('files', [])
+        overwrite = self.import_options.get('overwrite_existing', False)
+        validate = self.import_options.get('validate_files', True)
+        
+        for i, file_path in enumerate(files):
             try:
                 filename = os.path.basename(file_path)
+                self.progress_updated.emit(i + 1, f"Importing {filename}...")
                 
                 # Read file data
                 with open(file_path, 'rb') as f:
                     file_data = f.read()
                 
-                # Add to IMG
-                if main_window.current_img.add_entry(filename, file_data):
-                    imported_count += 1
-                    main_window.log_message(f"📥 Imported: {filename}")
-                else:
-                    failed_count += 1
-                    main_window.log_message(f"❌ Failed to import: {filename}")
-                    
-            except Exception as e:
-                failed_count += 1
-                main_window.log_message(f"❌ Error importing {os.path.basename(file_path)}: {str(e)}")
-        
-        # Update table
-        if hasattr(main_window, 'populate_entries_table'):
-            main_window.populate_entries_table()
-        
-        # Show results
-        QMessageBox.information(
-            main_window, 
-            "Import Complete", 
-            f"Imported {imported_count} files successfully.\n{failed_count} files failed."
-        )
-        
-    except Exception as e:
-        main_window.log_message(f"❌ Import error: {str(e)}")
-        QMessageBox.critical(main_window, "Import Error", f"Import failed: {str(e)}")
-
-
-def export_selected_function(main_window):
-    """Export selected entries - Clean version"""
-    try:
-        if not hasattr(main_window, 'current_img') or not main_window.current_img:
-            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
-            return
-        
-        selected_entries = get_selected_entries(main_window)
-        if not selected_entries:
-            QMessageBox.information(main_window, "No Selection", "Please select entries to export.")
-            return
-        
-        # Get export folder setting - FIXED: Use current_settings.get()
-        try:
-            from utils.app_settings_system import AppSettings
-            settings = AppSettings()
-            export_folder = settings.current_settings.get('export_folder', '')
-        except:
-            export_folder = ''
-        
-        # Set start directory
-        if export_folder and os.path.exists(export_folder):
-            start_dir = export_folder
-            main_window.log_message(f"📁 Using export folder: {export_folder}")
-        else:
-            start_dir = os.path.expanduser("~")
-        
-        # Directory selection
-        export_dir = QFileDialog.getExistingDirectory(main_window, "Export Selected Entries", start_dir)
-        if not export_dir:
-            return
-        
-        # Export each selected entry
-        exported_count = 0
-        failed_count = 0
-        
-        for entry in selected_entries:
-            try:
-                entry_name = getattr(entry, 'name', f'entry_{exported_count}')
-                output_path = os.path.join(export_dir, entry_name)
-                
-                # Get entry data
-                if hasattr(entry, 'get_data'):
-                    entry_data = entry.get_data()
-                elif hasattr(main_window.current_img, 'export_entry'):
-                    if main_window.current_img.export_entry(entry, output_path):
-                        exported_count += 1
-                        main_window.log_message(f"📤 Exported: {entry_name}")
-                        continue
-                    else:
-                        failed_count += 1
-                        continue
-                else:
-                    main_window.log_message(f"❌ Cannot export {entry_name}: No export method")
-                    failed_count += 1
+                # Validate if requested
+                if validate and not self._validate_file(file_path, filename):
+                    self.error_count += 1
                     continue
                 
-                # Write data to file
-                with open(output_path, 'wb') as f:
-                    f.write(entry_data)
+                # Check for existing entry
+                if not overwrite and self._entry_exists(filename):
+                    self.error_count += 1
+                    continue
                 
-                exported_count += 1
-                main_window.log_message(f"📤 Exported: {entry_name}")
-                
-            except Exception as e:
-                failed_count += 1
-                entry_name = getattr(entry, 'name', 'unknown')
-                main_window.log_message(f"❌ Export failed for {entry_name}: {str(e)}")
-        
-        # Show results
-        QMessageBox.information(
-            main_window, 
-            "Export Complete", 
-            f"Exported {exported_count} files successfully.\n{failed_count} files failed.\n\nFiles saved to: {export_dir}"
-        )
-        
-    except Exception as e:
-        main_window.log_message(f"❌ Export error: {str(e)}")
-        QMessageBox.critical(main_window, "Export Error", f"Export failed: {str(e)}")
-
-
-def quick_export_function(main_window):
-    """Quick export selected to organized folders by type - Clean version with COL support"""
-    try:
-        if not hasattr(main_window, 'current_img') or not main_window.current_img:
-            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
-            return
-        
-        selected_entries = get_selected_entries(main_window)
-        if not selected_entries:
-            QMessageBox.information(main_window, "No Selection", "Please select entries to export.")
-            return
-        
-        # Get base export directory - FIXED: Use current_settings.get()
-        try:
-            from utils.app_settings_system import AppSettings
-            settings = AppSettings()
-            base_export_dir = settings.current_settings.get('quick_export_folder', 
-                                         os.path.join(os.path.expanduser("~"), "Documents", "IMG_Exports"))
-        except:
-            base_export_dir = os.path.join(os.path.expanduser("~"), "Documents", "IMG_Exports")
-        
-        # Create base directory
-        os.makedirs(base_export_dir, exist_ok=True)
-        
-        # Export each file to its type-specific folder
-        exported_count = 0
-        failed_count = 0
-        
-        for entry in selected_entries:
-            try:
-                entry_name = getattr(entry, 'name', f'entry_{exported_count}')
-                file_ext = os.path.splitext(entry_name)[1].lower()
-                
-                # Determine subfolder by file type
-                if file_ext == '.dff':
-                    subfolder = 'models'
-                elif file_ext == '.txd':
-                    subfolder = 'textures'
-                elif file_ext == '.col':
-                    subfolder = 'collision'
-                elif file_ext == '.ifp':
-                    subfolder = 'animations'
-                elif file_ext == '.ide':
-                    subfolder = 'definitions'
-                elif file_ext == '.ipl':
-                    subfolder = 'placement'
-                elif file_ext in ['.wav', '.mp3']:
-                    subfolder = 'audio'
+                # Add entry to IMG
+                if hasattr(self.img_file, 'add_entry') and self.img_file.add_entry(filename, file_data):
+                    self.success_count += 1
                 else:
-                    subfolder = 'other'
+                    self.error_count += 1
                 
-                # Create type directory
-                type_dir = os.path.join(base_export_dir, subfolder)
-                os.makedirs(type_dir, exist_ok=True)
-                
-                # Export file
-                output_path = os.path.join(type_dir, entry_name)
-                
-                # Try multiple export methods
-                exported = False
-                
-                # Method 1: Use IMG export_entry if available
-                if hasattr(main_window.current_img, 'export_entry'):
-                    try:
-                        if main_window.current_img.export_entry(entry, output_path):
-                            exported = True
-                    except:
-                        pass
-                
-                # Method 2: Use entry get_data if available
-                if not exported and hasattr(entry, 'get_data'):
-                    try:
-                        entry_data = entry.get_data()
-                        with open(output_path, 'wb') as f:
-                            f.write(entry_data)
-                        exported = True
-                    except:
-                        pass
-                
-                # Method 3: Direct data access
-                if not exported and hasattr(entry, 'data'):
-                    try:
-                        with open(output_path, 'wb') as f:
-                            f.write(entry.data)
-                        exported = True
-                    except:
-                        pass
-                
-                if exported:
-                    exported_count += 1
-                    main_window.log_message(f"⚡ Quick export: {entry_name} → {subfolder}/")
-                else:
-                    failed_count += 1
-                    main_window.log_message(f"❌ Failed to export: {entry_name}")
-                
-            except Exception as e:
-                failed_count += 1
-                entry_name = getattr(entry, 'name', 'unknown')
-                main_window.log_message(f"❌ Quick export error for {entry_name}: {str(e)}")
+            except Exception:
+                self.error_count += 1
         
-        # Show results
-        main_window.log_message(f"⚡ Quick export complete: {exported_count} files, {failed_count} failed")
-        QMessageBox.information(
-            main_window, 
-            "Quick Export Complete", 
-            f"Exported {exported_count} files to organized folders.\n{failed_count} files failed.\n\nLocation: {base_export_dir}"
-        )
-        
-    except Exception as e:
-        main_window.log_message(f"❌ Quick export error: {str(e)}")
-        QMessageBox.critical(main_window, "Quick Export Error", f"Quick export failed: {str(e)}")
-
-
-def remove_selected_function(main_window):
-    """Remove selected entries from IMG - Clean version"""
-    try:
-        if not hasattr(main_window, 'current_img') or not main_window.current_img:
-            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
-            return
-        
-        selected_entries = get_selected_entries(main_window)
-        if not selected_entries:
-            QMessageBox.information(main_window, "No Selection", "Please select entries to remove.")
-            return
-        
-        # Confirm removal
-        entry_names = [getattr(entry, 'name', 'unknown') for entry in selected_entries]
-        reply = QMessageBox.question(
-            main_window,
-            "Confirm Removal",
-            f"Are you sure you want to remove {len(selected_entries)} entries?\n\n" + 
-            "\n".join(entry_names[:5]) + 
-            ("..." if len(entry_names) > 5 else ""),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-        
-        # Remove entries
-        removed_count = 0
-        for entry in selected_entries:
-            try:
-                if hasattr(main_window.current_img, 'remove_entry'):
-                    if main_window.current_img.remove_entry(entry):
-                        removed_count += 1
-                        entry_name = getattr(entry, 'name', 'unknown')
-                        main_window.log_message(f"🗑️ Removed: {entry_name}")
-                
-            except Exception as e:
-                entry_name = getattr(entry, 'name', 'unknown')
-                main_window.log_message(f"❌ Failed to remove {entry_name}: {str(e)}")
-        
-        # Update table
-        if hasattr(main_window, 'populate_entries_table'):
-            main_window.populate_entries_table()
-        
-        # Show results
-        QMessageBox.information(
-            main_window,
-            "Removal Complete",
-            f"Removed {removed_count} entries successfully."
-        )
-        
-    except Exception as e:
-        main_window.log_message(f"❌ Remove error: {str(e)}")
-        QMessageBox.critical(main_window, "Remove Error", f"Remove failed: {str(e)}")
-
-
-def remove_via_entries_function(main_window):
-    """Remove entries using IDE file reference - COMPLETE IMPLEMENTATION"""
-    try:
-        if not hasattr(main_window, 'current_img') or not main_window.current_img:
-            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
-            return
-
-        # Get IDE file for removal reference
-        ide_file, _ = QFileDialog.getOpenFileName(
-            main_window,
-            "Select IDE file for removal reference",
-            "",
-            "IDE Files (*.ide);;All Files (*)"
-        )
-
-        if not ide_file:
-            return
-
-        main_window.log_message(f"🚮 Remove Via IDE: {ide_file}")
-
-        # Parse IDE file to get entry names to remove
-        entries_to_remove = []
+        self.import_completed.emit(self.success_count, self.error_count)
+    
+    def _validate_file(self, file_path: str, filename: str) -> bool:
+        """Basic file validation"""
         try:
-            with open(ide_file, 'r', encoding='utf-8', errors='ignore') as f:
-                for line_num, line in enumerate(f, 1):
-                    line = line.strip()
-                    if not line or line.startswith('#') or line.startswith('//'):
-                        continue
+            # Check file size
+            size = os.path.getsize(file_path)
+            if size == 0:
+                return False
+            
+            # Basic extension check
+            if '.' in filename:
+                ext = filename.split('.')[-1].lower()
+                return ext in ['dff', 'txd', 'col', 'ifp', 'wav', 'scm', 'ide', 'ipl', 'dat']
+            
+            return True
+        except Exception:
+            return False
+    
+    def _entry_exists(self, filename: str) -> bool:
+        """Check if entry already exists"""
+        if hasattr(self.img_file, 'entries'):
+            for entry in self.img_file.entries:
+                if getattr(entry, 'name', '') == filename:
+                    return True
+        return False
 
-                    # Extract filename from IDE line
-                    # Common IDE formats:
-                    # filename.dff, texdict, 100, 0, 0, 0
-                    # filename.txd, texdict, 100, 0, 0, 0
-                    parts = line.split(',')
-                    if parts:
-                        filename = parts[0].strip()
-                        # Remove quotes if present
-                        filename = filename.strip('"\'')
-                        if filename:
-                            entries_to_remove.append(filename)
 
-        except Exception as e:
-            main_window.log_message(f"❌ Error reading IDE file: {str(e)}")
-            QMessageBox.critical(main_window, "IDE Parse Error", f"Could not parse IDE file:\n{str(e)}")
-            return
-
-        if not entries_to_remove:
-            QMessageBox.information(main_window, "No Entries Found", "No valid entries found in IDE file.")
-            return
-
-        main_window.log_message(f"📋 Found {len(entries_to_remove)} entries in IDE file")
-
-        # Find matching entries in current IMG
-        img_entries_to_remove = []
-        for entry_name in entries_to_remove:
-            # Try exact match first
-            found_entry = None
-            for img_entry in main_window.current_img.entries:
-                img_entry_name = getattr(img_entry, 'name', '')
-                if img_entry_name.lower() == entry_name.lower():
-                    found_entry = img_entry
-                    break
-
-            if found_entry:
-                img_entries_to_remove.append(found_entry)
-                main_window.log_message(f"✅ Found match: {entry_name}")
+class ExportThread(QThread):
+    """Background thread for exporting files"""
+    
+    progress_updated = pyqtSignal(int, str)
+    export_completed = pyqtSignal(int, int)  # success_count, error_count
+    
+    def __init__(self, img_file, export_options):
+        super().__init__()
+        self.img_file = img_file
+        self.export_options = export_options
+        self.success_count = 0
+        self.error_count = 0
+    
+    def run(self):
+        """Run export process"""
+        entries = self.export_options.get('selected_entries', [])
+        output_dir = self.export_options.get('output_directory', '')
+        organize = self.export_options.get('organize_by_type', False)
+        create_ide = self.export_options.get('create_ide_file', False)
+        overwrite = self.export_options.get('overwrite_existing', False)
+        
+        # Create output directory
+        os.makedirs(output_dir, exist_ok=True)
+        
+        ide_entries = []
+        
+        for i, entry in enumerate(entries):
+            try:
+                entry_name = getattr(entry, 'name', f'entry_{i}')
+                self.progress_updated.emit(i + 1, f"Exporting {entry_name}...")
+                
+                # Determine output path
+                if organize:
+                    file_type = self._get_file_type(entry_name)
+                    type_dir = os.path.join(output_dir, file_type.lower())
+                    os.makedirs(type_dir, exist_ok=True)
+                    output_path = os.path.join(type_dir, entry_name)
+                else:
+                    output_path = os.path.join(output_dir, entry_name)
+                
+                # Check if file exists
+                if os.path.exists(output_path) and not overwrite:
+                    self.error_count += 1
+                    continue
+                
+                # Export the file
+                if self._export_entry(entry, output_path):
+                    self.success_count += 1
+                    
+                    # Add to IDE list
+                    if create_ide:
+                        ide_entries.append({
+                            'name': entry_name,
+                            'path': os.path.relpath(output_path, output_dir),
+                            'size': getattr(entry, 'size', 0)
+                        })
+                else:
+                    self.error_count += 1
+                
+            except Exception:
+                self.error_count += 1
+        
+        # Create IDE file if requested
+        if create_ide and ide_entries:
+            self._create_ide_file(output_dir, ide_entries)
+        
+        self.export_completed.emit(self.success_count, self.error_count)
+    
+    def _get_file_type(self, filename: str) -> str:
+        """Get file type from filename"""
+        if '.' in filename:
+            ext = filename.split('.')[-1].upper()
+            if ext in ['DFF']:
+                return 'models'
+            elif ext in ['TXD']:
+                return 'textures'
+            elif ext in ['COL']:
+                return 'collision'
+            elif ext in ['IFP']:
+                return 'animations'
+            elif ext in ['WAV', 'OGG']:
+                return 'audio'
+            elif ext in ['SCM']:
+                return 'scripts'
+        return 'misc'
+    
+    def _export_entry(self, entry, output_path: str) -> bool:
+        """Export single entry"""
+        try:
+            # Get entry data
+            if hasattr(entry, 'get_data'):
+                file_data = entry.get_data()
+            elif hasattr(self.img_file, 'get_entry_data'):
+                file_data = self.img_file.get_entry_data(entry)
             else:
-                main_window.log_message(f"⚠️ Not found in IMG: {entry_name}")
+                return False
+            
+            # Write to file
+            with open(output_path, 'wb') as f:
+                f.write(file_data)
+            
+            return True
+            
+        except Exception:
+            return False
+    
+    def _create_ide_file(self, output_dir: str, ide_entries: List[Dict]):
+        """Create IDE file listing exported files"""
+        try:
+            ide_path = os.path.join(output_dir, 'exported_files.ide')
+            with open(ide_path, 'w', encoding='utf-8') as f:
+                f.write("# IMG Factory 1.5 - Exported Files List\n")
+                f.write(f"# Total files: {len(ide_entries)}\n\n")
+                
+                for entry in ide_entries:
+                    f.write(f"{entry['name']}\t{entry['path']}\t{entry['size']}\n")
+                
+        except Exception:
+            pass  # IDE file creation is optional
 
-        if not img_entries_to_remove:
-            QMessageBox.information(main_window, "No Matches", "No entries from IDE file were found in the current IMG.")
-            return
 
-        # Confirm removal
-        reply = QMessageBox.question(
-            main_window,
-            "Confirm Remove Via IDE",
-            f"Remove {len(img_entries_to_remove)} entries found in IDE file?\n\n" +
-            f"IDE file: {os.path.basename(ide_file)}\n" +
-            f"Entries to remove: {len(img_entries_to_remove)}/{len(entries_to_remove)} found",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
+# ============================================================================
+# MAIN IMPORT/EXPORT FUNCTIONS
+# ============================================================================
 
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-
-        # Remove the entries
-        removed_count = 0
-        for entry in img_entries_to_remove:
-            try:
-                if hasattr(main_window.current_img, 'remove_entry'):
-                    if main_window.current_img.remove_entry(entry):
-                        removed_count += 1
-                        entry_name = getattr(entry, 'name', 'unknown')
-                        main_window.log_message(f"🗑️ Removed: {entry_name}")
-
-            except Exception as e:
-                entry_name = getattr(entry, 'name', 'unknown')
-                main_window.log_message(f"❌ Failed to remove {entry_name}: {str(e)}")
-
-        # Update table
-        if hasattr(main_window, 'populate_entries_table'):
-            main_window.populate_entries_table()
-        elif hasattr(main_window, '_update_ui_for_loaded_img'):
-            main_window._update_ui_for_loaded_img()
-
-        # Show results
-        main_window.log_message(f"✅ Remove Via IDE complete: {removed_count} entries removed")
-        QMessageBox.information(
-            main_window,
-            "Remove Via IDE Complete",
-            f"Successfully removed {removed_count} entries based on IDE file."
-        )
-
-    except Exception as e:
-        main_window.log_message(f"❌ Remove Via IDE error: {str(e)}")
-        QMessageBox.critical(main_window, "Remove Via IDE Error", f"Remove Via IDE failed:\n{str(e)}")
-
-def dump_all_function(main_window):
-    """Dump all entries from IMG - Clean version"""
+def import_files_function(main_window):
+    """Import files with advanced dialog"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
             QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
             return
         
-        # Get dump directory
-        dump_dir = QFileDialog.getExistingDirectory(main_window, "Dump All Entries To")
-        if not dump_dir:
-            return
-        
-        # Confirm dump
-        total_entries = len(main_window.current_img.entries) if hasattr(main_window.current_img, 'entries') else 0
-        reply = QMessageBox.question(
-            main_window,
-            "Confirm Dump",
-            f"Dump all {total_entries} entries to:\n{dump_dir}",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-        
-        # Dump all entries
-        dumped_count = 0
-        failed_count = 0
-        
-        for i, entry in enumerate(main_window.current_img.entries):
-            try:
-                entry_name = getattr(entry, 'name', f'entry_{i}')
-                output_path = os.path.join(dump_dir, entry_name)
+        dialog = ImportOptionsDialog(main_window)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            options = dialog.get_import_options()
+            
+            if options['files']:
+                _import_files_threaded(main_window, options)
+            else:
+                QMessageBox.information(main_window, "Import", "No files selected for import.")
                 
-                # Try multiple dump methods
-                dumped = False
-                
-                if hasattr(main_window.current_img, 'export_entry'):
-                    try:
-                        if main_window.current_img.export_entry(entry, output_path):
-                            dumped = True
-                    except:
-                        pass
-                
-                if not dumped and hasattr(entry, 'get_data'):
-                    try:
-                        entry_data = entry.get_data()
-                        with open(output_path, 'wb') as f:
-                            f.write(entry_data)
-                        dumped = True
-                    except:
-                        pass
-                
-                if dumped:
-                    dumped_count += 1
-                    main_window.log_message(f"💾 Dumped: {entry_name}")
-                else:
-                    failed_count += 1
-                    main_window.log_message(f"❌ Failed to dump: {entry_name}")
-                
-            except Exception as e:
-                failed_count += 1
-                entry_name = getattr(entry, 'name', f'entry_{i}')
-                main_window.log_message(f"❌ Dump error for {entry_name}: {str(e)}")
-        
-        # Show results
-        QMessageBox.information(
-            main_window,
-            "Dump Complete",
-            f"Dumped {dumped_count} files successfully.\n{failed_count} files failed.\n\nLocation: {dump_dir}"
-        )
-        
     except Exception as e:
-        main_window.log_message(f"❌ Dump error: {str(e)}")
-        QMessageBox.critical(main_window, "Dump Error", f"Dump failed: {str(e)}")
+        main_window.log_message(f"❌ Import error: {str(e)}")
 
 
 def import_via_function(main_window):
-    """Import via IDE file or folder - Clean version"""
+    """Import via IDE file or folder"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
             QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
             return
         
-        # Choice dialog
+        # Ask user what to import
         reply = QMessageBox.question(
-            main_window,
-            "Import Method",
-            "Choose import method:\n\nYes = Import via IDE file\nNo = Import entire folder",
+            main_window, 
+            "Import Via",
+            "What would you like to import?\n\n"
+            "Yes = Import from IDE file\n"
+            "No = Import from folder",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
         )
         
-        if reply == QMessageBox.StandardButton.Cancel:
-            return
-        elif reply == QMessageBox.StandardButton.Yes:
-            # Import via IDE file
-            ide_file, _ = QFileDialog.getOpenFileName(
-                main_window, 
-                "Select IDE File", 
-                "",
-                "IDE Files (*.ide);;All Files (*)"
-            )
-            if ide_file:
-                import_from_ide_file(main_window, ide_file)
-        else:
-            # Import entire folder
-            folder = QFileDialog.getExistingDirectory(main_window, "Select Folder to Import")
-            if folder:
-                import_directory_function(main_window, folder)
-                
+        if reply == QMessageBox.StandardButton.Yes:
+            import_from_ide_file(main_window)
+        elif reply == QMessageBox.StandardButton.No:
+            import_directory_function(main_window)
+        
     except Exception as e:
         main_window.log_message(f"❌ Import via error: {str(e)}")
 
 
-def import_from_ide_file(main_window, ide_file_path):
+def import_from_ide_file(main_window):
     """Import files listed in IDE file"""
     try:
-        base_dir = os.path.dirname(ide_file_path)
-        imported_count = 0
-        failed_count = 0
+        ide_file, _ = QFileDialog.getOpenFileName(
+            main_window,
+            "Select IDE File",
+            "",
+            "IDE Files (*.ide);;Text Files (*.txt);;All Files (*)"
+        )
         
-        with open(ide_file_path, 'r') as f:
+        if not ide_file:
+            return
+        
+        # Parse IDE file
+        files_to_import = []
+        base_dir = os.path.dirname(ide_file)
+        
+        with open(ide_file, 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith('#'):
-                    # Parse IDE line (name, path, size)
                     parts = line.split('\t')
                     if len(parts) >= 2:
-                        file_name = parts[0]
-                        file_path = os.path.join(base_dir, parts[1])
+                        filename = parts[0]
+                        relative_path = parts[1]
+                        full_path = os.path.join(base_dir, relative_path)
                         
-                        if os.path.exists(file_path):
-                            try:
-                                with open(file_path, 'rb') as file_f:
-                                    file_data = file_f.read()
-                                
-                                if main_window.current_img.add_entry(file_name, file_data):
-                                    imported_count += 1
-                                    main_window.log_message(f"📥 IDE Import: {file_name}")
-                                else:
-                                    failed_count += 1
-                            except:
-                                failed_count += 1
-                        else:
-                            failed_count += 1
-                            main_window.log_message(f"❌ File not found: {file_path}")
+                        if os.path.exists(full_path):
+                            files_to_import.append(full_path)
         
-        # Update table
-        if hasattr(main_window, 'populate_entries_table'):
-            main_window.populate_entries_table()
-        
-        QMessageBox.information(
-            main_window,
-            "IDE Import Complete",
-            f"Imported {imported_count} files from IDE.\n{failed_count} files failed."
-        )
-        
+        if files_to_import:
+            options = {
+                'files': files_to_import,
+                'overwrite_existing': False,
+                'validate_files': True,
+                'organize_by_type': False
+            }
+            _import_files_threaded(main_window, options)
+        else:
+            QMessageBox.information(main_window, "IDE Import", "No valid files found in IDE file.")
+            
     except Exception as e:
         main_window.log_message(f"❌ IDE import error: {str(e)}")
 
 
-def import_directory_function(main_window, directory):
+def import_directory_function(main_window):
     """Import all files from directory"""
     try:
-        imported_count = 0
-        failed_count = 0
+        directory = QFileDialog.getExistingDirectory(main_window, "Select Directory to Import")
+        if not directory:
+            return
         
+        # Get all files in directory
+        files_to_import = []
         for filename in os.listdir(directory):
             file_path = os.path.join(directory, filename)
             if os.path.isfile(file_path):
-                try:
-                    with open(file_path, 'rb') as f:
-                        file_data = f.read()
-                    
-                    if main_window.current_img.add_entry(filename, file_data):
-                        imported_count += 1
-                        main_window.log_message(f"📁 Dir Import: {filename}")
-                    else:
-                        failed_count += 1
-                except:
-                    failed_count += 1
+                files_to_import.append(file_path)
         
-        # Update table
-        if hasattr(main_window, 'populate_entries_table'):
-            main_window.populate_entries_table()
-        
-        QMessageBox.information(
-            main_window,
-            "Directory Import Complete",
-            f"Imported {imported_count} files from directory.\n{failed_count} files failed."
-        )
+        if files_to_import:
+            options = {
+                'files': files_to_import,
+                'overwrite_existing': False,
+                'validate_files': True,
+                'organize_by_type': False
+            }
+            _import_files_threaded(main_window, options)
+        else:
+            QMessageBox.information(main_window, "Directory Import", "No files found in selected directory.")
         
     except Exception as e:
         main_window.log_message(f"❌ Directory import error: {str(e)}")
 
-def export_via_function(main_window):
-    """Export via existing IDE file - FIXED IDE PARSER"""
+
+def export_selected_function(main_window):
+    """Export selected entries with advanced dialog"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
             QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
             return
+        
+        selected_entries = get_selected_entries(main_window)
+        if not selected_entries:
+            QMessageBox.information(main_window, "Export", "No entries selected for export.")
+            return
+        
+        dialog = ExportOptionsDialog(selected_entries, main_window)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            options = dialog.get_export_options()
+            
+            if options['selected_entries'] and options['output_directory']:
+                _export_files_threaded(main_window, options)
+            else:
+                QMessageBox.information(main_window, "Export", "Export cancelled or no output directory specified.")
+                
+    except Exception as e:
+        main_window.log_message(f"❌ Export error: {str(e)}")
 
-        # Select IDE file
+
+def export_via_function(main_window):
+    """Export via existing IDE file"""
+    try:
+        if not hasattr(main_window, 'current_img') or not main_window.current_img:
+            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
+            return
+        
         ide_file, _ = QFileDialog.getOpenFileName(
             main_window,
             "Select IDE File for Export Matching",
             "",
-            "IDE Files (*.ide);;All Files (*)"
+            "IDE Files (*.ide);;Text Files (*.txt);;All Files (*)"
         )
-
+        
         if not ide_file:
             return
-
-        # Select export directory
-        export_dir = QFileDialog.getExistingDirectory(main_window, "Export Matching Files To")
-        if not export_dir:
+        
+        # Parse IDE file to get list of files to export
+        files_to_export = []
+        with open(ide_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    parts = line.split('\t')
+                    if len(parts) >= 1:
+                        filename = parts[0].strip()
+                        files_to_export.append(filename)
+        
+        if not files_to_export:
+            QMessageBox.information(main_window, "Export Via IDE", "No valid entries found in IDE file.")
             return
-
-        main_window.log_message(f"📋 Export Via IDE: {os.path.basename(ide_file)}")
-        main_window.log_message(f"📁 Export to: {export_dir}")
-
-        # Parse IDE file correctly
-        ide_entries = []
-        try:
-            with open(ide_file, 'r', encoding='utf-8', errors='ignore') as f:
-                for line_num, line in enumerate(f, 1):
-                    line = line.strip()
-
-                    # Skip empty lines and comments
-                    if not line or line.startswith('#') or line.startswith('//') or line.startswith(';'):
-                        continue
-
-                    # Parse different IDE formats
-                    filename = None
-
-                    # Method 1: Comma-separated (most common)
-                    if ',' in line:
-                        parts = [p.strip().strip('"\'') for p in line.split(',')]
-                        if parts[0]:
-                            filename = parts[0]
-
-                    # Method 2: Tab-separated
-                    elif '\t' in line:
-                        parts = [p.strip().strip('"\'') for p in line.split('\t')]
-                        if parts[0]:
-                            filename = parts[0]
-
-                    # Method 3: Space-separated (less common)
-                    elif ' ' in line:
-                        parts = line.split()
-                        if parts[0]:
-                            filename = parts[0].strip('"\'')
-
-                    # Method 4: Single filename per line
-                    else:
-                        filename = line.strip('"\'')
-
-                    if filename and filename not in ide_entries:
-                        ide_entries.append(filename)
-                        main_window.log_message(f"📋 IDE entry: {filename}")
-
-        except Exception as e:
-            main_window.log_message(f"❌ Error reading IDE file: {str(e)}")
-            QMessageBox.critical(main_window, "IDE Parse Error", f"Could not parse IDE file:\n{str(e)}")
+        
+        # Find matching entries in current IMG
+        matching_entries = []
+        for entry in main_window.current_img.entries:
+            entry_name = getattr(entry, 'name', '')
+            if entry_name in files_to_export:
+                matching_entries.append(entry)
+        
+        if not matching_entries:
+            QMessageBox.information(main_window, "Export Via IDE", "No matching entries found in current IMG file.")
             return
-
-        if not ide_entries:
-            QMessageBox.information(main_window, "No Entries Found", "No valid entries found in IDE file.")
+        
+        # Get export directory
+        output_dir = QFileDialog.getExistingDirectory(main_window, "Select Export Directory")
+        if not output_dir:
             return
-
-        main_window.log_message(f"📋 Found {len(ide_entries)} entries in IDE file")
-
-        # Find matching entries in IMG and export them
-        exported_count = 0
-        failed_count = 0
-        not_found_count = 0
-
-        for ide_filename in ide_entries:
-            # Find matching entry in IMG (try different matching strategies)
-            found_entry = None
-
-            # Strategy 1: Exact match
-            for entry in main_window.current_img.entries:
-                entry_name = getattr(entry, 'name', '')
-                if entry_name == ide_filename:
-                    found_entry = entry
-                    break
-
-            # Strategy 2: Case-insensitive match
-            if not found_entry:
-                for entry in main_window.current_img.entries:
-                    entry_name = getattr(entry, 'name', '')
-                    if entry_name.lower() == ide_filename.lower():
-                        found_entry = entry
-                        break
-
-            # Strategy 3: Without extension match
-            if not found_entry:
-                ide_basename = os.path.splitext(ide_filename)[0]
-                for entry in main_window.current_img.entries:
-                    entry_name = getattr(entry, 'name', '')
-                    entry_basename = os.path.splitext(entry_name)[0]
-                    if entry_basename.lower() == ide_basename.lower():
-                        found_entry = entry
-                        break
-
-            if found_entry:
-                # Export the found entry
-                try:
-                    entry_name = getattr(found_entry, 'name', ide_filename)
-                    output_path = os.path.join(export_dir, entry_name)
-
-                    # Create subdirectories if needed
-                    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
-                    # Try multiple export methods
-                    exported = False
-
-                    # Method 1: Use IMG file's export_entry method
-                    if hasattr(main_window.current_img, 'export_entry'):
-                        try:
-                            if main_window.current_img.export_entry(found_entry, output_path):
-                                exported = True
-                        except Exception as e:
-                            main_window.log_message(f"⚠️ Export method 1 failed for {entry_name}: {str(e)}")
-
-                    # Method 2: Use entry's get_data method
-                    if not exported and hasattr(found_entry, 'get_data'):
-                        try:
-                            entry_data = found_entry.get_data()
-                            if entry_data:
-                                with open(output_path, 'wb') as out_f:
-                                    out_f.write(entry_data)
-                                exported = True
-                        except Exception as e:
-                            main_window.log_message(f"⚠️ Export method 2 failed for {entry_name}: {str(e)}")
-
-                    # Method 3: Direct file reading from IMG
-                    if not exported:
-                        try:
-                            # Try to read data directly from IMG file
-                            if hasattr(main_window.current_img, 'read_entry_data'):
-                                entry_data = main_window.current_img.read_entry_data(found_entry)
-                                if entry_data:
-                                    with open(output_path, 'wb') as out_f:
-                                        out_f.write(entry_data)
-                                    exported = True
-                        except Exception as e:
-                            main_window.log_message(f"⚠️ Export method 3 failed for {entry_name}: {str(e)}")
-
-                    if exported:
-                        exported_count += 1
-                        main_window.log_message(f"✅ Exported: {entry_name}")
-                    else:
-                        failed_count += 1
-                        main_window.log_message(f"❌ Failed to export: {entry_name}")
-
-                except Exception as e:
-                    failed_count += 1
-                    main_window.log_message(f"❌ Export error for {ide_filename}: {str(e)}")
-            else:
-                not_found_count += 1
-                main_window.log_message(f"⚠️ Not found in IMG: {ide_filename}")
-
-        # Show results
-        result_msg = f"Export Via IDE Complete:\n\n"
-        result_msg += f"✅ Exported: {exported_count} files\n"
-        result_msg += f"❌ Failed: {failed_count} files\n"
-        result_msg += f"⚠️ Not found: {not_found_count} files\n"
-        result_msg += f"📁 Total IDE entries: {len(ide_entries)}"
-
-        main_window.log_message(f"✅ Export Via IDE complete: {exported_count}/{len(ide_entries)} exported")
-
-        QMessageBox.information(main_window, "Export Via IDE Complete", result_msg)
-
+        
+        # Export matching entries
+        options = {
+            'selected_entries': matching_entries,
+            'output_directory': output_dir,
+            'organize_by_type': False,
+            'create_ide_file': True,
+            'overwrite_existing': True
+        }
+        _export_files_threaded(main_window, options)
+        
     except Exception as e:
-        main_window.log_message(f"❌ Export Via IDE error: {str(e)}")
-        QMessageBox.critical(main_window, "Export Via IDE Error", f"Export Via IDE failed:\n{str(e)}")
+        main_window.log_message(f"❌ Export via error: {str(e)}")
 
-def export_all_function(main_window):
-    """Export all entries with dialog"""
+
+def quick_export_function(main_window):
+    """Quick export - organized by file type"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
             QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
             return
         
-        # Get export directory
-        export_dir = QFileDialog.getExistingDirectory(main_window, "Export All Entries To")
-        if not export_dir:
+        selected_entries = get_selected_entries(main_window)
+        if not selected_entries:
+            QMessageBox.information(main_window, "Quick Export", "No entries selected for export.")
             return
         
-        # Confirm export
-        total_entries = len(main_window.current_img.entries)
-        reply = QMessageBox.question(
-            main_window,
-            "Confirm Export All",
-            f"Export all {total_entries} entries to:\n{export_dir}",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        
-        if reply != QMessageBox.StandardButton.Yes:
+        # Get output directory
+        output_dir = QFileDialog.getExistingDirectory(main_window, "Select Quick Export Directory")
+        if not output_dir:
             return
         
-        # Export all entries
-        exported_count = 0
-        failed_count = 0
+        # Quick export with organization
+        options = {
+            'selected_entries': selected_entries,
+            'output_directory': output_dir,
+            'organize_by_type': True,
+            'create_ide_file': False,
+            'overwrite_existing': True
+        }
+        _export_files_threaded(main_window, options)
         
-        for i, entry in enumerate(main_window.current_img.entries):
-            try:
-                entry_name = getattr(entry, 'name', f'entry_{i}')
-                output_path = os.path.join(export_dir, entry_name)
-                
-                # Try multiple export methods
-                exported = False
-                
-                if hasattr(main_window.current_img, 'export_entry'):
-                    try:
-                        if main_window.current_img.export_entry(entry, output_path):
-                            exported = True
-                    except:
-                        pass
-                
-                if not exported and hasattr(entry, 'get_data'):
-                    try:
-                        entry_data = entry.get_data()
-                        with open(output_path, 'wb') as f:
-                            f.write(entry_data)
-                        exported = True
-                    except:
-                        pass
-                
-                if exported:
-                    exported_count += 1
-                    if exported_count % 50 == 0:  # Progress update every 50 files
-                        main_window.log_message(f"📤 Exported {exported_count}/{total_entries} files...")
-                else:
-                    failed_count += 1
-                
-            except Exception as e:
-                failed_count += 1
-                entry_name = getattr(entry, 'name', f'entry_{i}')
-                main_window.log_message(f"❌ Export all error for {entry_name}: {str(e)}")
+    except Exception as e:
+        main_window.log_message(f"❌ Quick export error: {str(e)}")
+
+
+def export_all_function(main_window):
+    """Export all entries with advanced dialog"""
+    try:
+        if not hasattr(main_window, 'current_img') or not main_window.current_img:
+            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
+            return
         
-        QMessageBox.information(
-            main_window,
-            "Export All Complete",
-            f"Exported {exported_count} files successfully.\n{failed_count} files failed.\n\nLocation: {export_dir}"
-        )
+        all_entries = main_window.current_img.entries if hasattr(main_window.current_img, 'entries') else []
+        if not all_entries:
+            QMessageBox.information(main_window, "Export All", "No entries found in current IMG file.")
+            return
         
+        dialog = ExportOptionsDialog(all_entries, main_window)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            options = dialog.get_export_options()
+            
+            if options['selected_entries'] and options['output_directory']:
+                _export_files_threaded(main_window, options)
+            else:
+                QMessageBox.information(main_window, "Export All", "Export cancelled or no output directory specified.")
+                
     except Exception as e:
         main_window.log_message(f"❌ Export all error: {str(e)}")
 
 
+def dump_all_function(main_window):
+    """Dump all entries - no organization, just extract everything"""
+    try:
+        if not hasattr(main_window, 'current_img') or not main_window.current_img:
+            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
+            return
+        
+        all_entries = main_window.current_img.entries if hasattr(main_window.current_img, 'entries') else []
+        if not all_entries:
+            QMessageBox.information(main_window, "Dump All", "No entries found in current IMG file.")
+            return
+        
+        # Get output directory
+        output_dir = QFileDialog.getExistingDirectory(main_window, "Select Dump Directory")
+        if not output_dir:
+            return
+        
+        reply = QMessageBox.question(
+            main_window,
+            "Dump All Entries",
+            f"This will extract all {len(all_entries)} entries to the selected directory.\n\n"
+            "Continue with dump operation?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            # Dump all entries without organization
+            options = {
+                'selected_entries': all_entries,
+                'output_directory': output_dir,
+                'organize_by_type': False,
+                'create_ide_file': True,
+                'overwrite_existing': True
+            }
+            _export_files_threaded(main_window, options)
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Dump all error: {str(e)}")
+
+
+def remove_selected_function(main_window):
+    """Remove selected entries from IMG"""
+    try:
+        if not hasattr(main_window, 'current_img') or not main_window.current_img:
+            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
+            return
+        
+        selected_entries = get_selected_entries(main_window)
+        if not selected_entries:
+            QMessageBox.information(main_window, "Remove", "No entries selected for removal.")
+            return
+        
+        reply = QMessageBox.question(
+            main_window,
+            "Remove Selected Entries",
+            f"Are you sure you want to remove {len(selected_entries)} selected entries?\n\n"
+            "This action cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            removed_count = 0
+            
+            for entry in selected_entries:
+                if hasattr(main_window.current_img, 'remove_entry'):
+                    if main_window.current_img.remove_entry(entry):
+                        removed_count += 1
+                elif hasattr(main_window.current_img, 'entries'):
+                    try:
+                        main_window.current_img.entries.remove(entry)
+                        removed_count += 1
+                    except ValueError:
+                        pass
+            
+            # Update table
+            if hasattr(main_window, 'populate_entries_table'):
+                main_window.populate_entries_table()
+            
+            main_window.log_message(f"✅ Removed {removed_count} entries")
+            QMessageBox.information(main_window, "Remove Complete", f"Removed {removed_count} entries from IMG file.")
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Remove error: {str(e)}")
+
+
+def remove_via_entries_function(main_window):
+    """Remove entries via IDE file list"""
+    try:
+        if not hasattr(main_window, 'current_img') or not main_window.current_img:
+            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
+            return
+        
+        ide_file, _ = QFileDialog.getOpenFileName(
+            main_window,
+            "Select IDE File for Removal List",
+            "",
+            "IDE Files (*.ide);;Text Files (*.txt);;All Files (*)"
+        )
+        
+        if not ide_file:
+            return
+        
+        # Parse IDE file
+        files_to_remove = []
+        with open(ide_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    parts = line.split('\t')
+                    if len(parts) >= 1:
+                        filename = parts[0].strip()
+                        files_to_remove.append(filename)
+        
+        if not files_to_remove:
+            QMessageBox.information(main_window, "Remove Via IDE", "No valid entries found in IDE file.")
+            return
+        
+        # Find matching entries
+        entries_to_remove = []
+        for entry in main_window.current_img.entries:
+            entry_name = getattr(entry, 'name', '')
+            if entry_name in files_to_remove:
+                entries_to_remove.append(entry)
+        
+        if not entries_to_remove:
+            QMessageBox.information(main_window, "Remove Via IDE", "No matching entries found in current IMG file.")
+            return
+        
+        reply = QMessageBox.question(
+            main_window,
+            "Remove Via IDE",
+            f"Found {len(entries_to_remove)} matching entries to remove.\n\n"
+            "Continue with removal?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            removed_count = 0
+            
+            for entry in entries_to_remove:
+                if hasattr(main_window.current_img, 'remove_entry'):
+                    if main_window.current_img.remove_entry(entry):
+                        removed_count += 1
+                elif hasattr(main_window.current_img, 'entries'):
+                    try:
+                        main_window.current_img.entries.remove(entry)
+                        removed_count += 1
+                    except ValueError:
+                        pass
+            
+            # Update table
+            if hasattr(main_window, 'populate_entries_table'):
+                main_window.populate_entries_table()
+            
+            main_window.log_message(f"✅ Removed {removed_count} entries via IDE")
+            QMessageBox.information(main_window, "Remove Complete", f"Removed {removed_count} entries from IMG file.")
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Remove via error: {str(e)}")
+
+
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
+
+def get_selected_entries(main_window):
+    """Get currently selected entries from the table"""
+    try:
+        selected_entries = []
+        
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            table = main_window.gui_layout.table
+            selected_rows = set()
+            
+            for item in table.selectedItems():
+                selected_rows.add(item.row())
+            
+            for row in selected_rows:
+                if hasattr(main_window, 'current_img') and main_window.current_img:
+                    if hasattr(main_window.current_img, 'entries') and row < len(main_window.current_img.entries):
+                        selected_entries.append(main_window.current_img.entries[row])
+        
+        return selected_entries
+        
+    except Exception:
+        return []
+
+
+def _import_files_threaded(main_window, import_options):
+    """Import files using background thread"""
+    try:
+        # Create progress dialog
+        progress_dialog = QDialog(main_window)
+        progress_dialog.setWindowTitle("Importing Files...")
+        progress_dialog.setMinimumSize(400, 150)
+        progress_dialog.setModal(True)
+        
+        layout = QVBoxLayout(progress_dialog)
+        
+        progress_label = QLabel("Preparing import...")
+        layout.addWidget(progress_label)
+        
+        progress_bar = QProgressBar()
+        progress_bar.setRange(0, len(import_options['files']))
+        layout.addWidget(progress_bar)
+        
+        cancel_btn = QPushButton("Cancel")
+        layout.addWidget(cancel_btn)
+        
+        # Create and start import thread
+        import_thread = ImportThread(main_window.current_img, import_options)
+        
+        def update_progress(current, message):
+            progress_bar.setValue(current)
+            progress_label.setText(message)
+        
+        def import_finished(success_count, error_count):
+            progress_dialog.close()
+            
+            # Update table
+            if hasattr(main_window, 'populate_entries_table'):
+                main_window.populate_entries_table()
+            
+            # Show results
+            message = f"Import completed!\n\nSuccessfully imported: {success_count}\nFailed: {error_count}"
+            QMessageBox.information(main_window, "Import Complete", message)
+            main_window.log_message(f"✅ Import: {success_count} success, {error_count} failed")
+        
+        def cancel_import():
+            if import_thread.isRunning():
+                import_thread.terminate()
+                import_thread.wait()
+            progress_dialog.close()
+        
+        import_thread.progress_updated.connect(update_progress)
+        import_thread.import_completed.connect(import_finished)
+        cancel_btn.clicked.connect(cancel_import)
+        
+        import_thread.start()
+        progress_dialog.exec()
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Import thread error: {str(e)}")
+
+
+def _export_files_threaded(main_window, export_options):
+    """Export files using background thread"""
+    try:
+        # Create progress dialog
+        progress_dialog = QDialog(main_window)
+        progress_dialog.setWindowTitle("Exporting Files...")
+        progress_dialog.setMinimumSize(400, 150)
+        progress_dialog.setModal(True)
+        
+        layout = QVBoxLayout(progress_dialog)
+        
+        progress_label = QLabel("Preparing export...")
+        layout.addWidget(progress_label)
+        
+        progress_bar = QProgressBar()
+        progress_bar.setRange(0, len(export_options['selected_entries']))
+        layout.addWidget(progress_bar)
+        
+        cancel_btn = QPushButton("Cancel")
+        layout.addWidget(cancel_btn)
+        
+        # Create and start export thread
+        export_thread = ExportThread(main_window.current_img, export_options)
+        
+        def update_progress(current, message):
+            progress_bar.setValue(current)
+            progress_label.setText(message)
+        
+        def export_finished(success_count, error_count):
+            progress_dialog.close()
+            
+            # Show results
+            message = f"Export completed!\n\nSuccessfully exported: {success_count}\nFailed: {error_count}"
+            QMessageBox.information(main_window, "Export Complete", message)
+            main_window.log_message(f"✅ Export: {success_count} success, {error_count} failed")
+        
+        def cancel_export():
+            if export_thread.isRunning():
+                export_thread.terminate()
+                export_thread.wait()
+            progress_dialog.close()
+        
+        export_thread.progress_updated.connect(update_progress)
+        export_thread.export_completed.connect(export_finished)
+        cancel_btn.clicked.connect(cancel_export)
+        
+        export_thread.start()
+        progress_dialog.exec()
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Export thread error: {str(e)}")
+
+
+# ============================================================================
+# MENU INTEGRATION
+# ============================================================================
+
 def add_import_export_menus(main_window):
     """Add import/export menus to main window"""
     try:
-        # Find or create File menu
-        file_menu = None
-        for action in main_window.menubar.actions():
-            if action.text() == "File":
-                file_menu = action.menu()
-                break
-        
-        if not file_menu:
-            file_menu = main_window.menubar.addMenu("File")
-        
-        # Add separator
-        file_menu.addSeparator()
-        
-        # Import submenu
-        import_menu = file_menu.addMenu("Import")
-        
-        from PyQt6.QtGui import QAction
-        
-        import_files_action = QAction("Import Files...", main_window)
-        import_files_action.setShortcut("Ctrl+I")
-        import_files_action.triggered.connect(lambda: import_files_function(main_window))
-        import_menu.addAction(import_files_action)
-        
-        import_via_action = QAction("Import Via...", main_window)
-        import_via_action.triggered.connect(lambda: import_via_function(main_window))
-        import_menu.addAction(import_via_action)
-        
-        # Export submenu
-        export_menu = file_menu.addMenu("Export")
-        
-        export_selected_action = QAction("Export Selected...", main_window)
-        export_selected_action.setShortcut("Ctrl+E")
-        export_selected_action.triggered.connect(lambda: export_selected_function(main_window))
-        export_menu.addAction(export_selected_action)
-        
-        export_via_action = QAction("Export Via IDE...", main_window)
-        export_via_action.triggered.connect(lambda: export_via_function(main_window))
-        export_menu.addAction(export_via_action)
-        
-        quick_export_action = QAction("Quick Export", main_window)
-        quick_export_action.setShortcut("Ctrl+Shift+E")
-        quick_export_action.triggered.connect(lambda: quick_export_function(main_window))
-        export_menu.addAction(quick_export_action)
-        
-        export_all_action = QAction("Export All...", main_window)
-        export_all_action.triggered.connect(lambda: export_all_function(main_window))
-        export_menu.addAction(export_all_action)
-        
-        export_menu.addSeparator()
-        
-        dump_all_action = QAction("Dump All Entries", main_window)
-        dump_all_action.triggered.connect(lambda: dump_all_function(main_window))
-        export_menu.addAction(dump_all_action)
-        
-        main_window.log_message("✅ Import/Export menus added")
+        # Get or create File menu
+        if hasattr(main_window, 'menuBar'):
+            menubar = main_window.menuBar()
+            file_menu = None
+            
+            # Find existing File menu
+            for action in menubar.actions():
+                if action.text() == "File":
+                    file_menu = action.menu()
+                    break
+            
+            # Create File menu if it doesn't exist
+            if not file_menu:
+                file_menu = menubar.addMenu("File")
+            
+            # Add import submenu
+            import_menu = file_menu.addMenu("Import")
+            
+            import_files_action = import_menu.addAction("Import Files...")
+            import_files_action.setShortcut("Ctrl+I")
+            import_files_action.triggered.connect(lambda: import_files_function(main_window))
+            
+            import_via_action = import_menu.addAction("Import Via...")
+            import_via_action.triggered.connect(lambda: import_via_function(main_window))
+            
+            # Add export submenu
+            export_menu = file_menu.addMenu("Export")
+            
+            export_selected_action = export_menu.addAction("Export Selected...")
+            export_selected_action.setShortcut("Ctrl+E")
+            export_selected_action.triggered.connect(lambda: export_selected_function(main_window))
+            
+            export_via_action = export_menu.addAction("Export Via IDE...")
+            export_via_action.triggered.connect(lambda: export_via_function(main_window))
+            
+            quick_export_action = export_menu.addAction("Quick Export")
+            quick_export_action.setShortcut("Ctrl+Shift+E")
+            quick_export_action.triggered.connect(lambda: quick_export_function(main_window))
+            
+            export_all_action = export_menu.addAction("Export All...")
+            export_all_action.triggered.connect(lambda: export_all_function(main_window))
+            
+            export_menu.addSeparator()
+            
+            dump_all_action = export_menu.addAction("Dump All Entries")
+            dump_all_action.triggered.connect(lambda: dump_all_function(main_window))
+            
+            main_window.log_message("✅ Import/Export menus added")
         
     except Exception as e:
         main_window.log_message(f"❌ Menu creation error: {str(e)}")
 
+
+# ============================================================================
+# MAIN INTEGRATION FUNCTION
+# ============================================================================
 
 def integrate_clean_import_export(main_window):
     """Integrate clean import/export functions to main window"""
@@ -1045,8 +1274,21 @@ def integrate_clean_import_export(main_window):
         main_window.log_message(f"❌ Integration error: {str(e)}")
         return False
 
-# Export functions for external use
+
+# ============================================================================
+# EXPORTS
+# ============================================================================
+
 __all__ = [
+    # Dialog classes
+    'ImportOptionsDialog',
+    'ExportOptionsDialog',
+    
+    # Thread classes
+    'ImportThread',
+    'ExportThread',
+    
+    # Main functions
     'import_files_function',
     'import_via_function',
     'import_from_ide_file',
@@ -1058,7 +1300,11 @@ __all__ = [
     'remove_selected_function',
     'remove_via_entries_function',
     'dump_all_function',
+    
+    # Utility functions
     'get_selected_entries',
     'add_import_export_menus',
+    
+    # Integration function
     'integrate_clean_import_export'
 ]

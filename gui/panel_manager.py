@@ -1,4 +1,4 @@
-#this belongs in gui/ panel_manager.py - Version: 6
+#this belongs in gui/ panel_manager.py - Version: 9
 # X-Seti - July12 2025 - Img Factory 1.5
 
 #!/usr/bin/env python3
