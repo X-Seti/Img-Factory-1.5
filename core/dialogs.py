@@ -1,11 +1,10 @@
-#this belongs in gui/ dialogs.py - version 3
+#this belongs in gui/ dialogs.py - version 4
 # $vers" X-Seti - June26, 2025 - Img Factory 1.5"
 # $hist" Credit MexUK 2007 Img Factory 1.2"
 
 #!/usr/bin/env python3
 """
 IMG Factory Dialogs - Common Dialog Windows
-Handles about dialog, search dialog, and other common dialogs
 """
 
 from PyQt6.QtWidgets import (
@@ -103,128 +102,6 @@ class AboutDialog(QDialog):
         button_layout.addWidget(close_btn)
         
         layout.addLayout(button_layout)
-
-
-class SearchDialog(QDialog):
-    """Search dialog for finding entries"""
-    
-    search_requested = pyqtSignal(str, dict)  # search_text, options
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Find Entries")
-        self.setMinimumSize(400, 300)
-        self.setModal(False)  # Allow interaction with main window
-        self._create_ui()
-    
-    def _create_ui(self):
-        """Create search dialog UI"""
-        layout = QVBoxLayout(self)
-        
-        # Search input
-        search_group = QGroupBox("Search Criteria")
-        search_layout = QVBoxLayout(search_group)
-        
-        # Search text
-        text_layout = QHBoxLayout()
-        text_layout.addWidget(QLabel("Find:"))
-        self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Enter search text...")
-        self.search_input.returnPressed.connect(self._do_search)
-        text_layout.addWidget(self.search_input)
-        search_layout.addLayout(text_layout)
-        
-        # Search options
-        options_layout = QVBoxLayout()
-        
-        self.case_sensitive_check = QCheckBox("Case sensitive")
-        options_layout.addWidget(self.case_sensitive_check)
-        
-        self.whole_word_check = QCheckBox("Whole word only")
-        options_layout.addWidget(self.whole_word_check)
-        
-        self.regex_check = QCheckBox("Regular expression")
-        options_layout.addWidget(self.regex_check)
-        
-        search_layout.addLayout(options_layout)
-        
-        # File type filter
-        type_layout = QHBoxLayout()
-        type_layout.addWidget(QLabel("File type:"))
-        self.type_combo = QComboBox()
-        self.type_combo.addItems([
-            "All Files", "Models (DFF)", "Textures (TXD)",
-            "Collision (COL)", "Animation (IFP)", "Audio (WAV)", "Scripts (SCM)"
-        ])
-        type_layout.addWidget(self.type_combo)
-        search_layout.addLayout(type_layout)
-        
-        layout.addWidget(search_group)
-        
-        # Results area
-        results_group = QGroupBox("Search Results")
-        results_layout = QVBoxLayout(results_group)
-        
-        self.results_label = QLabel("Enter search criteria and click Find")
-        self.results_label.setStyleSheet("color: #666666; font-style: italic;")
-        results_layout.addWidget(self.results_label)
-        
-        layout.addWidget(results_group)
-        
-        # Buttons
-        button_layout = QHBoxLayout()
-        
-        self.find_btn = QPushButton("Find")
-        self.find_btn.clicked.connect(self._do_search)
-        self.find_btn.setDefault(True)
-        button_layout.addWidget(self.find_btn)
-        
-        self.find_next_btn = QPushButton("Find Next")
-        self.find_next_btn.clicked.connect(self._find_next)
-        self.find_next_btn.setEnabled(False)
-        button_layout.addWidget(self.find_next_btn)
-        
-        button_layout.addStretch()
-        
-        close_btn = QPushButton("Close")
-        close_btn.clicked.connect(self.close)
-        button_layout.addWidget(close_btn)
-        
-        layout.addLayout(button_layout)
-        
-        # Focus on search input
-        self.search_input.setFocus()
-    
-    def _do_search(self):
-        """Perform search"""
-        search_text = self.search_input.text().strip()
-        if not search_text:
-            return
-        
-        options = {
-            'case_sensitive': self.case_sensitive_check.isChecked(),
-            'whole_word': self.whole_word_check.isChecked(),
-            'regex': self.regex_check.isChecked(),
-            'file_type': self.type_combo.currentText()
-        }
-        
-        self.search_requested.emit(search_text, options)
-        self.find_next_btn.setEnabled(True)
-    
-    def _find_next(self):
-        """Find next occurrence"""
-        # Emit search again to find next
-        self._do_search()
-    
-    def update_results(self, found_count, total_count):
-        """Update search results display"""
-        if found_count == 0:
-            self.results_label.setText("No matches found")
-            self.results_label.setStyleSheet("color: #D32F2F;")
-        else:
-            self.results_label.setText(f"Found {found_count} matches")
-            self.results_label.setStyleSheet("color: #2E7D32;")
-
 
 class ExportOptionsDialog(QDialog):
     """Dialog for export options"""
@@ -394,19 +271,10 @@ class ImportOptionsDialog(QDialog):
             'conflict_resolution': self.conflict_combo.currentText()
         }
 
-
 def show_about_dialog(parent=None):
     """Show about dialog"""
     dialog = AboutDialog(parent)
     dialog.exec()
-
-
-def show_search_dialog(parent=None):
-    """Show search dialog"""
-    dialog = SearchDialog(parent)
-    dialog.show()  # Non-modal
-    return dialog
-
 
 def show_export_options_dialog(parent=None, entry_count=0):
     """Show export options dialog"""
@@ -415,14 +283,12 @@ def show_export_options_dialog(parent=None, entry_count=0):
         return dialog.get_options()
     return None
 
-
 def show_import_options_dialog(parent=None, file_count=0):
     """Show import options dialog"""
     dialog = ImportOptionsDialog(parent, file_count)
     if dialog.exec() == QDialog.DialogCode.Accepted:
         return dialog.get_options()
     return None
-
 
 def show_error_dialog(parent, title, message, details=None):
     """Show error dialog with optional details"""
@@ -437,7 +303,6 @@ def show_error_dialog(parent, title, message, details=None):
     msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
     msg_box.exec()
 
-
 def show_warning_dialog(parent, title, message):
     """Show warning dialog"""
     msg_box = QMessageBox(parent)
@@ -446,7 +311,6 @@ def show_warning_dialog(parent, title, message):
     msg_box.setText(message)
     msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
     return msg_box.exec()
-
 
 def show_question_dialog(parent, title, message):
     """Show question dialog with Yes/No buttons"""
@@ -460,7 +324,6 @@ def show_question_dialog(parent, title, message):
     result = msg_box.exec()
     return result == QMessageBox.StandardButton.Yes
 
-
 def show_info_dialog(parent, title, message):
     """Show information dialog"""
     msg_box = QMessageBox(parent)
@@ -470,7 +333,6 @@ def show_info_dialog(parent, title, message):
     msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
     msg_box.exec()
 
-
 def show_progress_dialog(parent, title, text, maximum=100):
     """Show progress dialog"""
     progress = QProgressDialog(text, "Cancel", 0, maximum, parent)
@@ -479,7 +341,6 @@ def show_progress_dialog(parent, title, text, maximum=100):
     progress.setMinimumDuration(0)
     progress.show()
     return progress
-
 
 class ValidationResultsDialog(QDialog):
     """Dialog showing IMG validation results"""

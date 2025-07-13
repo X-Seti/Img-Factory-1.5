@@ -404,7 +404,6 @@ class IMGFactory(QMainWindow):
         # First integrate the functions
         integrate_clean_import_export(self)
 
-
         try:
             from components.col_tabs_functions import setup_col_tab_integration
             if setup_col_tab_integration(self):
@@ -431,7 +430,7 @@ class IMGFactory(QMainWindow):
         self.setup_debug_controls()
 
         # Setup search functionality
-        self.setup_search_functionality()
+        #self.setup_search_functionality()
 
         #OLD -setup_complete_import_export_integration(self)
 
@@ -445,11 +444,18 @@ class IMGFactory(QMainWindow):
         integrate_all_improvements(self)
 
     def apply_search_and_performance_fixes(self):
-        """Apply simple fixes without complex dependencies"""
+        """Apply search and performance fixes - CLEAN VERSION"""
         try:
-            self.log_message("🔧 Applying simple fixes...")
+            self.log_message("🔧 Applying search and performance fixes...")
 
-            # 1. Simple COL debug control
+            # 1. Setup our new consolidated search system
+            from core.guisearch import install_search_system
+            if install_search_system(self):
+                self.log_message("✅ New search system installed")
+            else:
+                self.log_message("⚠️ Search system setup failed")
+
+            # 2. COL debug control (keep your existing code)
             try:
                 def toggle_col_debug():
                     """Simple COL debug toggle"""
@@ -478,24 +484,10 @@ class IMGFactory(QMainWindow):
             except Exception as e:
                 self.log_message(f"⚠️ COL setup issue: {e}")
 
-            # 2. Simple keyboard shortcut
-            try:
-                from PyQt6.QtGui import QShortcut, QKeySequence
-
-                debug_shortcut = QShortcut(QKeySequence("Ctrl+Shift+D"), self)
-                debug_shortcut.activated.connect(self.toggle_col_debug)
-
-                self.log_message("✅ Debug shortcut ready (Ctrl+Shift+D)")
-
-            except Exception as e:
-                self.log_message(f"⚠️ Shortcut setup issue: {e}")
-
-            self.log_message("✅ Simple fixes applied successfully")
-            return True
+            self.log_message("✅ Search and performance fixes applied")
 
         except Exception as e:
-            self.log_message(f"❌ Simple fixes failed: {e}")
-            return False
+            self.log_message(f"❌ Apply fixes error: {e}")
 
     def setup_unified_signals(self):
         """Setup unified signal handler for all table interactions"""
@@ -660,11 +652,6 @@ class IMGFactory(QMainWindow):
         if hasattr(self.gui_layout, 'status_label'):
             self.gui_layout.status_label.setText(message)
 
-    def show_search_dialog(self):
-        """Handle search button/menu"""
-        self.log_message("🔍 Search dialog requested")
-        # TODO: Implement search dialog
-
     def refresh_table(self):
         """Handle refresh/update button"""
         self.log_message("🔄 Refresh table requested")
@@ -709,162 +696,6 @@ class IMGFactory(QMainWindow):
         """Show about dialog"""
         QMessageBox.about(self, "About IMG Factory 1.5",
                          "IMG Factory 1.5\nAdvanced IMG Archive Management\nX-Seti 2025")
-
-    def perform_search(self, search_text, options):
-        """Perform search in current IMG entries - FIXED VERSION"""
-        try:
-            if not self.current_img or not self.current_img.entries:
-                self.log_message("No IMG file loaded or no entries to search")
-                return
-
-            # Perform search
-            matches = []
-            total_entries = len(self.current_img.entries)
-
-            for i, entry in enumerate(self.current_img.entries):
-                entry_name = entry.name
-
-                # Apply search options
-                if not options.get('case_sensitive', False):
-                    entry_name = entry_name.lower()
-                    search_text = search_text.lower()
-
-                # Check file type filter
-                file_type = options.get('file_type', 'All Files')
-                if file_type != 'All Files':
-                    entry_ext = entry.name.split('.')[-1].upper() if '.' in entry.name else ''
-                    type_mapping = {
-                        'Models (DFF)': 'DFF',
-                        'Textures (TXD)': 'TXD',
-                        'Collision (COL)': 'COL',
-                        'Animation (IFP)': 'IFP',
-                        'Audio (WAV)': 'WAV',
-                        'Scripts (SCM)': 'SCM'
-                    }
-                    if file_type in type_mapping and entry_ext != type_mapping[file_type]:
-                        continue
-
-                # Check if matches
-                if options.get('whole_word', False):
-                    import re
-                    pattern = r'\b' + re.escape(search_text) + r'\b'
-                    if re.search(pattern, entry_name):
-                        matches.append(i)
-                elif options.get('regex', False):
-                    import re
-                    try:
-                        if re.search(search_text, entry_name):
-                            matches.append(i)
-                    except re.error:
-                        self.log_message("Invalid regular expression")
-                        return
-                else:
-                    # Simple text search
-                    if search_text in entry_name:
-                        matches.append(i)
-
-            # Select matching entries in table
-            if matches:
-                table = self.gui_layout.table
-                table.clearSelection()
-                for row in matches:
-                    if row < table.rowCount():
-                        table.selectRow(row)
-
-                # Scroll to first match
-                table.scrollToItem(table.item(matches[0], 0))
-
-                self.log_message(f"🔍 Found {len(matches)} matches for '{search_text}'")
-            else:
-                self.log_message(f"🔍 No matches found for '{search_text}'")
-
-        except Exception as e:
-            self.log_message(f"❌ Search error: {str(e)}")
-
-    def setup_search_functionality(self):
-        """Setup search box functionality - new"""
-        try:
-            # Find the search input widget
-            search_input = None
-
-            # Try different possible locations
-            if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'search_input'):
-                search_input = self.gui_layout.search_input
-            elif hasattr(self, 'filter_input'):
-                search_input = self.filter_input
-            elif hasattr(self.gui_layout, 'filter_input'):
-                search_input = self.gui_layout.filter_input
-
-            if search_input:
-                # Connect search functionality
-                from PyQt6.QtCore import QTimer
-
-                self.search_timer = QTimer()
-                self.search_timer.setSingleShot(True)
-                self.search_timer.timeout.connect(self._perform_live_search)
-
-                # Connect signals
-                search_input.textChanged.connect(self._on_search_text_changed)
-                search_input.returnPressed.connect(self._perform_live_search)
-
-                self.log_message("✅ Search functionality connected")
-                return True
-            else:
-                self.log_message("⚠️ Search input widget not found")
-                return False
-
-        except Exception as e:
-            self.log_message(f"❌ Search setup error: {e}")
-            return False
-
-    def _on_search_text_changed(self, text):
-        """Handle search text changes with debouncing"""
-        self.search_timer.stop()
-        if text.strip():
-            self.search_timer.start(300)  # 300ms delay
-        else:
-            self._clear_search()
-
-    def _perform_live_search(self):
-        """Perform live search"""
-        try:
-            # Get search text
-            search_text = ""
-            if hasattr(self, 'filter_input'):
-                search_text = self.filter_input.text().strip()
-            elif hasattr(self.gui_layout, 'search_input'):
-                search_text = self.gui_layout.search_input.text().strip()
-
-            if not search_text:
-                self._clear_search()
-                return
-
-            # Get file type filter
-            file_type = "All Files"
-            if hasattr(self, 'filter_combo'):
-                file_type = self.filter_combo.currentText()
-
-            # Create search options
-            options = {
-                'case_sensitive': False,
-                'whole_word': False,
-                'regex': False,
-                'file_type': file_type
-            }
-
-            # Perform search
-            self.perform_search(search_text, options)
-
-        except Exception as e:
-            self.log_message(f"❌ Live search error: {e}")
-
-    def _clear_search(self):
-        """Clear search results"""
-        try:
-            if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
-                self.gui_layout.table.clearSelection()
-        except Exception as e:
-            self.log_message(f"❌ Clear search error: {e}")
 
     def enable_col_debug(self):
         """Enable COL debug output"""
@@ -1069,7 +900,7 @@ class IMGFactory(QMainWindow):
                 'convert_img_format': self.convert_img_format,
 
                 # System
-                'show_search_dialog': self.show_search_dialog,
+                #'show_search_dialog': self.show_search_dialog,
             }
 
             if action_name in action_map:
@@ -1091,7 +922,7 @@ class IMGFactory(QMainWindow):
                 'close_all': self.close_manager.close_all_tabs if hasattr(self, 'close_manager') else lambda: self.log_message("Close manager not available"),
                 'exit': self.close,
                 'select_all': self.select_all_entries,
-                'find': self.show_search_dialog,
+                #'find': self.show_search_dialog,
                 'entry_import': self.import_files,
                 'entry_export': self.export_selected,
                 'entry_remove': self.remove_selected,
@@ -1106,10 +937,6 @@ class IMGFactory(QMainWindow):
 
         except Exception as e:
             self.log_message(f"❌ Menu connection error: {str(e)}")
-
-    def handle_menu_search(self):
-        """Handle search from menu (Ctrl+F)"""
-        self.show_search_dialog()
 
     def resizeEvent(self, event):
         """Handle window resize to adapt button text"""
