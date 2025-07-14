@@ -21,7 +21,7 @@ from PyQt6.QtGui import QDrag, QPixmap, QPainter, QCursor, QIcon, QAction
 
 # Import required classes
 from .tear_off import TearOffPanel
-from .panel_controls import ButtonPanel, FilterSearchPanel, ButtonPresetManager
+from .panel_controls import ButtonPanel, ButtonPresetManager
 
 
 class PanelManager:
@@ -50,9 +50,7 @@ class PanelManager:
         panels["entries_ops"] = entries_panel
         
         # Filter & Search Panel
-        filter_panel = FilterSearchPanel()
-        panels["filter_search"] = filter_panel
-        
+
         # Store panels
         self.panels.update(panels)
         

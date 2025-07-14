@@ -686,19 +686,8 @@ class IMGFactoryGUILayout:
         self.tab_widget.addTab(tree_tab, "🌳 Directory Tree")
         
         # Tab 3: Search Results (future enhancement)
-        search_tab = QWidget()
-        search_layout = QVBoxLayout(search_tab)
-        search_layout.setContentsMargins(0, 0, 0, 0)
-        
-        search_placeholder = QLabel("Search results will be displayed here")
-        search_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        search_placeholder.setStyleSheet("color: #666; font-style: italic;")
-        search_layout.addWidget(search_placeholder)
-        
-        self.tab_widget.addTab(search_tab, "🔍 Search Results")
-        
-        file_layout.addWidget(self.tab_widget)
-        
+        # placeholder
+
         return file_window
     
     def _create_status_window(self):
@@ -952,7 +941,7 @@ class IMGFactoryGUILayout:
         right_layout.addWidget(options_box)
 
         # Filter Section
-        filter_box = QGroupBox("Filter & Search")
+        filter_box = QGroupBox("Filter & S")
         filter_layout = QVBoxLayout()
         filter_layout.setSpacing(4)
         
@@ -963,14 +952,6 @@ class IMGFactoryGUILayout:
         filter_controls.addWidget(QLabel("Type:"))
         filter_controls.addWidget(filter_combo)
         filter_layout.addLayout(filter_controls)
-        
-        search_controls = QHBoxLayout()
-        search_input = QLineEdit()
-        search_input.setPlaceholderText("Search filename...")
-        search_controls.addWidget(QLabel("Search:"))
-        search_controls.addWidget(search_input)
-        filter_layout.addLayout(search_controls)
-        
         filter_box.setLayout(filter_layout)
         right_layout.addWidget(filter_box)
 

@@ -18,7 +18,6 @@ from .panel_controls import (
     ButtonPreset,
     ButtonFactory,
     ButtonPresetManager,
-    FilterSearchPanel,
     ButtonPanel
 )
 from .panel_manager import PanelManager
@@ -29,8 +28,8 @@ from .tear_off import (
 )
 from .log_panel import create_log_panel, setup_logging_for_main_window
 from .status_bar import create_status_bar, create_enhanced_status_bar
-from .dialogs import (
-    show_about_dialog, show_search_dialog, show_export_options_dialog,
+from core.dialogs import (
+    show_about_dialog, show_export_options_dialog,
     show_import_options_dialog, show_error_dialog, show_warning_dialog,
     show_question_dialog, show_info_dialog, show_progress_dialog
 )

@@ -767,24 +767,11 @@ class FilterPanel(QWidget):
         """Setup filter panel UI"""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
-        
-        # Search row
-        search_layout = QHBoxLayout()
-        
-        search_layout.addWidget(QLabel("🔍 Search:"))
-        
-        self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Type to search entries...")
-        self.search_input.setClearButtonEnabled(True)
-        search_layout.addWidget(self.search_input)
-        
+
         # Clear button
         self.clear_button = QPushButton("Clear")
         self.clear_button.setMaximumWidth(60)
-        search_layout.addWidget(self.clear_button)
-        
-        layout.addLayout(search_layout)
-        
+
         # File type filter row
         filter_layout = QHBoxLayout()
         
@@ -812,22 +799,6 @@ class FilterPanel(QWidget):
         
         layout.addLayout(filter_layout)
 
-    def _on_search_changed(self):
-        """Handle search text changes with debouncing"""
-        self.search_timer.stop()
-        self.search_timer.start(300)  # 300ms delay
-    
-    def _emit_filter_changed(self):
-        """Emit filter changed signal"""
-        search_text = self.search_input.text().strip()
-        file_type = self.file_type_combo.currentText()
-        self.filter_changed.emit(search_text, file_type)
-    
-    def _clear_filters(self):
-        """Clear all filters"""
-        self.search_input.clear()
-        self.file_type_combo.setCurrentIndex(0)
-    
     def _show_recent_files(self):
         """Show recent files menu"""
         recent_manager = RecentFilesManager()
@@ -1108,7 +1079,7 @@ def create_entries_table_panel(main_window):
     layout.addWidget(info_group)
     
     # Filter panel
-    filter_group = QGroupBox("🔍 Filter & Search")
+    filter_group = QGroupBox("🔍 Filter & S")
     filter_layout = QVBoxLayout(filter_group)
     
     main_window.filter_panel = FilterPanel()

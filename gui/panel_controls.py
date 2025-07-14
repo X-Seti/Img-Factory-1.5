@@ -5,7 +5,6 @@
 #!/usr/bin/env python3
 """
 IMG Factory Panel Controls - Consolidated Button Panel System
-Combines working functions from buttons.py, control_panels.py, button_panel.py, and panels.py
 """
 
 from PyQt6.QtWidgets import (
@@ -163,27 +162,7 @@ def create_right_panel_with_pastel_buttons(main_window):
     right_layout.addWidget(options_box)
 
     # Filter Section - MATCHES gui_layout.py
-    filter_box = QGroupBox("Filter & Search")
-    filter_layout = QVBoxLayout()
-    filter_layout.setSpacing(4)
-    
-    # Filter controls
-    filter_controls = QHBoxLayout()
-    filter_combo = QComboBox()
-    filter_combo.addItems(["All Files", "DFF Models", "TXD Textures", "COL Collision", "IFP Animations"])
-    filter_controls.addWidget(QLabel("Type:"))
-    filter_controls.addWidget(filter_combo)
-    filter_layout.addLayout(filter_controls)
-    
-    search_controls = QHBoxLayout()
-    search_input = QLineEdit()
-    search_input.setPlaceholderText("Search filename...")
-    search_controls.addWidget(QLabel("Search:"))
-    search_controls.addWidget(search_input)
-    filter_layout.addLayout(search_controls)
-    
-    filter_box.setLayout(filter_layout)
-    right_layout.addWidget(filter_box)
+
 
     # Add stretch to push everything up
     right_layout.addStretch()
@@ -462,81 +441,7 @@ def placeholder_function(main_window, method_name):
         print(f"🚧 {method_name} - Not yet implemented")
 
 
-# ============================================================================
-# FILTER AND SEARCH PANEL - From panels.py
-# ============================================================================
-
-class FilterSearchPanel(QWidget):
-    """Panel for filter and search controls"""
-    
-    filter_changed = pyqtSignal(str, str)  # filter_type, value
-    search_requested = pyqtSignal(str)     # search_text
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setObjectName("filter_search")
-        self.setWindowTitle("Filter & Search")
-        self._create_filter_controls()
-    
-    def _create_filter_controls(self):
-        """Create filter and search controls"""
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(5, 5, 5, 5)
-        layout.setSpacing(4)
-        
-        # Type filter
-        type_layout = QHBoxLayout()
-        type_layout.addWidget(QLabel("Type:"))
-        
-        self.type_filter = QComboBox()
-        self.type_filter.addItems(["All Types", "DFF", "TXD", "COL", "IFP", "WAV", "SCM"])
-        self.type_filter.currentTextChanged.connect(
-            lambda text: self.filter_changed.emit("type", text)
-        )
-        type_layout.addWidget(self.type_filter)
-        layout.addLayout(type_layout)
-        
-        # Version filter
-        version_layout = QHBoxLayout()
-        version_layout.addWidget(QLabel("Version:"))
-        
-        self.version_filter = QComboBox()
-        self.version_filter.addItems(["All Versions"])
-        self.version_filter.currentTextChanged.connect(
-            lambda text: self.filter_changed.emit("version", text)
-        )
-        version_layout.addWidget(self.version_filter)
-        layout.addLayout(version_layout)
-        
-        # Search
-        search_layout = QHBoxLayout()
-        
-        self.search_box = QLineEdit()
-        self.search_box.setPlaceholderText("Search...")
-        self.search_box.returnPressed.connect(self._do_search)
-        search_layout.addWidget(self.search_box)
-        
-        self.find_btn = QPushButton("Find")
-        self.find_btn.setMaximumWidth(50)
-        self.find_btn.clicked.connect(self._do_search)
-        search_layout.addWidget(self.find_btn)
-        layout.addLayout(search_layout)
-        
-        # Hit Tabs checkbox
-        self.hit_tabs_check = QCheckBox("Hit Tabs")
-        layout.addWidget(self.hit_tabs_check)
-        
-        layout.addStretch()
-    
-    def _do_search(self):
-        """Perform search"""
-        text = self.search_box.text().strip()
-        self.search_requested.emit(text)
-
-
-# ============================================================================
 # BUTTON PANEL WITH PRESET MANAGEMENT - From panels.py
-# ============================================================================
 
 class ButtonPanel(QWidget):
     """Panel containing configurable buttons"""
@@ -670,9 +575,7 @@ class ButtonPanel(QWidget):
                 self._clear_layout(child.layout())
 
 
-# ============================================================================
 # ADVANCED BUTTON CLASSES - From gui/buttons.py
-# ============================================================================
 
 class DraggableButton(QPushButton):
     """Advanced button with drag-and-drop functionality"""
@@ -1029,7 +932,6 @@ __all__ = [
     'ButtonPresetManager',
     
     # Panel classes (from panels.py)
-    'FilterSearchPanel',
     'ButtonPanel',
     'PanelManager',
     

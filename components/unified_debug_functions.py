@@ -73,7 +73,7 @@ def install_search_manager(main_window):
     try:
         # Try to use existing search functionality
         try:
-            from components.img_search_function import SearchManager
+            from core.guisearch import SearchManager
             
             if not hasattr(main_window, 'search_manager'):
                 main_window.search_manager = SearchManager(main_window)
