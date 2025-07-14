@@ -1,4 +1,4 @@
-#this belongs in gui/ gui_layout.py - Version: 12
+#this belongs in gui/ gui_layout.py - Version: 14
 # X-Seti - JULY03 2025 - Img Factory 1.5 - GUI Layout Module - Fixed Button Connections
 
 from PyQt6.QtWidgets import (
@@ -54,8 +54,8 @@ class IMGFactoryGUILayout:
 
         except Exception as e:
             # Don't crash on initialization issues
-            if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Delayed initialization warning: {str(e)}")
+            if hasattr(self.main_window, 'app_settings'):
+                self.load_tab_settings_from_app_settings(self.main_window.app_settings)
 
 
     def apply_settings_changes(self, settings):
@@ -686,7 +686,18 @@ class IMGFactoryGUILayout:
         self.tab_widget.addTab(tree_tab, "🌳 Directory Tree")
         
         # Tab 3: Search Results (future enhancement)
-        # placeholder
+        search_tab = QWidget()
+        search_layout = QVBoxLayout(search_tab)
+        search_layout.setContentsMargins(0, 0, 0, 0)
+
+        search_placeholder = QLabel("Search results will be displayed here")
+        search_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        search_placeholder.setStyleSheet("color: #666; font-style: italic;")
+        search_layout.addWidget(search_placeholder)
+
+        self.tab_widget.addTab(search_tab, "🔍 Search Results")
+
+        file_layout.addWidget(self.tab_widget)
 
         return file_window
     
@@ -941,7 +952,7 @@ class IMGFactoryGUILayout:
         right_layout.addWidget(options_box)
 
         # Filter Section
-        filter_box = QGroupBox("Filter & S")
+        filter_box = QGroupBox("Filter & Search")
         filter_layout = QVBoxLayout()
         filter_layout.setSpacing(4)
         
@@ -952,6 +963,14 @@ class IMGFactoryGUILayout:
         filter_controls.addWidget(QLabel("Type:"))
         filter_controls.addWidget(filter_combo)
         filter_layout.addLayout(filter_controls)
+
+        search_controls = QHBoxLayout()
+        search_input = QLineEdit()
+        search_input.setPlaceholderText("Search filename...")
+        search_controls.addWidget(QLabel("Search:"))
+        search_controls.addWidget(search_input)
+        filter_layout.addLayout(search_controls)
+
         filter_box.setLayout(filter_layout)
         right_layout.addWidget(filter_box)
 

@@ -61,6 +61,7 @@ from components.col_debug_control import COLDebugController
 from components.unified_debug_functions import integrate_all_improvements
 from components.file_extraction_functions import setup_complete_extraction_integration
 #gui-layout
+from core.remove import integrate_remove_functions
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.menu import IMGFactoryMenuBar
@@ -379,6 +380,7 @@ class IMGFactory(QMainWindow):
         self.gui_layout = IMGFactoryGUILayout(self)
 
         # Setup menu bar system
+        self.menubar = self.menuBar()
         self.menu_bar_system = IMGFactoryMenuBar(self)
 
         # Setup menu callbacks - FIXED TO USE WORKING METHOD
@@ -400,6 +402,8 @@ class IMGFactory(QMainWindow):
         install_close_functions(self)
         # COL Integration - FIXED: Move to end and use correct import
 
+        if integrate_remove_functions(self):
+            self.log_message("✅ Remove functions integrated")
 
         # First integrate the functions
         integrate_clean_import_export(self)

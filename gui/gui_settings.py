@@ -565,171 +565,111 @@ class GUISettingsDialog(QDialog):
         self.settings_changed.emit()
         self.accept()
     
-    def _save_settings(self):
-        """Save all settings to app_settings"""
-        settings = self.app_settings.current_settings
-        
-        # Tab settings - NEW
-        settings["main_tab_height"] = self.main_tab_height_spin.value()
-        settings["individual_tab_height"] = self.individual_tab_height_spin.value()
-        settings["tab_font_size"] = self.tab_font_size_spin.value()
-        settings["tab_padding"] = self.tab_padding_spin.value()
-        settings["tab_container_height"] = self.tab_container_height_spin.value()
-        settings["tab_style"] = self.tab_style_combo.currentText()
-        
-        # Appearance
-        theme_code = self._theme_name_to_code(self.theme_combo.currentText())
-        if settings.get("theme") != theme_code:
-            settings["theme"] = theme_code
-            self.theme_changed.emit(theme_code)
-        
-        # Visual effects
-        settings["enable_animations"] = self.animations_check.isChecked()
-        settings["enable_shadows"] = self.shadows_check.isChecked()
-        settings["enable_transparency"] = self.transparency_check.isChecked()
-        settings["rounded_corners"] = self.rounded_corners_check.isChecked()
-        
-        # Layout
-        settings["left_panel_width"] = self.left_panel_spin.value()
-        settings["right_panel_width"] = self.right_panel_spin.value()
-        settings["table_row_height"] = self.row_height_spin.value()
-        settings["widget_spacing"] = self.widget_spacing_spin.value()
-        settings["layout_margins"] = self.layout_margins_spin.value()
-        
-        # Window behavior
-        settings["remember_window_size"] = self.remember_size_check.isChecked()
-        settings["remember_window_position"] = self.remember_position_check.isChecked()
-        settings["maximize_on_startup"] = self.maximize_on_startup_check.isChecked()
-        settings["always_on_top"] = self.always_on_top_check.isChecked()
-        
-        # Fonts
-        settings["font_scale"] = self.font_scale_slider.value()
-        settings["font_antialiasing"] = self.antialiasing_check.isChecked()
-        settings["bold_table_headers"] = self.bold_headers_check.isChecked()
-        settings["monospace_numbers"] = self.monospace_numbers_check.isChecked()
-        
-        # Icons
-        settings["show_menu_icons"] = self.show_menu_icons_check.isChecked()
-        settings["show_toolbar_icons"] = self.show_toolbar_icons_check.isChecked()
-        settings["show_button_icons"] = self.show_button_icons_check.isChecked()
-        settings["show_file_type_icons"] = self.show_file_type_icons_check.isChecked()
-        
-        # Icon sizes (extract number from "16px" format)
-        settings["menu_icon_size"] = int(self.menu_icon_size_combo.currentText().replace("px", ""))
-        settings["toolbar_icon_size"] = int(self.toolbar_icon_size_combo.currentText().replace("px", ""))
-        settings["button_icon_size"] = int(self.button_icon_size_combo.currentText().replace("px", ""))
-        
-        # Icon style
-        settings["icon_style"] = self.icon_style_group.checkedId()
-        
-        # Behavior
-        settings["double_click_open"] = self.double_click_open_check.isChecked()
-        settings["single_click_select"] = self.single_click_select_check.isChecked()
-        settings["hover_preview"] = self.hover_preview_check.isChecked()
-        settings["auto_resize_columns"] = self.auto_resize_columns_check.isChecked()
-        
-        # Performance
-        settings["lazy_loading"] = self.lazy_loading_check.isChecked()
-        settings["cache_thumbnails"] = self.cache_thumbnails_check.isChecked()
-        settings["preload_common_files"] = self.preload_common_files_check.isChecked()
-        
-        # Notifications
-        settings["show_notifications"] = self.show_notifications_check.isChecked()
-        settings["sound_notifications"] = self.sound_notifications_check.isChecked()
-        settings["progress_notifications"] = self.progress_notifications_check.isChecked()
-        
-        # Apply tab settings to main window - NEW
-        self._apply_tab_settings_to_main_window()
-        
-        # Save to file
+    def _create_appearance_tab(self) -> QWidget:
+        """Create appearance settings tab with button display options"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        # Existing theme section...
+
+        # Button Display Mode Section - NEW
+        button_group = QGroupBox("🖲️ Button Display Mode")
+        button_layout = QVBoxLayout(button_group)
+
+        # Button display mode selection
+        mode_layout = QHBoxLayout()
+        mode_layout.addWidget(QLabel("Button Style:"))
+
+        self.button_mode_combo = QComboBox()
+        self.button_mode_combo.addItems([
+            "Text Only",
+            "Icons Only",
+            "Icons with Text"
+        ])
+        self.button_mode_combo.setCurrentText("Text Only")  # Default
+        self.button_mode_combo.currentTextChanged.connect(self._on_button_mode_changed)
+        mode_layout.addWidget(self.button_mode_combo)
+        mode_layout.addStretch()
+
+        button_layout.addLayout(mode_layout)
+
+        # Preview section
+        preview_layout = QHBoxLayout()
+        preview_layout.addWidget(QLabel("Preview:"))
+
+        # Create sample buttons to show the different modes
+        self.preview_text_btn = QPushButton("Export")
+        self.preview_text_btn.setMaximumWidth(60)
+
+        self.preview_icon_btn = QPushButton()
+        self.preview_icon_btn.setIcon(QIcon.fromTheme("document-export"))
+        self.preview_icon_btn.setMaximumWidth(40)
+        self.preview_icon_btn.setToolTip("Export")
+
+        self.preview_both_btn = QPushButton("Export")
+        self.preview_both_btn.setIcon(QIcon.fromTheme("document-export"))
+        self.preview_both_btn.setMaximumWidth(80)
+
+        preview_layout.addWidget(self.preview_text_btn)
+        preview_layout.addWidget(self.preview_icon_btn)
+        preview_layout.addWidget(self.preview_both_btn)
+        preview_layout.addStretch()
+
+        button_layout.addLayout(preview_layout)
+
+        # Help text
+        help_label = QLabel("Text Only: No icons, faster performance\n"
+                        "Icons Only: Desktop-style icons with tooltips\n"
+                        "Icons with Text: Icons with text labels")
+        help_label.setStyleSheet("color: #666; font-size: 8pt; font-style: italic;")
+        button_layout.addWidget(help_label)
+
+        layout.addWidget(button_group)
+
+        # Existing color and effects sections...
+
+        return widget
+
+    def _on_button_mode_changed(self, mode_text):
+        """Handle button mode change in settings"""
+        # Update preview buttons
+        if mode_text == "Text Only":
+            self.preview_text_btn.setVisible(True)
+            self.preview_icon_btn.setVisible(False)
+            self.preview_both_btn.setVisible(False)
+        elif mode_text == "Icons Only":
+            self.preview_text_btn.setVisible(False)
+            self.preview_icon_btn.setVisible(True)
+            self.preview_both_btn.setVisible(False)
+        elif mode_text == "Icons with Text":
+            self.preview_text_btn.setVisible(False)
+            self.preview_icon_btn.setVisible(False)
+            self.preview_both_btn.setVisible(True)
+
+    def _apply_button_mode_to_main_window(self):
+        """Apply button mode to main window immediately"""
         try:
-            self.app_settings.save_settings()
-            if hasattr(self.app_settings, 'log_message'):
-                self.app_settings.log_message("Settings saved successfully")
+            main_window = self.parent()
+
+            if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'backend'):
+                mode_text = self.button_mode_combo.currentText()
+
+                if mode_text == "Text Only":
+                    mode = "text_only"
+                elif mode_text == "Icons Only":
+                    mode = "icons_only"
+                elif mode_text == "Icons with Text":
+                    mode = "icons_with_text"
+                else:
+                    mode = "text_only"
+
+                main_window.gui_layout.backend.set_button_display_mode(mode)
+                main_window.log_message(f"✅ Button display mode: {mode_text}")
+
         except Exception as e:
-            if hasattr(self.app_settings, 'log_message'):
-                self.app_settings.log_message(f"Error saving settings: {str(e)}")
-    
-    def _load_current_settings(self):
-        """Load current settings into controls"""
-        settings = self.app_settings.current_settings
-        
-        # Tab settings - NEW
-        self.main_tab_height_spin.setValue(settings.get("main_tab_height", 35))
-        self.individual_tab_height_spin.setValue(settings.get("individual_tab_height", 24))
-        self.tab_font_size_spin.setValue(settings.get("tab_font_size", 9))
-        self.tab_padding_spin.setValue(settings.get("tab_padding", 4))
-        self.tab_container_height_spin.setValue(settings.get("tab_container_height", 40))
-        
-        # Set tab style combo
-        tab_style = settings.get("tab_style", "Compact")
-        self.tab_style_combo.setCurrentText(tab_style)
-        
-        # Theme
-        theme_code = settings.get("theme", "img_factory")
-        theme_name = self._theme_code_to_name(theme_code)
-        self.theme_combo.setCurrentText(theme_name)
-        
-        # Visual effects
-        self.animations_check.setChecked(settings.get("enable_animations", True))
-        self.shadows_check.setChecked(settings.get("enable_shadows", True))
-        self.transparency_check.setChecked(settings.get("enable_transparency", False))
-        self.rounded_corners_check.setChecked(settings.get("rounded_corners", True))
-        
-        # Layout
-        self.left_panel_spin.setValue(settings.get("left_panel_width", 600))
-        self.right_panel_spin.setValue(settings.get("right_panel_width", 280))
-        self.row_height_spin.setValue(settings.get("table_row_height", 25))
-        self.widget_spacing_spin.setValue(settings.get("widget_spacing", 5))
-        self.layout_margins_spin.setValue(settings.get("layout_margins", 5))
-        
-        # Window behavior
-        self.remember_size_check.setChecked(settings.get("remember_window_size", True))
-        self.remember_position_check.setChecked(settings.get("remember_window_position", True))
-        self.maximize_on_startup_check.setChecked(settings.get("maximize_on_startup", False))
-        self.always_on_top_check.setChecked(settings.get("always_on_top", False))
-        
-        # Fonts
-        self.font_scale_slider.setValue(settings.get("font_scale", 100))
-        self.antialiasing_check.setChecked(settings.get("font_antialiasing", True))
-        self.bold_headers_check.setChecked(settings.get("bold_table_headers", True))
-        self.monospace_numbers_check.setChecked(settings.get("monospace_numbers", False))
-        
-        # Icons
-        self.show_menu_icons_check.setChecked(settings.get("show_menu_icons", True))
-        self.show_toolbar_icons_check.setChecked(settings.get("show_toolbar_icons", True))
-        self.show_button_icons_check.setChecked(settings.get("show_button_icons", True))
-        self.show_file_type_icons_check.setChecked(settings.get("show_file_type_icons", True))
-        
-        # Icon sizes
-        self.menu_icon_size_combo.setCurrentText(f"{settings.get('menu_icon_size', 16)}px")
-        self.toolbar_icon_size_combo.setCurrentText(f"{settings.get('toolbar_icon_size', 24)}px")
-        self.button_icon_size_combo.setCurrentText(f"{settings.get('button_icon_size', 16)}px")
-        
-        # Icon style
-        icon_style = settings.get("icon_style", 0)
-        if 0 <= icon_style < self.icon_style_group.buttons().__len__():
-            self.icon_style_group.button(icon_style).setChecked(True)
-        
-        # Behavior
-        self.double_click_open_check.setChecked(settings.get("double_click_open", True))
-        self.single_click_select_check.setChecked(settings.get("single_click_select", False))
-        self.hover_preview_check.setChecked(settings.get("hover_preview", True))
-        self.auto_resize_columns_check.setChecked(settings.get("auto_resize_columns", True))
-        
-        # Performance
-        self.lazy_loading_check.setChecked(settings.get("lazy_loading", True))
-        self.cache_thumbnails_check.setChecked(settings.get("cache_thumbnails", True))
-        self.preload_common_files_check.setChecked(settings.get("preload_common_files", False))
-        
-        # Notifications
-        self.show_notifications_check.setChecked(settings.get("show_notifications", True))
-        self.sound_notifications_check.setChecked(settings.get("sound_notifications", False))
-        self.progress_notifications_check.setChecked(settings.get("progress_notifications", True))
-        
-        # Update font scale label
-        self._update_font_scale_label()
-    
+            print(f"Error applying button mode: {e}")
+
+
     def _update_font_scale_label(self):
         """Update font scale percentage label"""
         value = self.font_scale_slider.value()
@@ -762,38 +702,436 @@ class GUISettingsDialog(QDialog):
             elif font_type == 'menu':
                 self.menu_font_btn.setText(font_info)
     
+
+    def _save_settings(self):
+        """Save all settings to app_settings - CLEAN VERSION"""
+        try:
+            settings = self.app_settings.current_settings
+
+            # Button display mode - NEW
+            mode_text = self.button_mode_combo.currentText()
+            if mode_text == "Text Only":
+                settings["button_display_mode"] = "text_only"
+            elif mode_text == "Icons Only":
+                settings["button_display_mode"] = "icons_only"
+            elif mode_text == "Icons with Text":
+                settings["button_display_mode"] = "icons_with_text"
+            else:
+                settings["button_display_mode"] = "text_only"  # Default fallback
+
+            # Tab settings
+            settings["main_tab_height"] = self.main_tab_height_spin.value()
+            settings["individual_tab_height"] = self.individual_tab_height_spin.value()
+            settings["tab_font_size"] = self.tab_font_size_spin.value()
+            settings["tab_padding"] = self.tab_padding_spin.value()
+            settings["tab_container_height"] = self.tab_container_height_spin.value()
+            settings["tab_style"] = self.tab_style_combo.currentText()
+
+            # Theme settings
+            theme_code = self._theme_name_to_code(self.theme_combo.currentText())
+            if settings.get("theme") != theme_code:
+                settings["theme"] = theme_code
+                self.theme_changed.emit(theme_code)
+
+            # Visual effects
+            settings["enable_animations"] = self.animations_check.isChecked()
+            settings["enable_shadows"] = self.shadows_check.isChecked()
+            settings["enable_transparency"] = self.transparency_check.isChecked()
+            settings["rounded_corners"] = self.rounded_corners_check.isChecked()
+
+            # Layout settings
+            settings["left_panel_width"] = self.left_panel_spin.value()
+            settings["right_panel_width"] = self.right_panel_spin.value()
+            settings["table_row_height"] = self.row_height_spin.value()
+            settings["widget_spacing"] = self.widget_spacing_spin.value()
+            settings["layout_margins"] = self.layout_margins_spin.value()
+
+            # Window behavior
+            settings["remember_window_size"] = self.remember_size_check.isChecked()
+            settings["remember_window_position"] = self.remember_position_check.isChecked()
+            settings["maximize_on_startup"] = self.maximize_on_startup_check.isChecked()
+            settings["always_on_top"] = self.always_on_top_check.isChecked()
+
+            # Font settings
+            settings["font_scale"] = self.font_scale_slider.value()
+            settings["enable_antialiasing"] = self.antialiasing_check.isChecked()
+
+            # Performance settings
+            settings["lazy_loading"] = self.lazy_loading_check.isChecked()
+            settings["cache_thumbnails"] = self.cache_thumbnails_check.isChecked()
+            settings["preload_common_files"] = self.preload_common_files_check.isChecked()
+
+            # Notification settings
+            settings["show_notifications"] = self.show_notifications_check.isChecked()
+            settings["sound_notifications"] = self.sound_notifications_check.isChecked()
+            settings["progress_notifications"] = self.progress_notifications_check.isChecked()
+
+            # Apply settings to main window immediately
+            self._apply_settings_to_main_window()
+
+            # Save to file
+            self.app_settings.save_settings()
+
+            # Emit signals
+            self.settings_changed.emit()
+
+            if hasattr(self.app_settings, 'log_message'):
+                self.app_settings.log_message("✅ Settings saved successfully")
+
+        except Exception as e:
+            error_msg = f"Error saving settings: {str(e)}"
+            if hasattr(self.app_settings, 'log_message'):
+                self.app_settings.log_message(f"❌ {error_msg}")
+            print(error_msg)  # Fallback logging
+
+
+    def _load_current_settings(self):
+        """Load current settings into controls - CLEAN VERSION"""
+        try:
+            settings = self.app_settings.current_settings
+
+            # Button display mode - NEW
+            button_mode = settings.get("button_display_mode", "text_only")
+            if button_mode == "text_only":
+                self.button_mode_combo.setCurrentText("Text Only")
+            elif button_mode == "icons_only":
+                self.button_mode_combo.setCurrentText("Icons Only")
+            elif button_mode == "icons_with_text":
+                self.button_mode_combo.setCurrentText("Icons with Text")
+            else:
+                self.button_mode_combo.setCurrentText("Text Only")  # Default fallback
+
+            # Update preview based on loaded setting
+            self._on_button_mode_changed(self.button_mode_combo.currentText())
+
+            # Tab settings
+            self.main_tab_height_spin.setValue(settings.get("main_tab_height", 35))
+            self.individual_tab_height_spin.setValue(settings.get("individual_tab_height", 24))
+            self.tab_font_size_spin.setValue(settings.get("tab_font_size", 9))
+            self.tab_padding_spin.setValue(settings.get("tab_padding", 4))
+            self.tab_container_height_spin.setValue(settings.get("tab_container_height", 40))
+
+            # Tab style combo
+            tab_style = settings.get("tab_style", "Compact")
+            self.tab_style_combo.setCurrentText(tab_style)
+
+            # Theme
+            theme_code = settings.get("theme", "img_factory")
+            theme_name = self._theme_code_to_name(theme_code)
+            self.theme_combo.setCurrentText(theme_name)
+
+            # Visual effects
+            self.animations_check.setChecked(settings.get("enable_animations", True))
+            self.shadows_check.setChecked(settings.get("enable_shadows", True))
+            self.transparency_check.setChecked(settings.get("enable_transparency", False))
+            self.rounded_corners_check.setChecked(settings.get("rounded_corners", True))
+
+            # Layout
+            self.left_panel_spin.setValue(settings.get("left_panel_width", 600))
+            self.right_panel_spin.setValue(settings.get("right_panel_width", 280))
+            self.row_height_spin.setValue(settings.get("table_row_height", 25))
+            self.widget_spacing_spin.setValue(settings.get("widget_spacing", 5))
+            self.layout_margins_spin.setValue(settings.get("layout_margins", 5))
+
+            # Window behavior
+            self.remember_size_check.setChecked(settings.get("remember_window_size", True))
+            self.remember_position_check.setChecked(settings.get("remember_window_position", True))
+            self.maximize_on_startup_check.setChecked(settings.get("maximize_on_startup", False))
+            self.always_on_top_check.setChecked(settings.get("always_on_top", False))
+
+            # Font settings
+            self.font_scale_slider.setValue(settings.get("font_scale", 100))
+            self.antialiasing_check.setChecked(settings.get("enable_antialiasing", True))
+
+            # Performance settings
+            self.lazy_loading_check.setChecked(settings.get("lazy_loading", False))
+            self.cache_thumbnails_check.setChecked(settings.get("cache_thumbnails", True))
+            self.preload_common_files_check.setChecked(settings.get("preload_common_files", False))
+
+            # Notification settings
+            self.show_notifications_check.setChecked(settings.get("show_notifications", True))
+            self.sound_notifications_check.setChecked(settings.get("sound_notifications", False))
+            self.progress_notifications_check.setChecked(settings.get("progress_notifications", True))
+
+        except Exception as e:
+            error_msg = f"Error loading settings: {str(e)}"
+            print(error_msg)  # Fallback logging
+
+            # Set defaults if loading fails
+            self._set_default_values()
+
+
+    def _apply_settings_to_main_window(self):
+        """Apply all settings to main window immediately - CLEAN VERSION"""
+        try:
+            main_window = self.parent()
+
+            if not main_window:
+                return
+
+            # Apply button display mode
+            self._apply_button_mode_to_main_window()
+
+            # Apply tab settings
+            self._apply_tab_settings_to_main_window()
+
+            # Apply layout settings
+            if hasattr(main_window, 'gui_layout'):
+                gui_layout = main_window.gui_layout
+
+                # Update splitter sizes if available
+                if hasattr(gui_layout, 'main_splitter'):
+                    left_width = self.left_panel_spin.value()
+                    right_width = self.right_panel_spin.value()
+                    gui_layout.main_splitter.setSizes([left_width, right_width])
+
+                # Update table row height
+                if hasattr(gui_layout, 'table') and gui_layout.table:
+                    row_height = self.row_height_spin.value()
+                    gui_layout.table.verticalHeader().setDefaultSectionSize(row_height)
+
+            # Apply window behavior
+            if self.remember_size_check.isChecked():
+                # Window size will be remembered on close
+                pass
+
+            if self.always_on_top_check.isChecked():
+                main_window.setWindowFlags(main_window.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+                main_window.show()
+            else:
+                main_window.setWindowFlags(main_window.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
+                main_window.show()
+
+            # Log success
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("✅ Settings applied to main window")
+
+        except Exception as e:
+            error_msg = f"Error applying settings to main window: {str(e)}"
+            print(error_msg)
+
+
+    def _set_default_values(self):
+        """Set default values for all controls - HELPER METHOD"""
+        try:
+            # Button display mode
+            self.button_mode_combo.setCurrentText("Text Only")
+            self._on_button_mode_changed("Text Only")
+
+            # Tab settings
+            self.main_tab_height_spin.setValue(35)
+            self.individual_tab_height_spin.setValue(24)
+            self.tab_font_size_spin.setValue(9)
+            self.tab_padding_spin.setValue(4)
+            self.tab_container_height_spin.setValue(40)
+            self.tab_style_combo.setCurrentText("Compact")
+
+            # Theme
+            self.theme_combo.setCurrentText("IMG Factory Default")
+
+            # Visual effects
+            self.animations_check.setChecked(True)
+            self.shadows_check.setChecked(True)
+            self.transparency_check.setChecked(False)
+            self.rounded_corners_check.setChecked(True)
+
+            # Layout
+            self.left_panel_spin.setValue(600)
+            self.right_panel_spin.setValue(280)
+            self.row_height_spin.setValue(25)
+            self.widget_spacing_spin.setValue(5)
+            self.layout_margins_spin.setValue(5)
+
+            # Window behavior
+            self.remember_size_check.setChecked(True)
+            self.remember_position_check.setChecked(True)
+            self.maximize_on_startup_check.setChecked(False)
+            self.always_on_top_check.setChecked(False)
+
+            # Font settings
+            self.font_scale_slider.setValue(100)
+            self.antialiasing_check.setChecked(True)
+
+            # Performance settings
+            self.lazy_loading_check.setChecked(False)
+            self.cache_thumbnails_check.setChecked(True)
+            self.preload_common_files_check.setChecked(False)
+
+            # Notification settings
+            self.show_notifications_check.setChecked(True)
+            self.sound_notifications_check.setChecked(False)
+            self.progress_notifications_check.setChecked(True)
+
+        except Exception as e:
+            print(f"Error setting default values: {str(e)}")
+
     def _theme_code_to_name(self, code: str) -> str:
-        """Convert theme code to display name"""
+        """Convert theme code to display name - CONSOLIDATED VERSION"""
         theme_map = {
             "img_factory": "IMG Factory Default",
             "dark": "Dark Theme",
+            "light": "Light Mode",
             "light_professional": "Light Professional",
+            "high_contrast": "High Contrast",
             "gta_san_andreas": "GTA San Andreas",
             "gta_vice_city": "GTA Vice City",
             "lcars": "LCARS (Star Trek)",
             "cyberpunk_2077": "Cyberpunk 2077",
             "matrix": "Matrix",
             "synthwave": "Synthwave",
-            "amiga_workbench": "Amiga Workbench"
+            "amiga_workbench": "Amiga Workbench",
+            "custom": "Custom"
         }
         return theme_map.get(code, "IMG Factory Default")
-    
+
     def _theme_name_to_code(self, name: str) -> str:
-        """Convert display name to theme code"""
+        """Convert display name to theme code - CONSOLIDATED VERSION"""
         name_map = {
             "IMG Factory Default": "img_factory",
             "Dark Theme": "dark",
+            "Light Mode": "light",
             "Light Professional": "light_professional",
+            "High Contrast": "high_contrast",
             "GTA San Andreas": "gta_san_andreas",
             "GTA Vice City": "gta_vice_city",
             "LCARS (Star Trek)": "lcars",
             "Cyberpunk 2077": "cyberpunk_2077",
             "Matrix": "matrix",
             "Synthwave": "synthwave",
-            "Amiga Workbench": "amiga_workbench"
+            "Amiga Workbench": "amiga_workbench",
+            "Custom": "custom"
         }
         return name_map.get(name, "img_factory")
-    
+
+    def get_available_themes(self) -> list:
+        """Get list of all available theme display names"""
+        return [
+            "IMG Factory Default",
+            "Dark Theme",
+            "Light Mode",
+            "Light Professional",
+            "High Contrast",
+            "GTA San Andreas",
+            "GTA Vice City",
+            "LCARS (Star Trek)",
+            "Cyberpunk 2077",
+            "Matrix",
+            "Synthwave",
+            "Amiga Workbench",
+            "Custom"
+        ]
+
+    def get_theme_description(self, theme_code: str) -> str:
+        """Get description for theme code"""
+        descriptions = {
+            "img_factory": "Classic IMG Factory interface with pastel colors",
+            "dark": "Dark theme for reduced eye strain",
+            "light": "Clean light theme for maximum readability",
+            "light_professional": "Professional light theme for business use",
+            "high_contrast": "High contrast theme for accessibility",
+            "gta_san_andreas": "Inspired by GTA San Andreas color scheme",
+            "gta_vice_city": "Retro 80s Vice City inspired theme",
+            "lcars": "Star Trek LCARS computer interface style",
+            "cyberpunk_2077": "Futuristic cyberpunk aesthetic",
+            "matrix": "Green-on-black Matrix code style",
+            "synthwave": "Neon synthwave retro aesthetic",
+            "amiga_workbench": "Classic Amiga Workbench interface",
+            "custom": "User customized theme"
+        }
+        return descriptions.get(theme_code, "No description available")
+
+    def is_dark_theme(self, theme_code: str) -> bool:
+        """Check if theme is a dark theme"""
+        dark_themes = {
+            "dark", "cyberpunk_2077", "matrix", "synthwave"
+        }
+        return theme_code in dark_themes
+
+    def get_theme_preview_colors(self, theme_code: str) -> dict:
+        """Get preview colors for theme"""
+        theme_colors = {
+            "img_factory": {
+                "background": "#f5f5f5",
+                "text": "#333333",
+                "accent": "#2196f3",
+                "button": "#e3f2fd"
+            },
+            "dark": {
+                "background": "#2b2b2b",
+                "text": "#ffffff",
+                "accent": "#bb86fc",
+                "button": "#3c3c3c"
+            },
+            "light": {
+                "background": "#ffffff",
+                "text": "#000000",
+                "accent": "#0066cc",
+                "button": "#f0f0f0"
+            },
+            "light_professional": {
+                "background": "#fafafa",
+                "text": "#333333",
+                "accent": "#1976d2",
+                "button": "#e8eaf6"
+            },
+            "high_contrast": {
+                "background": "#000000",
+                "text": "#ffffff",
+                "accent": "#ffff00",
+                "button": "#ffffff"
+            },
+            "gta_san_andreas": {
+                "background": "#2d1810",
+                "text": "#f4e4bc",
+                "accent": "#ff6b35",
+                "button": "#4a2c17"
+            },
+            "gta_vice_city": {
+                "background": "#1a0d26",
+                "text": "#ff69b4",
+                "accent": "#00ffff",
+                "button": "#4d1a4d"
+            },
+            "lcars": {
+                "background": "#000000",
+                "text": "#ff9900",
+                "accent": "#9999ff",
+                "button": "#333366"
+            },
+            "cyberpunk_2077": {
+                "background": "#0f0f0f",
+                "text": "#00ffff",
+                "accent": "#ff003c",
+                "button": "#1a1a2e"
+            },
+            "matrix": {
+                "background": "#000000",
+                "text": "#00ff00",
+                "accent": "#00aa00",
+                "button": "#003300"
+            },
+            "synthwave": {
+                "background": "#2d1b69",
+                "text": "#ff006e",
+                "accent": "#06ffa5",
+                "button": "#4d2d8a"
+            },
+            "amiga_workbench": {
+                "background": "#c0c0c0",
+                "text": "#000000",
+                "accent": "#0000aa",
+                "button": "#dddddd"
+            },
+            "custom": {
+                "background": "#f5f5f5",
+                "text": "#333333",
+                "accent": "#2196f3",
+                "button": "#e3f2fd"
+            }
+        }
+        return theme_colors.get(theme_code, theme_colors["img_factory"])
+
+
     def _apply_settings(self):
         """Apply settings without closing dialog"""
         self._save_settings()
