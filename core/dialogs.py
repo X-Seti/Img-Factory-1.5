@@ -1,516 +1,37 @@
-#this belongs in gui/ dialogs.py - version 4
-# $vers" X-Seti - June26, 2025 - Img Factory 1.5"
-# $hist" Credit MexUK 2007 Img Factory 1.2"
+#this belongs in core/dialogs.py - Version: 2
+# X-Seti - July15 2025 - Img Factory 1.5
+# Complete dialog classes and threading for IMG Factory
 
-#!/usr/bin/env python3
-"""
-IMG Factory Dialogs - Common Dialog Windows
-"""
-
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QTextEdit, QLineEdit, QCheckBox, QComboBox, QGroupBox,
-    QDialogButtonBox, QMessageBox, QFileDialog, QProgressDialog
-)
-from PyQt6.QtCore import Qt, pyqtSignal, QThread
-from PyQt6.QtGui import QFont, QPixmap, QIcon
 import os
-
-
-class AboutDialog(QDialog):
-    """About IMG Factory dialog"""
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("About IMG Factory")
-        self.setFixedSize(500, 400)
-        self.setModal(True)
-        self._create_ui()
-    
-    def _create_ui(self):
-        """Create about dialog UI"""
-        layout = QVBoxLayout(self)
-        layout.setSpacing(15)
-        
-        # Header with logo/icon
-        header_layout = QHBoxLayout()
-        
-        # Icon/Logo placeholder
-        icon_label = QLabel("🏭")
-        icon_label.setStyleSheet("font-size: 48px;")
-        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header_layout.addWidget(icon_label)
-        
-        # Title and version
-        title_layout = QVBoxLayout()
-        
-        title_label = QLabel("IMG Factory 1.5")
-        title_font = QFont()
-        title_font.setPointSize(18)
-        title_font.setBold(True)
-        title_label.setFont(title_font)
-        title_layout.addWidget(title_label)
-        
-        subtitle_label = QLabel("Professional IMG Archive Manager")
-        subtitle_label.setStyleSheet("color: #666666; font-size: 12pt;")
-        title_layout.addWidget(subtitle_label)
-        
-        header_layout.addLayout(title_layout)
-        header_layout.addStretch()
-        
-        layout.addLayout(header_layout)
-        
-        # Description
-        description = QTextEdit()
-        description.setReadOnly(True)
-        description.setMaximumHeight(200)
-        description.setHtml("""
-        <h3>IMG Factory 1.5 - Python Edition</h3>
-        <p>A modern, cross-platform IMG archive manager for GTA and related games.</p>
-        
-        <p><b>Features:</b></p>
-        <ul>
-        <li>Support for IMG versions 1, 2, 3, and Fastman92</li>
-        <li>Template system for quick IMG creation</li>
-        <li>Import/Export functionality with batch processing</li>
-        <li>Background processing and progress tracking</li>
-        <li>Cross-platform compatibility</li>
-        <li>Modern Qt6-based interface with themes</li>
-        </ul>
-        
-        <p><b>Supported Games:</b></p>
-        <ul>
-        <li>Grand Theft Auto III, Vice City, San Andreas, IV</li>
-        <li>Bully</li>
-        </ul>
-        """)
-        layout.addWidget(description)
-        
-        # Credits
-        credits_label = QLabel("Based on the original IMG Factory by MexUK\nPython edition by X-Seti")
-        credits_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        credits_label.setStyleSheet("color: #888888; font-style: italic;")
-        layout.addWidget(credits_label)
-        
-        # Buttons
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-        
-        close_btn = QPushButton("Close")
-        close_btn.clicked.connect(self.accept)
-        close_btn.setDefault(True)
-        button_layout.addWidget(close_btn)
-        
-        layout.addLayout(button_layout)
-
-class ExportOptionsDialog(QDialog):
-    """Dialog for export options"""
-    
-    def __init__(self, parent=None, entry_count=0):
-        super().__init__(parent)
-        self.setWindowTitle("Export Options")
-        self.setMinimumSize(400, 300)
-        self.setModal(True)
-        self.entry_count = entry_count
-        self._create_ui()
-    
-    def _create_ui(self):
-        """Create export options UI"""
-        layout = QVBoxLayout(self)
-        
-        # Export location
-        location_group = QGroupBox("Export Location")
-        location_layout = QVBoxLayout(location_group)
-        
-        dir_layout = QHBoxLayout()
-        dir_layout.addWidget(QLabel("Directory:"))
-        self.dir_input = QLineEdit()
-        self.dir_input.setPlaceholderText("Choose export directory...")
-        dir_layout.addWidget(self.dir_input)
-        
-        browse_btn = QPushButton("Browse...")
-        browse_btn.clicked.connect(self._browse_directory)
-        dir_layout.addWidget(browse_btn)
-        
-        location_layout.addLayout(dir_layout)
-        layout.addWidget(location_group)
-        
-        # Export options
-        options_group = QGroupBox("Export Options")
-        options_layout = QVBoxLayout(options_group)
-        
-        self.preserve_structure_check = QCheckBox("Preserve directory structure")
-        self.preserve_structure_check.setChecked(True)
-        options_layout.addWidget(self.preserve_structure_check)
-        
-        self.overwrite_check = QCheckBox("Overwrite existing files")
-        options_layout.addWidget(self.overwrite_check)
-        
-        self.create_log_check = QCheckBox("Create export log")
-        self.create_log_check.setChecked(True)
-        options_layout.addWidget(self.create_log_check)
-        
-        layout.addWidget(options_group)
-        
-        # Progress options
-        progress_group = QGroupBox("Progress")
-        progress_layout = QVBoxLayout(progress_group)
-        
-        self.show_progress_check = QCheckBox("Show progress dialog")
-        self.show_progress_check.setChecked(True)
-        progress_layout.addWidget(self.show_progress_check)
-        
-        self.open_folder_check = QCheckBox("Open export folder when complete")
-        progress_layout.addWidget(self.open_folder_check)
-        
-        layout.addWidget(progress_group)
-        
-        # Info
-        info_label = QLabel(f"Ready to export {self.entry_count} entries")
-        info_label.setStyleSheet("color: #666666; font-style: italic;")
-        layout.addWidget(info_label)
-        
-        # Buttons
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
-    
-    def _browse_directory(self):
-        """Browse for export directory"""
-        directory = QFileDialog.getExistingDirectory(
-            self,
-            "Select Export Directory",
-            self.dir_input.text() or os.path.expanduser("~")
-        )
-        
-        if directory:
-            self.dir_input.setText(directory)
-    
-    def get_options(self):
-        """Get export options"""
-        return {
-            'directory': self.dir_input.text(),
-            'preserve_structure': self.preserve_structure_check.isChecked(),
-            'overwrite': self.overwrite_check.isChecked(),
-            'create_log': self.create_log_check.isChecked(),
-            'show_progress': self.show_progress_check.isChecked(),
-            'open_folder': self.open_folder_check.isChecked()
-        }
-
-
-class ImportOptionsDialog(QDialog):
-    """Dialog for import options"""
-    
-    def __init__(self, parent=None, file_count=0):
-        super().__init__(parent)
-        self.setWindowTitle("Import Options")
-        self.setMinimumSize(400, 250)
-        self.setModal(True)
-        self.file_count = file_count
-        self._create_ui()
-    
-    def _create_ui(self):
-        """Create import options UI"""
-        layout = QVBoxLayout(self)
-        
-        # Import options
-        options_group = QGroupBox("Import Options")
-        options_layout = QVBoxLayout(options_group)
-        
-        self.auto_rename_check = QCheckBox("Auto-rename conflicting files")
-        self.auto_rename_check.setChecked(True)
-        options_layout.addWidget(self.auto_rename_check)
-        
-        self.compress_check = QCheckBox("Compress files when possible")
-        options_layout.addWidget(self.compress_check)
-        
-        self.validate_check = QCheckBox("Validate files after import")
-        self.validate_check.setChecked(True)
-        options_layout.addWidget(self.validate_check)
-        
-        layout.addWidget(options_group)
-        
-        # Conflict resolution
-        conflict_group = QGroupBox("Conflict Resolution")
-        conflict_layout = QVBoxLayout(conflict_group)
-        
-        self.conflict_combo = QComboBox()
-        self.conflict_combo.addItems([
-            "Ask for each conflict",
-            "Auto-rename duplicates", 
-            "Overwrite existing",
-            "Skip existing"
-        ])
-        self.conflict_combo.setCurrentIndex(1)  # Auto-rename
-        conflict_layout.addWidget(self.conflict_combo)
-        
-        layout.addWidget(conflict_group)
-        
-        # Info
-        info_label = QLabel(f"Ready to import {self.file_count} files")
-        info_label.setStyleSheet("color: #666666; font-style: italic;")
-        layout.addWidget(info_label)
-        
-        # Buttons
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
-    
-    def get_options(self):
-        """Get import options"""
-        return {
-            'auto_rename': self.auto_rename_check.isChecked(),
-            'compress': self.compress_check.isChecked(),
-            'validate': self.validate_check.isChecked(),
-            'conflict_resolution': self.conflict_combo.currentText()
-        }
-
-def show_about_dialog(parent=None):
-    """Show about dialog"""
-    dialog = AboutDialog(parent)
-    dialog.exec()
-
-def show_export_options_dialog(parent=None, entry_count=0):
-    """Show export options dialog"""
-    dialog = ExportOptionsDialog(parent, entry_count)
-    if dialog.exec() == QDialog.DialogCode.Accepted:
-        return dialog.get_options()
-    return None
-
-def show_import_options_dialog(parent=None, file_count=0):
-    """Show import options dialog"""
-    dialog = ImportOptionsDialog(parent, file_count)
-    if dialog.exec() == QDialog.DialogCode.Accepted:
-        return dialog.get_options()
-    return None
-
-def show_error_dialog(parent, title, message, details=None):
-    """Show error dialog with optional details"""
-    msg_box = QMessageBox(parent)
-    msg_box.setIcon(QMessageBox.Icon.Critical)
-    msg_box.setWindowTitle(title)
-    msg_box.setText(message)
-    
-    if details:
-        msg_box.setDetailedText(details)
-    
-    msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
-    msg_box.exec()
-
-def show_warning_dialog(parent, title, message):
-    """Show warning dialog"""
-    msg_box = QMessageBox(parent)
-    msg_box.setIcon(QMessageBox.Icon.Warning)
-    msg_box.setWindowTitle(title)
-    msg_box.setText(message)
-    msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
-    return msg_box.exec()
-
-def show_question_dialog(parent, title, message):
-    """Show question dialog with Yes/No buttons"""
-    msg_box = QMessageBox(parent)
-    msg_box.setIcon(QMessageBox.Icon.Question)
-    msg_box.setWindowTitle(title)
-    msg_box.setText(message)
-    msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-    msg_box.setDefaultButton(QMessageBox.StandardButton.No)
-    
-    result = msg_box.exec()
-    return result == QMessageBox.StandardButton.Yes
-
-def show_info_dialog(parent, title, message):
-    """Show information dialog"""
-    msg_box = QMessageBox(parent)
-    msg_box.setIcon(QMessageBox.Icon.Information)
-    msg_box.setWindowTitle(title)
-    msg_box.setText(message)
-    msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
-    msg_box.exec()
-
-def show_progress_dialog(parent, title, text, maximum=100):
-    """Show progress dialog"""
-    progress = QProgressDialog(text, "Cancel", 0, maximum, parent)
-    progress.setWindowTitle(title)
-    progress.setWindowModality(Qt.WindowModality.WindowModal)
-    progress.setMinimumDuration(0)
-    progress.show()
-    return progress
-
-class ValidationResultsDialog(QDialog):
-    """Dialog showing IMG validation results"""
-    
-    def __init__(self, validation_result, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("IMG Validation Results")
-        self.setMinimumSize(600, 400)
-        self.setModal(True)
-        self.validation_result = validation_result
-        self._create_ui()
-    
-    def _create_ui(self):
-        """Create validation results UI"""
-        layout = QVBoxLayout(self)
-        
-        # Summary
-        summary_group = QGroupBox("Validation Summary")
-        summary_layout = QVBoxLayout(summary_group)
-        
-        # Overall status
-        if self.validation_result.get('is_valid', False):
-            status_text = "✅ IMG archive is valid"
-            status_color = "#2E7D32"
-        else:
-            status_text = "❌ IMG archive has issues"
-            status_color = "#D32F2F"
-        
-        status_label = QLabel(status_text)
-        status_label.setStyleSheet(f"color: {status_color}; font-weight: bold; font-size: 12pt;")
-        summary_layout.addWidget(status_label)
-        
-        # Statistics
-        stats = self.validation_result.get('statistics', {})
-        stats_text = f"""
-        Total Entries: {stats.get('total_entries', 0)}
-        Valid Entries: {stats.get('valid_entries', 0)}
-        Warnings: {stats.get('warnings', 0)}
-        Errors: {stats.get('errors', 0)}
-        """
-        
-        stats_label = QLabel(stats_text)
-        summary_layout.addWidget(stats_label)
-        
-        layout.addWidget(summary_group)
-        
-        # Issues details
-        if self.validation_result.get('issues'):
-            issues_group = QGroupBox("Issues Found")
-            issues_layout = QVBoxLayout(issues_group)
-            
-            issues_text = QTextEdit()
-            issues_text.setReadOnly(True)
-            issues_text.setMaximumHeight(200)
-            
-            issues_html = "<table border='1' cellpadding='4'>"
-            issues_html += "<tr><th>Type</th><th>Entry</th><th>Description</th></tr>"
-            
-            for issue in self.validation_result['issues'][:50]:  # Limit to first 50
-                issue_type = issue.get('type', 'Unknown')
-                entry_name = issue.get('entry', 'N/A')
-                description = issue.get('description', 'No description')
-                
-                color = "#FF6B6B" if issue_type == "Error" else "#FFD700"
-                issues_html += f"<tr><td style='background-color: {color};'>{issue_type}</td>"
-                issues_html += f"<td>{entry_name}</td><td>{description}</td></tr>"
-            
-            issues_html += "</table>"
-            
-            if len(self.validation_result['issues']) > 50:
-                issues_html += f"<p><i>... and {len(self.validation_result['issues']) - 50} more issues</i></p>"
-            
-            issues_text.setHtml(issues_html)
-            issues_layout.addWidget(issues_text)
-            
-            layout.addWidget(issues_group)
-        
-        # Buttons
-        button_layout = QHBoxLayout()
-        
-        if not self.validation_result.get('is_valid', False):
-            fix_btn = QPushButton("🔧 Try Auto-Fix")
-            fix_btn.clicked.connect(self._try_auto_fix)
-            button_layout.addWidget(fix_btn)
-        
-        save_report_btn = QPushButton("💾 Save Report")
-        save_report_btn.clicked.connect(self._save_report)
-        button_layout.addWidget(save_report_btn)
-        
-        button_layout.addStretch()
-        
-        close_btn = QPushButton("Close")
-        close_btn.clicked.connect(self.accept)
-        close_btn.setDefault(True)
-        button_layout.addWidget(close_btn)
-        
-        layout.addLayout(button_layout)
-    
-    def _try_auto_fix(self):
-        """Try to automatically fix issues"""
-        # Placeholder for auto-fix functionality
-        show_info_dialog(self, "Auto-Fix", "Auto-fix functionality not yet implemented")
-    
-    def _save_report(self):
-        """Save validation report to file"""
-        filename, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save Validation Report",
-            "validation_report.txt",
-            "Text Files (*.txt);;All Files (*)"
-        )
-        
-        if filename:
-            try:
-                with open(filename, 'w', encoding='utf-8') as f:
-                    f.write("IMG Factory Validation Report\n")
-                    f.write("=" * 40 + "\n\n")
-                    f.write(f"Overall Status: {'Valid' if self.validation_result.get('is_valid') else 'Invalid'}\n\n")
-                    
-                    # Statistics
-                    stats = self.validation_result.get('statistics', {})
-                    f.write("Statistics:\n")
-                    for key, value in stats.items():
-                        f.write(f"  {key}: {value}\n")
-                    f.write("\n")
-                    
-                    # Issues
-                    if self.validation_result.get('issues'):
-                        f.write("Issues Found:\n")
-                        for i, issue in enumerate(self.validation_result['issues'], 1):
-                            f.write(f"{i}. {issue.get('type', 'Unknown')}: {issue.get('description', 'No description')}\n")
-                            if issue.get('entry'):
-                                f.write(f"   Entry: {issue['entry']}\n")
-                            f.write("\n")
-                
-                show_info_dialog(self, "Report Saved", f"Validation report saved to:\n{filename}")
-                
-            except Exception as e:
-                show_error_dialog(self, "Save Error", f"Failed to save report:\n{str(e)}")
-
-
-def show_validation_results_dialog(validation_result, parent=None):
-    """Show validation results dialog"""
-    dialog = ValidationResultsDialog(validation_result, parent)
-    dialog.exec()
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, 
+                             QPushButton, QCheckBox, QComboBox, QProgressBar, QMessageBox, 
+                             QFileDialog, QGroupBox, QGridLayout, QTextEdit, QDialogButtonBox,
+                             QProgressDialog)
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtGui import QFont
 
 
 class IMGPropertiesDialog(QDialog):
-    """Dialog showing IMG archive properties"""
+    """Dialog showing IMG file properties"""
     
     def __init__(self, img_file, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("IMG Archive Properties")
-        self.setMinimumSize(500, 400)
-        self.setModal(True)
         self.img_file = img_file
+        self.setWindowTitle("IMG Properties")
+        self.setMinimumWidth(400)
         self._create_ui()
     
     def _create_ui(self):
-        """Create properties dialog UI"""
+        """Create properties UI"""
         layout = QVBoxLayout(self)
         
-        # File information
+        # File properties
         file_group = QGroupBox("File Information")
         file_layout = QVBoxLayout(file_group)
         
-        # Create properties table
         properties = [
-            ("File Name", os.path.basename(getattr(self.img_file, 'file_path', 'Unknown'))),
-            ("File Size", self._format_file_size()),
+            ("File Path", getattr(self.img_file, 'file_path', 'Unknown')),
+            ("File Size", self._get_file_size()),
             ("Version", getattr(self.img_file, 'version', 'Unknown')),
             ("Platform", getattr(self.img_file, 'platform', 'Unknown')),  
             ("Encrypted", "Yes" if getattr(self.img_file, 'is_encrypted', False) else "No"),
@@ -552,35 +73,35 @@ class IMGPropertiesDialog(QDialog):
         
         close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.accept)
-        close_btn.setDefault(True)
         button_layout.addWidget(close_btn)
         
         layout.addLayout(button_layout)
     
-    def _format_file_size(self):
-        """Format file size"""
+    def _get_file_size(self):
+        """Get formatted file size"""
         try:
-            if hasattr(self.img_file, 'file_path') and os.path.exists(self.img_file.file_path):
+            if hasattr(self.img_file, 'file_path'):
                 size = os.path.getsize(self.img_file.file_path)
-                if size < 1024:
-                    return f"{size} bytes"
-                elif size < 1024 * 1024:
-                    return f"{size / 1024:.1f} KB"
-                elif size < 1024 * 1024 * 1024:
-                    return f"{size / (1024 * 1024):.1f} MB"
-                else:
-                    return f"{size / (1024 * 1024 * 1024):.1f} GB"
+                return self._format_size(size)
         except:
             pass
         return "Unknown"
     
+    def _format_size(self, size):
+        """Format size in human readable format"""
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size < 1024.0:
+                return f"{size:.1f} {unit}"
+            size /= 1024.0
+        return f"{size:.1f} TB"
+    
     def _get_modification_time(self):
         """Get file modification time"""
         try:
-            if hasattr(self.img_file, 'file_path') and os.path.exists(self.img_file.file_path):
-                import time
+            if hasattr(self.img_file, 'file_path'):
+                import datetime
                 mtime = os.path.getmtime(self.img_file.file_path)
-                return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mtime))
+                return datetime.datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
         except:
             pass
         return "Unknown"
@@ -588,20 +109,533 @@ class IMGPropertiesDialog(QDialog):
     def _get_file_type_stats(self):
         """Get file type statistics"""
         stats = {}
-        if hasattr(self.img_file, 'entries'):
-            for entry in self.img_file.entries:
-                ext = getattr(entry, 'extension', 'Unknown')
-                stats[ext] = stats.get(ext, 0) + 1
+        for entry in self.img_file.entries:
+            ext = getattr(entry, 'extension', 'Unknown')
+            stats[ext] = stats.get(ext, 0) + 1
         return stats
 
 
+class ExportOptionsDialog(QDialog):
+    """Export options dialog"""
+    
+    def __init__(self, parent=None, entry_count=0):
+        super().__init__(parent)
+        self.entry_count = entry_count
+        self.setWindowTitle("Export Options")
+        self.setMinimumWidth(400)
+        self._create_ui()
+    
+    def _create_ui(self):
+        """Create export options UI"""
+        layout = QVBoxLayout(self)
+        
+        # Export destination
+        dest_group = QGroupBox("Export Destination")
+        dest_layout = QVBoxLayout(dest_group)
+        
+        folder_layout = QHBoxLayout()
+        self.folder_input = QLineEdit()
+        self.folder_input.setPlaceholderText("Select export folder...")
+        folder_layout.addWidget(self.folder_input)
+        
+        browse_btn = QPushButton("Browse")
+        browse_btn.clicked.connect(self._browse_folder)
+        folder_layout.addWidget(browse_btn)
+        
+        dest_layout.addLayout(folder_layout)
+        layout.addWidget(dest_group)
+        
+        # Export options
+        options_group = QGroupBox("Export Options")
+        options_layout = QVBoxLayout(options_group)
+        
+        self.organize_check = QCheckBox("Organize by file type")
+        self.organize_check.setChecked(True)
+        options_layout.addWidget(self.organize_check)
+        
+        self.overwrite_check = QCheckBox("Overwrite existing files")
+        self.overwrite_check.setChecked(True)
+        options_layout.addWidget(self.overwrite_check)
+        
+        self.create_log_check = QCheckBox("Create export log")
+        options_layout.addWidget(self.create_log_check)
+        
+        layout.addWidget(options_group)
+        
+        # Info
+        info_label = QLabel(f"Ready to export {self.entry_count} entries")
+        info_label.setStyleSheet("color: #666666; font-style: italic;")
+        layout.addWidget(info_label)
+        
+        # Buttons
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+    
+    def _browse_folder(self):
+        """Browse for export folder"""
+        folder = QFileDialog.getExistingDirectory(self, "Select Export Folder")
+        if folder:
+            self.folder_input.setText(folder)
+    
+    def get_options(self):
+        """Get export options"""
+        return {
+            'export_folder': self.folder_input.text(),
+            'organize_by_type': self.organize_check.isChecked(),
+            'overwrite_existing': self.overwrite_check.isChecked(),
+            'create_log': self.create_log_check.isChecked()
+        }
+
+
+class ImportOptionsDialog(QDialog):
+    """Import options dialog"""
+    
+    def __init__(self, parent=None, file_count=0):
+        super().__init__(parent)
+        self.file_count = file_count
+        self.setWindowTitle("Import Options")
+        self.setMinimumWidth(400)
+        self._create_ui()
+    
+    def _create_ui(self):
+        """Create import options UI"""
+        layout = QVBoxLayout(self)
+        
+        # Import options
+        options_group = QGroupBox("Import Options")
+        options_layout = QVBoxLayout(options_group)
+        
+        self.replace_check = QCheckBox("Replace existing entries")
+        self.replace_check.setChecked(True)
+        options_layout.addWidget(self.replace_check)
+        
+        self.validate_check = QCheckBox("Validate files before import")
+        self.validate_check.setChecked(True)
+        options_layout.addWidget(self.validate_check)
+        
+        self.backup_check = QCheckBox("Create backup before import")
+        options_layout.addWidget(self.backup_check)
+        
+        self.create_log_check = QCheckBox("Create import log")
+        options_layout.addWidget(self.create_log_check)
+        
+        layout.addWidget(options_group)
+        
+        # Info
+        info_label = QLabel(f"Ready to import {self.file_count} files")
+        info_label.setStyleSheet("color: #666666; font-style: italic;")
+        layout.addWidget(info_label)
+        
+        # Buttons
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+    
+    def get_options(self):
+        """Get import options"""
+        return {
+            'replace_existing': self.replace_check.isChecked(),
+            'validate_files': self.validate_check.isChecked(),
+            'create_backup': self.backup_check.isChecked(),
+            'create_log': self.create_log_check.isChecked()
+        }
+
+
+class ValidationResultsDialog(QDialog):
+    """Dialog showing IMG validation results"""
+    
+    def __init__(self, validation_result, parent=None):
+        super().__init__(parent)
+        self.validation_result = validation_result
+        self.setWindowTitle("IMG Validation Results")
+        self.setMinimumWidth(500)
+        self.setMinimumHeight(400)
+        self._create_ui()
+    
+    def _create_ui(self):
+        """Create validation results UI"""
+        layout = QVBoxLayout(self)
+        
+        # Results text
+        results_text = QTextEdit()
+        results_text.setReadOnly(True)
+        results_text.setFont(QFont("Courier", 9))
+        
+        # Format results
+        result_text = "IMG Validation Results\n" + "="*50 + "\n\n"
+        
+        if self.validation_result.get('is_valid', False):
+            result_text += "✅ Validation PASSED\n\n"
+        else:
+            result_text += "❌ Validation FAILED\n\n"
+        
+        # Show errors
+        errors = self.validation_result.get('errors', [])
+        if errors:
+            result_text += f"Errors ({len(errors)}):\n"
+            for error in errors:
+                result_text += f"  • {error}\n"
+            result_text += "\n"
+        
+        # Show warnings
+        warnings = self.validation_result.get('warnings', [])
+        if warnings:
+            result_text += f"Warnings ({len(warnings)}):\n"
+            for warning in warnings:
+                result_text += f"  • {warning}\n"
+            result_text += "\n"
+        
+        # Show statistics
+        stats = self.validation_result.get('statistics', {})
+        if stats:
+            result_text += "Statistics:\n"
+            for key, value in stats.items():
+                result_text += f"  {key}: {value}\n"
+        
+        results_text.setText(result_text)
+        layout.addWidget(results_text)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(self.accept)
+        button_layout.addWidget(close_btn)
+        
+        layout.addLayout(button_layout)
+
+
+class ImportThread(QThread):
+    """Background import thread"""
+    progress = pyqtSignal(int)
+    finished = pyqtSignal(bool, str)
+    
+    def __init__(self, main_window, files_to_import, replace_existing=True, validate_files=True, create_backup=False, create_log=False):
+        super().__init__()
+        self.main_window = main_window
+        self.files_to_import = files_to_import
+        self.replace_existing = replace_existing
+        self.validate_files = validate_files
+        self.create_backup = create_backup
+        self.create_log = create_log
+        
+    def run(self):
+        try:
+            from core.utils import validate_import_files, create_backup_before_import, entry_exists_in_img
+            
+            imported_count = 0
+            log_entries = []
+            
+            # Create backup if requested
+            if self.create_backup:
+                create_backup_before_import(self.main_window)
+            
+            # Validate files if requested
+            if self.validate_files:
+                self.files_to_import = validate_import_files(self.files_to_import)
+            
+            for i, file_path in enumerate(self.files_to_import):
+                filename = os.path.basename(file_path)
+                
+                # Check if entry already exists
+                if not self.replace_existing:
+                    if entry_exists_in_img(self.main_window, filename):
+                        log_entries.append(f"Skipped: {filename} (already exists)")
+                        continue
+                
+                # Import file
+                imported = self.import_file(file_path)
+                
+                if imported:
+                    imported_count += 1
+                    log_entries.append(f"Imported: {filename}")
+                else:
+                    log_entries.append(f"Failed: {filename}")
+                
+                self.progress.emit(i + 1)
+            
+            # Create log file if requested
+            if self.create_log and log_entries:
+                log_path = os.path.join(os.path.dirname(self.files_to_import[0]), 'import_log.txt')
+                with open(log_path, 'w') as f:
+                    f.write('\n'.join(log_entries))
+            
+            # Update UI
+            from core.utils import refresh_table
+            refresh_table(self.main_window)
+            
+            self.finished.emit(True, f"Imported {imported_count}/{len(self.files_to_import)} files successfully.")
+            
+        except Exception as e:
+            self.finished.emit(False, f"Import error: {str(e)}")
+    
+    def import_file(self, file_path):
+        """Import a single file"""
+        try:
+            filename = os.path.basename(file_path)
+            
+            # Read file data
+            with open(file_path, 'rb') as f:
+                file_data = f.read()
+            
+            # Method 1: Use IMG's add_entry method
+            if hasattr(self.main_window.current_img, 'add_entry'):
+                try:
+                    if self.main_window.current_img.add_entry(filename, file_data):
+                        return True
+                except Exception:
+                    pass
+            
+            # Method 2: Use IMG's import_file method
+            if hasattr(self.main_window.current_img, 'import_file'):
+                try:
+                    if self.main_window.current_img.import_file(file_path):
+                        return True
+                except Exception:
+                    pass
+            
+            # Method 3: Create entry directly
+            if hasattr(self.main_window.current_img, 'entries'):
+                try:
+                    # Create new entry
+                    new_entry = type('Entry', (), {
+                        'name': filename,
+                        'data': file_data,
+                        'size': len(file_data),
+                        'get_data': lambda: file_data
+                    })()
+                    
+                    # Remove existing entry if replacing
+                    if self.replace_existing:
+                        self.main_window.current_img.entries = [
+                            e for e in self.main_window.current_img.entries 
+                            if getattr(e, 'name', '').lower() != filename.lower()
+                        ]
+                    
+                    self.main_window.current_img.entries.append(new_entry)
+                    return True
+                except Exception:
+                    pass
+            
+            return False
+            
+        except Exception:
+            return False
+
+
+class ExportThread(QThread):
+    """Background export thread"""
+    progress = pyqtSignal(int)
+    finished = pyqtSignal(bool, str)
+    
+    def __init__(self, main_window, entries, export_dir, organize_by_type=True, overwrite=True, create_log=False):
+        super().__init__()
+        self.main_window = main_window
+        self.entries = entries
+        self.export_dir = export_dir
+        self.organize_by_type = organize_by_type
+        self.overwrite = overwrite
+        self.create_log = create_log
+        
+    def run(self):
+        try:
+            from core.utils import get_file_type_subfolder
+            
+            exported_count = 0
+            log_entries = []
+            
+            for i, entry in enumerate(self.entries):
+                entry_name = getattr(entry, 'name', f'entry_{i}')
+                
+                # Determine subfolder
+                if self.organize_by_type:
+                    subfolder = get_file_type_subfolder(entry_name)
+                    output_dir = os.path.join(self.export_dir, subfolder)
+                else:
+                    output_dir = self.export_dir
+                
+                os.makedirs(output_dir, exist_ok=True)
+                output_path = os.path.join(output_dir, entry_name)
+                
+                # Skip if file exists and not overwriting
+                if os.path.exists(output_path) and not self.overwrite:
+                    log_entries.append(f"Skipped: {entry_name} (already exists)")
+                    continue
+                
+                # Export file
+                exported = self.export_entry(entry, output_path)
+                
+                if exported:
+                    exported_count += 1
+                    log_entries.append(f"Exported: {entry_name}")
+                else:
+                    log_entries.append(f"Failed: {entry_name}")
+                
+                self.progress.emit(i + 1)
+            
+            # Create log file if requested
+            if self.create_log and log_entries:
+                log_path = os.path.join(self.export_dir, 'export_log.txt')
+                with open(log_path, 'w') as f:
+                    f.write('\n'.join(log_entries))
+            
+            self.finished.emit(True, f"Exported {exported_count}/{len(self.entries)} files successfully.")
+            
+        except Exception as e:
+            self.finished.emit(False, f"Export error: {str(e)}")
+    
+    def export_entry(self, entry, output_path):
+        """Export a single entry using multiple methods"""
+        try:
+            # Method 1: Use IMG file's export_entry method
+            if hasattr(self.main_window.current_img, 'export_entry'):
+                try:
+                    if self.main_window.current_img.export_entry(entry, output_path):
+                        return True
+                except Exception:
+                    pass
+            
+            # Method 2: Use entry's get_data method
+            if hasattr(entry, 'get_data'):
+                try:
+                    entry_data = entry.get_data()
+                    if entry_data:
+                        with open(output_path, 'wb') as f:
+                            f.write(entry_data)
+                        return True
+                except Exception:
+                    pass
+            
+            # Method 3: Direct data access
+            if hasattr(entry, 'data'):
+                try:
+                    with open(output_path, 'wb') as f:
+                        f.write(entry.data)
+                    return True
+                except Exception:
+                    pass
+            
+            return False
+            
+        except Exception:
+            return False
+
+
+# Dialog utility functions
 def show_img_properties_dialog(img_file, parent=None):
     """Show IMG properties dialog"""
     dialog = IMGPropertiesDialog(img_file, parent)
     dialog.exec()
 
 
-# Utility functions for file dialogs
+def show_export_options_dialog(parent=None, entry_count=0):
+    """Show export options dialog"""
+    dialog = ExportOptionsDialog(parent, entry_count)
+    if dialog.exec() == QDialog.DialogCode.Accepted:
+        return dialog.get_options()
+    return None
+
+
+def show_import_options_dialog(parent=None, file_count=0):
+    """Show import options dialog"""
+    dialog = ImportOptionsDialog(parent, file_count)
+    if dialog.exec() == QDialog.DialogCode.Accepted:
+        return dialog.get_options()
+    return None
+
+
+def show_validation_results_dialog(validation_result, parent=None):
+    """Show validation results dialog"""
+    dialog = ValidationResultsDialog(validation_result, parent)
+    dialog.exec()
+
+
+def show_error_dialog(parent, title, message, details=None):
+    """Show error dialog with optional details"""
+    msg_box = QMessageBox(parent)
+    msg_box.setIcon(QMessageBox.Icon.Critical)
+    msg_box.setWindowTitle(title)
+    msg_box.setText(message)
+    
+    if details:
+        msg_box.setDetailedText(details)
+    
+    msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+    msg_box.exec()
+
+
+def show_warning_dialog(parent, title, message):
+    """Show warning dialog"""
+    msg_box = QMessageBox(parent)
+    msg_box.setIcon(QMessageBox.Icon.Warning)
+    msg_box.setWindowTitle(title)
+    msg_box.setText(message)
+    msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+    return msg_box.exec()
+
+
+def show_question_dialog(parent, title, message):
+    """Show question dialog with Yes/No buttons"""
+    msg_box = QMessageBox(parent)
+    msg_box.setIcon(QMessageBox.Icon.Question)
+    msg_box.setWindowTitle(title)
+    msg_box.setText(message)
+    msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+    msg_box.setDefaultButton(QMessageBox.StandardButton.No)
+    
+    result = msg_box.exec()
+    return result == QMessageBox.StandardButton.Yes
+
+
+def show_info_dialog(parent, title, message):
+    """Show information dialog"""
+    msg_box = QMessageBox(parent)
+    msg_box.setIcon(QMessageBox.Icon.Information)
+    msg_box.setWindowTitle(title)
+    msg_box.setText(message)
+    msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+    msg_box.exec()
+
+
+def show_progress_dialog(parent, title, text, maximum=100):
+    """Show progress dialog"""
+    progress = QProgressDialog(text, "Cancel", 0, maximum, parent)
+    progress.setWindowTitle(title)
+    progress.setWindowModality(Qt.WindowModality.WindowModal)
+    progress.setMinimumDuration(0)
+    progress.show()
+    return progress
+
+
+def show_about_dialog(parent=None):
+    """Show about dialog"""
+    msg_box = QMessageBox(parent)
+    msg_box.setIcon(QMessageBox.Icon.Information)
+    msg_box.setWindowTitle("About IMG Factory")
+    msg_box.setText("IMG Factory 1.5")
+    msg_box.setInformativeText("A comprehensive IMG file editor for GTA games")
+    msg_box.setDetailedText(
+        "Features:\n"
+        "• Import/Export IMG entries\n"
+        "• COL file editing\n"
+        "• TXD conversion\n"
+        "• Project management\n"
+        "• Multiple theme support\n\n"
+        "X-Seti - 2025"
+    )
+    msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+    msg_box.exec()
+
+
+# File dialog utilities
 def get_img_file_filter():
     """Get file filter for IMG files"""
     return "IMG Archives (*.img);;All Files (*)"
@@ -643,3 +677,29 @@ def get_open_img_filename(parent=None, title="Open IMG Archive"):
         get_img_file_filter()
     )
     return filename
+
+
+# Export all functions
+__all__ = [
+    'IMGPropertiesDialog',
+    'ExportOptionsDialog', 
+    'ImportOptionsDialog',
+    'ValidationResultsDialog',
+    'ImportThread',
+    'ExportThread',
+    'show_img_properties_dialog',
+    'show_export_options_dialog',
+    'show_import_options_dialog',
+    'show_validation_results_dialog',
+    'show_error_dialog',
+    'show_warning_dialog',
+    'show_question_dialog',
+    'show_info_dialog',
+    'show_progress_dialog',
+    'show_about_dialog',
+    'get_img_file_filter',
+    'get_export_directory',
+    'get_import_files',
+    'get_save_img_filename',
+    'get_open_img_filename'
+]

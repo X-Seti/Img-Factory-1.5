@@ -56,7 +56,7 @@ from components.img_formats import GameSpecificIMGDialog, IMGCreator
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 #from components.img_threads import IMGLoadThread, IMGSaveThread
 from components.img_validator import IMGValidator
-from components.img_import_export_functions import integrate_clean_import_export
+from core.integration import integrate_complete_core_system
 from components.col_debug_control import COLDebugController
 from components.unified_debug_functions import integrate_all_improvements
 from components.file_extraction_functions import setup_complete_extraction_integration
@@ -406,7 +406,7 @@ class IMGFactory(QMainWindow):
             self.log_message("✅ Remove functions integrated")
 
         # First integrate the functions
-        integrate_clean_import_export(self)
+        integrate_complete_core_system(self)
 
         try:
             from components.col_tabs_functions import setup_col_tab_integration
