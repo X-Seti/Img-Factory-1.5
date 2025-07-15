@@ -35,7 +35,7 @@
   "button_update_color": "#ff9800",
   "button_convert_color": "#9c27b0",
   "button_default_color": "#0078d4",
-  "show_button_icons": true,
+  "show_button_icons": false,
   "show_menu_icons": true,
   "show_emoji_in_buttons": false,
   "remember_img_output_path": true,

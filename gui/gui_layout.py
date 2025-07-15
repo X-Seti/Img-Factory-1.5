@@ -1,6 +1,10 @@
 #this belongs in gui/ gui_layout.py - Version: 14
 # X-Seti - JULY03 2025 - Img Factory 1.5 - GUI Layout Module - Fixed Button Connections
 
+#adjectments, Refrash button renamed from update-list, Reload button.
+#first button block needs adjucting.
+#_get_short_text moved to gui_backend.py
+
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSplitter,
     QTableWidget, QTableWidgetItem, QTextEdit, QGroupBox, QLabel,
@@ -19,14 +23,15 @@ class IMGFactoryGUILayout:
         self.table = None
         self.log = None
         self.main_splitter = None
-        self.img_buttons = []
-        self.entry_buttons = []
+        self.img_buttons = []       #_create_right_panel_with_pastel_buttons
+        self.entry_buttons = []     #_create_right_panel_with_pastel_buttons
         self.options_buttons = []
+        #_create_right_panel_with_pastel_buttons
 
         # Status bar components
         self.status_bar = None
         self.status_label = None
-        self.progress_bar = None
+        self.progress_bar = None    #show_progres
         self.img_info_label = None
 
         # Tab-related components
@@ -36,7 +41,6 @@ class IMGFactoryGUILayout:
 
         # Fix button mappings and connections
         self.add_button_methods()
-        self.button_connections()
 
         # Initialize tab settings and button icons after a short delay
         # This ensures the main window is fully initialized
@@ -56,7 +60,6 @@ class IMGFactoryGUILayout:
             # Don't crash on initialization issues
             if hasattr(self.main_window, 'app_settings'):
                 self.load_tab_settings_from_app_settings(self.main_window.app_settings)
-
 
     def apply_settings_changes(self, settings):
         """Apply settings changes to the GUI layout"""
@@ -293,7 +296,7 @@ class IMGFactoryGUILayout:
         if button:
             menu.exec(button.mapToGlobal(button.rect().bottomLeft()))
 
-    def _show_file_info_popup(self, file_type):
+    def _show_show_file_actions(self, file_type):
         """Show file info popup for current file"""
         if file_type == "IMG" and hasattr(self.main_window, 'current_img') and self.main_window.current_img:
             self._show_detailed_file_info(file_type, self.main_window.current_img.file_path, self.main_window.current_img)
@@ -447,130 +450,6 @@ class IMGFactoryGUILayout:
                 self.txd_file_name_label.setText(name)
             if hasattr(self, 'txd_stats_label') and stats:
                 self.txd_stats_label.setText(f"Textures: {stats.get('textures', 0)}")
-
-    # Right-click context menu for detailed file info
-    def create_file_info_popup(self, file_type, file_path, file_object):
-        """Create detailed file info popup (right-click context menu)"""
-        from PyQt6.QtWidgets import QMenu, QAction, QMessageBox
-
-        menu = QMenu(self.main_window)
-
-        # File info action
-        info_action = QAction("📋 Detailed File Information", self.main_window)
-        info_action.triggered.connect(lambda: self._show_detailed_file_info(file_type, file_path, file_object))
-        menu.addAction(info_action)
-
-        # Properties action
-        props_action = QAction("🔍 File Properties", self.main_window)
-        props_action.triggered.connect(lambda: self._show_file_properties(file_type, file_path, file_object))
-        menu.addAction(props_action)
-
-        menu.addSeparator()
-
-        # File operations
-        if file_type == "IMG":
-            validate_action = QAction("✅ Validate IMG", self.main_window)
-            validate_action.triggered.connect(lambda: self.main_window.validate_img())
-            menu.addAction(validate_action)
-
-        return menu
-
-    def _show_detailed_file_info(self, file_type, file_path, file_object):
-        """Show detailed file information dialog"""
-        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QTextEdit, QDialogButtonBox
-
-        dialog = QDialog(self.main_window)
-        dialog.setWindowTitle(f"{file_type} File Information")
-        dialog.setMinimumSize(500, 400)
-
-        layout = QVBoxLayout(dialog)
-
-        # File path
-        path_label = QLabel(f"<b>File Path:</b> {file_path}")
-        path_label.setWordWrap(True)
-        layout.addWidget(path_label)
-
-        # File details
-        details_text = QTextEdit()
-        details_text.setReadOnly(True)
-
-        # Format details based on file type
-        if file_type == "IMG" and file_object:
-            details = f"""
-    File Format: {file_object.version.name if hasattr(file_object, 'version') else 'Unknown'}
-    Total Entries: {len(file_object.entries) if hasattr(file_object, 'entries') else 0}
-    File Size: {os.path.getsize(file_path) if os.path.exists(file_path) else 0} bytes
-    Creation Date: {os.path.getctime(file_path) if os.path.exists(file_path) else 'Unknown'}
-            """
-            details_text.setPlainText(details)
-
-        layout.addWidget(details_text)
-
-        # Buttons
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
-        buttons.accepted.connect(dialog.accept)
-        layout.addWidget(buttons)
-
-        dialog.exec()
-
-    def _show_file_properties(self, file_type, file_path, file_object):
-        """Show file properties dialog"""
-        from PyQt6.QtWidgets import QMessageBox
-
-        if os.path.exists(file_path):
-            stat = os.stat(file_path)
-            size = stat.st_size
-            modified = stat.st_mtime
-
-            from datetime import datetime
-            mod_time = datetime.fromtimestamp(modified).strftime("%Y-%m-%d %H:%M:%S")
-
-            QMessageBox.information(
-                self.main_window,
-                f"{file_type} File Properties",
-                f"File: {os.path.basename(file_path)}\n"
-                f"Path: {file_path}\n"
-                f"Size: {size:,} bytes\n"
-                f"Modified: {mod_time}\n"
-                f"Type: {file_type} Archive"
-            )
-        else:
-            QMessageBox.warning(self.main_window, "File Not Found", f"File not found: {file_path}")
-
-    # Update table context menu to include file info
-    def setup_table_context_menu(self):
-        """Setup context menu for the table"""
-        if hasattr(self, 'table'):
-            self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-            self.table.customContextMenuRequested.connect(self._show_table_context_menu)
-
-    def _show_table_context_menu(self, position):
-        """Show context menu for table"""
-        if hasattr(self, 'table'):
-            # Get current file info
-            current_type = self._get_current_file_type()
-            current_file = self._get_current_file()
-
-            if current_file:
-                menu = self.create_file_info_popup(current_type, current_file.get('path', ''), current_file.get('object'))
-                menu.exec(self.table.mapToGlobal(position))
-
-    def _get_current_file_type(self):
-        """Get currently selected file type"""
-        if hasattr(self, 'main_type_tabs'):
-            index = self.main_type_tabs.currentIndex()
-            return ["IMG", "COL", "TXD"][index] if 0 <= index < 3 else "IMG"
-        return "IMG"
-
-    def _get_current_file(self):
-        """Get current file information"""
-        # Return current file info from main window
-        if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
-            return {
-                'path': self.main_window.current_img.file_path,
-                'object': self.main_window.current_img
-            }
-        return None
 
 
     def _create_information_bar(self):
@@ -757,7 +636,7 @@ class IMGFactoryGUILayout:
         
         return status_window
     
-    def add_button_methods(main_window):
+    def add_button_methods(main_window): # we keep this version
         """Add any missing button method names that GUI might be calling"""
         try:
             # Import the functions we need
@@ -794,8 +673,8 @@ class IMGFactoryGUILayout:
                 'dump_entries': lambda: dump_all_function(main_window),
                 'dump_all_entries': lambda: dump_all_function(main_window),
                 'refresh_table': main_window.refresh_table if hasattr(main_window, 'refresh_table') else lambda: main_window.log_message("Refresh requested"),
+                'reload_table': main_window.refresh_table if hasattr(main_window, 'reload_table') else lambda: main_window.log_message("reload requested"),
             }
-
             # Add all method names to main_window
             for method_name, method_func in method_mappings.items():
                 setattr(main_window, method_name, method_func)
@@ -805,50 +684,6 @@ class IMGFactoryGUILayout:
 
         except Exception as e:
             main_window.log_message(f"❌ Error adding button methods: {str(e)}")
-            return False
-
-    def button_connections(self):
-        """all button connections"""
-        try:
-            from PyQt6.QtWidgets import QPushButton
-
-            # Find all buttons and fix their connections
-            all_buttons = self.findChildren(QPushButton)
-
-            for btn in all_buttons:
-                btn_text = btn.text()
-
-                # Change "Update List" to "Refresh"
-                if any(text in btn_text.lower() for text in ["update list", "update lst"]):
-                    btn.setText("🔄 Refresh")
-                    try:
-                        btn.clicked.disconnect()
-                    except:
-                        pass
-                    btn.clicked.connect(self.refresh_table)
-                    self.log_message(f"🔧 Changed '{btn_text}' to 'Refresh'")
-
-                # Fix export button connections
-                elif "Export via" in btn_text:
-                    try:
-                        btn.clicked.disconnect()
-                    except:
-                        pass
-                    btn.clicked.connect(self.export_selected_via)
-                    self.log_message(f"🔧 Fixed '{btn_text}' button")
-
-                elif "Quick" in btn_text and "Export" in btn_text:
-                    try:
-                        btn.clicked.disconnect()
-                    except:
-                        pass
-                    btn.clicked.connect(self.quick_export_selected)
-                    self.log_message(f"🔧 Fixed '{btn_text}' button")
-
-            return True
-
-        except Exception as e:
-            self.log_message(f"❌ Error fixing buttons: {str(e)}")
             return False
 
     def _create_right_panel_with_pastel_buttons(self):
@@ -863,14 +698,16 @@ class IMGFactoryGUILayout:
         img_layout = QGridLayout()
         img_layout.setSpacing(2)
         img_buttons_data = [
-            ("New", "new", "document-new", "#EEFAFA", "create_new_img"),
+            (" New ", "new", "document-new", "#EEFAFA", "create_new_img"),
             ("Open", "open", "document-open", "#E3F2FD", "open_img_file"),
+            ("Reload", "reload", "document-reload", "#F9FBE7", "reload_table"),
+            ("     ", "space", "placeholder", "#FEFEFE", "useless_button"),
             ("Close", "close", "window-close", "#FFF3E0", "close_img_file"),
             ("Close All", "close_all", "edit-clear", "#FFF3E0", "close_all_img"),
-            ("Rebuild", "rebuild", "view-refresh", "#E8F5E8", "rebuild_img"),
+            (" Rebuild ", "rebuild", "view-rebuild", "#E8F5E8", "rebuild_img"),
             ("Rebuild As", "rebuild_as", "document-save-as", "#E8F5E8", "rebuild_img_as"),
             ("Rebuild All", "rebuild_all", "document-save", "#E8F5E8", "rebuild_all_img"),
-            ("Merge", "merge", "document-merge", "#F3E5F5", "merge_img"),
+            (" Merge ", "merge", "document-merge", "#F3E5F5", "merge_img"),
             ("Split", "split", "edit-cut", "#F3E5F5", "split_img"),
             ("Convert", "convert", "transform", "#FFF8E1", "convert_img_format"),
         ]
@@ -1028,6 +865,58 @@ class IMGFactoryGUILayout:
 
         return btn
     
+    def _get_short_text(self, label):
+        """Get short text for button"""
+        short_map = {
+            "New": "New",
+            "Open": "Open",
+            "Close": "Close",
+            "Close All": "Close A",
+            "Reload": "Reload",
+            " ": " ",
+            "Rebuild": "Rebld",
+            "Rebuild As": "Rebld As",
+            "Rebuild All": "Rebld Al",
+            "Merge": "Merge",
+            "Split": "Split",
+            "Convert": "Conv",
+            "Import": "Imp",
+            "Import via": "Imp via",
+            "Refresh": "Refresh",
+            "Export": "Exp",
+            "Export via": "Exp via",
+            "Quick Export": "Q Exp",
+            "Remove": "Rem",
+            "Remove via": "Rem via",
+            "Dump": "Dump",
+            "Pin selected": "Pin",
+            "Rename": "Rename",
+            "Replace": "Replace",
+            "Select All": "Select",
+            "Sel Inverse": "Inverse",
+            "Sort": "Sort",
+            # Editing Options
+            "Col Edit": "Col Edit",
+            "Txd Edit": "Txd Edit",
+            "Dff Edit": "Dff Edit",
+            "Ipf Edit": "Ipf Edit",
+            "IDE Edit": "IDE Edit",
+            "IPL Edit": "IPL Edit",
+            "Dat Edit": "Dat Edit",
+            "Zons Cull Ed": "Zons Cull",
+            "Weap Edit": "Weap Edit",
+            "Vehi Edit": "Vehi Edit",
+            "Peds Edit": "Peds Edit",
+            "Radar Map": "Radar Map",
+            "Paths Map": "Paths Map",
+            "Waterpro": "Waterpro",
+            "Weather": "Weather",
+            "Handling": "Handling",
+            "Objects": "Objects",
+        }
+
+        return short_map.get(label, label)
+
     def _handle_button_click(self, button_label, method_name):
         """Handle button clicks for methods that don't exist yet"""
         if hasattr(self.main_window, 'log_message'):
@@ -1056,41 +945,21 @@ class IMGFactoryGUILayout:
         except:
             return color
     
-    def _get_short_text(self, text):
-        """Get shortened text for responsive buttons"""
-        short_map = {
-            "Import": "Imp",
-            "Export": "Exp", 
-            "Remove": "Rem",
-            "Update list": "Upd",
-            "Select All": "Sel A",
-            "Sel Inverse": "Sel I",
-            "Quick Export": "Q.Exp",
-            "Rebuild As": "Reb A",
-            "Rebuild All": "Reb A",
-            "Remove All": "Rem A",
-            "Close All": "Cls A",
-            "Pin selected": "Pin",
-            "Zons Cull Ed": "Zons",
-            "Radar Map": "Radar",
-            "Paths Map": "Paths",
-            "Col Edit": "Col",
-            "Txd Edit": "Txd",
-            "Dff Edit": "Dff",
-            "Ipf Edit": "Ipf",
-            "IDE Edit": "IDE",
-            "IPL Edit": "IPL",
-            "Dat Edit": "Dat",
-            "Weap Edit": "Weap",
-            "Vehi Edit": "Vehi",
-            "Peds Edit": "Peds",
-            "Waterpro": "Water",
-            "Weather": "Weath",
-            "Handling": "Hand",
-            "Objects": "Objs"
-        }
-        return short_map.get(text, text[:6])
-    
+    def _lighten_color(self, color, factor):
+        """Lighten a hex color by factor (0.0 to 1.0)"""
+        try:
+            color = color.lstrip('#')
+            r, g, b = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
+
+            r = min(255, int(r + (255 - r) * factor))
+            g = min(255, int(g + (255 - g) * factor))
+            b = min(255, int(b + (255 - b) * factor))
+
+            return f"#{r:02x}{g:02x}{b:02x}"
+        except:
+            return color
+
+
     def _apply_log_theme_styling(self):
         """Apply theme styling to the log widget"""
         theme_colors = self._get_theme_colors("default")
@@ -1172,7 +1041,7 @@ class IMGFactoryGUILayout:
                 background-color: #999999;
             }}
         """)
-    
+
     def _get_theme_colors(self, theme_name):
         """Get theme colors - fallback for missing theme system"""
         try:
@@ -1515,41 +1384,6 @@ class IMGFactoryGUILayout:
         if right_widget:
             right_widget.setMaximumWidth(width + 60)  # Allow some flexibility
             right_widget.setMinimumWidth(max(180, width - 40))
-    
-    def update_info_labels(self, file_name="No file loaded", entry_count=0, file_size=0, format_version="Unknown"):
-        """Update information bar labels"""
-        if hasattr(self, 'file_name_label'):
-            self.file_name_label.setText(f"File: {file_name}")
-        if hasattr(self, 'entry_count_label'):
-            self.entry_count_label.setText(f"Entries: {entry_count}")
-        if hasattr(self, 'file_size_label'):
-            self.file_size_label.setText(f"Size: {file_size} bytes")
-        if hasattr(self, 'format_version_label'):
-            self.format_version_label.setText(f"Format: {format_version}")
-    
-    def enable_buttons_by_context(self, img_loaded=False, entries_selected=False):
-        """Enable/disable buttons based on context"""
-        # IMG buttons that need an IMG loaded
-        img_dependent_buttons = ["close", "rebuild", "rebuild_as", "rebuild_all", "merge", "split", "convert"]
-        
-        # Entry buttons that need entries selected
-        selection_dependent_buttons = ["export", "export_via", "quick_export", "remove", "rename", "replace", "pin_selected"]
-        
-        # Update IMG buttons
-        for btn in self.img_buttons:
-            if hasattr(btn, 'full_text'):
-                button_action = btn.full_text.lower().replace(" ", "_")
-                if button_action in img_dependent_buttons:
-                    btn.setEnabled(img_loaded)
-        
-        # Update Entry buttons
-        for btn in self.entry_buttons:
-            if hasattr(btn, 'full_text'):
-                button_action = btn.full_text.lower().replace(" ", "_")
-                if button_action in selection_dependent_buttons:
-                    btn.setEnabled(entries_selected and img_loaded)
-                elif button_action in ["import", "import_via", "update_list", "select_all", "sel_inverse", "sort"]:
-                    btn.setEnabled(img_loaded)
     
     def create_status_bar(self):
         """Create status bar - called from imgfactory.py _create_ui method"""

@@ -2,6 +2,8 @@
 # X-Seti - July14 2025 - Img Factory 1.5
 # GUI backend functionality separated from layout
 
+#This file belongs to gui/gui_layput - extra methods
+
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox, QLabel,
     QPushButton, QComboBox, QLineEdit, QProgressBar, QTextEdit, QTabWidget,
@@ -26,16 +28,16 @@ class GUIBackend:
         self.button_display_mode = ButtonDisplayMode.TEXT_ONLY  # Default: no icons
         
         # Button collections
-        self.img_buttons = []
-        self.entry_buttons = []
-        self.options_buttons = []
+        self.img_buttons = []       # _update_all_button_displays
+        self.entry_buttons = []     # _update_all_button_displays
+        self.options_buttons = []   # _update_all_button_displays
         
         # UI References
-        self.table = None
+        self.table = None           # setup_table_context_menu
         self.log = None
-        self.progress_bar = None
-        self.status_label = None
-        self.tab_widget = None
+        self.status_label = None    # possible conflict
+        self.tab_widget = None      # possible conflict
+        self.button_connections()
         
         # Theme colors cache
         self._theme_colors_cache = {}
@@ -110,219 +112,371 @@ class GUIBackend:
         
         # Return empty icon as fallback
         return QIcon()
-    
-    def create_pastel_button(self, label, action_type, icon_name, bg_color, method_name):
-        """Create a button with pastel coloring and proper display mode handling"""
-        btn = QPushButton()
-        btn.setMaximumHeight(22)
-        btn.setMinimumHeight(20)
-        
-        # Store button properties
-        btn.full_text = label
-        btn.short_text = self._get_short_text(label)
-        btn.icon_name = icon_name
-        btn.action_type = action_type
-        btn.method_name = method_name
-        
-        # Apply initial display based on current mode
-        self._update_button_display(btn)
-        
-        # Apply pastel styling
-        btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {bg_color};
-                border: 1px solid #cccccc;
-                border-radius: 3px;
-                padding: 2px 6px;
-                font-size: 8pt;
-                font-weight: bold;
-                color: #333333;
-            }}
-            QPushButton:hover {{
-                background-color: {self._lighten_color(bg_color, 0.1)};
-                border: 1px solid #aaaaaa;
-            }}
-            QPushButton:pressed {{
-                background-color: {self._darken_color(bg_color, 0.1)};
-                border: 1px solid #888888;
-            }}
-        """)
-        
-        # Connect to method if it exists
-        if hasattr(self.main_window, method_name):
-            btn.clicked.connect(getattr(self.main_window, method_name))
-        else:
-            # Log missing method and connect placeholder
-            if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"⚠️ Missing method: {method_name}")
-            btn.clicked.connect(lambda: self._placeholder_function(method_name))
-        
-        return btn
-    
-    def _placeholder_function(self, method_name):
-        """Placeholder for missing methods"""
-        if hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"⚠️ Method '{method_name}' not implemented")
-    
-    def _get_short_text(self, label):
-        """Get short text for button"""
-        short_text_map = {
-            "New": "New",
-            "Open": "Open", 
-            "Close": "Close",
-            "Close All": "Close All",
-            "Rebuild": "Rebuild",
-            "Rebuild As": "Rebuild As",
-            "Rebuild All": "Rebuild All",
-            "Merge": "Merge",
-            "Split": "Split",
-            "Convert": "Convert",
-            "Import": "Import",
-            "Import via": "Import>",
-            "🔄 Refresh": "Refresh",
-            "Export": "Export",
-            "Export via": "Export>",
-            "Quick Export": "Quick Export",
-            "Remove": "Remove",
-            "Remove via": "Remove>",
-            "Dump": "Dump",
-            "Pin selected": "Pin",
-            "Rename": "Rename",
-            "Replace": "Replace",
-            "Select All": "Select All",
-            "Sel Inverse": "Sel Inverse",
-            "Sort": "Sort",
-            # Editing Options
-            "Col Edit": "Col Edit",
-            "Txd Edit": "Txd Edit",
-            "Dff Edit": "Dff Edit",
-            "Ipf Edit": "Ipf Edit",
-            "IDE Edit": "IDE Edit",
-            "IPL Edit": "IPL Edit",
-            "Dat Edit": "Dat Edit",
-            "Zons Cull Ed": "Zons Cull",
-            "Weap Edit": "Weap Edit",
-            "Vehi Edit": "Vehi Edit",
-            "Peds Edit": "Peds Edit",
-            "Radar Map": "Radar Map",
-            "Paths Map": "Paths Map",
-            "Waterpro": "Waterpro",
-            "Weather": "Weather",
-            "Handling": "Handling",
-            "Objects": "Objects",
-        }
-        
-        return short_text_map.get(label, label)
-    
-    def _lighten_color(self, color, factor):
-        """Lighten a hex color by factor (0.0 to 1.0)"""
-        try:
-            color = color.lstrip('#')
-            r, g, b = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
-            
-            r = min(255, int(r + (255 - r) * factor))
-            g = min(255, int(g + (255 - g) * factor))
-            b = min(255, int(b + (255 - b) * factor))
-            
-            return f"#{r:02x}{g:02x}{b:02x}"
-        except:
-            return color
-    
-    def _darken_color(self, color, factor):
-        """Darken a hex color by factor (0.0 to 1.0)"""
-        try:
-            color = color.lstrip('#')
-            r, g, b = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
-            
-            r = max(0, int(r * (1 - factor)))
-            g = max(0, int(g * (1 - factor)))
-            b = max(0, int(b * (1 - factor)))
-            
-            return f"#{r:02x}{g:02x}{b:02x}"
-        except:
-            return color
-    
-    def get_theme_colors(self, theme_name="default"):
-        """Get theme colors with caching"""
-        if theme_name in self._theme_colors_cache:
-            return self._theme_colors_cache[theme_name]
-        
-        # Default theme colors
-        colors = {
-            'background': 'f5f5f5',
-            'text': '333333',
-            'accent': '2196f3',
-            'splitter_color_background': '777777',
-            'splitter_color_shine': '787878',
-            'splitter_color_shadow': '757575'
-        }
-        
-        # Try to get colors from app settings
-        try:
-            if hasattr(self.main_window, 'app_settings'):
-                settings_colors = self.main_window.app_settings.current_settings.get('theme_colors', {})
-                colors.update(settings_colors)
-        except Exception:
-            pass
-        
-        self._theme_colors_cache[theme_name] = colors
-        return colors
-    
-    def apply_settings_changes(self, settings):
-        """Apply settings changes to the GUI backend"""
-        try:
-            # Handle button display mode changes
-            if 'button_display_mode' in settings:
-                self.set_button_display_mode(settings['button_display_mode'])
-            
-            # Handle theme changes
-            if any(key.startswith('theme') for key in settings.keys()):
-                self._theme_colors_cache.clear()  # Clear cache
-            
-            # Handle other settings
-            if 'table_row_height' in settings and self.table:
-                self.table.verticalHeader().setDefaultSectionSize(settings['table_row_height'])
-            
-            return True
-            
-        except Exception as e:
-            if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Error applying backend settings: {str(e)}")
-            return False
-    
-    def update_button_states(self, img_loaded=False, entries_selected=False):
-        """Update button states based on current state"""
-        try:
-            # Define which buttons depend on what
-            img_dependent_buttons = {
-                'import', 'import_via', 'refresh', 'export', 'export_via', 
-                'quick_export', 'remove', 'remove_via', 'dump', 'select_all',
-                'sel_inverse', 'sort', 'rebuild', 'rebuild_as', 'save'
-            }
-            
-            selection_dependent_buttons = {
-                'export', 'export_via', 'quick_export', 'remove', 'remove_via',
-                'pin_selected', 'rename', 'replace'
-            }
-            
-            # Update all buttons
-            all_buttons = self.img_buttons + self.entry_buttons + self.options_buttons
-            
-            for btn in all_buttons:
-                if hasattr(btn, 'action_type'):
-                    action_type = btn.action_type
-                    
-                    if action_type in img_dependent_buttons:
-                        btn.setEnabled(img_loaded)
-                    elif action_type in selection_dependent_buttons:
-                        btn.setEnabled(img_loaded and entries_selected)
-                    else:
-                        btn.setEnabled(True)  # Always enabled buttons
-            
-        except Exception as e:
-            if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Error updating button states: {str(e)}")
 
+    # Right-click context menu for detailed file info
+    def create_file_info_popup(self, file_type, file_path, file_object):
+        """Create detailed file info popup (right-click context menu)"""
+        from PyQt6.QtWidgets import QMenu, QAction, QMessageBox
+
+        menu = QMenu(self.main_window)
+
+        # File info action
+        info_action = QAction("📋 Detailed File Information", self.main_window)
+        info_action.triggered.connect(lambda: self._show_detailed_file_info(file_type, file_path, file_object))
+        menu.addAction(info_action)
+
+        # Properties action
+        props_action = QAction("🔍 File Properties", self.main_window)
+        props_action.triggered.connect(lambda: self._show_file_properties(file_type, file_path, file_object))
+        menu.addAction(props_action)
+
+        menu.addSeparator()
+
+        # File operations
+        if file_type == "IMG":
+            validate_action = QAction("✅ Validate IMG", self.main_window)
+            validate_action.triggered.connect(lambda: self.main_window.validate_img())
+            menu.addAction(validate_action)
+
+        return menu
+
+    def _show_detailed_file_info(self, file_type, file_path, file_object):
+        """Show detailed file information dialog"""
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QTextEdit, QDialogButtonBox
+
+        dialog = QDialog(self.main_window)
+        dialog.setWindowTitle(f"{file_type} File Information")
+        dialog.setMinimumSize(500, 400)
+
+        layout = QVBoxLayout(dialog)
+
+        # File path
+        path_label = QLabel(f"<b>File Path:</b> {file_path}")
+        path_label.setWordWrap(True)
+        layout.addWidget(path_label)
+
+        # File details
+        details_text = QTextEdit()
+        details_text.setReadOnly(True)
+
+        # Format details based on file type
+        if file_type == "IMG" and file_object:
+            details = f"""
+    File Format: {file_object.version.name if hasattr(file_object, 'version') else 'Unknown'}
+    Total Entries: {len(file_object.entries) if hasattr(file_object, 'entries') else 0}
+    File Size: {os.path.getsize(file_path) if os.path.exists(file_path) else 0} bytes
+    Creation Date: {os.path.getctime(file_path) if os.path.exists(file_path) else 'Unknown'}
+            """
+            details_text.setPlainText(details)
+
+        layout.addWidget(details_text)
+
+        # Buttons
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+        buttons.accepted.connect(dialog.accept)
+        layout.addWidget(buttons)
+
+        dialog.exec()
+
+    def _show_file_properties(self, file_type, file_path, file_object):
+        """Show file properties dialog"""
+        from PyQt6.QtWidgets import QMessageBox
+
+        if os.path.exists(file_path):
+            stat = os.stat(file_path)
+            size = stat.st_size
+            modified = stat.st_mtime
+
+            from datetime import datetime
+            mod_time = datetime.fromtimestamp(modified).strftime("%Y-%m-%d %H:%M:%S")
+
+            QMessageBox.information(
+                self.main_window,
+                f"{file_type} File Properties",
+                f"File: {os.path.basename(file_path)}\n"
+                f"Path: {file_path}\n"
+                f"Size: {size:,} bytes\n"
+                f"Modified: {mod_time}\n"
+                f"Type: {file_type} Archive"
+            )
+        else:
+            QMessageBox.warning(self.main_window, "File Not Found", f"File not found: {file_path}")
+
+    # Update table context menu to include file info
+    def setup_table_context_menu(self):
+        """Setup context menu for the table"""
+        if hasattr(self, 'table'):
+            self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            self.table.customContextMenuRequested.connect(self._show_table_context_menu)
+
+    def _show_table_context_menu(self, position):
+        """Show context menu for table"""
+        if hasattr(self, 'table'):
+            # Get current file info
+            current_type = self._get_current_file_type()
+            current_file = self._get_current_file()
+
+            if current_file:
+                menu = self.create_file_info_popup(current_type, current_file.get('path', ''), current_file.get('object'))
+                menu.exec(self.table.mapToGlobal(position))
+
+    def _get_current_file_type(self):
+        """Get currently selected file type"""
+        if hasattr(self, 'main_type_tabs'):
+            index = self.main_type_tabs.currentIndex()
+            return ["IMG", "COL", "TXD"][index] if 0 <= index < 3 else "IMG"
+        return "IMG"
+
+    def _get_current_file(self):
+        """Get current file information"""
+        # Return current file info from main window
+        if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
+            return {
+                'path': self.main_window.current_img.file_path,
+                'object': self.main_window.current_img
+            }
+        return None
+
+    def button_connections(self):
+        """all button connections"""
+        try:
+            from PyQt6.QtWidgets import QPushButton
+
+            # Find all buttons and fix their connections
+            all_buttons = self.findChildren(QPushButton)
+
+            for btn in all_buttons:
+                btn_text = btn.text()
+
+                # Change "Update List" to "Refresh"
+                if any(text in btn_text.lower() for text in ["update list", "update lst"]):
+                    btn.setText("🔄 Refresh")
+                    try:
+                        btn.clicked.disconnect()
+                    except:
+                        pass
+                    btn.clicked.connect(self.refresh_table)
+                    self.log_message(f"🔧 Changed '{btn_text}' to 'Refresh'")
+
+                # Fix export button connections
+                elif "Export via" in btn_text:
+                    try:
+                        btn.clicked.disconnect()
+                    except:
+                        pass
+                    btn.clicked.connect(self.export_selected_via)
+                    self.log_message(f"🔧 Fixed '{btn_text}' button")
+
+                elif "Quick" in btn_text and "Export" in btn_text:
+                    try:
+                        btn.clicked.disconnect()
+                    except:
+                        pass
+                    btn.clicked.connect(self.quick_export_selected)
+                    self.log_message(f"🔧 Fixed '{btn_text}' button")
+
+            return True
+
+        except Exception as e:
+            self.log_message(f"❌ Error fixing buttons: {str(e)}")
+            return False
+
+    def update_info_labels(self, file_name="No file loaded", entry_count=0, file_size=0, format_version="Unknown"):
+        """Update information bar labels"""
+        if hasattr(self, 'file_name_label'):
+            self.file_name_label.setText(f"File: {file_name}")
+        if hasattr(self, 'entry_count_label'):
+            self.entry_count_label.setText(f"Entries: {entry_count}")
+        if hasattr(self, 'file_size_label'):
+            self.file_size_label.setText(f"Size: {file_size} bytes")
+        if hasattr(self, 'format_version_label'):
+            self.format_version_label.setText(f"Format: {format_version}")
+
+    def enable_buttons_by_context(self, img_loaded=False, entries_selected=False):
+        """Enable/disable buttons based on context"""
+        # IMG buttons that need an IMG loaded
+        img_dependent_buttons = ["close", "rebuild", "rebuild_as", "rebuild_all", "merge", "split", "convert"]
+
+        # Entry buttons that need entries selected
+        selection_dependent_buttons = ["export", "export_via", "quick_export", "remove", "rename", "replace", "pin_selected"]
+
+        # Update IMG buttons
+        for btn in self.img_buttons:
+            if hasattr(btn, 'full_text'):
+                button_action = btn.full_text.lower().replace(" ", "_")
+                if button_action in img_dependent_buttons:
+                    btn.setEnabled(img_loaded)
+
+        # Update Entry buttons
+        for btn in self.entry_buttons:
+            if hasattr(btn, 'full_text'):
+                button_action = btn.full_text.lower().replace(" ", "_")
+                if button_action in selection_dependent_buttons:
+                    btn.setEnabled(entries_selected and img_loaded)
+                elif button_action in ["import", "import_via", "update_list", "select_all", "sel_inverse", "sort"]:
+                    btn.setEnabled(img_loaded)
+
+    def create_adaptive_button(self, label, action_type=None, icon=None, callback=None, bold=False):
+        """Create adaptive button with theme support"""
+        btn = QPushButton(label)
+
+        # Set font
+        font = btn.font()
+        if bold:
+            font.setBold(True)
+        btn.setFont(font)
+
+        # Set icon if provided
+        if icon:
+            btn.setIcon(QIcon.fromTheme(icon))
+
+        # Connect callback if provided
+        if callback:
+            btn.clicked.connect(callback)
+        else:
+            btn.setEnabled(False)  # Disable buttons without callbacks
+
+        return btn
+
+    def themed_button(self, label, action_type=None, icon=None, bold=False):
+        """Legacy method for compatibility"""
+        return self.create_adaptive_button(label, action_type, icon, None, bold)
+
+    def _update_ui_for_loaded_col(self):
+        """Update UI when COL file is loaded - FIXED to use col_tab_integration"""
+        try:
+            if hasattr(self, 'load_col_file_safely'):
+                # Use the method provided by col_tab_integration
+                from components.col_tabs_functions import update_ui_for_loaded_col
+                update_ui_for_loaded_col(self)
+            else:
+                # Fallback implementation
+                self.log_message("⚠️ COL Fintegration not fully loaded, using fallback")
+                if hasattr(self, 'gui_layout') and self.gui_layout.table:
+                    self.gui_layout.table.setRowCount(1)
+                    col_name = os.path.basename(self.current_col.file_path) if hasattr(self.current_col, 'file_path') else "Unknown"
+                    items = [
+                        (col_name, "COL", "Unknown", "0x0", "COL", "None", "Loaded")
+                    ]
+
+                    for row, item_data in enumerate(items):
+                        for col, value in enumerate(item_data):
+                            item = QTableWidgetItem(str(value))
+                            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                            self.gui_layout.table.setItem(row, col, item)
+
+                # Update status
+                if hasattr(self, 'statusBar') and self.statusBar():
+                    self.statusBar().showMessage(f"COL file loaded: {col_name}")
+
+        except Exception as e:
+            self.log_message(f"❌ Error updating UI for COL: {str(e)}")
+
+    def handle_action(self, action_name):
+        """Handle unified action signals - UPDATED with missing methods"""
+        try:
+            action_map = {
+                # File operations
+                'create_new_img': self.create_new_img,
+                'open_img_file': self.open_img_file,
+                'reload_ing': self.reload_table,
+                #placeholder button
+                'close_img_file': self.close_img_file,
+                'close_all': self.close_manager.close_all_tabs if hasattr(self, 'close_manager') else lambda: self.log_message("Close manager not available"),
+                'close_all_img': self.close_all_img,
+                # IMG operations
+                'rebuild_img': self.rebuild_img,
+                'rebuild_img_as': self.rebuild_img_as,
+                'rebuild_all_img': self.rebuild_all_img,
+                'merge_img': self.merge_img,
+                'split_img': self.split_img,
+                'convert_img_format': self.convert_img_format,
+                # Entry operations
+                'import_files': self.import_files,
+                'import_via': self.import_files_via,
+                'refresh_table': self.refresh_table,
+                'export_selected': self.export_selected,
+                'export_via': self.export_selected_via,
+                'Quick_export':self.quick_export_selected,
+                'remove_selected': self.remove_selected,
+                'remove_via': self.remove_via_entries,
+                'select_all_entries': self.select_all_entries,
+                'dump': self.dump_entries,
+                #other
+                'rename': self.rename_selected,
+                'replace': self.replace_selected,
+                'select': self.select,
+                'select_all': self.select_all_entries,
+                'Inverse': self.select_inverse,
+                'Sort': self.sort_entries,
+                'Pin selected': self.pin_selected_entries,
+
+                # System
+                #'show_search_dialog': self.show_search_dialog,
+            }
+
+            if action_name in action_map:
+                self.log_message(f"🎯 Action: {action_name}")
+                action_map[action_name]()
+            else:
+                self.log_message(f"⚠️ Method '{action_name}' not implemented")
+
+        except Exception as e:
+            self.log_message(f"❌ Action error ({action_name}): {str(e)}")
+
+    def setup_menu_connections(self):
+        """Setup menu connections - UPDATED for unified file loading"""
+        try:
+            menu_callbacks = {
+                'new_img': self.create_new_img,
+                'open_img_file': self.open_img_dialog,
+                'reload_ing': self.reload_table,
+                #placeholder button
+                'close_img': self.close_manager.close_img_file if hasattr(self, 'close_manager') else lambda: self.log_message("Close manager not available"),
+                'exit': self.close,
+                'close_all': self.close_manager.close_all_tabs if hasattr(self, 'close_manager') else lambda: self.log_message("Close manager not available"),
+                'close_all_img': self.close_all_img,
+                # IMG operations
+                'rebuild_img': self.rebuild_img,
+                'rebuild_img_as': self.rebuild_img_as,
+                'img_rebuild': self.rebuild_img,
+                'img_rebuild_as': self.rebuild_img_as,
+                'rebuild_all_img': self.rebuild_all_img,
+                'merge_img': self.merge_img,
+                'split_img': self.split_img,
+                'convert_img_format': self.convert_img_format,
+                # Entry operations
+                'entry_import': self.import_files,
+                'import_files': self.import_files,
+                'import_via': self.import_files_via,
+                'refresh_table': self.refresh_table,
+                'export_selected': self.export_selected,
+                'entry_export': self.export_selected,
+                'export_via': self.export_selected_via,
+                'Quick_export':self.quick_export_selected,
+                'entry_remove': self.remove_selected,
+                'remove_selected': self.remove_selected,
+                'remove_via': self.remove_via_entries,
+                'select_all_entries': self.select_all_entries,
+                'dump': self.dump_entries,
+                #other
+                #'find': self.show_search_dialog,
+                'rename': self.rename_selected,
+                'replace': self.replace_selected,
+                'select': self.select,
+                'select_all': self.select_all_entries,
+                'Inverse': self.select_inverse,
+                'Sort': self.sort_entries,
+                'Pin selected': self.pin_selected_entries,
+            }
+
+            if hasattr(self, 'menu_bar_system') and hasattr(self.menu_bar_system, 'set_callbacks'):
+                self.menu_bar_system.set_callbacks(menu_callbacks)
+
+            self.log_message("✅ Menu connections established (unified file loading)")
+
+        except Exception as e:
+            self.log_message(f"❌ Menu connection error: {str(e)}")
 
 # Export classes
 __all__ = [

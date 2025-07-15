@@ -59,10 +59,11 @@ from components.img_validator import IMGValidator
 from core.integration import integrate_complete_core_system
 from components.col_debug_control import COLDebugController
 from components.unified_debug_functions import integrate_all_improvements
-from components.file_extraction_functions import setup_complete_extraction_integration
+from components.file_extraction_functions import setup_complete_extraction_integration # possible conflict
 #gui-layout
 from core.remove import integrate_remove_functions
 from gui.gui_layout import IMGFactoryGUILayout
+from gui.gui_backend import ButtonDisplayMode, GUIBackend
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.menu import IMGFactoryMenuBar
 
@@ -70,7 +71,6 @@ from gui.menu import IMGFactoryMenuBar
 print("Attempting COL integration...")
 COL_INTEGRATION_AVAILABLE = False
 COL_SETUP_FUNCTION = None
-
 
 def populate_img_table(table: QTableWidget, img_file: IMGFile):
     """Populate table with IMG file entries - FIXED VERSION"""
@@ -619,7 +619,7 @@ class IMGFactory(QMainWindow):
         # Find buttons in GUI layout and update their states
         # These buttons need both an IMG and selection
         selection_dependent_buttons = [
-            'export_btn', 'export_selected_btn', 'remove_btn', 'remove_selected_btn',
+            'export_btn', 'export_selected_btn', 'remove_btn', 'remove_selected_btn', 'reload_btn',
             'extract_btn', 'quick_export_btn'
         ]
 
@@ -633,7 +633,7 @@ class IMGFactory(QMainWindow):
         # These buttons only need an IMG (no selection required) - DISABLE for COL
         img_dependent_buttons = [
             'import_btn', 'import_files_btn', 'rebuild_btn', 'close_btn',
-            'validate_btn', 'refresh_btn'
+            'validate_btn', 'refresh_btn',  'reload_btn'
         ]
 
         for btn_name in img_dependent_buttons:
@@ -877,78 +877,6 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Error populating table: {str(e)}")
 
-    def handle_action(self, action_name):
-        """Handle unified action signals - UPDATED with missing methods"""
-        try:
-            action_map = {
-                # File operations
-                'open_img_file': self.open_img_file,
-                'close_img_file': self.close_img_file,
-                'close_all': self.close_manager.close_all_tabs if hasattr(self, 'close_manager') else lambda: self.log_message("Close manager not available"),
-                'close_all_img': self.close_all_img,
-                'create_new_img': self.create_new_img,
-                'refresh_table': self.refresh_table,
-
-                # Entry operations
-                'import_files': self.import_files,
-                'export_selected': self.export_selected,
-                'remove_selected': self.remove_selected,
-                'select_all_entries': self.select_all_entries,
-
-                # IMG operations
-                'rebuild_img': self.rebuild_img,
-                'rebuild_img_as': self.rebuild_img_as,
-                'rebuild_all_img': self.rebuild_all_img,
-                'merge_img': self.merge_img,
-                'split_img': self.split_img,
-                'convert_img_format': self.convert_img_format,
-
-                # System
-                #'show_search_dialog': self.show_search_dialog,
-            }
-
-            if action_name in action_map:
-                self.log_message(f"🎯 Action: {action_name}")
-                action_map[action_name]()
-            else:
-                self.log_message(f"⚠️ Method '{action_name}' not implemented")
-
-        except Exception as e:
-            self.log_message(f"❌ Action error ({action_name}): {str(e)}")
-
-    def setup_menu_connections(self):
-        """Setup menu connections - UPDATED for unified file loading"""
-        try:
-            menu_callbacks = {
-                'new_img': self.create_new_img,
-                'open_img': self.open_file_dialog,  # UPDATED: Use unified loader
-                'close_img': self.close_manager.close_img_file if hasattr(self, 'close_manager') else lambda: self.log_message("Close manager not available"),
-                'close_all': self.close_manager.close_all_tabs if hasattr(self, 'close_manager') else lambda: self.log_message("Close manager not available"),
-                'exit': self.close,
-                'select_all': self.select_all_entries,
-                #'find': self.show_search_dialog,
-                'entry_import': self.import_files,
-                'entry_export': self.export_selected,
-                'entry_remove': self.remove_selected,
-                'img_rebuild': self.rebuild_img,
-                'img_rebuild_as': self.rebuild_img_as,
-            }
-
-            if hasattr(self, 'menu_bar_system') and hasattr(self.menu_bar_system, 'set_callbacks'):
-                self.menu_bar_system.set_callbacks(menu_callbacks)
-
-            self.log_message("✅ Menu connections established (unified file loading)")
-
-        except Exception as e:
-            self.log_message(f"❌ Menu connection error: {str(e)}")
-
-    def resizeEvent(self, event):
-        """Handle window resize to adapt button text"""
-        super().resizeEvent(event)
-        # Delegate to GUI layout
-        if hasattr(self.gui_layout, 'handle_resize_event'):
-            self.gui_layout.handle_resize_event(event)
-
     def log_message(self, message):
         """Log a message to the activity log"""
         print(f"LOG: {message}")  # Temporary - shows in console
@@ -964,62 +892,6 @@ class IMGFactory(QMainWindow):
             # Fallback - create a simple log in status bar
             if hasattr(self, 'statusBar'):
                 self.statusBar().showMessage(message)
-
-    def create_adaptive_button(self, label, action_type=None, icon=None, callback=None, bold=False):
-        """Create adaptive button with theme support"""
-        btn = QPushButton(label)
-
-        # Set font
-        font = btn.font()
-        if bold:
-            font.setBold(True)
-        btn.setFont(font)
-
-        # Set icon if provided
-        if icon:
-            btn.setIcon(QIcon.fromTheme(icon))
-
-        # Connect callback if provided
-        if callback:
-            btn.clicked.connect(callback)
-        else:
-            btn.setEnabled(False)  # Disable buttons without callbacks
-
-        return btn
-
-    def themed_button(self, label, action_type=None, icon=None, bold=False):
-        """Legacy method for compatibility"""
-        return self.create_adaptive_button(label, action_type, icon, None, bold)
-
-    def _update_ui_for_loaded_col(self):
-        """Update UI when COL file is loaded - FIXED to use col_tab_integration"""
-        try:
-            if hasattr(self, 'load_col_file_safely'):
-                # Use the method provided by col_tab_integration
-                from components.col_tabs_functions import update_ui_for_loaded_col
-                update_ui_for_loaded_col(self)
-            else:
-                # Fallback implementation
-                self.log_message("⚠️ COL Fintegration not fully loaded, using fallback")
-                if hasattr(self, 'gui_layout') and self.gui_layout.table:
-                    self.gui_layout.table.setRowCount(1)
-                    col_name = os.path.basename(self.current_col.file_path) if hasattr(self.current_col, 'file_path') else "Unknown"
-                    items = [
-                        (col_name, "COL", "Unknown", "0x0", "COL", "None", "Loaded")
-                    ]
-
-                    for row, item_data in enumerate(items):
-                        for col, value in enumerate(item_data):
-                            item = QTableWidgetItem(str(value))
-                            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                            self.gui_layout.table.setItem(row, col, item)
-
-                # Update status
-                if hasattr(self, 'statusBar') and self.statusBar():
-                    self.statusBar().showMessage(f"COL file loaded: {col_name}")
-
-        except Exception as e:
-            self.log_message(f"❌ Error updating UI for COL: {str(e)}")
 
     def create_new_img(self):
         """Show new IMG creation dialog - FIXED: No signal connections"""
