@@ -1,0 +1,110 @@
+import re
+from PyQt6.QtWidgets import (
+    QDialog, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSplitter,
+    QTableWidget, QTableWidgetItem, QTextEdit, QGroupBox, QLabel,
+    QPushButton, QComboBox, QLineEdit, QHeaderView, QAbstractItemView,
+    QMenuBar, QStatusBar, QProgressBar, QTabWidget, QCheckBox, QMessageBox
+)
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QFont, QAction, QIcon, QShortcut, QKeySequence
+from core.guisearch import AdvancedSearchDialog, SearchManager
+from typing import Optional, Dict, Any, List
+
+
+        # Filter controls
+        filter_controls = QHBoxLayout()
+        filter_combo = QComboBox()
+        filter_combo.addItems(["All Files", "DFF Models", "TXD Textures", "COL Collision", "IFP Animations"])
+        filter_controls.addWidget(QLabel("Type:"))
+        filter_controls.addWidget(filter_combo)
+        filter_layout.addLayout(filter_controls)
+
+        search_controls = QHBoxLayout()
+        search_input = QLineEdit()
+        search_input.setPlaceholderText("Search filename...")
+        search_controls.addWidget(QLabel("Search:"))
+        search_controls.addWidget(search_input)
+        filter_layout.addLayout(search_controls)
+
+        filter_box.setLayout(filter_layout)
+        right_layout.addWidget(filter_box)
+
+        # Add stretch to push everything up
+        right_layout.addStretch()
+
+
+
+        layout = QVBoxLayout(self)
+
+        # Search criteria group
+        search_group = QGroupBox("Search Criteria")
+        search_layout = QVBoxLayout(search_group)
+
+        # Search text
+        text_layout = QHBoxLayout()
+        text_layout.addWidget(QLabel("Search for:"))
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Enter search text...")
+        text_layout.addWidget(self.search_input)
+        search_layout.addLayout(text_layout)
+
+        # Search options
+        options_layout = QVBoxLayout()
+
+        self.case_sensitive_check = QCheckBox("Case sensitive")
+        options_layout.addWidget(self.case_sensitive_check)
+
+        self.whole_word_check = QCheckBox("Whole word only")
+        options_layout.addWidget(self.whole_word_check)
+
+        self.regex_check = QCheckBox("Regular expression")
+        options_layout.addWidget(self.regex_check)
+
+        search_layout.addLayout(options_layout)
+
+        # File type filter
+        type_layout = QHBoxLayout()
+        type_layout.addWidget(QLabel("File type:"))
+        self.type_combo = QComboBox()
+        self.type_combo.addItems([
+            "All Files", "Models (DFF)", "Textures (TXD)",
+            "Collision (COL)", "Animation (IFP)", "Audio (WAV)", "Scripts (SCM)"
+        ])
+        type_layout.addWidget(self.type_combo)
+        search_layout.addLayout(type_layout)
+
+        layout.addWidget(search_group)
+
+        # Results area
+        results_group = QGroupBox("Search Results")
+        results_layout = QVBoxLayout(results_group)
+
+        self.results_label = QLabel("Enter search criteria and click Find")
+        self.results_label.setStyleSheet("color: #666666; font-style: italic;")
+        results_layout.addWidget(self.results_label)
+
+        layout.addWidget(results_group)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+
+        self.find_btn = QPushButton("Find")
+        self.find_btn.clicked.connect(self._do_search)
+        self.find_btn.setDefault(True)
+        button_layout.addWidget(self.find_btn)
+
+        self.find_next_btn = QPushButton("Find Next")
+        self.find_next_btn.clicked.connect(self._find_next)
+        self.find_next_btn.setEnabled(False)
+        button_layout.addWidget(self.find_next_btn)
+
+        button_layout.addStretch()
+
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(self.close)
+        button_layout.addWidget(close_btn)
+
+        layout.addLayout(button_layout)
+
+        # Focus on search input
+        self.search_input.setFocus()

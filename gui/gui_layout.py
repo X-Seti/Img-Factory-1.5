@@ -5,14 +5,17 @@
 #first button block needs adjucting.
 #_get_short_text moved to gui_backend.py
 
+import re
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSplitter,
+    QDialog, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSplitter,
     QTableWidget, QTableWidgetItem, QTextEdit, QGroupBox, QLabel,
     QPushButton, QComboBox, QLineEdit, QHeaderView, QAbstractItemView,
-    QMenuBar, QStatusBar, QProgressBar, QTabWidget
+    QMenuBar, QStatusBar, QProgressBar, QTabWidget, QCheckBox, QMessageBox
 )
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont, QAction, QIcon
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QFont, QAction, QIcon, QShortcut, QKeySequence
+from core.guisearch import AdvancedSearchDialog, SearchManager
+from typing import Optional, Dict, Any, List
 
 class IMGFactoryGUILayout:
     """Handles the complete GUI layout for IMG Factory 1.5"""
@@ -54,7 +57,7 @@ class IMGFactoryGUILayout:
             self.load_tab_settings_from_app_settings()
 
             # Enable button icons based on settings
-            self.enable_button_icons()
+            #self.enable_button_icons()
 
         except Exception as e:
             # Don't crash on initialization issues
@@ -132,9 +135,9 @@ class IMGFactoryGUILayout:
         
         # Style the main horizontal splitter handle with theme colors
         theme_colors = self._get_theme_colors("default")
-        splitter_bg = theme_colors.get('splitter_color_background', '777777')
-        splitter_shine = theme_colors.get('splitter_color_shine', '787878')
-        splitter_shadow = theme_colors.get('splitter_color_shadow', '757575')
+        splitter_bg = theme_colors.get('splitter_color_background', 'default')
+        splitter_shine = theme_colors.get('splitter_color_shine', 'default')
+        splitter_shadow = theme_colors.get('splitter_color_shadow', 'default')
         
         self.main_splitter.setStyleSheet(f"""
             QSplitter::handle:horizontal {{
@@ -698,17 +701,17 @@ class IMGFactoryGUILayout:
         img_layout = QGridLayout()
         img_layout.setSpacing(2)
         img_buttons_data = [
-            (" New ", "new", "document-new", "#EEFAFA", "create_new_img"),
+            ("Create Img", "new", "document-new", "#EEFAFA", "create_new_img"),
             ("Open", "open", "document-open", "#E3F2FD", "open_img_file"),
             ("Reload", "reload", "document-reload", "#F9FBE7", "reload_table"),
             ("     ", "space", "placeholder", "#FEFEFE", "useless_button"),
             ("Close", "close", "window-close", "#FFF3E0", "close_img_file"),
             ("Close All", "close_all", "edit-clear", "#FFF3E0", "close_all_img"),
-            (" Rebuild ", "rebuild", "view-rebuild", "#E8F5E8", "rebuild_img"),
+            ("Rebuild", "rebuild", "view-rebuild", "#E8F5E8", "rebuild_img"),
             ("Rebuild As", "rebuild_as", "document-save-as", "#E8F5E8", "rebuild_img_as"),
             ("Rebuild All", "rebuild_all", "document-save", "#E8F5E8", "rebuild_all_img"),
-            (" Merge ", "merge", "document-merge", "#F3E5F5", "merge_img"),
-            ("Split", "split", "edit-cut", "#F3E5F5", "split_img"),
+            ("Merge", "merge", "document-merge", "#F3E5F5", "merge_img"),
+            ("Split via", "split", "edit-cut", "#F3E5F5", "split_img"),
             ("Convert", "convert", "transform", "#FFF8E1", "convert_img_format"),
         ]
         
@@ -732,15 +735,15 @@ class IMGFactoryGUILayout:
             ("Refresh", "update", "view-refresh", "#F9FBE7", "refresh_table"),
             ("Export", "export", "document-export", "#E8F5E8", "export_selected"),
             ("Export via", "export_via", "document-export", "#E8F5E8", "export_selected_via"),
-            ("Quick Export", "quick_export", "document-send", "#E8F5E8", "quick_export_selected"),
+            ("Quick Exp", "quick_export", "document-send", "#E8F5E8", "quick_export_selected"),
             ("Remove", "remove", "edit-delete", "#FFEBEE", "remove_selected"),
             ("Remove via", "remove_via", "document-remvia", "#FFEBEE", "remove_via_entries"),
             ("Dump", "dump", "document-dump", "#F3E5F5", "dump_entries"),
             ("Rename", "rename", "edit-rename", "#FFF8E1", "rename_selected"),
             ("Replace", "replace", "edit-copy", "#FFF8E1", "replace_selected"),
             ("Select All", "select_all", "edit-select-all", "#F1F8E9", "select_all_entries"),
-            ("Sel Inverse", "sel_inverse", "edit-select", "#F1F8E9", "select_inverse"),
-            ("Sort", "sort", "view-sort", "#F1F8E9", "sort_entries"),
+            ("Inverse", "sel_inverse", "edit-select", "#F1F8E9", "select_inverse"),
+            ("Sort via", "sort", "view-sort", "#F1F8E9", "sort_entries"),
             ("Pin selected", "pin_selected", "pin", "#E8EAF6", "pin_selected_entries"),
         ]
         
@@ -776,6 +779,9 @@ class IMGFactoryGUILayout:
             ("Weather", "timecyc", "timecyc", "#E0F2F1", "edit_weather"),
             ("Handling", "handling", "handling", "#E4E3ED", "edit_handling"),
             ("Objects", "ojs_breakble", "ojs-breakble", "#FFE0B2", "edit_objects"),
+            ("SCM code", "scm_code", "scm-code", "#FFD0BD", "editscm"),
+            ("GXT font", "gxt_font", "gxt-font", "#CFD0BD", "editgxt"),
+            ("Menu Edit", "menu_font", "menu-font", "#AFD0BD", "editmenu"),
         ]
         
         for i, (label, action_type, icon, color, method_name) in enumerate(options_buttons_data):
@@ -792,7 +798,7 @@ class IMGFactoryGUILayout:
         filter_box = QGroupBox("Filter & Search")
         filter_layout = QVBoxLayout()
         filter_layout.setSpacing(4)
-        
+
         # Filter controls
         filter_controls = QHBoxLayout()
         filter_combo = QComboBox()
@@ -822,9 +828,11 @@ class IMGFactoryGUILayout:
         btn.setMaximumHeight(22)
         btn.setMinimumHeight(20)
 
+        """
         # Set icon if provided
         if icon:
             btn.setIcon(QIcon.fromTheme(icon))
+        """
 
         # Apply pastel styling
         btn.setStyleSheet(f"""
@@ -913,6 +921,10 @@ class IMGFactoryGUILayout:
             "Weather": "Weather",
             "Handling": "Handling",
             "Objects": "Objects",
+            "SCM Code": "SCM Code",
+            "GXT Edit": "GXT Edit",
+            "Menu Edit": "Menu Ed",
+
         }
 
         return short_map.get(label, label)
@@ -1027,7 +1039,7 @@ class IMGFactoryGUILayout:
     def _apply_vertical_splitter_theme(self):
         """Apply theme styling to the vertical splitter"""
         theme_colors = self._get_theme_colors("default")
-        splitter_bg = theme_colors.get('splitter_color_background', '777777')
+        splitter_bg = theme_colors.get('splitter_color_background', 'default')
         
         self.left_vertical_splitter.setStyleSheet(f"""
             QSplitter::handle:vertical {{
@@ -1053,9 +1065,9 @@ class IMGFactoryGUILayout:
         return {
             'log_background': 'ffffff',
             'log_text': '333333',
-            'splitter_color_background': '777777',
-            'splitter_color_shine': '787878',
-            'splitter_color_shadow': '757575'
+            'splitter_color_background': 'default',
+            'splitter_color_shine': 'default',
+            'splitter_color_shadow': 'default'
         }
     
     def apply_table_theme(self):
@@ -1330,7 +1342,7 @@ class IMGFactoryGUILayout:
                     "button_height": button_height_spin.value(),
                     "button_font_size": button_font_size_spin.value(),
                     "button_font_family": font_combo.currentText(),
-                    "show_icons": show_icons_check.isChecked(),
+                    #"show_icons": show_icons_check.isChecked(),
                     "adaptive_button_text": adaptive_text_check.isChecked(),
                     "show_tooltips": show_tooltips_check.isChecked(),
                     "color_scheme": color_scheme_combo.currentText(),
@@ -1353,7 +1365,7 @@ class IMGFactoryGUILayout:
             button_height_spin.setValue(22)
             button_font_size_spin.setValue(8)
             font_combo.setCurrentText("Segoe UI")
-            show_icons_check.setChecked(False)
+            #show_icons_check.setChecked(False)
             adaptive_text_check.setChecked(True)
             show_tooltips_check.setChecked(True)
             color_scheme_combo.setCurrentText("Default Pastel")

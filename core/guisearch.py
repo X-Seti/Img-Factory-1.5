@@ -359,11 +359,11 @@ class AdvancedSearchDialog(QDialog):
     def _setup_ui(self):
         """Setup dialog UI"""
         layout = QVBoxLayout(self)
-        
+
         # Search criteria group
         search_group = QGroupBox("Search Criteria")
         search_layout = QVBoxLayout(search_group)
-        
+
         # Search text
         text_layout = QHBoxLayout()
         text_layout.addWidget(QLabel("Search for:"))
@@ -371,21 +371,21 @@ class AdvancedSearchDialog(QDialog):
         self.search_input.setPlaceholderText("Enter search text...")
         text_layout.addWidget(self.search_input)
         search_layout.addLayout(text_layout)
-        
+
         # Search options
         options_layout = QVBoxLayout()
-        
+
         self.case_sensitive_check = QCheckBox("Case sensitive")
         options_layout.addWidget(self.case_sensitive_check)
-        
+
         self.whole_word_check = QCheckBox("Whole word only")
         options_layout.addWidget(self.whole_word_check)
-        
+
         self.regex_check = QCheckBox("Regular expression")
         options_layout.addWidget(self.regex_check)
-        
+
         search_layout.addLayout(options_layout)
-        
+
         # File type filter
         type_layout = QHBoxLayout()
         type_layout.addWidget(QLabel("File type:"))
@@ -396,40 +396,40 @@ class AdvancedSearchDialog(QDialog):
         ])
         type_layout.addWidget(self.type_combo)
         search_layout.addLayout(type_layout)
-        
+
         layout.addWidget(search_group)
-        
+
         # Results area
         results_group = QGroupBox("Search Results")
         results_layout = QVBoxLayout(results_group)
-        
+
         self.results_label = QLabel("Enter search criteria and click Find")
         self.results_label.setStyleSheet("color: #666666; font-style: italic;")
         results_layout.addWidget(self.results_label)
-        
+
         layout.addWidget(results_group)
-        
+
         # Buttons
         button_layout = QHBoxLayout()
-        
+
         self.find_btn = QPushButton("Find")
         self.find_btn.clicked.connect(self._do_search)
         self.find_btn.setDefault(True)
         button_layout.addWidget(self.find_btn)
-        
+
         self.find_next_btn = QPushButton("Find Next")
         self.find_next_btn.clicked.connect(self._find_next)
         self.find_next_btn.setEnabled(False)
         button_layout.addWidget(self.find_next_btn)
-        
+
         button_layout.addStretch()
-        
+
         close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.close)
         button_layout.addWidget(close_btn)
-        
+
         layout.addLayout(button_layout)
-        
+
         # Focus on search input
         self.search_input.setFocus()
     
@@ -521,3 +521,8 @@ def install_search_system(main_window):
     except Exception as e:
         main_window.log_message(f"❌ Search system installation error: {e}")
         return False
+
+__all__ = [
+    'AdvancedSearchDialog',
+    'SearchManager'
+]
