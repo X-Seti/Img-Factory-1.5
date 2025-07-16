@@ -443,40 +443,6 @@ class GUIBackend:
         except Exception:
             return None
 
-    def _update_ui_for_loaded_col(self):
-        """Update UI when COL file is loaded - FIXED to use col_tab_integration"""
-        try:
-            if hasattr(self.main_window, 'load_col_file_safely'):
-                # Use the method provided by col_tab_integration
-                try:
-                    from components.col_tabs_functions import update_ui_for_loaded_col
-                    update_ui_for_loaded_col(self.main_window)
-                except ImportError:
-                    self.log_message("⚠️ COL integration not available")
-            else:
-                # Fallback implementation
-                self.log_message("⚠️ COL integration not fully loaded, using fallback")
-                if hasattr(self.main_window, 'gui_layout') and self.main_window.gui_layout.table:
-                    self.main_window.gui_layout.table.setRowCount(1)
-                    col_name = os.path.basename(self.main_window.current_col.file_path) if hasattr(self.main_window.current_col, 'file_path') else "Unknown"
-                    items = [
-                        (col_name, "COL", "Unknown", "0x0", "COL", "None", "Loaded")
-                    ]
-
-                    for row, item_data in enumerate(items):
-                        for col, value in enumerate(item_data):
-                            item = QTableWidgetItem(str(value))
-                            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                            self.main_window.gui_layout.table.setItem(row, col, item)
-
-                # Update status
-                if hasattr(self.main_window, 'statusBar') and self.main_window.statusBar():
-                    self.main_window.statusBar().showMessage(f"COL file loaded: {col_name}")
-
-        except Exception as e:
-            self.log_message(f"❌ Error updating UI for COL: {str(e)}")
-
-
 # Export classes
 __all__ = [
     'GUIBackend',

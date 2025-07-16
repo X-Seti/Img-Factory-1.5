@@ -311,6 +311,122 @@ class IMGFile:
             print(f"❌ Error creating IMG file: {e}")
             return False
 
+    def open(self) -> bool:
+        """Open IMG file for reading"""
+        if not os.path.exists(self.file_path):
+            return False
+
+        self.version = self.detect_version()
+        if self.version == IMGVersion.UNKNOWN:
+            return False
+
+        try:
+            if self.version == IMGVersion.VERSION_1:
+                return self._open_version_1()
+            elif self.version == IMGVersion.VERSION_2:
+                return self._open_version_2()
+            else:
+                return False
+        except Exception:
+            return False
+
+    def detect_version(self) -> IMGVersion:
+        """Detect IMG file version from header"""
+        if not os.path.exists(self.file_path):
+            return IMGVersion.UNKNOWN
+
+        # Check if it's a DIR file (IMG version 1)
+        if self.file_path.lower().endswith('.dir'):
+            img_path = self.file_path[:-4] + '.img'
+            if os.path.exists(img_path):
+                return IMGVersion.VERSION_1
+            return IMGVersion.UNKNOWN
+
+        # Read header to detect version
+        try:
+            with open(self.file_path, 'rb') as f:
+                header = f.read(4)
+                if len(header) < 4:
+                    return IMGVersion.UNKNOWN
+
+                # Check for version 2 (VER2 signature)
+                if header[:4] == b'VER2':
+                    return IMGVersion.VERSION_2
+
+                # Check if corresponding DIR file exists (version 1)
+                dir_path = self.file_path[:-4] + '.dir'
+                if os.path.exists(dir_path):
+                    return IMGVersion.VERSION_1
+        except Exception:
+            pass
+
+        return IMGVersion.UNKNOWN
+
+    def _open_version_2(self) -> bool:
+        """Open IMG version 2 (single file)"""
+        try:
+            with open(self.file_path, 'rb') as f:
+                # Skip VER2 header (4 bytes)
+                f.seek(4)
+                # Read entry count
+                entry_count = struct.unpack('<I', f.read(4))[0]
+
+                for i in range(entry_count):
+                    # Read entry: offset(4), size(4), name(24)
+                    entry_data = f.read(32)
+                    if len(entry_data) < 32:
+                        break
+
+                    entry_offset, entry_size = struct.unpack('<II', entry_data[:8])
+                    entry_name = entry_data[8:32].rstrip(b'\x00').decode('ascii', errors='ignore')
+
+                    if entry_name:
+                        entry = IMGEntry()
+                        entry.name = entry_name
+                        entry.offset = entry_offset * 2048  # Convert sectors to bytes
+                        entry.size = entry_size * 2048
+                        entry.set_img_file(self)
+                        self.entries.append(entry)
+
+            return True
+        except Exception:
+            return False
+
+    def _open_version_1(self) -> bool:
+        """Open IMG version 1 (DIR/IMG pair)"""
+        dir_path = self.file_path[:-4] + '.dir'
+        if not os.path.exists(dir_path):
+            return False
+
+        try:
+            with open(dir_path, 'rb') as dir_file:
+                dir_data = dir_file.read()
+
+            # Parse directory entries (32 bytes each)
+            entry_count = len(dir_data) // 32
+            for i in range(entry_count):
+                offset = i * 32
+                entry_data = dir_data[offset:offset+32]
+
+                if len(entry_data) < 32:
+                    break
+
+                # Parse entry: offset(4), size(4), name(24)
+                entry_offset, entry_size = struct.unpack('<II', entry_data[:8])
+                entry_name = entry_data[8:32].rstrip(b'\x00').decode('ascii', errors='ignore')
+
+                if entry_name:
+                    entry = IMGEntry()
+                    entry.name = entry_name
+                    entry.offset = entry_offset * 2048  # Convert sectors to bytes
+                    entry.size = entry_size * 2048
+                    entry.set_img_file(self)
+                    self.entries.append(entry)
+
+            return True
+        except Exception:
+            return False
+
     def read_entry_data(self, entry: IMGEntry) -> bytes:
         """Read data for a specific entry"""
         try:

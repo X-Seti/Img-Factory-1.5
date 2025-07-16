@@ -68,7 +68,6 @@
 ├── templates
 │   └── new_templates.json
 ├── test.dir
-├── test.img
 ├── themes
 │   ├── amiga_mui.json
 │   ├── amiga_workbench.json
@@ -1140,4 +1139,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-940 directories, 201 files
+940 directories, 200 files

@@ -1,9 +1,10 @@
-#this belongs in components/ img_version2.py - Version: 1
+#this belongs in components/ img_version2.py - Version: 2
 # X-Seti - July16 2025 - Img Factory 1.5
 
 """
 IMG Version 2 Creator - Single IMG file format
 Handles creation of VER2 IMG files with proper SA support
+FIXED: Method naming, parameter conversion, and file I/O issues
 """
 
 import os
@@ -19,9 +20,12 @@ class IMGVersion2Creator:
         self.entries = []
         self.file_path = ""
         
-    def _create_version_2(self, output_path: str, initial_size: int, compression_enabled: bool = False) -> bool:
+    def create_version_2(self, output_path: str, initial_size_mb: int, compression_enabled: bool = False) -> bool:
         """Create IMG version 2 (single file) - COMPLETE IMPLEMENTATION"""
         try:
+            # Convert MB to bytes
+            initial_size = initial_size_mb * 1024 * 1024
+            
             if not output_path.lower().endswith('.img'):
                 output_path += '.img'
 
