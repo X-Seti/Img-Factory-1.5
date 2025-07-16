@@ -50,7 +50,7 @@ from components.img_core_classes import (
     IMGEntriesTable, FilterPanel, IMGFileInfoPanel,
     TabFilterWidget, integrate_filtering, create_entries_table_panel
 )
-from components.img_creator import GameType, NewIMGDialog, IMGCreationThread
+from components.img_creator import NewIMGDialog, IMGCreationThread
 from components.img_close_functions import install_close_functions, setup_close_manager
 from components.img_formats import GameSpecificIMGDialog, IMGCreator
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog

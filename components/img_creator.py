@@ -1,27 +1,25 @@
-#this belongs in components/ img_creator.py - version 18
-# X-Seti - July06 2025 - Img Factory 1.5
-# Credit MexUK 2007 Img Factory 1.2
+#this belongs in components/ img_creator.py - Version: 2
+# X-Seti - July16 2025 - Img Factory 1.5
 
-#!/usr/bin/env python3
 """
-IMG Creator - Clean dialog for creating new IMG files
-Streamlined implementation with no conflicts
+IMG Creator - Updated with Project Folder Integration
+Uses assists_folder from settings as default output path
 """
 
 import os
-import json
+from typing import Dict, Any, Optional
 from pathlib import Path
-from typing import Dict, Optional, List, Any
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QPushButton, QLineEdit, QComboBox, QSpinBox, QCheckBox,
-    QGroupBox, QFileDialog, QMessageBox, QProgressBar
-)
-from PyQt6.QtCore import Qt, pyqtSignal, QThread
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton, 
+                           QLabel, QComboBox, QSpinBox, QCheckBox, QLineEdit, 
+                           QFileDialog, QProgressBar, QGroupBox, QGridLayout,
+                           QMessageBox, QTextEdit)
+from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QFont
 
-# Import from consolidated img_core_classes
-from components.img_core_classes import IMGFile, IMGVersion, format_file_size
+# Import updated core classes and version creators
+from components.img_core_classes import IMGFile, IMGVersion
+from components.img_version1 import create_version_1_img
+from components.img_version2 import create_version_2_img
 
 
 class GamePreset:
@@ -30,43 +28,43 @@ class GamePreset:
     PRESETS = {
         'gta3': {
             'name': 'GTA III',
+            'code': 'gta3',
             'version': IMGVersion.VERSION_1,
             'default_size': 50,
-            'max_size': 500,
             'compression': False,
-            'description': 'Original RenderWare format with DIR+IMG files'
+            'description': 'GTA III format (DIR+IMG files)'
         },
         'gtavc': {
             'name': 'GTA Vice City', 
+            'code': 'gtavc',
             'version': IMGVersion.VERSION_1,
-            'default_size': 75,
-            'max_size': 750,
+            'default_size': 100,
             'compression': False,
-            'description': 'Enhanced V1 format with improved DIR handling'
+            'description': 'Vice City format (DIR+IMG files)'
         },
         'gtasa': {
             'name': 'GTA San Andreas',
+            'code': 'gtasa', 
             'version': IMGVersion.VERSION_2,
-            'default_size': 150,
-            'max_size': 2048,
-            'compression': True,
-            'description': 'V2 format with integrated header and compression'
+            'default_size': 200,
+            'compression': False,
+            'description': 'San Andreas format (Single IMG file)'
         },
-        'bully': {
-            'name': 'Bully',
+        'gtaiv': {
+            'name': 'GTA IV',
+            'code': 'gtaiv',
             'version': IMGVersion.VERSION_2,
-            'default_size': 100,
-            'max_size': 1024,
+            'default_size': 500,
             'compression': True,
-            'description': 'Modified V2 format for Bully game engine'
+            'description': 'GTA IV format (Single IMG file with compression)'
         },
         'custom': {
-            'name': 'Custom Configuration',
+            'name': 'Custom Project',
+            'code': 'custom',
             'version': IMGVersion.VERSION_2,
             'default_size': 100,
-            'max_size': 4096,
             'compression': False,
-            'description': 'Custom settings for advanced users'
+            'description': 'Custom format for modding projects'
         }
     }
     
@@ -82,88 +80,90 @@ class GamePreset:
 
 
 class NewIMGDialog(QDialog):
-    """Clean dialog for creating new IMG files"""
+    """Dialog for creating new IMG files - Updated with Project Folder Integration"""
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Create New IMG Archive")
-        self.setModal(True)
-        self.setFixedSize(480, 420)
-        
         self.selected_preset = None
         self.output_path = ""
+        self.creation_thread = None
+        self.main_window = parent  # Store reference to get settings
         
-        self._setup_ui()
-        self._connect_signals()
-        self._load_preset('gtasa')  # Default to GTA SA
+        self.setWindowTitle("Create New IMG File")
+        self.setModal(True)
+        self.setMinimumSize(500, 400)
+        
+        self.setup_ui()
+        self.load_project_folder_default()  # NEW: Load project folder as default
     
-    def _setup_ui(self):
-        """Setup the user interface"""
-        layout = QVBoxLayout(self)
-        layout.setSpacing(10)
-        
-        # Title
-        title = QLabel("🏭 Create New IMG Archive")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet("font-size: 16px; font-weight: bold; color: #2E7D32; margin: 10px;")
-        layout.addWidget(title)
+    def setup_ui(self):
+        """Setup dialog UI"""
+        layout = QVBoxLayout()
         
         # Game preset selection
         preset_group = QGroupBox("Game Preset")
-        preset_layout = QFormLayout(preset_group)
+        preset_layout = QVBoxLayout()
         
         self.preset_combo = QComboBox()
         for code, preset in GamePreset.get_all_presets().items():
-            self.preset_combo.addItem(preset['name'], code)
-        preset_layout.addRow("Target Game:", self.preset_combo)
+            self.preset_combo.addItem(f"{preset['name']} - {preset['description']}", code)
         
-        self.desc_label = QLabel()
-        self.desc_label.setWordWrap(True)
-        self.desc_label.setStyleSheet("color: #666; font-style: italic;")
-        preset_layout.addRow("Description:", self.desc_label)
+        self.preset_combo.currentTextChanged.connect(self._on_preset_changed)
+        preset_layout.addWidget(self.preset_combo)
         
+        preset_group.setLayout(preset_layout)
         layout.addWidget(preset_group)
         
-        # Creation options
-        options_group = QGroupBox("Options")
-        options_layout = QFormLayout(options_group)
+        # Output path selection - UPDATED with project folder integration
+        path_group = QGroupBox("Output Location")
+        path_layout = QVBoxLayout()
         
-        # Size
-        self.size_spin = QSpinBox()
-        self.size_spin.setRange(1, 4096)
-        self.size_spin.setSuffix(" MB")
-        options_layout.addRow("Initial Size:", self.size_spin)
+        path_row = QHBoxLayout()
+        self.path_edit = QLineEdit()
+        self.path_edit.setPlaceholderText("Select output path...")
+        self.browse_btn = QPushButton("Browse...")
+        self.browse_btn.clicked.connect(self._browse_output_path)
         
-        # Version
+        path_row.addWidget(self.path_edit)
+        path_row.addWidget(self.browse_btn)
+        path_layout.addLayout(path_row)
+        
+        # Project folder info label
+        self.project_info_label = QLabel("📁 Using project folder from settings")
+        self.project_info_label.setStyleSheet("color: #666; font-size: 9pt;")
+        path_layout.addWidget(self.project_info_label)
+        
+        path_group.setLayout(path_layout)
+        layout.addWidget(path_group)
+        
+        # Settings group
+        settings_group = QGroupBox("IMG Settings")
+        settings_layout = QGridLayout()
+        
+        # Version selection
+        settings_layout.addWidget(QLabel("Version:"), 0, 0)
         self.version_combo = QComboBox()
         self.version_combo.addItem("Version 1 (DIR+IMG)", IMGVersion.VERSION_1)
-        self.version_combo.addItem("Version 2 (Single File)", IMGVersion.VERSION_2)
-        options_layout.addRow("IMG Version:", self.version_combo)
+        self.version_combo.addItem("Version 2 (Single IMG)", IMGVersion.VERSION_2)
+        settings_layout.addWidget(self.version_combo, 0, 1)
         
-        # Compression
-        self.compression_check = QCheckBox("Enable compression")
-        options_layout.addRow("Compression:", self.compression_check)
+        # Size setting
+        settings_layout.addWidget(QLabel("Initial Size (MB):"), 1, 0)
+        self.size_spin = QSpinBox()
+        self.size_spin.setRange(1, 2000)
+        self.size_spin.setValue(100)
+        settings_layout.addWidget(self.size_spin, 1, 1)
         
-        # Structure
-        self.structure_check = QCheckBox("Create basic structure")
-        self.structure_check.setChecked(True)
-        options_layout.addRow("Structure:", self.structure_check)
+        # Compression option
+        self.compression_check = QCheckBox("Enable Compression")
+        settings_layout.addWidget(self.compression_check, 2, 0, 1, 2)
         
-        layout.addWidget(options_group)
+        # Structure option
+        self.structure_check = QCheckBox("Create Basic Directory Structure")
+        settings_layout.addWidget(self.structure_check, 3, 0, 1, 2)
         
-        # Output path
-        path_group = QGroupBox("Output File")
-        path_layout = QHBoxLayout(path_group)
-        
-        self.path_edit = QLineEdit()
-        self.path_edit.setPlaceholderText("Select output location...")
-        path_layout.addWidget(self.path_edit)
-        
-        self.browse_btn = QPushButton("Browse...")
-        self.browse_btn.clicked.connect(self._browse_output)
-        path_layout.addWidget(self.browse_btn)
-        
-        layout.addWidget(path_group)
+        settings_group.setLayout(settings_layout)
+        layout.addWidget(settings_group)
         
         # Progress bar (hidden initially)
         self.progress_bar = QProgressBar()
@@ -172,78 +172,86 @@ class NewIMGDialog(QDialog):
         
         # Buttons
         button_layout = QHBoxLayout()
-        button_layout.addStretch()
+        self.create_btn = QPushButton("Create IMG")
+        self.create_btn.clicked.connect(self._create_img)
+        self.create_btn.setDefault(True)
         
         self.cancel_btn = QPushButton("Cancel")
         self.cancel_btn.clicked.connect(self.reject)
+        
+        button_layout.addStretch()
+        button_layout.addWidget(self.create_btn)
         button_layout.addWidget(self.cancel_btn)
         
-        self.create_btn = QPushButton("Create IMG")
-        self.create_btn.clicked.connect(self._create_img)
-        self.create_btn.setEnabled(False)
-        button_layout.addWidget(self.create_btn)
-        
         layout.addLayout(button_layout)
-    
-    def _connect_signals(self):
-        """Connect UI signals"""
-        self.preset_combo.currentTextChanged.connect(self._on_preset_changed)
-        self.path_edit.textChanged.connect(self._validate_form)
-    
-    def _load_preset(self, code: str):
-        """Load preset configuration"""
-        preset = GamePreset.get_preset(code)
-        if not preset:
-            return
+        self.setLayout(layout)
         
-        self.selected_preset = preset
-        
-        # Update UI
-        self.desc_label.setText(preset['description'])
-        self.size_spin.setValue(preset['default_size'])
-        self.size_spin.setMaximum(preset['max_size'])
-        
-        # Set version
-        version_index = 0 if preset['version'] == IMGVersion.VERSION_1 else 1
-        self.version_combo.setCurrentIndex(version_index)
-        
-        # Set compression
-        self.compression_check.setChecked(preset['compression'])
-        self.compression_check.setEnabled(preset['compression'] or code == 'custom')
+        # Set initial preset
+        self._on_preset_changed()
     
-    def _on_preset_changed(self):
-        """Handle preset selection change"""
-        code = self.preset_combo.currentData()
-        if code:
-            self._load_preset(code)
+    def load_project_folder_default(self):
+        """Load project folder from settings as default output path"""
+        try:
+            if self.main_window and hasattr(self.main_window, 'settings'):
+                # Try to get assists_folder from settings
+                assists_folder = getattr(self.main_window.settings, 'assists_folder', None)
+                if assists_folder and os.path.exists(assists_folder):
+                    self.path_edit.setText(assists_folder)
+                    self.project_info_label.setText(f"📁 Using project folder: {assists_folder}")
+                    return
+                
+                # Fallback to project_folder for compatibility
+                project_folder = self.main_window.settings.get('project_folder')
+                if project_folder and os.path.exists(project_folder):
+                    self.path_edit.setText(project_folder)
+                    self.project_info_label.setText(f"📁 Using project folder: {project_folder}")
+                    return
+            
+            # No project folder set
+            self.project_info_label.setText("⚠️ No project folder set in settings")
+            self.project_info_label.setStyleSheet("color: #ff9800; font-size: 9pt;")
+            
+        except Exception as e:
+            print(f"❌ Error loading project folder: {e}")
+            self.project_info_label.setText("❌ Error loading project folder")
+            self.project_info_label.setStyleSheet("color: #f44336; font-size: 9pt;")
     
-    def _browse_output(self):
-        """Browse for output file"""
+    def _browse_output_path(self):
+        """Browse for output path"""
+        current_path = self.path_edit.text() or os.path.expanduser("~")
+        
         file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save IMG Archive",
-            "",
-            "IMG Archives (*.img);;All Files (*)"
+            self, 
+            "Save IMG File",
+            current_path,
+            "IMG Files (*.img);;All Files (*)"
         )
         
         if file_path:
-            if not file_path.lower().endswith('.img'):
-                file_path += '.img'
-            
             self.path_edit.setText(file_path)
-            self.output_path = file_path
+            # Update project info to show custom path
+            self.project_info_label.setText("📁 Using custom output path")
+            self.project_info_label.setStyleSheet("color: #666; font-size: 9pt;")
     
-    def _validate_form(self):
-        """Validate form inputs"""
-        has_path = bool(self.path_edit.text().strip())
-        has_preset = self.selected_preset is not None
-        
-        self.create_btn.setEnabled(has_path and has_preset)
+    def _on_preset_changed(self):
+        """Handle preset selection change"""
+        current_data = self.preset_combo.currentData()
+        if current_data:
+            self.selected_preset = GamePreset.get_preset(current_data)
+            if self.selected_preset:
+                # Update UI based on preset
+                self.version_combo.setCurrentText(
+                    f"Version {self.selected_preset['version'].value}"
+                )
+                self.size_spin.setValue(self.selected_preset['default_size'])
+                self.compression_check.setChecked(self.selected_preset['compression'])
     
     def _create_img(self):
-        """Create the IMG file"""
+        """Create IMG file"""
+        # Validate inputs
+        self.output_path = self.path_edit.text().strip()
         if not self.output_path:
-            QMessageBox.warning(self, "Warning", "Please select an output file.")
+            QMessageBox.warning(self, "Warning", "Please select an output path.")
             return
         
         if not self.selected_preset:
@@ -257,7 +265,8 @@ class NewIMGDialog(QDialog):
             'size_mb': self.size_spin.value(),
             'compression': self.compression_check.isChecked(),
             'create_structure': self.structure_check.isChecked(),
-            'preset_name': self.selected_preset['name']
+            'preset_name': self.selected_preset['name'],
+            'game_preset': self.selected_preset
         }
         
         # Show progress and disable UI
@@ -308,20 +317,29 @@ class IMGCreationThread(QThread):
             compression = self.settings['compression']
             create_structure = self.settings['create_structure']
             preset_name = self.settings['preset_name']
+            game_preset = self.settings['game_preset']
             
             self.progress_updated.emit(10, "Initializing")
             
-            # Create IMG file
-            img = IMGFile()
-            
+            # Create IMG file using appropriate version creator
             self.progress_updated.emit(30, "Creating file")
             
             creation_options = {
                 'initial_size_mb': size_mb,
-                'compression_enabled': compression
+                'compression_enabled': compression,
+                'game_preset': game_preset
             }
             
-            if not img.create_new(output_path, version, **creation_options):
+            # Use version-specific creation
+            if version == IMGVersion.VERSION_1:
+                success = create_version_1_img(output_path, size_mb, game_preset)
+            elif version == IMGVersion.VERSION_2:
+                success = create_version_2_img(output_path, size_mb, compression, game_preset)
+            else:
+                self.creation_finished.emit(False, f"Unsupported IMG version: {version}")
+                return
+            
+            if not success:
                 self.creation_finished.emit(False, "Failed to create IMG file structure")
                 return
             
@@ -330,22 +348,13 @@ class IMGCreationThread(QThread):
             # Add basic structure if requested
             if create_structure:
                 self.progress_updated.emit(80, "Creating structure")
-                
-                # Add common directories based on version
-                if version == IMGVersion.VERSION_2:
-                    # Add some basic entries for structure
-                    try:
-                        img.add_entry('vehicles/', b'')
-                        img.add_entry('peds/', b'')
-                        img.add_entry('weapons/', b'')
-                    except:
-                        pass  # Structure creation is optional
+                # TODO: Add structure creation logic here
             
             self.progress_updated.emit(100, "Complete")
             
             # Success message
             file_size = os.path.getsize(output_path) if os.path.exists(output_path) else 0
-            size_str = format_file_size(file_size)
+            size_str = f"{file_size / (1024*1024):.1f} MB"
             
             success_msg = (
                 f"IMG archive created successfully!\n\n"
@@ -368,12 +377,7 @@ class BasicIMGCreator:
     def create_simple(output_path: str, size_mb: int = 100) -> bool:
         """Create simple IMG file with minimal configuration"""
         try:
-            img = IMGFile()
-            return img.create_new(
-                output_path, 
-                IMGVersion.VERSION_2, 
-                initial_size_mb=size_mb
-            )
+            return create_version_2_img(output_path, size_mb)
         except Exception as e:
             print(f"❌ Error creating simple IMG: {e}")
             return False
@@ -386,13 +390,11 @@ class BasicIMGCreator:
             if not preset:
                 return False
             
-            img = IMGFile()
-            return img.create_new(
-                output_path,
-                preset['version'],
-                initial_size_mb=preset['default_size'],
-                compression_enabled=preset['compression']
-            )
+            if preset['version'] == IMGVersion.VERSION_1:
+                return create_version_1_img(output_path, preset['default_size'], preset)
+            else:
+                return create_version_2_img(output_path, preset['default_size'], 
+                                          preset['compression'], preset)
         except Exception as e:
             print(f"❌ Error creating with preset: {e}")
             return False
@@ -414,15 +416,10 @@ def create_basic_img(output_path: str, preset_code: str = 'gtasa') -> bool:
     return BasicIMGCreator.create_with_preset(output_path, preset_code)
 
 
-# Backward compatibility aliases for existing imports
-GameType = GamePreset  # For old imports that expect GameType
-
-
 # Export list for external imports
 __all__ = [
     'NewIMGDialog',
     'GamePreset', 
-    'GameType',  # Backward compatibility alias
     'IMGCreationThread',
     'BasicIMGCreator',
     'create_new_img_dialog',
