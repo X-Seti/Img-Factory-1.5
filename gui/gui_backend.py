@@ -1,8 +1,6 @@
-#this belongs in gui/gui_backend.py - Version: 1 
-# X-Seti - July14 2025 - Img Factory 1.5
-# GUI backend functionality separated from layout
-
-#This file belongs to gui/gui_layput - extra methods
+#this belongs in gui/gui_backend.py - Version: 2
+# X-Seti - July15 2025 - Img Factory 1.5
+# GUI backend functionality - Clean version with core function integration
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox, QLabel,
@@ -11,6 +9,19 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QIcon
+import os
+
+# Import core functions
+try:
+    from core.remove import remove_selected_function, remove_via_entries_function
+    from core.export import export_selected_function, export_via_function, quick_export_function, dump_all_function
+    from core.importer import import_files_function, import_via_function  # Much cleaner!
+    from core.utils import get_selected_entries, refresh_table
+    CORE_FUNCTIONS_AVAILABLE = True
+    print("✅ Core functions imported successfully")
+except ImportError as e:
+    print(f"⚠️ Core functions not available: {e}")
+    CORE_FUNCTIONS_AVAILABLE = False
 
 
 class ButtonDisplayMode:
@@ -21,7 +32,7 @@ class ButtonDisplayMode:
 
 
 class GUIBackend:
-    """Backend functionality for GUI layout"""
+    """Backend functionality for GUI layout - COMPLETE WITH CORE FUNCTIONS"""
     
     def __init__(self, main_window):
         self.main_window = main_window
@@ -37,10 +48,101 @@ class GUIBackend:
         self.log = None
         self.status_label = None    # possible conflict
         self.tab_widget = None      # possible conflict
-        self.button_connections()
         
         # Theme colors cache
         self._theme_colors_cache = {}
+        
+        # Initialize core functions and button connections
+        self.integrate_core_functions()
+        self.button_connections()
+    
+    def integrate_core_functions(self):
+        """Integrate core functions - PRESERVES EXISTING FUNCTIONALITY"""
+        # Check if core functions are available by trying to import them
+        try:
+            from core.remove import remove_selected_function, remove_via_entries_function
+            from core.exporter import export_selected_function, export_via_function, quick_export_function, dump_all_function
+            from core.importer import import_files_function, import_via_function
+            from core.utils import get_selected_entries, refresh_table
+            core_available = True
+        except ImportError as e:
+            self.log_message(f"⚠️ Core functions not available: {e}")
+            self._setup_fallback_methods()
+            return False
+        
+        if not core_available:
+            self.log_message("⚠️ Core functions not available - using fallback methods")
+            self._setup_fallback_methods()
+            return False
+        
+        try:
+            # Remove functions
+            if not hasattr(self, 'remove_via_entries'):
+                self.remove_via_entries = lambda: remove_via_entries_function(self.main_window)
+                
+            if not hasattr(self, 'remove_selected') or not callable(getattr(self, 'remove_selected', None)):
+                self.remove_selected = lambda: remove_selected_function(self.main_window)
+            
+            # Export functions  
+            if not hasattr(self, 'export_selected_via'):
+                self.export_selected_via = lambda: export_via_function(self.main_window)
+                
+            if not hasattr(self, 'quick_export_selected'):
+                self.quick_export_selected = lambda: quick_export_function(self.main_window)
+                
+            if not hasattr(self, 'dump_entries'):
+                self.dump_entries = lambda: dump_all_function(self.main_window)
+                
+            if not hasattr(self, 'export_selected') or not callable(getattr(self, 'export_selected', None)):
+                self.export_selected = lambda: export_selected_function(self.main_window)
+            
+            # Import functions
+            if not hasattr(self, 'import_files_via'):
+                self.import_files_via = lambda: import_via_function(self.main_window)
+                
+            if not hasattr(self, 'import_files') or not callable(getattr(self, 'import_files', None)):
+                self.import_files = lambda: import_files_function(self.main_window)
+            
+            # Utility functions
+            if not hasattr(self, 'refresh_table') or not callable(getattr(self, 'refresh_table', None)):
+                self.refresh_table = lambda: refresh_table(self.main_window)
+                
+            if not hasattr(self, 'get_selected_entries') or not callable(getattr(self, 'get_selected_entries', None)):
+                self.get_selected_entries = lambda: get_selected_entries(self.main_window)
+            
+            self.log_message("✅ Core functions integrated into GUI backend")
+            return True
+            
+        except Exception as e:
+            self.log_message(f"❌ Failed to integrate core functions: {str(e)}")
+            self._setup_fallback_methods()
+            return False
+
+    def _setup_fallback_methods(self):
+        """Setup fallback methods when core functions aren't available"""
+        # Add basic fallback implementations
+        if not hasattr(self, 'remove_via_entries'):
+            self.remove_via_entries = lambda: self.log_message("⚠️ Remove via entries not available")
+        if not hasattr(self, 'dump_entries'):
+            self.dump_entries = lambda: self.log_message("⚠️ Dump entries not available")
+        if not hasattr(self, 'export_selected_via'):
+            self.export_selected_via = lambda: self.log_message("⚠️ Export via not available")
+        if not hasattr(self, 'quick_export_selected'):
+            self.quick_export_selected = lambda: self.log_message("⚠️ Quick export not available")
+        if not hasattr(self, 'import_files_via'):
+            self.import_files_via = lambda: self.log_message("⚠️ Import via not available")
+        if not hasattr(self, 'refresh_table'):
+            self.refresh_table = lambda: self.log_message("⚠️ Refresh table not available")
+    
+    def log_message(self, message):
+        """Log message - safe fallback"""
+        try:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(message)
+            else:
+                print(f"GUI Backend: {message}")
+        except Exception:
+            print(f"GUI Backend: {message}")
     
     def set_button_display_mode(self, mode):
         """Set button display mode and update all buttons"""
@@ -66,184 +168,130 @@ class GUIBackend:
         if self.button_display_mode == ButtonDisplayMode.TEXT_ONLY:
             btn.setText(btn.short_text)
             btn.setIcon(QIcon())  # Remove icon
-            btn.setToolTip(btn.full_text)
-            
         elif self.button_display_mode == ButtonDisplayMode.ICONS_ONLY:
             btn.setText("")
             if hasattr(btn, 'icon_name'):
-                btn.setIcon(self._safe_load_icon(btn.icon_name))
-            btn.setToolTip(btn.full_text)
-            
-        elif self.button_display_mode == ButtonDisplayMode.ICONS_WITH_TEXT:
-            btn.setText(btn.short_text)
+                btn.setIcon(QIcon.fromTheme(btn.icon_name))
+        else:  # ICONS_WITH_TEXT
+            btn.setText(btn.full_text)
             if hasattr(btn, 'icon_name'):
-                btn.setIcon(self._safe_load_icon(btn.icon_name))
-            btn.setToolTip(btn.full_text)
-    
-    def _safe_load_icon(self, icon_name):
-        """Safely load icon with fallback"""
-        if not icon_name:
-            return QIcon()
-        
+                btn.setIcon(QIcon.fromTheme(btn.icon_name))
+
+    def handle_action(self, action_name):
+        """Handle unified action signals - COMPLETE with all methods"""
         try:
-            # Try theme icon first
-            theme_icon = QIcon.fromTheme(icon_name)
-            if theme_icon and not theme_icon.isNull():
-                return theme_icon
-        except Exception:
-            pass
-        
-        # Try local icon paths
-        try:
-            icon_paths = [
-                f"icons/{icon_name}.png",
-                f"gui/icons/{icon_name}.png",
-                f"resources/icons/{icon_name}.png"
-            ]
-            
-            for path in icon_paths:
-                import os
-                if os.path.exists(path):
-                    local_icon = QIcon(path)
-                    if local_icon and not local_icon.isNull():
-                        return local_icon
-        except Exception:
-            pass
-        
-        # Return empty icon as fallback
-        return QIcon()
-
-    # Right-click context menu for detailed file info
-    def create_file_info_popup(self, file_type, file_path, file_object):
-        """Create detailed file info popup (right-click context menu)"""
-        from PyQt6.QtWidgets import QMenu, QAction, QMessageBox
-
-        menu = QMenu(self.main_window)
-
-        # File info action
-        info_action = QAction("📋 Detailed File Information", self.main_window)
-        info_action.triggered.connect(lambda: self._show_detailed_file_info(file_type, file_path, file_object))
-        menu.addAction(info_action)
-
-        # Properties action
-        props_action = QAction("🔍 File Properties", self.main_window)
-        props_action.triggered.connect(lambda: self._show_file_properties(file_type, file_path, file_object))
-        menu.addAction(props_action)
-
-        menu.addSeparator()
-
-        # File operations
-        if file_type == "IMG":
-            validate_action = QAction("✅ Validate IMG", self.main_window)
-            validate_action.triggered.connect(lambda: self.main_window.validate_img())
-            menu.addAction(validate_action)
-
-        return menu
-
-    def _show_detailed_file_info(self, file_type, file_path, file_object):
-        """Show detailed file information dialog"""
-        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QTextEdit, QDialogButtonBox
-
-        dialog = QDialog(self.main_window)
-        dialog.setWindowTitle(f"{file_type} File Information")
-        dialog.setMinimumSize(500, 400)
-
-        layout = QVBoxLayout(dialog)
-
-        # File path
-        path_label = QLabel(f"<b>File Path:</b> {file_path}")
-        path_label.setWordWrap(True)
-        layout.addWidget(path_label)
-
-        # File details
-        details_text = QTextEdit()
-        details_text.setReadOnly(True)
-
-        # Format details based on file type
-        if file_type == "IMG" and file_object:
-            details = f"""
-    File Format: {file_object.version.name if hasattr(file_object, 'version') else 'Unknown'}
-    Total Entries: {len(file_object.entries) if hasattr(file_object, 'entries') else 0}
-    File Size: {os.path.getsize(file_path) if os.path.exists(file_path) else 0} bytes
-    Creation Date: {os.path.getctime(file_path) if os.path.exists(file_path) else 'Unknown'}
-            """
-            details_text.setPlainText(details)
-
-        layout.addWidget(details_text)
-
-        # Buttons
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
-        buttons.accepted.connect(dialog.accept)
-        layout.addWidget(buttons)
-
-        dialog.exec()
-
-    def _show_file_properties(self, file_type, file_path, file_object):
-        """Show file properties dialog"""
-        from PyQt6.QtWidgets import QMessageBox
-
-        if os.path.exists(file_path):
-            stat = os.stat(file_path)
-            size = stat.st_size
-            modified = stat.st_mtime
-
-            from datetime import datetime
-            mod_time = datetime.fromtimestamp(modified).strftime("%Y-%m-%d %H:%M:%S")
-
-            QMessageBox.information(
-                self.main_window,
-                f"{file_type} File Properties",
-                f"File: {os.path.basename(file_path)}\n"
-                f"Path: {file_path}\n"
-                f"Size: {size:,} bytes\n"
-                f"Modified: {mod_time}\n"
-                f"Type: {file_type} Archive"
-            )
-        else:
-            QMessageBox.warning(self.main_window, "File Not Found", f"File not found: {file_path}")
-
-    # Update table context menu to include file info
-    def setup_table_context_menu(self):
-        """Setup context menu for the table"""
-        if hasattr(self, 'table'):
-            self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-            self.table.customContextMenuRequested.connect(self._show_table_context_menu)
-
-    def _show_table_context_menu(self, position):
-        """Show context menu for table"""
-        if hasattr(self, 'table'):
-            # Get current file info
-            current_type = self._get_current_file_type()
-            current_file = self._get_current_file()
-
-            if current_file:
-                menu = self.create_file_info_popup(current_type, current_file.get('path', ''), current_file.get('object'))
-                menu.exec(self.table.mapToGlobal(position))
-
-    def _get_current_file_type(self):
-        """Get currently selected file type"""
-        if hasattr(self, 'main_type_tabs'):
-            index = self.main_type_tabs.currentIndex()
-            return ["IMG", "COL", "TXD"][index] if 0 <= index < 3 else "IMG"
-        return "IMG"
-
-    def _get_current_file(self):
-        """Get current file information"""
-        # Return current file info from main window
-        if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
-            return {
-                'path': self.main_window.current_img.file_path,
-                'object': self.main_window.current_img
+            action_map = {
+                # File operations
+                'create_new_img': getattr(self.main_window, 'create_new_img', lambda: self.log_message("Create new IMG not available")),
+                'open_img_file': getattr(self.main_window, 'open_img_file', lambda: self.log_message("Open IMG file not available")),
+                'reload_img': getattr(self.main_window, 'reload_table', lambda: self.log_message("Reload not available")),
+                
+                # Close operations
+                'close_img': getattr(self.main_window, 'close_img_file', lambda: self.log_message("Close IMG not available")),
+                'exit': getattr(self.main_window, 'close', lambda: self.log_message("Exit not available")),
+                'close_all': getattr(self.main_window.close_manager, 'close_all_tabs', lambda: self.log_message("Close manager not available")) if hasattr(self.main_window, 'close_manager') else lambda: self.log_message("Close manager not available"),
+                'close_all_img': getattr(self.main_window, 'close_all_img', lambda: self.log_message("Close all IMG not available")),
+                
+                # IMG operations
+                'rebuild_img': getattr(self.main_window, 'rebuild_img', lambda: self.log_message("Rebuild IMG not available")),
+                'rebuild_img_as': getattr(self.main_window, 'rebuild_img_as', lambda: self.log_message("Rebuild IMG as not available")),
+                'rebuild_all_img': getattr(self.main_window, 'rebuild_all_img', lambda: self.log_message("Rebuild all IMG not available")),
+                'merge_img': getattr(self.main_window, 'merge_img', lambda: self.log_message("Merge IMG not available")),
+                'split_img': getattr(self.main_window, 'split_img', lambda: self.log_message("Split IMG not available")),
+                'convert_img_format': getattr(self.main_window, 'convert_img_format', lambda: self.log_message("Convert IMG format not available")),
+                
+                # Entry operations - Core functions integrated
+                'import_files': self.import_files,
+                'import_via': self.import_files_via,
+                'refresh_table': self.refresh_table,
+                'export_selected': self.export_selected,
+                'export_via': self.export_selected_via,
+                'Quick_export': self.quick_export_selected,
+                'remove_selected': self.remove_selected,
+                'remove_via': self.remove_via_entries,
+                'dump': self.dump_entries,
+                
+                # Selection operations
+                'select_all_entries': getattr(self.main_window, 'select_all_entries', lambda: self.log_message("Select all not available")),
+                'Inverse': getattr(self.main_window, 'select_inverse', lambda: self.log_message("Select inverse not available")),
+                'Sort': getattr(self.main_window, 'sort_entries', lambda: self.log_message("Sort entries not available")),
+                
+                # Edit operations
+                'rename': getattr(self.main_window, 'rename_selected', lambda: self.log_message("Rename not available")),
+                'replace': getattr(self.main_window, 'replace_selected', lambda: self.log_message("Replace not available")),
+                'Pin selected': getattr(self.main_window, 'pin_selected_entries', lambda: self.log_message("Pin selected not available")),
             }
-        return None
+
+            if action_name in action_map:
+                self.log_message(f"🎯 Action: {action_name}")
+                action_map[action_name]()
+            else:
+                self.log_message(f"⚠️ Method '{action_name}' not implemented")
+
+        except Exception as e:
+            self.log_message(f"❌ Action error ({action_name}): {str(e)}")
+
+    def setup_menu_connections(self):
+        """Setup menu connections - UPDATED for unified file loading"""
+        try:
+            menu_callbacks = {
+                'new_img': getattr(self.main_window, 'create_new_img', lambda: self.log_message("Create new IMG not available")),
+                'open_img_file': getattr(self.main_window, 'open_img_dialog', lambda: self.log_message("Open IMG dialog not available")),
+                'reload_img': getattr(self.main_window, 'reload_table', lambda: self.log_message("Reload not available")),
+                
+                # Close operations
+                'close_img': getattr(self.main_window.close_manager, 'close_img_file', lambda: self.log_message("Close manager not available")) if hasattr(self.main_window, 'close_manager') else lambda: self.log_message("Close manager not available"),
+                'exit': getattr(self.main_window, 'close', lambda: self.log_message("Exit not available")),
+                'close_all': getattr(self.main_window.close_manager, 'close_all_tabs', lambda: self.log_message("Close manager not available")) if hasattr(self.main_window, 'close_manager') else lambda: self.log_message("Close manager not available"),
+                'close_all_img': getattr(self.main_window, 'close_all_img', lambda: self.log_message("Close all IMG not available")),
+                
+                # IMG operations
+                'rebuild_img': getattr(self.main_window, 'rebuild_img', lambda: self.log_message("Rebuild IMG not available")),
+                'rebuild_img_as': getattr(self.main_window, 'rebuild_img_as', lambda: self.log_message("Rebuild IMG as not available")),
+                'rebuild_all_img': getattr(self.main_window, 'rebuild_all_img', lambda: self.log_message("Rebuild all IMG not available")),
+                'merge_img': getattr(self.main_window, 'merge_img', lambda: self.log_message("Merge IMG not available")),
+                'split_img': getattr(self.main_window, 'split_img', lambda: self.log_message("Split IMG not available")),
+                'convert_img_format': getattr(self.main_window, 'convert_img_format', lambda: self.log_message("Convert IMG format not available")),
+                
+                # Entry operations - Core functions
+                'entry_import': self.import_files,
+                'import_files': self.import_files,
+                'import_via': self.import_files_via,
+                'refresh_table': self.refresh_table,
+                'export_selected': self.export_selected,
+                'entry_export': self.export_selected,
+                'export_via': self.export_selected_via,
+                'Quick_export': self.quick_export_selected,
+                'entry_remove': self.remove_selected,
+                'remove_selected': self.remove_selected,
+                'remove_via': self.remove_via_entries,
+                'select_all_entries': getattr(self.main_window, 'select_all_entries', lambda: self.log_message("Select all not available")),
+                'dump': self.dump_entries,
+                
+                # Other operations
+                'rename': getattr(self.main_window, 'rename_selected', lambda: self.log_message("Rename not available")),
+                'replace': getattr(self.main_window, 'replace_selected', lambda: self.log_message("Replace not available")),
+                'select': getattr(self.main_window, 'select', lambda: self.log_message("Select not available")),
+                'Inverse': getattr(self.main_window, 'select_inverse', lambda: self.log_message("Select inverse not available")),
+                'Sort': getattr(self.main_window, 'sort_entries', lambda: self.log_message("Sort entries not available")),
+                'Pin selected': getattr(self.main_window, 'pin_selected_entries', lambda: self.log_message("Pin selected not available")),
+            }
+
+            if hasattr(self.main_window, 'menu_bar_system') and hasattr(self.main_window.menu_bar_system, 'set_callbacks'):
+                self.main_window.menu_bar_system.set_callbacks(menu_callbacks)
+
+            self.log_message("✅ Menu connections established (unified file loading)")
+
+        except Exception as e:
+            self.log_message(f"❌ Menu connection error: {str(e)}")
 
     def button_connections(self):
-        """all button connections"""
+        """Fix button connections and text"""
         try:
             from PyQt6.QtWidgets import QPushButton
 
             # Find all buttons and fix their connections
-            all_buttons = self.findChildren(QPushButton)
+            all_buttons = self.main_window.findChildren(QPushButton)
 
             for btn in all_buttons:
                 btn_text = btn.text()
@@ -275,6 +323,7 @@ class GUIBackend:
                     btn.clicked.connect(self.quick_export_selected)
                     self.log_message(f"🔧 Fixed '{btn_text}' button")
 
+            self.log_message("✅ Button connections fixed")
             return True
 
         except Exception as e:
@@ -283,38 +332,44 @@ class GUIBackend:
 
     def update_info_labels(self, file_name="No file loaded", entry_count=0, file_size=0, format_version="Unknown"):
         """Update information bar labels"""
-        if hasattr(self, 'file_name_label'):
-            self.file_name_label.setText(f"File: {file_name}")
-        if hasattr(self, 'entry_count_label'):
-            self.entry_count_label.setText(f"Entries: {entry_count}")
-        if hasattr(self, 'file_size_label'):
-            self.file_size_label.setText(f"Size: {file_size} bytes")
-        if hasattr(self, 'format_version_label'):
-            self.format_version_label.setText(f"Format: {format_version}")
+        try:
+            if hasattr(self.main_window, 'file_name_label'):
+                self.main_window.file_name_label.setText(f"File: {file_name}")
+            if hasattr(self.main_window, 'entry_count_label'):
+                self.main_window.entry_count_label.setText(f"Entries: {entry_count}")
+            if hasattr(self.main_window, 'file_size_label'):
+                self.main_window.file_size_label.setText(f"Size: {file_size} bytes")
+            if hasattr(self.main_window, 'format_version_label'):
+                self.main_window.format_version_label.setText(f"Format: {format_version}")
+        except Exception as e:
+            self.log_message(f"❌ Error updating info labels: {str(e)}")
 
     def enable_buttons_by_context(self, img_loaded=False, entries_selected=False):
         """Enable/disable buttons based on context"""
-        # IMG buttons that need an IMG loaded
-        img_dependent_buttons = ["close", "rebuild", "rebuild_as", "rebuild_all", "merge", "split", "convert"]
+        try:
+            # IMG buttons that need an IMG loaded
+            img_dependent_buttons = ["close", "rebuild", "rebuild_as", "rebuild_all", "merge", "split", "convert"]
 
-        # Entry buttons that need entries selected
-        selection_dependent_buttons = ["export", "export_via", "quick_export", "remove", "rename", "replace", "pin_selected"]
+            # Entry buttons that need entries selected
+            selection_dependent_buttons = ["export", "export_via", "quick_export", "remove", "rename", "replace", "pin_selected"]
 
-        # Update IMG buttons
-        for btn in self.img_buttons:
-            if hasattr(btn, 'full_text'):
-                button_action = btn.full_text.lower().replace(" ", "_")
-                if button_action in img_dependent_buttons:
-                    btn.setEnabled(img_loaded)
+            # Update IMG buttons
+            for btn in self.img_buttons:
+                if hasattr(btn, 'full_text'):
+                    button_action = btn.full_text.lower().replace(" ", "_")
+                    if button_action in img_dependent_buttons:
+                        btn.setEnabled(img_loaded)
 
-        # Update Entry buttons
-        for btn in self.entry_buttons:
-            if hasattr(btn, 'full_text'):
-                button_action = btn.full_text.lower().replace(" ", "_")
-                if button_action in selection_dependent_buttons:
-                    btn.setEnabled(entries_selected and img_loaded)
-                elif button_action in ["import", "import_via", "update_list", "select_all", "sel_inverse", "sort"]:
-                    btn.setEnabled(img_loaded)
+            # Update Entry buttons
+            for btn in self.entry_buttons:
+                if hasattr(btn, 'full_text'):
+                    button_action = btn.full_text.lower().replace(" ", "_")
+                    if button_action in selection_dependent_buttons:
+                        btn.setEnabled(entries_selected and img_loaded)
+                    elif button_action in ["import", "import_via", "refresh", "select_all", "sel_inverse", "sort"]:
+                        btn.setEnabled(img_loaded)
+        except Exception as e:
+            self.log_message(f"❌ Error enabling buttons: {str(e)}")
 
     def create_adaptive_button(self, label, action_type=None, icon=None, callback=None, bold=False):
         """Create adaptive button with theme support"""
@@ -342,19 +397,68 @@ class GUIBackend:
         """Legacy method for compatibility"""
         return self.create_adaptive_button(label, action_type, icon, None, bold)
 
+    def setup_table_context_menu(self):
+        """Setup context menu for the table"""
+        try:
+            if hasattr(self.main_window, 'table'):
+                self.main_window.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+                self.main_window.table.customContextMenuRequested.connect(self._show_table_context_menu)
+        except Exception as e:
+            self.log_message(f"❌ Error setting up table context menu: {str(e)}")
+
+    def _show_table_context_menu(self, position):
+        """Show context menu for table"""
+        try:
+            if hasattr(self.main_window, 'table'):
+                # Get current file info
+                current_type = self._get_current_file_type()
+                current_file = self._get_current_file()
+
+                if current_file and hasattr(self.main_window, 'create_file_info_popup'):
+                    menu = self.main_window.create_file_info_popup(current_type, current_file.get('path', ''), current_file.get('object'))
+                    menu.exec(self.main_window.table.mapToGlobal(position))
+        except Exception as e:
+            self.log_message(f"❌ Error showing context menu: {str(e)}")
+
+    def _get_current_file_type(self):
+        """Get currently selected file type"""
+        try:
+            if hasattr(self.main_window, 'main_type_tabs'):
+                index = self.main_window.main_type_tabs.currentIndex()
+                return ["IMG", "COL", "TXD"][index] if 0 <= index < 3 else "IMG"
+            return "IMG"
+        except Exception:
+            return "IMG"
+
+    def _get_current_file(self):
+        """Get current file information"""
+        try:
+            # Return current file info from main window
+            if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
+                return {
+                    'path': getattr(self.main_window.current_img, 'file_path', 'Unknown'),
+                    'object': self.main_window.current_img
+                }
+            return None
+        except Exception:
+            return None
+
     def _update_ui_for_loaded_col(self):
         """Update UI when COL file is loaded - FIXED to use col_tab_integration"""
         try:
-            if hasattr(self, 'load_col_file_safely'):
+            if hasattr(self.main_window, 'load_col_file_safely'):
                 # Use the method provided by col_tab_integration
-                from components.col_tabs_functions import update_ui_for_loaded_col
-                update_ui_for_loaded_col(self)
+                try:
+                    from components.col_tabs_functions import update_ui_for_loaded_col
+                    update_ui_for_loaded_col(self.main_window)
+                except ImportError:
+                    self.log_message("⚠️ COL integration not available")
             else:
                 # Fallback implementation
-                self.log_message("⚠️ COL Fintegration not fully loaded, using fallback")
-                if hasattr(self, 'gui_layout') and self.gui_layout.table:
-                    self.gui_layout.table.setRowCount(1)
-                    col_name = os.path.basename(self.current_col.file_path) if hasattr(self.current_col, 'file_path') else "Unknown"
+                self.log_message("⚠️ COL integration not fully loaded, using fallback")
+                if hasattr(self.main_window, 'gui_layout') and self.main_window.gui_layout.table:
+                    self.main_window.gui_layout.table.setRowCount(1)
+                    col_name = os.path.basename(self.main_window.current_col.file_path) if hasattr(self.main_window.current_col, 'file_path') else "Unknown"
                     items = [
                         (col_name, "COL", "Unknown", "0x0", "COL", "None", "Loaded")
                     ]
@@ -363,120 +467,15 @@ class GUIBackend:
                         for col, value in enumerate(item_data):
                             item = QTableWidgetItem(str(value))
                             item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                            self.gui_layout.table.setItem(row, col, item)
+                            self.main_window.gui_layout.table.setItem(row, col, item)
 
                 # Update status
-                if hasattr(self, 'statusBar') and self.statusBar():
-                    self.statusBar().showMessage(f"COL file loaded: {col_name}")
+                if hasattr(self.main_window, 'statusBar') and self.main_window.statusBar():
+                    self.main_window.statusBar().showMessage(f"COL file loaded: {col_name}")
 
         except Exception as e:
             self.log_message(f"❌ Error updating UI for COL: {str(e)}")
 
-    def handle_action(self, action_name):
-        """Handle unified action signals - UPDATED with missing methods"""
-        try:
-            action_map = {
-                # File operations
-                'create_new_img': self.create_new_img,
-                'open_img_file': self.open_img_file,
-                'reload_ing': self.reload_table,
-                #placeholder button
-                'close_img_file': self.close_img_file,
-                'close_all': self.close_manager.close_all_tabs if hasattr(self, 'close_manager') else lambda: self.log_message("Close manager not available"),
-                'close_all_img': self.close_all_img,
-                # IMG operations
-                'rebuild_img': self.rebuild_img,
-                'rebuild_img_as': self.rebuild_img_as,
-                'rebuild_all_img': self.rebuild_all_img,
-                'merge_img': self.merge_img,
-                'split_img': self.split_img,
-                'convert_img_format': self.convert_img_format,
-                # Entry operations
-                'import_files': self.import_files,
-                'import_via': self.import_files_via,
-                'refresh_table': self.refresh_table,
-                'export_selected': self.export_selected,
-                'export_via': self.export_selected_via,
-                'Quick_export':self.quick_export_selected,
-                'remove_selected': self.remove_selected,
-                'remove_via': self.remove_via_entries,
-                'select_all_entries': self.select_all_entries,
-                'dump': self.dump_entries,
-                #other
-                'rename': self.rename_selected,
-                'replace': self.replace_selected,
-                'select': self.select,
-                'select_all': self.select_all_entries,
-                'Inverse': self.select_inverse,
-                'Sort': self.sort_entries,
-                'Pin selected': self.pin_selected_entries,
-
-                # System
-                #'show_search_dialog': self.show_search_dialog,
-            }
-
-            if action_name in action_map:
-                self.log_message(f"🎯 Action: {action_name}")
-                action_map[action_name]()
-            else:
-                self.log_message(f"⚠️ Method '{action_name}' not implemented")
-
-        except Exception as e:
-            self.log_message(f"❌ Action error ({action_name}): {str(e)}")
-
-    def setup_menu_connections(self):
-        """Setup menu connections - UPDATED for unified file loading"""
-        try:
-            menu_callbacks = {
-                'new_img': self.create_new_img,
-                'open_img_file': self.open_img_dialog,
-                'reload_ing': self.reload_table,
-                #placeholder button
-                'close_img': self.close_manager.close_img_file if hasattr(self, 'close_manager') else lambda: self.log_message("Close manager not available"),
-                'exit': self.close,
-                'close_all': self.close_manager.close_all_tabs if hasattr(self, 'close_manager') else lambda: self.log_message("Close manager not available"),
-                'close_all_img': self.close_all_img,
-                # IMG operations
-                'rebuild_img': self.rebuild_img,
-                'rebuild_img_as': self.rebuild_img_as,
-                'img_rebuild': self.rebuild_img,
-                'img_rebuild_as': self.rebuild_img_as,
-                'rebuild_all_img': self.rebuild_all_img,
-                'merge_img': self.merge_img,
-                'split_img': self.split_img,
-                'convert_img_format': self.convert_img_format,
-                # Entry operations
-                'entry_import': self.import_files,
-                'import_files': self.import_files,
-                'import_via': self.import_files_via,
-                'refresh_table': self.refresh_table,
-                'export_selected': self.export_selected,
-                'entry_export': self.export_selected,
-                'export_via': self.export_selected_via,
-                'Quick_export':self.quick_export_selected,
-                'entry_remove': self.remove_selected,
-                'remove_selected': self.remove_selected,
-                'remove_via': self.remove_via_entries,
-                'select_all_entries': self.select_all_entries,
-                'dump': self.dump_entries,
-                #other
-                #'find': self.show_search_dialog,
-                'rename': self.rename_selected,
-                'replace': self.replace_selected,
-                'select': self.select,
-                'select_all': self.select_all_entries,
-                'Inverse': self.select_inverse,
-                'Sort': self.sort_entries,
-                'Pin selected': self.pin_selected_entries,
-            }
-
-            if hasattr(self, 'menu_bar_system') and hasattr(self.menu_bar_system, 'set_callbacks'):
-                self.menu_bar_system.set_callbacks(menu_callbacks)
-
-            self.log_message("✅ Menu connections established (unified file loading)")
-
-        except Exception as e:
-            self.log_message(f"❌ Menu connection error: {str(e)}")
 
 # Export classes
 __all__ = [

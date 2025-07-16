@@ -436,7 +436,22 @@ class IMGFactory(QMainWindow):
         # Setup search functionality
         #self.setup_search_functionality()
 
-        #OLD -setup_complete_import_export_integration(self)
+        # Create gui_backend
+        self.gui_backend = GUIBackend(self)
+
+        # Debug: Check what methods gui_backend has
+        print("🔍 GUI Backend methods:")
+        for method in dir(self.gui_backend):
+            if not method.startswith('_') and callable(getattr(self.gui_backend, method)):
+                print(f"   - {method}")
+
+        # Debug: Check if bridging worked
+        methods_to_check = ['export_selected_via', 'quick_export_selected', 'remove_via_entries', 'dump_entries', 'import_files_via']
+        for method in methods_to_check:
+            if hasattr(self, method):
+                print(f"✅ {method} bridged successfully")
+            else:
+                print(f"❌ {method} NOT bridged")
 
         # Apply theme
         if hasattr(self.app_settings, 'themes'):
@@ -446,6 +461,30 @@ class IMGFactory(QMainWindow):
         self.log_message("IMG Factory 1.5 initialized")
 
         integrate_all_improvements(self)
+
+    def import_files_via(self):
+        """Import files via IDE or folder"""
+        try:
+            from core.importer import import_via_function
+            import_via_function(self)
+        except Exception as e:
+            self.log_message(f"❌ Import via error: {str(e)}")
+
+    def remove_via_entries(self):
+        """Remove entries via IDE file"""
+        try:
+            from core.remove import remove_via_entries_function
+            remove_via_entries_function(self)
+        except Exception as e:
+            self.log_message(f"❌ Remove via error: {str(e)}")
+
+    def dump_entries(self):
+        """Dump all entries"""
+        try:
+            from core.exporter import dump_all_function
+            dump_all_function(self)
+        except Exception as e:
+            self.log_message(f"❌ Dump error: {str(e)}")
 
     def apply_search_and_performance_fixes(self):
         """Apply search and performance fixes - CLEAN VERSION"""

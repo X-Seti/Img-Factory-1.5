@@ -1,106 +1,176 @@
+#this belongs in core/remove.py - Version: 1
+# X-Seti - July15 2025 - Img Factory 1.5
+# Remove functions for IMG Factory
+
+import os
+from PyQt6.QtWidgets import QMessageBox, QInputDialog
+from PyQt6.QtCore import QThread, pyqtSignal
+
+
+def get_selected_entries(main_window):
+    """Get currently selected entries from the table"""
+    try:
+        selected_entries = []
+        
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            table = main_window.gui_layout.table
+            selected_rows = set()
+            
+            for item in table.selectedItems():
+                selected_rows.add(item.row())
+            
+            for row in selected_rows:
+                if hasattr(main_window, 'current_img') and main_window.current_img and row < len(main_window.current_img.entries):
+                    selected_entries.append(main_window.current_img.entries[row])
+        
+        return selected_entries
+        
+    except Exception:
+        return []
+
+
 def remove_selected_function(main_window):
-    """Remove selected entries from IMG"""
+    """Remove selected entries from IMG file"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
             QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
             return
-        
-        # Get selected entries using the utility function
-        from core.utils import get_selected_entries
+
         selected_entries = get_selected_entries(main_window)
-        
         if not selected_entries:
             QMessageBox.information(main_window, "No Selection", "Please select entries to remove.")
             return
-        
-        main_window.log_message(f"📋 Found {len(selected_entries)} selected entries for removal")
-        
+
         # Confirm removal
-        entry_names = [getattr(entry, 'name', 'unknown') for entry in selected_entries]
         reply = QMessageBox.question(
-            main_window,
-            "Confirm Removal",
-            f"Are you sure you want to remove {len(selected_entries)} entries?\n\n" + 
-            "\n".join(entry_names[:5]) + 
-            ("..." if len(entry_names) > 5 else ""),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            main_window, 
+            "Confirm Removal", 
+            f"Are you sure you want to remove {len(selected_entries)} selected entries?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
         )
         
         if reply != QMessageBox.StandardButton.Yes:
             return
-        
-        # Remove entries from IMG
+
+        # Remove entries
         removed_count = 0
         for entry in selected_entries:
             try:
-                entry_name = getattr(entry, 'name', 'unknown')
-                
-                # Method 1: Use IMG's remove_entry method
                 if hasattr(main_window.current_img, 'remove_entry'):
-                    try:
-                        if main_window.current_img.remove_entry(entry):
-                            removed_count += 1
-                            main_window.log_message(f"🗑️ Removed: {entry_name}")
-                            continue
-                    except Exception as e:
-                        main_window.log_message(f"⚠️ Method 1 failed for {entry_name}: {str(e)}")
-                
-                # Method 2: Remove from entries list directly
-                if hasattr(main_window.current_img, 'entries'):
-                    try:
-                        if entry in main_window.current_img.entries:
-                            main_window.current_img.entries.remove(entry)
-                            removed_count += 1
-                            main_window.log_message(f"🗑️ Removed: {entry_name}")
-                            continue
-                    except Exception as e:
-                        main_window.log_message(f"⚠️ Method 2 failed for {entry_name}: {str(e)}")
-                
-                # Method 3: Remove by name match
-                if hasattr(main_window.current_img, 'entries'):
-                    try:
-                        original_count = len(main_window.current_img.entries)
-                        main_window.current_img.entries = [
-                            e for e in main_window.current_img.entries 
-                            if getattr(e, 'name', '').lower() != entry_name.lower()
-                        ]
-                        if len(main_window.current_img.entries) < original_count:
-                            removed_count += 1
-                            main_window.log_message(f"🗑️ Removed: {entry_name}")
-                            continue
-                    except Exception as e:
-                        main_window.log_message(f"⚠️ Method 3 failed for {entry_name}: {str(e)}")
-                
-                # If we get here, removal failed
-                main_window.log_message(f"❌ Failed to remove: {entry_name}")
-                
+                    if main_window.current_img.remove_entry(entry):
+                        removed_count += 1
+                elif hasattr(main_window.current_img, 'entries'):
+                    if entry in main_window.current_img.entries:
+                        main_window.current_img.entries.remove(entry)
+                        removed_count += 1
             except Exception as e:
-                entry_name = getattr(entry, 'name', 'unknown')
-                main_window.log_message(f"❌ Error removing {entry_name}: {str(e)}")
+                main_window.log_message(f"❌ Failed to remove entry: {str(e)}")
+
+        # Refresh table
+        if hasattr(main_window, 'refresh_table'):
+            main_window.refresh_table()
         
-        # Update table display
-        try:
-            if hasattr(main_window, 'populate_entries_table'):
-                main_window.populate_entries_table()
-            elif hasattr(main_window, '_update_ui_for_loaded_img'):
-                main_window._update_ui_for_loaded_img()
-            elif hasattr(main_window, 'refresh_table'):
-                main_window.refresh_table()
-        except Exception as e:
-            main_window.log_message(f"⚠️ Table refresh failed: {str(e)}")
-        
-        # Show results
-        main_window.log_message(f"✅ Removal complete: {removed_count}/{len(selected_entries)} entries removed")
-        
-        QMessageBox.information(
-            main_window,
-            "Removal Complete",
-            f"Successfully removed {removed_count} out of {len(selected_entries)} entries."
-        )
-        
+        main_window.log_message(f"✅ Removed {removed_count} entries")
+        QMessageBox.information(main_window, "Removal Complete", f"Successfully removed {removed_count} entries.")
+
     except Exception as e:
         main_window.log_message(f"❌ Remove error: {str(e)}")
         QMessageBox.critical(main_window, "Remove Error", f"Remove failed: {str(e)}")
+
+
+def remove_via_entries_function(main_window):
+    """Remove entries based on IDE file or pattern"""
+    try:
+        if not hasattr(main_window, 'current_img') or not main_window.current_img:
+            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
+            return
+
+        # Get IDE file or pattern
+        from PyQt6.QtWidgets import QFileDialog
+        ide_file, _ = QFileDialog.getOpenFileName(
+            main_window,
+            "Select IDE File or Pattern File",
+            "",
+            "IDE Files (*.ide);;Text Files (*.txt);;All Files (*)"
+        )
+        
+        if not ide_file:
+            return
+
+        try:
+            # Read file and get entry names
+            with open(ide_file, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+            
+            # Parse entry names (simple implementation)
+            entry_names = []
+            for line in content.splitlines():
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    # Extract filename from IDE line (basic parsing)
+                    parts = line.split(',')
+                    if len(parts) >= 2:
+                        # Second part is usually the model/texture name
+                        entry_name = parts[1].strip()
+                        if entry_name:
+                            entry_names.append(entry_name)
+            
+            if not entry_names:
+                QMessageBox.information(main_window, "No Entries Found", "No valid entry names found in the selected file.")
+                return
+
+            # Find matching entries
+            entries_to_remove = []
+            for entry in main_window.current_img.entries:
+                entry_name = getattr(entry, 'name', '')
+                if entry_name in entry_names:
+                    entries_to_remove.append(entry)
+
+            if not entries_to_remove:
+                QMessageBox.information(main_window, "No Matches", "No entries match the names in the selected file.")
+                return
+
+            # Confirm removal
+            reply = QMessageBox.question(
+                main_window,
+                "Confirm Removal",
+                f"Found {len(entries_to_remove)} entries matching the file. Remove them?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
+            # Remove entries
+            removed_count = 0
+            for entry in entries_to_remove:
+                try:
+                    if hasattr(main_window.current_img, 'remove_entry'):
+                        if main_window.current_img.remove_entry(entry):
+                            removed_count += 1
+                    elif hasattr(main_window.current_img, 'entries'):
+                        if entry in main_window.current_img.entries:
+                            main_window.current_img.entries.remove(entry)
+                            removed_count += 1
+                except Exception as e:
+                    main_window.log_message(f"❌ Failed to remove entry: {str(e)}")
+
+            # Refresh table
+            if hasattr(main_window, 'refresh_table'):
+                main_window.refresh_table()
+            
+            main_window.log_message(f"✅ Removed {removed_count} entries via IDE file")
+            QMessageBox.information(main_window, "Removal Complete", f"Successfully removed {removed_count} entries.")
+
+        except Exception as e:
+            main_window.log_message(f"❌ Error reading IDE file: {str(e)}")
+            QMessageBox.critical(main_window, "File Error", f"Error reading file: {str(e)}")
+
+    except Exception as e:
+        main_window.log_message(f"❌ Remove via error: {str(e)}")
+        QMessageBox.critical(main_window, "Remove Via Error", f"Remove via failed: {str(e)}")
 
 
 def integrate_remove_functions(main_window):
@@ -119,3 +189,12 @@ def integrate_remove_functions(main_window):
     except Exception as e:
         main_window.log_message(f"❌ Failed to integrate remove functions: {str(e)}")
         return False
+
+
+# Export functions
+__all__ = [
+    'remove_selected_function',
+    'remove_via_entries_function',
+    'get_selected_entries',
+    'integrate_remove_functions'
+]

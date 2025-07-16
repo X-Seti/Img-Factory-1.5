@@ -10,6 +10,7 @@ Settings management without demo code
 #This goes in root/ app_settings_system.py - version 54
 
 import json
+import os
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -20,7 +21,7 @@ from PyQt6.QtWidgets import (
     QFileDialog, QColorDialog, QFontDialog, QTextEdit,
     QTableWidget, QTableWidgetItem, QHeaderView
 )
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QDateTime  # Fixed: Added QDateTime
 from PyQt6.QtGui import QFont
 
 
@@ -75,6 +76,25 @@ class AppSettings:
             self.themes_dir = current_file_dir / "themes"
             self.settings_file = current_file_dir / "imgfactory.settings.json"
 
+        # Initialize default settings first
+        self.default_settings = {
+            'debug_mode': False,
+            'debug_level': 'INFO',
+            'current_theme': 'img_factory',
+            'debug_categories': ['IMG_LOADING', 'TABLE_POPULATION', 'BUTTON_ACTIONS', 'FILE_OPERATIONS'],
+            'working_gta_folder': os.path.expanduser("~/.steamapps/common/GTA Vice City/"),
+            'assists_folder': os.path.expanduser("~/Desktop/Assists/"),
+            'textures_folder': os.path.expanduser("~/Desktop/Textures/"),
+            'collisions_folder': os.path.expanduser("~/Desktop/Collisions/"),
+            'generics_folder': os.path.expanduser("~/Desktop/Generics/"),
+            'water_folder': os.path.expanduser("~/Desktop/Water/"),
+            'radar_folder': os.path.expanduser("~/Desktop/Radartiles/"),
+            'gameart_folder': os.path.expanduser("~/Desktop/Gameart/"),
+            'peds_folder': os.path.expanduser("~/Desktop/Peds/"),
+            'vehicles_folder': os.path.expanduser("~/Desktop/Vehicles/"),
+            'weapons_folder': os.path.expanduser("~/Desktop/Weapons/")
+        }
+
         # Debug: Show what we found
         print(f"🎨 Looking for themes in: {self.themes_dir}")
         print(f"📁 Themes directory exists: {self.themes_dir.exists()}")
@@ -86,6 +106,99 @@ class AppSettings:
 
         # Load themes first
         self.themes = self._load_all_themes()
+
+        # Fixed: Initialize current_settings
+        self.current_settings = self._load_settings()
+
+        # GTA Project Directories - use values from settings
+        self.working_gta_folder = self.current_settings.get('working_gta_folder', self.default_settings['working_gta_folder'])
+        self.assists_folder = self.current_settings.get('assists_folder', self.default_settings['assists_folder'])
+        self.textures_folder = self.current_settings.get('textures_folder', self.default_settings['textures_folder'])
+        self.collisions_folder = self.current_settings.get('collisions_folder', self.default_settings['collisions_folder'])
+        self.generics_folder = self.current_settings.get('generics_folder', self.default_settings['generics_folder'])
+        self.water_folder = self.current_settings.get('water_folder', self.default_settings['water_folder'])
+        self.radar_folder = self.current_settings.get('radar_folder', self.default_settings['radar_folder'])
+        self.gameart_folder = self.current_settings.get('gameart_folder', self.default_settings['gameart_folder'])
+        self.peds_folder = self.current_settings.get('peds_folder', self.default_settings['peds_folder'])
+        self.vehicles_folder = self.current_settings.get('vehicles_folder', self.default_settings['vehicles_folder'])
+        self.weapons_folder = self.current_settings.get('weapons_folder', self.default_settings['weapons_folder'])
+
+    # For creating directories if they don't exist
+    def ensure_directories_exist(self):
+        """Create all project directories if they don't exist"""
+        directories = [
+            self.working_gta_folder,
+            self.assists_folder,
+            self.textures_folder,
+            self.collisions_folder,
+            self.generics_folder,
+            self.water_folder,
+            self.radar_folder,
+            self.gameart_folder,
+            self.peds_folder,
+            self.vehicles_folder,
+            self.weapons_folder
+        ]
+
+        for directory in directories:
+            try:
+                os.makedirs(directory, exist_ok=True)
+                print(f"✅ Directory ready: {directory}")
+            except Exception as e:
+                print(f"⚠️ Could not create directory {directory}: {e}")
+
+    def get(self, key, default=None):
+        """Get setting value for core functions compatibility"""
+        # Map old 'project_folder' to assists_folder for compatibility
+        if key == 'project_folder':
+            return getattr(self, 'assists_folder', default)
+        return getattr(self, key, default)
+
+    def _load_settings(self):
+        """Load settings from file"""
+        try:
+            if self.settings_file.exists():
+                with open(self.settings_file, 'r') as f:
+                    settings = json.load(f)
+                    # Merge with defaults to ensure all keys exist
+                    merged_settings = self.default_settings.copy()
+                    merged_settings.update(settings)
+                    return merged_settings
+        except Exception as e:
+            print(f"⚠️ Could not load settings: {e}")
+
+        # Return defaults if loading failed
+        return self.default_settings.copy()
+
+    def _load_all_themes(self):
+        """Load all theme files from themes directory"""
+        themes = {}
+        try:
+            if self.themes_dir.exists():
+                for theme_file in self.themes_dir.glob("*.json"):
+                    try:
+                        with open(theme_file, 'r') as f:
+                            theme_data = json.load(f)
+                            theme_name = theme_file.stem
+                            themes[theme_name] = theme_data
+                    except Exception as e:
+                        print(f"⚠️ Could not load theme {theme_file.name}: {e}")
+        except Exception as e:
+            print(f"⚠️ Error loading themes: {e}")
+
+        return themes
+
+    def save_settings(self):
+        """Save current settings to file"""
+        try:
+            with open(self.settings_file, 'w') as f:
+                json.dump(self.current_settings, f, indent=2)
+        except Exception as e:
+            print(f"⚠️ Could not save settings: {e}")
+        # Map old 'project_folder' to assists_folder for compatibility
+        if key == 'project_folder':
+            return getattr(self, 'assists_folder', default)
+        return getattr(self, key, default)
 
         # Default settings
         self.default_settings = {

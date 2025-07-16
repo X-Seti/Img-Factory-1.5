@@ -83,6 +83,46 @@ class IMGFactoryMainWindow(QMainWindow):
         # Show window
         self.show()
     
+    def import_files_via(self):
+        """Import files via IDE or folder"""
+        try:
+            from core.importer import import_via_function
+            import_via_function(self)
+        except Exception as e:
+            self.log_message(f"❌ Import via error: {str(e)}")
+
+    def remove_via_entries(self):
+        """Remove entries via IDE file"""
+        try:
+            from core.remove import remove_via_entries_function
+            remove_via_entries_function(self)
+        except Exception as e:
+            self.log_message(f"❌ Remove via error: {str(e)}")
+
+    def dump_entries(self):
+        """Dump all entries"""
+        try:
+            from core.exporter import dump_all_function
+            dump_all_function(self)
+        except Exception as e:
+            self.log_message(f"❌ Dump error: {str(e)}")
+
+    def export_selected_via(self):
+        """Export selected via IDE"""
+        try:
+            from core.exporter import export_via_function
+            export_via_function(self)
+        except Exception as e:
+            self.log_message(f"❌ Export via error: {str(e)}")
+
+    def quick_export_selected(self):
+        """Quick export to project folder"""
+        try:
+            from core.exporter import quick_export_function
+            quick_export_function(self)
+        except Exception as e:
+            self.log_message(f"❌ Quick export error: {str(e)}")
+
     def setup_window(self):
         """Setup basic window properties"""
         self.setWindowTitle("IMG Factory 1.5")
