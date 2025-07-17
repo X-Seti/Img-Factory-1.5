@@ -70,6 +70,7 @@ from core.remove import integrate_remove_functions
 from core.shortcuts import setup_all_shortcuts, setup_debug_shortcuts
 from core.integration import integrate_complete_core_system
 from core.tables_structure import populate_img_table, populate_col_table_img_format, populate_col_table_enhanced, setup_col_table_structure
+#gui-layout
 
 #gui
 from gui.gui_backend import ButtonDisplayMode, GUIBackend
@@ -80,14 +81,112 @@ from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.menu import IMGFactoryMenuBar
 from gui.gui_context import open_col_file_dialog, open_col_batch_processor_dialog, open_col_editor_dialog, analyze_col_file_dialog
 
-# Metheds
-# load_col_file_safely
-
-
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
 COL_INTEGRATION_AVAILABLE = False
 COL_SETUP_FUNCTION = None
+
+def populate_img_table(table: QTableWidget, img_file: IMGFile):
+    """Populate table with IMG file entries - FIXED VERSION"""
+    if not img_file or not img_file.entries:
+        table.setRowCount(0)
+        return
+
+    entries = img_file.entries
+    print(f"DEBUG: Populating table with {len(entries)} entries")
+
+    # Clear existing data first
+    table.setRowCount(0)
+    table.setRowCount(len(entries))
+
+    for row, entry in enumerate(entries):
+        # Name
+        table.setItem(row, 0, QTableWidgetItem(entry.name))
+
+        # Type (file extension) - FIXED: Always use name-based detection
+        if '.' in entry.name:
+            file_type = entry.name.split('.')[-1].upper()
+        else:
+            file_type = "NO_EXT"
+
+        print(f"DEBUG: Row {row}: {entry.name} -> Type: {file_type}")
+        table.setItem(row, 1, QTableWidgetItem(file_type))
+
+        # Size (formatted)
+        try:
+            from components.img_core_classes import format_file_size
+            size_text = format_file_size(entry.size)
+        except:
+            size_text = f"{entry.size} bytes"
+        table.setItem(row, 2, QTableWidgetItem(size_text))
+
+        # Offset (hex format)
+        table.setItem(row, 3, QTableWidgetItem(f"0x{entry.offset:X}"))
+
+        # Version - Improved detection
+        version = "Unknown"
+        try:
+            if hasattr(entry, 'get_version_text') and callable(entry.get_version_text):
+                version = entry.get_version_text()
+            elif hasattr(entry, 'version') and entry.version:
+                version = str(entry.version)
+            else:
+                # Provide sensible defaults based on file type
+                if file_type in ['DFF', 'TXD']:
+                    version = "RenderWare"
+                elif file_type == 'COL':
+                    version = "COL"
+                elif file_type == 'IFP':
+                    version = "IFP"
+                elif file_type == 'WAV':
+                    version = "Audio"
+                elif file_type == 'SCM':
+                    version = "Script"
+                else:
+                    version = "Unknown"
+        except Exception as e:
+            print(f"DEBUG: Version detection error for {entry.name}: {e}")
+            version = "Unknown"
+
+        table.setItem(row, 4, QTableWidgetItem(version))
+
+        # Compression
+        compression = "None"
+        try:
+            if hasattr(entry, 'compression_type') and entry.compression_type:
+                compression = str(entry.compression_type)
+            elif hasattr(entry, 'compressed') and entry.compressed:
+                compression = "Compressed"
+        except:
+            compression = "None"
+
+        table.setItem(row, 5, QTableWidgetItem(compression))
+
+        # Status
+        status = "Ready"
+        try:
+            if hasattr(entry, 'is_new_entry') and entry.is_new_entry:
+                status = "New"
+            elif hasattr(entry, 'is_replaced') and entry.is_replaced:
+                status = "Modified"
+        except:
+            status = "Ready"
+
+        table.setItem(row, 6, QTableWidgetItem(status))
+
+        # Make items read-only
+        for col in range(7):
+            item = table.item(row, col)
+            if item:
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+
+    print(f"DEBUG: Table population complete. Table now has {table.rowCount()} rows")
+
+    # IMPORTANT: Clear any filters that might be hiding rows
+    for row in range(table.rowCount()):
+        table.setRowHidden(row, False)
+
+    print(f"DEBUG: All rows made visible")
 
 def setup_debug_mode(self):
     """Setup debug mode integration"""
@@ -231,6 +330,33 @@ class IMGLoadThread(QThread):
         except Exception as e:
             self.loading_error.emit(f"Error loading IMG file: {str(e)}")
 
+    def populate_img_table(table: QTableWidget, img_file: IMGFile):
+        """Populate table with IMG file entries"""
+        if not img_file or not img_file.entries:
+            table.setRowCount(0)
+            return
+
+        table.setRowCount(len(img_file.entries))
+
+        for row, entry in enumerate(img_file.entries):
+            # Filename
+            table.setItem(row, 0, QTableWidgetItem(entry.name))
+            # File type
+            file_type = entry.name.split('.')[-1].upper() if '.' in entry.name else "Unknown"
+            table.setItem(row, 1, QTableWidgetItem(file_type))
+            # Size
+            table.setItem(row, 2, QTableWidgetItem(format_file_size(entry.size)))
+            # Offset
+            table.setItem(row, 3, QTableWidgetItem(f"0x{entry.offset:X}"))
+            # Version
+            table.setItem(row, 4, QTableWidgetItem(str(entry.version)))
+            # Compression
+            compression = "ZLib" if hasattr(entry, 'compressed') and entry.compressed else "None"
+            table.setItem(row, 5, QTableWidgetItem(compression))
+            # Status
+            table.setItem(row, 6, QTableWidgetItem("Ready"))
+
+
 class IMGFactory(QMainWindow):
     """Main IMG Factory application window"""
 
@@ -308,7 +434,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"COL integration error: {str(e)}")
 
         try:
-            from components.file_extraction_functions import setup_complete_extraction_integration
+            from core.file_extraction import setup_complete_extraction_integration
             setup_complete_extraction_integration(self)
         except Exception as e:
             self.log_message(f"⚠️ Failed to setup extraction integration: {str(e)}")
@@ -855,7 +981,7 @@ class IMGFactory(QMainWindow):
                 self.load_img_file(file_path)
                 return True
             elif file_ext == '.col':
-                self.load_col_file_safely(file_path)
+                self._load_col_file_safely(file_path)
                 return True
 
             # If extension is ambiguous, check file content
@@ -874,7 +1000,7 @@ class IMGFactory(QMainWindow):
             # Check for COL signatures
             elif header[:4] in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
                 self.log_message(f"🔍 Detected COL file by signature")
-                self.load_col_file_safely(file_path)
+                self._load_col_file_safely(file_path)
                 return True
 
             # Try reading as IMG version 1 (no header signature)
@@ -931,6 +1057,16 @@ class IMGFactory(QMainWindow):
             self.log_message(f"❌ Error detecting file type: {str(e)}")
             return "UNKNOWN"
 
+    def _load_col_file_safely(self, file_path):
+        """Load COL file safely - REDIRECTS to col_tab_integration"""
+        try:
+            if hasattr(self, 'load_col_file_safely'):
+                # Use the method provided by col_tab_integration
+                self.load_col_file_safely(file_path)
+            else:
+                self.log_message("❌ Error loading file: 'IMGFactory' object has no attribute 'load_col_file_safely'")
+        except Exception as e:
+            self.log_message(f"❌ Error loading COL file: {str(e)}")
 
     def _load_col_as_generic_file(self, file_path):
         """Load COL as generic file when COL classes aren't available"""
@@ -960,7 +1096,7 @@ class IMGFactory(QMainWindow):
                 self._load_img_file_in_new_tab(file_path)
             elif file_type == "COL":
                 self.log_message(f"🔧 Loading COL: {os.path.basename(file_path)}")
-                self.load_col_file_safely(file_path)
+                self._load_col_file_safely(file_path)
             else:
                 self.log_message(f"❌ Unsupported file type: {file_path}")
                 QMessageBox.warning(self, "Unsupported File",
@@ -2302,7 +2438,7 @@ class IMGFactory(QMainWindow):
 
     # COL FILE OPERATIONS - KEEP 100% OF FUNCTIONALITY
 
-    def load_col_file_in_new_tab(self, file_path):
+    def _load_col_file_in_new_tab(self, file_path):
         """Load COL file in new tab with proper styling - UPDATED"""
         try:
             current_index = self.main_tab_widget.currentIndex()
@@ -2352,22 +2488,6 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             error_msg = f"Error setting up COL tab: {str(e)}"
             self.log_message(f"❌ {error_msg}")
-
-    def load_file_unified(self, file_path: str):
-        """Unified file loader - FIXED VERSION"""
-        try:
-            file_type = self._detect_file_type(file_path)
-
-            if file_type == "IMG":
-                self._load_img_file_async(file_path)
-            elif file_type == "COL":
-                # Call the imported function directly
-                load_col_file_safely(self, file_path)
-            else:
-                self.log_message(f"❌ Unsupported file type: {file_type}")
-
-        except Exception as e:
-            self.log_message(f"❌ Error loading file: {str(e)}")
 
     def _on_col_loaded(self, col_file):
         """Handle COL file loaded - UPDATED with styling"""
