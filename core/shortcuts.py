@@ -97,6 +97,7 @@ def setup_all_shortcuts(main_window): #vers 11
         setup_col_shortcuts(main_window)
         setup_search_shortcuts(main_window)
         setup_debug_shortcuts(main_window)
+        create_debug_keyboard_shortcuts(main_window)
 
         main_window.log_message("✅ All keyboard shortcuts setup complete")
         return True
@@ -166,38 +167,6 @@ def setup_col_shortcuts(main_window): #vers 11
     except Exception as e:
         main_window.log_message(f"❌ COL shortcuts setup error: {str(e)}")
         return False
-
-
-def create_debug_keyboard_shortcuts(main_window): #vers 3
-    """Create keyboard shortcuts for debug functions - CLEAN VERSION"""
-    try:
-        # F12 - Quick performance mode toggle
-        def toggle_performance():
-            """Toggle between performance and debug mode"""
-            try:
-                from components.col_core_classes import is_col_debug_enabled
-
-                if is_col_debug_enabled():
-                    main_window.performance_mode()
-                else:
-                    main_window.minimal_debug_mode()
-            except:
-                if hasattr(main_window, 'toggle_col_debug'):
-                    main_window.toggle_col_debug()
-
-        perf_shortcut = QShortcut(QKeySequence("F12"), main_window)
-        perf_shortcut.activated.connect(toggle_performance)
-
-        # Ctrl+F12 - Show debug settings
-        debug_shortcut = QShortcut(QKeySequence("Ctrl+F12"), main_window)
-        debug_shortcut.activated.connect(main_window.show_debug_settings)
-
-        main_window.log_message("✅ Debug keyboard shortcuts created")
-        main_window.log_message("⌨️ F12: Toggle performance mode")
-        main_window.log_message("⌨️ Ctrl+F12: Debug settings")
-
-    except Exception as e:
-        main_window.log_message(f"❌ Keyboard shortcuts error: {e}")
 
 
 def setup_debug_shortcuts(main_window): #vers 4

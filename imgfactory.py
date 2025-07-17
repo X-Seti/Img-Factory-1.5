@@ -64,10 +64,10 @@ from components.unified_debug_functions import integrate_all_improvements
 
 #core
 from core.file_extraction import setup_complete_extraction_integration
-from core.loadcol import load_col_file_safely
 from core.tables_structure import reset_table_styling
+from core.loadcol import load_col_file_safely
 from core.remove import integrate_remove_functions
-from core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
+from core.shortcuts import setup_all_shortcuts, setup_debug_shortcuts
 from core.integration import integrate_complete_core_system
 from core.tables_structure import populate_img_table, populate_col_table_img_format, populate_col_table_enhanced, setup_col_table_structure
 
@@ -931,16 +931,6 @@ class IMGFactory(QMainWindow):
             self.log_message(f"❌ Error detecting file type: {str(e)}")
             return "UNKNOWN"
 
-    def load_col_file_safely(self, file_path): #vers 3 - (core.loadcol)
-        """Load COL file safely - REDIRECTS to col_tab_integration"""
-        try:
-            if hasattr(self, 'load_col_file_safely'):
-                # Use the method provided by col_tab_integration
-                self.load_col_file_safely(file_path)
-            else:
-                self.log_message("❌ Error loading file: 'IMGFactory' object has no attribute 'load_col_file_safely'")
-        except Exception as e:
-            self.log_message(f"❌ Error loading COL file: {str(e)}")
 
     def _load_col_as_generic_file(self, file_path):
         """Load COL as generic file when COL classes aren't available"""
@@ -2362,6 +2352,22 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             error_msg = f"Error setting up COL tab: {str(e)}"
             self.log_message(f"❌ {error_msg}")
+
+    def load_file_unified(self, file_path: str):
+        """Unified file loader - FIXED VERSION"""
+        try:
+            file_type = self._detect_file_type(file_path)
+
+            if file_type == "IMG":
+                self._load_img_file_async(file_path)
+            elif file_type == "COL":
+                # Call the imported function directly
+                load_col_file_safely(self, file_path)
+            else:
+                self.log_message(f"❌ Unsupported file type: {file_type}")
+
+        except Exception as e:
+            self.log_message(f"❌ Error loading file: {str(e)}")
 
     def _on_col_loaded(self, col_file):
         """Handle COL file loaded - UPDATED with styling"""
