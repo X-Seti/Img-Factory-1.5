@@ -16,6 +16,32 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QPixmap, QIcon
 from datetime import datetime
 
+def add_col_status_info(img_factory_instance):
+    """Add COL-specific status information"""
+
+    # Store original status update method
+    if hasattr(img_factory_instance, 'update_status_bar'):
+        original_update_status = img_factory_instance.update_status_bar
+
+        def enhanced_update_status_bar():
+            # Call original method
+            original_update_status()
+
+            # Add COL-specific info
+            if hasattr(img_factory_instance, 'current_img') and img_factory_instance.current_img:
+                col_count = 0
+                for entry in img_factory_instance.current_img.entries:
+                    if entry.name.lower().endswith('.col'):
+                        col_count += 1
+
+                if col_count > 0:
+                    current_status = img_factory_instance.statusBar().currentMessage()
+                    enhanced_status = f"{current_status} | COL Files: {col_count}"
+                    img_factory_instance.statusBar().showMessage(enhanced_status)
+
+        # Replace the method
+        img_factory_instance.update_status_bar = enhanced_update_status_bar
+
 
 class StatusBarManager:
     """Manages status bar components and updates"""
@@ -336,6 +362,83 @@ class OperationStatusWidget(QWidget):
         
         # Auto-clear after 5 seconds
         QTimer.singleShot(5000, self.set_idle)
+
+
+class COLStatusIndicator(QWidget):
+    """Status indicator for COL operations"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setup_ui()
+        self.reset_status()
+
+    def setup_ui(self):
+        """Setup status indicator UI"""
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        # Status label
+        self.status_label = QPushButton("COL: Ready")
+        self.status_label.setFlat(True)
+        self.status_label.setMaximumHeight(20)
+        self.status_label.setStyleSheet("""
+            QPushButton {
+                background-color: #e8f5e8;
+                border: 1px solid #4caf50;
+                border-radius: 3px;
+                padding: 2px 8px;
+                font-size: 8pt;
+                color: #2e7d32;
+            }
+            QPushButton:hover {
+                background-color: #c8e6c9;
+            }
+        """)
+
+        layout.addWidget(self.status_label)
+
+    def set_status(self, status: str, status_type: str = "ready"):
+        """Set status with type-based styling"""
+        colors = {
+            "ready": {"bg": "#e8f5e8", "border": "#4caf50", "text": "#2e7d32"},
+            "working": {"bg": "#fff3e0", "border": "#ff9800", "text": "#e65100"},
+            "error": {"bg": "#ffebee", "border": "#f44336", "text": "#c62828"},
+            "success": {"bg": "#e3f2fd", "border": "#2196f3", "text": "#1565c0"}
+        }
+
+        color = colors.get(status_type, colors["ready"])
+
+        self.status_label.setText(f"COL: {status}")
+        self.status_label.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {color["bg"]};
+                border: 1px solid {color["border"]};
+                border-radius: 3px;
+                padding: 2px 8px;
+                font-size: 8pt;
+                color: {color["text"]};
+            }}
+            QPushButton:hover {{
+                background-color: {color["bg"]};
+                opacity: 0.8;
+            }}
+        """)
+
+    def reset_status(self):
+        """Reset to ready status"""
+        self.set_status("Ready", "ready")
+
+    def set_working(self, operation: str):
+        """Set working status"""
+        self.set_status(f"Working: {operation}", "working")
+
+    def set_error(self, error: str):
+        """Set error status"""
+        self.set_status(f"Error: {error}", "error")
+
+    def set_success(self, message: str):
+        """Set success status"""
+        self.set_status(f"✓ {message}", "success")
 
 
 def create_enhanced_status_bar(main_window):

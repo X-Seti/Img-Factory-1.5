@@ -14,7 +14,7 @@ import os
 # Import core functions
 try:
     from core.remove import remove_selected_function, remove_via_entries_function
-    from core.export import export_selected_function, export_via_function, quick_export_function, dump_all_function
+    from core.exporter import export_selected_function, export_via_function, quick_export_function, dump_all_function
     from core.importer import import_files_function, import_via_function  # Much cleaner!
     from core.utils import get_selected_entries, refresh_table
     CORE_FUNCTIONS_AVAILABLE = True

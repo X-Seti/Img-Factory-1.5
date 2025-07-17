@@ -1,11 +1,9 @@
-#this belongs in components/ unified_debug_functions.py - Version: 2
+#this belongs in components/ unified_debug_functions.py - Version: 5
 # X-Seti - July11 2025 - IMG Factory 1.5
 # Unified Debug Integration - CLEAN VERSION without missing dependencies
 
 """
-Unified Debug Integration - CLEAN VERSION
-Combines search fix, COL debug control, and performance improvements
-All functions preserved, dependencies fixed
+Unified Debug Integration
 """
 
 from PyQt6.QtWidgets import QLabel, QMessageBox
@@ -365,39 +363,6 @@ def add_status_indicators(main_window):
     except Exception as e:
         main_window.log_message(f"❌ Status indicators error: {e}")
 
-
-def create_debug_keyboard_shortcuts(main_window):
-    """Create keyboard shortcuts for debug functions - CLEAN VERSION"""
-    try:
-        # F12 - Quick performance mode toggle
-        def toggle_performance():
-            """Toggle between performance and debug mode"""
-            try:
-                from components.col_core_classes import is_col_debug_enabled
-                
-                if is_col_debug_enabled():
-                    main_window.performance_mode()
-                else:
-                    main_window.minimal_debug_mode()
-            except:
-                if hasattr(main_window, 'toggle_col_debug'):
-                    main_window.toggle_col_debug()
-        
-        perf_shortcut = QShortcut(QKeySequence("F12"), main_window)
-        perf_shortcut.activated.connect(toggle_performance)
-        
-        # Ctrl+F12 - Show debug settings
-        debug_shortcut = QShortcut(QKeySequence("Ctrl+F12"), main_window)
-        debug_shortcut.activated.connect(main_window.show_debug_settings)
-        
-        main_window.log_message("✅ Debug keyboard shortcuts created")
-        main_window.log_message("⌨️ F12: Toggle performance mode")
-        main_window.log_message("⌨️ Ctrl+F12: Debug settings")
-        
-    except Exception as e:
-        main_window.log_message(f"❌ Keyboard shortcuts error: {e}")
-
-
 def setup_debug_categories_for_col():
     """Setup COL debug categories in the main app settings - CLEAN VERSION"""
     try:
@@ -538,22 +503,3 @@ __all__ = [
     'patch_settings_dialog_for_col_debug'
 ]
 
-
-"""
-TO INTEGRATE INTO IMGFACTORY.PY:
-==================================
-
-Add this single line in imgfactory.py __init__ method, after GUI setup:
-
-    # Apply all fixes and improvements
-    from components.unified_debug_functions import integrate_all_improvements
-    integrate_all_improvements(self)
-
-This will:
-✅ Fix the broken search box
-✅ Silence COL debug spam  
-✅ Add comprehensive debug controls
-✅ Create debug menu with shortcuts
-✅ Add status indicators
-✅ Provide performance/debug mode toggles
-"""

@@ -1,4 +1,4 @@
-#this belongs in components/ col_parsing_functions.py - Version: 2
+#this belongs in components/ col_parsing_functions.py - Version: 7
 # X-Seti - July11 2025 - Img Factory 1.5
 
 """
@@ -11,82 +11,61 @@ import os
 from typing import Dict, List, Tuple, Optional
 from components.col_core_classes import is_col_debug_enabled
 
-def reset_table_styling(main_window):
-    """Completely reset table styling to default"""
+##Methods list -
+# _load_col_file
+# _populate_col_table_enhanced
+# _setup_col_tab
+# setup_col_tab_integration
+# _setup_col_table_structure
+# _update_col_info_bar_enhanced
+# _validate_col_file
+
+##class COLParser: -
+#__init__
+# def log
+# _is_multi_model_archive
+
+# _calculate_model_end_offset
+# clear_debug_log
+# format_collision_types
+# get_debug_log
+# get_model_stats_by_index
+# _parse_collision_data
+# parse_col_file_structure
+# _parse_multi_model_archive
+# parse_single_model
+# set_debug
+
+## Export main classes and functions -
+# format_model_collision_types
+# get_model_collision_stats
+# parse_col_file_with_debug
+
+
+def _load_col_file(main_window, file_path): #vers 4
+    """Load COL file object"""
     try:
-        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            return
+        from components.col_core_classes import COLFile
 
-        table = main_window.gui_layout.table
-        header = table.horizontalHeader()
+        main_window.log_message("📖 Loading COL file data...")
+        col_file = COLFile(file_path)
 
-        # Clear all styling
-        table.setStyleSheet("")
-        header.setStyleSheet("")
-        table.setObjectName("")
+        if not col_file.load():
+            error_details = getattr(col_file, 'load_error', 'Unknown loading error')
+            main_window.log_message(f"❌ Failed to load COL file: {error_details}")
+            return None
 
-        # Reset to basic alternating colors
-        table.setAlternatingRowColors(True)
+        return col_file
 
-        main_window.log_message("🔧 Table styling completely reset")
-
-    except Exception as e:
-        main_window.log_message(f"⚠️ Error resetting table styling: {str(e)}")
-
-def setup_col_tab_integration(main_window):
-    """Setup COL tab integration with main window"""
-    try:
-        # Add COL loading method to main window
-        main_window.load_col_file_safely = lambda file_path: load_col_file_safely(main_window, file_path)
-
-        # Add styling reset method
-        main_window._reset_table_styling = lambda: reset_table_styling(main_window)
-
-        main_window.log_message("✅ COL tab integration ready")
-        return True
-
-    except Exception as e:
-        main_window.log_message(f"❌ COL tab integration failed: {str(e)}")
-        return False
-
-def load_col_file_safely(main_window, file_path):
-    """Load COL file safely with proper tab management"""
-    try:
-        # Validate file
-        if not _validate_col_file(main_window, file_path):
-            return False
-
-        # Setup tab
-        tab_index = _setup_col_tab(main_window, file_path)
-        if tab_index is None:
-            return False
-
-        # Load COL file
-        col_file = _load_col_file(main_window, file_path)
-        if col_file is None:
-            return False
-
-        # Setup table structure for COL data
-        _setup_col_table_structure(main_window)
-
-        # Populate table with enhanced COL data
-        _populate_col_table_enhanced(main_window, col_file)
-
-        # Update main window state
-        main_window.current_col = col_file
-        main_window.open_files[tab_index]['file_object'] = col_file
-
-        # Update info bar with enhanced data
-        _update_col_info_bar_enhanced(main_window, col_file, file_path)
-
-        main_window.log_message(f"✅ COL file loaded: {os.path.basename(file_path)}")
-        return True
-
+    except ImportError as e:
+        main_window.log_message(f"❌ COL core classes not available: {str(e)}")
+        return None
     except Exception as e:
         main_window.log_message(f"❌ Error loading COL file: {str(e)}")
-        return False
+        return None
 
-def _populate_col_table_enhanced(main_window, col_file):
+
+def _populate_col_table_enhanced(main_window, col_file): #vers 3
     """Populate table using enhanced display manager"""
     try:
         from components.col_display import COLDisplayManager
@@ -99,37 +78,8 @@ def _populate_col_table_enhanced(main_window, col_file):
         main_window.log_message(f"❌ Enhanced table population failed: {str(e)}")
         raise
 
-def _update_col_info_bar_enhanced(main_window, col_file, file_path):
-    """Update info bar using enhanced display manager"""
-    try:
-        from components.col_display import COLDisplayManager
 
-        display_manager = COLDisplayManager(main_window)
-        display_manager.update_col_info_bar(col_file, file_path)
-        main_window.log_message("✅ Enhanced info bar updated")
-
-    except Exception as e:
-        main_window.log_message(f"❌ Enhanced info bar update failed: {str(e)}")
-        raise
-
-def _validate_col_file(main_window, file_path):
-    """Validate COL file before loading"""
-    if not os.path.exists(file_path):
-        main_window.log_message(f"❌ COL file not found: {file_path}")
-        return False
-
-    if not os.access(file_path, os.R_OK):
-        main_window.log_message(f"❌ Cannot read COL file: {file_path}")
-        return False
-
-    file_size = os.path.getsize(file_path)
-    if file_size < 32:
-        main_window.log_message(f"❌ COL file too small ({file_size} bytes)")
-        return False
-
-    return True
-
-def _setup_col_tab(main_window, file_path):
+def _setup_col_tab(main_window, file_path): #vers 4
     """Setup or reuse tab for COL file"""
     try:
         current_index = main_window.main_tab_widget.currentIndex()
@@ -171,29 +121,25 @@ def _setup_col_tab(main_window, file_path):
         main_window.log_message(f"❌ Error setting up COL tab: {str(e)}")
         return None
 
-def _load_col_file(main_window, file_path):
-    """Load COL file object"""
+
+def setup_col_tab_integration(main_window): #vers 3
+    """Setup COL tab integration with main window"""
     try:
-        from components.col_core_classes import COLFile
+        # Add COL loading method to main window
+        main_window.load_col_file_safely = lambda file_path: load_col_file_safely(main_window, file_path)
 
-        main_window.log_message("📖 Loading COL file data...")
-        col_file = COLFile(file_path)
+        # Add styling reset method
+        main_window._reset_table_styling = lambda: reset_table_styling(main_window)
 
-        if not col_file.load():
-            error_details = getattr(col_file, 'load_error', 'Unknown loading error')
-            main_window.log_message(f"❌ Failed to load COL file: {error_details}")
-            return None
+        main_window.log_message("✅ COL tab integration ready")
+        return True
 
-        return col_file
-
-    except ImportError as e:
-        main_window.log_message(f"❌ COL core classes not available: {str(e)}")
-        return None
     except Exception as e:
-        main_window.log_message(f"❌ Error loading COL file: {str(e)}")
-        return None
+        main_window.log_message(f"❌ COL tab integration failed: {str(e)}")
+        return False
 
-def _setup_col_table_structure(main_window):
+
+def _setup_col_table_structure(main_window): #vers 3
     """Setup table structure for COL data display with enhanced usability"""
     try:
         if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
@@ -285,10 +231,42 @@ def _setup_col_table_structure(main_window):
         main_window.log_message(f"⚠️ Error setting up table structure: {str(e)}")
 
 
+def _update_col_info_bar_enhanced(main_window, col_file, file_path): #vers 3
+    """Update info bar using enhanced display manager"""
+    try:
+        from components.col_display import COLDisplayManager
+
+        display_manager = COLDisplayManager(main_window)
+        display_manager.update_col_info_bar(col_file, file_path)
+        main_window.log_message("✅ Enhanced info bar updated")
+
+    except Exception as e:
+        main_window.log_message(f"❌ Enhanced info bar update failed: {str(e)}")
+        raise
+
+
+def _validate_col_file(main_window, file_path): #vers 3
+    """Validate COL file before loading"""
+    if not os.path.exists(file_path):
+        main_window.log_message(f"❌ COL file not found: {file_path}")
+        return False
+
+    if not os.access(file_path, os.R_OK):
+        main_window.log_message(f"❌ Cannot read COL file: {file_path}")
+        return False
+
+    file_size = os.path.getsize(file_path)
+    if file_size < 32:
+        main_window.log_message(f"❌ COL file too small ({file_size} bytes)")
+        return False
+
+    return True
+
+
 class COLParser:
     """Complete COL file parser with debugging support"""
     
-    def __init__(self, debug=None):
+    def __init__(self, debug=None): #vers 1
         """Initialize COL parser with debug control"""
         # Check global debug setting if not specified
         if debug is None:
@@ -298,17 +276,131 @@ class COLParser:
         
         self.log_messages = []
     
-    def log(self, message):
+
+    def _calculate_model_end_offset(self, data, start_offset, declared_size): #vers 4
+        """Calculate the end offset of a model"""
+        try:
+            # Add 8 bytes for header (signature + size)
+            end_offset = start_offset + declared_size + 8
+
+            # Ensure we don't go beyond data bounds
+            if end_offset > len(data):
+                end_offset = len(data)
+
+            self.log(f"Model end offset: {end_offset}")
+
+            return end_offset
+
+        except Exception as e:
+            self.log(f"Error calculating model end: {str(e)}")
+            return start_offset + 800  # Safe fallback
+
+
+    def clear_debug_log(self): #vers 1
+        """Clear debug log"""
+        self.log_messages = []
+
+
+    def get_model_stats_by_index(self, file_path, model_index): #vers 5
+        """Get statistics for a specific model by index"""
+        models = self.parse_col_file_structure(file_path)
+
+        if model_index < len(models):
+            return models[model_index]
+        else:
+            self.log(f"Model index {model_index} not found (only {len(models)} models)")
+            return {
+                'sphere_count': 0,
+                'box_count': 0,
+                'vertex_count': 0,
+                'face_count': 0,
+                'total_elements': 0,
+                'estimated_size': 64}
+
+
+    def format_collision_types(self, stats):  #vers 4
+        """Format collision types string from stats"""
+        types = []
+        if stats.get('sphere_count', 0) > 0:
+            types.append(f"Spheres({stats['sphere_count']})")
+        if stats.get('box_count', 0) > 0:
+            types.append(f"Boxes({stats['box_count']})")
+        if stats.get('face_count', 0) > 0:
+            types.append(f"Mesh({stats['face_count']})")
+
+        return ", ".join(types) if types else "None"
+
+
+    def get_debug_log(self): #vers 1
+        """Get debug log messages"""
+        return self.log_messages
+
+
+    def _is_multi_model_archive(self, data):
+        """Check if this is a multi-model COL archive"""
+        try:
+            # Look for multiple COL signatures
+            signature_count = 0
+            offset = 0
+
+            while offset < len(data) - 4:
+                if data[offset:offset+4] in [b'COLL', b'COL2', b'COL3', b'COL4']:
+                    signature_count += 1
+                    if signature_count > 1:
+                        self.log(f"Detected multi-model archive ({signature_count} signatures found)")
+                        return True
+                    # Skip to avoid counting the same signature multiple times
+                    offset += 100
+                else:
+                    offset += 1
+
+            return False
+
+        except Exception:
+            return False
+
+
+    def log(self, message): #vers 1
         """Log debug message only if debug is enabled"""
         if self.debug:
             print(f"🔍 COLParser: {message}")
         self.log_messages.append(message)
     
-    def set_debug(self, enabled):
-        """Update debug setting"""
-        self.debug = enabled
-    
-    def parse_col_file_structure(self, file_path):
+
+    def _parse_collision_data(self, data, offset, data_size, version): #vers 4
+        """Parse collision data and return statistics"""
+        stats = {
+            'sphere_count': 0,
+            'box_count': 0,
+            'vertex_count': 0,
+            'face_count': 0,
+            'total_elements': 0
+        }
+
+        try:
+            if version == 'COL1':
+                # COL1 has simpler structure
+                # For now, estimate based on data size
+                if data_size > 100:
+                    stats['sphere_count'] = max(1, data_size // 200)
+                    stats['total_elements'] = stats['sphere_count']
+            else:
+                # COL2/3/4 have more complex structure
+                # For now, estimate based on data size
+                if data_size > 200:
+                    stats['vertex_count'] = max(10, data_size // 50)
+                    stats['face_count'] = max(5, data_size // 100)
+                    stats['total_elements'] = stats['vertex_count'] + stats['face_count']
+
+            self.log(f"Collision stats: {stats}")
+
+        except Exception as e:
+            self.log(f"Error parsing collision data: {e}")
+
+        return stats
+
+
+    def parse_col_file_structure(self, file_path): #vers 6
         """Parse complete COL file and return structure info for all models"""
         try:
             with open(file_path, 'rb') as f:
@@ -364,30 +456,8 @@ class COLParser:
             self.log(f"Error parsing COL file: {str(e)}")
             return []
     
-    def _is_multi_model_archive(self, data):
-        """Check if this is a multi-model COL archive"""
-        try:
-            # Look for multiple COL signatures
-            signature_count = 0
-            offset = 0
-            
-            while offset < len(data) - 4:
-                if data[offset:offset+4] in [b'COLL', b'COL2', b'COL3', b'COL4']:
-                    signature_count += 1
-                    if signature_count > 1:
-                        self.log(f"Detected multi-model archive ({signature_count} signatures found)")
-                        return True
-                    # Skip to avoid counting the same signature multiple times
-                    offset += 100
-                else:
-                    offset += 1
-            
-            return False
-            
-        except Exception:
-            return False
-    
-    def _parse_multi_model_archive(self, data):
+
+    def _parse_multi_model_archive(self, data): #vers 5
         """Parse multi-model COL archive with different structure"""
         try:
             self.log("Parsing as multi-model archive...")
@@ -429,7 +499,8 @@ class COLParser:
             self.log(f"Error parsing multi-model archive: {str(e)}")
             return []
     
-    def parse_single_model(self, data, offset, model_index):
+
+    def parse_single_model(self, data, offset, model_index): #vers 5
         """Parse a single COL model and return info + new offset"""
         try:
             start_offset = offset
@@ -513,96 +584,29 @@ class COLParser:
             self.log(f"Error parsing model at offset {offset}: {str(e)}")
             return None, offset + 32  # Skip ahead to try next model
     
-    def _parse_collision_data(self, data, offset, data_size, version):
-        """Parse collision data and return statistics"""
-        stats = {
-            'sphere_count': 0,
-            'box_count': 0,
-            'vertex_count': 0,
-            'face_count': 0,
-            'total_elements': 0
-        }
-        
-        try:
-            if version == 'COL1':
-                # COL1 has simpler structure
-                # For now, estimate based on data size
-                if data_size > 100:
-                    stats['sphere_count'] = max(1, data_size // 200)
-                    stats['total_elements'] = stats['sphere_count']
-            else:
-                # COL2/3/4 have more complex structure
-                # For now, estimate based on data size
-                if data_size > 200:
-                    stats['vertex_count'] = max(10, data_size // 50)
-                    stats['face_count'] = max(5, data_size // 100)
-                    stats['total_elements'] = stats['vertex_count'] + stats['face_count']
-            
-            self.log(f"Collision stats: {stats}")
-            
-        except Exception as e:
-            self.log(f"Error parsing collision data: {e}")
-        
-        return stats
-    
-    def _calculate_model_end_offset(self, data, start_offset, declared_size):
-        """Calculate the end offset of a model"""
-        try:
-            # Add 8 bytes for header (signature + size)
-            end_offset = start_offset + declared_size + 8
-            
-            # Ensure we don't go beyond data bounds
-            if end_offset > len(data):
-                end_offset = len(data)
-            
-            self.log(f"Model end offset: {end_offset}")
-            
-            return end_offset
-            
-        except Exception as e:
-            self.log(f"Error calculating model end: {str(e)}")
-            return start_offset + 800  # Safe fallback
-    
-    def get_model_stats_by_index(self, file_path, model_index):
-        """Get statistics for a specific model by index"""
-        models = self.parse_col_file_structure(file_path)
-        
-        if model_index < len(models):
-            return models[model_index]
-        else:
-            self.log(f"Model index {model_index} not found (only {len(models)} models)")
-            return {
-                'sphere_count': 0,
-                'box_count': 0,
-                'vertex_count': 0,
-                'face_count': 0,
-                'total_elements': 0,
-                'estimated_size': 64
-            }
-    
-    def format_collision_types(self, stats):
-        """Format collision types string from stats"""
-        types = []
-        if stats.get('sphere_count', 0) > 0:
-            types.append(f"Spheres({stats['sphere_count']})")
-        if stats.get('box_count', 0) > 0:
-            types.append(f"Boxes({stats['box_count']})")
-        if stats.get('face_count', 0) > 0:
-            types.append(f"Mesh({stats['face_count']})")
-        
-        return ", ".join(types) if types else "None"
-    
-    def get_debug_log(self):
-        """Get debug log messages"""
-        return self.log_messages
-    
-    def clear_debug_log(self):
-        """Clear debug log"""
-        self.log_messages = []
+
+    def set_debug(self, enabled): #vers 1
+        """Update debug setting"""
+        self.debug = enabled
 
 
 # Convenience functions
-def parse_col_file_with_debug(file_path, debug=None):
+def format_model_collision_types(stats): #vers 4
+    """Format collision types string"""
+    parser = COLParser(debug=False)
+    return parser.format_collision_types(stats)
+
+
+def get_model_collision_stats(file_path, model_index, debug=None): #vers 4
+    """Get collision statistics for a specific model"""
+    if debug is None:
+        debug = is_col_debug_enabled()
+
+    parser = COLParser(debug=debug)
+    return parser.get_model_stats_by_index(file_path, model_index)
+
+
+def parse_col_file_with_debug(file_path, debug=None): #vers 4
     """Parse COL file and return model statistics with optional debug output"""
     if debug is None:
         debug = is_col_debug_enabled()
@@ -618,24 +622,11 @@ def parse_col_file_with_debug(file_path, debug=None):
     
     return models
 
-def get_model_collision_stats(file_path, model_index, debug=None):
-    """Get collision statistics for a specific model"""
-    if debug is None:
-        debug = is_col_debug_enabled()
-    
-    parser = COLParser(debug=debug)
-    return parser.get_model_stats_by_index(file_path, model_index)
-
-def format_model_collision_types(stats):
-    """Format collision types string"""
-    parser = COLParser(debug=False)
-    return parser.format_collision_types(stats)
-
 
 # Export main classes and functions
 __all__ = [
     'COLParser',
-    'parse_col_file_with_debug',
+    'format_model_collision_types',
     'get_model_collision_stats', 
-    'format_model_collision_types'
+    'parse_col_file_with_debug'
 ]

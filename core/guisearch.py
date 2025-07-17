@@ -78,25 +78,7 @@ class SearchManager:
             return self.main_window.search_input
             
         return None
-    
-    def _setup_shortcuts(self):
-        """Setup keyboard shortcuts for search"""
-        try:
-            # Advanced search dialog (Ctrl+F)
-            search_shortcut = QShortcut(QKeySequence("Ctrl+F"), self.main_window)
-            search_shortcut.activated.connect(self.show_search_dialog)
-            
-            # Find next (F3)
-            find_next_shortcut = QShortcut(QKeySequence("F3"), self.main_window)
-            find_next_shortcut.activated.connect(self.find_next)
-            
-            # Find previous (Shift+F3)
-            find_prev_shortcut = QShortcut(QKeySequence("Shift+F3"), self.main_window)
-            find_prev_shortcut.activated.connect(self.find_previous)
-            
-        except Exception as e:
-            self.main_window.log_message(f"❌ Shortcut setup error: {e}")
-    
+
     def _on_search_text_changed(self, text):
         """Handle search text changes with debouncing"""
         self.search_timer.stop()
