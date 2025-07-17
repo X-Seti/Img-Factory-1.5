@@ -1,4 +1,4 @@
-# this belongs in components/img_validator.py - version 10
+# this belongs in components/img_validator.py - version 11
 #!/usr/bin/env python3
 """
 X-Seti - June26 2025 - IMG Validator - Validation and verification utilities for IMG files
@@ -10,6 +10,10 @@ import struct
 from typing import List, Dict, Tuple, Optional, Union
 from pathlib import Path
 from components.img_core_classes import IMGFile, IMGEntry, IMGVersion
+from core.rw_versions import is_valid_rw_version
+if not is_valid_rw_version(version):
+    result.add_warning(f"Unusual RenderWare version: 0x{version:08X}")
+
 
 
 class ValidationResult:

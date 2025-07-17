@@ -1,18 +1,29 @@
-#this belongs in components/ unified_debug_functions.py - Version: 5
-# X-Seti - July11 2025 - IMG Factory 1.5
-# Unified Debug Integration - CLEAN VERSION without missing dependencies
+#this belongs in components/unified_debug_functions.py - Version: 6
+# X-Seti - July17 2025 - IMG Factory 1.5
+# Unified Debug Integration - CLEAN VERSION using IMG debug system
 
 """
-Unified Debug Integration
+Unified Debug Integration - Clean version using IMG debug system
+REMOVED CONFLICTS: All COL debug functions now use col_debug_functions.py with IMG debug system
 """
 
 from PyQt6.QtWidgets import QLabel, QMessageBox
 from PyQt6.QtGui import QAction, QShortcut, QKeySequence
 from PyQt6.QtCore import QTimer
 
+##Methods list -
+# add_status_indicators
+# apply_all_fixes_and_improvements
+# create_debug_keyboard_shortcuts
+# create_debug_menu
+# fix_search_dialog
+# install_debug_control_system
+# install_search_manager
+# integrate_all_improvements
+# setup_debug_convenience_methods
 
-def apply_all_fixes_and_improvements(main_window):
-    """Apply all fixes and improvements to IMG Factory - CLEAN VERSION"""
+def apply_all_fixes_and_improvements(main_window): #vers 1
+    """Apply all fixes and improvements to IMG Factory - CLEAN VERSION using IMG debug"""
     try:
         main_window.log_message("🔧 Applying comprehensive fixes...")
         
@@ -32,78 +43,88 @@ def apply_all_fixes_and_improvements(main_window):
         if debug_system_success:
             main_window.log_message("✅ Debug control system installed")
         
-        # 3. COL debug control - using clean col_core_classes approach
-        col_patcher_success = setup_col_debug_control(main_window)
+        # 3. COL debug control - NOW USES col_debug_functions.py
+        col_debug_success = setup_img_debug_system_integration(main_window)
         
-        if col_patcher_success:
-            main_window.log_message("✅ COL debug control enabled")
+        if col_debug_success:
+            main_window.log_message("✅ IMG debug system integrated for COL operations")
         
-        # 4. Add convenience methods to main window - FIXED
+        # 4. Add convenience methods to main window
         setup_debug_convenience_methods(main_window)
         
         # 5. Create comprehensive debug menu
         create_debug_menu(main_window)
         
         # 6. Show summary of what was fixed
-        overall_success = search_manager_success and debug_system_success and col_patcher_success
+        overall_success = search_manager_success and debug_system_success and col_debug_success
         
         if overall_success:
             main_window.log_message("=" * 50)
             main_window.log_message("🎯 ALL FIXES APPLIED SUCCESSFULLY!")
-            main_window.log_message("📝 Search box now works with live filtering")
-            main_window.log_message("🚀 COL loading is much faster (debug disabled)")
-            main_window.log_message("🎛️ Debug control available via Ctrl+Shift+D")
-            main_window.log_message("⌨️ COL debug toggle: Ctrl+Alt+C")
-            main_window.log_message("🔍 Search shortcuts: F3 (next), Shift+F3 (prev)")
-            main_window.log_message("=" * 50)
-        else:
-            main_window.log_message("⚠️ Some fixes had issues - check logs above")
+            main_window.log_message("📖 Check Debug menu for all options")
         
         return overall_success
         
     except Exception as e:
-        main_window.log_message(f"❌ Unified integration error: {e}")
+        main_window.log_message(f"❌ Integration error: {e}")
         return False
 
-
-def install_search_manager(main_window):
-    """Install search manager - CLEAN VERSION"""
+def setup_img_debug_system_integration(main_window): #vers 1
+    """Setup IMG debug system for COL operations - REPLACES old COL debug"""
     try:
-        # Try to use existing search functionality
-        try:
-            from core.guisearch import SearchManager
-            
-            if not hasattr(main_window, 'search_manager'):
-                main_window.search_manager = SearchManager(main_window)
-                
-        except ImportError:
-            # Create simple fallback search manager
-            class SimpleSearchManager:
-                def __init__(self, parent):
-                    self.parent = parent
-                
-                def show_search_dialog(self):
-                    """Simple search dialog"""
-                    self.parent.log_message("🔍 Search dialog shown")
-            
-            main_window.search_manager = SimpleSearchManager(main_window)
+        # Use the new col_debug_functions.py which uses IMG debug system
+        from components.col_debug_functions import integrate_col_debug_with_main_window
         
-        # Add search method to main window
-        main_window.show_search_dialog = main_window.search_manager.show_search_dialog
+        success = integrate_col_debug_with_main_window(main_window)
         
-        return True
+        if success:
+            main_window.log_message("✅ COL operations now use IMG debug system")
+        else:
+            main_window.log_message("⚠️ COL debug integration had issues")
+        
+        return success
         
     except Exception as e:
-        main_window.log_message(f"Search manager error: {e}")
+        main_window.log_message(f"IMG debug integration error: {e}")
         return False
 
-
-def fix_search_dialog(main_window):
-    """Fix search dialog functionality - CLEAN VERSION"""
+def install_search_manager(main_window): #vers 1
+    """Install search manager - simplified approach"""
     try:
-        # Ensure search method exists
+        # Try to install from core search system
+        from core.guisearch import install_search_system
+        
+        success = install_search_system(main_window)
+        
+        if success:
+            main_window.log_message("✅ Search system installed")
+        else:
+            main_window.log_message("⚠️ Search system installation issues")
+        
+        return success
+        
+    except ImportError:
+        main_window.log_message("⚠️ Search system not available")
+        return False
+    except Exception as e:
+        main_window.log_message(f"Search installation error: {e}")
+        return False
+
+def fix_search_dialog(main_window): #vers 1
+    """Fix search dialog functionality"""
+    try:
+        # Add search dialog method if missing
         if not hasattr(main_window, 'show_search_dialog'):
-            main_window.show_search_dialog = lambda: main_window.log_message("🔍 Search")
+            def show_search_dialog():
+                """Simple search dialog"""
+                try:
+                    from core.dialogs import show_search_dialog as core_search
+                    core_search(main_window)
+                except ImportError:
+                    QMessageBox.information(main_window, "Search", 
+                        "Use Ctrl+F for quick search in the entries table")
+            
+            main_window.show_search_dialog = show_search_dialog
         
         return True
         
@@ -111,8 +132,7 @@ def fix_search_dialog(main_window):
         main_window.log_message(f"Search dialog error: {e}")
         return False
 
-
-def install_debug_control_system(main_window):
+def install_debug_control_system(main_window): #vers 1
     """Install debug control system - CLEAN VERSION"""
     try:
         # Add missing method to main window
@@ -139,120 +159,45 @@ def install_debug_control_system(main_window):
         main_window.log_message(f"Debug control error: {e}")
         return False
 
-
-def setup_col_debug_control(main_window):
-    """Setup COL debug control - CLEAN VERSION using col_core_classes"""
+def setup_debug_convenience_methods(main_window): #vers 1
+    """Add convenience debug methods to main window"""
     try:
-        from components.col_core_classes import set_col_debug_enabled, is_col_debug_enabled
-        
-        # Start with debug disabled for performance
-        set_col_debug_enabled(False)
-        
-        # Add toggle method to main window
-        def toggle_col_debug():
-            """Toggle COL debug output"""
-            current = is_col_debug_enabled()
-            set_col_debug_enabled(not current)
-            
-            if not current:
-                main_window.log_message("🔊 COL debug enabled")
-            else:
-                main_window.log_message("🔇 COL debug disabled")
-        
-        main_window.toggle_col_debug = toggle_col_debug
-        
-        return True
-        
-    except Exception as e:
-        main_window.log_message(f"COL debug control error: {e}")
-        return False
-
-
-def DebugControlDialog(parent):
-    """Simple debug control dialog - FALLBACK"""
-    from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
-    
-    dialog = QDialog(parent)
-    dialog.setWindowTitle("Debug Control")
-    dialog.setModal(True)
-    
-    layout = QVBoxLayout(dialog)
-    layout.addWidget(QLabel("Debug Control Options:"))
-    layout.addWidget(QLabel("• F12: Toggle performance mode"))
-    layout.addWidget(QLabel("• Ctrl+F12: Show debug settings"))
-    layout.addWidget(QLabel("• Ctrl+Shift+D: Settings dialog"))
-    layout.addWidget(QLabel("• Ctrl+Alt+C: Toggle COL debug"))
-    
-    close_btn = QPushButton("Close")
-    close_btn.clicked.connect(dialog.accept)
-    layout.addWidget(close_btn)
-    
-    return dialog
-
-
-def patch_settings_dialog_for_col_debug(settings_dialog):
-    """Add COL debug settings to existing settings dialog - SAFE VERSION"""
-    try:
-        # Simple approach - just add a checkbox for COL debug
-        from PyQt6.QtWidgets import QCheckBox, QVBoxLayout, QLabel
-        
-        # Try to find debug tab or create info
-        if hasattr(settings_dialog, 'layout'):
-            info_label = QLabel("COL Debug: Use Ctrl+Alt+C to toggle")
-            # Try to add to existing layout
-            layout = settings_dialog.layout()
-            if layout:
-                layout.addWidget(info_label)
-        
-        return True
-        
-    except Exception as e:
-        print(f"❌ Failed to patch settings dialog: {e}")
-        return False
-
-
-def setup_debug_convenience_methods(main_window):
-    """Add convenience methods to main window - CLEAN VERSION"""
-    try:
-        def show_debug_settings():
-            """Show debug settings dialog"""
-            if hasattr(main_window, 'show_debug_settings'):
-                main_window.show_debug_settings()
-            else:
-                QMessageBox.information(main_window, "Debug Settings", 
-                    "Debug settings: Use keyboard shortcuts for debug control")
-        
-        def quick_performance_mode():
-            """Quick switch to performance mode"""
+        # Add debug info method
+        def show_debug_info():
+            """Show debug information"""
             try:
-                from components.col_core_classes import set_col_debug_enabled
-                set_col_debug_enabled(False)
-                main_window.log_message("🚀 Performance mode activated - all debug disabled")
-            except:
-                main_window.log_message("🚀 Performance mode activated")
+                from components.img_debug_functions import img_debugger
+                from components.col_debug_functions import is_col_debug_enabled
+                
+                info = f"IMG Debug: {'Enabled' if img_debugger.debug_enabled else 'Disabled'}\n"
+                info += f"COL Debug: {'Enabled' if is_col_debug_enabled() else 'Disabled'}\n"
+                info += f"Debug Log: {img_debugger.log_file}\n"
+                info += f"Error Count: {img_debugger.error_count}\n"
+                info += f"Warning Count: {img_debugger.warning_count}"
+                
+                QMessageBox.information(main_window, "Debug Information", info)
+                
+            except Exception as e:
+                QMessageBox.critical(main_window, "Debug Error", f"Error getting debug info: {e}")
         
-        def quick_minimal_debug():
-            """Quick switch to minimal debug mode"""
+        main_window.show_debug_info = show_debug_info
+        
+        # Add debug log viewer
+        def view_debug_log():
+            """View debug log file"""
             try:
-                from components.col_core_classes import set_col_debug_enabled
-                set_col_debug_enabled(True)
-                main_window.log_message("⚠️ Minimal debug mode - COL debug enabled")
-            except:
-                main_window.log_message("⚠️ Minimal debug mode")
+                from components.img_debug_functions import img_debugger
+                import os
+                
+                if os.path.exists(img_debugger.log_file):
+                    os.system(f"xdg-open {img_debugger.log_file}")  # Linux
+                else:
+                    QMessageBox.information(main_window, "Debug Log", "No debug log file found")
+                    
+            except Exception as e:
+                QMessageBox.critical(main_window, "Debug Error", f"Error opening debug log: {e}")
         
-        def quick_col_debug():
-            """Quick switch to COL debug mode"""
-            if hasattr(main_window, 'toggle_col_debug'):
-                main_window.toggle_col_debug()
-            else:
-                main_window.log_message("📁 COL debug mode")
-        
-        # Add methods to main window
-        if not hasattr(main_window, 'show_debug_settings'):
-            main_window.show_debug_settings = show_debug_settings
-        main_window.performance_mode = quick_performance_mode
-        main_window.minimal_debug_mode = quick_minimal_debug
-        main_window.col_debug_mode = quick_col_debug
+        main_window.view_debug_log = view_debug_log
         
         return True
         
@@ -260,90 +205,119 @@ def setup_debug_convenience_methods(main_window):
         main_window.log_message(f"Debug convenience methods error: {e}")
         return False
 
-
-def create_debug_menu(main_window):
-    """Create comprehensive debug menu - CLEAN VERSION"""
+def create_debug_menu(main_window): #vers 1
+    """Create comprehensive debug menu"""
     try:
-        if not hasattr(main_window, 'menuBar'):
-            return
+        menu_bar = main_window.menuBar()
         
         # Find or create Debug menu
         debug_menu = None
-        for action in main_window.menuBar().actions():
-            if action.text().lower() == 'debug':
+        for action in menu_bar.actions():
+            if "debug" in action.text().lower():
                 debug_menu = action.menu()
                 break
         
         if not debug_menu:
-            debug_menu = main_window.menuBar().addMenu("Debug")
+            debug_menu = menu_bar.addMenu("🔧 Debug")
         
-        # Clear existing debug menu items to avoid duplicates
+        # Clear existing debug actions
         debug_menu.clear()
         
-        # Debug Control Settings
-        settings_action = QAction("🎛️ Debug Control Settings...", main_window)
-        settings_action.setShortcut(QKeySequence("Ctrl+Shift+D"))
-        settings_action.triggered.connect(main_window.show_debug_settings)
-        debug_menu.addAction(settings_action)
+        # IMG Debug controls
+        img_debug_menu = debug_menu.addMenu("📁 IMG Debug")
+        
+        img_enable_action = img_debug_menu.addAction("Enable IMG Debug")
+        img_enable_action.triggered.connect(lambda: setattr(__import__('components.img_debug_functions').img_debug_functions.img_debugger, 'debug_enabled', True))
+        
+        img_disable_action = img_debug_menu.addAction("Disable IMG Debug")
+        img_disable_action.triggered.connect(lambda: setattr(__import__('components.img_debug_functions').img_debug_functions.img_debugger, 'debug_enabled', False))
+        
+        # COL Debug controls (using IMG debug system)
+        col_debug_menu = debug_menu.addMenu("🛡️ COL Debug")
+        
+        col_enable_action = col_debug_menu.addAction("Enable COL Debug")
+        col_enable_action.triggered.connect(lambda: main_window.enable_col_debug() if hasattr(main_window, 'enable_col_debug') else None)
+        
+        col_disable_action = col_debug_menu.addAction("Disable COL Debug")
+        col_disable_action.triggered.connect(lambda: main_window.disable_col_debug() if hasattr(main_window, 'disable_col_debug') else None)
+        
+        col_toggle_action = col_debug_menu.addAction("Toggle COL Debug")
+        col_toggle_action.triggered.connect(lambda: main_window.toggle_col_debug() if hasattr(main_window, 'toggle_col_debug') else None)
+        col_toggle_action.setShortcut(QKeySequence("Ctrl+Shift+D"))
         
         debug_menu.addSeparator()
         
-        # Quick Mode Actions
-        performance_action = QAction("🚀 Performance Mode (All Debug Off)", main_window)
-        performance_action.triggered.connect(main_window.performance_mode)
-        debug_menu.addAction(performance_action)
+        # Debug information
+        debug_info_action = debug_menu.addAction("📊 Debug Information")
+        debug_info_action.triggered.connect(lambda: main_window.show_debug_info() if hasattr(main_window, 'show_debug_info') else None)
         
-        minimal_action = QAction("⚠️ Minimal Debug (Errors Only)", main_window)
-        minimal_action.triggered.connect(main_window.minimal_debug_mode)
-        debug_menu.addAction(minimal_action)
-        
-        col_action = QAction("📁 COL Debug Mode", main_window)
-        col_action.triggered.connect(main_window.col_debug_mode)
-        debug_menu.addAction(col_action)
+        # Debug log
+        debug_log_action = debug_menu.addAction("📋 View Debug Log")
+        debug_log_action.triggered.connect(lambda: main_window.view_debug_log() if hasattr(main_window, 'view_debug_log') else None)
         
         debug_menu.addSeparator()
         
-        # COL Debug Toggle
-        col_toggle_action = QAction("🔇/🔊 Toggle COL Debug", main_window)
-        col_toggle_action.setShortcut(QKeySequence("Ctrl+Alt+C"))
-        col_toggle_action.setCheckable(True)
-        if hasattr(main_window, 'toggle_col_debug'):
-            col_toggle_action.triggered.connect(main_window.toggle_col_debug)
-        debug_menu.addAction(col_toggle_action)
-        
-        debug_menu.addSeparator()
-        
-        # Search Functions
-        search_action = QAction("🔍 Test Search Function", main_window)
-        search_action.triggered.connect(lambda: main_window.show_search_dialog() if hasattr(main_window, 'show_search_dialog') else None)
-        debug_menu.addAction(search_action)
+        # Debug settings
+        debug_settings_action = debug_menu.addAction("⚙️ Debug Settings")
+        debug_settings_action.triggered.connect(lambda: main_window.show_debug_settings() if hasattr(main_window, 'show_debug_settings') else None)
         
         main_window.log_message("✅ Debug menu created")
+        return True
         
     except Exception as e:
-        main_window.log_message(f"❌ Debug menu creation error: {e}")
+        main_window.log_message(f"Debug menu error: {e}")
+        return False
 
-
-def add_status_indicators(main_window):
-    """Add debug status indicators to status bar - CLEAN VERSION"""
+def create_debug_keyboard_shortcuts(main_window): #vers 1
+    """Create debug keyboard shortcuts"""
     try:
-        if not hasattr(main_window, 'statusBar'):
-            return
+        # COL debug toggle
+        col_toggle_shortcut = QShortcut(QKeySequence("Ctrl+Shift+D"), main_window)
+        col_toggle_shortcut.activated.connect(lambda: main_window.toggle_col_debug() if hasattr(main_window, 'toggle_col_debug') else None)
         
+        # Debug info
+        debug_info_shortcut = QShortcut(QKeySequence("Ctrl+Shift+I"), main_window)
+        debug_info_shortcut.activated.connect(lambda: main_window.show_debug_info() if hasattr(main_window, 'show_debug_info') else None)
+        
+        # Search shortcut
+        search_shortcut = QShortcut(QKeySequence("Ctrl+F"), main_window)
+        search_shortcut.activated.connect(lambda: main_window.show_search_dialog() if hasattr(main_window, 'show_search_dialog') else None)
+        
+        main_window.log_message("✅ Debug keyboard shortcuts created")
+        return True
+        
+    except Exception as e:
+        main_window.log_message(f"Debug shortcuts error: {e}")
+        return False
+
+def add_status_indicators(main_window): #vers 1
+    """Add debug status indicators to status bar"""
+    try:
         # Create debug status label
-        debug_status_label = QLabel()
+        debug_status_label = QLabel("🎛️ Debug Ready")
+        debug_status_label.setToolTip("Debug system status")
         
         def update_debug_status():
             """Update debug status display"""
             try:
-                from components.col_core_classes import is_col_debug_enabled
+                from components.img_debug_functions import img_debugger
+                from components.col_debug_functions import is_col_debug_enabled
                 
-                if is_col_debug_enabled():
-                    debug_status_label.setText("🔍 COL Debug ON")
+                img_debug = img_debugger.debug_enabled
+                col_debug = is_col_debug_enabled()
+                
+                if img_debug and col_debug:
+                    debug_status_label.setText("🔴 IMG+COL Debug")
+                    debug_status_label.setStyleSheet("color: red; font-weight: bold;")
+                elif img_debug:
+                    debug_status_label.setText("🟡 IMG Debug")
                     debug_status_label.setStyleSheet("color: orange; font-weight: bold;")
-                else:
-                    debug_status_label.setText("🚀 Performance Mode")
+                elif col_debug:
+                    debug_status_label.setText("🟢 COL Debug")
                     debug_status_label.setStyleSheet("color: green; font-weight: bold;")
+                else:
+                    debug_status_label.setText("🎛️ Debug Ready")
+                    debug_status_label.setStyleSheet("color: blue;")
             except:
                 debug_status_label.setText("🎛️ Debug Ready")
                 debug_status_label.setStyleSheet("color: blue;")
@@ -359,107 +333,13 @@ def add_status_indicators(main_window):
         timer.start(5000)  # Update every 5 seconds
         
         main_window.log_message("✅ Debug status indicators added")
+        return True
         
     except Exception as e:
         main_window.log_message(f"❌ Status indicators error: {e}")
-
-def setup_debug_categories_for_col():
-    """Setup COL debug categories in the main app settings - CLEAN VERSION"""
-    try:
-        from utils.app_settings_system import AppSettings
-
-        # Add COL debug categories to default settings
-        col_categories = [
-            'COL_LOADING',
-            'COL_PARSING',
-            'COL_THREADING',
-            'COL_DISPLAY',
-            'COL_INTEGRATION',
-            'COL_ESTIMATION',
-            'COL_VALIDATION'
-        ]
-
-        # Check if method exists before patching
-        if hasattr(AppSettings, '_get_default_settings'):
-            # Patch the default settings
-            original_get_default = AppSettings._get_default_settings
-
-            def patched_get_default(self):
-                defaults = original_get_default(self)
-
-                # Add COL categories to existing debug categories
-                existing_categories = defaults.get('debug_categories', [])
-                for category in col_categories:
-                    if category not in existing_categories:
-                        existing_categories.append(category)
-
-                defaults['debug_categories'] = existing_categories
-                return defaults
-
-            AppSettings._get_default_settings = patched_get_default
-
-        print("✅ COL debug categories added to default settings")
-        return True
-
-    except Exception as e:
-        print(f"❌ Failed to setup COL debug categories: {e}")
         return False
 
-
-def integrate_col_debug_into_settings():
-    """Integrate COL debug settings into existing settings dialog - CLEAN VERSION"""
-    try:
-        # Try to integrate, but don't fail if components are missing
-        try:
-            from utils.app_settings_system import SettingsDialog
-            
-            # Patch the SettingsDialog class if possible
-            if hasattr(SettingsDialog, '__init__'):
-                original_init = SettingsDialog.__init__
-
-                def patched_init(self, app_settings, parent=None):
-                    # Call original init
-                    original_init(self, app_settings, parent)
-
-                    # Add COL debug functionality
-                    try:
-                        patch_settings_dialog_for_col_debug(self)
-                    except Exception as e:
-                        print(f"Warning: Could not add COL debug settings: {e}")
-
-                # Apply the patch
-                SettingsDialog.__init__ = patched_init
-                
-            print("✅ COL debug settings integrated into main settings dialog")
-            
-        except ImportError:
-            print("⚠️ Settings dialog not available for COL debug integration")
-        
-        return True
-
-    except Exception as e:
-        print(f"❌ Failed to integrate COL debug settings: {e}")
-        return False
-
-
-def setup_col_debug_integration():
-    """Main function to setup COL debug integration - CLEAN VERSION"""
-    try:
-        # Setup debug categories first
-        setup_debug_categories_for_col()
-
-        # Integrate into settings dialog
-        integrate_col_debug_into_settings()
-
-        print("✅ COL debug integration setup complete")
-        return True
-
-    except Exception as e:
-        print(f"❌ COL debug integration failed: {e}")
-        return False
-
-
-def integrate_all_improvements(main_window):
+def integrate_all_improvements(main_window): #vers 1
     """Main function to integrate all improvements - call this from imgfactory.py"""
     try:
         # Apply core fixes
@@ -479,27 +359,16 @@ def integrate_all_improvements(main_window):
         main_window.log_message(f"❌ Integration error: {e}")
         return False
 
-
-# Call this from imgfactory.py after imports
-if __name__ != "__main__":
-    setup_col_debug_integration()
-
-
-# Export main functions
+# Export main functions - REMOVED CONFLICTING COL DEBUG FUNCTIONS
 __all__ = [
     'apply_all_fixes_and_improvements',
     'integrate_all_improvements', 
     'install_search_manager',
     'fix_search_dialog',
     'install_debug_control_system',
-    'setup_col_debug_control',
+    'setup_img_debug_system_integration',  # REPLACED setup_col_debug_control
     'create_debug_menu',
     'add_status_indicators',
     'create_debug_keyboard_shortcuts',
-    'setup_debug_categories_for_col',
-    'integrate_col_debug_into_settings',
-    'setup_col_debug_integration',
-    'DebugControlDialog',
-    'patch_settings_dialog_for_col_debug'
+    'setup_debug_convenience_methods'
 ]
-

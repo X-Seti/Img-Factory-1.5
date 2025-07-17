@@ -26,8 +26,8 @@ from PyQt6.QtGui import QFont, QAction
 from enum import Enum
 
 # Import version-specific creators
-from components.img_version1 import IMGVersion1Creator, create_version_1_img
-from components.img_version2 import IMGVersion2Creator, create_version_2_img
+from core.img_version1 import IMGVersion1Creator, create_version_1_img
+from core.img_version2 import IMGVersion2Creator, create_version_2_img
 
 
 class IMGVersion(Enum):

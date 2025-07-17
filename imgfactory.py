@@ -53,7 +53,7 @@ from components.img_core_classes import (
 
 #components
 from components.col_creator import create_new_col_file, import_col_to_current_img, export_all_col_from_img
-from components.col_debug_control import COLDebugController
+from components.col_debug_functions import integrate_col_debug_with_main_window
 from components.col_validator import validate_col_file
 from components.img_close_functions import install_close_functions, setup_close_manager
 from components.img_creator import NewIMGDialog, IMGCreationThread
@@ -67,6 +67,8 @@ from core.file_extraction import setup_complete_extraction_integration
 from core.tables_structure import reset_table_styling
 from core.loadcol import load_col_file_safely
 from core.remove import integrate_remove_functions
+from core.rw_versions import get_rw_version_name
+version_text = get_rw_version_name(entry.rw_version)
 from core.shortcuts import setup_all_shortcuts, setup_debug_shortcuts
 from core.integration import integrate_complete_core_system
 from core.tables_structure import populate_img_table, populate_col_table_img_format, populate_col_table_enhanced, setup_col_table_structure
@@ -423,7 +425,7 @@ class IMGFactory(QMainWindow):
         integrate_complete_core_system(self)
 
         try:
-            from components.col_tabs_functions import setup_col_tab_integration
+            from gui.col_gui_integration import setup_col_gui_integration
             if setup_col_tab_integration(self):
                 self.log_message("✅ COL tab integration setup complete")
             else:
@@ -1058,15 +1060,28 @@ class IMGFactory(QMainWindow):
             return "UNKNOWN"
 
     def _load_col_file_safely(self, file_path):
-        """Load COL file safely - REDIRECTS to col_tab_integration"""
+        """Load COL file safely - FIXED METHOD"""
         try:
-            if hasattr(self, 'load_col_file_safely'):
-                # Use the method provided by col_tab_integration
-                self.load_col_file_safely(file_path)
+            # Import the function directly from core.loadcol
+            from core.loadcol import load_col_file_safely
+
+            # Call the imported function with proper parameters
+            result = load_col_file_safely(self, file_path)
+
+            if result:
+                self.log_message(f"✅ COL file loaded successfully: {os.path.basename(file_path)}")
             else:
-                self.log_message("❌ Error loading file: 'IMGFactory' object has no attribute 'load_col_file_safely'")
+                self.log_message(f"❌ Failed to load COL file: {os.path.basename(file_path)}")
+
+            return result
+
+        except ImportError as e:
+            self.log_message(f"❌ COL loading module not available: {str(e)}")
+            return False
         except Exception as e:
             self.log_message(f"❌ Error loading COL file: {str(e)}")
+            return False
+
 
     def _load_col_as_generic_file(self, file_path):
         """Load COL as generic file when COL classes aren't available"""

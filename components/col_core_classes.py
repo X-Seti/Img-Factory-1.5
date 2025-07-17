@@ -1,168 +1,234 @@
-#this belongs in components/ col_core_classes.py - Version: 13
-# X-Seti - July11 2025 - Img Factory 1.5
-# COL file core classes - CLEAN VERSION with debug control
+#this belongs in components/ col_core_classes.py - Version: 2
+# X-Seti - July17 2025 - Img Factory 1.5 - COL Core Classes with IMG Debug System
 
-import struct
+"""
+COL Core Classes - Using IMG Debug Framework
+Handles COL file structure and operations using the proven IMG debug system
+Converted from broken COL debug system to working IMG debug system
+"""
+
 import os
-from enum import Enum
+import struct
 from typing import List, Optional, Tuple, Dict, Any
+from enum import Enum
+from dataclasses import dataclass
 
-# Global debug flag - controlled by settings (same as IMG loading)
-_global_debug_enabled = False
+# Import IMG debug system (proven to work)
+from components.img_debug_functions import img_debugger, debug_trace
 
-def set_col_debug_enabled(enabled: bool):
-    """Set global COL debug flag"""
-    global _global_debug_enabled
-    _global_debug_enabled = enabled
+## Methods list -
+# diagnose_col_file
+# get_col_info
+# load_col_file_safely
+# parse_col_data
+# validate_col_structure
 
-def is_col_debug_enabled() -> bool:
-    """Check if COL debug is enabled"""
-    global _global_debug_enabled
-    return _global_debug_enabled
+##class COLVersion: -
+# COL_1
+# COL_2
+# COL_3
+# COL_4
+
+##class COLModel: -
+# __init__
+# calculate_bounding_box
+# get_stats
+# update_flags
+
+##class COLFile: -
+# __init__
+# load
+# load_from_file
+# load_from_data
+# _parse_col_data
+# _parse_col_model
+# _parse_col1_model
+# _parse_col23_model
+# get_summary
 
 class COLVersion(Enum):
-    """COL file format versions"""
+    """COL file version enumeration"""
     COL_1 = 1
     COL_2 = 2
     COL_3 = 3
     COL_4 = 4
 
-class Vector3:
-    """3D vector class"""
-    def __init__(self, x: float = 0.0, y: float = 0.0, z: float = 0.0):
-        self.x = x
-        self.y = y
-        self.z = z
-    
-    def __str__(self):
-        return f"({self.x:.3f}, {self.y:.3f}, {self.z:.3f})"
 
+@dataclass
+class Vector3:
+    """3D vector for collision data"""
+    x: float = 0.0
+    y: float = 0.0
+    z: float = 0.0
+    
+    def __iter__(self):
+        return iter((self.x, self.y, self.z))
+
+
+@dataclass
 class BoundingBox:
-    """Bounding box class"""
-    def __init__(self):
-        self.min = Vector3()
-        self.max = Vector3()
-        self.center = Vector3()
-        self.radius = 0.0
+    """Bounding box for collision models"""
+    center: Vector3 = None
+    min_point: Vector3 = None
+    max_point: Vector3 = None
+    radius: float = 0.0
+    
+    def __post_init__(self):
+        if self.center is None:
+            self.center = Vector3()
+        if self.min_point is None:
+            self.min_point = Vector3()
+        if self.max_point is None:
+            self.max_point = Vector3()
     
     def calculate_from_vertices(self, vertices: List[Vector3]):
-        """Calculate bounding box from vertices"""
+        """Calculate bounding box from vertex list"""
         if not vertices:
             return
         
         # Find min/max coordinates
-        self.min.x = min(v.x for v in vertices)
-        self.min.y = min(v.y for v in vertices)
-        self.min.z = min(v.z for v in vertices)
+        min_x = min(v.x for v in vertices)
+        max_x = max(v.x for v in vertices)
+        min_y = min(v.y for v in vertices)
+        max_y = max(v.y for v in vertices)
+        min_z = min(v.z for v in vertices)
+        max_z = max(v.z for v in vertices)
         
-        self.max.x = max(v.x for v in vertices)
-        self.max.y = max(v.y for v in vertices)
-        self.max.z = max(v.z for v in vertices)
+        self.min_point = Vector3(min_x, min_y, min_z)
+        self.max_point = Vector3(max_x, max_y, max_z)
+        self.center = Vector3(
+            (min_x + max_x) / 2,
+            (min_y + max_y) / 2,
+            (min_z + max_z) / 2
+        )
         
-        # Calculate center and radius
-        self.center.x = (self.min.x + self.max.x) / 2
-        self.center.y = (self.min.y + self.max.y) / 2
-        self.center.z = (self.min.z + self.max.z) / 2
-        
-        # Calculate radius as distance from center to corner
-        dx = self.max.x - self.center.x
-        dy = self.max.y - self.center.y
-        dz = self.max.z - self.center.z
-        self.radius = (dx*dx + dy*dy + dz*dz)**0.5
+        # Calculate radius
+        dx = max_x - min_x
+        dy = max_y - min_y
+        dz = max_z - min_z
+        self.radius = (dx * dx + dy * dy + dz * dz) ** 0.5 / 2
 
-class COLMaterial:
-    """COL material definition"""
-    def __init__(self):
-        self.material_id = 0
-        self.flags = 0
-        self.brightness = 0
-        self.light = 0
 
+@dataclass
 class COLSphere:
-    """COL sphere collision primitive"""
-    def __init__(self):
-        self.center = Vector3()
-        self.radius = 0.0
-        self.material = COLMaterial()
+    """COL collision sphere"""
+    center: Vector3 = None
+    radius: float = 0.0
+    material: int = 0
+    flags: int = 0
+    
+    def __post_init__(self):
+        if self.center is None:
+            self.center = Vector3()
 
+
+@dataclass
 class COLBox:
-    """COL box collision primitive"""
-    def __init__(self):
-        self.min = Vector3()
-        self.max = Vector3()
-        self.material = COLMaterial()
+    """COL collision box"""
+    min_point: Vector3 = None
+    max_point: Vector3 = None
+    material: int = 0
+    flags: int = 0
+    
+    def __post_init__(self):
+        if self.min_point is None:
+            self.min_point = Vector3()
+        if self.max_point is None:
+            self.max_point = Vector3()
 
+
+@dataclass
 class COLVertex:
     """COL mesh vertex"""
-    def __init__(self):
-        self.position = Vector3()
+    position: Vector3 = None
+    
+    def __post_init__(self):
+        if self.position is None:
+            self.position = Vector3()
 
+
+@dataclass
 class COLFace:
     """COL mesh face"""
-    def __init__(self):
-        self.vertex_a = 0
-        self.vertex_b = 0
-        self.vertex_c = 0
-        self.material = COLMaterial()
+    vertex_indices: Tuple[int, int, int] = (0, 0, 0)
+    material: int = 0
+    light: int = 0
+    flags: int = 0
 
+
+@dataclass
 class COLFaceGroup:
     """COL face group"""
-    def __init__(self):
-        self.bounding_box = BoundingBox()
-        self.start_face = 0
-        self.end_face = 0
+    surface_flags: int = 0
+    material: int = 0
+    first_face: int = 0
+    face_count: int = 0
+
+
+@dataclass
+class COLMaterial:
+    """COL material properties"""
+    friction: float = 0.7
+    elasticity: float = 0.1
+    material_id: int = 0
+
 
 class COLModel:
-    """COL collision model"""
+    """COL collision model using IMG debug system"""
+    
     def __init__(self):
-        self.name = ""
-        self.model_id = 0
-        self.version = COLVersion.COL_1
-        self.flags = 0
+        self.name: str = ""
+        self.model_id: int = 0
+        self.version: COLVersion = COLVersion.COL_1
         
-        # Bounding data
-        self.bounding_box = BoundingBox()
-        
-        # Collision primitives
+        # Collision data
         self.spheres: List[COLSphere] = []
         self.boxes: List[COLBox] = []
-        
-        # Mesh data
         self.vertices: List[COLVertex] = []
         self.faces: List[COLFace] = []
         self.face_groups: List[COLFaceGroup] = []
         
+        # Shadow mesh data (COL3+)
+        self.shadow_vertices: List[COLVertex] = []
+        self.shadow_faces: List[COLFace] = []
+        
+        # Bounding data
+        self.bounding_box: BoundingBox = BoundingBox()
+        
         # Status flags
-        self.is_loaded = False
-        self.has_sphere_data = False
-        self.has_box_data = False
-        self.has_mesh_data = False
+        self.has_sphere_data: bool = False
+        self.has_box_data: bool = False
+        self.has_mesh_data: bool = False
+        
+        img_debugger.debug(f"COL model initialized: {self.name}")
     
-    def get_stats(self) -> Dict[str, int]:
-        """Get collision statistics"""
-        return {
+    @debug_trace
+    def get_stats(self) -> Dict[str, int]: #vers 1
+        """Get collision model statistics"""
+        stats = {
             'spheres': len(self.spheres),
             'boxes': len(self.boxes),
             'vertices': len(self.vertices),
             'faces': len(self.faces),
             'face_groups': len(self.face_groups),
-            'total_elements': len(self.spheres) + len(self.boxes) + len(self.faces)
+            'shadow_vertices': len(self.shadow_vertices),
+            'shadow_faces': len(self.shadow_faces)
         }
+        
+        img_debugger.debug(f"COL stats for {self.name}: {stats}")
+        return stats
     
-    def calculate_bounding_box(self):
+    def calculate_bounding_box(self): #vers 1
         """Calculate bounding box from collision data"""
         all_vertices = []
         
-        # Add sphere centers and extents
+        # Add sphere centers
         for sphere in self.spheres:
-            all_vertices.extend([
-                Vector3(sphere.center.x - sphere.radius, sphere.center.y - sphere.radius, sphere.center.z - sphere.radius),
-                Vector3(sphere.center.x + sphere.radius, sphere.center.y + sphere.radius, sphere.center.z + sphere.radius)
-            ])
+            all_vertices.append(sphere.center)
         
-        # Add box extents
+        # Add box corners
         for box in self.boxes:
-            all_vertices.extend([box.min, box.max])
+            all_vertices.extend([box.min_point, box.max_point])
         
         # Add mesh vertices
         all_vertices.extend([vertex.position for vertex in self.vertices])
@@ -170,83 +236,96 @@ class COLModel:
         # Calculate bounding box
         if all_vertices:
             self.bounding_box.calculate_from_vertices(all_vertices)
+            img_debugger.debug(f"Bounding box calculated for {self.name}")
     
-    def update_flags(self):
+    def update_flags(self): #vers 1
         """Update status flags based on available data"""
         self.has_sphere_data = len(self.spheres) > 0
         self.has_box_data = len(self.boxes) > 0
         self.has_mesh_data = len(self.vertices) > 0 and len(self.faces) > 0
+        
+        img_debugger.debug(f"Flags updated for {self.name}: spheres={self.has_sphere_data}, boxes={self.has_box_data}, mesh={self.has_mesh_data}")
+
 
 class COLFile:
-    """COL file handler with debug control"""
+    """COL file handler using IMG debug system"""
+    
     def __init__(self, file_path: str = None):
         self.file_path = file_path
         self.models: List[COLModel] = []
         self.is_loaded = False
         self.load_error = None
         self.file_size = 0
+        
+        img_debugger.debug(f"COL file initialized: {file_path}")
     
-
-    def load(self) -> bool:
-        """Load COL file - MISSING METHOD FIX"""
+    @debug_trace
+    def load(self) -> bool: #vers 1
+        """Load COL file - Main entry point"""
         if not self.file_path:
             self.load_error = "No file path specified"
+            img_debugger.error(f"COL load failed: {self.load_error}")
             return False
-
+        
         return self.load_from_file(self.file_path)
-
-    def load_from_file(self, file_path: str) -> bool:
-        """Load COL file from disk with debug control"""
+    
+    @debug_trace
+    def load_from_file(self, file_path: str) -> bool: #vers 1
+        """Load COL file from disk using IMG debug system"""
         try:
             self.file_path = file_path
             self.load_error = None
-
+            
+            img_debugger.debug(f"Loading COL file: {file_path}")
+            
             if not os.path.exists(file_path):
                 self.load_error = "File not found"
+                img_debugger.error(f"COL file not found: {file_path}")
                 return False
-
+            
             with open(file_path, 'rb') as f:
                 data = f.read()
-
+            
             self.file_size = len(data)
-
-            if is_col_debug_enabled():
-                print(f"Loading COL file: {os.path.basename(file_path)} ({self.file_size} bytes)")
-
+            img_debugger.info(f"COL file read: {os.path.basename(file_path)} ({self.file_size} bytes)")
+            
             return self.load_from_data(data)
-
+            
         except Exception as e:
             self.load_error = str(e)
-            if is_col_debug_enabled():
-                print(f"Error loading COL file: {e}")
+            img_debugger.error(f"Error loading COL file: {e}")
             return False
-
-    def load_from_data(self, data: bytes) -> bool:
-        """Load COL data from bytes with debug control"""
+    
+    @debug_trace
+    def load_from_data(self, data: bytes) -> bool: #vers 1
+        """Load COL data from bytes using IMG debug system"""
         try:
             self.models.clear()
             self.is_loaded = False
             
             if len(data) < 8:
                 self.load_error = "File too small"
+                img_debugger.error("COL data too small (<8 bytes)")
                 return False
             
-            return self._parse_col_data(data)
+            success = self._parse_col_data(data)
+            if success:
+                self.is_loaded = True
+                img_debugger.success(f"COL data loaded successfully: {len(self.models)} models")
+            
+            return success
             
         except Exception as e:
             self.load_error = str(e)
-            if is_col_debug_enabled():
-                print(f"Error parsing COL data: {e}")
+            img_debugger.error(f"Error parsing COL data: {e}")
             return False
     
-    def _parse_col_data(self, data: bytes) -> bool:
-        """Parse COL data - CLEAN with debug control"""
+    def _parse_col_data(self, data: bytes) -> bool: #vers 1
+        """Parse COL data using IMG debug system"""
         self.models = []
         offset = 0
         
-        # Only log if debug is enabled
-        if is_col_debug_enabled():
-            print(f"Parsing COL data: {len(data)} bytes")
+        img_debugger.debug(f"Parsing COL data: {len(data)} bytes")
         
         while offset < len(data):
             model, consumed = self._parse_col_model(data, offset)
@@ -258,27 +337,26 @@ class COLFile:
             
             # Safety check to prevent infinite loops
             if consumed == 0:
+                img_debugger.warning("COL parsing stopped: no bytes consumed")
                 break
         
-        self.is_loaded = True
         success = len(self.models) > 0
-        
-        # Only log summary if debug enabled
-        if is_col_debug_enabled():
-            print(f"COL parsing complete: {len(self.models)} models loaded")
+        img_debugger.debug(f"COL parsing complete: {len(self.models)} models loaded")
         
         return success
     
-    def _parse_col_model(self, data: bytes, offset: int) -> Tuple[Optional[COLModel], int]:
-        """Parse single COL model - CLEAN with debug control"""
+    def _parse_col_model(self, data: bytes, offset: int) -> Tuple[Optional[COLModel], int]: #vers 1
+        """Parse single COL model using IMG debug system"""
         try:
             if offset + 8 > len(data):
+                img_debugger.debug("COL model parsing stopped: insufficient data for header")
                 return None, 0
             
             # Read FourCC signature
             fourcc = data[offset:offset+4]
             
             if fourcc not in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
+                img_debugger.debug(f"COL model parsing stopped: invalid signature {fourcc}")
                 return None, 0
             
             # Read file size
@@ -286,6 +364,7 @@ class COLFile:
             total_size = file_size + 8
             
             if offset + total_size > len(data):
+                img_debugger.warning(f"COL model size mismatch: expected {total_size}, available {len(data) - offset}")
                 return None, 0
             
             # Create model
@@ -308,21 +387,19 @@ class COLFile:
             else:
                 self._parse_col23_model(model, model_data)
             
-            # Only log if debug enabled
-            if is_col_debug_enabled():
-                print(f"Parsed COL model: {model.name} (version {model.version.value})")
+            img_debugger.debug(f"COL model parsed: {model.name} (version {model.version.value})")
             
             return model, total_size
             
         except Exception as e:
-            if is_col_debug_enabled():
-                print(f"Error parsing COL model at offset {offset}: {e}")
+            img_debugger.error(f"Error parsing COL model at offset {offset}: {e}")
             return None, 0
     
-    def _parse_col1_model(self, model: COLModel, data: bytes):
-        """Parse COL version 1 model - CLEAN with debug control"""
+    def _parse_col1_model(self, model: COLModel, data: bytes): #vers 1
+        """Parse COL version 1 model using IMG debug system"""
         try:
             if len(data) < 22:
+                img_debugger.warning("COL1 data too small for header")
                 return
             
             offset = 0
@@ -351,19 +428,16 @@ class COLFile:
             model.calculate_bounding_box()
             model.update_flags()
             
-            if is_col_debug_enabled():
-                print(f"COL1 model parsed: {model.name}")
-                
+            img_debugger.debug(f"COL1 model parsed: {model.name}")
+            
         except Exception as e:
-            if is_col_debug_enabled():
-                print(f"Error parsing COL1 model: {e}")
+            img_debugger.error(f"Error parsing COL1 model: {e}")
     
-    def _parse_col23_model(self, model: COLModel, data: bytes):
-        """Parse COL version 2/3 model - CLEAN with debug control"""
+    def _parse_col23_model(self, model: COLModel, data: bytes): #vers 1
+        """Parse COL version 2/3 model using IMG debug system"""
         try:
             if len(data) < 40:
-                if is_col_debug_enabled():
-                    print("COL2/3 data too small for header")
+                img_debugger.warning("COL2/3 data too small for header")
                 return
             
             offset = 0
@@ -377,11 +451,12 @@ class COLFile:
             # Read bounding box (24 bytes)
             min_x, min_y, min_z = struct.unpack('<fff', data[offset:offset+12])
             max_x, max_y, max_z = struct.unpack('<fff', data[offset+12:offset+24])
-            model.bounding_box.min = Vector3(min_x, min_y, min_z)
-            model.bounding_box.max = Vector3(max_x, max_y, max_z)
+            model.bounding_box.min_point = Vector3(min_x, min_y, min_z)
+            model.bounding_box.max_point = Vector3(max_x, max_y, max_z)
             offset += 24
             
-            # For now, create basic collision data
+            # For now, initialize empty collision data
+            # TODO: Add detailed COL2/3 parsing
             model.spheres = []
             model.boxes = []
             model.vertices = []
@@ -390,138 +465,48 @@ class COLFile:
             # Set default name
             model.name = f"COL{model.version.value}_Model"
             
-            # Update flags
             model.update_flags()
             
-            if is_col_debug_enabled():
-                print(f"COL2/3 model parsed: {model.name}")
-                
-        except Exception as e:
-            if is_col_debug_enabled():
-                print(f"Error parsing COL2/3 model: {e}")
-    
-    def save_to_file(self, file_path: str) -> bool:
-        """Save COL file to disk"""
-        try:
-            data = self._build_col_data()
-            
-            with open(file_path, 'wb') as f:
-                f.write(data)
-            
-            if is_col_debug_enabled():
-                print(f"COL file saved: {os.path.basename(file_path)} ({len(data)} bytes)")
-            
-            return True
+            img_debugger.debug(f"COL{model.version.value} model parsed: {model.name}")
             
         except Exception as e:
-            if is_col_debug_enabled():
-                print(f"Error saving COL file: {e}")
-            return False
+            img_debugger.error(f"Error parsing COL{model.version.value} model: {e}")
     
-    def _build_col_data(self) -> bytes:
-        """Build COL file data from models"""
-        data = b''
-        
-        for model in self.models:
-            model_data = self._build_col_model(model)
-            data += model_data
-        
-        return data
-    
-    def _build_col_model(self, model: COLModel) -> bytes:
-        """Build data for a single COL model"""
-        if model.version == COLVersion.COL_1:
-            return self._build_col1_model(model)
-        else:
-            return self._build_col23_model(model)
-    
-    def _build_col1_model(self, model: COLModel) -> bytes:
-        """Build COL version 1 model data"""
-        # Basic COL1 structure
-        data = b'COLL'
-        
-        # Calculate content size
-        content_size = 22 + 4  # name + model_id
-        data += struct.pack('<I', content_size)
-        
-        # Write name (22 bytes, padded with nulls)
-        name_bytes = model.name.encode('ascii')[:22]
-        name_bytes = name_bytes.ljust(22, b'\x00')
-        data += name_bytes
-        
-        # Write model ID
-        data += struct.pack('<I', model.model_id)
-        
-        return data
-    
-    def _build_col23_model(self, model: COLModel) -> bytes:
-        """Build COL version 2/3 model data"""
-        # Determine signature
-        if model.version == COLVersion.COL_2:
-            fourcc = b'COL\x02'
-        elif model.version == COLVersion.COL_3:
-            fourcc = b'COL\x03'
-        else:
-            fourcc = b'COL\x04'
-        
-        data = fourcc
-        
-        # Calculate content size (simplified)
-        content_size = 60  # Basic header
-        data += struct.pack('<I', content_size)
-        
-        # Write bounding sphere
-        if model.bounding_box:
-            center = model.bounding_box.center
-            radius = model.bounding_box.radius
-        else:
-            center = Vector3()
-            radius = 0.0
-        
-        data += struct.pack('<ffff', center.x, center.y, center.z, radius)
-        
-        # Write bounding box
-        if model.bounding_box:
-            min_pt = model.bounding_box.min
-            max_pt = model.bounding_box.max
-        else:
-            min_pt = max_pt = Vector3()
-        
-        data += struct.pack('<ffffff', min_pt.x, min_pt.y, min_pt.z, max_pt.x, max_pt.y, max_pt.z)
-        
-        # Pad to required size
-        remaining = content_size - (len(data) - 8)
-        if remaining > 0:
-            data += b'\x00' * remaining
-        
-        return data
-    
-    def get_info(self) -> str:
-        """Get file information as formatted string"""
-        lines = [f"COL File: {os.path.basename(self.file_path) if self.file_path else 'Unknown'}"]
+    def get_summary(self) -> str: #vers 1
+        """Get file summary using IMG debug system"""
+        lines = []
+        lines.append(f"COL File: {os.path.basename(self.file_path) if self.file_path else 'Unknown'}")
+        lines.append(f"File Size: {self.file_size} bytes")
         lines.append(f"Models: {len(self.models)}")
         
-        if self.is_loaded:
-            total_stats = {'spheres': 0, 'boxes': 0, 'vertices': 0, 'faces': 0, 'total_elements': 0}
+        if self.is_loaded and self.models:
+            lines.append(f"Loaded: Yes")
+            
+            # Calculate total statistics
+            total_stats = {'spheres': 0, 'boxes': 0, 'vertices': 0, 'faces': 0}
             for model in self.models:
                 stats = model.get_stats()
                 for key in total_stats:
                     total_stats[key] += stats.get(key, 0)
             
-            lines.append(f"Loaded: Yes")
-            lines.append(f"    Elements: {total_stats['total_elements']} total")
-            lines.append(f"    Spheres: {total_stats['spheres']}, Boxes: {total_stats['boxes']}")
-            lines.append(f"    Mesh: {total_stats['vertices']} vertices, {total_stats['faces']} faces")
+            lines.append(f"Total Collision: {total_stats['spheres']} spheres, {total_stats['boxes']} boxes")
+            lines.append(f"Total Mesh: {total_stats['vertices']} vertices, {total_stats['faces']} faces")
         else:
             lines.append(f"Loaded: No")
             if self.load_error:
                 lines.append(f"Error: {self.load_error}")
         
-        return "\n".join(lines)
+        summary = "\n".join(lines)
+        img_debugger.debug(f"COL summary generated: {len(lines)} lines")
+        return summary
 
 
-def diagnose_col_file(file_path: str) -> dict:
-    """Diagnose COL file structure for debugging"""
+# Utility functions using IMG debug system
+@debug_trace
+def diagnose_col_file(file_path: str) -> dict: #vers 1
+    """Diagnose COL file structure using IMG debug system"""
+    img_debugger.debug(f"Diagnosing COL file: {file_path}")
+    
     try:
         with open(file_path, 'rb') as f:
             data = f.read()
@@ -534,6 +519,7 @@ def diagnose_col_file(file_path: str) -> dict:
         
         if len(data) < 8:
             info['error'] = 'File too small (< 8 bytes)'
+            img_debugger.warning(f"COL file too small: {len(data)} bytes")
             return info
         
         # Check first 8 bytes
@@ -570,20 +556,28 @@ def diagnose_col_file(file_path: str) -> dict:
             except:
                 info['error'] = 'Failed to read size field'
         
+        img_debugger.info(f"COL diagnosis complete: {info['detected_version']}")
         return info
         
     except Exception as e:
-        return {
+        error_info = {
             'exists': os.path.exists(file_path),
             'readable': False,
             'error': str(e)
         }
+        img_debugger.error(f"COL diagnosis failed: {e}")
+        return error_info
 
 
-# Export main classes for import
+# Legacy compatibility - remove broken debug system
+def get_col_info(col_file: COLFile) -> str: #vers 1
+    """Get COL file information using IMG debug system"""
+    return col_file.get_summary()
+
+
+# Export main classes and functions
 __all__ = [
     'COLFile', 'COLModel', 'COLVersion', 'COLMaterial',
     'COLSphere', 'COLBox', 'COLVertex', 'COLFace', 'COLFaceGroup',
-    'Vector3', 'BoundingBox', 'diagnose_col_file',
-    'set_col_debug_enabled', 'is_col_debug_enabled'
+    'Vector3', 'BoundingBox', 'diagnose_col_file', 'get_col_info'
 ]
