@@ -10,7 +10,7 @@ import os
 from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
 from PyQt6.QtCore import Qt
 from methods.populate_img_table import populate_img_table
-from methods.populate_col_table import populate_col_table
+from methods.populate_col_table import populate_col_table, setup_col_table_structure
 
 
 # Methods list.
@@ -136,42 +136,96 @@ def setup_col_table_structure(main_window): #vers 4
         main_window.log_message(f"❌ Error setting up COL table structure: {str(e)}")
         return False
 
-
-def setup_col_table_structure(main_window) -> bool: #vers 3
-    """Setup table structure for COL data (6 columns)"""
+def _setup_col_table_structure(main_window): #vers 11
+    """Setup table structure for COL data display with enhanced usability"""
     try:
         if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
             main_window.log_message("⚠️ Main table not available")
-            return False
+            return
 
         table = main_window.gui_layout.table
 
-        # Configure table for COL data (7 columns) - match original blue table
+        # Configure table for COL data (7 columns)
         table.setColumnCount(7)
         table.setHorizontalHeaderLabels([
             "Model", "Type", "Size", "Surfaces", "Vertices", "Collision", "Status"
         ])
 
-        # Set column widths
-        table.setColumnWidth(0, 120)  # Model
-        table.setColumnWidth(1, 60)   # Type
-        table.setColumnWidth(2, 80)   # Size
+        # Enable column dragging and resizing
+        from PyQt6.QtWidgets import QHeaderView
+        header = table.horizontalHeader()
+        header.setSectionsMovable(True)  # Allow dragging columns
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)  # Allow resizing
+        header.setDefaultSectionSize(120)  # Default column width
+
+        # Set specific column widths for better visibility
+        table.setColumnWidth(0, 150)  # Model name - wider for readability
+        table.setColumnWidth(1, 80)   # Type
+        table.setColumnWidth(2, 100)  # Size
         table.setColumnWidth(3, 80)   # Surfaces
         table.setColumnWidth(4, 80)   # Vertices
-        table.setColumnWidth(5, 100)  # Collision
+        table.setColumnWidth(5, 200)  # Collision - wider for collision types
         table.setColumnWidth(6, 80)   # Status
 
-        # Configure table properties
+        # Enable alternating row colors with light blue theme
         table.setAlternatingRowColors(True)
-        table.setSelectionBehavior(table.SelectionBehavior.SelectRows)
-        table.setSortingEnabled(True)
 
-        main_window.log_message("✅ COL table structure setup (7 columns)")
-        return True
+        # Set object name for specific styling
+        table.setObjectName("col_table")
+
+        # Apply COL-specific styling ONLY to this table
+        col_table_style = """
+            QTableWidget#col_table {
+                alternate-background-color: #E3F2FD;
+                background-color: #F5F5F5;
+                gridline-color: #CCCCCC;
+                selection-background-color: #2196F3;
+                selection-color: white;
+            }
+            QTableWidget#col_table::item {
+                padding: 4px;
+                border-bottom: 1px solid #E0E0E0;
+                background-color: transparent;
+            }
+            QTableWidget#col_table::item:alternate {
+                background-color: #E3F2FD;
+            }
+            QTableWidget#col_table::item:selected {
+                background-color: #2196F3;
+                color: white;
+            }
+        """
+
+        # Apply header styling separately to avoid affecting other headers
+        header_style = """
+            background-color: #BBDEFB;
+            color: #1976D2;
+            font-weight: bold;
+            border: 1px solid #90CAF9;
+            padding: 6px;
+        """
+
+        # Apply table styling
+        table.setStyleSheet(col_table_style)
+
+        # Apply header styling directly to the header widget
+        header = table.horizontalHeader()
+        header.setStyleSheet(f"""
+            QHeaderView::section {{
+                {header_style}
+            }}
+            QHeaderView::section:hover {{
+                background-color: #90CAF9;
+            }}
+        """)
+
+        # Clear existing data
+        table.setRowCount(0)
+
+        main_window.log_message("🔧 Table structure configured for COL data with scoped styling")
 
     except Exception as e:
-        main_window.log_message(f"❌ Error setting up COL table: {str(e)}")
-        return False
+        main_window.log_message(f"⚠️ Error setting up table structure: {str(e)}")
 
 
 # Export functions

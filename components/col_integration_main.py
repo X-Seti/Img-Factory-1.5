@@ -181,7 +181,7 @@ def create_col_file_dialog(main_window): #vers 1
             col_debug_log(main_window, f"Selected COL file: {file_path}", 'COL_DIALOG')
             
             # Load COL file using core loader
-            from core.loadcol import load_col_file_safely
+            from components.col_loader import load_col_file_safely
             success = load_col_file_safely(main_window, file_path)
             
             if success:

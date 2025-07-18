@@ -8,7 +8,6 @@
 │   ├── col_integration_main.py
 │   ├── col_loader.py
 │   ├── col_manager.py
-│   ├── col_parser_rebuild.py
 │   ├── col_parsing_functions.py
 │   ├── col_validator.py
 │   ├── gta_file_editors.py
@@ -45,6 +44,7 @@
 │   ├── rebuild.py
 │   ├── reload.py
 │   ├── remove.py
+│   ├── right_click_actions.py
 │   ├── rw_versions.py
 │   ├── shortcuts.py
 │   ├── tables_structure.py

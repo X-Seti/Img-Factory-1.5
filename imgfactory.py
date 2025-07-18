@@ -17,7 +17,7 @@ current_dir = Path(__file__).parent
 components_dir = current_dir / "components"
 gui_dir = current_dir / "gui"
 utils_dir = current_dir / "utils"
-#version_text = get_rw_version_name(entry.rw_version)
+
 
 # Add directories to Python path
 if str(current_dir) not in sys.path:
@@ -67,6 +67,7 @@ from core.file_extraction import setup_complete_extraction_integration
 from core.tables_structure import reset_table_styling
 from core.remove import integrate_remove_functions
 from core.rw_versions import get_rw_version_name
+from core.right_click_actions import integrate_right_click_actions
 from core.shortcuts import setup_all_shortcuts, setup_debug_shortcuts
 from core.integration import integrate_complete_core_system
 from core.tables_structure import setup_col_table_structure
@@ -299,6 +300,9 @@ class IMGFactory(QMainWindow):
 
         # Setup close manager for tab handling
         install_close_functions(self)
+
+        integrate_right_click_actions(self)
+
         # COL Integration - FIXED: Move to end and use correct import
 
         if integrate_remove_functions(self):
@@ -395,7 +399,7 @@ class IMGFactory(QMainWindow):
             self.log_message("🔧 Applying search and performance fixes...")
 
             # 1. Setup our new consolidated search system
-            from core.guisearch import install_search_system
+            from core.gui_search import install_search_system
             if install_search_system(self):
                 self.log_message("✅ New search system installed")
             else:
@@ -812,13 +816,6 @@ class IMGFactory(QMainWindow):
 
         self.log_message("✅ IMG UI updated successfully")
 
-    def _populate_real_img_table(self, img_file):
-        """Populate table with real IMG data - HELPER method"""
-        try:
-            populate_img_table(self.gui_layout.table, img_file)
-        except Exception as e:
-            self.log_message(f"❌ Error populating table: {str(e)}")
-
     def log_message(self, message):
         """Log a message to the activity log"""
         print(f"LOG: {message}")  # Temporary - shows in console
@@ -947,7 +944,7 @@ class IMGFactory(QMainWindow):
         """Load COL file safely - FIXED METHOD"""
         try:
             # Import the function directly from core.loadcol
-            from core.loadcol import load_col_file_safely
+            from components.col_loader import load_col_file_safely
 
             # Call the imported function with proper parameters
             result = load_col_file_safely(self, file_path)
@@ -1498,44 +1495,20 @@ class IMGFactory(QMainWindow):
                     offset_text = "0x0"
                 table.setItem(row, 3, QTableWidgetItem(offset_text))
 
-                # Version - Use proper RW version parsing
+                # Version - FIXED: Use new method
                 try:
                     if extension in ['DFF', 'TXD']:
-                        if hasattr(entry, 'get_version_text') and callable(entry.get_version_text):
-                            version_text = entry.get_version_text()
-                        elif hasattr(entry, 'rw_version') and entry.rw_version > 0:
-                            # FIXED: Use proper RW version mapping
-                            rw_versions = {
-                                0x0800FFFF: "3.0.0.0",
-                                0x1003FFFF: "3.1.0.1",
-                                0x1005FFFF: "3.2.0.0",
-                                0x1400FFFF: "3.4.0.3",
-                                0x1803FFFF: "3.6.0.3",
-                                0x1C020037: "3.7.0.2",
-                                # Additional common SA versions
-                                0x34003: "3.4.0.3",
-                                0x35002: "3.5.0.2",
-                                0x36003: "3.6.0.3",
-                                0x37002: "3.7.0.2",
-                                0x1801: "3.6.0.3",  # Common SA version
-                                0x1400: "3.4.0.3",  # Common SA version
-                            }
-
-                            if entry.rw_version in rw_versions:
-                                version_text = f"RW {rw_versions[entry.rw_version]}"
-                            else:
-                                # Show hex for unknown versions
-                                version_text = f"RW 0x{entry.rw_version:X}"
-                        else:
-                            version_text = "Unknown"
+                        version_text = self.get_entry_rw_version(entry, extension)
                     elif extension == 'COL':
                         version_text = "COL"
                     elif extension == 'IFP':
                         version_text = "IFP"
                     else:
                         version_text = "Unknown"
-                except:
+                except Exception as e:
+                    print(f"🔍 DEBUG: Version detection error for {clean_name}: {e}")
                     version_text = "Unknown"
+
                 table.setItem(row, 4, QTableWidgetItem(version_text))
 
                 # Compression
@@ -1580,7 +1553,79 @@ class IMGFactory(QMainWindow):
                 table.setItem(row, 5, QTableWidgetItem("None"))
                 table.setItem(row, 6, QTableWidgetItem("Error"))
 
-        self.log_message(f"📋 Table populated with {len(entries)} entries (SA format parser fixed)")
+        self.log_message(f"📋 Table populated with {len(entries)} entries (using RW version detection method)")
+
+    def get_entry_rw_version(self, entry, extension):
+        """Detect RW version from entry file data"""
+        try:
+            # Skip non-RW files
+            if extension not in ['DFF', 'TXD']:
+                return "Unknown"
+
+            # Check if entry already has version info
+            if hasattr(entry, 'get_version_text') and callable(entry.get_version_text):
+                return entry.get_version_text()
+
+            # Try to get file data using different methods
+            file_data = None
+
+            # Method 1: Direct data access
+            if hasattr(entry, 'get_data'):
+                try:
+                    file_data = entry.get_data()
+                except:
+                    pass
+
+            # Method 2: Extract data method
+            if not file_data and hasattr(entry, 'extract_data'):
+                try:
+                    file_data = entry.extract_data()
+                except:
+                    pass
+
+            # Method 3: Read directly from IMG file
+            if not file_data:
+                try:
+                    if (hasattr(self, 'current_img') and
+                        hasattr(entry, 'offset') and
+                        hasattr(entry, 'size') and
+                        self.current_img and
+                        self.current_img.file_path):
+
+                        with open(self.current_img.file_path, 'rb') as f:
+                            f.seek(entry.offset)
+                            # Only read the header (12 bytes) for efficiency
+                            file_data = f.read(min(entry.size, 12))
+                except Exception as e:
+                    print(f"🔍 DEBUG: Failed to read file data for {entry.name}: {e}")
+                    return "Unknown"
+
+            # Parse RW version from file header
+            if file_data and len(file_data) >= 12:
+                import struct
+                try:
+                    # RW version is stored at offset 8-12 in RW files
+                    rw_version = struct.unpack('<I', file_data[8:12])[0]
+
+                    if rw_version > 0:
+                        version_name = get_rw_version_name(rw_version)
+                        print(f"🔍 DEBUG: Found RW version 0x{rw_version:X} ({version_name}) for {entry.name}")
+                        return f"RW {version_name}"
+                    else:
+                        print(f"🔍 DEBUG: Invalid RW version (0) for {entry.name}")
+                        return "Unknown"
+
+                except struct.error as e:
+                    print(f"🔍 DEBUG: Struct unpack error for {entry.name}: {e}")
+                    return "Unknown"
+            else:
+                print(f"🔍 DEBUG: Insufficient file data for {entry.name} (need 12 bytes, got {len(file_data) if file_data else 0})")
+                return "Unknown"
+
+        except Exception as e:
+            print(f"🔍 DEBUG: RW version detection error for {entry.name}: {e}")
+            return "Unknown"
+
 
     def _on_load_error(self, error_message):
         """Handle loading error from background thread"""
