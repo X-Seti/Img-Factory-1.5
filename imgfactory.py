@@ -82,8 +82,6 @@ from gui.gui_menu import IMGFactoryMenuBar
 from gui.gui_context import open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog
 
 #methods
-from methods.populate_img_table import populate_img_table
-from methods.populate_col_table import populate_col_table, populate_col_table, populate_col_table_enh
 
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
