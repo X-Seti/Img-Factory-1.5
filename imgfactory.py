@@ -57,18 +57,17 @@ from components.col_debug_functions import integrate_col_debug_with_main_window
 from components.col_validator import validate_col_file
 from components.img_close_functions import install_close_functions, setup_close_manager
 from components.img_creator import NewIMGDialog, IMGCreationThread
-from components.img_formats import GameSpecificIMGDialog, IMGCreator
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_validator import IMGValidator
 from components.unified_debug_functions import integrate_all_improvements
 
 #core
+from core.img_formats import GameSpecificIMGDialog, IMGCreator
 from core.file_extraction import setup_complete_extraction_integration
 from core.tables_structure import reset_table_styling
 from core.loadcol import load_col_file_safely
 from core.remove import integrate_remove_functions
 from core.rw_versions import get_rw_version_name
-version_text = get_rw_version_name(entry.rw_version)
 from core.shortcuts import setup_all_shortcuts, setup_debug_shortcuts
 from core.integration import integrate_complete_core_system
 from core.tables_structure import populate_img_table, populate_col_table_img_format, populate_col_table_enhanced, setup_col_table_structure
@@ -80,13 +79,14 @@ from gui.gui_context import add_col_context_menu_to_entries_table, enhanced_cont
 from gui.gui_infobar import update_col_info_bar_enhanced
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
-from gui.menu import IMGFactoryMenuBar
+from gui.gui_menu import IMGFactoryMenuBar
 from gui.gui_context import open_col_file_dialog, open_col_batch_processor_dialog, open_col_editor_dialog, analyze_col_file_dialog
 
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
 COL_INTEGRATION_AVAILABLE = False
 COL_SETUP_FUNCTION = None
+#version_text = get_rw_version_name(entry.rw_version)
 
 def populate_img_table(table: QTableWidget, img_file: IMGFile):
     """Populate table with IMG file entries - FIXED VERSION"""
@@ -205,6 +205,15 @@ def setup_debug_mode(self):
         if hasattr(self.menu_bar_system, 'settings_menu'):
             self.menu_bar_system.settings_menu.addSeparator()
             self.menu_bar_system.settings_menu.addAction(debug_action)
+
+def debug_trace(func):
+    """Simple debug decorator to trace function calls."""
+    def wrapper(*args, **kwargs):
+        print(f"[DEBUG] Calling: {func.__name__} with args={args} kwargs={kwargs}")
+        result = func(*args, **kwargs)
+        print(f"[DEBUG] Finished: {func.__name__}")
+        return result
+    return wrapper
 
 def toggle_debug_mode(self):
     """Toggle debug mode with user feedback"""
@@ -423,6 +432,7 @@ class IMGFactory(QMainWindow):
 
         # First integrate the functions
         integrate_complete_core_system(self)
+
 
         try:
             from gui.col_gui_integration import setup_col_gui_integration
@@ -2847,7 +2857,6 @@ def main():
 
        # Create main window
        window = IMGFactory(settings)
-
        # Show window
        window.show()
 

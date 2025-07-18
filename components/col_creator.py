@@ -430,7 +430,7 @@ class BasicCOLCreator:
     """Simple COL file creation without dialog"""
     
     @staticmethod
-    def create_empty_col(output_path: str, version: COLVersion = COLVersion.COL2) -> bool:
+    def create_empty_col(output_path: str, version: COLVersion = COLVersion.COL_2) -> bool:
         """Create empty COL file"""
         try:
             img_debugger.debug(f"Creating empty COL file: {output_path}")

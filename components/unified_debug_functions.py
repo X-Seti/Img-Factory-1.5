@@ -22,6 +22,15 @@ from PyQt6.QtCore import QTimer
 # integrate_all_improvements
 # setup_debug_convenience_methods
 
+def debug_trace(func):
+    """Simple debug decorator to trace function calls."""
+    def wrapper(*args, **kwargs):
+        print(f"[DEBUG] Calling: {func.__name__} with args={args} kwargs={kwargs}")
+        result = func(*args, **kwargs)
+        print(f"[DEBUG] Finished: {func.__name__}")
+        return result
+    return wrapper
+
 def apply_all_fixes_and_improvements(main_window): #vers 1
     """Apply all fixes and improvements to IMG Factory - CLEAN VERSION using IMG debug"""
     try:

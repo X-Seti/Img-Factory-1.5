@@ -17,6 +17,7 @@ from pathlib import Path
 
 # Import the proven IMG debug system
 from components.img_debug_functions import img_debugger
+from components.unified_debug_functions import debug_trace
 
 ##Methods list -
 # col_debug_log
@@ -31,6 +32,7 @@ from components.img_debug_functions import img_debugger
 
 # Global debug state for COL operations
 _col_debug_enabled = False
+
 
 def set_col_debug_enabled(enabled: bool):
     """Enable/disable COL debug output using IMG debug system"""

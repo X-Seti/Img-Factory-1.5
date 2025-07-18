@@ -12,6 +12,7 @@ import inspect
 import time
 from typing import Any, Dict, List, Optional
 from pathlib import Path
+from components.unified_debug_functions import debug_trace
 
 class IMGDebugger:
     """Advanced debugging system for IMG Factory operations"""
@@ -25,12 +26,13 @@ class IMGDebugger:
         
         # Create debug log file
         self._init_log_file()
-        
+
         # Debug counters
         self.call_count = 0
         self.error_count = 0
         self.warning_count = 0
-        
+
+
     def _init_log_file(self):
         """Initialize debug log file"""
         try:
@@ -265,8 +267,8 @@ Log file: {self.log_file}
 
 
 # Global debugger instance
-img_debugger = IMGDebugger()
 
+img_debugger = IMGDebugger()
 
 def debug_img_creation_process(img_creator_dialog):
     """Debug the IMG creation process from dialog"""
@@ -349,7 +351,6 @@ def test_debug_system():
     img_debugger.check_file_operations("nonexistent_file.img")
     
     print(img_debugger.get_debug_summary())
-
 
 if __name__ == "__main__":
     test_debug_system()

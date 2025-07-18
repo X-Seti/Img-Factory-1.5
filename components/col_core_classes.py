@@ -14,7 +14,8 @@ from enum import Enum
 from dataclasses import dataclass
 
 # Import IMG debug system (proven to work)
-from components.img_debug_functions import img_debugger, debug_trace
+from components.img_debug_functions import img_debugger, IMGDebugger
+from components.unified_debug_functions import debug_trace
 
 ## Methods list -
 # diagnose_col_file

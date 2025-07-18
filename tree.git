@@ -6,10 +6,8 @@
 │   ├── col_debug_functions.py
 │   ├── col_editor.py
 │   ├── col_integration_main.py
+│   ├── col_manager.py
 │   ├── col_parsing_functions.py
-│   ├── col_structure_manager.py
-│   ├── col_threaded_loader.py
-│   ├── col_utilities.py
 │   ├── col_validator.py
 │   ├── gta_file_editors.py
 │   ├── img_close_functions.py
@@ -53,17 +51,18 @@
 ├── cuts
 ├── gui
 │   ├── col_display.py
+│   ├── col_display.zip
 │   ├── col_gui_integration.py
 │   ├── col_tab_css_theme.css
 │   ├── gui_backend.py
 │   ├── gui_context.py
 │   ├── gui_infobar.py
 │   ├── gui_layout.py
+│   ├── gui_menu.py
 │   ├── gui_settings.py
 │   ├── __init__.py
 │   ├── log_panel.py
 │   ├── main_window.py
-│   ├── menu.py
 │   ├── panel_controls.py
 │   ├── panel_manager.py
 │   ├── pastel_button_theme.py
@@ -1149,4 +1148,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-941 directories, 209 files
+941 directories, 208 files

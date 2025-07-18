@@ -11,9 +11,8 @@ from typing import List, Dict, Tuple, Optional, Union
 from pathlib import Path
 from components.img_core_classes import IMGFile, IMGEntry, IMGVersion
 from core.rw_versions import is_valid_rw_version
-if not is_valid_rw_version(version):
-    result.add_warning(f"Unusual RenderWare version: 0x{version:08X}")
-
+#if not is_valid_rw_version():
+#   result.add_warning(f"Unusual RenderWare version: 0x{version:08X}")
 
 
 class ValidationResult:

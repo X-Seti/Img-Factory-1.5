@@ -18,8 +18,8 @@ from PyQt6.QtGui import QFont
 
 # Import updated core classes and version creators
 from components.img_core_classes import IMGFile, IMGVersion
-from components.img_version1 import create_version_1_img
-from components.img_version2 import create_version_2_img
+from core.img_version1 import create_version_1_img
+from core.img_version2 import create_version_2_img
 from core.rw_versions import get_default_version_for_game
 default_version = get_default_version_for_game('gtasa')
 

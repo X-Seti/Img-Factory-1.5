@@ -286,7 +286,7 @@ class IMGFile:
 
             if version == IMGVersion.VERSION_1:
                 # Use new Version 1 creator
-                from components.img_version1 import IMGVersion1Creator
+                from core.img_version1 import IMGVersion1Creator
                 creator = IMGVersion1Creator()
                 success = creator.create_version_1(output_path, initial_size_mb)
                 if success:
@@ -295,7 +295,7 @@ class IMGFile:
                 return success
             elif version == IMGVersion.VERSION_2:
                 # Use new Version 2 creator
-                from components.img_version2 import IMGVersion2Creator
+                from core.img_version2 import IMGVersion2Creator
                 creator = IMGVersion2Creator()
                 success = creator.create_version_2(output_path, initial_size_mb, compression_enabled)
                 if success:
