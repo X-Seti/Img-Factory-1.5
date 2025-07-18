@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont, QAction, QIcon, QShortcut, QKeySequence
-from core.guisearch import AdvancedSearchDialog, SearchManager
+from core.gui_search import ASearchDialog, SearchManager
 from typing import Optional, Dict, Any, List
 
 class IMGFactoryGUILayout:

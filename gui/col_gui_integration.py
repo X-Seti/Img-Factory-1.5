@@ -326,7 +326,7 @@ def setup_col_gui_integration(main_window): #vers 1
         main_window.update_col_tab_info = lambda file_path, stats=None: update_col_tab_info(main_window, file_path, stats)
         
         # 4. Import helper functions for menu integration
-        from gui.gui_context import open_col_file_dialog, open_col_editor_dialog, open_col_batch_processor_dialog
+        from gui.gui_context import open_col_file_dialog, open_col_editor_dialog, open_col_batch_proc_dialog
         
         def open_col_file_dialog_wrapper():
             """Wrapper for COL file dialog"""
@@ -387,7 +387,7 @@ def integrate_col_gui_into_imgfactory(img_factory_window): #vers 1
                         
                         # Connect signals to main window methods
                         col_tools.col_editor_requested.connect(img_factory_window.create_col_editor_action)
-                        col_tools.col_batch_requested.connect(lambda: open_col_batch_processor_dialog(img_factory_window))
+                        col_tools.col_batch_requested.connect(lambda: open_col_batch_proc_dialog(img_factory_window))
                         col_tools.col_analyzer_requested.connect(lambda: col_debug_log(img_factory_window, "COL analyzer not yet implemented", 'COL_GUI'))
                         
                         # Add to layout (before stretch if present)

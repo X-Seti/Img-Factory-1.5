@@ -316,7 +316,7 @@ class SearchManager:
     def show_search_dialog(self):
         """Show advanced search dialog"""
         try:
-            dialog = AdvancedSearchDialog(self.main_window)
+            dialog = ASearchDialog(self.main_window)
             dialog.search_requested.connect(self.perform_search)
             dialog.exec()
             
@@ -324,7 +324,7 @@ class SearchManager:
             self.main_window.log_message(f"❌ Search dialog error: {e}")
 
 
-class AdvancedSearchDialog(QDialog):
+class ASearchDialog(QDialog):
     """Advanced search dialog with options"""
     
     search_requested = pyqtSignal(str, dict)
@@ -505,6 +505,6 @@ def install_search_system(main_window):
         return False
 
 __all__ = [
-    'AdvancedSearchDialog',
+    'ASearchDialog',
     'SearchManager'
 ]

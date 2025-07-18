@@ -32,7 +32,7 @@ from components.col_core_classes import COLFile, COLModel, COLVersion
 # convert_model_version
 # load_col_file_async
 # merge_nearby_vertices
-# open_col_batch_processor_dialog
+# open_col_batch_proc_dialog
 # optimize_model_geometry
 # parse_col_bounds
 # parse_col_face
@@ -385,7 +385,7 @@ def load_col_file_async(main_window, file_path: str): #vers 1
             main_window.log_message(f"❌ Failed to start COL loading: {str(e)}")
         return None
 
-def open_col_batch_processor_dialog(main_window): #vers 1
+def open_col_batch_proc_dialog(main_window): #vers 1
     """Open COL batch processor dialog"""
     try:
         if img_debugger.debug_enabled:
@@ -422,7 +422,7 @@ __all__ = [
     'COLFace',
     'COLModelStructure',
     'load_col_file_async',
-    'open_col_batch_processor_dialog',
+    'open_col_batch_proc_dialog',
     'analyze_col_file',
     'analyze_col_model',
     'optimize_model_geometry',

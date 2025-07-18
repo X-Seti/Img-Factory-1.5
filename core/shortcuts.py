@@ -112,7 +112,7 @@ def setup_col_shortcuts(main_window): #vers 11
     try:
         col_shortcuts = [
             ("Ctrl+Shift+C", "open_col_editor_dialog", "COL Editor"),
-            ("Ctrl+Shift+B", "open_col_batch_processor_dialog", "Batch Processor"),
+            ("Ctrl+Shift+B", "open_col_batch_proc_dialog", "Batch Processor"),
             ("Ctrl+Shift+A", "analyze_col_file_dialog", "Analyze COL"),
             ("Ctrl+Shift+O", "open_col_file_dialog", "Open COL file"),
         ]
@@ -132,14 +132,14 @@ def setup_col_shortcuts(main_window): #vers 11
                 try:
                     from gui.gui_context import (
                         open_col_file_dialog, 
-                        open_col_batch_processor_dialog,
+                        open_col_batch_proc_dialog,
                         open_col_editor_dialog,
                         analyze_col_file_dialog
                     )
                     
                     method_map = {
                         'open_col_file_dialog': lambda: open_col_file_dialog(main_window),
-                        'open_col_batch_processor_dialog': lambda: open_col_batch_processor_dialog(main_window),
+                        'open_col_batch_proc_dialog': lambda: open_col_batch_proc_dialog(main_window),
                         'open_col_editor_dialog': lambda: open_col_editor_dialog(main_window),
                         'analyze_col_file_dialog': lambda: analyze_col_file_dialog(main_window)
                     }

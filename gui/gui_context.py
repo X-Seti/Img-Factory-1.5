@@ -20,7 +20,7 @@ from PyQt6.QtGui import QAction, QContextMenuEvent
 # edit_txd_textures
 # enhanced_context_menu_event
 # replace_selected_entry
-# open_col_batch_processor_dialog
+# open_col_batch_proc_dialog
 # open_col_editor_dialog
 # open_col_file_dialog
 # show_entry_properties
@@ -356,7 +356,7 @@ def replace_selected_entry(main_window, row): #vers 1
     main_window.log_message(f"🔄 Replace entry from row {row} - not yet implemented")
 
 
-def open_col_batch_processor_dialog(main_window): #vers 2
+def open_col_batch_proc_dialog(main_window): #vers 2
     """Open COL batch processor"""
     try:
         # Try to open batch processor if available
@@ -438,7 +438,7 @@ __all__ = [
     'add_img_context_menu_to_entries_table',
     'analyze_col_file_dialog',
     'enhanced_context_menu_event',
-    'open_col_batch_processor_dialog', 
+    'open_col_batch_proc_dialog',
     'open_col_editor_dialog',
     'open_col_file_dialog'
 ]

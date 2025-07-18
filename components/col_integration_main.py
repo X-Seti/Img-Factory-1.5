@@ -225,9 +225,9 @@ def open_col_batch_processor(main_window): #vers 1
     try:
         col_debug_log(main_window, "Opening COL batch processor", 'COL_BATCH')
         
-        from components.col_utilities import open_col_batch_processor_dialog
+        from components.col_utilities import open_col_batch_proc_dialog
         
-        result = open_col_batch_processor_dialog(main_window)
+        result = open_col_batch_proc_dialog(main_window)
         
         if result:
             col_debug_log(main_window, "COL batch processor completed", 'COL_BATCH', 'SUCCESS')

@@ -46,32 +46,30 @@ from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent,
 # OR use the full path:
 from utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
 
-from components.img_core_classes import (
-    IMGFile, IMGEntry, IMGVersion, Platform, format_file_size,
-    IMGEntriesTable, FilterPanel, IMGFileInfoPanel,
-    TabFilterWidget, integrate_filtering, create_entries_table_panel
-)
-
 #components
+from components.unified_debug_functions import integrate_all_improvements
 from components.col_creator import create_new_col_file, import_col_to_current_img, export_all_col_from_img
 from components.col_debug_functions import integrate_col_debug_with_main_window
+from components.col_loader import load_col_file_safely
 from components.col_validator import validate_col_file
 from components.img_close_functions import install_close_functions, setup_close_manager
 from components.img_creator import NewIMGDialog, IMGCreationThread
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_validator import IMGValidator
-from components.unified_debug_functions import integrate_all_improvements
+from components.img_core_classes import (
+    IMGFile, IMGEntry, IMGVersion, Platform, format_file_size,
+    IMGEntriesTable, FilterPanel, IMGFileInfoPanel,
+    TabFilterWidget, integrate_filtering, create_entries_table_panel)
 
 #core
 from core.img_formats import GameSpecificIMGDialog, IMGCreator
 from core.file_extraction import setup_complete_extraction_integration
 from core.tables_structure import reset_table_styling
-from core.loadcol import load_col_file_safely
 from core.remove import integrate_remove_functions
 from core.rw_versions import get_rw_version_name
 from core.shortcuts import setup_all_shortcuts, setup_debug_shortcuts
 from core.integration import integrate_complete_core_system
-from core.tables_structure import populate_img_table, populate_col_table_img_format, populate_col_table_enhanced, setup_col_table_structure
+from core.tables_structure import setup_col_table_structure
 #gui-layout
 
 #gui
@@ -81,114 +79,17 @@ from gui.gui_infobar import update_col_info_bar_enhanced
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.gui_menu import IMGFactoryMenuBar
-from gui.gui_context import open_col_file_dialog, open_col_batch_processor_dialog, open_col_editor_dialog, analyze_col_file_dialog
+from gui.gui_context import open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog
+
+#methods
+from methods.populate_img_table import populate_img_table
+from methods.populate_col_table import populate_col_table, populate_col_table, populate_col_table_enh
 
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
 COL_INTEGRATION_AVAILABLE = False
 COL_SETUP_FUNCTION = None
 
-def populate_img_table(table: QTableWidget, img_file: IMGFile):
-    """Populate table with IMG file entries - FIXED VERSION"""
-    if not img_file or not img_file.entries:
-        table.setRowCount(0)
-        return
-
-    entries = img_file.entries
-    print(f"DEBUG: Populating table with {len(entries)} entries")
-
-    # Clear existing data first
-    table.setRowCount(0)
-    table.setRowCount(len(entries))
-
-    for row, entry in enumerate(entries):
-        # Name
-        table.setItem(row, 0, QTableWidgetItem(entry.name))
-
-        # Type (file extension) - FIXED: Always use name-based detection
-        if '.' in entry.name:
-            file_type = entry.name.split('.')[-1].upper()
-        else:
-            file_type = "NO_EXT"
-
-        print(f"DEBUG: Row {row}: {entry.name} -> Type: {file_type}")
-        table.setItem(row, 1, QTableWidgetItem(file_type))
-
-        # Size (formatted)
-        try:
-            from components.img_core_classes import format_file_size
-            size_text = format_file_size(entry.size)
-        except:
-            size_text = f"{entry.size} bytes"
-        table.setItem(row, 2, QTableWidgetItem(size_text))
-
-        # Offset (hex format)
-        table.setItem(row, 3, QTableWidgetItem(f"0x{entry.offset:X}"))
-
-        # Version - Improved detection
-        version = "Unknown"
-        try:
-            if hasattr(entry, 'get_version_text') and callable(entry.get_version_text):
-                version = entry.get_version_text()
-            elif hasattr(entry, 'version') and entry.version:
-                version = str(entry.version)
-            else:
-                # Provide sensible defaults based on file type
-                if file_type in ['DFF', 'TXD']:
-                    version = "RenderWare"
-                elif file_type == 'COL':
-                    version = "COL"
-                elif file_type == 'IFP':
-                    version = "IFP"
-                elif file_type == 'WAV':
-                    version = "Audio"
-                elif file_type == 'SCM':
-                    version = "Script"
-                else:
-                    version = "Unknown"
-        except Exception as e:
-            print(f"DEBUG: Version detection error for {entry.name}: {e}")
-            version = "Unknown"
-
-        table.setItem(row, 4, QTableWidgetItem(version))
-
-        # Compression
-        compression = "None"
-        try:
-            if hasattr(entry, 'compression_type') and entry.compression_type:
-                compression = str(entry.compression_type)
-            elif hasattr(entry, 'compressed') and entry.compressed:
-                compression = "Compressed"
-        except:
-            compression = "None"
-
-        table.setItem(row, 5, QTableWidgetItem(compression))
-
-        # Status
-        status = "Ready"
-        try:
-            if hasattr(entry, 'is_new_entry') and entry.is_new_entry:
-                status = "New"
-            elif hasattr(entry, 'is_replaced') and entry.is_replaced:
-                status = "Modified"
-        except:
-            status = "Ready"
-
-        table.setItem(row, 6, QTableWidgetItem(status))
-
-        # Make items read-only
-        for col in range(7):
-            item = table.item(row, col)
-            if item:
-                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-
-    print(f"DEBUG: Table population complete. Table now has {table.rowCount()} rows")
-
-    # IMPORTANT: Clear any filters that might be hiding rows
-    for row in range(table.rowCount()):
-        table.setRowHidden(row, False)
-
-    print(f"DEBUG: All rows made visible")
 
 def setup_debug_mode(self):
     """Setup debug mode integration"""
@@ -341,31 +242,6 @@ class IMGLoadThread(QThread):
         except Exception as e:
             self.loading_error.emit(f"Error loading IMG file: {str(e)}")
 
-    def populate_img_table(table: QTableWidget, img_file: IMGFile):
-        """Populate table with IMG file entries"""
-        if not img_file or not img_file.entries:
-            table.setRowCount(0)
-            return
-
-        table.setRowCount(len(img_file.entries))
-
-        for row, entry in enumerate(img_file.entries):
-            # Filename
-            table.setItem(row, 0, QTableWidgetItem(entry.name))
-            # File type
-            file_type = entry.name.split('.')[-1].upper() if '.' in entry.name else "Unknown"
-            table.setItem(row, 1, QTableWidgetItem(file_type))
-            # Size
-            table.setItem(row, 2, QTableWidgetItem(format_file_size(entry.size)))
-            # Offset
-            table.setItem(row, 3, QTableWidgetItem(f"0x{entry.offset:X}"))
-            # Version
-            table.setItem(row, 4, QTableWidgetItem(str(entry.version)))
-            # Compression
-            compression = "ZLib" if hasattr(entry, 'compressed') and entry.compressed else "None"
-            table.setItem(row, 5, QTableWidgetItem(compression))
-            # Status
-            table.setItem(row, 6, QTableWidgetItem("Ready"))
 
 
 class IMGFactory(QMainWindow):

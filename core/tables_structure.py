@@ -9,13 +9,13 @@ Handles table population and setup for both IMG and COL files
 import os
 from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
 from PyQt6.QtCore import Qt
+from methods.populate_img_table import populate_img_table
+from methods.populate_col_table import populate_col_table, populate_col_table, populate_col_table_enh
+
 
 # Methods list.
 # estimate_col_model_size_bytes
 # format_file_size
-# populate_col_table_img_format
-# populate_col_table_enhanced
-# populate_img_table
 # reset_table_styling
 # setup_col_table_structure
 
@@ -73,213 +73,6 @@ def format_file_size(size_bytes): #vers 4
 
     except Exception:
         return f"{size_bytes} bytes"
-
-
-def populate_col_table_img_format(table: QTableWidget, col_file, file_name): #vers 4
-    """Populate table with COL models using same format as IMG entries"""
-    # Keep the same 7-column format as IMG files
-    table.setColumnCount(7)
-    table.setHorizontalHeaderLabels([
-        "Name", "Type", "Size", "Offset", "Version", "Compression", "Status"
-    ])
-
-    if not col_file or not hasattr(col_file, 'models') or not col_file.models:
-        # Show the file itself if no models
-        table.setRowCount(1)
-
-        try:
-            file_size = os.path.getsize(col_file.file_path) if col_file and hasattr(col_file, 'file_path') and col_file.file_path else 0
-            size_text = format_file_size(file_size)
-        except:
-            size_text = "Unknown"
-
-        items = [
-            (file_name, "COL", size_text, "0x0", "Unknown", "None", "No Models")
-        ]
-
-        for row, item_data in enumerate(items):
-            for col, value in enumerate(item_data):
-                item = QTableWidgetItem(str(value))
-                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                table.setItem(row, col, item)
-
-        print(f"DEBUG: COL file loaded but no models found")
-        return
-
-    # Show individual models in IMG entry format
-    models = col_file.models
-    table.setRowCount(len(models))
-
-    print(f"DEBUG: Populating table with {len(models)} COL models")
-
-    virtual_offset = 0x0  # Virtual offset for COL models
-
-    for row, model in enumerate(models):
-        try:
-            # Name - use model name or generate one
-            model_name = getattr(model, 'name', f"Model_{row}") if hasattr(model, 'name') and model.name else f"Model_{row}"
-            table.setItem(row, 0, QTableWidgetItem(model_name))
-
-            # Type - just "COL" (like IMG shows "DFF", "TXD", etc.)
-            table.setItem(row, 1, QTableWidgetItem("COL"))
-
-            # Size - estimate COL model size
-            try:
-                model_size = estimate_col_model_size_bytes(model)
-                size_text = format_file_size(model_size)
-            except:
-                size_text = "1 KB"
-            table.setItem(row, 2, QTableWidgetItem(size_text))
-
-            # Virtual offset (increment for each model)
-            table.setItem(row, 3, QTableWidgetItem(f"0x{virtual_offset:X}"))
-            virtual_offset += 1024  # Increment by 1KB for next model
-
-            # Version - try to get COL version
-            try:
-                if hasattr(model, 'version') and hasattr(model.version, 'name'):
-                    version_text = model.version.name
-                elif hasattr(model, 'version') and hasattr(model.version, 'value'):
-                    version_text = f"COL{model.version.value}"
-                else:
-                    version_text = "COL"
-            except:
-                version_text = "COL"
-            table.setItem(row, 4, QTableWidgetItem(version_text))
-
-            # Compression - COL models aren't typically compressed
-            table.setItem(row, 5, QTableWidgetItem("None"))
-
-            # Status - always Ready for COL models
-            table.setItem(row, 6, QTableWidgetItem("Ready"))
-
-            # Make all items read-only
-            for col in range(7):
-                item = table.item(row, col)
-                if item:
-                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-
-        except Exception as e:
-            print(f"DEBUG: Error populating COL model {row}: {str(e)}")
-            # Create fallback row (same as IMG error handling)
-            table.setItem(row, 0, QTableWidgetItem(f"Model_{row}"))
-            table.setItem(row, 1, QTableWidgetItem("COL"))
-            table.setItem(row, 2, QTableWidgetItem("0 B"))
-            table.setItem(row, 3, QTableWidgetItem("0x0"))
-            table.setItem(row, 4, QTableWidgetItem("Unknown"))
-            table.setItem(row, 5, QTableWidgetItem("None"))
-            table.setItem(row, 6, QTableWidgetItem("Error"))
-
-    print(f"DEBUG: Table populated with {len(models)} COL models (IMG format)")
-
-
-def populate_col_table_enhanced(main_window, col_file): #vers 2
-    """Populate table using enhanced display manager"""
-    try:
-        from components.col_display import COLDisplayManager
-
-        display_manager = COLDisplayManager(main_window)
-        display_manager.populate_col_table(col_file)
-        main_window.log_message("✅ Enhanced COL table populated")
-
-    except Exception as e:
-        main_window.log_message(f"❌ Enhanced table population failed: {str(e)}")
-        raise
-
-
-def populate_img_table(table: QTableWidget, img_file): #vers 4
-    """Populate table with IMG file entries"""
-    if not img_file or not img_file.entries:
-        table.setRowCount(0)
-        return
-
-    entries = img_file.entries
-    print(f"DEBUG: Populating table with {len(entries)} entries")
-
-    # Clear existing data first
-    table.setRowCount(0)
-    table.setRowCount(len(entries))
-
-    for row, entry in enumerate(entries):
-        # Name
-        table.setItem(row, 0, QTableWidgetItem(entry.name))
-
-        # Type (file extension) - FIXED: Always use name-based detection
-        if '.' in entry.name:
-            file_type = entry.name.split('.')[-1].upper()
-        else:
-            file_type = "Unknown"
-        table.setItem(row, 1, QTableWidgetItem(file_type))
-
-        # Size
-        try:
-            from components.img_core_classes import format_file_size
-            size_text = format_file_size(entry.size)
-        except:
-            size_text = f"{entry.size} bytes"
-        table.setItem(row, 2, QTableWidgetItem(size_text))
-
-        # Offset
-        table.setItem(row, 3, QTableWidgetItem(f"0x{entry.offset:X}"))
-
-        # Version
-        version = "Unknown"
-        try:
-            if hasattr(entry, 'get_version_text') and callable(entry.get_version_text):
-                version = entry.get_version_text()
-            elif hasattr(entry, 'version') and entry.version:
-                version = str(entry.version)
-            else:
-                # Provide sensible defaults based on file type
-                if file_type in ['DFF', 'TXD']:
-                    version = "RenderWare"
-                elif file_type == 'COL':
-                    version = "COL"
-                elif file_type == 'IFP':
-                    version = "IFP"
-                elif file_type == 'WAV':
-                    version = "Audio"
-                elif file_type == 'SCM':
-                    version = "Script"
-                else:
-                    version = "Unknown"
-        except Exception as e:
-            print(f"DEBUG: Version detection error for {entry.name}: {e}")
-            version = "Unknown"
-
-        table.setItem(row, 4, QTableWidgetItem(version))
-
-        # Compression
-        compression = "None"
-        try:
-            if hasattr(entry, 'compression_type') and entry.compression_type:
-                compression = str(entry.compression_type)
-            elif hasattr(entry, 'compressed') and entry.compressed:
-                compression = "Compressed"
-        except:
-            compression = "None"
-
-        table.setItem(row, 5, QTableWidgetItem(compression))
-
-        # Status
-        status = "Ready"
-        try:
-            if hasattr(entry, 'is_new_entry') and entry.is_new_entry:
-                status = "New"
-            elif hasattr(entry, 'is_replaced') and entry.is_replaced:
-                status = "Modified"
-        except:
-            status = "Ready"
-
-        table.setItem(row, 6, QTableWidgetItem(status))
-
-        # Make items read-only
-        for col in range(7):
-            item = table.item(row, col)
-            if item:
-                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-
-    print(f"DEBUG: Table population complete.")
 
 
 def reset_table_styling(main_window): #vers 4
@@ -344,13 +137,47 @@ def setup_col_table_structure(main_window): #vers 4
         return False
 
 
+def setup_col_table_structure(main_window) -> bool: #vers 3
+    """Setup table structure for COL data (6 columns)"""
+    try:
+        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
+            main_window.log_message("⚠️ Main table not available")
+            return False
+
+        table = main_window.gui_layout.table
+
+        # Configure table for COL data (7 columns) - match original blue table
+        table.setColumnCount(7)
+        table.setHorizontalHeaderLabels([
+            "Model", "Type", "Size", "Surfaces", "Vertices", "Collision", "Status"
+        ])
+
+        # Set column widths
+        table.setColumnWidth(0, 120)  # Model
+        table.setColumnWidth(1, 60)   # Type
+        table.setColumnWidth(2, 80)   # Size
+        table.setColumnWidth(3, 80)   # Surfaces
+        table.setColumnWidth(4, 80)   # Vertices
+        table.setColumnWidth(5, 100)  # Collision
+        table.setColumnWidth(6, 80)   # Status
+
+        # Configure table properties
+        table.setAlternatingRowColors(True)
+        table.setSelectionBehavior(table.SelectionBehavior.SelectRows)
+        table.setSortingEnabled(True)
+
+        main_window.log_message("✅ COL table structure setup (7 columns)")
+        return True
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error setting up COL table: {str(e)}")
+        return False
+
+
 # Export functions
 __all__ = [
     'estimate_col_model_size_bytes',
     'format_file_size',
-    'populate_col_table_img_format', 
-    'populate_col_table_enhanced',
-    'populate_img_table',
     'reset_table_styling',
     'setup_col_table_structure'
 ]
