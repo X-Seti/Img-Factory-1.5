@@ -1,52 +1,15 @@
-#this belongs in components/ col_parsing_functions.py - Version: 8
-# X-Seti - July18 2025 - Img Factory 1.5 - Fixed COL Parser with IMG Debug
+#this belongs in components/ col_parsing_functions.py - Version: 2
+# X-Seti - July11 2025 - Img Factory 1.5
 
 """
-COL Parser - Complete collision file parsing using IMG debug system
-Handles all COL format versions (COL1/COL2/COL3/COL4) with working collision data parsing
+COL Parser - Complete collision file parsing with debug control
+Handles all COL format versions (COL1/COL2/COL3/COL4) with detailed logging
 """
 
 import struct
 import os
 from typing import Dict, List, Tuple, Optional
-
-# Use IMG debug system instead of broken COL debug
-try:
-    from components.img_debug_functions import img_debugger
-    debug_available = True
-except ImportError:
-    debug_available = False
-    print("⚠️ IMG debug system not available")
-
-##Methods list -
-# _load_col_file
-# _populate_col_table_enhanced
-# _setup_col_tab
-# setup_col_tab_integration
-# _setup_col_table_structure
-# _update_col_info_bar_enhanced
-# _validate_col_file
-
-##class COLParser: -
-#__init__
-# def log
-# _is_multi_model_archive
-# _calculate_model_end_offset
-# clear_debug_log
-# format_collision_types
-# get_debug_log
-# get_model_stats_by_index
-# _parse_collision_data
-# parse_col_file_structure
-# _parse_multi_model_archive
-# parse_single_model
-# set_debug
-
-## Export main classes and functions -
-# format_model_collision_types
-# get_model_collision_stats
-# parse_col_file_with_debug
-
+from components.col_core_classes import is_col_debug_enabled
 
 def reset_table_styling(main_window):
     """Completely reset table styling to default"""
@@ -70,7 +33,6 @@ def reset_table_styling(main_window):
     except Exception as e:
         main_window.log_message(f"⚠️ Error resetting table styling: {str(e)}")
 
-
 def setup_col_tab_integration(main_window):
     """Setup COL tab integration with main window"""
     try:
@@ -86,7 +48,6 @@ def setup_col_tab_integration(main_window):
     except Exception as e:
         main_window.log_message(f"❌ COL tab integration failed: {str(e)}")
         return False
-
 
 def load_col_file_safely(main_window, file_path):
     """Load COL file safely with proper tab management"""
@@ -125,166 +86,31 @@ def load_col_file_safely(main_window, file_path):
         main_window.log_message(f"❌ Error loading COL file: {str(e)}")
         return False
 
-
 def _populate_col_table_enhanced(main_window, col_file):
-    """Populate table using enhanced display manager with working collision parsing"""
+    """Populate table using enhanced display manager"""
     try:
-        if debug_available:
-            img_debugger.debug("Starting enhanced COL table population")
-        
-        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            main_window.log_message("⚠️ Main table not available")
-            return
-        
-        table = main_window.gui_layout.table
-        
-        # Configure table for COL data (7 columns) - from working old files
-        table.setColumnCount(7)
-        table.setHorizontalHeaderLabels([
-            "Model", "Type", "Size", "Surfaces", "Vertices", "Collision", "Status"
-        ])
-        
-        # Clear existing data
-        table.setRowCount(0)
-        
-        if not hasattr(col_file, 'models') or not col_file.models:
-            main_window.log_message("⚠️ No models found in COL file")
-            return
-        
-        table.setRowCount(len(col_file.models))
-        main_window.log_message(f"🔧 Populating table with {len(col_file.models)} COL models")
-        
-        # Use working collision parser for real data
-        parser = COLParser(debug=True)
-        parsed_models = parser.parse_col_file_structure(col_file.file_path)
-        
-        for row, model in enumerate(col_file.models):
-            try:
-                # Get real collision stats from working parser
-                if row < len(parsed_models):
-                    stats = parsed_models[row]
-                else:
-                    stats = {
-                        'sphere_count': 0,
-                        'box_count': 0,
-                        'vertex_count': 0,
-                        'face_count': 0,
-                        'total_elements': 0,
-                        'estimated_size': 64
-                    }
-                
-                # Model name/index
-                model_name = getattr(model, 'name', stats.get('name', f"Model_{row+1}"))
-                if not model_name or model_name.strip() == "":
-                    model_name = f"Model_{row+1}"
-                table.setItem(row, 0, QTableWidgetItem(str(model_name)))
-                
-                # Model type - show COL version
-                model_type = stats.get('version', 'COL1')
-                table.setItem(row, 1, QTableWidgetItem(model_type))
-                
-                # Calculate model size
-                model_size = stats.get('estimated_size', 64)
-                size_str = _format_file_size(model_size)
-                table.setItem(row, 2, QTableWidgetItem(size_str))
-                
-                # Surface count (spheres + boxes)
-                surface_count = stats.get('sphere_count', 0) + stats.get('box_count', 0)
-                table.setItem(row, 3, QTableWidgetItem(str(surface_count)))
-                
-                # Vertex count
-                vertex_count = stats.get('vertex_count', 0)
-                table.setItem(row, 4, QTableWidgetItem(str(vertex_count)))
-                
-                # Collision types
-                collision_types = _format_collision_types(stats)
-                table.setItem(row, 5, QTableWidgetItem(collision_types))
-                
-                # Status
-                total_elements = stats.get('total_elements', 0)
-                status = "✅ Loaded" if total_elements > 0 else "⚠️ Empty"
-                table.setItem(row, 6, QTableWidgetItem(status))
-                
-                # Log progress
-                if debug_available:
-                    img_debugger.debug(f"Row {row}: {model_name} - {collision_types}")
-                main_window.log_message(f"✅ Model {row} ({model_name}): {stats}")
-                
-            except Exception as e:
-                main_window.log_message(f"⚠️ Error populating row {row}: {str(e)}")
-                # Fill with error data
-                table.setItem(row, 0, QTableWidgetItem(f"Model_{row+1}"))
-                table.setItem(row, 1, QTableWidgetItem("ERROR"))
-                table.setItem(row, 2, QTableWidgetItem("0 B"))
-                table.setItem(row, 3, QTableWidgetItem("0"))
-                table.setItem(row, 4, QTableWidgetItem("0"))
-                table.setItem(row, 5, QTableWidgetItem("Parse Error"))
-                table.setItem(row, 6, QTableWidgetItem("❌ Error"))
-        
-        main_window.log_message("✅ Enhanced COL table populated with working parser")
+        from components.col_display import COLDisplayManager
+
+        display_manager = COLDisplayManager(main_window)
+        display_manager.populate_col_table(col_file)
+        main_window.log_message("✅ Enhanced COL table populated")
 
     except Exception as e:
         main_window.log_message(f"❌ Enhanced table population failed: {str(e)}")
         raise
 
-
-def _format_collision_types(stats):
-    """Format collision types string from stats"""
-    types = []
-    if stats.get('sphere_count', 0) > 0:
-        types.append(f"Spheres({stats['sphere_count']})")
-    if stats.get('box_count', 0) > 0:
-        types.append(f"Boxes({stats['box_count']})")
-    if stats.get('face_count', 0) > 0:
-        types.append(f"Mesh({stats['face_count']})")
-    
-    return ", ".join(types) if types else "None"
-
-
-def _format_file_size(size_bytes):
-    """Format file size for display"""
-    if size_bytes < 1024:
-        return f"{size_bytes} B"
-    elif size_bytes < 1024*1024:
-        return f"{size_bytes/1024:.1f} KB"
-    else:
-        return f"{size_bytes/(1024*1024):.1f} MB"
-
-
 def _update_col_info_bar_enhanced(main_window, col_file, file_path):
     """Update info bar using enhanced display manager"""
     try:
-        if debug_available:
-            img_debugger.debug("Updating COL info bar")
-        
-        file_name = os.path.basename(file_path)
-        file_size = os.path.getsize(file_path)
-        model_count = len(col_file.models) if hasattr(col_file, 'models') else 0
-        
-        # Update window title
-        main_window.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
-        
-        # Update info labels if they exist
-        if hasattr(main_window, 'file_path_label'):
-            main_window.file_path_label.setText(file_path)
-        
-        if hasattr(main_window, 'version_label'):
-            main_window.version_label.setText("COL")
-        
-        if hasattr(main_window, 'entry_count_label'):
-            main_window.entry_count_label.setText(str(model_count))
-        
-        # Update status bar
-        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'show_progress'):
-            size_text = f"{file_size // 1024}KB" if file_size >= 1024 else f"{file_size}B"
-            main_window.gui_layout.show_progress(-1, f"COL: {model_count} models ({size_text})")
-        
+        from components.col_display import COLDisplayManager
+
+        display_manager = COLDisplayManager(main_window)
+        display_manager.update_col_info_bar(col_file, file_path)
         main_window.log_message("✅ Enhanced info bar updated")
 
     except Exception as e:
         main_window.log_message(f"❌ Enhanced info bar update failed: {str(e)}")
         raise
-
 
 def _validate_col_file(main_window, file_path):
     """Validate COL file before loading"""
@@ -302,7 +128,6 @@ def _validate_col_file(main_window, file_path):
         return False
 
     return True
-
 
 def _setup_col_tab(main_window, file_path):
     """Setup or reuse tab for COL file"""
@@ -346,7 +171,6 @@ def _setup_col_tab(main_window, file_path):
         main_window.log_message(f"❌ Error setting up COL tab: {str(e)}")
         return None
 
-
 def _load_col_file(main_window, file_path):
     """Load COL file object"""
     try:
@@ -369,7 +193,6 @@ def _load_col_file(main_window, file_path):
         main_window.log_message(f"❌ Error loading COL file: {str(e)}")
         return None
 
-
 def _setup_col_table_structure(main_window):
     """Setup table structure for COL data display with enhanced usability"""
     try:
@@ -379,7 +202,7 @@ def _setup_col_table_structure(main_window):
 
         table = main_window.gui_layout.table
 
-        # Configure table for COL data (7 columns) - from working old files
+        # Configure table for COL data (7 columns)
         table.setColumnCount(7)
         table.setHorizontalHeaderLabels([
             "Model", "Type", "Size", "Surfaces", "Vertices", "Collision", "Status"
@@ -407,7 +230,7 @@ def _setup_col_table_structure(main_window):
         # Set object name for specific styling
         table.setObjectName("col_table")
 
-        # Apply COL-specific styling ONLY to this table (from working old files)
+        # Apply COL-specific styling ONLY to this table
         col_table_style = """
             QTableWidget#col_table {
                 alternate-background-color: #E3F2FD;
@@ -462,36 +285,31 @@ def _setup_col_table_structure(main_window):
         main_window.log_message(f"⚠️ Error setting up table structure: {str(e)}")
 
 
-# Import QTableWidgetItem for table population
-try:
-    from PyQt6.QtWidgets import QTableWidgetItem
-except ImportError:
-    try:
-        from PyQt5.QtWidgets import QTableWidgetItem
-    except ImportError:
-        QTableWidgetItem = None
-
-
 class COLParser:
-    """Complete COL file parser with working collision data extraction - using IMG debug"""
+    """Complete COL file parser with debugging support"""
     
-    def __init__(self, debug=None): #vers 1
-        """Initialize COL parser with IMG debug control"""
-        self.debug = debug if debug is not None else debug_available
+    def __init__(self, debug=None):
+        """Initialize COL parser with debug control"""
+        # Check global debug setting if not specified
+        if debug is None:
+            self.debug = is_col_debug_enabled()
+        else:
+            self.debug = debug
+        
         self.log_messages = []
     
-    def log(self, message): #vers 1
-        """Log debug message using IMG debug system"""
-        if self.debug and debug_available:
-            img_debugger.debug(f"COLParser: {message}")
+    def log(self, message):
+        """Log debug message only if debug is enabled"""
+        if self.debug:
+            print(f"🔍 COLParser: {message}")
         self.log_messages.append(message)
     
-    def set_debug(self, enabled): #vers 1
+    def set_debug(self, enabled):
         """Update debug setting"""
         self.debug = enabled
     
-    def parse_col_file_structure(self, file_path): #vers 1
-        """Parse complete COL file and return structure info for all models - WORKING VERSION"""
+    def parse_col_file_structure(self, file_path):
+        """Parse complete COL file and return structure info for all models"""
         try:
             with open(file_path, 'rb') as f:
                 data = f.read()
@@ -546,7 +364,7 @@ class COLParser:
             self.log(f"Error parsing COL file: {str(e)}")
             return []
     
-    def _is_multi_model_archive(self, data): #vers 1
+    def _is_multi_model_archive(self, data):
         """Check if this is a multi-model COL archive"""
         try:
             # Look for multiple COL signatures
@@ -569,8 +387,8 @@ class COLParser:
         except Exception:
             return False
     
-    def _parse_multi_model_archive(self, data): #vers 1
-        """Parse multi-model COL archive with different structure - WORKING VERSION"""
+    def _parse_multi_model_archive(self, data):
+        """Parse multi-model COL archive with different structure"""
         try:
             self.log("Parsing as multi-model archive...")
             models = []
@@ -611,8 +429,8 @@ class COLParser:
             self.log(f"Error parsing multi-model archive: {str(e)}")
             return []
     
-    def parse_single_model(self, data, offset, model_index): #vers 1
-        """Parse a single COL model and return info + new offset - WORKING VERSION"""
+    def parse_single_model(self, data, offset, model_index):
+        """Parse a single COL model and return info + new offset"""
         try:
             start_offset = offset
             
@@ -667,8 +485,8 @@ class COLParser:
             else:
                 version = 'UNKNOWN'
             
-            # Parse collision data based on version - WORKING VERSION FROM OLD FILES
-            collision_stats = self._parse_collision_data_working(data, offset, file_size - 28, version)
+            # Parse collision data based on version
+            collision_stats = self._parse_collision_data(data, offset, file_size - 28, version)
             
             # Calculate end offset
             end_offset = self._calculate_model_end_offset(data, start_offset, file_size)
@@ -695,8 +513,8 @@ class COLParser:
             self.log(f"Error parsing model at offset {offset}: {str(e)}")
             return None, offset + 32  # Skip ahead to try next model
     
-    def _parse_collision_data_working(self, data, offset, data_size, version): #vers 1
-        """Parse collision data using WORKING logic from old files"""
+    def _parse_collision_data(self, data, offset, data_size, version):
+        """Parse collision data and return statistics"""
         stats = {
             'sphere_count': 0,
             'box_count': 0,
@@ -707,77 +525,18 @@ class COLParser:
         
         try:
             if version == 'COL1':
-                # COL1 structure from working old files
-                current_offset = offset
-                
-                # Skip bounds (40 bytes for COL1)
-                current_offset += 40
-                
-                # Skip unknown data section if present
-                if current_offset + 4 <= len(data):
-                    unknown_count = struct.unpack('<I', data[current_offset:current_offset+4])[0]
-                    if 0 <= unknown_count <= 100:  # Sanity check
-                        current_offset += 4 + (unknown_count * 8)
-                        self.log(f"COL1: Skipped {unknown_count} unknown entries")
-                
-                # Read spheres
-                if current_offset + 4 <= len(data):
-                    sphere_count = struct.unpack('<I', data[current_offset:current_offset+4])[0]
-                    if 0 <= sphere_count <= 1000:  # Sanity check
-                        stats['sphere_count'] = sphere_count
-                        current_offset += 4 + (sphere_count * 20)
-                        self.log(f"COL1: {sphere_count} spheres")
-                
-                # Read boxes
-                if current_offset + 4 <= len(data):
-                    box_count = struct.unpack('<I', data[current_offset:current_offset+4])[0]
-                    if 0 <= box_count <= 1000:  # Sanity check
-                        stats['box_count'] = box_count
-                        current_offset += 4 + (box_count * 28)
-                        self.log(f"COL1: {box_count} boxes")
-                
-                # Read vertices
-                if current_offset + 4 <= len(data):
-                    vertex_count = struct.unpack('<I', data[current_offset:current_offset+4])[0]
-                    if 0 <= vertex_count <= 10000:  # Sanity check
-                        stats['vertex_count'] = vertex_count
-                        current_offset += 4 + (vertex_count * 12)  # COL1 uses 12 bytes per vertex
-                        self.log(f"COL1: {vertex_count} vertices")
-                
-                # Read faces
-                if current_offset + 4 <= len(data):
-                    face_count = struct.unpack('<I', data[current_offset:current_offset+4])[0]
-                    if 0 <= face_count <= 10000:  # Sanity check
-                        stats['face_count'] = face_count
-                        self.log(f"COL1: {face_count} faces")
-                
+                # COL1 has simpler structure
+                # For now, estimate based on data size
+                if data_size > 100:
+                    stats['sphere_count'] = max(1, data_size // 200)
+                    stats['total_elements'] = stats['sphere_count']
             else:
-                # COL2/3/4 structure from working old files
-                current_offset = offset
-                
-                # Skip bounds (28 bytes for COL2/3/4)
-                current_offset += 28
-                
-                # COL2/3/4 structure: counts first, then data
-                if current_offset + 16 <= len(data):
-                    sphere_count, box_count, vertex_count, face_count = struct.unpack('<IIII', 
-                        data[current_offset:current_offset+16])
-                    
-                    self.log(f"{version} counts: {sphere_count} spheres, {box_count} boxes, {vertex_count} vertices, {face_count} faces")
-                    
-                    # Validate counts (from old working sanity checks)
-                    if (0 <= sphere_count <= 1000 and 0 <= box_count <= 1000 and 
-                        0 <= vertex_count <= 10000 and 0 <= face_count <= 10000):
-                        
-                        stats['sphere_count'] = sphere_count
-                        stats['box_count'] = box_count
-                        stats['vertex_count'] = vertex_count
-                        stats['face_count'] = face_count
-                    else:
-                        self.log(f"{version} counts failed sanity check")
-            
-            # Calculate total elements
-            stats['total_elements'] = stats['sphere_count'] + stats['box_count'] + stats['face_count']
+                # COL2/3/4 have more complex structure
+                # For now, estimate based on data size
+                if data_size > 200:
+                    stats['vertex_count'] = max(10, data_size // 50)
+                    stats['face_count'] = max(5, data_size // 100)
+                    stats['total_elements'] = stats['vertex_count'] + stats['face_count']
             
             self.log(f"Collision stats: {stats}")
             
@@ -786,7 +545,7 @@ class COLParser:
         
         return stats
     
-    def _calculate_model_end_offset(self, data, start_offset, declared_size): #vers 1
+    def _calculate_model_end_offset(self, data, start_offset, declared_size):
         """Calculate the end offset of a model"""
         try:
             # Add 8 bytes for header (signature + size)
@@ -804,7 +563,7 @@ class COLParser:
             self.log(f"Error calculating model end: {str(e)}")
             return start_offset + 800  # Safe fallback
     
-    def get_model_stats_by_index(self, file_path, model_index): #vers 1
+    def get_model_stats_by_index(self, file_path, model_index):
         """Get statistics for a specific model by index"""
         models = self.parse_col_file_structure(file_path)
         
@@ -821,7 +580,7 @@ class COLParser:
                 'estimated_size': 64
             }
     
-    def format_collision_types(self, stats): #vers 1
+    def format_collision_types(self, stats):
         """Format collision types string from stats"""
         types = []
         if stats.get('sphere_count', 0) > 0:
@@ -833,43 +592,41 @@ class COLParser:
         
         return ", ".join(types) if types else "None"
     
-    def get_debug_log(self): #vers 1
+    def get_debug_log(self):
         """Get debug log messages"""
         return self.log_messages
     
-    def clear_debug_log(self): #vers 1
+    def clear_debug_log(self):
         """Clear debug log"""
         self.log_messages = []
 
 
 # Convenience functions
-def parse_col_file_with_debug(file_path, debug=None): #vers 1
+def parse_col_file_with_debug(file_path, debug=None):
     """Parse COL file and return model statistics with optional debug output"""
     if debug is None:
-        debug = debug_available
+        debug = is_col_debug_enabled()
     
     parser = COLParser(debug=debug)
     models = parser.parse_col_file_structure(file_path)
     
-    if debug and debug_available:
-        img_debugger.debug("=== COL Parser Debug Log ===")
+    if debug:
+        print("\n=== COL Parser Debug Log ===")
         for msg in parser.get_debug_log():
-            img_debugger.debug(msg)
-        img_debugger.debug("=== End Debug Log ===")
+            print(msg)
+        print("=== End Debug Log ===\n")
     
     return models
 
-
-def get_model_collision_stats(file_path, model_index, debug=None): #vers 1
+def get_model_collision_stats(file_path, model_index, debug=None):
     """Get collision statistics for a specific model"""
     if debug is None:
-        debug = debug_available
+        debug = is_col_debug_enabled()
     
     parser = COLParser(debug=debug)
     return parser.get_model_stats_by_index(file_path, model_index)
 
-
-def format_model_collision_types(stats): #vers 1
+def format_model_collision_types(stats):
     """Format collision types string"""
     parser = COLParser(debug=False)
     return parser.format_collision_types(stats)
@@ -880,7 +637,5 @@ __all__ = [
     'COLParser',
     'parse_col_file_with_debug',
     'get_model_collision_stats', 
-    'format_model_collision_types',
-    'load_col_file_safely',
-    'setup_col_tab_integration'
+    'format_model_collision_types'
 ]

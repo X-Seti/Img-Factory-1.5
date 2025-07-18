@@ -1,14 +1,15 @@
-#this belongs in core/ loadcol.py - Version: 2
-# X-Seti - July17 2025 - Img Factory 1.5 - Unified COL Loading System
+#this belongs in core/ loadcol.py - Version: 3
+# X-Seti - July18 2025 - Img Factory 1.5 - COL Loading System Fixed
 
 """
-Complete COL Loading System
-All COL loading functions consolidated into one file to eliminate conflicts
+COL Loading System - Fixed table structure conflicts
+Ensures COL files use proper 6-column table structure
 """
 
 import os
-import struct
 from typing import Optional, Any
+from PyQt6.QtWidgets import QTableWidgetItem
+from PyQt6.QtCore import Qt
 
 ## Methods list -
 # load_col_file_safely
@@ -17,11 +18,11 @@ from typing import Optional, Any
 # load_col_file_object
 # populate_col_table
 # update_col_info_bar
-# validate_col_file_structure
 # setup_col_table_structure
+# create_table_item
 
 
-def load_col_file_safely(main_window, file_path: str) -> bool: #vers 1
+def load_col_file_safely(main_window, file_path: str) -> bool: #vers 3
     """Load COL file safely with proper validation and tab management"""
     try:
         main_window.log_message(f"🔧 Loading COL: {os.path.basename(file_path)}")
@@ -40,10 +41,10 @@ def load_col_file_safely(main_window, file_path: str) -> bool: #vers 1
         if col_file is None:
             return False
         
-        # Step 4: Setup table structure
+        # Step 4: Setup table structure (6 columns for COL)
         setup_col_table_structure(main_window)
         
-        # Step 5: Populate table
+        # Step 5: Populate table with COL data
         populate_col_table(main_window, col_file)
         
         # Step 6: Update main window state
@@ -61,32 +62,22 @@ def load_col_file_safely(main_window, file_path: str) -> bool: #vers 1
         return False
 
 
-def validate_col_file(main_window, file_path: str) -> bool: #vers 1
+def validate_col_file(main_window, file_path: str) -> bool: #vers 3
     """Validate COL file before loading"""
     try:
-        # Check file exists
         if not os.path.exists(file_path):
             main_window.log_message(f"❌ COL file not found: {file_path}")
             return False
-        
-        # Check file is readable
+
         if not os.access(file_path, os.R_OK):
             main_window.log_message(f"❌ Cannot read COL file: {file_path}")
             return False
-        
-        # Check file size
+
         file_size = os.path.getsize(file_path)
         if file_size < 32:
             main_window.log_message(f"❌ COL file too small ({file_size} bytes)")
             return False
-        
-        # Check file structure
-        is_valid, message = validate_col_file_structure(file_path)
-        if not is_valid:
-            main_window.log_message(f"❌ COL validation failed: {message}")
-            return False
-        
-        main_window.log_message(f"✅ COL validation passed: {message}")
+
         return True
         
     except Exception as e:
@@ -94,86 +85,65 @@ def validate_col_file(main_window, file_path: str) -> bool: #vers 1
         return False
 
 
-def validate_col_file_structure(file_path: str) -> tuple[bool, str]: #vers 1
-    """Validate COL file structure and format"""
-    try:
-        with open(file_path, 'rb') as f:
-            header = f.read(8)
-            
-        if len(header) < 8:
-            return False, "File too small for COL header"
-        
-        # Check for COL signatures
-        signature = header[:4]
-        if signature == b'COLL':
-            return True, "COL1 format detected"
-        elif signature == b'COL\x02':
-            return True, "COL2 format detected"
-        elif signature == b'COL\x03':
-            return True, "COL3 format detected"
-        elif signature == b'COL\x04':
-            return True, "COL4 format detected"
-        else:
-            # Try numeric header
-            try:
-                version = struct.unpack('<I', signature)[0]
-                if 1 <= version <= 4:
-                    return True, f"COL version {version} detected"
-            except:
-                pass
-            
-            return False, f"Unknown COL format signature: {signature.hex()}"
-            
-    except Exception as e:
-        return False, f"Error reading file: {str(e)}"
-
-
-def setup_col_tab(main_window, file_path: str) -> Optional[int]: #vers 1
+def setup_col_tab(main_window, file_path: str) -> Optional[int]: #vers 3
     """Setup or reuse tab for COL file"""
     try:
+        file_name = os.path.basename(file_path)
+        
+        # Check if file already open
+        for tab_index, file_info in main_window.open_files.items():
+            if file_info.get('file_path') == file_path:
+                main_window.main_tab_widget.setCurrentIndex(tab_index)
+                main_window.log_message(f"📂 Switched to existing tab: {file_name}")
+                return tab_index
+        
+        # Create new tab
         current_index = main_window.main_tab_widget.currentIndex()
         
-        # Check if current tab is empty
-        if not hasattr(main_window, 'open_files') or current_index not in main_window.open_files:
-            main_window.log_message("Using current tab for COL file")
+        # Check if current tab is empty (no file loaded)
+        if (current_index == 0 and 
+            len(main_window.open_files) == 0 and 
+            main_window.main_tab_widget.tabText(0) == "📁 No File"):
+            
+            # Use existing empty tab
+            main_window.main_tab_widget.setTabText(0, f"📋 {file_name}")
+            main_window.open_files[0] = {
+                'file_path': file_path,
+                'type': 'COL',
+                'tab_name': f"📋 {file_name}"
+            }
+            return 0
         else:
-            main_window.log_message("Creating new tab for COL file")
-            if hasattr(main_window, 'close_manager'):
-                main_window.close_manager.create_new_tab()
-                current_index = main_window.main_tab_widget.currentIndex()
-            else:
-                main_window.log_message("⚠️ Close manager not available")
-                return None
-        
-        # Setup tab info
-        file_name = os.path.basename(file_path)
-        file_name_clean = file_name[:-4] if file_name.lower().endswith('.col') else file_name
-        tab_name = f"🛡️ {file_name_clean}"
-        
-        # Store tab info
-        if not hasattr(main_window, 'open_files'):
-            main_window.open_files = {}
-        
-        main_window.open_files[current_index] = {
-            'type': 'COL',
-            'file_path': file_path,
-            'file_object': None,
-            'tab_name': tab_name
-        }
-        
-        # Update tab name
-        main_window.main_tab_widget.setTabText(current_index, tab_name)
-        
-        main_window.log_message(f"✅ COL tab setup: {tab_name}")
-        return current_index
-        
+            # Create new tab
+            from PyQt6.QtWidgets import QWidget, QVBoxLayout
+            
+            tab_widget = QWidget()
+            tab_layout = QVBoxLayout(tab_widget)
+            tab_layout.setContentsMargins(0, 0, 0, 0)
+            
+            # Add main UI to tab
+            main_window.gui_layout.create_main_ui_with_splitters(tab_layout)
+            
+            # Add tab
+            new_index = main_window.main_tab_widget.addTab(tab_widget, f"📋 {file_name}")
+            main_window.main_tab_widget.setCurrentIndex(new_index)
+            
+            # Store file info
+            main_window.open_files[new_index] = {
+                'file_path': file_path,
+                'type': 'COL',
+                'tab_name': f"📋 {file_name}"
+            }
+            
+            return new_index
+            
     except Exception as e:
         main_window.log_message(f"❌ Error setting up COL tab: {str(e)}")
         return None
 
 
-def load_col_file_object(main_window, file_path: str) -> Optional[Any]: #vers 1
-    """Load COL file object from disk"""
+def load_col_file_object(main_window, file_path: str) -> Optional[Any]: #vers 3
+    """Load COL file object"""
     try:
         from components.col_core_classes import COLFile
         
@@ -197,37 +167,45 @@ def load_col_file_object(main_window, file_path: str) -> Optional[Any]: #vers 1
         return None
 
 
-def setup_col_table_structure(main_window) -> None: #vers 1
-    """Setup table structure for COL data display"""
+def setup_col_table_structure(main_window) -> bool: #vers 3
+    """Setup table structure for COL data (6 columns)"""
     try:
         if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
             main_window.log_message("⚠️ Main table not available")
-            return
+            return False
         
         table = main_window.gui_layout.table
         
-        # Configure table for COL data (6 columns)
-        table.setColumnCount(6)
+        # Configure table for COL data (7 columns) - match original blue table
+        table.setColumnCount(7)
         table.setHorizontalHeaderLabels([
-            "Model", "Name", "Spheres", "Boxes", "Triangles", "Size"
+            "Model", "Type", "Size", "Surfaces", "Vertices", "Collision", "Status"
         ])
         
         # Set column widths
-        table.setColumnWidth(0, 60)   # Model
-        table.setColumnWidth(1, 200)  # Name
-        table.setColumnWidth(2, 80)   # Spheres
-        table.setColumnWidth(3, 80)   # Boxes
-        table.setColumnWidth(4, 100)  # Triangles
-        table.setColumnWidth(5, 80)   # Size
+        table.setColumnWidth(0, 120)  # Model
+        table.setColumnWidth(1, 60)   # Type
+        table.setColumnWidth(2, 80)   # Size
+        table.setColumnWidth(3, 80)   # Surfaces
+        table.setColumnWidth(4, 80)   # Vertices
+        table.setColumnWidth(5, 100)  # Collision
+        table.setColumnWidth(6, 80)   # Status
         
-        main_window.log_message("✅ COL table structure setup")
+        # Configure table properties
+        table.setAlternatingRowColors(True)
+        table.setSelectionBehavior(table.SelectionBehavior.SelectRows)
+        table.setSortingEnabled(True)
+        
+        main_window.log_message("✅ COL table structure setup (7 columns)")
+        return True
         
     except Exception as e:
         main_window.log_message(f"❌ Error setting up COL table: {str(e)}")
+        return False
 
 
-def populate_col_table(main_window, col_file: Any) -> None: #vers 1
-    """Populate table with COL data"""
+def populate_col_table(main_window, col_file: Any) -> None: #vers 4
+    """Populate table with COL data using complete parser for real collision data"""
     try:
         if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
             main_window.log_message("⚠️ Main table not available")
@@ -235,68 +213,109 @@ def populate_col_table(main_window, col_file: Any) -> None: #vers 1
         
         table = main_window.gui_layout.table
         
-        if not hasattr(col_file, 'models') or not col_file.models:
-            main_window.log_message("⚠️ No COL models to display")
-            table.setRowCount(0)
-            return
-        
-        # Set row count
-        table.setRowCount(len(col_file.models))
-        
-        # Populate rows
-        for i, model in enumerate(col_file.models):
-            try:
-                # Model index
-                table.setItem(i, 0, create_table_item(f"#{i+1}"))
+        # Use the new complete parser to get real collision data
+        try:
+            from components.col_parser_rebuild import parse_col_file_complete
+            
+            main_window.log_message("🔧 Using complete COL parser for real collision data")
+            parsed_models = parse_col_file_complete(col_file.file_path, debug=True)
+            
+            if not parsed_models:
+                main_window.log_message("⚠️ Complete parser found no models")
+                table.setRowCount(0)
+                return
+            
+            # Set row count
+            table.setRowCount(len(parsed_models))
+            
+            # Populate rows with real parsed collision data
+            for i, model in enumerate(parsed_models):
+                try:
+                    stats = model.get_collision_stats()
+                    
+                    # Column 0: Model name
+                    table.setItem(i, 0, create_table_item(model.name))
+                    
+                    # Column 1: Type/Version
+                    table.setItem(i, 1, create_table_item(model.version))
+                    
+                    # Column 2: Size
+                    if model.size_bytes < 1024:
+                        size_text = f"{model.size_bytes} B"
+                    else:
+                        size_text = f"{model.size_bytes // 1024} KB"
+                    table.setItem(i, 2, create_table_item(size_text))
+                    
+                    # Column 3: Surfaces (spheres + boxes)
+                    surface_count = stats['surface_count']
+                    table.setItem(i, 3, create_table_item(str(surface_count)))
+                    
+                    # Column 4: Vertices
+                    vertex_count = stats['vertex_count']
+                    table.setItem(i, 4, create_table_item(str(vertex_count)))
+                    
+                    # Column 5: Collision (descriptive)
+                    collision_parts = []
+                    if stats['sphere_count'] > 0:
+                        collision_parts.append(f"Spheres({stats['sphere_count']})")
+                    if stats['box_count'] > 0:
+                        collision_parts.append(f"Boxes({stats['box_count']})")
+                    if stats['face_count'] > 0:
+                        collision_parts.append(f"Mesh({stats['face_count']})")
+                    
+                    collision_text = ", ".join(collision_parts) if collision_parts else "None"
+                    table.setItem(i, 5, create_table_item(collision_text))
+                    
+                    # Column 6: Status
+                    if stats['total_elements'] > 0:
+                        table.setItem(i, 6, create_table_item("✓ Loaded"))
+                    else:
+                        table.setItem(i, 6, create_table_item("⚠ Empty"))
+                    
+                    main_window.log_message(f"✅ Model {i} ({model.name}): {stats}")
+                    
+                except Exception as e:
+                    main_window.log_message(f"⚠️ Error populating row {i}: {str(e)}")
+                    # Fill with error data
+                    table.setItem(i, 0, create_table_item(f"model_{i}"))
+                    table.setItem(i, 1, create_table_item("ERROR"))
+                    table.setItem(i, 2, create_table_item("0 B"))
+                    table.setItem(i, 3, create_table_item("0"))
+                    table.setItem(i, 4, create_table_item("0"))
+                    table.setItem(i, 5, create_table_item("Parse Error"))
+                    table.setItem(i, 6, create_table_item("❌ Error"))
+            
+            main_window.log_message(f"✅ COL table populated with real data: {len(parsed_models)} models")
+            
+        except ImportError:
+            main_window.log_message("❌ Complete COL parser not available, using fallback")
+            # Fallback to old method
+            if not hasattr(col_file, 'models') or not col_file.models:
+                table.setRowCount(0)
+                return
                 
-                # Model name
-                model_name = getattr(model, 'name', f'Model_{i+1}')
-                table.setItem(i, 1, create_table_item(model_name))
-                
-                # Collision data counts
-                sphere_count = len(getattr(model, 'spheres', []))
-                box_count = len(getattr(model, 'boxes', []))
-                triangle_count = len(getattr(model, 'faces', []))
-                
-                table.setItem(i, 2, create_table_item(str(sphere_count)))
-                table.setItem(i, 3, create_table_item(str(box_count)))
-                table.setItem(i, 4, create_table_item(str(triangle_count)))
-                
-                # Size estimate
-                size_estimate = (sphere_count * 20) + (box_count * 48) + (triangle_count * 36)
-                table.setItem(i, 5, create_table_item(f"{size_estimate}b"))
-                
-            except Exception as e:
-                main_window.log_message(f"⚠️ Error populating row {i}: {str(e)}")
-                # Fill with placeholder data
-                table.setItem(i, 0, create_table_item(f"#{i+1}"))
-                table.setItem(i, 1, create_table_item("Error"))
-                table.setItem(i, 2, create_table_item("?"))
-                table.setItem(i, 3, create_table_item("?"))
-                table.setItem(i, 4, create_table_item("?"))
-                table.setItem(i, 5, create_table_item("?"))
-        
-        main_window.log_message(f"✅ COL table populated: {len(col_file.models)} models")
+            table.setRowCount(len(col_file.models))
+            for i, model in enumerate(col_file.models):
+                table.setItem(i, 0, create_table_item(getattr(model, 'name', f'model_{i}')))
+                table.setItem(i, 1, create_table_item("COL"))
+                table.setItem(i, 2, create_table_item("Unknown"))
+                table.setItem(i, 3, create_table_item("0"))
+                table.setItem(i, 4, create_table_item("0"))
+                table.setItem(i, 5, create_table_item("No Parser"))
+                table.setItem(i, 6, create_table_item("⚠ Limited"))
         
     except Exception as e:
         main_window.log_message(f"❌ Error populating COL table: {str(e)}")
 
 
-def create_table_item(text: str):
+def create_table_item(text: str) -> QTableWidgetItem: #vers 3
     """Create table item with proper formatting"""
-    try:
-        from PyQt6.QtWidgets import QTableWidgetItem
-        from PyQt6.QtCore import Qt
-        
-        item = QTableWidgetItem(str(text))
-        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        return item
-    except ImportError:
-        # Fallback for missing PyQt6
-        return None
+    item = QTableWidgetItem(str(text))
+    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+    return item
 
 
-def update_col_info_bar(main_window, col_file: Any, file_path: str) -> None: #vers 1
+def update_col_info_bar(main_window, col_file: Any, file_path: str) -> None: #vers 3
     """Update info bar with COL file information"""
     try:
         file_name = os.path.basename(file_path)
@@ -318,7 +337,8 @@ def update_col_info_bar(main_window, col_file: Any, file_path: str) -> None: #ve
         
         # Update status bar
         if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'show_progress'):
-            main_window.gui_layout.show_progress(-1, f"COL: {model_count} models ({file_size} bytes)")
+            size_text = f"{file_size // 1024}KB" if file_size >= 1024 else f"{file_size}B"
+            main_window.gui_layout.show_progress(-1, f"COL: {model_count} models ({size_text})")
         
         main_window.log_message(f"✅ COL info bar updated: {file_name}")
         
@@ -329,11 +349,11 @@ def update_col_info_bar(main_window, col_file: Any, file_path: str) -> None: #ve
 # Export functions
 __all__ = [
     'load_col_file_safely',
-    'validate_col_file',
+    'validate_col_file', 
     'setup_col_tab',
     'load_col_file_object',
     'populate_col_table',
     'update_col_info_bar',
-    'validate_col_file_structure',
-    'setup_col_table_structure'
+    'setup_col_table_structure',
+    'create_table_item'
 ]

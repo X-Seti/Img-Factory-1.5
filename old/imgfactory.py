@@ -17,7 +17,6 @@ current_dir = Path(__file__).parent
 components_dir = current_dir / "components"
 gui_dir = current_dir / "gui"
 utils_dir = current_dir / "utils"
-#version_text = get_rw_version_name(entry.rw_version)
 
 # Add directories to Python path
 if str(current_dir) not in sys.path:
@@ -51,42 +50,26 @@ from components.img_core_classes import (
     IMGEntriesTable, FilterPanel, IMGFileInfoPanel,
     TabFilterWidget, integrate_filtering, create_entries_table_panel
 )
-
-#components
-from components.col_creator import create_new_col_file, import_col_to_current_img, export_all_col_from_img
-from components.col_debug_functions import integrate_col_debug_with_main_window
-from components.col_validator import validate_col_file
-from components.img_close_functions import install_close_functions, setup_close_manager
 from components.img_creator import NewIMGDialog, IMGCreationThread
+from components.img_close_functions import install_close_functions, setup_close_manager
+from components.img_formats import GameSpecificIMGDialog, IMGCreator
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
+#from components.img_threads import IMGLoadThread, IMGSaveThread
 from components.img_validator import IMGValidator
+from components.img_import_export_functions import integrate_clean_import_export
+from components.col_debug_control import COLDebugController
 from components.unified_debug_functions import integrate_all_improvements
-
-#core
-from core.img_formats import GameSpecificIMGDialog, IMGCreator
-from core.file_extraction import setup_complete_extraction_integration
-from core.tables_structure import reset_table_styling
-from core.loadcol import load_col_file_safely
-from core.remove import integrate_remove_functions
-from core.rw_versions import get_rw_version_name
-from core.shortcuts import setup_all_shortcuts, setup_debug_shortcuts
-from core.integration import integrate_complete_core_system
-from core.tables_structure import populate_img_table, populate_col_table_img_format, populate_col_table_enhanced, setup_col_table_structure
+from components.file_extraction_functions import setup_complete_extraction_integration
 #gui-layout
-
-#gui
-from gui.gui_backend import ButtonDisplayMode, GUIBackend
-from gui.gui_context import add_col_context_menu_to_entries_table, enhanced_context_menu_event
-from gui.gui_infobar import update_col_info_bar_enhanced
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
-from gui.gui_menu import IMGFactoryMenuBar
-from gui.gui_context import open_col_file_dialog, open_col_batch_processor_dialog, open_col_editor_dialog, analyze_col_file_dialog
+from gui.menu import IMGFactoryMenuBar
 
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
 COL_INTEGRATION_AVAILABLE = False
 COL_SETUP_FUNCTION = None
+
 
 def populate_img_table(table: QTableWidget, img_file: IMGFile):
     """Populate table with IMG file entries - FIXED VERSION"""
@@ -205,15 +188,6 @@ def setup_debug_mode(self):
         if hasattr(self.menu_bar_system, 'settings_menu'):
             self.menu_bar_system.settings_menu.addSeparator()
             self.menu_bar_system.settings_menu.addAction(debug_action)
-
-def debug_trace(func):
-    """Simple debug decorator to trace function calls."""
-    def wrapper(*args, **kwargs):
-        print(f"[DEBUG] Calling: {func.__name__} with args={args} kwargs={kwargs}")
-        result = func(*args, **kwargs)
-        print(f"[DEBUG] Finished: {func.__name__}")
-        return result
-    return wrapper
 
 def toggle_debug_mode(self):
     """Toggle debug mode with user feedback"""
@@ -405,7 +379,6 @@ class IMGFactory(QMainWindow):
         self.gui_layout = IMGFactoryGUILayout(self)
 
         # Setup menu bar system
-        self.menubar = self.menuBar()
         self.menu_bar_system = IMGFactoryMenuBar(self)
 
         # Setup menu callbacks - FIXED TO USE WORKING METHOD
@@ -427,15 +400,13 @@ class IMGFactory(QMainWindow):
         install_close_functions(self)
         # COL Integration - FIXED: Move to end and use correct import
 
-        if integrate_remove_functions(self):
-            self.log_message("✅ Remove functions integrated")
 
         # First integrate the functions
-        integrate_complete_core_system(self)
+        integrate_clean_import_export(self)
 
 
         try:
-            from gui.col_gui_integration import setup_col_gui_integration
+            from components.col_tabs_functions import setup_col_tab_integration
             if setup_col_tab_integration(self):
                 self.log_message("✅ COL tab integration setup complete")
             else:
@@ -446,7 +417,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"COL integration error: {str(e)}")
 
         try:
-            from core.file_extraction import setup_complete_extraction_integration
+            from components.file_extraction_functions import setup_complete_extraction_integration
             setup_complete_extraction_integration(self)
         except Exception as e:
             self.log_message(f"⚠️ Failed to setup extraction integration: {str(e)}")
@@ -460,27 +431,9 @@ class IMGFactory(QMainWindow):
         self.setup_debug_controls()
 
         # Setup search functionality
-        #self.setup_search_functionality()
+        self.setup_search_functionality()
 
-        # Create gui_backend
-        self.gui_backend = GUIBackend(self)
-
-        # After GUI setup in __init__:
-        setup_all_shortcuts(self)
-
-        # Debug: Check what methods gui_backend has
-        print("🔍 GUI Backend methods:")
-        for method in dir(self.gui_backend):
-            if not method.startswith('_') and callable(getattr(self.gui_backend, method)):
-                print(f"   - {method}")
-
-        # Debug: Check if bridging worked
-        methods_to_check = ['export_selected_via', 'quick_export_selected', 'remove_via_entries', 'dump_entries', 'import_files_via']
-        for method in methods_to_check:
-            if hasattr(self, method):
-                print(f"✅ {method} bridged successfully")
-            else:
-                print(f"❌ {method} NOT bridged")
+        #OLD -setup_complete_import_export_integration(self)
 
         # Apply theme
         if hasattr(self.app_settings, 'themes'):
@@ -491,43 +444,12 @@ class IMGFactory(QMainWindow):
 
         integrate_all_improvements(self)
 
-    def import_files_via(self):
-        """Import files via IDE or folder"""
-        try:
-            from core.importer import import_via_function
-            import_via_function(self)
-        except Exception as e:
-            self.log_message(f"❌ Import via error: {str(e)}")
-
-    def remove_via_entries(self):
-        """Remove entries via IDE file"""
-        try:
-            from core.remove import remove_via_entries_function
-            remove_via_entries_function(self)
-        except Exception as e:
-            self.log_message(f"❌ Remove via error: {str(e)}")
-
-    def dump_entries(self):
-        """Dump all entries"""
-        try:
-            from core.exporter import dump_all_function
-            dump_all_function(self)
-        except Exception as e:
-            self.log_message(f"❌ Dump error: {str(e)}")
-
     def apply_search_and_performance_fixes(self):
-        """Apply search and performance fixes - CLEAN VERSION"""
+        """Apply simple fixes without complex dependencies"""
         try:
-            self.log_message("🔧 Applying search and performance fixes...")
+            self.log_message("🔧 Applying simple fixes...")
 
-            # 1. Setup our new consolidated search system
-            from core.guisearch import install_search_system
-            if install_search_system(self):
-                self.log_message("✅ New search system installed")
-            else:
-                self.log_message("⚠️ Search system setup failed")
-
-            # 2. COL debug control (keep your existing code)
+            # 1. Simple COL debug control
             try:
                 def toggle_col_debug():
                     """Simple COL debug toggle"""
@@ -556,10 +478,24 @@ class IMGFactory(QMainWindow):
             except Exception as e:
                 self.log_message(f"⚠️ COL setup issue: {e}")
 
-            self.log_message("✅ Search and performance fixes applied")
+            # 2. Simple keyboard shortcut
+            try:
+                from PyQt6.QtGui import QShortcut, QKeySequence
+
+                debug_shortcut = QShortcut(QKeySequence("Ctrl+Shift+D"), self)
+                debug_shortcut.activated.connect(self.toggle_col_debug)
+
+                self.log_message("✅ Debug shortcut ready (Ctrl+Shift+D)")
+
+            except Exception as e:
+                self.log_message(f"⚠️ Shortcut setup issue: {e}")
+
+            self.log_message("✅ Simple fixes applied successfully")
+            return True
 
         except Exception as e:
-            self.log_message(f"❌ Apply fixes error: {e}")
+            self.log_message(f"❌ Simple fixes failed: {e}")
+            return False
 
     def setup_unified_signals(self):
         """Setup unified signal handler for all table interactions"""
@@ -687,7 +623,7 @@ class IMGFactory(QMainWindow):
         # Find buttons in GUI layout and update their states
         # These buttons need both an IMG and selection
         selection_dependent_buttons = [
-            'export_btn', 'export_selected_btn', 'remove_btn', 'remove_selected_btn', 'reload_btn',
+            'export_btn', 'export_selected_btn', 'remove_btn', 'remove_selected_btn',
             'extract_btn', 'quick_export_btn'
         ]
 
@@ -701,7 +637,7 @@ class IMGFactory(QMainWindow):
         # These buttons only need an IMG (no selection required) - DISABLE for COL
         img_dependent_buttons = [
             'import_btn', 'import_files_btn', 'rebuild_btn', 'close_btn',
-            'validate_btn', 'refresh_btn',  'reload_btn'
+            'validate_btn', 'refresh_btn'
         ]
 
         for btn_name in img_dependent_buttons:
@@ -723,6 +659,11 @@ class IMGFactory(QMainWindow):
         # Also update GUI layout status if available
         if hasattr(self.gui_layout, 'status_label'):
             self.gui_layout.status_label.setText(message)
+
+    def show_search_dialog(self):
+        """Handle search button/menu"""
+        self.log_message("🔍 Search dialog requested")
+        # TODO: Implement search dialog
 
     def refresh_table(self):
         """Handle refresh/update button"""
@@ -768,6 +709,162 @@ class IMGFactory(QMainWindow):
         """Show about dialog"""
         QMessageBox.about(self, "About IMG Factory 1.5",
                          "IMG Factory 1.5\nAdvanced IMG Archive Management\nX-Seti 2025")
+
+    def perform_search(self, search_text, options):
+        """Perform search in current IMG entries - FIXED VERSION"""
+        try:
+            if not self.current_img or not self.current_img.entries:
+                self.log_message("No IMG file loaded or no entries to search")
+                return
+
+            # Perform search
+            matches = []
+            total_entries = len(self.current_img.entries)
+
+            for i, entry in enumerate(self.current_img.entries):
+                entry_name = entry.name
+
+                # Apply search options
+                if not options.get('case_sensitive', False):
+                    entry_name = entry_name.lower()
+                    search_text = search_text.lower()
+
+                # Check file type filter
+                file_type = options.get('file_type', 'All Files')
+                if file_type != 'All Files':
+                    entry_ext = entry.name.split('.')[-1].upper() if '.' in entry.name else ''
+                    type_mapping = {
+                        'Models (DFF)': 'DFF',
+                        'Textures (TXD)': 'TXD',
+                        'Collision (COL)': 'COL',
+                        'Animation (IFP)': 'IFP',
+                        'Audio (WAV)': 'WAV',
+                        'Scripts (SCM)': 'SCM'
+                    }
+                    if file_type in type_mapping and entry_ext != type_mapping[file_type]:
+                        continue
+
+                # Check if matches
+                if options.get('whole_word', False):
+                    import re
+                    pattern = r'\b' + re.escape(search_text) + r'\b'
+                    if re.search(pattern, entry_name):
+                        matches.append(i)
+                elif options.get('regex', False):
+                    import re
+                    try:
+                        if re.search(search_text, entry_name):
+                            matches.append(i)
+                    except re.error:
+                        self.log_message("Invalid regular expression")
+                        return
+                else:
+                    # Simple text search
+                    if search_text in entry_name:
+                        matches.append(i)
+
+            # Select matching entries in table
+            if matches:
+                table = self.gui_layout.table
+                table.clearSelection()
+                for row in matches:
+                    if row < table.rowCount():
+                        table.selectRow(row)
+
+                # Scroll to first match
+                table.scrollToItem(table.item(matches[0], 0))
+
+                self.log_message(f"🔍 Found {len(matches)} matches for '{search_text}'")
+            else:
+                self.log_message(f"🔍 No matches found for '{search_text}'")
+
+        except Exception as e:
+            self.log_message(f"❌ Search error: {str(e)}")
+
+    def setup_search_functionality(self):
+        """Setup search box functionality - new"""
+        try:
+            # Find the search input widget
+            search_input = None
+
+            # Try different possible locations
+            if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'search_input'):
+                search_input = self.gui_layout.search_input
+            elif hasattr(self, 'filter_input'):
+                search_input = self.filter_input
+            elif hasattr(self.gui_layout, 'filter_input'):
+                search_input = self.gui_layout.filter_input
+
+            if search_input:
+                # Connect search functionality
+                from PyQt6.QtCore import QTimer
+
+                self.search_timer = QTimer()
+                self.search_timer.setSingleShot(True)
+                self.search_timer.timeout.connect(self._perform_live_search)
+
+                # Connect signals
+                search_input.textChanged.connect(self._on_search_text_changed)
+                search_input.returnPressed.connect(self._perform_live_search)
+
+                self.log_message("✅ Search functionality connected")
+                return True
+            else:
+                self.log_message("⚠️ Search input widget not found")
+                return False
+
+        except Exception as e:
+            self.log_message(f"❌ Search setup error: {e}")
+            return False
+
+    def _on_search_text_changed(self, text):
+        """Handle search text changes with debouncing"""
+        self.search_timer.stop()
+        if text.strip():
+            self.search_timer.start(300)  # 300ms delay
+        else:
+            self._clear_search()
+
+    def _perform_live_search(self):
+        """Perform live search"""
+        try:
+            # Get search text
+            search_text = ""
+            if hasattr(self, 'filter_input'):
+                search_text = self.filter_input.text().strip()
+            elif hasattr(self.gui_layout, 'search_input'):
+                search_text = self.gui_layout.search_input.text().strip()
+
+            if not search_text:
+                self._clear_search()
+                return
+
+            # Get file type filter
+            file_type = "All Files"
+            if hasattr(self, 'filter_combo'):
+                file_type = self.filter_combo.currentText()
+
+            # Create search options
+            options = {
+                'case_sensitive': False,
+                'whole_word': False,
+                'regex': False,
+                'file_type': file_type
+            }
+
+            # Perform search
+            self.perform_search(search_text, options)
+
+        except Exception as e:
+            self.log_message(f"❌ Live search error: {e}")
+
+    def _clear_search(self):
+        """Clear search results"""
+        try:
+            if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
+                self.gui_layout.table.clearSelection()
+        except Exception as e:
+            self.log_message(f"❌ Clear search error: {e}")
 
     def enable_col_debug(self):
         """Enable COL debug output"""
@@ -945,6 +1042,82 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Error populating table: {str(e)}")
 
+    def handle_action(self, action_name):
+        """Handle unified action signals - UPDATED with missing methods"""
+        try:
+            action_map = {
+                # File operations
+                'open_img_file': self.open_img_file,
+                'close_img_file': self.close_img_file,
+                'close_all': self.close_manager.close_all_tabs if hasattr(self, 'close_manager') else lambda: self.log_message("Close manager not available"),
+                'close_all_img': self.close_all_img,
+                'create_new_img': self.create_new_img,
+                'refresh_table': self.refresh_table,
+
+                # Entry operations
+                'import_files': self.import_files,
+                'export_selected': self.export_selected,
+                'remove_selected': self.remove_selected,
+                'select_all_entries': self.select_all_entries,
+
+                # IMG operations
+                'rebuild_img': self.rebuild_img,
+                'rebuild_img_as': self.rebuild_img_as,
+                'rebuild_all_img': self.rebuild_all_img,
+                'merge_img': self.merge_img,
+                'split_img': self.split_img,
+                'convert_img_format': self.convert_img_format,
+
+                # System
+                'show_search_dialog': self.show_search_dialog,
+            }
+
+            if action_name in action_map:
+                self.log_message(f"🎯 Action: {action_name}")
+                action_map[action_name]()
+            else:
+                self.log_message(f"⚠️ Method '{action_name}' not implemented")
+
+        except Exception as e:
+            self.log_message(f"❌ Action error ({action_name}): {str(e)}")
+
+    def setup_menu_connections(self):
+        """Setup menu connections - UPDATED for unified file loading"""
+        try:
+            menu_callbacks = {
+                'new_img': self.create_new_img,
+                'open_img': self.open_file_dialog,  # UPDATED: Use unified loader
+                'close_img': self.close_manager.close_img_file if hasattr(self, 'close_manager') else lambda: self.log_message("Close manager not available"),
+                'close_all': self.close_manager.close_all_tabs if hasattr(self, 'close_manager') else lambda: self.log_message("Close manager not available"),
+                'exit': self.close,
+                'select_all': self.select_all_entries,
+                'find': self.show_search_dialog,
+                'entry_import': self.import_files,
+                'entry_export': self.export_selected,
+                'entry_remove': self.remove_selected,
+                'img_rebuild': self.rebuild_img,
+                'img_rebuild_as': self.rebuild_img_as,
+            }
+
+            if hasattr(self, 'menu_bar_system') and hasattr(self.menu_bar_system, 'set_callbacks'):
+                self.menu_bar_system.set_callbacks(menu_callbacks)
+
+            self.log_message("✅ Menu connections established (unified file loading)")
+
+        except Exception as e:
+            self.log_message(f"❌ Menu connection error: {str(e)}")
+
+    def handle_menu_search(self):
+        """Handle search from menu (Ctrl+F)"""
+        self.show_search_dialog()
+
+    def resizeEvent(self, event):
+        """Handle window resize to adapt button text"""
+        super().resizeEvent(event)
+        # Delegate to GUI layout
+        if hasattr(self.gui_layout, 'handle_resize_event'):
+            self.gui_layout.handle_resize_event(event)
+
     def log_message(self, message):
         """Log a message to the activity log"""
         print(f"LOG: {message}")  # Temporary - shows in console
@@ -960,6 +1133,62 @@ class IMGFactory(QMainWindow):
             # Fallback - create a simple log in status bar
             if hasattr(self, 'statusBar'):
                 self.statusBar().showMessage(message)
+
+    def create_adaptive_button(self, label, action_type=None, icon=None, callback=None, bold=False):
+        """Create adaptive button with theme support"""
+        btn = QPushButton(label)
+
+        # Set font
+        font = btn.font()
+        if bold:
+            font.setBold(True)
+        btn.setFont(font)
+
+        # Set icon if provided
+        if icon:
+            btn.setIcon(QIcon.fromTheme(icon))
+
+        # Connect callback if provided
+        if callback:
+            btn.clicked.connect(callback)
+        else:
+            btn.setEnabled(False)  # Disable buttons without callbacks
+
+        return btn
+
+    def themed_button(self, label, action_type=None, icon=None, bold=False):
+        """Legacy method for compatibility"""
+        return self.create_adaptive_button(label, action_type, icon, None, bold)
+
+    def _update_ui_for_loaded_col(self):
+        """Update UI when COL file is loaded - FIXED to use col_tab_integration"""
+        try:
+            if hasattr(self, 'load_col_file_safely'):
+                # Use the method provided by col_tab_integration
+                from components.col_tabs_functions import update_ui_for_loaded_col
+                update_ui_for_loaded_col(self)
+            else:
+                # Fallback implementation
+                self.log_message("⚠️ COL Fintegration not fully loaded, using fallback")
+                if hasattr(self, 'gui_layout') and self.gui_layout.table:
+                    self.gui_layout.table.setRowCount(1)
+                    col_name = os.path.basename(self.current_col.file_path) if hasattr(self.current_col, 'file_path') else "Unknown"
+                    items = [
+                        (col_name, "COL", "Unknown", "0x0", "COL", "None", "Loaded")
+                    ]
+
+                    for row, item_data in enumerate(items):
+                        for col, value in enumerate(item_data):
+                            item = QTableWidgetItem(str(value))
+                            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                            self.gui_layout.table.setItem(row, col, item)
+
+                # Update status
+                if hasattr(self, 'statusBar') and self.statusBar():
+                    self.statusBar().showMessage(f"COL file loaded: {col_name}")
+
+        except Exception as e:
+            self.log_message(f"❌ Error updating UI for COL: {str(e)}")
 
     def create_new_img(self):
         """Show new IMG creation dialog - FIXED: No signal connections"""
@@ -1070,28 +1299,15 @@ class IMGFactory(QMainWindow):
             return "UNKNOWN"
 
     def _load_col_file_safely(self, file_path):
-        """Load COL file safely - FIXED METHOD"""
+        """Load COL file safely - REDIRECTS to col_tab_integration"""
         try:
-            # Import the function directly from core.loadcol
-            from core.loadcol import load_col_file_safely
-
-            # Call the imported function with proper parameters
-            result = load_col_file_safely(self, file_path)
-
-            if result:
-                self.log_message(f"✅ COL file loaded successfully: {os.path.basename(file_path)}")
+            if hasattr(self, 'load_col_file_safely'):
+                # Use the method provided by col_tab_integration
+                self.load_col_file_safely(file_path)
             else:
-                self.log_message(f"❌ Failed to load COL file: {os.path.basename(file_path)}")
-
-            return result
-
-        except ImportError as e:
-            self.log_message(f"❌ COL loading module not available: {str(e)}")
-            return False
+                self.log_message("❌ Error loading file: 'IMGFactory' object has no attribute 'load_col_file_safely'")
         except Exception as e:
             self.log_message(f"❌ Error loading COL file: {str(e)}")
-            return False
-
 
     def _load_col_as_generic_file(self, file_path):
         """Load COL as generic file when COL classes aren't available"""
@@ -2857,6 +3073,7 @@ def main():
 
        # Create main window
        window = IMGFactory(settings)
+
        # Show window
        window.show()
 
