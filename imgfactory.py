@@ -48,10 +48,7 @@ from utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsD
 
 #components
 from components.unified_debug_functions import integrate_all_improvements
-from components.col_creator import create_new_col_file, import_col_to_current_img, export_all_col_from_img
-from components.col_debug_functions import integrate_col_debug_with_main_window
-from components.col_loader import load_col_file_safely
-from components.col_validator import validate_col_file
+
 from components.img_close_functions import install_close_functions, setup_close_manager
 from components.img_creator import NewIMGDialog, IMGCreationThread
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
@@ -70,24 +67,19 @@ from core.rw_versions import get_rw_version_name
 from core.right_click_actions import integrate_right_click_actions
 from core.shortcuts import setup_all_shortcuts, setup_debug_shortcuts
 from core.integration import integrate_complete_core_system
-from core.tables_structure import setup_col_table_structure
+
 #gui-layout
 
 #gui
 from gui.gui_backend import ButtonDisplayMode, GUIBackend
-from gui.gui_context import add_col_context_menu_to_entries_table, enhanced_context_menu_event
-from gui.gui_infobar import update_col_info_bar_enhanced
+from gui.gui_context import enhanced_context_menu_event
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.gui_menu import IMGFactoryMenuBar
-from gui.gui_context import open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog
 
 #methods
+from methods.populate_img_table import install_img_table_populator
 
-# FIXED COL INTEGRATION IMPORTS
-print("Attempting COL integration...")
-COL_INTEGRATION_AVAILABLE = False
-COL_SETUP_FUNCTION = None
 
 
 def setup_debug_mode(self):
@@ -269,7 +261,7 @@ class IMGFactory(QMainWindow):
 
         # Core data
         self.current_img: Optional[IMGFile] = None
-        self.current_col: Optional = None  # For COL file support
+        #self.current_col: Optional =
         self.open_files = {}  # Dict to store open files {tab_index: file_info}
         self.tab_counter = 0  # Counter for unique tab IDs
 
@@ -300,10 +292,8 @@ class IMGFactory(QMainWindow):
 
         # Setup close manager for tab handling
         install_close_functions(self)
-
+        install_img_table_populator(self)
         integrate_right_click_actions(self)
-
-        # COL Integration - FIXED: Move to end and use correct import
 
         if integrate_remove_functions(self):
             self.log_message("✅ Remove functions integrated")
@@ -311,34 +301,12 @@ class IMGFactory(QMainWindow):
         # First integrate the functions
         integrate_complete_core_system(self)
 
-
-        try:
-            from gui.col_gui_integration import setup_col_gui_integration
-            if setup_col_tab_integration(self):
-                self.log_message("✅ COL tab integration setup complete")
-            else:
-                self.log_message("⚠️ COL tab integration setup failed")
-        except ImportError as e:
-            self.log_message(f"COL integration not available: {e}")
-        except Exception as e:
-            self.log_message(f"COL integration error: {str(e)}")
-
         try:
             from core.file_extraction import setup_complete_extraction_integration
             setup_complete_extraction_integration(self)
         except Exception as e:
             self.log_message(f"⚠️ Failed to setup extraction integration: {str(e)}")
 
-        integrate_all_improvements(self)
-        #apply_search_and_performance_fixes(self)
-        self.apply_search_and_performance_fixes()
-        #apply_search_and_performance_fixes(main_window)
-
-        # Setup debug controls
-        self.setup_debug_controls()
-
-        # Setup search functionality
-        #self.setup_search_functionality()
 
         # Create gui_backend
         self.gui_backend = GUIBackend(self)
@@ -364,10 +332,9 @@ class IMGFactory(QMainWindow):
         if hasattr(self.app_settings, 'themes'):
             apply_theme_to_app(QApplication.instance(), self.app_settings)
 
+
         # Log startup
         self.log_message("IMG Factory 1.5 initialized")
-
-        integrate_all_improvements(self)
 
     def import_files_via(self):
         """Import files via IDE or folder"""
@@ -392,52 +359,6 @@ class IMGFactory(QMainWindow):
             dump_all_function(self)
         except Exception as e:
             self.log_message(f"❌ Dump error: {str(e)}")
-
-    def apply_search_and_performance_fixes(self):
-        """Apply search and performance fixes - CLEAN VERSION"""
-        try:
-            self.log_message("🔧 Applying search and performance fixes...")
-
-            # 1. Setup our new consolidated search system
-            from core.gui_search import install_search_system
-            if install_search_system(self):
-                self.log_message("✅ New search system installed")
-            else:
-                self.log_message("⚠️ Search system setup failed")
-
-            # 2. COL debug control (keep your existing code)
-            try:
-                def toggle_col_debug():
-                    """Simple COL debug toggle"""
-                    try:
-                        import components.col_core_classes as col_module
-                        current = getattr(col_module, '_global_debug_enabled', False)
-                        col_module._global_debug_enabled = not current
-
-                        if col_module._global_debug_enabled:
-                            self.log_message("🔊 COL debug enabled")
-                        else:
-                            self.log_message("🔇 COL debug disabled")
-
-                    except Exception as e:
-                        self.log_message(f"❌ COL debug toggle error: {e}")
-
-                # Add to main window
-                self.toggle_col_debug = toggle_col_debug
-
-                # Start with debug disabled for performance
-                import components.col_core_classes as col_module
-                col_module._global_debug_enabled = False
-
-                self.log_message("✅ COL performance mode enabled")
-
-            except Exception as e:
-                self.log_message(f"⚠️ COL setup issue: {e}")
-
-            self.log_message("✅ Search and performance fixes applied")
-
-        except Exception as e:
-            self.log_message(f"❌ Apply fixes error: {e}")
 
     def setup_unified_signals(self):
         """Setup unified signal handler for all table interactions"""
@@ -557,7 +478,7 @@ class IMGFactory(QMainWindow):
         """Update button enabled/disabled states based on selection"""
         # Enable/disable buttons based on selection and loaded IMG
         has_img = self.current_img is not None
-        has_col = self.current_col is not None
+        #has_col = self.current_col is not None
 
         # Log the button state changes for debugging
         self.log_message(f"Button states updated: selection={has_selection}, img_loaded={has_img}, col_loaded={has_col}")
@@ -646,61 +567,6 @@ class IMGFactory(QMainWindow):
         """Show about dialog"""
         QMessageBox.about(self, "About IMG Factory 1.5",
                          "IMG Factory 1.5\nAdvanced IMG Archive Management\nX-Seti 2025")
-
-    def enable_col_debug(self):
-        """Enable COL debug output"""
-        # Set debug flag on all loaded COL files
-        if hasattr(self, 'current_col') and self.current_col:
-            self.current_col._debug_enabled = True
-
-        # Set global flag for future COL files
-        import components.col_core_classes as col_module
-        col_module._global_debug_enabled = True
-
-        self.log_message("🔊 COL debug output enabled")
-
-    def disable_col_debug(self):
-        """Disable COL debug output"""
-        # Set debug flag on all loaded COL files
-        if hasattr(self, 'current_col') and self.current_col:
-            self.current_col._debug_enabled = False
-
-        # Set global flag for future COL files
-        import components.col_core_classes as col_module
-        col_module._global_debug_enabled = False
-
-        self.log_message("🔇 COL debug output disabled")
-
-    def toggle_col_debug(self):
-        """Toggle COL debug output"""
-        try:
-            import components.col_core_classes as col_module
-            debug_enabled = getattr(col_module, '_global_debug_enabled', False)
-
-            if debug_enabled:
-                self.disable_col_debug()
-            else:
-                self.enable_col_debug()
-
-        except Exception as e:
-            self.log_message(f"❌ Debug toggle error: {e}")
-
-    def setup_debug_controls(self):
-        """Setup debug control shortcuts - ADD THIS TO __init__"""
-        try:
-            from PyQt6.QtGui import QShortcut, QKeySequence
-
-            # Ctrl+Shift+D for debug toggle
-            debug_shortcut = QShortcut(QKeySequence("Ctrl+Shift+D"), self)
-            debug_shortcut.activated.connect(self.toggle_col_debug)
-
-            # Start with debug disabled for performance
-            self.disable_col_debug()
-
-            self.log_message("✅ Debug controls ready (Ctrl+Shift+D to toggle COL debug)")
-
-        except Exception as e:
-            self.log_message(f"❌ Debug controls error: {e}")
 
     def _create_ui(self):
         """Create the main user interface - WITH TABS FIXED"""
@@ -801,7 +667,7 @@ class IMGFactory(QMainWindow):
 
         # Populate table with IMG entries
         if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
-            self._populate_real_img_table(self.current_img)
+            self._populate_img_table(self.current_img)
             self.log_message(f"📋 Table populated with {len(self.current_img.entries)} entries")
         else:
             self.log_message("⚠️ GUI layout or table not available")
@@ -940,47 +806,6 @@ class IMGFactory(QMainWindow):
             self.log_message(f"❌ Error detecting file type: {str(e)}")
             return "UNKNOWN"
 
-    def _load_col_file_safely(self, file_path):
-        """Load COL file safely - FIXED METHOD"""
-        try:
-            # Import the function directly from core.loadcol
-            from components.col_loader import load_col_file_safely
-
-            # Call the imported function with proper parameters
-            result = load_col_file_safely(self, file_path)
-
-            if result:
-                self.log_message(f"✅ COL file loaded successfully: {os.path.basename(file_path)}")
-            else:
-                self.log_message(f"❌ Failed to load COL file: {os.path.basename(file_path)}")
-
-            return result
-
-        except ImportError as e:
-            self.log_message(f"❌ COL loading module not available: {str(e)}")
-            return False
-        except Exception as e:
-            self.log_message(f"❌ Error loading COL file: {str(e)}")
-            return False
-
-
-    def _load_col_as_generic_file(self, file_path):
-        """Load COL as generic file when COL classes aren't available"""
-        try:
-            # Create simple COL representation
-            self.current_col = {
-                "file_path": file_path,
-                "type": "COL",
-                "size": os.path.getsize(file_path)
-            }
-
-            # Update UI
-            self._update_ui_for_loaded_col()
-
-            self.log_message(f"✅ Loaded COL (generic): {os.path.basename(file_path)}")
-
-        except Exception as e:
-            self.log_message(f"❌ Error loading COL as generic: {str(e)}")
 
     def load_file_unified(self, file_path: str):
         """Unified file loader with proper type detection"""
@@ -1002,6 +827,7 @@ class IMGFactory(QMainWindow):
             error_msg = f"Error loading file: {str(e)}"
             self.log_message(f"❌ {error_msg}")
             QMessageBox.critical(self, "File Load Error", error_msg)
+
 
     # Part 3
     def _load_img_file_in_new_tab(self, file_path):
@@ -1040,6 +866,7 @@ class IMGFactory(QMainWindow):
         # Start loading
         self.load_img_file(file_path)
 
+
     def load_img_file(self, file_path: str):
         """Load IMG file in background thread - FIXED recursion issue"""
         if self.load_thread and self.load_thread.isRunning():
@@ -1060,12 +887,14 @@ class IMGFactory(QMainWindow):
         self.load_thread.loading_error.connect(self._on_img_load_error)
         self.load_thread.start()
 
+
     def _on_img_load_progress(self, progress: int, status: str):
         """Handle IMG loading progress updates"""
         if hasattr(self.gui_layout, 'show_progress'):
             self.gui_layout.show_progress(progress, status)
         else:
             self.log_message(f"Progress: {progress}% - {status}")
+
 
     def _on_img_load_error(self, error_message: str):
         """Handle IMG loading error"""
@@ -1079,15 +908,17 @@ class IMGFactory(QMainWindow):
 
         QMessageBox.critical(self, "IMG Load Error", error_message)
 
+
     def open_img_file(self):
         """Open file dialog - REDIRECTS to unified loader"""
         self.open_file_dialog()
+
 
     def _update_ui_for_no_img(self):
         """Update UI when no IMG file is loaded"""
         # Clear current data
         self.current_img = None
-        self.current_col = None  # Also clear COL
+        #self.current_col = None  # Also clear COL
 
         # Update window title
         self.setWindowTitle("IMG Factory 1.5")
@@ -1125,143 +956,6 @@ class IMGFactory(QMainWindow):
 
         self.log_message("IMG interface reset")
 
-    def _populate_col_table_img_format(self, col_file, file_name):
-        """Populate table with COL models using same format as IMG entries"""
-        from PyQt6.QtWidgets import QTableWidgetItem
-        from PyQt6.QtCore import Qt
-
-        table = self.gui_layout.table
-
-        # Keep the same 7-column format as IMG files
-        table.setColumnCount(7)
-        table.setHorizontalHeaderLabels([
-            "Name", "Type", "Size", "Offset", "Version", "Compression", "Status"
-        ])
-
-        if not col_file or not hasattr(col_file, 'models') or not col_file.models:
-            # Show the file itself if no models
-            table.setRowCount(1)
-
-            try:
-                file_size = os.path.getsize(col_file.file_path) if col_file and hasattr(col_file, 'file_path') and col_file.file_path else 0
-                size_text = self._format_file_size(file_size)
-            except:
-                size_text = "Unknown"
-
-            items = [
-                (file_name, "COL", size_text, "0x0", "Unknown", "None", "No Models")
-            ]
-
-            for row, item_data in enumerate(items):
-                for col, value in enumerate(item_data):
-                    item = QTableWidgetItem(str(value))
-                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                    table.setItem(row, col, item)
-
-            self.log_message(f"📋 COL file loaded but no models found")
-            return
-
-        # Show individual models in IMG entry format
-        models = col_file.models
-        table.setRowCount(len(models))
-
-        self.log_message(f"📋 Populating table with {len(models)} COL models")
-
-        virtual_offset = 0x0  # Virtual offset for COL models
-
-        for row, model in enumerate(models):
-            try:
-                # Name - use model name or generate one
-                model_name = getattr(model, 'name', f"Model_{row}") if hasattr(model, 'name') and model.name else f"Model_{row}"
-                table.setItem(row, 0, QTableWidgetItem(model_name))
-
-                # Type - just "COL" (like IMG shows "DFF", "TXD", etc.)
-                table.setItem(row, 1, QTableWidgetItem("COL"))
-
-                # Size - estimate model size in same format as IMG
-                estimated_size = self._estimate_col_model_size_bytes(model)
-                size_text = self._format_file_size(estimated_size)
-                table.setItem(row, 2, QTableWidgetItem(size_text))
-
-                # Offset - virtual hex offset (like IMG entries)
-                offset_text = f"0x{virtual_offset:X}"
-                table.setItem(row, 3, QTableWidgetItem(offset_text))
-                virtual_offset += estimated_size  # Increment for next model
-
-                # Version - show just the COL version number (1, 2, 3, or 4)
-                if hasattr(model, 'version') and hasattr(model.version, 'value'):
-                    version_text = str(model.version.value)  # Just "1", "2", "3", or "4"
-                elif hasattr(model, 'version'):
-                    version_text = str(model.version)
-                else:
-                    version_text = "Unknown"
-                table.setItem(row, 4, QTableWidgetItem(version_text))
-
-                # Compression - always None for COL models
-                table.setItem(row, 5, QTableWidgetItem("None"))
-
-                # Status - based on model content (like IMG status)
-                stats = model.get_stats() if hasattr(model, 'get_stats') else {}
-                total_elements = stats.get('total_elements', 0)
-
-                if total_elements == 0:
-                    status = "Empty"
-                elif total_elements > 500:
-                    status = "Complex"
-                elif total_elements > 100:
-                    status = "Medium"
-                else:
-                    status = "Ready"
-                table.setItem(row, 6, QTableWidgetItem(status))
-
-                # Make all items read-only (same as IMG)
-                for col in range(7):
-                    item = table.item(row, col)
-                    if item:
-                        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-
-            except Exception as e:
-                self.log_message(f"❌ Error populating COL model {row}: {str(e)}")
-                # Create fallback row (same as IMG error handling)
-                table.setItem(row, 0, QTableWidgetItem(f"Model_{row}"))
-                table.setItem(row, 1, QTableWidgetItem("COL"))
-                table.setItem(row, 2, QTableWidgetItem("0 B"))
-                table.setItem(row, 3, QTableWidgetItem("0x0"))
-                table.setItem(row, 4, QTableWidgetItem("Unknown"))
-                table.setItem(row, 5, QTableWidgetItem("None"))
-                table.setItem(row, 6, QTableWidgetItem("Error"))
-
-        self.log_message(f"✅ Table populated with {len(models)} COL models (IMG format)")
-
-    def _estimate_col_model_size_bytes(self, model):
-        """Estimate COL model size in bytes (similar to IMG entry sizes)"""
-        try:
-            if not hasattr(model, 'get_stats'):
-                return 1024  # Default 1KB
-
-            stats = model.get_stats()
-
-            # Rough estimation based on collision elements
-            size = 100  # Base model overhead (header, name, etc.)
-            size += stats.get('spheres', 0) * 16     # 16 bytes per sphere
-            size += stats.get('boxes', 0) * 24       # 24 bytes per box
-            size += stats.get('vertices', 0) * 12    # 12 bytes per vertex
-            size += stats.get('faces', 0) * 8        # 8 bytes per face
-            size += stats.get('face_groups', 0) * 8  # 8 bytes per face group
-
-            # Add version-specific overhead
-            if hasattr(model, 'version') and hasattr(model.version, 'value'):
-                if model.version.value >= 3:
-                    size += stats.get('shadow_vertices', 0) * 12
-                    size += stats.get('shadow_faces', 0) * 8
-                    size += 64  # COL3+ additional headers
-                elif model.version.value >= 2:
-                    size += 48  # COL2 headers
-
-            return max(size, 64)  # Minimum 64 bytes
-
-        except Exception:
-            return 1024  # Default 1KB on error
 
     def _format_file_size(self, size_bytes):
         """Format file size same as IMG entries"""
@@ -1285,115 +979,6 @@ class IMGFactory(QMainWindow):
 
         except Exception:
             return f"{size_bytes} bytes"
-
-    def get_col_model_details_for_display(self, model, row_index):
-        """Get COL model details in same format as IMG entry details"""
-        try:
-            stats = model.get_stats() if hasattr(model, 'get_stats') else {}
-
-            details = {
-                'name': getattr(model, 'name', f"Model_{row_index}") if hasattr(model, 'name') and model.name else f"Model_{row_index}",
-                'type': "COL",
-                'size': self._estimate_col_model_size_bytes(model),
-                'version': str(model.version.value) if hasattr(model, 'version') and hasattr(model.version, 'value') else "Unknown",
-                'elements': stats.get('total_elements', 0),
-                'spheres': stats.get('spheres', 0),
-                'boxes': stats.get('boxes', 0),
-                'faces': stats.get('faces', 0),
-                'vertices': stats.get('vertices', 0),
-            }
-
-            if hasattr(model, 'bounding_box') and model.bounding_box:
-                bbox = model.bounding_box
-                if hasattr(bbox, 'center') and hasattr(bbox, 'radius'):
-                    details.update({
-                        'bbox_center': (bbox.center.x, bbox.center.y, bbox.center.z),
-                        'bbox_radius': bbox.radius,
-                    })
-                    if hasattr(bbox, 'min') and hasattr(bbox, 'max'):
-                        details.update({
-                            'bbox_min': (bbox.min.x, bbox.min.y, bbox.min.z),
-                            'bbox_max': (bbox.max.x, bbox.max.y, bbox.max.z),
-                        })
-
-            return details
-
-        except Exception as e:
-            self.log_message(f"❌ Error getting COL model details: {str(e)}")
-            return {
-                'name': f"Model_{row_index}",
-                'type': "COL",
-                'size': 0,
-                'version': "Unknown",
-                'elements': 0,
-            }
-
-    def show_col_model_details_img_style(self, model_index):
-        """Show COL model details in same style as IMG entry details"""
-        try:
-            if (not hasattr(self, 'current_col') or
-                not hasattr(self.current_col, 'models') or
-                model_index >= len(self.current_col.models)):
-                return
-
-            model = self.current_col.models[model_index]
-            details = self.get_col_model_details_for_display(model, model_index)
-
-            from PyQt6.QtWidgets import QMessageBox
-
-            info_lines = []
-            info_lines.append(f"Name: {details['name']}")
-            info_lines.append(f"Type: {details['type']}")
-            info_lines.append(f"Size: {self._format_file_size(details['size'])}")
-            info_lines.append(f"Version: {details['version']}")
-            info_lines.append("")
-            info_lines.append("Collision Data:")
-            info_lines.append(f"  Total Elements: {details['elements']}")
-            info_lines.append(f"  Spheres: {details['spheres']}")
-            info_lines.append(f"  Boxes: {details['boxes']}")
-            info_lines.append(f"  Faces: {details['faces']}")
-            info_lines.append(f"  Vertices: {details['vertices']}")
-
-            if 'bbox_center' in details:
-                info_lines.append("")
-                info_lines.append("Bounding Box:")
-                center = details['bbox_center']
-                info_lines.append(f"  Center: ({center[0]:.2f}, {center[1]:.2f}, {center[2]:.2f})")
-                info_lines.append(f"  Radius: {details['bbox_radius']:.2f}")
-
-            QMessageBox.information(
-                self,
-                f"COL Model Details - {details['name']}",
-                "\n".join(info_lines)
-            )
-
-        except Exception as e:
-            self.log_message(f"❌ Error showing COL model details: {str(e)}")
-
-    def _on_col_table_double_click(self, item):
-        """Handle double-click on COL table item - IMG style"""
-        try:
-            if hasattr(self, 'current_col') and hasattr(self.current_col, 'models'):
-                row = item.row()
-                self.show_col_model_details_img_style(row)
-            else:
-                self.log_message("No COL models available for details")
-        except Exception as e:
-            self.log_message(f"❌ Error handling COL table double-click: {str(e)}")
-
-    def _setup_col_integration_safely(self):
-        """Setup COL integration safely"""
-        try:
-            if COL_SETUP_FUNCTION:
-                result = COL_SETUP_FUNCTION(self)
-                if result:
-                    self.log_message("✅ COL functionality integrated")
-                else:
-                    self.log_message("⚠️ COL integration returned False")
-            else:
-                self.log_message("⚠️ COL integration function not available")
-        except Exception as e:
-            self.log_message(f"❌ COL integration error: {str(e)}")
 
     def _on_load_progress(self, progress: int, status: str):
         """Handle loading progress updates"""
@@ -1438,122 +1023,6 @@ class IMGFactory(QMainWindow):
 
             QMessageBox.critical(self, "IMG Processing Error", error_msg)
 
-    def _populate_real_img_table(self, img_file: IMGFile):
-        """Populate table with real IMG file entries - FIXED for SA format display"""
-        if not img_file or not img_file.entries:
-            self.gui_layout.table.setRowCount(0)
-            return
-
-        table = self.gui_layout.table
-        entries = img_file.entries
-
-        # Clear existing data (including sample entries)
-        table.setRowCount(0)
-        table.setRowCount(len(entries))
-
-        for row, entry in enumerate(entries):
-            try:
-                # Name - should now be clean from fixed parsing
-                clean_name = str(entry.name).strip() if hasattr(entry, 'name') else f"Entry_{row}"
-                table.setItem(row, 0, QTableWidgetItem(clean_name))
-
-                # Extension - Use the cleaned extension from populate_entry_details
-                if hasattr(entry, 'extension') and entry.extension:
-                    extension = entry.extension
-                else:
-                    # Fallback extraction
-                    if '.' in clean_name:
-                        extension = clean_name.split('.')[-1].upper()
-                        extension = ''.join(c for c in extension if c.isalpha())
-                    else:
-                        extension = "NO_EXT"
-                table.setItem(row, 1, QTableWidgetItem(extension))
-
-                # Size - Format properly
-                try:
-                    if hasattr(entry, 'size') and entry.size:
-                        size_bytes = int(entry.size)
-                        if size_bytes < 1024:
-                            size_text = f"{size_bytes} B"
-                        elif size_bytes < 1024 * 1024:
-                            size_text = f"{size_bytes / 1024:.1f} KB"
-                        else:
-                            size_text = f"{size_bytes / (1024 * 1024):.1f} MB"
-                    else:
-                        size_text = "0 B"
-                except:
-                    size_text = "Unknown"
-                table.setItem(row, 2, QTableWidgetItem(size_text))
-
-                # Hash/Offset - Show as hex
-                try:
-                    if hasattr(entry, 'offset') and entry.offset is not None:
-                        offset_text = f"0x{int(entry.offset):X}"
-                    else:
-                        offset_text = "0x0"
-                except:
-                    offset_text = "0x0"
-                table.setItem(row, 3, QTableWidgetItem(offset_text))
-
-                # Version - FIXED: Use new method
-                try:
-                    if extension in ['DFF', 'TXD']:
-                        version_text = self.get_entry_rw_version(entry, extension)
-                    elif extension == 'COL':
-                        version_text = "COL"
-                    elif extension == 'IFP':
-                        version_text = "IFP"
-                    else:
-                        version_text = "Unknown"
-                except Exception as e:
-                    print(f"🔍 DEBUG: Version detection error for {clean_name}: {e}")
-                    version_text = "Unknown"
-
-                table.setItem(row, 4, QTableWidgetItem(version_text))
-
-                # Compression
-                try:
-                    if hasattr(entry, 'compression_type') and entry.compression_type:
-                        if str(entry.compression_type).upper() != 'NONE':
-                            compression_text = str(entry.compression_type)
-                        else:
-                            compression_text = "None"
-                    else:
-                        compression_text = "None"
-                except:
-                    compression_text = "None"
-                table.setItem(row, 5, QTableWidgetItem(compression_text))
-
-                # Status
-                try:
-                    if hasattr(entry, 'is_new_entry') and entry.is_new_entry:
-                        status_text = "New"
-                    elif hasattr(entry, 'is_replaced') and entry.is_replaced:
-                        status_text = "Modified"
-                    else:
-                        status_text = "Ready"
-                except:
-                    status_text = "Ready"
-                table.setItem(row, 6, QTableWidgetItem(status_text))
-
-                # Make all items read-only
-                for col in range(7):
-                    item = table.item(row, col)
-                    if item:
-                        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-
-            except Exception as e:
-                self.log_message(f"❌ Error populating row {row}: {str(e)}")
-                # Create minimal fallback row
-                table.setItem(row, 0, QTableWidgetItem(f"Entry_{row}"))
-                table.setItem(row, 1, QTableWidgetItem("UNKNOWN"))
-                table.setItem(row, 2, QTableWidgetItem("0 B"))
-                table.setItem(row, 3, QTableWidgetItem("0x0"))
-                table.setItem(row, 4, QTableWidgetItem("Unknown"))
-                table.setItem(row, 5, QTableWidgetItem("None"))
-                table.setItem(row, 6, QTableWidgetItem("Error"))
-
-        self.log_message(f"📋 Table populated with {len(entries)} entries (using RW version detection method)")
 
     def get_entry_rw_version(self, entry, extension):
         """Detect RW version from entry file data"""
@@ -1650,6 +1119,7 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Error in _on_load_error: {str(e)}")
 
+
     def close_img_file(self):
         """Close current IMG/COL file - DIRECT implementation if close_manager fails"""
         try:
@@ -1668,15 +1138,15 @@ class IMGFactory(QMainWindow):
             if hasattr(self, 'current_img') and self.current_img:
                 file_path = getattr(self.current_img, 'file_path', 'Unknown IMG')
                 self.log_message(f"🗂️ Closing IMG: {os.path.basename(file_path)}")
-            elif hasattr(self, 'current_col') and self.current_col:
-                file_path = getattr(self.current_col, 'file_path', 'Unknown COL')
-                self.log_message(f"🗂️ Closing COL: {os.path.basename(file_path)}")
+          #  elif hasattr(self, 'current_col') and self.current_col:
+          #      file_path = getattr(self.current_col, 'file_path', 'Unknown #=-COL')
+          #      self.log_message(f"🗂️ Closing COL: {os.path.basename(file_path)}")
             else:
                 self.log_message("🗂️ Closing current tab")
 
             # Clear the current file data
             self.current_img = None
-            self.current_col = None
+            #self.current_col = None
 
             # Remove from open_files if exists
             if hasattr(self, 'open_files') and current_index in self.open_files:
@@ -1696,6 +1166,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"❌ {error_msg}")
             # Don't show error dialog, just log it
 
+
     def close_all_img(self):
         """Close all IMG files - Wrapper for close_all_tabs"""
         try:
@@ -1705,6 +1176,7 @@ class IMGFactory(QMainWindow):
                 self.log_message("❌ Close manager not available")
         except Exception as e:
             self.log_message(f"❌ Error in close_all_img: {str(e)}")
+
 
     def rebuild_all_img(self):
         """Rebuild all IMG files in current directory or selected directory"""
@@ -1843,6 +1315,7 @@ class IMGFactory(QMainWindow):
 
             QMessageBox.critical(self, "Rebuild All Error", error_msg)
 
+
     def merge_img(self):
         """Merge multiple IMG files"""
         try:
@@ -1862,6 +1335,7 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Error in merge_img: {str(e)}")
 
+
     def split_img(self):
         """Split IMG file into smaller parts"""
         if not self.current_img:
@@ -1876,6 +1350,7 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Error in split_img: {str(e)}")
 
+
     def convert_img(self):
         """Convert IMG between versions"""
         if not self.current_img:
@@ -1888,14 +1363,17 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Error in convert_img: {str(e)}")
 
+
     def convert_img_format(self):
         """Convert IMG format - Placeholder"""
         self.log_message("🔄 Convert IMG format requested")
         # TODO: Implement format conversion
 
+
     def import_via_tool(self):
         """Import files using external tool"""
         self.log_message("Import via tool functionality coming soon")
+
 
     def export_via_tool(self):
         """Export using external tool"""
@@ -1903,6 +1381,7 @@ class IMGFactory(QMainWindow):
             QMessageBox.warning(self, "Warning", "No IMG file loaded")
             return
         self.log_message("Export via tool functionality coming soon")
+
 
     def remove_all_entries(self):
         """Remove all entries from IMG"""
@@ -1919,6 +1398,7 @@ class IMGFactory(QMainWindow):
                 self.log_message("All entries removed")
         except Exception as e:
             self.log_message(f"❌ Error in remove_all_entries: {str(e)}")
+
 
     def quick_export(self):
         """Quick export selected files to default location"""
@@ -1946,6 +1426,7 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Error in quick_export: {str(e)}")
 
+
     def pin_selected(self):
         """Pin selected entries to top of list"""
         try:
@@ -1961,6 +1442,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"Pinned {len(selected_rows)} entries")
         except Exception as e:
             self.log_message(f"❌ Error in pin_selected: {str(e)}")
+
 
     # COL and editor functions
     def open_col_editor(self):
@@ -2015,84 +1497,6 @@ class IMGFactory(QMainWindow):
         """Open water properties editor"""
         self.log_message("Water properties functionality coming soon")
 
-    def rebuild_img(self):
-        """Rebuild current IMG file"""
-        if not self.current_img:
-            QMessageBox.warning(self, "No IMG", "No IMG file is currently loaded.")
-            return
-
-        try:
-            self.log_message("Rebuilding IMG file...")
-
-            # Show progress - CHECK if method exists first
-            if hasattr(self.gui_layout, 'show_progress'):
-                self.gui_layout.show_progress(0, "Rebuilding...")
-
-            # Check if IMG has rebuild method
-            if hasattr(self.current_img, 'rebuild'):
-                if self.current_img.rebuild():
-                    self.log_message("IMG file rebuilt successfully")
-                    if hasattr(self.gui_layout, 'show_progress'):
-                        self.gui_layout.show_progress(-1, "Rebuild complete")
-                    QMessageBox.information(self, "Success", "IMG file rebuilt successfully!")
-                else:
-                    self.log_message("Failed to rebuild IMG file")
-                    if hasattr(self.gui_layout, 'show_progress'):
-                        self.gui_layout.show_progress(-1, "Rebuild failed")
-                    QMessageBox.critical(self, "Error", "Failed to rebuild IMG file")
-            else:
-                self.log_message("❌ Error rebuilding IMG: 'IMGFile' object has no attribute 'rebuild'")
-                QMessageBox.critical(self, "Error", "Rebuild method not available in IMG file class")
-
-        except Exception as e:
-            error_msg = f"Error rebuilding IMG: {str(e)}"
-            self.log_message(error_msg)
-            if hasattr(self.gui_layout, 'show_progress'):
-                self.gui_layout.show_progress(-1, "Error")
-            QMessageBox.critical(self, "Rebuild Error", error_msg)
-
-    def rebuild_img_as(self):
-        """Rebuild IMG file with new name"""
-        if not self.current_img:
-            QMessageBox.warning(self, "No IMG", "No IMG file is currently loaded.")
-            return
-
-        try:
-            file_path, _ = QFileDialog.getSaveFileName(
-                self, "Rebuild IMG As", "",
-                "IMG Archives (*.img);;All Files (*)"
-            )
-
-            if file_path:
-                self.log_message(f"Rebuilding IMG as: {os.path.basename(file_path)}")
-
-                # Show progress - CHECK if method exists first
-                if hasattr(self.gui_layout, 'show_progress'):
-                    self.gui_layout.show_progress(0, "Rebuilding...")
-
-                # Check if IMG has rebuild_as method
-                if hasattr(self.current_img, 'rebuild_as'):
-                    if self.current_img.rebuild_as(file_path):
-                        self.log_message("IMG file rebuilt successfully")
-                        if hasattr(self.gui_layout, 'show_progress'):
-                            self.gui_layout.show_progress(-1, "Rebuild complete")
-                        QMessageBox.information(self, "Success", f"IMG file rebuilt as {os.path.basename(file_path)}")
-                    else:
-                        self.log_message("Failed to rebuild IMG file")
-                        if hasattr(self.gui_layout, 'show_progress'):
-                            self.gui_layout.show_progress(-1, "Rebuild failed")
-                        QMessageBox.critical(self, "Error", "Failed to rebuild IMG file")
-                else:
-                    self.log_message("❌ Error rebuilding IMG: 'IMGFile' object has no attribute 'rebuild_as'")
-                    QMessageBox.critical(self, "Error", "Rebuild As method not available in IMG file class")
-
-        except Exception as e:
-            error_msg = f"Error rebuilding IMG: {str(e)}"
-            self.log_message(error_msg)
-            if hasattr(self.gui_layout, 'show_progress'):
-                self.gui_layout.show_progress(-1, "Error")
-            QMessageBox.critical(self, "Rebuild Error", error_msg)
-
     # Part 4
     def import_files(self):
         """Import files into current IMG"""
@@ -2129,8 +1533,8 @@ class IMGFactory(QMainWindow):
                         break
 
                 # Refresh table
-                if hasattr(self, '_populate_real_img_table'):
-                    self._populate_real_img_table(self.current_img)
+                if hasattr(self, '_populate_img_table'):
+                    self._populate_img_table(self.current_img)
                 else:
                     populate_img_table(self.gui_layout.table, self.current_img)
 
@@ -2303,8 +1707,8 @@ class IMGFactory(QMainWindow):
                         break
 
                 # Refresh table
-                if hasattr(self, '_populate_real_img_table'):
-                    self._populate_real_img_table(self.current_img)
+                if hasattr(self, '_populate_img_table'):
+                    self._populate_img_table(self.current_img)
                 else:
                     populate_img_table(self.gui_layout.table, self.current_img)
 
@@ -2380,95 +1784,6 @@ class IMGFactory(QMainWindow):
                 self.gui_layout.show_progress(-1, "Validation error")
             QMessageBox.critical(self, "Validation Error", error_msg)
 
-    # COL FILE OPERATIONS - KEEP 100% OF FUNCTIONALITY
-
-    def _load_col_file_in_new_tab(self, file_path):
-        """Load COL file in new tab with proper styling - UPDATED"""
-        try:
-            current_index = self.main_tab_widget.currentIndex()
-
-            # Check if current tab is empty (no file loaded)
-            if current_index not in self.open_files:
-                # Current tab is empty, use it
-                self.log_message(f"Using current empty tab for: {os.path.basename(file_path)}")
-            else:
-                # Current tab has a file, create new tab using close manager
-                self.log_message(f"Creating new tab for: {os.path.basename(file_path)}")
-                if hasattr(self, 'close_manager'):
-                    self.close_manager.create_new_tab()
-                    current_index = self.main_tab_widget.currentIndex()
-
-            # Store file info BEFORE loading (same as IMG)
-            file_name = os.path.basename(file_path)
-            # Remove .col extension for cleaner tab name
-            if file_name.lower().endswith('.col'):
-                file_name_clean = file_name[:-4]
-            else:
-                file_name_clean = file_name
-
-            # Use collision/shield icon for COL files
-            tab_name = f"🛡️ {file_name_clean}"
-
-            self.open_files[current_index] = {
-                'type': 'COL',
-                'file_path': file_path,
-                'file_object': None,  # Will be set when loaded
-                'tab_name': tab_name
-            }
-
-            # Update tab name with icon
-            self.main_tab_widget.setTabText(current_index, tab_name)
-
-            # Apply light blue styling to this COL tab
-            if hasattr(self, '_apply_col_tab_styling'):
-                self._apply_col_tab_styling(current_index)
-
-            # Start loading COL file - use col_tab_integration if available
-            if hasattr(self, 'load_col_file_safely'):
-                self.load_col_file_safely(file_path)
-            else:
-                self.log_message("❌ COL loading method not available")
-
-        except Exception as e:
-            error_msg = f"Error setting up COL tab: {str(e)}"
-            self.log_message(f"❌ {error_msg}")
-
-    def _on_col_loaded(self, col_file):
-        """Handle COL file loaded - UPDATED with styling"""
-        try:
-            self.current_col = col_file
-            current_index = self.main_tab_widget.currentIndex()
-
-            # Update file info in open_files (same as IMG)
-            if current_index in self.open_files:
-                self.open_files[current_index]['file_object'] = col_file
-                self.log_message(f"✅ Updated tab {current_index} with loaded COL")
-            else:
-                self.log_message(f"⚠️ Tab {current_index} not found in open_files")
-
-            # Apply enhanced COL tab styling after loading
-            if hasattr(self, '_apply_individual_col_tab_style'):
-                self._apply_individual_col_tab_style(current_index)
-
-            # Update UI for loaded COL
-            if hasattr(self, '_update_ui_for_loaded_col'):
-                self._update_ui_for_loaded_col()
-
-            # Update window title to show current file
-            file_name = os.path.basename(col_file.file_path) if hasattr(col_file, 'file_path') else "Unknown COL"
-            self.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
-
-            model_count = len(col_file.models) if hasattr(col_file, 'models') and col_file.models else 0
-            self.log_message(f"✅ Loaded: {file_name} ({model_count} models)")
-
-            # Hide progress and show COL-specific status
-            if hasattr(self.gui_layout, 'show_progress'):
-                self.gui_layout.show_progress(-1, f"COL loaded: {model_count} models")
-
-        except Exception as e:
-            self.log_message(f"❌ Error in _on_col_loaded: {str(e)}")
-            if hasattr(self, '_on_col_load_error'):
-                self._on_col_load_error(str(e))
 
     def show_theme_settings(self):
         """Show theme settings dialog"""

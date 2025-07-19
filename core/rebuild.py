@@ -226,12 +226,6 @@ def rebuild_current_img(main_window, save_as: bool = False) -> bool:
         main_window.log_message(f"❌ Rebuild initiation failed: {str(e)}")
         return False
 
-
-def rebuild_img_as(main_window) -> bool:
-    """Rebuild IMG with new filename"""
-    return rebuild_current_img(main_window, save_as=True)
-
-
 def rebuild_all_img(main_window) -> bool:
     """Rebuild all loaded IMG files"""
     try:
@@ -336,6 +330,75 @@ def _update_rebuild_progress(main_window, progress: int, message: str):
     except Exception as e:
         print(f"Progress update error: {e}")
 
+
+def rebuild_img_as(main_window) -> bool: #vers 1
+    """Rebuild IMG file with new name (Save As functionality)"""
+    try:
+        if not hasattr(main_window, 'current_img') or not main_window.current_img:
+            QMessageBox.warning(main_window, "No IMG", "No IMG file is currently loaded.")
+            return False
+
+        # Get save path from user
+        file_path, _ = QFileDialog.getSaveFileName(
+            main_window, "Rebuild IMG As", "",
+            "IMG Archives (*.img);;All Files (*)"
+        )
+
+        if not file_path:
+            return False  # User cancelled
+
+        main_window.log_message(f"Rebuilding IMG as: {os.path.basename(file_path)}")
+
+        # Create rebuild options
+        options = {
+            'create_backup': False,  # Don't backup when saving as new file
+            'optimize_structure': True,
+            'remove_gaps': True
+        }
+
+        # Start rebuild thread
+        rebuild_thread = RebuildThread(main_window, main_window.current_img, file_path, options)
+
+        # Connect progress signals
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'show_progress'):
+            rebuild_thread.progress_updated.connect(
+                lambda progress, status: main_window.gui_layout.show_progress(progress, status)
+            )
+
+        # Connect completion signal
+        def on_rebuild_complete(success, message, stats):
+            if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'show_progress'):
+                main_window.gui_layout.show_progress(-1, "Complete" if success else "Failed")
+
+            if success:
+                main_window.log_message(f"✅ IMG rebuilt successfully as: {os.path.basename(file_path)}")
+                _show_rebuild_stats(main_window, stats)
+
+                # Ask if user wants to open the new file
+                reply = QMessageBox.question(
+                    main_window, "Rebuild Complete",
+                    f"IMG rebuilt successfully as {os.path.basename(file_path)}\n\nOpen the new file?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+
+                if reply == QMessageBox.StandardButton.Yes:
+                    # Open the new file
+                    main_window.open_img_file(file_path)
+            else:
+                main_window.log_message(f"❌ Rebuild failed: {message}")
+                QMessageBox.critical(main_window, "Rebuild Failed", f"Failed to rebuild IMG:\n{message}")
+
+        rebuild_thread.rebuild_completed.connect(on_rebuild_complete)
+
+        # Start rebuild
+        rebuild_thread.start()
+
+        return True
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error in rebuild as: {str(e)}")
+        QMessageBox.critical(main_window, "Rebuild Error", f"Error rebuilding IMG:\n{str(e)}")
+        return False
 
 def _handle_rebuild_completion(main_window, success: bool, message: str, stats: Dict[str, Any], 
                               output_path: str, original_path: str):

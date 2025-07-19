@@ -9,8 +9,6 @@ Handles table population and setup for both IMG and COL files
 import os
 from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
 from PyQt6.QtCore import Qt
-from methods.populate_img_table import populate_img_table
-from methods.populate_col_table import populate_col_table, setup_col_table_structure
 
 
 # Methods list.
