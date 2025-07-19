@@ -1,4 +1,4 @@
-#this belongs in core/importer.py - Version: 1
+#this belongs in core/importer.py - Version: 4
 # X-Seti - July15 2025 - Img Factory 1.5
 # Import functions for IMG Factory
 
@@ -8,8 +8,17 @@ from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QFont
 
+##Methods list
+# import_files
+# import_files_function'
+# import_via_function'
+# import_via_ide_file'
+# import_from_folder'
+# get_selected_entries'
+# integrate_import_functions
 
-def get_selected_entries(main_window):
+
+def get_selected_entries(main_window): #vers 2
     """Get currently selected entries from the table"""
     try:
         selected_entries = []
@@ -34,14 +43,14 @@ def get_selected_entries(main_window):
 class ImportOptionsDialog(QDialog):
     """Import options dialog"""
     
-    def __init__(self, main_window, files, import_type="files"):
+    def __init__(self, main_window, files, import_type="files"): #vers 1
         super().__init__(main_window)
         self.main_window = main_window
         self.files = files
         self.import_type = import_type
         self.setup_ui()
         
-    def setup_ui(self):
+    def setup_ui(self): #vers 2
         self.setWindowTitle(f"Import {self.import_type.title()}")
         self.setMinimumWidth(500)
         
@@ -98,7 +107,7 @@ class ImportOptionsDialog(QDialog):
         layout.addLayout(button_layout)
         self.setLayout(layout)
     
-    def start_import(self):
+    def start_import(self): #vers 2
         """Start the import process"""
         try:
             # Create backup if requested
@@ -123,7 +132,7 @@ class ImportOptionsDialog(QDialog):
         except Exception as e:
             QMessageBox.critical(self, "Import Error", f"Failed to start import: {str(e)}")
     
-    def create_backup_file(self):
+    def create_backup_file(self): #vers 2
         """Create backup of current IMG file"""
         try:
             if hasattr(self.main_window, 'current_img') and hasattr(self.main_window.current_img, 'file_path'):
@@ -133,8 +142,8 @@ class ImportOptionsDialog(QDialog):
                 self.main_window.log_message(f"✅ Backup created: {backup_path}")
         except Exception as e:
             self.main_window.log_message(f"❌ Backup failed: {str(e)}")
-    
-    def import_finished(self, success, message):
+
+    def import_finished(self, success, message): #vers 1
         """Handle import completion"""
         self.progress_bar.setVisible(False)
         
@@ -150,14 +159,14 @@ class ImportThread(QThread):
     progress = pyqtSignal(int)
     finished = pyqtSignal(bool, str)
     
-    def __init__(self, main_window, files, replace_existing=True, validate_files=True):
+    def __init__(self, main_window, files, replace_existing=True, validate_files=True): #vers 1
         super().__init__()
         self.main_window = main_window
         self.files = files
         self.replace_existing = replace_existing
         self.validate_files = validate_files
         
-    def run(self):
+    def run(self): #vers 2
         try:
             imported_count = 0
             failed_count = 0
@@ -182,7 +191,7 @@ class ImportThread(QThread):
         except Exception as e:
             self.finished.emit(False, f"Import error: {str(e)}")
     
-    def import_file(self, file_path):
+    def import_file(self, file_path): #vers 1
         """Import a single file"""
         try:
             filename = os.path.basename(file_path)
@@ -241,7 +250,65 @@ class ImportThread(QThread):
             return False
 
 
-def import_files_function(main_window):
+    def import_files(self): #vers 3
+        """Import files into current IMG"""
+        if not self.current_img:
+            QMessageBox.warning(self, "No IMG", "No IMG file is currently loaded.")
+            return
+
+        try:
+            file_paths, _ = QFileDialog.getOpenFileNames(
+                self, "Import Files", "",
+                "All Files (*);;DFF Models (*.dff);;TXD Textures (*.txd);;COL Collision (*.col)"
+            )
+
+            if file_paths:
+                self.log_message(f"Importing {len(file_paths)} files...")
+
+                # Show progress - CHECK if method exists first
+                if hasattr(self.gui_layout, 'show_progress'):
+                    self.gui_layout.show_progress(0, "Importing files...")
+
+                imported_count = 0
+                for i, file_path in enumerate(file_paths):
+                    progress = int((i + 1) * 100 / len(file_paths))
+                    if hasattr(self.gui_layout, 'show_progress'):
+                        self.gui_layout.show_progress(progress, f"Importing {os.path.basename(file_path)}")
+
+                    # Check if IMG has import_file method
+                    if hasattr(self.current_img, 'import_file'):
+                        if self.current_img.import_file(file_path):
+                            imported_count += 1
+                            self.log_message(f"Imported: {os.path.basename(file_path)}")
+                    else:
+                        self.log_message(f"❌ IMG import_file method not available")
+                        break
+
+                # Refresh table
+                if hasattr(self, '_populate_img_table'):
+                    self._populate_img_table(self.current_img)
+                else:
+                    populate_img_table(self.gui_layout.table, self.current_img)
+
+                self.log_message(f"Import complete: {imported_count}/{len(file_paths)} files imported")
+
+                if hasattr(self.gui_layout, 'show_progress'):
+                    self.gui_layout.show_progress(-1, "Import complete")
+                if hasattr(self.gui_layout, 'update_img_info'):
+                    self.gui_layout.update_img_info(f"{len(self.current_img.entries)} entries")
+
+                QMessageBox.information(self, "Import Complete",
+                                      f"Imported {imported_count} of {len(file_paths)} files")
+
+        except Exception as e:
+            error_msg = f"Error importing files: {str(e)}"
+            self.log_message(error_msg)
+            if hasattr(self.gui_layout, 'show_progress'):
+                self.gui_layout.show_progress(-1, "Import error")
+            QMessageBox.critical(self, "Import Error", error_msg)
+
+
+def import_files_function(main_window): #vers 3
     """Import files into IMG"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
@@ -270,7 +337,7 @@ def import_files_function(main_window):
         QMessageBox.critical(main_window, "Import Error", f"Import failed: {str(e)}")
 
 
-def import_via_function(main_window):
+def import_via_function(main_window): #vers 2
     """Import files via IDE file or folder"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
@@ -300,7 +367,7 @@ def import_via_function(main_window):
         QMessageBox.critical(main_window, "Import Via Error", f"Import via failed: {str(e)}")
 
 
-def import_via_ide_file(main_window):
+def import_via_ide_file(main_window): #vers 2
     """Import files listed in IDE file"""
     try:
         # Get IDE file
@@ -356,7 +423,7 @@ def import_via_ide_file(main_window):
         QMessageBox.critical(main_window, "Import Via IDE Error", f"Import via IDE failed: {str(e)}")
 
 
-def import_from_folder(main_window):
+def import_from_folder(main_window): #vers 2
     """Import all files from a folder"""
     try:
         # Get folder
@@ -390,7 +457,7 @@ def import_from_folder(main_window):
         QMessageBox.critical(main_window, "Import From Folder Error", f"Import from folder failed: {str(e)}")
 
 
-def integrate_import_functions(main_window):
+def integrate_import_functions(main_window): #vers 2
     """Integrate import functions into main window"""
     try:
         main_window.import_files_function = lambda: import_files_function(main_window)
@@ -410,6 +477,7 @@ def integrate_import_functions(main_window):
 
 # Export functions
 __all__ = [
+    'import_files',
     'import_files_function',
     'import_via_function',
     'import_via_ide_file',

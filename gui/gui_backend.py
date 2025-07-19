@@ -134,7 +134,8 @@ class GUIBackend:
         if not hasattr(self, 'refresh_table'):
             self.refresh_table = lambda: self.log_message("⚠️ Refresh table not available")
     
-    def log_message(self, message):
+
+    def log_message(self, message): #vers 3 #keep
         """Log message - safe fallback"""
         try:
             if hasattr(self.main_window, 'log_message'):
@@ -144,6 +145,7 @@ class GUIBackend:
         except Exception:
             print(f"GUI Backend: {message}")
     
+
     def set_button_display_mode(self, mode):
         """Set button display mode and update all buttons"""
         if mode not in [ButtonDisplayMode.TEXT_ONLY, ButtonDisplayMode.ICONS_ONLY, ButtonDisplayMode.ICONS_WITH_TEXT]:

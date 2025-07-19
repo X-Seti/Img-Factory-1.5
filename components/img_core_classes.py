@@ -1,4 +1,4 @@
-#this belongs in components/ img_core_classes.py - Version: 3
+#this belongs in components/ img_core_classes.py - Version: 5
 # X-Seti - July16 2025 - Img Factory 1.5
 
 """
@@ -68,13 +68,13 @@ class CompressionType(Enum):
 class RecentFilesManager:
     """Manages recent files list for file dialogs"""
     
-    def __init__(self, max_files=10):
+    def __init__(self, max_files=10): #vers 2
         self.max_files = max_files
         self.recent_files = []
         self.settings_file = "recent_files.json"
         self._load_recent_files()
     
-    def _load_recent_files(self):
+    def _load_recent_files(self): #vers 2
         """Load recent files from settings"""
         try:
             if os.path.exists(self.settings_file):
@@ -84,7 +84,7 @@ class RecentFilesManager:
         except Exception:
             self.recent_files = []
     
-    def _save_recent_files(self):
+    def _save_recent_files(self): #vers 2
         """Save recent files to settings"""
         try:
             data = {'recent_files': self.recent_files}
@@ -93,7 +93,7 @@ class RecentFilesManager:
         except Exception:
             pass
     
-    def add_file(self, file_path):
+    def add_file(self, file_path): #vers 2
         """Add file to recent files list"""
         if file_path in self.recent_files:
             self.recent_files.remove(file_path)
@@ -106,7 +106,7 @@ class RecentFilesManager:
         
         self._save_recent_files()
     
-    def get_recent_files(self):
+    def get_recent_files(self): #vers 1
         """Get list of recent files"""
         # Filter out files that no longer exist
         existing_files = [f for f in self.recent_files if os.path.exists(f)]
@@ -118,16 +118,16 @@ class RecentFilesManager:
 
 class ValidationResult:
     """Results from entry validation"""
-    def __init__(self):
+    def __init__(self): #vers 1
         self.is_valid: bool = True
         self.errors: List[str] = []
         self.warnings: List[str] = []
     
-    def add_error(self, message: str):
+    def add_error(self, message: str): #vers 1
         self.errors.append(message)
         self.is_valid = False
     
-    def add_warning(self, message: str):
+    def add_warning(self, message: str): #vers 1
         self.warnings.append(message)
 
 
@@ -136,7 +136,7 @@ class IMGEntry:
     Represents a single file entry within an IMG archive
     """
     
-    def __init__(self):
+    def __init__(self): #vers 3
         self.name: str = ""
         self.extension: str = ""
         self.offset: int = 0          # Offset in bytes
@@ -155,31 +155,31 @@ class IMGEntry:
         self._cached_data: Optional[bytes] = None
         self._img_file: Optional['IMGFile'] = None
     
-    def set_img_file(self, img_file: 'IMGFile'):
+    def set_img_file(self, img_file: 'IMGFile'): #vers 1
         """Set reference to parent IMG file"""
         self._img_file = img_file
     
-    def get_offset_in_sectors(self) -> int:
+    def get_offset_in_sectors(self) -> int: #vers 1
         """Get offset in 2048-byte sectors"""
         return self.offset // 2048
     
-    def get_size_in_sectors(self) -> int:
+    def get_size_in_sectors(self) -> int: #vers 1
         """Get size in 2048-byte sectors (rounded up)"""
         return (self.size + 2047) // 2048
     
-    def get_padded_size(self) -> int:
+    def get_padded_size(self) -> int: #vers 1
         """Get size padded to sector boundary"""
         return self.get_size_in_sectors() * 2048
     
-    def is_compressed(self) -> bool:
+    def is_compressed(self) -> bool: #vers 1
         """Check if entry is compressed"""
         return self.compression_type != CompressionType.NONE
     
-    def is_rw_file(self) -> bool:
+    def is_rw_file(self) -> bool: #vers 1
         """Check if this is a RenderWare file (DFF/TXD)"""
         return self.file_type in [FileType.MODEL, FileType.TEXTURE]
     
-    def get_file_type(self) -> FileType:
+    def get_file_type(self) -> FileType: #vers 2
         """Get file type based on extension"""
         if not self.extension:
             return FileType.UNKNOWN
@@ -199,7 +199,7 @@ class IMGEntry:
         }
         return type_map.get(ext, FileType.OTHER)
     
-    def validate(self) -> ValidationResult:
+    def validate(self) -> ValidationResult: #vers 3
         """Validate entry data"""
         result = ValidationResult()
         
@@ -241,14 +241,14 @@ class IMGEntry:
 
         return result
     
-    def get_data(self) -> bytes:
+    def get_data(self) -> bytes: #vers 4
         """Read entry data from IMG file"""
         if not self._img_file:
             raise ValueError("No IMG file reference set")
         
         return self._img_file.read_entry_data(self)
     
-    def set_data(self, data: bytes):
+    def set_data(self, data: bytes): #vers 4
         """Write entry data to IMG file"""
         if not self._img_file:
             raise ValueError("No IMG file reference set")
@@ -261,7 +261,7 @@ class IMGFile:
     Main IMG archive file handler - Updated to use version-specific creators
     """
     
-    def __init__(self, file_path: str = ""):
+    def __init__(self, file_path: str = ""): #vers 4
         self.file_path: str = file_path
         self.version: IMGVersion = IMGVersion.UNKNOWN
         self.entries: List[IMGEntry] = []
@@ -272,7 +272,7 @@ class IMGFile:
         self._img_handle: Optional[BinaryIO] = None
         self._dir_handle: Optional[BinaryIO] = None
     
-    def create_new(self, output_path: str, version: IMGVersion, **options) -> bool:
+    def create_new(self, output_path: str, version: IMGVersion, **options) -> bool: #vers 4
         """Create new IMG file with specified parameters - FIXED"""
         try:
             self.file_path = output_path
@@ -311,7 +311,7 @@ class IMGFile:
             print(f"❌ Error creating IMG file: {e}")
             return False
 
-    def open(self) -> bool:
+    def open(self) -> bool: #vers 4
         """Open IMG file for reading"""
         if not os.path.exists(self.file_path):
             return False
@@ -330,7 +330,7 @@ class IMGFile:
         except Exception:
             return False
 
-    def detect_version(self) -> IMGVersion:
+    def detect_version(self) -> IMGVersion: #vers 4
         """Detect IMG file version from header"""
         if not os.path.exists(self.file_path):
             return IMGVersion.UNKNOWN
@@ -362,7 +362,7 @@ class IMGFile:
 
         return IMGVersion.UNKNOWN
 
-    def _open_version_2(self) -> bool:
+    def _open_version_2(self) -> bool: #vers 4
         """Open IMG version 2 (single file)"""
         try:
             with open(self.file_path, 'rb') as f:
@@ -392,7 +392,7 @@ class IMGFile:
         except Exception:
             return False
 
-    def _open_version_1(self) -> bool:
+    def _open_version_1(self) -> bool: #vers 4
         """Open IMG version 1 (DIR/IMG pair)"""
         dir_path = self.file_path[:-4] + '.dir'
         if not os.path.exists(dir_path):
@@ -427,7 +427,7 @@ class IMGFile:
         except Exception:
             return False
 
-    def read_entry_data(self, entry: IMGEntry) -> bytes:
+    def read_entry_data(self, entry: IMGEntry) -> bytes: #vers 4
         """Read data for a specific entry"""
         try:
             if self.version == IMGVersion.VERSION_1:
@@ -444,7 +444,7 @@ class IMGFile:
         except Exception as e:
             raise RuntimeError(f"Failed to read entry data: {e}")
 
-    def write_entry_data(self, entry: IMGEntry, data: bytes):
+    def write_entry_data(self, entry: IMGEntry, data: bytes): #vers 4
         """Write data for a specific entry"""
         try:
             if self.version == IMGVersion.VERSION_1:
@@ -462,7 +462,7 @@ class IMGFile:
             raise RuntimeError(f"Failed to write entry data: {e}")
 
 
-    def get_creation_info(self) -> Dict[str, Any]:
+    def get_creation_info(self) -> Dict[str, Any]: #vers 4
         """Get information about the IMG file"""
         if not self.file_path or not os.path.exists(self.file_path):
             return {}
@@ -487,12 +487,12 @@ class IMGEntriesTable(QTableWidget):
     entries_selected = pyqtSignal(list)
     entry_double_clicked = pyqtSignal(int)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None): #vers 1
         super().__init__(parent)
         self._setup_table()
         self.entries = []
 
-    def _setup_table(self): #kept
+    def _setup_table(self): #vers 4
         """Setup table appearance and headers"""
         headers = ["Name", "Type", "Size", "Offset", "Version", "Compression", "Status"]
         self.setColumnCount(len(headers))
@@ -518,7 +518,7 @@ class IMGEntriesTable(QTableWidget):
         self.setSortingEnabled(True)
 
 
-    def populate_entries(self, entries: List[IMGEntry]): #kept
+    def populate_entries(self, entries: List[IMGEntry]): #vers 3
         """Populate table with IMG entries"""
         self.entries = entries
         self.setRowCount(len(entries))
@@ -551,7 +551,7 @@ class IMGEntriesTable(QTableWidget):
             status = "Modified" if entry.is_new_entry or entry.is_replaced else "Original"
             self.setItem(row, 6, QTableWidgetItem(status))
 
-    def get_selected_entries(self) -> List[int]: #kept
+    def get_selected_entries(self) -> List[int]: #vers 4
         """Get list of selected entry indices"""
         selected_rows = []
         for item in self.selectedItems():
@@ -559,7 +559,7 @@ class IMGEntriesTable(QTableWidget):
                 selected_rows.append(item.row())
         return sorted(set(selected_rows))
 
-    def get_selected_entry_names(self) -> List[str]:
+    def get_selected_entry_names(self) -> List[str]: #vers 4
         """Get list of selected entry names for logging"""
         selected_names = []
         selected_rows = self.get_selected_entries()
@@ -569,7 +569,7 @@ class IMGEntriesTable(QTableWidget):
                 selected_names.append(name_item.text())
         return selected_names
 
-    def get_selection_summary(self) -> str:
+    def get_selection_summary(self) -> str: #vers 4
         """Get a summary of current selection for logging"""
         selected_rows = self.get_selected_entries()
         if not selected_rows:
@@ -582,11 +582,11 @@ class IMGEntriesTable(QTableWidget):
         else:
             return f"{len(selected_rows)} entries selected"
 
-    def select_all_entries(self):
+    def select_all_entries(self): #vers 4
         """Select all entries"""
         self.selectAll()
 
-    def invert_selection(self):
+    def invert_selection(self): #vers 4
         """Invert current selection"""
         current_selection = self.get_selected_entries()
         self.clearSelection()
@@ -595,7 +595,7 @@ class IMGEntriesTable(QTableWidget):
             if row not in current_selection:
                 self.selectRow(row)
 
-    def apply_filter(self, filter_text="", file_type="All Files"): #kept
+    def apply_filter(self, filter_text="", file_type="All Files"): #vers 5
         """Apply filtering to table entries - FIXED VERSION"""
         if not hasattr(self, 'entries') or not self.entries:
             return
@@ -649,11 +649,11 @@ class FilterPanel(QWidget):
 
     filter_changed = pyqtSignal(str, str)  # search_text, file_type
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None): #vers 1
         super().__init__(parent)
         self._setup_ui()
 
-    def _setup_ui(self):
+    def _setup_ui(self): #vers 4
         """Setup filter panel UI"""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
@@ -689,7 +689,7 @@ class FilterPanel(QWidget):
 
         layout.addLayout(filter_layout)
 
-    def _show_recent_files(self):
+    def _show_recent_files(self): #vers 5
         """Show recent files menu"""
         recent_manager = RecentFilesManager()
         recent_files = recent_manager.get_recent_files()
@@ -720,11 +720,11 @@ class FilterPanel(QWidget):
 class IMGFileInfoPanel(QWidget):
     """Panel showing IMG file information"""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None): #vers 1
         super().__init__(parent)
         self._setup_ui()
 
-    def _setup_ui(self):
+    def _setup_ui(self): #vers 2
         """Setup info panel UI"""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
@@ -742,13 +742,13 @@ class IMGFileInfoPanel(QWidget):
         self.version_label = QLabel("")
         layout.addWidget(self.version_label)
 
-    def _reset_info(self):
+    def _reset_info(self): #vers 1
         """Reset panel to default state"""
         self.file_label.setText("No IMG file loaded")
         self.stats_label.setText("")
         self.version_label.setText("")
 
-    def update_info(self, img_file: IMGFile):
+    def update_info(self, img_file: IMGFile): #vers 2
         """Update panel with IMG file information"""
         if not img_file:
             self._reset_info()
@@ -774,7 +774,7 @@ class TabFilterWidget(QWidget):
 
     filter_changed = pyqtSignal(str, str)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None): #vers 1
         super().__init__(parent)
         # Create a simplified version that delegates to FilterPanel
         self.filter_panel = FilterPanel(parent)
@@ -785,23 +785,12 @@ class TabFilterWidget(QWidget):
         # Connect signals
         self.filter_panel.filter_changed.connect(self.filter_changed)
 
-    def apply_filter(self, filter_text="", file_type="All Files"):
+    def apply_filter(self, filter_text="", file_type="All Files"): #vers 2
         """Apply filter - compatibility method"""
         self.filter_changed.emit(filter_text, file_type)
 
 
-def format_file_size(size_bytes: int) -> str:
-    """Format file size in human-readable format"""
-    if size_bytes < 1024:
-        return f"{size_bytes} B"
-    elif size_bytes < 1024 * 1024:
-        return f"{size_bytes / 1024:.1f} KB"
-    elif size_bytes < 1024 * 1024 * 1024:
-        return f"{size_bytes / (1024 * 1024):.1f} MB"
-    else:
-        return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
-
-def format_file_size(size_bytes: int) -> str:
+def format_file_size(size_bytes: int) -> str: #vers 4
     """Format file size in human readable format"""
     if size_bytes == 0:
         return "0 B"
@@ -819,7 +808,7 @@ def format_file_size(size_bytes: int) -> str:
     else:
         return f"{size:.1f} {units[unit_index]}"
 
-def integrate_filtering(main_window, table_widget, filter_widget=None):
+def integrate_filtering(main_window, table_widget, filter_widget=None): #vers 4
     """Integrate filtering functionality - compatibility function"""
     if filter_widget is None:
         filter_widget = FilterPanel(main_window)
@@ -832,13 +821,13 @@ def integrate_filtering(main_window, table_widget, filter_widget=None):
 
 
 # Convenience functions for external use
-def create_img_file(output_path: str, version: IMGVersion, **options) -> bool:
+def create_img_file(output_path: str, version: IMGVersion, **options) -> bool: #vers 2
     """Create IMG file using appropriate version creator"""
     img = IMGFile()
     return img.create_new(output_path, version, **options)
 
 
-def create_entries_table_panel(main_window):
+def create_entries_table_panel(main_window): #vers 4
     """Create the complete entries table panel"""
     panel = QWidget()
     layout = QVBoxLayout(panel)
@@ -888,13 +877,13 @@ def create_entries_table_panel(main_window):
     return panel
 
 
-def detect_img_version(file_path: str) -> IMGVersion:
+def detect_img_version(file_path: str) -> IMGVersion: #vers 2
     """Detect IMG version without fully opening the file"""
     img = IMGFile(file_path)
     return img.detect_version()
 
 
-def populate_table_with_sample_data(table):
+def populate_table_with_sample_data(table): #vers 3
     """Populate table with sample data for testing"""
     sample_entries = [
         {"name": "player.dff", "extension": "DFF", "size": 250880, "offset": 0x2000, "version": "RW 3.6"},
@@ -905,7 +894,7 @@ def populate_table_with_sample_data(table):
 
     # Convert to mock entry objects
     class MockEntry:
-        def __init__(self, data):
+        def __init__(self, data): #vers 1
             self.name = data["name"]
             self.extension = data["extension"]
             self.size = data["size"]
@@ -915,7 +904,7 @@ def populate_table_with_sample_data(table):
             self.is_replaced = False
             self.compression_type = CompressionType.NONE
 
-        def get_version_text(self):
+        def get_version_text(self): #vers 1
             return self._version
 
     mock_entries = [MockEntry(data) for data in sample_entries]

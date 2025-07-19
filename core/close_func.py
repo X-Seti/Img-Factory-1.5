@@ -14,12 +14,12 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout
 class IMGCloseManager:
     """Manages all close operations and tab cleanup for IMG Factory"""
     
-    def __init__(self, main_window):
+    def __init__(self, main_window): #vers 1
         """Initialize with reference to main window"""
         self.main_window = main_window
         self.log_message = main_window.log_message
 
-    def close_img_file(self):
+    def _close_img_file(self): #vers 5
         """Close current file (IMG or COL) - UPDATED for both file types"""
         current_index = self.main_window.main_tab_widget.currentIndex()
 
@@ -51,7 +51,65 @@ class IMGCloseManager:
         else:
             self.log_message("✅ Tab cleared")
 
-    def close_all_tabs(self):
+    def close_img_file(self): #vers 5
+        """Close current IMG/COL file - DIRECT implementation if close_manager fails"""
+        try:
+            # Try to use close manager first
+            if hasattr(self, 'close_manager') and self.close_manager:
+                self.close_manager.close_img_file()
+                return
+        except Exception as e:
+            self.log_message(f"❌ Close manager error: {str(e)}")
+
+        # Fallback: Direct implementation
+        try:
+            current_index = self.main_tab_widget.currentIndex()
+
+            # Log what we're closing
+            if hasattr(self, 'current_img') and self.current_img:
+                file_path = getattr(self.current_img, 'file_path', 'Unknown IMG')
+                self.log_message(f"🗂️ Closing IMG: {os.path.basename(file_path)}")
+          #  elif hasattr(self, 'current_col') and self.current_col:
+          #      file_path = getattr(self.current_col, 'file_path', 'Unknown #=-COL')
+          #      self.log_message(f"🗂️ Closing COL: {os.path.basename(file_path)}")
+            else:
+                self.log_message("🗂️ Closing current tab")
+
+            # Clear the current file data
+            self.current_img = None
+            #self.current_col = None
+
+            # Remove from open_files if exists
+            if hasattr(self, 'open_files') and current_index in self.open_files:
+                del self.open_files[current_index]
+
+            # Reset tab name to "No File"
+            if hasattr(self, 'main_tab_widget'):
+                self.main_tab_widget.setTabText(current_index, "📁 No File")
+
+            # Update UI for no file state
+            self._update_ui_for_no_img()
+
+            self.log_message("✅ File closed successfully")
+
+        except Exception as e:
+            error_msg = f"Error closing file: {str(e)}"
+            self.log_message(f"❌ {error_msg}")
+            # Don't show error dialog, just log it
+
+
+    def close_all_img(self): #vers 2
+        """Close all IMG files - Wrapper for close_all_tabs"""
+        try:
+            if hasattr(self, 'close_manager') and self.close_manager:
+                self.close_manager.close_all_tabs()
+            else:
+                self.log_message("❌ Close manager not available")
+        except Exception as e:
+            self.log_message(f"❌ Error in close_all_img: {str(e)}")
+
+
+    def close_all_tabs(self): #vers 2
         """Close all tabs - UPDATED to handle both IMG and COL"""
         try:
             tab_count = self.main_window.main_tab_widget.count()
@@ -76,7 +134,8 @@ class IMGCloseManager:
         except Exception as e:
             self.log_message(f"❌ Error closing all tabs: {str(e)}")
 
-    def close_tab(self, index):
+
+    def close_tab(self, index): #vers 4
         """Close tab at index - UPDATED for both IMG and COL"""
         if self.main_window.main_tab_widget.count() <= 1:
             # Don't close the last tab, just clear it
@@ -126,7 +185,7 @@ class IMGCloseManager:
         except Exception as e:
             self.log_message(f"❌ Error closing tab {index}: {str(e)}")
 
-    def _clear_current_tab(self):
+    def _clear_current_tab(self): #vers 4
         """Clear current tab - UPDATED for both IMG and COL"""
         current_index = self.main_window.main_tab_widget.currentIndex()
 
@@ -154,7 +213,8 @@ class IMGCloseManager:
 
         self.log_message("🗂️ Tab cleared")
 
-    def _clear_all_tables_in_tab(self, tab_widget):
+
+    def _clear_all_tables_in_tab(self, tab_widget): #vers 3
         """Clear ALL table widgets found in a tab (deep search)"""
         try:
             tables_cleared = 0
@@ -193,7 +253,8 @@ class IMGCloseManager:
         except Exception as e:
             self.log_message(f"❌ Error clearing tables in tab: {str(e)}")
 
-    def _reindex_open_files(self):
+
+    def _reindex_open_files(self): #vers 4
         """Reindex open_files dict after tab removal"""
         new_open_files = {}
         for i in range(self.main_window.main_tab_widget.count()):
@@ -204,7 +265,8 @@ class IMGCloseManager:
                     break
         self.main_window.open_files = new_open_files
 
-    def create_new_tab(self):
+
+    def create_new_tab(self): #vers 4
         """Create new empty tab - FIXED: Use correct method"""
         # Create tab widget
         tab_widget = QWidget()
@@ -218,26 +280,27 @@ class IMGCloseManager:
         self.main_window.main_tab_widget.addTab(tab_widget, "📁 No File")
         self.main_window.main_tab_widget.setCurrentIndex(self.main_window.main_tab_widget.count() - 1)
 
-    def get_open_file_count(self):
+
+    def get_open_file_count(self): #vers 1
         """Get count of open files"""
         return len(self.main_window.open_files)
 
-    def get_tab_count(self):
+    def get_tab_count(self): #vers 1
         """Get total tab count"""
         return self.main_window.main_tab_widget.count()
 
-    def is_any_file_open(self):
+    def is_any_file_open(self): #vers 1
         """Check if any files are currently open"""
         return len(self.main_window.open_files) > 0
 
-    def get_current_tab_file_info(self):
+    def get_current_tab_file_info(self): #vers 1
         """Get file info for current tab"""
         current_index = self.main_window.main_tab_widget.currentIndex()
         return self.main_window.open_files.get(current_index, None)
 
 
 # Convenience functions for integration with main window
-def setup_close_manager(main_window):
+def setup_close_manager(main_window): #vers 2
     """Setup close manager for main window"""
     main_window.close_manager = IMGCloseManager(main_window)
     
@@ -247,7 +310,7 @@ def setup_close_manager(main_window):
     return main_window.close_manager
 
 
-def install_close_functions(main_window):
+def install_close_functions(main_window): #vers 2
     """Install close functions as methods on main window for backward compatibility"""
     close_manager = setup_close_manager(main_window)
     

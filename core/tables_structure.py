@@ -13,7 +13,6 @@ from PyQt6.QtCore import Qt
 
 # Methods list.
 # estimate_col_model_size_bytes
-# format_file_size
 # reset_table_styling
 # setup_col_table_structure
 
@@ -47,30 +46,6 @@ def estimate_col_model_size_bytes(model): #vers 4
 
     except Exception:
         return 1024  # Default 1KB on error
-
-
-def format_file_size(size_bytes): #vers 4
-    """Format file size same as IMG entries"""
-    try:
-        # Use the same formatting as IMG entries
-        try:
-            from components.img_core_classes import format_file_size
-            return format_file_size(size_bytes)
-        except:
-            pass
-
-        # Fallback formatting (same logic as IMG)
-        if size_bytes < 1024:
-            return f"{size_bytes} B"
-        elif size_bytes < 1024 * 1024:
-            return f"{size_bytes // 1024} KB"
-        elif size_bytes < 1024 * 1024 * 1024:
-            return f"{size_bytes // (1024 * 1024)} MB"
-        else:
-            return f"{size_bytes // (1024 * 1024 * 1024)} GB"
-
-    except Exception:
-        return f"{size_bytes} bytes"
 
 
 def reset_table_styling(main_window): #vers 4
@@ -229,7 +204,6 @@ def _setup_col_table_structure(main_window): #vers 11
 # Export functions
 __all__ = [
     'estimate_col_model_size_bytes',
-    'format_file_size',
     'reset_table_styling',
     'setup_col_table_structure'
 ]

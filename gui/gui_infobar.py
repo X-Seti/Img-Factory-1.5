@@ -1,4 +1,4 @@
-#this belongs in gui/gui_infobar.py - Version: 2
+#this belongs in gui/gui_infobar.py - Version: 4
 # X-Seti - July17 2025 - IMG Factory 1.5 - Info Bar Functions
 # Enhanced with all COL info bar functions using IMG debug system
 
@@ -16,24 +16,11 @@ from components.col_debug_functions import col_debug_log, is_col_debug_enabled
 from components.img_debug_functions import img_debugger
 
 ##Methods list -
-# format_file_size
 # get_col_file_statistics
 # update_col_info_bar
 # update_col_info_bar_enhanced
 # update_img_info_bar
 # update_main_info_display
-
-def format_file_size(size_bytes: int) -> str: #vers 1
-    """Format file size for display in info bar"""
-    try:
-        if size_bytes < 1024:
-            return f"{size_bytes} B"
-        elif size_bytes < 1024*1024:
-            return f"{size_bytes/1024:.1f} KB"
-        else:
-            return f"{size_bytes/(1024*1024):.1f} MB"
-    except:
-        return "Unknown"
 
 def get_col_file_statistics(col_file, file_path: str) -> Dict[str, Any]: #vers 1
     """Get comprehensive COL file statistics for info bar display"""
@@ -265,7 +252,6 @@ def update_main_info_display(main_window, file_type: str, file_object, file_path
 
 # Export functions
 __all__ = [
-    'format_file_size',
     'get_col_file_statistics',
     'update_col_info_bar',
     'update_col_info_bar_enhanced',

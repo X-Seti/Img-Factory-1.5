@@ -27,15 +27,6 @@ def create_table_item(text: str, data=None) -> QTableWidgetItem: #vers 5
         item.setData(Qt.ItemDataRole.UserRole, data)
     return item
 
-def format_file_size(size_bytes: int) -> str: #vers 5
-    """Format file size for display"""
-    if size_bytes < 1024:
-        return f"{size_bytes} B"
-    elif size_bytes < 1024*1024:
-        return f"{size_bytes/1024:.1f} KB"
-    else:
-        return f"{size_bytes/(1024*1024):.1f} MB"
-
 def format_collision_display(model_info: Dict[str, Any]) -> str: #vers 5
     """Format collision types for table display"""
     if not isinstance(model_info, dict):

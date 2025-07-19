@@ -1,4 +1,4 @@
-#this belongs in core/remove.py - Version: 1
+#this belongs in core/remove.py - Version: 4
 # X-Seti - July15 2025 - Img Factory 1.5
 # Remove functions for IMG Factory
 
@@ -6,8 +6,14 @@ import os
 from PyQt6.QtWidgets import QMessageBox, QInputDialog
 from PyQt6.QtCore import QThread, pyqtSignal
 
+##Methods list
+#remove_selected_function
+# remove_via_entries_function
+# get_selected_entries
+# integrate_remove_functions
 
-def get_selected_entries(main_window):
+
+def get_selected_entries(main_window): #vers 2
     """Get currently selected entries from the table"""
     try:
         selected_entries = []
@@ -29,7 +35,7 @@ def get_selected_entries(main_window):
         return []
 
 
-def remove_selected_function(main_window):
+def remove_selected_function(main_window): #vers 2
     """Remove selected entries from IMG file"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
@@ -79,7 +85,7 @@ def remove_selected_function(main_window):
         QMessageBox.critical(main_window, "Remove Error", f"Remove failed: {str(e)}")
 
 
-def remove_via_entries_function(main_window):
+def remove_via_entries_function(main_window): #vers 2
     """Remove entries based on IDE file or pattern"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
@@ -173,7 +179,7 @@ def remove_via_entries_function(main_window):
         QMessageBox.critical(main_window, "Remove Via Error", f"Remove via failed: {str(e)}")
 
 
-def integrate_remove_functions(main_window):
+def integrate_remove_functions(main_window): #vers 2
     """Integrate remove functions into main window"""
     try:
         main_window.remove_selected_function = lambda: remove_selected_function(main_window)
@@ -190,6 +196,73 @@ def integrate_remove_functions(main_window):
         main_window.log_message(f"❌ Failed to integrate remove functions: {str(e)}")
         return False
 
+def remove_selected(self):
+    """Remove selected entries"""
+    if not self.current_img:
+        QMessageBox.warning(self, "No IMG", "No IMG file is currently loaded.")
+        return
+""""
+    try:
+        selected_rows = []
+        if hasattr(self.gui_layout, 'table') and hasattr(self.gui_layout.table, 'selectedItems'):
+            for item in self.gui_layout.table.selectedItems():
+                if item.column() == 0:  # Only filename column
+                    selected_rows.append(item.row())
+
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select entries to remove.")
+            return
+
+        # Confirm removal
+        entry_names = []
+        for row in selected_rows:
+            item = self.gui_layout.table.item(row, 0)
+            entry_names.append(item.text() if item else f"Entry_{row}")
+
+            reply = QMessageBox.question(
+            self, "Confirm Removal",
+            f"Remove {len(selected_rows)} selected entries?\n\n" + "\n".join(entry_names[:5]) +
+            (f"\n... and {len(entry_names) - 5} more" if len(entry_names) > 5 else ""),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+
+        if reply == QMessageBox.StandardButton.Yes:
+            # Sort in reverse order to maintain indices
+            selected_rows.sort(reverse=True)
+
+            removed_count = 0
+            for row in selected_rows:
+                item = self.gui_layout.table.item(row, 0)
+                entry_name = item.text() if item else f"Entry_{row}"
+
+                # Check if IMG has remove_entry method
+                if hasattr(self.current_img, 'remove_entry'):
+                    if self.current_img.remove_entry(row):
+                        removed_count += 1
+                        self.log_message(f"Removed: {entry_name}")
+                else:
+                    self.log_message(f"❌ IMG remove_entry method not available")
+                    break
+
+            # Refresh table
+            if hasattr(self, '_populate_img_table'):
+                self._populate_img_table(self.current_img)
+            else:
+                populate_img_table(self.gui_layout.table, self.current_img)
+
+            self.log_message(f"Removal complete: {removed_count} entries removed")
+
+            if hasattr(self.gui_layout, 'update_img_info'):
+                self.gui_layout.update_img_info(f"{len(self.current_img.entries)} entries")
+
+            QMessageBox.information(self, "Removal Complete",
+                                    f"Removed {removed_count} entries")
+
+        except Exception as e:
+            error_msg = f"Error removing entries: {str(e)}"
+            self.log_message(error_msg)
+            QMessageBox.critical(self, "Removal Error", error_msg)
+
+"""
 
 # Export functions
 __all__ = [

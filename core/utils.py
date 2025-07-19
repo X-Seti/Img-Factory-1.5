@@ -7,8 +7,25 @@ import shutil
 import json
 from typing import List, Optional, Dict, Any
 
+## Method list
+# get_selected_entries
+# validate_import_files
+# create_backup_before_import
+# get_import_statistics
+# get_file_type_subfolder
+# parse_ide_file
+# find_matching_entries
+# entry_exists_in_img
+# get_project_folder
+# get_export_folder
+# refresh_table
+# validate_img_file
+# get_img_info
+# log_operation
+# integrate_core_functions
 
-def get_selected_entries(main_window):
+
+def get_selected_entries(main_window): #vers 3
     """Get currently selected entries from the table"""
     try:
         selected_entries = []
@@ -51,7 +68,7 @@ def get_selected_entries(main_window):
         return []
 
 
-def validate_import_files(files_to_import: List[str]) -> List[str]:
+def validate_import_files(files_to_import: List[str]) -> List[str]: #vers 3
     """Validate files before import"""
     valid_files = []
     
@@ -68,7 +85,7 @@ def validate_import_files(files_to_import: List[str]) -> List[str]:
     return valid_files
 
 
-def create_backup_before_import(main_window) -> bool:
+def create_backup_before_import(main_window) -> bool: #vers 5
     """Create backup of current IMG file before import"""
     try:
         if hasattr(main_window, 'current_img') and hasattr(main_window.current_img, 'file_path'):
@@ -82,7 +99,7 @@ def create_backup_before_import(main_window) -> bool:
         return False
 
 
-def get_import_statistics(main_window) -> Dict[str, Any]:
+def get_import_statistics(main_window) -> Dict[str, Any]: #vers 4
     """Get import statistics"""
     try:
         if hasattr(main_window, 'current_img') and main_window.current_img:
@@ -105,7 +122,7 @@ def get_import_statistics(main_window) -> Dict[str, Any]:
     return {'total_entries': 0, 'type_counts': {}}
 
 
-def get_file_type_subfolder(filename: str) -> str:
+def get_file_type_subfolder(filename: str) -> str: #vers 4
     """Get organized subfolder by file type"""
     ext = os.path.splitext(filename)[1].lower()
     
@@ -131,7 +148,7 @@ def get_file_type_subfolder(filename: str) -> str:
         return 'other'
 
 
-def parse_ide_file(ide_file_path: str) -> List[str]:
+def parse_ide_file(ide_file_path: str) -> List[str]: #vers 3
     """Parse IDE file to get filenames"""
     filenames = []
     
@@ -158,7 +175,7 @@ def parse_ide_file(ide_file_path: str) -> List[str]:
     return filenames
 
 
-def find_matching_entries(main_window, entry_names: List[str]) -> List[Any]:
+def find_matching_entries(main_window, entry_names: List[str]) -> List[Any]: #vers
     """Find entries by name in IMG"""
     matching_entries = []
     
@@ -176,7 +193,7 @@ def find_matching_entries(main_window, entry_names: List[str]) -> List[Any]:
     return matching_entries
 
 
-def entry_exists_in_img(main_window, filename: str) -> bool:
+def entry_exists_in_img(main_window, filename: str) -> bool: #vers 3
     """Check if entry already exists in IMG"""
     try:
         if hasattr(main_window, 'current_img') and main_window.current_img:
@@ -189,7 +206,7 @@ def entry_exists_in_img(main_window, filename: str) -> bool:
         return False
 
 
-def get_project_folder(main_window) -> Optional[str]:
+def get_project_folder(main_window) -> Optional[str]: #vers 3
     """Get project folder from settings"""
     try:
         if hasattr(main_window, 'settings') and main_window.settings:
@@ -199,7 +216,7 @@ def get_project_folder(main_window) -> Optional[str]:
     return None
 
 
-def get_export_folder(main_window) -> Optional[str]:
+def get_export_folder(main_window) -> Optional[str]: #vers 2
     """Get export folder from settings"""
     try:
         if hasattr(main_window, 'settings') and main_window.settings:
@@ -209,7 +226,7 @@ def get_export_folder(main_window) -> Optional[str]:
     return None
 
 
-def refresh_table(main_window):
+def refresh_table(main_window): #vers 1
     """Refresh the entries table"""
     try:
         if hasattr(main_window, 'populate_entries_table'):
@@ -224,7 +241,7 @@ def refresh_table(main_window):
         main_window.log_message(f"❌ Table refresh failed: {str(e)}")
 
 
-def validate_img_file(main_window) -> bool:
+def validate_img_file(main_window) -> bool: #vers 4
     """Validate current IMG file"""
     try:
         if hasattr(main_window, 'current_img') and main_window.current_img:
@@ -238,7 +255,7 @@ def validate_img_file(main_window) -> bool:
     return False
 
 
-def get_img_info(main_window) -> Dict[str, Any]:
+def get_img_info(main_window) -> Dict[str, Any]: #vers 5
     """Get IMG file information"""
     try:
         if hasattr(main_window, 'current_img') and main_window.current_img:
@@ -269,21 +286,7 @@ def get_img_info(main_window) -> Dict[str, Any]:
     return {'file_path': 'None', 'entry_count': 0, 'file_size': 0, 'type_counts': {}}
 
 
-def format_file_size(size_bytes: int) -> str:
-    """Format file size in human readable format"""
-    if size_bytes == 0:
-        return "0 B"
-    
-    size_names = ["B", "KB", "MB", "GB", "TB"]
-    i = 0
-    while size_bytes >= 1024 and i < len(size_names) - 1:
-        size_bytes /= 1024.0
-        i += 1
-    
-    return f"{size_bytes:.1f} {size_names[i]}"
-
-
-def log_operation(main_window, operation: str, details: str = ""):
+def log_operation(main_window, operation: str, details: str = ""): #vers 4
     """Log an operation with timestamp"""
     try:
         import datetime
@@ -297,7 +300,7 @@ def log_operation(main_window, operation: str, details: str = ""):
         main_window.log_message(f"{operation}: {details}")
 
 
-def integrate_core_functions(main_window):
+def integrate_core_functions(main_window): #vers 4
     """Integrate core utility functions into main window"""
     try:
         # Add utility functions
@@ -340,7 +343,6 @@ __all__ = [
     'refresh_table',
     'validate_img_file',
     'get_img_info',
-    'format_file_size',
     'log_operation',
     'integrate_core_functions'
 ]

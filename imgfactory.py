@@ -48,21 +48,23 @@ from utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsD
 
 #components
 from components.unified_debug_functions import integrate_all_improvements
-
-from components.img_close_functions import install_close_functions, setup_close_manager
 from components.img_creator import NewIMGDialog, IMGCreationThread
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_validator import IMGValidator
 from components.img_core_classes import (
-    IMGFile, IMGEntry, IMGVersion, Platform, format_file_size,
+    IMGFile, IMGEntry, IMGVersion, Platform,
     IMGEntriesTable, FilterPanel, IMGFileInfoPanel,
     TabFilterWidget, integrate_filtering, create_entries_table_panel)
 
 #core
+from core.close_func import install_close_functions, setup_close_manager
 from core.img_formats import GameSpecificIMGDialog, IMGCreator
 from core.file_extraction import setup_complete_extraction_integration
 from core.tables_structure import reset_table_styling
 from core.remove import integrate_remove_functions
+from core.importer import (import_files_function,
+    import_via_function, import_via_ide_file, import_from_folder,
+    get_selected_entries, integrate_import_functions)
 from core.rw_versions import get_rw_version_name
 from core.right_click_actions import integrate_right_click_actions
 from core.shortcuts import setup_all_shortcuts, setup_debug_shortcuts
@@ -516,14 +518,12 @@ class IMGFactory(QMainWindow):
             self._update_ui_for_loaded_col()
 
     def select_all_entries(self): #vers 3
-        # ./components/img_core_classes.py: - def select_all_entries(self):
-
         """Select all entries in current table"""
         if hasattr(self.gui_layout, 'table') and self.gui_layout.table:
             self.gui_layout.table.selectAll()
             self.log_message("✅ Selected all entries")
 
-    def validate_img(self):
+    def validate_img(self): #vers 4
         """Validate current IMG file"""
         if not self.current_img:
             self.log_message("❌ No IMG file loaded")
@@ -539,7 +539,7 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Validation error: {str(e)}")
 
-    def show_gui_settings(self):
+    def show_gui_settings(self): #vers 5
         """Show GUI settings dialog"""
         self.log_message("⚙️ GUI settings requested")
         try:
@@ -549,12 +549,22 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Settings dialog error: {str(e)}")
 
-    def show_about(self):
-        """Show about dialog"""
-        QMessageBox.about(self, "About IMG Factory 1.5",
-                         "IMG Factory 1.5\nAdvanced IMG Archive Management\nX-Seti 2025")
 
-    def _create_ui(self):
+    def _create_ui(self): #vers 10
+        #./core/dialogs.py: - def _create_ui(self):
+        #./core/dialogs.py: - def _create_ui(self):
+        #./core/dialogs.py: - def _create_ui(self):
+        #./core/dialogs.py: - def _create_ui(self):
+        #./core/img_formats.py: - def _create_ui(self):
+        #./gui/gui_settings.py: - def _create_ui(self):
+        #./gui/log_panel.py: - def _create_ui(self):
+        #./gui/status_bar.py: - def _create_ui(self):
+        #./gui/status_bar.py: - def _create_ui(self):
+        #./gui/status_bar.py: - def _create_ui(self):
+        #./gui/status_bar.py: - def _create_ui(self):
+        #./components/img_templates.py: - def _create_ui(self):
+        #./components/img_open_dialog.py: - def _create_ui(self):
+
         """Create the main user interface - WITH TABS FIXED"""
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -588,7 +598,8 @@ class IMGFactory(QMainWindow):
         # Setup unified signal system
         self.setup_unified_signals()
 
-    def _create_initial_tab(self):
+    def _create_initial_tab(self): #vers 4
+        #./components/img_close_functions.py: - def _create_initial_tab[self]
         """Create initial empty tab"""
         # Create tab widget
         tab_widget = QWidget()
@@ -601,7 +612,7 @@ class IMGFactory(QMainWindow):
         # Add tab with "No file" label
         self.main_tab_widget.addTab(tab_widget, "📁 No File")
 
-    def _on_tab_changed(self, index):
+    def _on_tab_changed(self, index): #vers 4
         """Handle tab change - FIXED"""
         if index == -1:
             return
@@ -629,7 +640,7 @@ class IMGFactory(QMainWindow):
             self.current_col = None
             self._update_ui_for_no_img()
 
-    def _update_ui_for_current_file(self):
+    def _update_ui_for_current_file(self): #vers 5
         """Update UI for currently selected file - FIXED"""
         if self.current_img:
             self.log_message("🔄 Updating UI for IMG file")
@@ -641,7 +652,7 @@ class IMGFactory(QMainWindow):
             self.log_message("🔄 Updating UI for no file")
             self._update_ui_for_no_img()
 
-    def _update_ui_for_loaded_img(self):
+    def _update_ui_for_loaded_img(self): #vers 2
         """Update UI when IMG file is loaded - FIXED: Complete implementation"""
         if not self.current_img:
             self.log_message("⚠️ _update_ui_for_loaded_img called but no current_img")
@@ -668,7 +679,9 @@ class IMGFactory(QMainWindow):
 
         self.log_message("✅ IMG UI updated successfully")
 
-    def log_message(self, message):
+    def log_message(self, message): #vers 3
+        #./gui/gui_layout.py - def log_message(self, message): #vers 3 #keep
+        #./gui/gui_backend.py - def log_message(self, message): #vers 3 #keep
         """Log a message to the activity log"""
         print(f"LOG: {message}")  # Temporary - shows in console
 
@@ -684,7 +697,7 @@ class IMGFactory(QMainWindow):
             if hasattr(self, 'statusBar'):
                 self.statusBar().showMessage(message)
 
-    def create_new_img(self):
+    def create_new_img(self): #vers 5
         """Show new IMG creation dialog - FIXED: No signal connections"""
         try:
             dialog = GameSpecificIMGDialog(self)
@@ -702,11 +715,13 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Error creating new IMG: {str(e)}")
 
-    def open_img_file(self):
+
+    def open_img_file(self): #vers 5
         """Open file dialog - REDIRECTS to unified loader"""
         self.open_file_dialog()
 
-    def _detect_and_open_file(self, file_path: str) -> bool:
+
+    def _detect_and_open_file(self, file_path: str) -> bool: #vers 5
         """Detect file type and open with appropriate handler"""
         try:
             # First check by extension
@@ -751,7 +766,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"❌ Error detecting file type: {str(e)}")
             return False
 
-    def open_file_dialog(self):
+    def open_file_dialog(self): #vers 4
         """Unified file dialog for IMG and COL files"""
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Open IMG/COL Archive", "",
@@ -760,7 +775,7 @@ class IMGFactory(QMainWindow):
         if file_path:
             self.load_file_unified(file_path)
 
-    def _detect_file_type(self, file_path: str) -> str:
+    def _detect_file_type(self, file_path: str) -> str: #vers 3
         """Detect file type by extension and content"""
         try:
             file_ext = os.path.splitext(file_path)[1].lower()
@@ -793,7 +808,7 @@ class IMGFactory(QMainWindow):
             return "UNKNOWN"
 
 
-    def load_file_unified(self, file_path: str):
+    def load_file_unified(self, file_path: str): #vers 2
         """Unified file loader with proper type detection"""
         try:
             file_type = self._detect_file_type(file_path)
@@ -815,8 +830,7 @@ class IMGFactory(QMainWindow):
             QMessageBox.critical(self, "File Load Error", error_msg)
 
 
-    # Part 3
-    def _load_img_file_in_new_tab(self, file_path):
+    def _load_img_file_in_new_tab(self, file_path): #vers 3
         """Load IMG file in new tab - logic using close manager"""
         current_index = self.main_tab_widget.currentIndex()
 
@@ -853,7 +867,7 @@ class IMGFactory(QMainWindow):
         self.load_img_file(file_path)
 
 
-    def load_img_file(self, file_path: str):
+    def load_img_file(self, file_path: str): #vers 3
         """Load IMG file in background thread - FIXED recursion issue"""
         if self.load_thread and self.load_thread.isRunning():
             return
@@ -874,7 +888,7 @@ class IMGFactory(QMainWindow):
         self.load_thread.start()
 
 
-    def _on_img_load_progress(self, progress: int, status: str):
+    def _on_img_load_progress(self, progress: int, status: str): #vers 4
         """Handle IMG loading progress updates"""
         if hasattr(self.gui_layout, 'show_progress'):
             self.gui_layout.show_progress(progress, status)
@@ -882,7 +896,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"Progress: {progress}% - {status}")
 
 
-    def _on_img_load_error(self, error_message: str):
+    def _on_img_load_error(self, error_message: str): #vers 3
         """Handle IMG loading error"""
         self.log_message(f"❌ {error_message}")
 
@@ -895,12 +909,7 @@ class IMGFactory(QMainWindow):
         QMessageBox.critical(self, "IMG Load Error", error_message)
 
 
-    def open_img_file(self):
-        """Open file dialog - REDIRECTS to unified loader"""
-        self.open_file_dialog()
-
-
-    def _update_ui_for_no_img(self):
+    def _update_ui_for_no_img(self): #vers 5
         """Update UI when no IMG file is loaded"""
         # Clear current data
         self.current_img = None
@@ -943,7 +952,9 @@ class IMGFactory(QMainWindow):
         self.log_message("IMG interface reset")
 
 
-    def _format_file_size(self, size_bytes):
+    def _format_file_size(self, size_bytes): #vers 4
+        #./core/tables_structure.py - def format_file_size(size_bytes): #vers 4
+
         """Format file size same as IMG entries"""
         try:
             # Use the same formatting as IMG entries
@@ -966,14 +977,14 @@ class IMGFactory(QMainWindow):
         except Exception:
             return f"{size_bytes} bytes"
 
-    def _on_load_progress(self, progress: int, status: str):
+    def _on_load_progress(self, progress: int, status: str): #vers 4
         """Handle loading progress updates"""
         if hasattr(self.gui_layout, 'show_progress'):
             self.gui_layout.show_progress(progress, status)
         else:
             self.log_message(f"Progress: {progress}% - {status}")
 
-    def _on_img_loaded(self, img_file: IMGFile):
+    def _on_img_loaded(self, img_file: IMGFile): #vers 4
         """Handle successful IMG loading"""
         try:
             # Store the loaded IMG file
@@ -1010,7 +1021,7 @@ class IMGFactory(QMainWindow):
             QMessageBox.critical(self, "IMG Processing Error", error_msg)
 
 
-    def get_entry_rw_version(self, entry, extension):
+    def get_entry_rw_version(self, entry, extension): #vers 3
         """Detect RW version from entry file data"""
         try:
             # Skip non-RW files
@@ -1082,7 +1093,7 @@ class IMGFactory(QMainWindow):
             return "Unknown"
 
 
-    def _on_load_error(self, error_message):
+    def _on_load_error(self, error_message): #vers 2
         """Handle loading error from background thread"""
         try:
             self.log_message(f"❌ Loading error: {error_message}")
@@ -1099,210 +1110,13 @@ class IMGFactory(QMainWindow):
             QMessageBox.critical(
                 self,
                 "Loading Error",
-                f"Failed to load IMG file:\n\n{error_message}"
-            )
+                f"Failed to load IMG file:\n\n{error_message}")
 
         except Exception as e:
             self.log_message(f"❌ Error in _on_load_error: {str(e)}")
 
 
-    def close_img_file(self):
-        """Close current IMG/COL file - DIRECT implementation if close_manager fails"""
-        try:
-            # Try to use close manager first
-            if hasattr(self, 'close_manager') and self.close_manager:
-                self.close_manager.close_img_file()
-                return
-        except Exception as e:
-            self.log_message(f"❌ Close manager error: {str(e)}")
-
-        # Fallback: Direct implementation
-        try:
-            current_index = self.main_tab_widget.currentIndex()
-
-            # Log what we're closing
-            if hasattr(self, 'current_img') and self.current_img:
-                file_path = getattr(self.current_img, 'file_path', 'Unknown IMG')
-                self.log_message(f"🗂️ Closing IMG: {os.path.basename(file_path)}")
-          #  elif hasattr(self, 'current_col') and self.current_col:
-          #      file_path = getattr(self.current_col, 'file_path', 'Unknown #=-COL')
-          #      self.log_message(f"🗂️ Closing COL: {os.path.basename(file_path)}")
-            else:
-                self.log_message("🗂️ Closing current tab")
-
-            # Clear the current file data
-            self.current_img = None
-            #self.current_col = None
-
-            # Remove from open_files if exists
-            if hasattr(self, 'open_files') and current_index in self.open_files:
-                del self.open_files[current_index]
-
-            # Reset tab name to "No File"
-            if hasattr(self, 'main_tab_widget'):
-                self.main_tab_widget.setTabText(current_index, "📁 No File")
-
-            # Update UI for no file state
-            self._update_ui_for_no_img()
-
-            self.log_message("✅ File closed successfully")
-
-        except Exception as e:
-            error_msg = f"Error closing file: {str(e)}"
-            self.log_message(f"❌ {error_msg}")
-            # Don't show error dialog, just log it
-
-
-    def close_all_img(self):
-        """Close all IMG files - Wrapper for close_all_tabs"""
-        try:
-            if hasattr(self, 'close_manager') and self.close_manager:
-                self.close_manager.close_all_tabs()
-            else:
-                self.log_message("❌ Close manager not available")
-        except Exception as e:
-            self.log_message(f"❌ Error in close_all_img: {str(e)}")
-
-
-    def rebuild_all_img(self):
-        """Rebuild all IMG files in current directory or selected directory"""
-        try:
-            # Get base directory - use current IMG directory or let user choose
-            if self.current_img and hasattr(self.current_img, 'file_path'):
-                base_dir = os.path.dirname(self.current_img.file_path)
-                use_current_dir = QMessageBox.question(
-                    self, "Rebuild All IMG Files",
-                    f"Rebuild all IMG files in current directory?\n\n{base_dir}",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
-                )
-
-                if use_current_dir == QMessageBox.StandardButton.Cancel:
-                    return
-                elif use_current_dir == QMessageBox.StandardButton.No:
-                    base_dir = QFileDialog.getExistingDirectory(self, "Select Directory with IMG Files")
-                    if not base_dir:
-                        return
-            else:
-                base_dir = QFileDialog.getExistingDirectory(self, "Select Directory with IMG Files")
-                if not base_dir:
-                    return
-
-            # Find all IMG files in directory
-            try:
-                img_files = [f for f in os.listdir(base_dir) if f.lower().endswith('.img')]
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Cannot access directory: {str(e)}")
-                return
-
-            if not img_files:
-                QMessageBox.information(self, "No IMG Files", "No IMG files found in selected directory")
-                return
-
-            # Show confirmation with file list
-            file_list = "\n".join(img_files[:10])
-            if len(img_files) > 10:
-                file_list += f"\n... and {len(img_files) - 10} more files"
-
-            reply = QMessageBox.question(
-                self, "Confirm Rebuild All",
-                f"Rebuild {len(img_files)} IMG files?\n\nFiles to rebuild:\n{file_list}",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-            )
-
-            if reply != QMessageBox.StandardButton.Yes:
-                return
-
-            # Perform rebuild operation
-            self.log_message(f"🔧 Starting rebuild of {len(img_files)} IMG files...")
-
-            if hasattr(self.gui_layout, 'show_progress'):
-                self.gui_layout.show_progress(0, "Rebuilding IMG files...")
-
-            rebuilt_count = 0
-            failed_files = []
-
-            for i, img_file in enumerate(img_files):
-                file_path = os.path.join(base_dir, img_file)
-                progress = int((i + 1) * 100 / len(img_files))
-
-                if hasattr(self.gui_layout, 'show_progress'):
-                    self.gui_layout.show_progress(progress, f"Rebuilding {img_file}...")
-
-                self.log_message(f"🔧 Rebuilding {img_file}...")
-
-                try:
-                    # Import IMG class and attempt to rebuild
-                    from components.img_core_classes import IMGFile
-
-                    # Load IMG file
-                    img = IMGFile(file_path)
-                    if not img.open():
-                        failed_files.append(f"{img_file}: Failed to open")
-                        continue
-
-                    # Check if rebuild method exists and attempt rebuild
-                    if hasattr(img, 'rebuild'):
-                        if img.rebuild():
-                            rebuilt_count += 1
-                            self.log_message(f"✅ Rebuilt: {img_file}")
-                        else:
-                            failed_files.append(f"{img_file}: Rebuild method failed")
-                    elif hasattr(img, 'save'):
-                        # Alternative: try save method
-                        if img.save():
-                            rebuilt_count += 1
-                            self.log_message(f"✅ Saved: {img_file}")
-                        else:
-                            failed_files.append(f"{img_file}: Save method failed")
-                    else:
-                        failed_files.append(f"{img_file}: No rebuild/save method available")
-
-                    # Clean up
-                    if hasattr(img, 'close'):
-                        img.close()
-
-                except Exception as e:
-                    failed_files.append(f"{img_file}: {str(e)}")
-                    self.log_message(f"❌ Error rebuilding {img_file}: {str(e)}")
-
-            # Hide progress
-            if hasattr(self.gui_layout, 'show_progress'):
-                self.gui_layout.show_progress(-1, f"Rebuild complete: {rebuilt_count}/{len(img_files)}")
-
-            # Show results
-            self.log_message(f"✅ Rebuild all complete: {rebuilt_count}/{len(img_files)} files rebuilt")
-
-            if failed_files:
-                # Show detailed results with failures
-                failed_list = "\n".join(failed_files[:10])
-                if len(failed_files) > 10:
-                    failed_list += f"\n... and {len(failed_files) - 10} more failures"
-
-                QMessageBox.warning(
-                    self, "Rebuild All Results",
-                    f"Rebuild completed with some issues:\n\n"
-                    f"✅ Successfully rebuilt: {rebuilt_count} files\n"
-                    f"❌ Failed: {len(failed_files)} files\n\n"
-                    f"Failed files:\n{failed_list}"
-                )
-            else:
-                # All successful
-                QMessageBox.information(
-                    self, "Rebuild All Complete",
-                    f"✅ Successfully rebuilt all {rebuilt_count} IMG files!"
-                )
-
-        except Exception as e:
-            error_msg = f"Error in rebuild_all_img: {str(e)}"
-            self.log_message(f"❌ {error_msg}")
-
-            if hasattr(self.gui_layout, 'show_progress'):
-                self.gui_layout.show_progress(-1, "Rebuild all failed")
-
-            QMessageBox.critical(self, "Rebuild All Error", error_msg)
-
-
-    def merge_img(self):
+    def merge_img(self): #vers 1
         """Merge multiple IMG files"""
         try:
             files, _ = QFileDialog.getOpenFileNames(
@@ -1322,7 +1136,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"❌ Error in merge_img: {str(e)}")
 
 
-    def split_img(self):
+    def split_img(self): #vers 1
         """Split IMG file into smaller parts"""
         if not self.current_img:
             QMessageBox.warning(self, "Warning", "No IMG file loaded")
@@ -1337,7 +1151,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"❌ Error in split_img: {str(e)}")
 
 
-    def convert_img(self):
+    def convert_img(self): #vers 1
         """Convert IMG between versions"""
         if not self.current_img:
             QMessageBox.warning(self, "Warning", "No IMG file loaded")
@@ -1350,18 +1164,18 @@ class IMGFactory(QMainWindow):
             self.log_message(f"❌ Error in convert_img: {str(e)}")
 
 
-    def convert_img_format(self):
+    def convert_img_format(self): #vers 1
         """Convert IMG format - Placeholder"""
         self.log_message("🔄 Convert IMG format requested")
         # TODO: Implement format conversion
 
 
-    def import_via_tool(self):
+    def import_via_tool(self): #vers 1
         """Import files using external tool"""
         self.log_message("Import via tool functionality coming soon")
 
 
-    def export_via_tool(self):
+    def export_via_tool(self): #vers 1
         """Export using external tool"""
         if not self.current_img:
             QMessageBox.warning(self, "Warning", "No IMG file loaded")
@@ -1369,7 +1183,7 @@ class IMGFactory(QMainWindow):
         self.log_message("Export via tool functionality coming soon")
 
 
-    def remove_all_entries(self):
+    def remove_all_entries(self): #vers 2
         """Remove all entries from IMG"""
         if not self.current_img:
             QMessageBox.warning(self, "Warning", "No IMG file loaded")
@@ -1386,7 +1200,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"❌ Error in remove_all_entries: {str(e)}")
 
 
-    def quick_export(self):
+    def quick_export(self): #vers 2
         """Quick export selected files to default location"""
         if not self.current_img:
             QMessageBox.warning(self, "Warning", "No IMG file loaded")
@@ -1413,7 +1227,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"❌ Error in quick_export: {str(e)}")
 
 
-    def pin_selected(self):
+    def pin_selected(self): #vers 1
         """Pin selected entries to top of list"""
         try:
             if hasattr(self.gui_layout, 'table') and hasattr(self.gui_layout.table, 'selectionModel'):
@@ -1431,287 +1245,60 @@ class IMGFactory(QMainWindow):
 
 
     # COL and editor functions
-    def open_col_editor(self):
+    def open_col_editor(self): #vers 1
         """Open COL file editor"""
         self.log_message("COL editor functionality coming soon")
 
-    def open_txd_editor(self):
+    def open_txd_editor(self): #vers 1
         """Open TXD texture editor"""
         self.log_message("TXD editor functionality coming soon")
 
-    def open_dff_editor(self):
+    def open_dff_editor(self): #vers 1
         """Open DFF model editor"""
         self.log_message("DFF editor functionality coming soon")
 
-    def open_ipf_editor(self):
+    def open_ipf_editor(self): #vers 1
         """Open IPF animation editor"""
         self.log_message("IPF editor functionality coming soon")
 
-    def open_ipl_editor(self):
+    def open_ipl_editor(self): #vers 1
         """Open IPL item placement editor"""
         self.log_message("IPL editor functionality coming soon")
 
-    def open_ide_editor(self):
+    def open_ide_editor(self): #vers 1
         """Open IDE item definition editor"""
         self.log_message("IDE editor functionality coming soon")
 
-    def open_dat_editor(self):
+    def open_dat_editor(self): #vers 1
         """Open DAT file editor"""
         self.log_message("DAT editor functionality coming soon")
 
-    def open_zons_editor(self):
+    def open_zons_editor(self): #vers 1
         """Open zones editor"""
         self.log_message("Zones editor functionality coming soon")
 
-    def open_weap_editor(self):
+    def open_weap_editor(self): #vers 1
         """Open weapons editor"""
         self.log_message("Weapons editor functionality coming soon")
 
-    def open_vehi_editor(self):
+    def open_vehi_editor(self): #vers 1
         """Open vehicles editor"""
         self.log_message("Vehicles editor functionality coming soon")
 
-    def open_radar_map(self):
+    def open_radar_map(self): #vers 1
         """Open radar map editor"""
         self.log_message("Radar map functionality coming soon")
 
-    def open_paths_map(self):
+    def open_paths_map(self): #vers 1
         """Open paths map editor"""
         self.log_message("Paths map functionality coming soon")
 
-    def open_waterpro(self):
+    def open_waterpro(self): #vers 1
         """Open water properties editor"""
         self.log_message("Water properties functionality coming soon")
 
-    # Part 4
-    def import_files(self):
-        """Import files into current IMG"""
-        if not self.current_img:
-            QMessageBox.warning(self, "No IMG", "No IMG file is currently loaded.")
-            return
 
-        try:
-            file_paths, _ = QFileDialog.getOpenFileNames(
-                self, "Import Files", "",
-                "All Files (*);;DFF Models (*.dff);;TXD Textures (*.txd);;COL Collision (*.col)"
-            )
-
-            if file_paths:
-                self.log_message(f"Importing {len(file_paths)} files...")
-
-                # Show progress - CHECK if method exists first
-                if hasattr(self.gui_layout, 'show_progress'):
-                    self.gui_layout.show_progress(0, "Importing files...")
-
-                imported_count = 0
-                for i, file_path in enumerate(file_paths):
-                    progress = int((i + 1) * 100 / len(file_paths))
-                    if hasattr(self.gui_layout, 'show_progress'):
-                        self.gui_layout.show_progress(progress, f"Importing {os.path.basename(file_path)}")
-
-                    # Check if IMG has import_file method
-                    if hasattr(self.current_img, 'import_file'):
-                        if self.current_img.import_file(file_path):
-                            imported_count += 1
-                            self.log_message(f"Imported: {os.path.basename(file_path)}")
-                    else:
-                        self.log_message(f"❌ IMG import_file method not available")
-                        break
-
-                # Refresh table
-                if hasattr(self, '_populate_img_table'):
-                    self._populate_img_table(self.current_img)
-                else:
-                    populate_img_table(self.gui_layout.table, self.current_img)
-
-                self.log_message(f"Import complete: {imported_count}/{len(file_paths)} files imported")
-
-                if hasattr(self.gui_layout, 'show_progress'):
-                    self.gui_layout.show_progress(-1, "Import complete")
-                if hasattr(self.gui_layout, 'update_img_info'):
-                    self.gui_layout.update_img_info(f"{len(self.current_img.entries)} entries")
-
-                QMessageBox.information(self, "Import Complete",
-                                      f"Imported {imported_count} of {len(file_paths)} files")
-
-        except Exception as e:
-            error_msg = f"Error importing files: {str(e)}"
-            self.log_message(error_msg)
-            if hasattr(self.gui_layout, 'show_progress'):
-                self.gui_layout.show_progress(-1, "Import error")
-            QMessageBox.critical(self, "Import Error", error_msg)
-
-    def export_selected(self):
-        """Export selected entries"""
-        if not self.current_img:
-            QMessageBox.warning(self, "No IMG", "No IMG file is currently loaded.")
-            return
-
-        try:
-            selected_rows = []
-            if hasattr(self.gui_layout, 'table') and hasattr(self.gui_layout.table, 'selectedItems'):
-                for item in self.gui_layout.table.selectedItems():
-                    if item.column() == 0:  # Only filename column
-                        selected_rows.append(item.row())
-
-            if not selected_rows:
-                QMessageBox.warning(self, "No Selection", "Please select entries to export.")
-                return
-
-            export_dir = QFileDialog.getExistingDirectory(self, "Export To Folder")
-            if export_dir:
-                self.log_message(f"Exporting {len(selected_rows)} entries...")
-
-                if hasattr(self.gui_layout, 'show_progress'):
-                    self.gui_layout.show_progress(0, "Exporting...")
-
-                exported_count = 0
-                for i, row in enumerate(selected_rows):
-                    progress = int((i + 1) * 100 / len(selected_rows))
-                    entry_name = self.gui_layout.table.item(row, 0).text() if self.gui_layout.table.item(row, 0) else f"Entry_{row}"
-
-                    if hasattr(self.gui_layout, 'show_progress'):
-                        self.gui_layout.show_progress(progress, f"Exporting {entry_name}")
-
-                    # Check if IMG has export_entry method
-                    if hasattr(self.current_img, 'export_entry'):
-                        if self.current_img.export_entry(row, export_dir):
-                            exported_count += 1
-                            self.log_message(f"Exported: {entry_name}")
-                    else:
-                        self.log_message(f"❌ IMG export_entry method not available")
-                        break
-
-                self.log_message(f"Export complete: {exported_count}/{len(selected_rows)} files exported")
-
-                if hasattr(self.gui_layout, 'show_progress'):
-                    self.gui_layout.show_progress(-1, "Export complete")
-
-                QMessageBox.information(self, "Export Complete",
-                                      f"Exported {exported_count} of {len(selected_rows)} files to {export_dir}")
-
-        except Exception as e:
-            error_msg = f"Error exporting files: {str(e)}"
-            self.log_message(error_msg)
-            if hasattr(self.gui_layout, 'show_progress'):
-                self.gui_layout.show_progress(-1, "Export error")
-            QMessageBox.critical(self, "Export Error", error_msg)
-
-    def export_all(self):
-        """Export all entries"""
-        if not self.current_img:
-            QMessageBox.warning(self, "No IMG", "No IMG file is currently loaded.")
-            return
-
-        try:
-            export_dir = QFileDialog.getExistingDirectory(self, "Export All To Folder")
-            if export_dir:
-                entry_count = len(self.current_img.entries) if hasattr(self.current_img, 'entries') and self.current_img.entries else 0
-                self.log_message(f"Exporting all {entry_count} entries...")
-
-                if hasattr(self.gui_layout, 'show_progress'):
-                    self.gui_layout.show_progress(0, "Exporting all...")
-
-                exported_count = 0
-                for i, entry in enumerate(self.current_img.entries):
-                    progress = int((i + 1) * 100 / entry_count)
-                    entry_name = getattr(entry, 'name', f"Entry_{i}")
-
-                    if hasattr(self.gui_layout, 'show_progress'):
-                        self.gui_layout.show_progress(progress, f"Exporting {entry_name}")
-
-                    # Check if IMG has export_entry method
-                    if hasattr(self.current_img, 'export_entry'):
-                        if self.current_img.export_entry(i, export_dir):
-                            exported_count += 1
-                            self.log_message(f"Exported: {entry_name}")
-                    else:
-                        self.log_message(f"❌ IMG export_entry method not available")
-                        break
-
-                self.log_message(f"Export complete: {exported_count}/{entry_count} files exported")
-
-                if hasattr(self.gui_layout, 'show_progress'):
-                    self.gui_layout.show_progress(-1, "Export complete")
-
-                QMessageBox.information(self, "Export Complete",
-                                      f"Exported {exported_count} of {entry_count} files to {export_dir}")
-
-        except Exception as e:
-            error_msg = f"Error exporting all files: {str(e)}"
-            self.log_message(error_msg)
-            if hasattr(self.gui_layout, 'show_progress'):
-                self.gui_layout.show_progress(-1, "Export error")
-            QMessageBox.critical(self, "Export Error", error_msg)
-
-    def remove_selected(self):
-        """Remove selected entries"""
-        if not self.current_img:
-            QMessageBox.warning(self, "No IMG", "No IMG file is currently loaded.")
-            return
-
-        try:
-            selected_rows = []
-            if hasattr(self.gui_layout, 'table') and hasattr(self.gui_layout.table, 'selectedItems'):
-                for item in self.gui_layout.table.selectedItems():
-                    if item.column() == 0:  # Only filename column
-                        selected_rows.append(item.row())
-
-            if not selected_rows:
-                QMessageBox.warning(self, "No Selection", "Please select entries to remove.")
-                return
-
-            # Confirm removal
-            entry_names = []
-            for row in selected_rows:
-                item = self.gui_layout.table.item(row, 0)
-                entry_names.append(item.text() if item else f"Entry_{row}")
-
-            reply = QMessageBox.question(
-                self, "Confirm Removal",
-                f"Remove {len(selected_rows)} selected entries?\n\n" + "\n".join(entry_names[:5]) +
-                (f"\n... and {len(entry_names) - 5} more" if len(entry_names) > 5 else ""),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-            )
-
-            if reply == QMessageBox.StandardButton.Yes:
-                # Sort in reverse order to maintain indices
-                selected_rows.sort(reverse=True)
-
-                removed_count = 0
-                for row in selected_rows:
-                    item = self.gui_layout.table.item(row, 0)
-                    entry_name = item.text() if item else f"Entry_{row}"
-
-                    # Check if IMG has remove_entry method
-                    if hasattr(self.current_img, 'remove_entry'):
-                        if self.current_img.remove_entry(row):
-                            removed_count += 1
-                            self.log_message(f"Removed: {entry_name}")
-                    else:
-                        self.log_message(f"❌ IMG remove_entry method not available")
-                        break
-
-                # Refresh table
-                if hasattr(self, '_populate_img_table'):
-                    self._populate_img_table(self.current_img)
-                else:
-                    populate_img_table(self.gui_layout.table, self.current_img)
-
-                self.log_message(f"Removal complete: {removed_count} entries removed")
-
-                if hasattr(self.gui_layout, 'update_img_info'):
-                    self.gui_layout.update_img_info(f"{len(self.current_img.entries)} entries")
-
-                QMessageBox.information(self, "Removal Complete",
-                                      f"Removed {removed_count} entries")
-
-        except Exception as e:
-            error_msg = f"Error removing entries: {str(e)}"
-            self.log_message(error_msg)
-            QMessageBox.critical(self, "Removal Error", error_msg)
-
-    def validate_img(self):
+    def validate_img(self): #vers 3
         """Validate current IMG file"""
         if not self.current_img:
             QMessageBox.warning(self, "No IMG", "No IMG file is currently loaded.")
@@ -1771,11 +1358,11 @@ class IMGFactory(QMainWindow):
             QMessageBox.critical(self, "Validation Error", error_msg)
 
 
-    def show_theme_settings(self):
+    def show_theme_settings(self): #vers 2
         """Show theme settings dialog"""
         self.show_settings()  # For now, use general settings
 
-    def show_about(self):
+    def show_about(self): #vers 2
         """Show about dialog"""
         about_text = """
         <h2>IMG Factory 1.5</h2>
@@ -1796,7 +1383,8 @@ class IMGFactory(QMainWindow):
 
         QMessageBox.about(self, "About IMG Factory", about_text)
 
-    def show_gui_settings(self):
+
+    def show_gui_settings(self): #vers 5
         """Show GUI settings dialog - ADD THIS METHOD TO YOUR MAIN WINDOW CLASS"""
         try:
             from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QPushButton, QGroupBox
@@ -1899,14 +1487,14 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Error showing GUI settings: {str(e)}")
 
-    def show_gui_layout_settings(self):
+    def show_gui_layout_settings(self): #vers 2
         """Show GUI Layout settings - called from menu"""
         if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'show_gui_layout_settings'):
             self.gui_layout.show_gui_layout_settings()
         else:
             self.log_message("GUI Layout settings not available")
 
-    def debug_theme_system(self):
+    def debug_theme_system(self): #vers 1
         """Debug method to check theme system status"""
         try:
             if hasattr(self, 'app_settings'):
@@ -1934,7 +1522,7 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Error in debug_theme_system: {str(e)}")
 
-    def show_settings(self):
+    def show_settings(self): #vers 1
         """Show settings dialog"""
         print("show_settings called!")  # Debug
         try:
@@ -1956,7 +1544,7 @@ class IMGFactory(QMainWindow):
 
     # SETTINGS PERSISTENCE - KEEP 100% OF FUNCTIONALITY
 
-    def _restore_settings(self):
+    def _restore_settings(self): #vers 1
         """Restore application settings"""
         try:
             settings = QSettings("XSeti", "IMGFactory")
@@ -1976,7 +1564,7 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"Failed to restore settings: {str(e)}")
 
-    def _save_settings(self):
+    def _save_settings(self): #vers 1
         """Save application settings"""
         try:
             settings = QSettings("XSeti", "IMGFactory")

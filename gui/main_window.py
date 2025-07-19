@@ -188,11 +188,7 @@ class IMGFactoryMainWindow(QMainWindow):
             
         except Exception as e:
             print(f"Error setting up panels: {e}")
-    
-    def log_message(self, message: str):
-        """Log a message (placeholder - will be connected to actual logging)"""
-        print(f"[IMG Factory] {message}")
-    
+
     def get_left_panel(self) -> QWidget:
         """Get the left panel for content"""
         return self.left_panel

@@ -713,18 +713,6 @@ def format_compression_ratio(ratio: float) -> str:
     return f"{percentage:.1f}%"
 
 
-def format_file_size(size_bytes: int) -> str:
-    """Format file size in human readable format"""
-    if size_bytes < 1024:
-        return f"{size_bytes} B"
-    elif size_bytes < 1024 * 1024:
-        return f"{size_bytes / 1024:.1f} KB"
-    elif size_bytes < 1024 * 1024 * 1024:
-        return f"{size_bytes / (1024 * 1024):.1f} MB"
-    else:
-        return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
-
-
 # Example usage and testing
 if __name__ == "__main__":
     # Test compression system

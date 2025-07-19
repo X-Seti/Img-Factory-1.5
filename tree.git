@@ -11,7 +11,6 @@
 │   ├── col_parsing_functions.py
 │   ├── col_validator.py
 │   ├── gta_file_editors.py
-│   ├── img_close_functions.py
 │   ├── img_compression.py
 │   ├── img_core_classes_addon.py
 │   ├── img_core_classes.py
@@ -31,6 +30,7 @@
 │   ├── unified_debug_functions.py
 │   └── unified_signal_handler.py
 ├── core
+│   ├── close_func.py
 │   ├── dialogs.py
 │   ├── exporter.py
 │   ├── file_extraction.py

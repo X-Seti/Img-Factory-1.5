@@ -1146,7 +1146,7 @@ class IMGFactoryGUILayout:
                     button.setText("")
 
     # logging
-    def log_message(self, message):
+    def log_message(self, message): #vers 3 #keep
         """Add message to activity log"""
         if self.log:
             from PyQt6.QtCore import QDateTime
@@ -1156,7 +1156,7 @@ class IMGFactoryGUILayout:
             self.log.verticalScrollBar().setValue(
                 self.log.verticalScrollBar().maximum()
             )
-    
+
     def show_gui_layout_settings(self):
         """Show comprehensive GUI Layout settings dialog - called from Settings menu"""
         from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, 

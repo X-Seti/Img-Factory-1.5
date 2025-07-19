@@ -1,4 +1,4 @@
-#this belongs in core/export.py - Version: 1
+#this belongs in core/export.py - Version: 7
 # X-Seti - July15 2025 - Img Factory 1.5
 # Export functions for IMG Factory
 
@@ -9,7 +9,7 @@ from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QFont
 
 
-def get_selected_entries(main_window):
+def get_selected_entries(main_window): #vers 2
     """Get currently selected entries from the table"""
     try:
         selected_entries = []
@@ -34,14 +34,14 @@ def get_selected_entries(main_window):
 class ExportOptionsDialog(QDialog):
     """Export options dialog"""
     
-    def __init__(self, main_window, entries, export_type="selected"):
+    def __init__(self, main_window, entries, export_type="selected"): #vers 2
         super().__init__(main_window)
         self.main_window = main_window
         self.entries = entries
         self.export_type = export_type
         self.setup_ui()
         
-    def setup_ui(self):
+    def setup_ui(self): #vers 4
         self.setWindowTitle(f"Export {self.export_type.title()} Files")
         self.setMinimumWidth(500)
         
@@ -104,12 +104,12 @@ class ExportOptionsDialog(QDialog):
         layout.addLayout(button_layout)
         self.setLayout(layout)
         
-    def browse_folder(self):
+    def browse_folder(self): #vers 1
         folder = QFileDialog.getExistingDirectory(self, "Select Export Folder")
         if folder:
             self.folder_path.setText(folder)
     
-    def start_export(self):
+    def start_export(self): #vers 2
         if not self.folder_path.text():
             QMessageBox.warning(self, "No Folder", "Please select an export folder.")
             return
@@ -132,7 +132,7 @@ class ExportOptionsDialog(QDialog):
         self.export_thread.finished.connect(self.export_finished)
         self.export_thread.start()
         
-    def export_finished(self, success, message):
+    def export_finished(self, success, message): #vers 2
         self.progress_bar.setVisible(False)
         if success:
             QMessageBox.information(self, "Export Complete", message)
@@ -146,7 +146,7 @@ class ExportThread(QThread):
     progress = pyqtSignal(int)
     finished = pyqtSignal(bool, str)
     
-    def __init__(self, main_window, entries, export_dir, organize_by_type, overwrite, create_log):
+    def __init__(self, main_window, entries, export_dir, organize_by_type, overwrite, create_log): #vers 2
         super().__init__()
         self.main_window = main_window
         self.entries = entries
@@ -213,7 +213,7 @@ class ExportThread(QThread):
         except Exception as e:
             self.finished.emit(False, f"Export error: {str(e)}")
     
-    def export_entry(self, entry, output_path):
+    def export_entry(self, entry, output_path): #vers 2
         """Export a single entry using multiple methods"""
         try:
             # Method 1: Use IMG file's export_entry method
@@ -249,8 +249,111 @@ class ExportThread(QThread):
         except Exception:
             return False
 
+    def export_selected(self): #vers 6
+        """Export selected entries"""
+        if not self.current_img:
+            QMessageBox.warning(self, "No IMG", "No IMG file is currently loaded.")
+            return
 
-def export_selected_function(main_window):
+        try:
+            selected_rows = []
+            if hasattr(self.gui_layout, 'table') and hasattr(self.gui_layout.table, 'selectedItems'):
+                for item in self.gui_layout.table.selectedItems():
+                    if item.column() == 0:  # Only filename column
+                        selected_rows.append(item.row())
+
+            if not selected_rows:
+                QMessageBox.warning(self, "No Selection", "Please select entries to export.")
+                return
+
+            export_dir = QFileDialog.getExistingDirectory(self, "Export To Folder")
+            if export_dir:
+                self.log_message(f"Exporting {len(selected_rows)} entries...")
+
+                if hasattr(self.gui_layout, 'show_progress'):
+                    self.gui_layout.show_progress(0, "Exporting...")
+
+                exported_count = 0
+                for i, row in enumerate(selected_rows):
+                    progress = int((i + 1) * 100 / len(selected_rows))
+                    entry_name = self.gui_layout.table.item(row, 0).text() if self.gui_layout.table.item(row, 0) else f"Entry_{row}"
+
+                    if hasattr(self.gui_layout, 'show_progress'):
+                        self.gui_layout.show_progress(progress, f"Exporting {entry_name}")
+
+                    # Check if IMG has export_entry method
+                    if hasattr(self.current_img, 'export_entry'):
+                        if self.current_img.export_entry(row, export_dir):
+                            exported_count += 1
+                            self.log_message(f"Exported: {entry_name}")
+                    else:
+                        self.log_message(f"❌ IMG export_entry method not available")
+                        break
+
+                self.log_message(f"Export complete: {exported_count}/{len(selected_rows)} files exported")
+
+                if hasattr(self.gui_layout, 'show_progress'):
+                    self.gui_layout.show_progress(-1, "Export complete")
+
+                QMessageBox.information(self, "Export Complete",
+                                      f"Exported {exported_count} of {len(selected_rows)} files to {export_dir}")
+
+        except Exception as e:
+            error_msg = f"Error exporting files: {str(e)}"
+            self.log_message(error_msg)
+            if hasattr(self.gui_layout, 'show_progress'):
+                self.gui_layout.show_progress(-1, "Export error")
+            QMessageBox.critical(self, "Export Error", error_msg)
+
+    def export_all(self): #vers 2
+        """Export all entries"""
+        if not self.current_img:
+            QMessageBox.warning(self, "No IMG", "No IMG file is currently loaded.")
+            return
+
+        try:
+            export_dir = QFileDialog.getExistingDirectory(self, "Export All To Folder")
+            if export_dir:
+                entry_count = len(self.current_img.entries) if hasattr(self.current_img, 'entries') and self.current_img.entries else 0
+                self.log_message(f"Exporting all {entry_count} entries...")
+
+                if hasattr(self.gui_layout, 'show_progress'):
+                    self.gui_layout.show_progress(0, "Exporting all...")
+
+                exported_count = 0
+                for i, entry in enumerate(self.current_img.entries):
+                    progress = int((i + 1) * 100 / entry_count)
+                    entry_name = getattr(entry, 'name', f"Entry_{i}")
+
+                    if hasattr(self.gui_layout, 'show_progress'):
+                        self.gui_layout.show_progress(progress, f"Exporting {entry_name}")
+
+                    # Check if IMG has export_entry method
+                    if hasattr(self.current_img, 'export_entry'):
+                        if self.current_img.export_entry(i, export_dir):
+                            exported_count += 1
+                            self.log_message(f"Exported: {entry_name}")
+                    else:
+                        self.log_message(f"❌ IMG export_entry method not available")
+                        break
+
+                self.log_message(f"Export complete: {exported_count}/{entry_count} files exported")
+
+                if hasattr(self.gui_layout, 'show_progress'):
+                    self.gui_layout.show_progress(-1, "Export complete")
+
+                QMessageBox.information(self, "Export Complete",
+                                      f"Exported {exported_count} of {entry_count} files to {export_dir}")
+
+        except Exception as e:
+            error_msg = f"Error exporting all files: {str(e)}"
+            self.log_message(error_msg)
+            if hasattr(self.gui_layout, 'show_progress'):
+                self.gui_layout.show_progress(-1, "Export error")
+            QMessageBox.critical(self, "Export Error", error_msg)
+
+
+def export_selected_function(main_window): #vers 3
     """Export selected entries"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
@@ -270,7 +373,7 @@ def export_selected_function(main_window):
         QMessageBox.critical(main_window, "Export Error", f"Export failed: {str(e)}")
 
 
-def export_via_function(main_window):
+def export_via_function(main_window): #vers 2
     """Export files matching IDE file to chosen folder"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
@@ -345,7 +448,7 @@ def export_via_function(main_window):
         QMessageBox.critical(main_window, "Export Via Error", f"Export Via failed: {str(e)}")
 
 
-def quick_export_function(main_window):
+def quick_export_function(main_window): #vers 3
     """Quick export to project folder with organized structure"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
@@ -376,7 +479,7 @@ def quick_export_function(main_window):
         QMessageBox.critical(main_window, "Quick Export Error", f"Quick Export failed: {str(e)}")
 
 
-def export_all_function(main_window):
+def export_all_function(main_window): #vers 2
     """Export all entries with dialog"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
@@ -396,7 +499,7 @@ def export_all_function(main_window):
         QMessageBox.critical(main_window, "Export All Error", f"Export All failed: {str(e)}")
 
 
-def dump_all_function(main_window):
+def dump_all_function(main_window): #vers 3
     """Dump all entries to single folder - no organization"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
@@ -425,7 +528,7 @@ def dump_all_function(main_window):
         QMessageBox.critical(main_window, "Dump Error", f"Dump failed: {str(e)}")
 
 
-def integrate_export_functions(main_window):
+def integrate_export_functions(main_window): #vers 2
     """Integrate export functions into main window"""
     try:
         main_window.export_selected = lambda: export_selected_function(main_window)
@@ -449,8 +552,11 @@ def integrate_export_functions(main_window):
         return False
 
 
+
 # Export functions
 __all__ = [
+    'export_selected'
+    'export_all'
     'export_selected_function',
     'export_via_function',
     'quick_export_function',
