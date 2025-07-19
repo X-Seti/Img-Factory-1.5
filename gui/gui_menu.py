@@ -904,7 +904,7 @@ class IMGFactoryMenuBar:
         else:
             self.main_window.showFullScreen()
     
-    def _show_about(self):
+    def _show_about(self): #vers 6
         """Show about dialog"""
         about_text = """
         <h2>IMG Factory 1.5</h2>

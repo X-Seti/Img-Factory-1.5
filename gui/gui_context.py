@@ -4,10 +4,15 @@
 """
 Context Menu Functions - Handles right-click context menus
 """
-
+import sys
+import os
+import mimetypes
+from typing import Optional, List, Dict, Any
+from pathlib import Path
 from PyQt6.QtWidgets import QMenu
 from PyQt6.QtGui import QAction, QContextMenuEvent
 
+print(f"[DEBUG] gui_context calling: with args={Path}")
 
 ## Methods list
 # add_col_context_menu_to_entries_table

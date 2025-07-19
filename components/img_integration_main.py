@@ -1,4 +1,4 @@
-#this belongs in components/img_integration_main.py - Version: 2
+#this belongs in components/img_integration_main.py - Version: 11
 # X-Seti - July15 2025 - Img Factory 1.5
 """
 Main integration module for import/export functionality with fixed button mappings
@@ -9,7 +9,7 @@ from typing import List, Optional
 from PyQt6.QtWidgets import QMessageBox, QApplication
 from PyQt6.QtCore import QTimer
 
-def integrate_complete_img_system(main_window):
+def integrate_complete_img_system(main_window): #vers 4
     """Main function to integrate all import/export functionality"""
     try:
         # Import the required functions

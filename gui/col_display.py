@@ -19,6 +19,7 @@ from components.col_core_classes import COLFile, COLModel
 from components.col_debug_functions import col_debug_log, is_col_debug_enabled
 from components.img_debug_functions import img_debugger
 
+print(f"[DEBUG] gui.col_display calling: with args={Path}")
 ##Methods list -
 # create_table_item
 # format_collision_types

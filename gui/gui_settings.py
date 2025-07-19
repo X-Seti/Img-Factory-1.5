@@ -20,6 +20,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QColor, QPalette, QIcon
 import os
 
+print(f"[DEBUG] gui_settings calling: with args={Path}")
 
 class GUISettingsDialog(QDialog):
     """Comprehensive GUI Settings Dialog"""

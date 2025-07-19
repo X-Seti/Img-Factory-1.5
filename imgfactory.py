@@ -4,7 +4,7 @@
 X-Seti - JUNE25 2025 - IMG Factory 1.5 - Main Application Entry Point
 Clean Qt6-based implementation for IMG archive management
 """
-#this belongs in root /imgfactory.py - version 61
+#this belongs in root /imgfactory.py - version 62
 import sys
 import os
 import mimetypes
@@ -73,6 +73,7 @@ from core.integration import integrate_complete_core_system
 #gui
 from gui.gui_backend import ButtonDisplayMode, GUIBackend
 from gui.gui_context import enhanced_context_menu_event
+from gui.main_window import IMGFactoryMainWindow
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.gui_menu import IMGFactoryMenuBar
@@ -238,7 +239,7 @@ class IMGLoadThread(QThread):
 class IMGFactory(QMainWindow):
     """Main IMG Factory application window"""
 
-    def __init__(self, settings):
+    def __init__(self, settings): #vers 60
         super().__init__()
         self.settings = settings
         self.app_settings = settings if hasattr(settings, 'themes') else AppSettings()
@@ -336,31 +337,8 @@ class IMGFactory(QMainWindow):
         # Log startup
         self.log_message("IMG Factory 1.5 initialized")
 
-    def import_files_via(self):
-        """Import files via IDE or folder"""
-        try:
-            from core.importer import import_via_function
-            import_via_function(self)
-        except Exception as e:
-            self.log_message(f"❌ Import via error: {str(e)}")
 
-    def remove_via_entries(self):
-        """Remove entries via IDE file"""
-        try:
-            from core.remove import remove_via_entries_function
-            remove_via_entries_function(self)
-        except Exception as e:
-            self.log_message(f"❌ Remove via error: {str(e)}")
-
-    def dump_entries(self):
-        """Dump all entries"""
-        try:
-            from core.exporter import dump_all_function
-            dump_all_function(self)
-        except Exception as e:
-            self.log_message(f"❌ Dump error: {str(e)}")
-
-    def setup_unified_signals(self):
+    def setup_unified_signals(self): #vers 6
         """Setup unified signal handler for all table interactions"""
         from components.unified_signal_handler import connect_table_signals
 
@@ -382,7 +360,8 @@ class IMGFactory(QMainWindow):
         from components.unified_signal_handler import signal_handler
         signal_handler.status_update_requested.connect(self._update_status_from_signal)
 
-    def debug_img_entries(self):
+
+    def debug_img_entries(self): #vers 4
         """Debug function to check what entries are actually loaded"""
         if not self.current_img or not self.current_img.entries:
             self.log_message("❌ No IMG loaded or no entries found")
@@ -433,8 +412,8 @@ class IMGFactory(QMainWindow):
         if hidden_count > 0:
             self.log_message("⚠️ Some rows are hidden! Check the filter settings.")
 
-    # Part 2
-    def _unified_double_click_handler(self, row, filename, item):
+
+    def _unified_double_click_handler(self, row, filename, item): #vers 2
         """Handle double-click through unified system"""
         # Get the actual filename from the first column (index 0)
         if row < self.gui_layout.table.rowCount():
@@ -453,7 +432,8 @@ class IMGFactory(QMainWindow):
         else:
             self.log_message(f"Double-clicked: {filename}")
 
-    def _unified_selection_handler(self, selected_rows, selection_count):
+
+    def _unified_selection_handler(self, selected_rows, selection_count): #vers 1
         """Handle selection changes through unified system"""
         # Update button states based on selection
         has_selection = selection_count > 0
@@ -473,6 +453,7 @@ class IMGFactory(QMainWindow):
                         self.log_message(f"Selected: {name_item.text()}")
         else:
             self.log_message(f"Selected {selection_count} entries")
+
 
     def _update_button_states(self, has_selection):
         """Update button enabled/disabled states based on selection"""
@@ -513,7 +494,7 @@ class IMGFactory(QMainWindow):
                     else:
                         button.setEnabled(has_img or has_col)
 
-    def _update_status_from_signal(self, message):
+    def _update_status_from_signal(self, message): #vers 3
         """Update status from unified signal system"""
         # Update status bar if available
         if hasattr(self, 'statusBar') and self.statusBar():
@@ -523,7 +504,10 @@ class IMGFactory(QMainWindow):
         if hasattr(self.gui_layout, 'status_label'):
             self.gui_layout.status_label.setText(message)
 
-    def refresh_table(self):
+    def refresh_table(self): #vers 4 -
+        #./core/utils.py - def refresh_table(main_window):
+        #./components/img_integration_main.py: - def refresh_table_func():
+
         """Handle refresh/update button"""
         self.log_message("🔄 Refresh table requested")
         if self.current_img:
@@ -531,7 +515,9 @@ class IMGFactory(QMainWindow):
         elif self.current_col:
             self._update_ui_for_loaded_col()
 
-    def select_all_entries(self):
+    def select_all_entries(self): #vers 3
+        # ./components/img_core_classes.py: - def select_all_entries(self):
+
         """Select all entries in current table"""
         if hasattr(self.gui_layout, 'table') and self.gui_layout.table:
             self.gui_layout.table.selectAll()

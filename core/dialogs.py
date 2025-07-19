@@ -1,4 +1,4 @@
-#this belongs in core/dialogs.py - Version: 2
+#this belongs in core/dialogs.py - Version: 12
 # X-Seti - July15 2025 - Img Factory 1.5
 # Complete dialog classes and threading for IMG Factory
 
@@ -9,6 +9,43 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdi
                              QProgressDialog)
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont
+
+## Methods list -
+# ExportOptionsDialog._create_ui
+# ExportThread.export_entry
+# ExportThread.run
+# ImportOptionsDialog._create_ui  
+# ImportThread.import_file
+# ImportThread.run
+# IMGPropertiesDialog._create_ui
+# IMGPropertiesDialog._format_size
+# IMGPropertiesDialog._get_file_size
+# IMGPropertiesDialog._get_file_type_stats
+# IMGPropertiesDialog._get_modification_time
+# ValidationResultsDialog._create_ui
+# get_export_directory
+# get_img_file_filter
+# get_import_files
+# get_open_img_filename
+# get_save_img_filename
+# show_about_dialog
+# show_error_dialog
+# show_export_options_dialog
+# show_img_properties_dialog
+# show_import_options_dialog
+# show_info_dialog
+# show_progress_dialog
+# show_question_dialog
+# show_validation_results_dialog
+# show_warning_dialog
+
+##Classes -
+# ExportOptionsDialog
+# ExportThread
+# ImportOptionsDialog
+# ImportThread
+# IMGPropertiesDialog
+# ValidationResultsDialog
 
 
 class IMGPropertiesDialog(QDialog):
@@ -21,7 +58,7 @@ class IMGPropertiesDialog(QDialog):
         self.setMinimumWidth(400)
         self._create_ui()
     
-    def _create_ui(self):
+    def _create_ui(self): #vers 11
         """Create properties UI"""
         layout = QVBoxLayout(self)
         
@@ -77,7 +114,7 @@ class IMGPropertiesDialog(QDialog):
         
         layout.addLayout(button_layout)
     
-    def _get_file_size(self):
+    def _get_file_size(self): #vers 10
         """Get formatted file size"""
         try:
             if hasattr(self.img_file, 'file_path'):
@@ -87,7 +124,7 @@ class IMGPropertiesDialog(QDialog):
             pass
         return "Unknown"
     
-    def _format_size(self, size):
+    def _format_size(self, size): #vers 8
         """Format size in human readable format"""
         for unit in ['B', 'KB', 'MB', 'GB']:
             if size < 1024.0:
@@ -106,7 +143,7 @@ class IMGPropertiesDialog(QDialog):
             pass
         return "Unknown"
     
-    def _get_file_type_stats(self):
+    def _get_file_type_stats(self): #vers 8
         """Get file type statistics"""
         stats = {}
         for entry in self.img_file.entries:
@@ -118,14 +155,14 @@ class IMGPropertiesDialog(QDialog):
 class ExportOptionsDialog(QDialog):
     """Export options dialog"""
     
-    def __init__(self, parent=None, entry_count=0):
+    def __init__(self, parent=None, entry_count=0): #vers 5
         super().__init__(parent)
         self.entry_count = entry_count
         self.setWindowTitle("Export Options")
         self.setMinimumWidth(400)
         self._create_ui()
     
-    def _create_ui(self):
+    def _create_ui(self): #vers 10
         """Create export options UI"""
         layout = QVBoxLayout(self)
         
@@ -175,13 +212,13 @@ class ExportOptionsDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
     
-    def _browse_folder(self):
+    def _browse_folder(self): #vers 3
         """Browse for export folder"""
         folder = QFileDialog.getExistingDirectory(self, "Select Export Folder")
         if folder:
             self.folder_input.setText(folder)
     
-    def get_options(self):
+    def get_options(self): #vers 4
         """Get export options"""
         return {
             'export_folder': self.folder_input.text(),
@@ -194,14 +231,14 @@ class ExportOptionsDialog(QDialog):
 class ImportOptionsDialog(QDialog):
     """Import options dialog"""
     
-    def __init__(self, parent=None, file_count=0):
+    def __init__(self, parent=None, file_count=0): #vers 5
         super().__init__(parent)
         self.file_count = file_count
         self.setWindowTitle("Import Options")
         self.setMinimumWidth(400)
         self._create_ui()
     
-    def _create_ui(self):
+    def _create_ui(self): #vers 10
         """Create import options UI"""
         layout = QVBoxLayout(self)
         
@@ -238,7 +275,7 @@ class ImportOptionsDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
     
-    def get_options(self):
+    def get_options(self): #vers 4
         """Get import options"""
         return {
             'replace_existing': self.replace_check.isChecked(),
@@ -251,7 +288,7 @@ class ImportOptionsDialog(QDialog):
 class ValidationResultsDialog(QDialog):
     """Dialog showing IMG validation results"""
     
-    def __init__(self, validation_result, parent=None):
+    def __init__(self, validation_result, parent=None): #vers 6
         super().__init__(parent)
         self.validation_result = validation_result
         self.setWindowTitle("IMG Validation Results")
@@ -259,7 +296,7 @@ class ValidationResultsDialog(QDialog):
         self.setMinimumHeight(400)
         self._create_ui()
     
-    def _create_ui(self):
+    def _create_ui(self): #vers 10
         """Create validation results UI"""
         layout = QVBoxLayout(self)
         
@@ -318,7 +355,7 @@ class ImportThread(QThread):
     progress = pyqtSignal(int)
     finished = pyqtSignal(bool, str)
     
-    def __init__(self, main_window, files_to_import, replace_existing=True, validate_files=True, create_backup=False, create_log=False):
+    def __init__(self, main_window, files_to_import, replace_existing=True, validate_files=True, create_backup=False, create_log=False): #vers 7
         super().__init__()
         self.main_window = main_window
         self.files_to_import = files_to_import
@@ -327,7 +364,7 @@ class ImportThread(QThread):
         self.create_backup = create_backup
         self.create_log = create_log
         
-    def run(self):
+    def run(self): #vers 11
         try:
             from core.utils import validate_import_files, create_backup_before_import, entry_exists_in_img
             
@@ -377,7 +414,7 @@ class ImportThread(QThread):
         except Exception as e:
             self.finished.emit(False, f"Import error: {str(e)}")
     
-    def import_file(self, file_path):
+    def import_file(self, file_path): #vers 4
         """Import a single file"""
         try:
             filename = os.path.basename(file_path)
@@ -436,7 +473,7 @@ class ExportThread(QThread):
     progress = pyqtSignal(int)
     finished = pyqtSignal(bool, str)
     
-    def __init__(self, main_window, entries, export_dir, organize_by_type=True, overwrite=True, create_log=False):
+    def __init__(self, main_window, entries, export_dir, organize_by_type=True, overwrite=True, create_log=False): #vers 6
         super().__init__()
         self.main_window = main_window
         self.entries = entries
@@ -445,7 +482,7 @@ class ExportThread(QThread):
         self.overwrite = overwrite
         self.create_log = create_log
         
-    def run(self):
+    def run(self): #vers 4
         try:
             from core.utils import get_file_type_subfolder
             
@@ -492,7 +529,7 @@ class ExportThread(QThread):
         except Exception as e:
             self.finished.emit(False, f"Export error: {str(e)}")
     
-    def export_entry(self, entry, output_path):
+    def export_entry(self, entry, output_path): #vers 6
         """Export a single entry using multiple methods"""
         try:
             # Method 1: Use IMG file's export_entry method
@@ -530,13 +567,13 @@ class ExportThread(QThread):
 
 
 # Dialog utility functions
-def show_img_properties_dialog(img_file, parent=None):
+def show_img_properties_dialog(img_file, parent=None): #vers 1
     """Show IMG properties dialog"""
     dialog = IMGPropertiesDialog(img_file, parent)
     dialog.exec()
 
 
-def show_export_options_dialog(parent=None, entry_count=0):
+def show_export_options_dialog(parent=None, entry_count=0): #vers 1
     """Show export options dialog"""
     dialog = ExportOptionsDialog(parent, entry_count)
     if dialog.exec() == QDialog.DialogCode.Accepted:
@@ -544,7 +581,7 @@ def show_export_options_dialog(parent=None, entry_count=0):
     return None
 
 
-def show_import_options_dialog(parent=None, file_count=0):
+def show_import_options_dialog(parent=None, file_count=0): #vers 2
     """Show import options dialog"""
     dialog = ImportOptionsDialog(parent, file_count)
     if dialog.exec() == QDialog.DialogCode.Accepted:
@@ -552,13 +589,13 @@ def show_import_options_dialog(parent=None, file_count=0):
     return None
 
 
-def show_validation_results_dialog(validation_result, parent=None):
+def show_validation_results_dialog(validation_result, parent=None): #vers 2
     """Show validation results dialog"""
     dialog = ValidationResultsDialog(validation_result, parent)
     dialog.exec()
 
 
-def show_error_dialog(parent, title, message, details=None):
+def show_error_dialog(parent, title, message, details=None): #vers 2
     """Show error dialog with optional details"""
     msg_box = QMessageBox(parent)
     msg_box.setIcon(QMessageBox.Icon.Critical)
@@ -572,7 +609,7 @@ def show_error_dialog(parent, title, message, details=None):
     msg_box.exec()
 
 
-def show_warning_dialog(parent, title, message):
+def show_warning_dialog(parent, title, message): #vers 2
     """Show warning dialog"""
     msg_box = QMessageBox(parent)
     msg_box.setIcon(QMessageBox.Icon.Warning)
@@ -582,7 +619,7 @@ def show_warning_dialog(parent, title, message):
     return msg_box.exec()
 
 
-def show_question_dialog(parent, title, message):
+def show_question_dialog(parent, title, message): #vers 2
     """Show question dialog with Yes/No buttons"""
     msg_box = QMessageBox(parent)
     msg_box.setIcon(QMessageBox.Icon.Question)
@@ -595,7 +632,7 @@ def show_question_dialog(parent, title, message):
     return result == QMessageBox.StandardButton.Yes
 
 
-def show_info_dialog(parent, title, message):
+def show_info_dialog(parent, title, message): #vers 2
     """Show information dialog"""
     msg_box = QMessageBox(parent)
     msg_box.setIcon(QMessageBox.Icon.Information)
@@ -605,7 +642,7 @@ def show_info_dialog(parent, title, message):
     msg_box.exec()
 
 
-def show_progress_dialog(parent, title, text, maximum=100):
+def show_progress_dialog(parent, title, text, maximum=100): #vers 2
     """Show progress dialog"""
     progress = QProgressDialog(text, "Cancel", 0, maximum, parent)
     progress.setWindowTitle(title)
@@ -615,7 +652,7 @@ def show_progress_dialog(parent, title, text, maximum=100):
     return progress
 
 
-def show_about_dialog(parent=None):
+def show_about_dialog(parent=None): #vers 2
     """Show about dialog"""
     msg_box = QMessageBox(parent)
     msg_box.setIcon(QMessageBox.Icon.Information)
@@ -636,17 +673,17 @@ def show_about_dialog(parent=None):
 
 
 # File dialog utilities
-def get_img_file_filter():
+def get_img_file_filter(): #vers 2
     """Get file filter for IMG files"""
     return "IMG Archives (*.img);;All Files (*)"
 
 
-def get_export_directory(parent=None, title="Select Export Directory"):
+def get_export_directory(parent=None, title="Select Export Directory"): #vers 1
     """Get export directory from user"""
     return QFileDialog.getExistingDirectory(parent, title)
 
 
-def get_import_files(parent=None, title="Select Files to Import"):
+def get_import_files(parent=None, title="Select Files to Import"): #vers 3
     """Get files to import from user"""
     files, _ = QFileDialog.getOpenFileNames(
         parent,
@@ -657,7 +694,7 @@ def get_import_files(parent=None, title="Select Files to Import"):
     return files
 
 
-def get_save_img_filename(parent=None, title="Save IMG Archive"):
+def get_save_img_filename(parent=None, title="Save IMG Archive"): #vers 2
     """Get filename for saving IMG archive"""
     filename, _ = QFileDialog.getSaveFileName(
         parent,
@@ -668,7 +705,7 @@ def get_save_img_filename(parent=None, title="Save IMG Archive"):
     return filename
 
 
-def get_open_img_filename(parent=None, title="Open IMG Archive"):
+def get_open_img_filename(parent=None, title="Open IMG Archive"): #vers 2
     """Get filename for opening IMG archive"""
     filename, _ = QFileDialog.getOpenFileName(
         parent,

@@ -1,4 +1,4 @@
-#this belongs in gui/ main_window.py - Version: 56
+#this belongs in gui/ main_window.py - Version: 57
 # X-Seti - July12 2025 - Img Factory 1.5
 # Credit MexUK 2007 Img Factory 1.2
 
