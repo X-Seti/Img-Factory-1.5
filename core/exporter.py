@@ -141,6 +141,7 @@ class ExportOptionsDialog(QDialog):
             QMessageBox.critical(self, "Export Failed", message)
 
 
+
 class ExportThread(QThread):
     """Background export thread"""
     progress = pyqtSignal(int)
@@ -353,6 +354,49 @@ class ExportThread(QThread):
             QMessageBox.critical(self, "Export Error", error_msg)
 
 
+    def remove_all_entries(self): #vers 2
+        """Remove all entries from IMG"""
+        if not self.current_img:
+            QMessageBox.warning(self, "Warning", "No IMG file loaded")
+            return
+
+        try:
+            reply = QMessageBox.question(self, "Remove All",
+                                        "Remove all entries from IMG?")
+            if reply == QMessageBox.StandardButton.Yes:
+                self.current_img.entries.clear()
+                self._update_ui_for_loaded_img()
+                self.log_message("All entries removed")
+        except Exception as e:
+            self.log_message(f"❌ Error in remove_all_entries: {str(e)}")
+
+
+    def quick_export(self): #vers 2
+        """Quick export selected files to default location"""
+        if not self.current_img:
+            QMessageBox.warning(self, "Warning", "No IMG file loaded")
+            return
+
+        try:
+            # Check if we have a selection method available
+            if hasattr(self.gui_layout, 'table') and hasattr(self.gui_layout.table, 'selectionModel'):
+                selected_rows = self.gui_layout.table.selectionModel().selectedRows()
+            else:
+                selected_rows = []
+
+            if not selected_rows:
+                QMessageBox.warning(self, "Warning", "No entries selected")
+                return
+
+            # Use Documents/IMG_Exports as default
+            export_dir = os.path.join(os.path.expanduser("~"), "Documents", "IMG_Exports")
+            os.makedirs(export_dir, exist_ok=True)
+
+            self.log_message(f"Quick exporting {len(selected_rows)} files to {export_dir}")
+            QMessageBox.information(self, "Info", "Quick export functionality coming soon")
+        except Exception as e:
+            self.log_message(f"❌ Error in quick_export: {str(e)}")
+
 def export_selected_function(main_window): #vers 3
     """Export selected entries"""
     try:
@@ -555,8 +599,10 @@ def integrate_export_functions(main_window): #vers 2
 
 # Export functions
 __all__ = [
-    'export_selected'
-    'export_all'
+    'export_selected',
+    'remove_all_entries',
+    'quick_export',
+    'export_all',
     'export_selected_function',
     'export_via_function',
     'quick_export_function',
