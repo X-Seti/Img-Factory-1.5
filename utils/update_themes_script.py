@@ -225,7 +225,7 @@ def add_button_structure_to_theme(theme_data: Dict[str, Any]):
                 {"text": "Export via", "action": "export_via", "icon": "document-export", "color": "#E0F2F1"},
                 {"text": "Remove", "action": "remove", "icon": "edit-delete", "color": "#FFEBEE"},
                 {"text": "Remove All", "action": "remove_all", "icon": "edit-clear", "color": "#FFEBEE"},
-                {"text": "Update list", "action": "update", "icon": "view-refresh", "color": "#F9FBE7"},
+                {"text": "Refresh", "action": "update", "icon": "view-refresh", "color": "#F9FBE7"},
                 {"text": "Quick Export", "action": "quick_export", "icon": "document-export", "color": "#E0F2F1"},
                 {"text": "Pin selected", "action": "pin", "icon": "view-pin", "color": "#FCE4EC"}
             ],
