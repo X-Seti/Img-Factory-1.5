@@ -40,10 +40,11 @@ def integrate_complete_core_system(main_window):
         if not integrate_menu_functions(main_window):
             return False
         
-        # 7. Integrate core class patches
-        from components.img_core_classes_addon import integrate_import_export_methods
-        if not integrate_import_export_methods():
-            main_window.log_message("⚠️ Core class patches failed - continuing...")
+        # 7. Integrate core class
+        from core.importer import integrate_import_functions
+        from core.exporter import integrate_export_functions
+        from core.remove import integrate_remove_functions
+
         
         # 8. Add convenience methods
         main_window.refresh_table = lambda: main_window.get_selected_entries() or main_window.log_message("🔄 Refresh requested")
