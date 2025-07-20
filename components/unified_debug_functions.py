@@ -14,7 +14,6 @@ from PyQt6.QtCore import QTimer
 ##Methods list -
 # add_status_indicators
 # apply_all_fixes_and_improvements
-# create_debug_keyboard_shortcuts
 # create_debug_menu
 # fix_search_dialog
 # install_debug_control_system
@@ -22,7 +21,7 @@ from PyQt6.QtCore import QTimer
 # integrate_all_improvements
 # setup_debug_convenience_methods
 
-def debug_trace(func):
+def debug_trace(func): #vers 1
     """Simple debug decorator to trace function calls."""
     def wrapper(*args, **kwargs):
         print(f"[DEBUG] Calling: {func.__name__} with args={args} kwargs={kwargs}")
@@ -277,28 +276,6 @@ def create_debug_menu(main_window): #vers 1
         main_window.log_message(f"Debug menu error: {e}")
         return False
 
-def create_debug_keyboard_shortcuts(main_window): #vers 1
-    """Create debug keyboard shortcuts"""
-    try:
-        # COL debug toggle
-        col_toggle_shortcut = QShortcut(QKeySequence("Ctrl+Shift+D"), main_window)
-        col_toggle_shortcut.activated.connect(lambda: main_window.toggle_col_debug() if hasattr(main_window, 'toggle_col_debug') else None)
-        
-        # Debug info
-        debug_info_shortcut = QShortcut(QKeySequence("Ctrl+Shift+I"), main_window)
-        debug_info_shortcut.activated.connect(lambda: main_window.show_debug_info() if hasattr(main_window, 'show_debug_info') else None)
-        
-        # Search shortcut
-        search_shortcut = QShortcut(QKeySequence("Ctrl+F"), main_window)
-        search_shortcut.activated.connect(lambda: main_window.show_search_dialog() if hasattr(main_window, 'show_search_dialog') else None)
-        
-        main_window.log_message("✅ Debug keyboard shortcuts created")
-        return True
-        
-    except Exception as e:
-        main_window.log_message(f"Debug shortcuts error: {e}")
-        return False
-
 def add_status_indicators(main_window): #vers 1
     """Add debug status indicators to status bar"""
     try:
@@ -356,7 +333,6 @@ def integrate_all_improvements(main_window): #vers 1
         
         # Add additional UI improvements
         add_status_indicators(main_window)
-        create_debug_keyboard_shortcuts(main_window)
         
         if core_success:
             main_window.log_message("🎉 IMG Factory 1.5 - All improvements integrated successfully!")
@@ -375,9 +351,8 @@ __all__ = [
     'install_search_manager',
     'fix_search_dialog',
     'install_debug_control_system',
-    'setup_img_debug_system_integration',  # REPLACED setup_col_debug_control
+    'setup_img_debug_system_integration',
     'create_debug_menu',
     'add_status_indicators',
-    'create_debug_keyboard_shortcuts',
     'setup_debug_convenience_methods'
 ]

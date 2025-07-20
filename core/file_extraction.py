@@ -163,7 +163,7 @@ def get_selected_entries_for_extraction(main_window) -> List: #vers 2
 def integrate_extraction_system(main_window): #vers 3
     """Integrate file extraction system into main window"""
     try:
-        from components.file_type_filter import (
+        from core.file_type_filter import (
             integrate_file_filtering, show_extraction_dialog,
             update_filter_statistics
         )
@@ -405,7 +405,7 @@ def setup_extraction_context_menu(main_window): #vers 5
 def setup_extraction_methods(main_window): #vers 7
     """Add extraction methods to main window"""
     try:
-        from components.file_type_filter import show_extraction_dialog, update_filter_statistics
+        from core.file_type_filter import show_extraction_dialog, update_filter_statistics
 
         def extract_selected_files():
             """Extract currently selected files"""

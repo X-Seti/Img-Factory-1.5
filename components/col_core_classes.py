@@ -221,6 +221,7 @@ class COLFile:
                 img_debugger.error(f"COL load error: {e}")
             return False
     
+
     def _parse_col_data_safe(self, data: bytes) -> bool:
         """Parse COL data with hang prevention - SAFE VERSION"""
         self.models = []
@@ -285,6 +286,32 @@ class COLFile:
         
         return success
     
+        def format_file_size(self, size_bytes): #vers 4
+        #./core/tables_structure.py - def format_file_size(size_bytes): #vers 4
+
+        """Format file size same as IMG entries"""
+        try:
+            # Use the same formatting as IMG entries
+            try:
+                from components.img_core_classes import format_file_size
+                return format_file_size(size_bytes)
+            except:
+                pass
+
+            # Fallback formatting (same logic as IMG)
+            if size_bytes < 1024:
+                return f"{size_bytes} B"
+            elif size_bytes < 1024 * 1024:
+                return f"{size_bytes // 1024} KB"
+            elif size_bytes < 1024 * 1024 * 1024:
+                return f"{size_bytes // (1024 * 1024)} MB"
+            else:
+                return f"{size_bytes // (1024 * 1024 * 1024)} GB"
+
+        except Exception:
+            return f"{size_bytes} bytes"
+
+
     def _parse_col_model_safe(self, data: bytes, offset: int) -> Tuple[Optional[COLModel], int]:
         """Parse single COL model with safety checks - SAFE VERSION"""
         try:

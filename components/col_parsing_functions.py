@@ -21,15 +21,11 @@ except ImportError:
 
 ##Methods list -
 # _load_col_file
-# _populate_col_table_enhanced
 # _setup_col_tab
 # setup_col_tab_integration
-# _setup_col_table_structure
-# _update_col_info_bar_enhanced
 # _validate_col_file
 # format_model_collision_types
 # get_model_collision_stats
-# load_col_file_safely
 # parse_col_file_with_debug
 # reset_table_styling
 
@@ -215,44 +211,6 @@ def setup_col_tab_integration(main_window):
         return False
 
 
-def load_col_file_safely(main_window, file_path):
-    """Load COL file safely with proper tab management"""
-    try:
-        # Validate file
-        if not _validate_col_file(main_window, file_path):
-            return False
-
-        # Setup tab
-        tab_index = _setup_col_tab(main_window, file_path)
-        if tab_index is None:
-            return False
-
-        # Load COL file
-        col_file = _load_col_file(main_window, file_path)
-        if col_file is None:
-            return False
-
-        # Setup table structure for COL data
-        _setup_col_table_structure(main_window)
-
-        # Populate table with working COL data
-        _populate_col_table_enhanced(main_window, col_file)
-
-        # Update main window state
-        main_window.current_col = col_file
-        main_window.open_files[tab_index]['file_object'] = col_file
-
-        # Update info bar with enhanced data
-        _update_col_info_bar_enhanced(main_window, col_file, file_path)
-
-        main_window.log_message(f"✅ COL file loaded: {os.path.basename(file_path)}")
-        return True
-
-    except Exception as e:
-        main_window.log_message(f"❌ Error loading COL file: {str(e)}")
-        return False
-
-
 def _validate_col_file(main_window, file_path): #vers 1
     """Validate COL file before loading"""
     try:
@@ -333,198 +291,6 @@ def _load_col_file(main_window, file_path): #vers 1
     except Exception as e:
         main_window.log_message(f"❌ Error loading COL file: {str(e)}")
         return None
-
-
-def _setup_col_table_structure(main_window): #vers 1
-    """Setup table structure for COL data with scoped styling"""
-    try:
-        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            return
-
-        table = main_window.gui_layout.table
-        
-        # Configure table for COL data (7 columns)
-        table.setColumnCount(7)
-        table.setHorizontalHeaderLabels([
-            "Model", "Type", "Size", "Surfaces", "Vertices", "Collision", "Status"
-        ])
-
-        # Set column widths
-        table.setColumnWidth(0, 60)   # Model
-        table.setColumnWidth(1, 80)   # Type
-        table.setColumnWidth(2, 100)  # Size
-        table.setColumnWidth(3, 80)   # Surfaces
-        table.setColumnWidth(4, 80)   # Vertices
-        table.setColumnWidth(5, 120)  # Collision
-        table.setColumnWidth(6, 80)   # Status
-
-        # Apply scoped COL table styling
-        table.setObjectName("col_table")
-        col_table_style = """
-            QTableWidget#col_table {
-                background-color: #F8F9FA;
-                gridline-color: #E0E0E0;
-                selection-background-color: #E3F2FD;
-            }
-            QTableWidget#col_table::item {
-                padding: 6px;
-                border: none;
-            }
-            QTableWidget#col_table::item:alternate {
-                background-color: #F5F5F5;
-            }
-            QTableWidget#col_table::item:hover {
-                background-color: #E3F2FD;
-            }
-            QTableWidget#col_table::item:selected {
-                background-color: #2196F3;
-                color: white;
-            }
-        """
-
-        # Apply header styling separately
-        header_style = """
-            background-color: #BBDEFB;
-            color: #1976D2;
-            font-weight: bold;
-            border: 1px solid #90CAF9;
-            padding: 6px;
-        """
-
-        # Apply table styling
-        table.setStyleSheet(col_table_style)
-
-        # Apply header styling directly to the header widget
-        header = table.horizontalHeader()
-        header.setStyleSheet(f"""
-            QHeaderView::section {{
-                {header_style}
-            }}
-            QHeaderView::section:hover {{
-                background-color: #90CAF9;
-            }}
-        """)
-
-        # Clear existing data
-        table.setRowCount(0)
-
-        main_window.log_message("🔧 Table structure configured for COL data")
-
-    except Exception as e:
-        main_window.log_message(f"⚠️ Error setting up table structure: {str(e)}")
-
-
-def _populate_col_table_enhanced(main_window, col_file): #vers 1
-    """Populate table with COL data using working parser"""
-    try:
-        if debug_available:
-            img_debugger.debug("Starting COL table population")
-        
-        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            main_window.log_message("⚠️ Main table not available")
-            return
-        
-        table = main_window.gui_layout.table
-        
-        # Import QTableWidgetItem
-        try:
-            from PyQt6.QtWidgets import QTableWidgetItem
-        except ImportError:
-            try:
-                from PyQt5.QtWidgets import QTableWidgetItem
-            except ImportError:
-                main_window.log_message("❌ QTableWidgetItem not available")
-                return
-        
-        if not hasattr(col_file, 'models') or not col_file.models:
-            main_window.log_message("⚠️ No models found in COL file")
-            return
-        
-        table.setRowCount(len(col_file.models))
-        main_window.log_message(f"🔧 Populating table with {len(col_file.models)} COL models")
-        
-        # Use working collision parser for real data
-        parser = COLParser(debug=debug_available)
-        parsed_models = parser.parse_col_file_structure(col_file.file_path)
-        
-        for row, model in enumerate(col_file.models):
-            try:
-                # Get collision stats from working parser
-                collision_stats = ""
-                if parsed_models and row < len(parsed_models):
-                    parsed_model = parsed_models[row]
-                    if isinstance(parsed_model, dict):
-                        collision_stats = format_model_collision_types(parsed_model)
-                
-                # Model index
-                table.setItem(row, 0, QTableWidgetItem(str(row)))
-                
-                # Type (COL version)
-                version_str = f"COL{model.version.value}" if hasattr(model, 'version') else "COL1"
-                table.setItem(row, 1, QTableWidgetItem(version_str))
-                
-                # Size
-                size_str = f"{len(model.spheres + model.boxes + model.vertices)} objects"
-                table.setItem(row, 2, QTableWidgetItem(size_str))
-                
-                # Surfaces
-                surfaces = len(model.face_groups) if hasattr(model, 'face_groups') else 0
-                table.setItem(row, 3, QTableWidgetItem(str(surfaces)))
-                
-                # Vertices
-                vertices = len(model.vertices) if hasattr(model, 'vertices') else 0
-                table.setItem(row, 4, QTableWidgetItem(str(vertices)))
-                
-                # Collision types
-                table.setItem(row, 5, QTableWidgetItem(collision_stats))
-                
-                # Status
-                status = "✅ Loaded" if model.is_loaded else "❌ Error"
-                table.setItem(row, 6, QTableWidgetItem(status))
-                
-            except Exception as e:
-                main_window.log_message(f"⚠️ Error populating row {row}: {str(e)}")
-                # Fill with error data
-                table.setItem(row, 0, QTableWidgetItem(str(row)))
-                table.setItem(row, 1, QTableWidgetItem("ERROR"))
-                table.setItem(row, 2, QTableWidgetItem("N/A"))
-                table.setItem(row, 3, QTableWidgetItem("N/A"))
-                table.setItem(row, 4, QTableWidgetItem("N/A"))
-                table.setItem(row, 5, QTableWidgetItem("Parse Error"))
-                table.setItem(row, 6, QTableWidgetItem("❌ Error"))
-
-        main_window.log_message("✅ COL table population complete")
-
-    except Exception as e:
-        main_window.log_message(f"❌ Error populating COL table: {str(e)}")
-
-
-def _update_col_info_bar_enhanced(main_window, col_file, file_path): #vers 1
-    """Update info bar with COL file information"""
-    try:
-        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'info_bar'):
-            return
-
-        info_bar = main_window.gui_layout.info_bar
-        
-        # Calculate statistics
-        total_models = len(col_file.models)
-        total_vertices = sum(len(model.vertices) for model in col_file.models if hasattr(model, 'vertices'))
-        total_surfaces = sum(len(model.face_groups) for model in col_file.models if hasattr(model, 'face_groups'))
-        
-        # File info
-        file_size = os.path.getsize(file_path)
-        file_size_str = f"{file_size:,} bytes"
-        
-        # Update info bar
-        info_text = f"COL File: {os.path.basename(file_path)} | Models: {total_models} | Vertices: {total_vertices} | Surfaces: {total_surfaces} | Size: {file_size_str}"
-        info_bar.setText(info_text)
-        
-        if debug_available:
-            img_debugger.debug(f"Updated info bar: {info_text}")
-
-    except Exception as e:
-        main_window.log_message(f"⚠️ Error updating info bar: {str(e)}")
 
 
 # COL Parser Class - WORKING VERSION FROM OLD FILES
@@ -881,7 +647,6 @@ def parse_col_file_with_debug(file_path, debug=False): #vers 1
 # Export main functions
 __all__ = [
     'COLParser',
-    'load_col_file_safely',
     'setup_col_tab_integration',
     'reset_table_styling',
     'format_model_collision_types',

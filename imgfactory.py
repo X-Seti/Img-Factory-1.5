@@ -47,14 +47,16 @@ from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent,
 from utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
 
 #components
-from components.unified_debug_functions import integrate_all_improvements
+from components.unified_debug_functions import integrate_all_improvements, install_debug_control_system
+
 from components.img_creator import NewIMGDialog, IMGCreationThread
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_validator import IMGValidator
 from components.img_core_classes import (
     IMGFile, IMGEntry, IMGVersion, Platform,
-    IMGEntriesTable, FilterPanel, IMGFileInfoPanel,
+    IMGEntriesTable, FilterPanel, IMGFileInfoPanel, format_file_size,
     TabFilterWidget, integrate_filtering, create_entries_table_panel)
+from components.col_loader import load_col_file_safely
 
 #core
 from core.close_func import install_close_functions, setup_close_manager
@@ -67,8 +69,9 @@ from core.importer import (import_files_function,
     get_selected_entries, integrate_import_functions)
 from core.rw_versions import get_rw_version_name
 from core.right_click_actions import integrate_right_click_actions
-from core.shortcuts import setup_all_shortcuts, setup_debug_shortcuts
+from core.shortcuts import setup_all_shortcuts
 from core.integration import integrate_complete_core_system
+
 
 #gui-layout
 
@@ -313,6 +316,7 @@ class IMGFactory(QMainWindow):
 
         # Create gui_backend
         self.gui_backend = GUIBackend(self)
+        install_debug_control_system(self)
 
         # After GUI setup in __init__:
         setup_all_shortcuts(self)
@@ -339,6 +343,20 @@ class IMGFactory(QMainWindow):
         # Log startup
         self.log_message("IMG Factory 1.5 initialized")
 
+    def show_debug_settings(self): #vers 1
+        """Show debug settings dialog"""
+        try:
+            # Try to show proper debug settings if available
+            from utils.app_settings_system import SettingsDialog
+            if hasattr(self, 'app_settings'):
+                dialog = SettingsDialog(self.app_settings, self)
+                dialog.exec()
+            else:
+                QMessageBox.information(self, "Debug Settings",
+                    "Debug settings: Use F12 to toggle performance mode")
+        except ImportError:
+            QMessageBox.information(self, "Debug Settings",
+                "Debug settings: Use F12 to toggle performance mode")
 
     def setup_unified_signals(self): #vers 6
         """Setup unified signal handler for all table interactions"""
@@ -951,32 +969,6 @@ class IMGFactory(QMainWindow):
 
         self.log_message("IMG interface reset")
 
-
-    def _format_file_size(self, size_bytes): #vers 4
-        #./core/tables_structure.py - def format_file_size(size_bytes): #vers 4
-
-        """Format file size same as IMG entries"""
-        try:
-            # Use the same formatting as IMG entries
-            try:
-                from components.img_core_classes import format_file_size
-                return format_file_size(size_bytes)
-            except:
-                pass
-
-            # Fallback formatting (same logic as IMG)
-            if size_bytes < 1024:
-                return f"{size_bytes} B"
-            elif size_bytes < 1024 * 1024:
-                return f"{size_bytes // 1024} KB"
-            elif size_bytes < 1024 * 1024 * 1024:
-                return f"{size_bytes // (1024 * 1024)} MB"
-            else:
-                return f"{size_bytes // (1024 * 1024 * 1024)} GB"
-
-        except Exception:
-            return f"{size_bytes} bytes"
-
     def _on_load_progress(self, progress: int, status: str): #vers 4
         """Handle loading progress updates"""
         if hasattr(self.gui_layout, 'show_progress'):
@@ -1181,6 +1173,26 @@ class IMGFactory(QMainWindow):
             QMessageBox.warning(self, "Warning", "No IMG file loaded")
             return
         self.log_message("Export via tool functionality coming soon")
+
+    def export_selected_via(self): #vers 1
+        """Export selected entries via IDE file"""
+        from core.exporter import export_via_function
+        export_via_function(self)
+
+    def quick_export_selected(self): #vers 1
+        """Quick export selected entries"""
+        from core.exporter import quick_export_function
+        quick_export_function(self)
+
+    def dump_entries(self): #vers 1
+        """Dump all entries to folder"""
+        from core.exporter import dump_all_function
+        dump_all_function(self)
+
+    def import_files_via(self): #vers 1
+        """Import files via IDE file"""
+        from core.importer import import_via_function
+        import_via_function(self)
 
 
     def pin_selected(self): #vers 1
