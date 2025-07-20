@@ -12,11 +12,9 @@
 │   ├── col_validator.py
 │   ├── gta_file_editors.py
 │   ├── img_compression.py
-│   ├── img_core_classes_newer.py
 │   ├── img_core_classes.py
 │   ├── img_creator.py
 │   ├── img_debug_functions.py
-│   ├── img_factory_debug.log
 │   ├── img_integration_main.py
 │   ├── img_manager.py
 │   ├── img_open_dialog.py
@@ -1206,4 +1204,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-944 directories, 263 files
+944 directories, 261 files

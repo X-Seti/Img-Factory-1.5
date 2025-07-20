@@ -1,13 +1,8 @@
 #this belongs in components/img_core_classes.py - Version: 6
 # X-Seti - July20 2025 - IMG Factory 1.5 - IMG Core Classes with Fixed RW Version Detection
-# FIXED: IMGEntry now properly detects and stores RW versions during loading
-# PRESERVED: 100% of original functionality - only added RW version detection
-# CIRCULAR IMPORT FIX: Removed only the circular import, all other functionality intact
 
 """
-IMG Core Classes - Complete with Fixed Version Detection
-Core classes for handling IMG files with proper RW version detection
-Uses existing functions from core/rw_versions.py and maintains all original functionality
+IMG Core Classes
 """
 
 import os
@@ -19,8 +14,7 @@ from typing import List, Dict, Optional, Any, Union, BinaryIO
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
-    QPushButton, QComboBox, QLineEdit, QGroupBox, QLabel
-)
+    QPushButton, QComboBox, QLineEdit, QGroupBox, QLabel)
 from PyQt6.QtCore import pyqtSignal, Qt
 
 # Import existing RW version functions - KEPT ALL ORIGINAL IMPORTS
@@ -57,7 +51,6 @@ class IMGVersion(Enum):
     VERSION_2 = 2    # Single IMG file (SA)
     UNKNOWN = 0
 
-# MOVED HERE TO FIX CIRCULAR IMPORT - was imported from core.img_platform_detection
 class IMGPlatform(Enum):
     """Platform types for IMG files - MOVED HERE TO ELIMINATE CIRCULAR IMPORT"""
     PC = "pc"
@@ -79,13 +72,6 @@ class FileType(Enum):
     WAV = "wav"         # Audio files
     UNKNOWN = "unknown"
 
-class CompressionType(Enum):
-    """Compression types"""
-    NONE = "none"
-    ZLIB = "zlib"
-    LZO = "lzo"
-    UNKNOWN = "unknown"
-
 class Platform(Enum):
     """Platform types for IMG files"""
     PC = 0
@@ -93,9 +79,16 @@ class Platform(Enum):
     PS2 = 2
     MOBILE = 3
 
+class CompressionType(Enum):
+    """Compression types"""
+    NONE = "none"
+    ZLIB = "zlib"
+    LZO = "lzo"
+    UNKNOWN = "unknown"
+
 class RecentFilesManager:
     """Manage recently opened files"""
-    def __init__(self, max_files: int = 10):
+    def __init__(self, max_files: int = 10): #vers 1
         self.max_files = max_files
         self.recent_files: List[str] = []
         self.settings_file = "recent_files.json"
@@ -184,13 +177,43 @@ class IMGEntry:
         """Set reference to parent IMG file"""
         self._img_file = img_file
 
+    def detect_file_type_and_version(self): #vers 2
+        """ADDED: Detect file type and RW version from file data"""
+        try:
+            # Extract extension from name
+            if '.' in self.name:
+                self.extension = self.name.split('.')[-1].lower()
+                self.file_type = self._get_file_type_from_extension()
+
+            # For RenderWare files, detect version from data
+            if self.is_renderware_file() and self._img_file and not self._version_detected:
+                try:
+                    data = self.get_data()
+                    if len(data) >= 12:  # Minimum RW header size
+                        # Use existing RW version detection function
+                        version_info = parse_rw_version(data)
+                        if version_info and 'version' in version_info:
+                            self.rw_version = version_info['version']
+                            self.rw_version_name = get_rw_version_name(self.rw_version)
+                            self._version_detected = True
+
+                            if hasattr(img_debugger, 'debug'):
+                                img_debugger.debug(f"✅ RW Version detected for {self.name}: {self.rw_version_name}")
+
+                except Exception as e:
+                    if hasattr(img_debugger, 'warning'):
+                        img_debugger.warning(f"Could not detect RW version for {self.name}: {e}")
+
+        except Exception as e:
+            if hasattr(img_debugger, 'error'):
+                img_debugger.error(f"Error detecting file type/version for {self.name}: {e}")
+
     def detect_file_type_and_version(self): #vers 1
         """ADDED: Detect file type and RW version from file data"""
         try:
             # Extract extension from name
             if '.' in self.name:
                 self.extension = self.name.split('.')[-1].upper()
-                # Clean extension of any non-alpha characters
                 self.extension = ''.join(c for c in self.extension if c.isalpha())
             else:
                 self.extension = "NO_EXT"
@@ -280,6 +303,14 @@ class IMGEntry:
         except Exception as e:
             img_debugger.error(f"Error reading header data for {self.name}: {e}")
             return None
+
+    def _get_file_type_from_extension(self) -> FileType: #vers 1
+        """Get file type from extension"""
+        ext_lower = self.extension.lower()
+        try:
+            return FileType(ext_lower)
+        except ValueError:
+            return FileType.UNKNOWN
 
     def get_version_text(self) -> str: #vers 2
         """FIXED: Get human-readable version text"""
@@ -398,6 +429,27 @@ def detect_img_platform(file_path: str): #vers 1
             
     except Exception:
         return IMGPlatform.UNKNOWN, {'confidence': 0, 'indicators': ['error']}
+
+def detect_img_platform_inline(file_path: str) -> IMGPlatform: #vers 1
+    """MOVED: Simple platform detection to avoid circular import"""
+    try:
+        filename = os.path.basename(file_path).lower()
+
+        # Simple platform detection based on filename/path
+        if any(keyword in filename for keyword in ['ps2', 'playstation']):
+            return IMGPlatform.PS2
+        elif any(keyword in filename for keyword in ['xbox']):
+            return IMGPlatform.XBOX
+        elif any(keyword in filename for keyword in ['android', 'mobile']):
+            return IMGPlatform.ANDROID
+        elif any(keyword in filename for keyword in ['psp', 'stories']):
+            return IMGPlatform.PSP
+        else:
+            return IMGPlatform.PC
+
+    except Exception:
+        return IMGPlatform.UNKNOWN
+
 
 def get_platform_specific_specs(platform: IMGPlatform) -> Dict[str, Any]: #vers 1
     """INLINE: Get platform-specific specifications"""
@@ -721,6 +773,23 @@ class IMGFile:
                 with open(self.file_path, 'rb') as f:
                     f.seek(entry.offset)
                     return f.read(entry.size)
+        except Exception as e:
+            raise RuntimeError(f"Failed to write entry data: {e}")
+
+    def write_entry_data(self, entry: IMGEntry, data: bytes): #vers 1
+        """Write data for a specific entry"""
+        try:
+            if self.version == IMGVersion.VERSION_1:
+                # Write to .img file
+                img_path = self.file_path.replace('.dir', '.img')
+                with open(img_path, 'r+b') as f:
+                    f.seek(entry.offset)
+                    f.write(data)
+            else:
+                # Write to single .img file
+                with open(self.file_path, 'r+b') as f:
+                    f.seek(entry.offset)
+                    f.write(data)
         except Exception as e:
             raise RuntimeError(f"Failed to write entry data: {e}")
 
