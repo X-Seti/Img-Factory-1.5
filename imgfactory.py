@@ -301,7 +301,7 @@ class IMGFactory(QMainWindow):
         # Setup close manager for tab handling
         install_close_functions(self)
         install_img_table_populator(self)
-        integrate_right_click_actions(self)
+        #integrate_right_click_actions(self)
         integrate_unknown_rw_detection(self)
 
         if integrate_remove_functions(self):
@@ -903,7 +903,6 @@ class IMGFactory(QMainWindow):
 
         # Create and start the loading thread
         self.load_thread = IMGLoadThread(file_path)
-        img_file.set_main_window_reference(self)
         self.load_thread.progress_updated.connect(self._on_img_load_progress)
         self.load_thread.loading_finished.connect(self._on_img_loaded)
         self.load_thread.loading_error.connect(self._on_img_load_error)

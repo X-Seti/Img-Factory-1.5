@@ -1,5 +1,5 @@
-#this belongs in core/ rw_versions.py - Version: 2
-# X-Seti - July17 2025 - Img Factory 1.5 - RenderWare Version Constants
+#this belongs in core/ rw_versions.py - Version: 3
+# X-Seti - July20 2025 - Img Factory 1.5 - RenderWare Version Constants - FIXED
 
 """
 RenderWare Version Constants - Expanded
@@ -8,6 +8,7 @@ Used by IMG, TXD, DFF, MDL, and validation systems
 Includes support for DFF models, MDL files, and other 3D formats
 """
 
+import struct
 from enum import Enum
 from typing import Dict, Optional, Tuple
 
@@ -168,16 +169,17 @@ def get_version_info(version_value: int) -> Dict[str, any]: #vers 1
     }
 
 
-def parse_rw_version(version_bytes: bytes) -> Tuple[int, str]: #vers 1
-    """Parse RenderWare version from 4-byte header"""
+def parse_rw_version(version_bytes: bytes) -> Tuple[int, str]: #vers 2
+    """Parse RenderWare version from 4-byte header - FIXED"""
     if len(version_bytes) < 4:
         return 0, "Invalid"
     
-    import struct
-    version_value = struct.unpack('<I', version_bytes)[0]
-    version_name = get_rw_version_name(version_value)
-    
-    return version_value, version_name
+    try:
+        version_value = struct.unpack('<I', version_bytes)[0]
+        version_name = get_rw_version_name(version_value)
+        return version_value, version_name
+    except struct.error:
+        return 0, "Invalid"
 
 
 def get_model_format_version(file_extension: str, data: bytes) -> Tuple[str, str]: #vers 1
@@ -186,7 +188,6 @@ def get_model_format_version(file_extension: str, data: bytes) -> Tuple[str, str
     
     if ext == 'dff':
         if len(data) >= 12:
-            import struct
             try:
                 version = struct.unpack('<I', data[8:12])[0]
                 return "DFF", get_rw_version_name(version)
@@ -197,7 +198,6 @@ def get_model_format_version(file_extension: str, data: bytes) -> Tuple[str, str
     elif ext == 'mdl':
         # GTA Stories PSP MDL files
         if len(data) >= 12:
-            import struct
             try:
                 version = struct.unpack('<I', data[8:12])[0]
                 if version == 0x35000:

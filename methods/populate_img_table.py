@@ -159,6 +159,10 @@ class IMGTablePopulator:
             self.main_window.log_message(f"📋 Table populated with {len(entries)} entries")
         print(f"[SUCCESS] Successfully populated table with {len(entries)} entries")
 
+        from core.right_click_actions import setup_table_context_menu
+        setup_table_context_menu(self.main_window)
+
+
     def create_img_table_item(self, text: str, data=None) -> QTableWidgetItem: #vers 2
         """Create standardized IMG table widget item"""
         item = QTableWidgetItem(str(text))
