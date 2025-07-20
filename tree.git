@@ -1,5 +1,6 @@
 .
 ├── cc.py
+├── cols.list
 ├── components
 │   ├── col_core_classes.py
 │   ├── col_creator.py
@@ -91,27 +92,6 @@
 │   │   ├── file_extraction_functions.py
 │   │   ├── file_type_filter.py
 │   │   ├── gta_file_editors.py
-│   │   ├── img_close_functions.py
-│   │   ├── img_compression.py
-│   │   ├── img_core_classes_addon.py
-│   │   ├── img_core_classes.py
-│   │   ├── img_creator.py
-│   │   ├── img_debug_functions.py
-│   │   ├── img_formats.py
-│   │   ├── img_import_export_functions.py
-│   │   ├── img_import_export.py
-│   │   ├── img_integration_main.py
-│   │   ├── img_manager.py
-│   │   ├── img_open_functions_dialog.py
-│   │   ├── img_parsing_functions.py
-│   │   ├── img_project_manager.py
-│   │   ├── img_search_function.py
-│   │   ├── img_table_styling.py
-│   │   ├── img_templates.json
-│   │   ├── img_templates.py
-│   │   ├── img_validator.py
-│   │   ├── img_version1.py
-│   │   ├── img_version2.py
 │   │   ├── txd_converter.py
 │   │   ├── unified_debug_functions.py
 │   │   └── unified_signal_handler.py
@@ -1204,4 +1184,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-944 directories, 261 files
+944 directories, 241 files
