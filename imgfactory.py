@@ -57,6 +57,8 @@ from components.img_core_classes import (
     IMGEntriesTable, FilterPanel, IMGFileInfoPanel, format_file_size,
     TabFilterWidget, integrate_filtering, create_entries_table_panel)
 from components.col_loader import load_col_file_safely
+from components.rw_unknown_snapshot import integrate_unknown_rw_detection
+
 
 #core
 from core.close_func import install_close_functions, setup_close_manager
@@ -300,6 +302,7 @@ class IMGFactory(QMainWindow):
         install_close_functions(self)
         install_img_table_populator(self)
         integrate_right_click_actions(self)
+        integrate_unknown_rw_detection(self)
 
         if integrate_remove_functions(self):
             self.log_message("✅ Remove functions integrated")
@@ -900,6 +903,7 @@ class IMGFactory(QMainWindow):
 
         # Create and start the loading thread
         self.load_thread = IMGLoadThread(file_path)
+        img_file.set_main_window_reference(self)
         self.load_thread.progress_updated.connect(self._on_img_load_progress)
         self.load_thread.loading_finished.connect(self._on_img_loaded)
         self.load_thread.loading_error.connect(self._on_img_load_error)

@@ -37,6 +37,7 @@
 │   ├── file_type_filter.py
 │   ├── gui_search.py
 │   ├── img_formats.py
+│   ├── img_platform_detection.py
 │   ├── img_version1.py
 │   ├── img_version2.py
 │   ├── importer.py
@@ -1204,4 +1205,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-944 directories, 261 files
+944 directories, 262 files

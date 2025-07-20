@@ -16,14 +16,12 @@ import shutil
 from enum import Enum
 from typing import List, Dict, Optional, Any, Union, BinaryIO
 from pathlib import Path
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
-    QPushButton, QComboBox, QLineEdit, QGroupBox, QLabel
-)
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QPushButton, QComboBox, QLineEdit, QGroupBox, QLabel)
 from PyQt6.QtCore import pyqtSignal, Qt
 
-# Import existing RW version functions
+# Import existing RW version functions and NEW platform detection
 from core.rw_versions import get_rw_version_name, parse_rw_version, get_model_format_version
+from core.img_platform_detection import detect_img_platform, get_platform_specific_specs, IMGPlatform
 from components.img_debug_functions import img_debugger
 
 ##Methods list -
@@ -365,19 +363,19 @@ class IMGEntry:
         self._img_file.write_entry_data(self, data)
 
 class IMGFile:
-    """Main IMG archive file handler - FIXED WITH PROPER ENTRY PARSING"""
+    """Main IMG archive file handler - FIXED WITH PLATFORM SUPPORT"""
     
-    def __init__(self, file_path: str = ""): #vers 3
+    def __init__(self, file_path: str = ""): #vers 5
         self.file_path: str = file_path
         self.version: IMGVersion = IMGVersion.UNKNOWN
+        self.platform: IMGPlatform = IMGPlatform.UNKNOWN  # ADDED: Platform detection
+        self.platform_specs: Dict[str, Any] = {}  # ADDED: Platform-specific specs
         self.entries: List[IMGEntry] = []
-        self.is_encrypted: bool = False
-        self.platform: str = "PC"
         self.is_open: bool = False
         self.total_size: int = 0
         self.creation_time: Optional[float] = None
         self.modification_time: Optional[float] = None
-        
+
         # File handles
         self._img_handle: Optional[BinaryIO] = None
         self._dir_handle: Optional[BinaryIO] = None
@@ -422,11 +420,19 @@ class IMGFile:
             print(f"❌ Error creating IMG file: {e}")
             return False
 
-    def detect_version(self) -> IMGVersion: #vers 3
-        """Detect IMG version from file"""
+    def detect_version(self) -> IMGVersion: #vers 4
+        """Detect IMG version and platform from file"""
         try:
             if not os.path.exists(self.file_path):
                 return IMGVersion.UNKNOWN
+
+            # ADDED: Platform detection first
+            detected_platform, detection_info = detect_img_platform(self.file_path)
+            self.platform = detected_platform
+            self.platform_specs = get_platform_specific_specs(detected_platform)
+            
+            print(f"[DEBUG] Detected platform: {detected_platform.value}")
+            print(f"[DEBUG] Platform specs: {self.platform_specs}")
 
             # Check if it's a .dir file (Version 1)
             if self.file_path.lower().endswith('.dir'):
@@ -509,14 +515,22 @@ class IMGFile:
         except Exception as e:
             print(f"[ERROR] Error in _parse_all_entries: {e}")
 
-    def _open_version_2(self) -> bool: #vers 4
-        """Open IMG version 2 (single file)"""
+    def _open_version_2(self) -> bool: #vers 5
+        """Open IMG version 2 (single file) - ENHANCED WITH PLATFORM SUPPORT"""
         try:
+            # Use platform-specific specifications
+            sector_size = self.platform_specs.get('sector_size', 2048)
+            
             with open(self.file_path, 'rb') as f:
                 # Skip VER2 header (4 bytes)
                 f.seek(4)
                 # Read entry count
                 entry_count = struct.unpack('<I', f.read(4))[0]
+                
+                # Platform-specific entry count validation
+                max_entries = self.platform_specs.get('max_entries', 65535)
+                if entry_count > max_entries:
+                    print(f"[WARNING] Entry count {entry_count} exceeds platform limit {max_entries}")
 
                 for i in range(entry_count):
                     # Read entry: offset(4), size(4), name(24)
@@ -536,7 +550,8 @@ class IMGFile:
                         self.entries.append(entry)
 
             return True
-        except Exception:
+        except Exception as e:
+            print(f"[ERROR] Error opening Version 2 IMG: {e}")
             return False
 
     def _open_version_1(self) -> bool: #vers 4
@@ -842,5 +857,6 @@ __all__ = [
     'integrate_filtering',
     'create_entries_table_panel',
     'detect_img_version',
-    'populate_table_with_sample_data'
+    'populate_table_with_sample_data',
+    'get_img_platform_info'  # ADDED: Platform info function
 ]
