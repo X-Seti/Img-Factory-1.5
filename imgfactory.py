@@ -271,7 +271,7 @@ class IMGFactory(QMainWindow):
 
         # Core data
         self.current_img: Optional[IMGFile] = None
-        #self.current_col: Optional =
+        self.current_col: Optional[COLFile] = None
         self.open_files = {}  # Dict to store open files {tab_index: file_info}
         self.tab_counter = 0  # Counter for unique tab IDs
 
@@ -1000,7 +1000,7 @@ class IMGFactory(QMainWindow):
 
 
     def load_file_unified(self, file_path: str): #vers 8
-        """Unified file loader for IMG and COL files - FIXED TABLE STRUCTURE"""
+        """Unified file loader for IMG and COL files"""
         try:
             if not file_path or not os.path.exists(file_path):
                 self.log_message("❌ File not found")
@@ -1010,7 +1010,7 @@ class IMGFactory(QMainWindow):
             file_name = os.path.basename(file_path)
 
             if file_ext == 'img':
-                # IMG file loading - FIXED with proper table setup
+                # IMG file loading - tab hang issues
                 self.log_message(f"📁 Loading IMG file: {file_name}")
 
                 try:
@@ -1025,8 +1025,9 @@ class IMGFactory(QMainWindow):
                         self.log_message(f"❌ Failed to open IMG file: {img_file.get_error()}")
                         return False
 
-                    # Set as current IMG file
-                    self.current_img = img_file
+                    # Set as current IMG file #hangs after second img added?
+                    self._load_img_file_in_new_tab(file_path)
+                    #self.current_img = img_file
 
                     # CRITICAL: Setup IMG table structure (6 columns)
                     if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
@@ -1045,6 +1046,7 @@ class IMGFactory(QMainWindow):
                         table.setColumnWidth(5, 150)  # Info
 
                     # Populate table with IMG data using proper method
+
                     populate_img_table(table, img_file)
 
                     # Update window title
@@ -1169,7 +1171,7 @@ class IMGFactory(QMainWindow):
         """Update UI when no IMG file is loaded"""
         # Clear current data
         self.current_img = None
-        #self.current_col = None  # Also clear COL
+        self.current_col = None  # Also clear COL
 
         # Update window title
         self.setWindowTitle("IMG Factory 1.5")
