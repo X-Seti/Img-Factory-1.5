@@ -76,6 +76,7 @@ from core.rw_versions import get_rw_version_name
 from core.right_click_actions import integrate_right_click_actions
 from core.shortcuts import setup_all_shortcuts
 from core.integration import integrate_complete_core_system
+from core.connections import connect_all_buttons_safely
 
 #gui-layout
 
@@ -299,12 +300,17 @@ class IMGFactory(QMainWindow):
         # Initialize UI (but without menu creation in gui_layout)
         self._create_ui()
         self._restore_settings()
+        connect_all_buttons_safely(self)
         self.setup_missing_utility_functions()
 
         # Setup close manager for tab handling
         install_close_functions(self)
+
+
+
         install_img_table_populator(self)
         self.setup_col_integration()
+
 
         #integrate_right_click_actions(self)
         integrate_unknown_rw_detection(self)
@@ -548,45 +554,6 @@ class IMGFactory(QMainWindow):
             return False
 
 
-    def _update_button_states(self, has_selection):
-        """Update button enabled/disabled states based on selection"""
-        # Enable/disable buttons based on selection and loaded IMG
-        has_img = self.current_img is not None
-        has_col = self.current_col is not None
-
-        # Log the button state changes for debugging
-        self.log_message(f"Button states updated: selection={has_selection}, img_loaded={has_img}, col_loaded={has_col}")
-
-        # Find buttons in GUI layout and update their states
-        # These buttons need both an IMG and selection
-        selection_dependent_buttons = [
-            'export_btn', 'export_selected_btn', 'remove_btn', 'remove_selected_btn', 'reload_btn',
-            'extract_btn', 'quick_export_btn'
-        ]
-
-        for btn_name in selection_dependent_buttons:
-            if hasattr(self.gui_layout, btn_name):
-                button = getattr(self.gui_layout, btn_name)
-                if hasattr(button, 'setEnabled'):
-                    # Enable for IMG files with selection, disable for COL files
-                    button.setEnabled(has_selection and has_img and not has_col)
-
-        # These buttons only need an IMG (no selection required) - DISABLE for COL
-        img_dependent_buttons = [
-            'import_btn', 'import_files_btn', 'rebuild_btn', 'close_btn',
-            'validate_btn', 'refresh_btn',  'reload_btn'
-        ]
-
-        for btn_name in img_dependent_buttons:
-            if hasattr(self.gui_layout, btn_name):
-                button = getattr(self.gui_layout, btn_name)
-                if hasattr(button, 'setEnabled'):
-                    # Special handling for rebuild - disable for COL files
-                    if btn_name == 'rebuild_btn':
-                        button.setEnabled(has_img and not has_col)
-                    else:
-                        button.setEnabled(has_img or has_col)
-
     def _update_status_from_signal(self, message): #vers 3
         """Update status from unified signal system"""
         # Update status bar if available
@@ -628,6 +595,135 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Error setting up COL integration: {str(e)}")
             return False
+
+    def _update_ui_for_loaded_col(self): #vers 1
+        """Update UI when COL file is loaded - Uses proper methods/populate_col_table.py"""
+        if not hasattr(self, 'current_col') or not self.current_col:
+            self.log_message("⚠️ _update_ui_for_loaded_col called but no current_col")
+            return
+
+        try:
+            # Update window title
+            if hasattr(self.current_col, 'file_path'):
+                file_name = os.path.basename(self.current_col.file_path)
+                self.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
+
+            # Use proper COL table population from methods/
+            if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
+                try:
+                    # Import the proper COL table functions
+                    from methods.populate_col_table import setup_col_table_structure, populate_table_with_col_data_debug
+
+                    # Setup COL table structure (proper headers and widths)
+                    setup_col_table_structure(self)
+
+                    # Populate with actual COL data using the methods system
+                    populate_table_with_col_data_debug(self, self.current_col)
+
+                    model_count = len(self.current_col.models) if hasattr(self.current_col, 'models') else 0
+                    self.log_message(f"📋 COL table populated with {model_count} models")
+
+                except ImportError as e:
+                    self.log_message(f"⚠️ COL methods not available: {str(e)}")
+                    # Fallback to basic display
+                    self._basic_col_table_fallback(file_name)
+
+            # Update status
+            if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'show_progress'):
+                self.gui_layout.show_progress(-1, "COL loaded")
+
+            self.log_message("✅ COL UI updated successfully")
+
+        except Exception as e:
+            self.log_message(f"❌ Error updating COL UI: {str(e)}")
+
+
+    def _basic_col_table_fallback(self, file_name): #vers 1
+        """Basic COL table fallback when methods/ not available"""
+        table = self.gui_layout.table
+
+        # Setup basic COL structure
+        col_headers = ["Model Name", "Type", "Version", "Size", "Spheres", "Boxes", "Faces", "Info"]
+        table.setColumnCount(len(col_headers))
+        table.setHorizontalHeaderLabels(col_headers)
+
+        # Set COL column widths
+        table.setColumnWidth(0, 200)  # Model Name
+        table.setColumnWidth(1, 80)   # Type
+        table.setColumnWidth(2, 80)   # Version
+        table.setColumnWidth(3, 100)  # Size
+        table.setColumnWidth(4, 80)   # Spheres
+        table.setColumnWidth(5, 80)   # Boxes
+        table.setColumnWidth(6, 80)   # Faces
+        table.setColumnWidth(7, 150)  # Info
+
+        # Basic placeholder row
+        table.setRowCount(1)
+        table.setItem(0, 0, QTableWidgetItem(file_name))
+        table.setItem(0, 1, QTableWidgetItem("COL"))
+        table.setItem(0, 2, QTableWidgetItem("Unknown"))
+        table.setItem(0, 3, QTableWidgetItem("N/A"))
+        table.setItem(0, 4, QTableWidgetItem("N/A"))
+        table.setItem(0, 5, QTableWidgetItem("N/A"))
+        table.setItem(0, 6, QTableWidgetItem("N/A"))
+        table.setItem(0, 7, QTableWidgetItem("COL loaded - methods/ not available"))
+
+        self.log_message("⚠️ Using basic COL fallback display")
+
+
+    # FIX: Close manager tab widget issue
+    def fix_close_manager_tab_reference(main_window): #vers 1
+        """Fix close manager missing main_tab_widget reference"""
+        try:
+            if hasattr(main_window, 'close_manager'):
+                # Add missing reference
+                main_window.close_manager.main_tab_widget = main_window.main_tab_widget
+                main_window.log_message("✅ Close manager tab reference fixed")
+                return True
+        except Exception as e:
+            main_window.log_message(f"❌ Close manager fix failed: {str(e)}")
+        return False
+
+
+    def add_update_button_states_stub(main_window): #vers 1
+        """Add stub for _update_button_states to prevent selection callback errors"""
+        def _update_button_states_stub(has_selection):
+            """Stub for button state updates - handled by connections.py"""
+            pass  # Do nothing - connections.py handles this
+
+        main_window._update_button_states = _update_button_states_stub
+        main_window.log_message("✅ Button states stub added")
+
+
+    # MASTER FIX FUNCTION
+    def apply_quick_fixes(main_window): #vers 2
+        """Apply all quick fixes for missing methods"""
+        try:
+            fixes_applied = 0
+
+            # Fix 1: Add missing COL UI update method (uses proper methods/)
+            if not hasattr(main_window, '_update_ui_for_loaded_col'):
+                setattr(main_window, '_update_ui_for_loaded_col',
+                    lambda: _update_ui_for_loaded_col(main_window))
+                setattr(main_window, '_basic_col_table_fallback',
+                    lambda file_name: _basic_col_table_fallback(main_window, file_name))
+                fixes_applied += 1
+
+            # Fix 2: Fix close manager tab reference
+            if fix_close_manager_tab_reference(main_window):
+                fixes_applied += 1
+
+            # Fix 3: Add button states stub
+            add_update_button_states_stub(main_window)
+            fixes_applied += 1
+
+            main_window.log_message(f"✅ Applied {fixes_applied} quick fixes")
+            return True
+
+        except Exception as e:
+            main_window.log_message(f"❌ Quick fixes failed: {str(e)}")
+            return False
+
 
     def handle_col_file_open(self, file_path: str):
         """Handle opening of COL files"""
@@ -817,32 +913,6 @@ class IMGFactory(QMainWindow):
             self.log_message("🔄 Updating UI for no file")
             self._update_ui_for_no_img()
 
-    def _update_ui_for_loaded_img(self): #vers 2
-        """Update UI when IMG file is loaded - FIXED: Complete implementation"""
-        if not self.current_img:
-            self.log_message("⚠️ _update_ui_for_loaded_img called but no current_img")
-            return
-
-        # Update window title
-        file_name = os.path.basename(self.current_img.file_path)
-        self.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
-
-        # Populate table with IMG entries
-        if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
-            self._populate_img_table(self.current_img)
-            self.log_message(f"📋 Table populated with {len(self.current_img.entries)} entries")
-        else:
-            self.log_message("⚠️ GUI layout or table not available")
-
-        # Update status
-        if hasattr(self, 'gui_layout'):
-            entry_count = len(self.current_img.entries) if self.current_img.entries else 0
-            self.gui_layout.show_progress(-1, f"Loaded: {entry_count} entries")
-
-            if hasattr(self.gui_layout, 'update_img_info'):
-                self.gui_layout.update_img_info(f"IMG: {file_name}")
-
-        self.log_message("✅ IMG UI updated successfully")
 
     def log_message(self, message): #vers 3
         #./gui/gui_layout.py - def log_message(self, message): #vers 3 #keep
@@ -999,6 +1069,89 @@ class IMGFactory(QMainWindow):
             return False
 
 
+    def _on_img_loaded(self, img_file: IMGFile): #vers 5
+        """Handle IMG loading completion from background thread - FIXED"""
+        try:
+            # Store the loaded IMG file in tab system
+            current_index = self.main_tab_widget.currentIndex()
+
+            if current_index in self.open_files:
+                self.open_files[current_index]['file_object'] = img_file
+
+            # Set current IMG reference
+            self.current_img = img_file
+
+            # Update UI using fixed method
+            self._update_ui_for_loaded_img()
+
+            # Hide progress - CHECK if method exists first
+            if hasattr(self.gui_layout, 'hide_progress'):
+                self.gui_layout.hide_progress()
+            else:
+                self.log_message("⚠️ gui_layout.hide_progress not available")
+
+            # Log success
+            self.log_message(f"✅ Loaded: {os.path.basename(img_file.file_path)} ({len(img_file.entries)} entries)")
+
+        except Exception as e:
+            error_msg = f"Error processing loaded IMG: {str(e)}"
+            self.log_message(f"❌ {error_msg}")
+
+            # Hide progress - CHECK if method exists first
+            if hasattr(self.gui_layout, 'hide_progress'):
+                self.gui_layout.hide_progress()
+            else:
+                self.log_message("⚠️ gui_layout.hide_progress not available")
+
+            QMessageBox.critical(self, "IMG Processing Error", error_msg)
+
+
+    def _update_ui_for_loaded_img(self): #vers 3
+        """Update UI when IMG file is loaded - FIXED: Use standalone populate_img_table"""
+        if not self.current_img:
+            self.log_message("⚠️ _update_ui_for_loaded_img called but no current_img")
+            return
+
+        # Update window title
+        file_name = os.path.basename(self.current_img.file_path)
+        self.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
+
+        # Populate table with IMG entries using STANDALONE method
+        if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
+            # Import and use the standalone function from methods/
+            from methods.populate_img_table import populate_img_table
+
+            # Setup IMG table structure first
+            table = self.gui_layout.table
+            table.setColumnCount(6)
+            table.setHorizontalHeaderLabels([
+                "Name", "Type", "Size", "Offset", "RW Version", "Info"
+            ])
+            # Set IMG column widths
+            table.setColumnWidth(0, 200)  # Name
+            table.setColumnWidth(1, 80)   # Type
+            table.setColumnWidth(2, 100)  # Size
+            table.setColumnWidth(3, 100)  # Offset
+            table.setColumnWidth(4, 120)  # RW Version
+            table.setColumnWidth(5, 150)  # Info
+
+            # Populate table
+            populate_img_table(self.gui_layout.table, self.current_img)
+            self.log_message(f"📋 Table populated with {len(self.current_img.entries)} entries")
+        else:
+            self.log_message("⚠️ GUI layout or table not available")
+
+        # Update status
+        if hasattr(self, 'gui_layout'):
+            entry_count = len(self.current_img.entries) if self.current_img.entries else 0
+            self.gui_layout.show_progress(-1, f"Loaded: {entry_count} entries")
+
+            if hasattr(self.gui_layout, 'update_img_info'):
+                self.gui_layout.update_img_info(f"IMG: {file_name}")
+
+        self.log_message("✅ IMG UI updated successfully")
+
+
     def load_file_unified(self, file_path: str): #vers 8
         """Unified file loader for IMG and COL files"""
         try:
@@ -1012,7 +1165,8 @@ class IMGFactory(QMainWindow):
             if file_ext == 'img':
                 # IMG file loading - tab hang issues
                 self.log_message(f"📁 Loading IMG file: {file_name}")
-
+                self._load_img_file_in_new_tab(file_path)
+                return True
                 try:
                     # Import IMG loading components directly
                     from components.img_core_classes import IMGFile
@@ -1026,7 +1180,6 @@ class IMGFactory(QMainWindow):
                         return False
 
                     # Set as current IMG file #hangs after second img added?
-                    self._load_img_file_in_new_tab(file_path)
                     #self.current_img = img_file
 
                     # CRITICAL: Setup IMG table structure (6 columns)
@@ -1216,41 +1369,6 @@ class IMGFactory(QMainWindow):
         else:
             self.log_message(f"Progress: {progress}% - {status}")
 
-    def _on_img_loaded(self, img_file: IMGFile): #vers 4
-        """Handle successful IMG loading"""
-        try:
-            # Store the loaded IMG file
-            current_index = self.main_tab_widget.currentIndex()
-
-            if current_index in self.open_files:
-                self.open_files[current_index]['file_object'] = img_file
-
-            # Set current IMG reference
-            self.current_img = img_file
-
-            # Update UI
-            self._update_ui_for_loaded_img()
-
-            # Hide progress - CHECK if method exists first
-            if hasattr(self.gui_layout, 'hide_progress'):
-                self.gui_layout.hide_progress()
-            else:
-                self.log_message("⚠️ gui_layout.hide_progress not available")
-
-            # Log success
-            self.log_message(f"✅ Loaded: {os.path.basename(img_file.file_path)} ({len(img_file.entries)} entries)")
-
-        except Exception as e:
-            error_msg = f"Error processing loaded IMG: {str(e)}"
-            self.log_message(f"❌ {error_msg}")
-
-            # Hide progress - CHECK if method exists first
-            if hasattr(self.gui_layout, 'hide_progress'):
-                self.gui_layout.hide_progress()
-            else:
-                self.log_message("⚠️ gui_layout.hide_progress not available")
-
-            QMessageBox.critical(self, "IMG Processing Error", error_msg)
 
 
     def get_entry_rw_version(self, entry, extension): #vers 3
