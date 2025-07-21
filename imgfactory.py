@@ -299,6 +299,7 @@ class IMGFactory(QMainWindow):
         # Initialize UI (but without menu creation in gui_layout)
         self._create_ui()
         self._restore_settings()
+        self.setup_missing_utility_functions()
 
         # Setup close manager for tab handling
         install_close_functions(self)
@@ -351,6 +352,7 @@ class IMGFactory(QMainWindow):
         setup_complete_col_integration(self)
         self.load_col_file_safely = lambda file_path: load_col_file_safely(self, file_path)
 
+        integrate_right_click_actions(self)
 
         # Log startup
         self.log_message("IMG Factory 1.5 initialized")
@@ -487,11 +489,70 @@ class IMGFactory(QMainWindow):
             self.log_message(f"Selected {selection_count} entries")
 
 
+    def setup_missing_utility_functions(self):
+        """Add missing utility functions that selection callbacks need"""
+
+        # Simple file type detection functions - MISSING FUNCTIONS
+        self.has_col = lambda name: name.lower().endswith('.col') if name else False
+        self.has_dff = lambda name: name.lower().endswith('.dff') if name else False
+        self.has_txd = lambda name: name.lower().endswith('.txd') if name else False
+        self.get_entry_type = lambda name: name.split('.')[-1].upper() if name and '.' in name else "Unknown"
+
+        self.log_message("✅ Missing utility functions added")
+
+
+    # INTEGRATION FIX for imgfactory.py:
+    def fix_selection_callback_functions(main_window):
+        """Add missing selection callback functions to main window"""
+        try:
+            # Add the missing has_* functions
+            main_window.has_col = has_col
+            main_window.has_dff = has_dff
+            main_window.has_txd = has_txd
+            main_window.get_entry_type = get_entry_type
+
+            # Add other common utility functions that might be missing
+            def get_selected_entry_name():
+                """Get name of currently selected entry"""
+                try:
+                    if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+                        table = main_window.gui_layout.table
+                        current_row = table.currentRow()
+                        if current_row >= 0:
+                            name_item = table.item(current_row, 0)
+                            if name_item:
+                                return name_item.text()
+                    return None
+                except:
+                    return None
+
+            def get_selected_entries_count():
+                """Get count of selected entries"""
+                try:
+                    if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+                        table = main_window.gui_layout.table
+                        return len(table.selectedItems())
+                    return 0
+                except:
+                    return 0
+
+            # Add utility functions to main window
+            main_window.get_selected_entry_name = get_selected_entry_name
+            main_window.get_selected_entries_count = get_selected_entries_count
+
+            main_window.log_message("✅ Selection callback functions fixed")
+            return True
+
+        except Exception as e:
+            main_window.log_message(f"❌ Selection callback fix failed: {e}")
+            return False
+
+
     def _update_button_states(self, has_selection):
         """Update button enabled/disabled states based on selection"""
         # Enable/disable buttons based on selection and loaded IMG
         has_img = self.current_img is not None
-        #has_col = self.current_col is not None
+        has_col = self.current_col is not None
 
         # Log the button state changes for debugging
         self.log_message(f"Button states updated: selection={has_selection}, img_loaded={has_img}, col_loaded={has_col}")

@@ -10,7 +10,8 @@ import mimetypes
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 from PyQt6.QtWidgets import QMenu
-from PyQt6.QtGui import QAction, QContextMenuEvent
+from PyQt6.QtCore import pyqtSignal, QMimeData, Qt, QThread, QTimer, QSettings
+from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent, QFont, QIcon, QPixmap, QShortcut
 
 print(f"[DEBUG] gui_context calling: with args={Path}")
 
