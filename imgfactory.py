@@ -58,7 +58,10 @@ from components.img_core_classes import (
     TabFilterWidget, integrate_filtering, create_entries_table_panel)
 from components.col_loader import load_col_file_safely
 from components.rw_unknown_snapshot import integrate_unknown_rw_detection
-
+from components.col_integration_main import integrate_complete_col_system
+from components.col_functions import setup_complete_col_integration
+from components.col_debug_functions import set_col_debug_enabled
+from components.col_parsing_functions import load_col_file_safely
 
 #core
 from core.close_func import install_close_functions, setup_close_manager
@@ -73,7 +76,6 @@ from core.rw_versions import get_rw_version_name
 from core.right_click_actions import integrate_right_click_actions
 from core.shortcuts import setup_all_shortcuts
 from core.integration import integrate_complete_core_system
-
 
 #gui-layout
 
@@ -301,6 +303,8 @@ class IMGFactory(QMainWindow):
         # Setup close manager for tab handling
         install_close_functions(self)
         install_img_table_populator(self)
+        self.setup_col_integration()
+
         #integrate_right_click_actions(self)
         integrate_unknown_rw_detection(self)
 
@@ -341,6 +345,11 @@ class IMGFactory(QMainWindow):
         # Apply theme
         if hasattr(self.app_settings, 'themes'):
             apply_theme_to_app(QApplication.instance(), self.app_settings)
+
+        from components.col_functions import setup_complete_col_integration
+        from components.col_parsing_functions import load_col_file_safely
+        setup_complete_col_integration(self)
+        self.load_col_file_safely = lambda file_path: load_col_file_safely(self, file_path)
 
 
         # Log startup
@@ -526,6 +535,80 @@ class IMGFactory(QMainWindow):
         # Also update GUI layout status if available
         if hasattr(self.gui_layout, 'status_label'):
             self.gui_layout.status_label.setText(message)
+
+    def setup_col_integration(self):
+        """Setup complete COL integration with IMG Factory"""
+        try:
+            self.log_message("🛡️ Setting up COL integration...")
+
+            # Enable COL debug based on main debug state
+            if hasattr(self, 'debug_enabled') and self.debug_enabled:
+                set_col_debug_enabled(True)
+            else:
+                set_col_debug_enabled(False)
+
+            # Setup complete COL integration
+            success = setup_complete_col_integration(self)
+
+            if success:
+                self.log_message("✅ COL integration completed successfully")
+
+                # Add COL file loading capability
+                self.load_col_file_safely = lambda file_path: load_col_file_safely(self, file_path)
+
+                # Mark COL as available
+                self.col_integration_active = True
+
+            else:
+                self.log_message("❌ COL integration failed")
+
+            return success
+
+        except Exception as e:
+            self.log_message(f"❌ Error setting up COL integration: {str(e)}")
+            return False
+
+    def handle_col_file_open(self, file_path: str):
+        """Handle opening of COL files"""
+        try:
+            if file_path.lower().endswith('.col'):
+                self.log_message(f"📂 Loading COL file: {os.path.basename(file_path)}")
+
+                if hasattr(self, 'load_col_file_safely'):
+                    success = self.load_col_file_safely(file_path)
+                    if success:
+                        self.log_message("✅ COL file loaded successfully")
+                    else:
+                        self.log_message("❌ Failed to load COL file")
+                    return success
+                else:
+                    self.log_message("❌ COL integration not available")
+                    return False
+
+            return False
+
+        except Exception as e:
+            self.log_message(f"❌ Error handling COL file: {str(e)}")
+            return False
+
+    def open_col_file_dialog(self):
+        """Open COL file dialog"""
+        try:
+            if hasattr(self, 'load_col_file_safely'):
+                file_path, _ = QFileDialog.getOpenFileName(
+                    self, "Open COL File", "", "COL Files (*.col);;All Files (*)"
+                )
+
+                if file_path:
+                    return self.handle_col_file_open(file_path)
+            else:
+                QMessageBox.warning(self, "COL Support", "COL integration not available")
+
+            return False
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to open COL file: {str(e)}")
+            return False
 
     def refresh_table(self): #vers 4 -
         #./core/utils.py - def refresh_table(main_window):
@@ -828,27 +911,118 @@ class IMGFactory(QMainWindow):
             self.log_message(f"❌ Error detecting file type: {str(e)}")
             return "UNKNOWN"
 
-
-    def load_file_unified(self, file_path: str): #vers 2
-        """Unified file loader with proper type detection"""
+    def get_current_file_type(main_window) -> str: #vers 1
+        """Get the current file type (IMG or COL)"""
         try:
-            file_type = self._detect_file_type(file_path)
-
-            if file_type == "IMG":
-                self.log_message(f"📁 Loading IMG: {os.path.basename(file_path)}")
-                self._load_img_file_in_new_tab(file_path)
-            elif file_type == "COL":
-                self.log_message(f"🔧 Loading COL: {os.path.basename(file_path)}")
-                self._load_col_file_safely(file_path)
+            if hasattr(main_window, 'current_col') and main_window.current_col:
+                return 'COL'
+            elif hasattr(main_window, 'current_img') and main_window.current_img:
+                return 'IMG'
             else:
-                self.log_message(f"❌ Unsupported file type: {file_path}")
-                QMessageBox.warning(self, "Unsupported File",
-                                  f"File type not supported: {os.path.basename(file_path)}")
+                return 'UNKNOWN'
+        except:
+            return 'UNKNOWN'
+
+    def has_col_file_loaded(main_window) -> bool: #vers 1
+        """Check if a COL file is currently loaded - REPLACES has_col"""
+        try:
+            return hasattr(main_window, 'current_col') and main_window.current_col is not None
+        except:
+            return False
+
+    def has_img_file_loaded(main_window) -> bool: #vers 1
+        """Check if an IMG file is currently loaded"""
+        try:
+            return hasattr(main_window, 'current_img') and main_window.current_img is not None
+        except:
+            return False
+
+
+    def load_file_unified(self, file_path: str): #vers 8
+        """Unified file loader for IMG and COL files - FIXED TABLE STRUCTURE"""
+        try:
+            if not file_path or not os.path.exists(file_path):
+                self.log_message("❌ File not found")
+                return False
+
+            file_ext = file_path.lower().split('.')[-1]
+            file_name = os.path.basename(file_path)
+
+            if file_ext == 'img':
+                # IMG file loading - FIXED with proper table setup
+                self.log_message(f"📁 Loading IMG file: {file_name}")
+
+                try:
+                    # Import IMG loading components directly
+                    from components.img_core_classes import IMGFile
+                    from methods.populate_img_table import populate_img_table
+
+                    # Create IMG file object
+                    img_file = IMGFile(file_path)
+
+                    if not img_file.open():
+                        self.log_message(f"❌ Failed to open IMG file: {img_file.get_error()}")
+                        return False
+
+                    # Set as current IMG file
+                    self.current_img = img_file
+
+                    # CRITICAL: Setup IMG table structure (6 columns)
+                    if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
+                        table = self.gui_layout.table
+                        # Reset to IMG structure
+                        table.setColumnCount(6)
+                        table.setHorizontalHeaderLabels([
+                            "Name", "Type", "Size", "Offset", "RW Version", "Info"
+                        ])
+                        # Set IMG column widths
+                        table.setColumnWidth(0, 200)  # Name
+                        table.setColumnWidth(1, 80)   # Type
+                        table.setColumnWidth(2, 100)  # Size
+                        table.setColumnWidth(3, 100)  # Offset
+                        table.setColumnWidth(4, 120)  # RW Version
+                        table.setColumnWidth(5, 150)  # Info
+
+                    # Populate table with IMG data using proper method
+                    populate_img_table(table, img_file)
+
+                    # Update window title
+                    self.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
+
+                    # Update info panel/status
+                    entry_count = len(img_file.entries) if img_file.entries else 0
+                    file_size = os.path.getsize(file_path)
+
+                    self.log_message(f"✅ IMG file loaded: {entry_count} entries")
+                    return True
+
+                except Exception as img_error:
+                    self.log_message(f"❌ Error loading IMG file: {str(img_error)}")
+                    return False
+
+            elif file_ext == 'col':
+                # COL file loading (unchanged - working correctly)
+                if hasattr(self, 'load_col_file_safely'):
+                    self.log_message(f"🛡️ Loading COL file: {file_name}")
+                    success = self.load_col_file_safely(file_path)
+                    if success:
+                        self.log_message("✅ COL file loaded successfully")
+                    else:
+                        self.log_message("❌ Failed to load COL file")
+                    return success
+                else:
+                    self.log_message("❌ COL integration not available")
+                    return False
+
+            else:
+                self.log_message(f"❌ Unsupported file type: {file_ext}")
+                return False
 
         except Exception as e:
-            error_msg = f"Error loading file: {str(e)}"
-            self.log_message(f"❌ {error_msg}")
-            QMessageBox.critical(self, "File Load Error", error_msg)
+            self.log_message(f"❌ Error loading file: {str(e)}")
+            import traceback
+            traceback.print_exc()  # Debug info
+            return False
 
 
     def _load_img_file_in_new_tab(self, file_path): #vers 3

@@ -1,121 +1,502 @@
-#this belongs in components/col_integration_main.py - Version: 1
-# X-Seti - July17 2025 - IMG Factory 1.5 - COL Integration Main
-# Uses IMG debug system for COL integration
+#this belongs in components/col_integration_main.py - Version: 6
+# X-Seti - July20 2025 - IMG Factory 1.5 - COL Integration Main
+# Complete COL integration for IMG Factory using IMG debug system
 
 """
-COL Integration Main
-Integrates all COL functionality into the main IMG Factory interface using IMG debug system
+COL Integration Main - Complete COL system integration
+Integrates all COL functionality into IMG Factory with menu, tabs, and context menus
 """
 
 import os
-import sys
-from typing import Optional, List, Dict, Any
+import tempfile
+from typing import Optional
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
-    QMenuBar, QMenu, QMessageBox, QFileDialog, QTabWidget,
-    QTableWidget, QTableWidgetItem, QPushButton, QLabel,
-    QHeaderView, QAbstractItemView, QDialog, QTextEdit
+    QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QTabWidget,
+    QMessageBox, QFileDialog, QDialog, QTextEdit
 )
-from PyQt6.QtCore import QThread, pyqtSignal, QTimer, Qt
-from PyQt6.QtGui import QAction, QContextMenuEvent, QIcon, QShortcut, QKeySequence, QFont
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QAction, QFont
 
-# Import COL classes with IMG debug system
-from components.col_core_classes import COLFile, COLModel, COLVersion
-from components.col_debug_functions import col_debug_log, is_col_debug_enabled, debug_col_loading_process
-from components.col_parsing_functions import COLParser
+# Import IMG debug system and COL components
 from components.img_debug_functions import img_debugger
+from components.col_debug_functions import col_debug_log
+from components.col_core_classes import COLFile, COLModel, COLVersion
 
 ##Methods list -
+# add_col_context_menu_items
 # add_col_file_detection
+# add_col_menu
+# add_col_tab
 # add_col_tools_menu
 # analyze_col_from_img
 # create_col_editor_action
 # create_col_file_dialog
+# create_new_col_file
+# detect_col_version_from_data
+# edit_col_from_img
 # export_col_to_img_format
+# integrate_col_functionality
 # integrate_complete_col_system
+# open_col_batch_processor
+# open_col_editor_with_file
+# open_col_file_dialog
 # setup_col_debug_for_main_window
 # setup_col_integration_full
 # setup_threaded_col_loading
 
-def add_col_file_detection(img_factory_instance): #vers 1
-    """Add COL file type detection to IMG entries using IMG debug system"""
+def integrate_col_functionality(img_factory_instance): #vers 1
+    """Main function to integrate all COL functionality into IMG Factory using IMG debug system"""
     try:
-        col_debug_log(img_factory_instance, "Setting up COL file detection in IMG entries", 'COL_INTEGRATION')
+        img_debugger.debug("Starting COL functionality integration")
         
-        # Enhance the file type detection in the entries table
-        if hasattr(img_factory_instance, 'populate_entries_table'):
-            original_populate = img_factory_instance.populate_entries_table
-            
-            def enhanced_populate_entries_table():
-                # Call original method
-                result = original_populate()
+        # Add COL menu to menu bar
+        if add_col_menu(img_factory_instance):
+            img_debugger.debug("COL menu added successfully")
+        
+        # Add COL tab to main interface
+        if add_col_tab(img_factory_instance):
+            img_debugger.debug("COL tab added successfully")
+        
+        # Add COL context menu items to IMG entries
+        if add_col_context_menu_items(img_factory_instance):
+            img_debugger.debug("COL context menu items added successfully")
+        
+        # Add COL file type detection
+        if add_col_file_detection(img_factory_instance):
+            img_debugger.debug("COL file detection added successfully")
+        
+        img_debugger.success("COL functionality integrated successfully!")
+        return True
+        
+    except Exception as e:
+        img_debugger.error(f"Error integrating COL functionality: {e}")
+        return False
+
+def add_col_menu(img_factory_instance): #vers 1
+    """Add COL menu to the main menu bar using IMG debug system"""
+    try:
+        menubar = img_factory_instance.menuBar()
+        
+        # Create COL menu
+        col_menu = menubar.addMenu("🔧 COL")
+        
+        # File operations
+        open_col_action = QAction("📂 Open COL File", img_factory_instance)
+        open_col_action.setShortcut("Ctrl+Shift+O")
+        open_col_action.triggered.connect(lambda: open_col_file_dialog(img_factory_instance))
+        col_menu.addAction(open_col_action)
+        
+        new_col_action = QAction("🆕 New COL File", img_factory_instance)
+        new_col_action.triggered.connect(lambda: create_new_col_file(img_factory_instance))
+        col_menu.addAction(new_col_action)
+        
+        col_menu.addSeparator()
+        
+        # COL Editor
+        editor_action = QAction("✏️ COL Editor", img_factory_instance)
+        editor_action.setShortcut("Ctrl+E")
+        editor_action.triggered.connect(lambda: create_col_editor_action(img_factory_instance))
+        col_menu.addAction(editor_action)
+        
+        col_menu.addSeparator()
+        
+        # Batch operations
+        from components.col_utilities import analyze_col_file_dialog
+        
+        batch_process_action = QAction("⚙️ Batch Processor", img_factory_instance)
+        batch_process_action.triggered.connect(lambda: open_col_batch_processor(img_factory_instance))
+        col_menu.addAction(batch_process_action)
+        
+        analyze_action = QAction("📊 Analyze COL", img_factory_instance)
+        analyze_action.triggered.connect(lambda: analyze_col_file_dialog(img_factory_instance))
+        col_menu.addAction(analyze_action)
+        
+        col_menu.addSeparator()
+        
+        # Import/Export
+        import_to_img_action = QAction("📥 Import to IMG", img_factory_instance)
+        import_to_img_action.triggered.connect(lambda: QMessageBox.information(img_factory_instance, "Import COL", "COL import functionality will be available soon."))
+        col_menu.addAction(import_to_img_action)
+        
+        export_from_img_action = QAction("📤 Export from IMG", img_factory_instance)
+        export_from_img_action.triggered.connect(lambda: QMessageBox.information(img_factory_instance, "Export COL", "COL export functionality will be available soon."))
+        col_menu.addAction(export_from_img_action)
+        
+        # Store reference to COL menu
+        img_factory_instance.col_menu = col_menu
+        
+        return True
+        
+    except Exception as e:
+        img_debugger.error(f"Error adding COL menu: {e}")
+        return False
+
+def add_col_tab(img_factory_instance): #vers 1
+    """Add COL tab to the main interface using IMG debug system"""
+    try:
+        # Check if main interface has a tab widget
+        if not hasattr(img_factory_instance, 'main_tab_widget'):
+            # Create tab widget if it doesn't exist
+            central_widget = img_factory_instance.centralWidget()
+            if central_widget:
+                # Replace central widget with tab widget
+                old_layout = central_widget.layout()
                 
-                # Add COL detection to entries
-                if hasattr(img_factory_instance, 'current_img') and img_factory_instance.current_img:
-                    for entry in img_factory_instance.current_img.entries:
+                img_factory_instance.main_tab_widget = QTabWidget()
+                
+                # Move existing content to first tab
+                if old_layout:
+                    img_tab = QWidget()
+                    img_tab.setLayout(old_layout)
+                    img_factory_instance.main_tab_widget.addTab(img_tab, "📁 IMG Files")
+                
+                # Set new layout
+                new_layout = QVBoxLayout(central_widget)
+                new_layout.addWidget(img_factory_instance.main_tab_widget)
+        
+        # Create COL tab
+        col_tab = QWidget()
+        col_layout = QVBoxLayout(col_tab)
+        
+        # Create COL interface
+        col_splitter = QSplitter(Qt.Orientation.Horizontal)
+        
+        # Left panel - COL file list
+        from components.col_functions import COLListWidget
+        col_list_widget = COLListWidget()
+        col_splitter.addWidget(col_list_widget)
+        
+        # Right panel - COL model details
+        from components.col_functions import COLModelDetailsWidget
+        col_details_widget = COLModelDetailsWidget()
+        col_splitter.addWidget(col_details_widget)
+        
+        # Set splitter sizes
+        col_splitter.setSizes([400, 300])
+        
+        col_layout.addWidget(col_splitter)
+        
+        # Add COL tab
+        img_factory_instance.main_tab_widget.addTab(col_tab, "🔧 COL Files")
+        
+        # Store references
+        img_factory_instance.col_list_widget = col_list_widget
+        img_factory_instance.col_details_widget = col_details_widget
+        
+        return True
+        
+    except Exception as e:
+        img_debugger.error(f"Error adding COL tab: {e}")
+        return False
+
+def add_col_context_menu_items(img_factory_instance): #vers 1
+    """Add COL-specific context menu items to IMG entries using IMG debug system"""
+    try:
+        # Use existing context menu system from gui.gui_context
+        if hasattr(img_factory_instance, 'gui_layout') and hasattr(img_factory_instance.gui_layout, 'table'):
+            from gui.gui_context import add_col_context_menu_to_entries_table
+            return add_col_context_menu_to_entries_table(img_factory_instance)
+        else:
+            img_debugger.warning("No entries table available for COL context menu")
+            return False
+            
+    except Exception as e:
+        img_debugger.error(f"Error adding COL context menu items: {e}")
+        return False
+
+def add_col_file_detection(img_factory_instance): #vers 1
+    """Add COL file type detection using IMG debug system"""
+    try:
+        # Store original populate function if it exists
+        if hasattr(img_factory_instance, 'populate_table_original'):
+            # Already patched
+            return True
+        
+        # Find the populate table function
+        populate_func = None
+        if hasattr(img_factory_instance, 'gui_layout') and hasattr(img_factory_instance.gui_layout, 'populate_table'):
+            populate_func = img_factory_instance.gui_layout.populate_table
+        elif hasattr(img_factory_instance, 'populate_table'):
+            populate_func = img_factory_instance.populate_table
+        
+        if populate_func:
+            # Store original function
+            img_factory_instance.populate_table_original = populate_func
+            
+            # Create enhanced version
+            def enhanced_populate_entries_table(img_file):
+                # Call original function
+                result = img_factory_instance.populate_table_original(img_file)
+                
+                # Add COL detection
+                if img_file and img_file.entries:
+                    for entry in img_file.entries:
                         if entry.name.lower().endswith('.col'):
-                            col_debug_log(img_factory_instance, f"Detected COL file: {entry.name}", 'COL_DETECTION')
+                            # Add COL version detection
+                            try:
+                                col_data = entry.get_data()
+                                if col_data:
+                                    version_info = detect_col_version_from_data(col_data)
+                                    if version_info:
+                                        # Update entry display with COL info
+                                        pass  # Could enhance table display here
+                            except:
+                                pass  # Ignore detection errors
                 
                 return result
             
-            img_factory_instance.populate_entries_table = enhanced_populate_entries_table
-            col_debug_log(img_factory_instance, "COL file detection integrated", 'COL_INTEGRATION', 'SUCCESS')
-            return True
+            # Replace function
+            if hasattr(img_factory_instance, 'gui_layout'):
+                img_factory_instance.gui_layout.populate_table = enhanced_populate_entries_table
+            else:
+                img_factory_instance.populate_table = enhanced_populate_entries_table
             
-    except Exception as e:
-        col_debug_log(img_factory_instance, f"Error setting up COL detection: {e}", 'COL_INTEGRATION', 'ERROR')
-        return False
-
-def analyze_col_from_img(main_window, entry_name: str): #vers 1
-    """Analyze COL file from IMG entry using IMG debug system"""
-    try:
-        col_debug_log(main_window, f"Analyzing COL file: {entry_name}", 'COL_ANALYSIS')
-        
-        if not main_window.current_img:
-            col_debug_log(main_window, "No IMG file loaded", 'COL_ANALYSIS', 'ERROR')
-            return False
-        
-        # Find the COL entry
-        col_entry = None
-        for entry in main_window.current_img.entries:
-            if entry.name == entry_name:
-                col_entry = entry
-                break
-        
-        if not col_entry:
-            col_debug_log(main_window, f"COL entry not found: {entry_name}", 'COL_ANALYSIS', 'ERROR')
-            return False
-        
-        # Extract and analyze COL data
-        col_data = col_entry.get_data()
-        if not col_data:
-            col_debug_log(main_window, f"Could not extract COL data from {entry_name}", 'COL_ANALYSIS', 'ERROR')
-            return False
-        
-        # Create temporary COL file for analysis
-        col_parser = COLParser()
-        col_parser.set_debug(is_col_debug_enabled())
-        
-        analysis_result = col_parser.parse_col_data(col_data)
-        
-        # Show analysis results
-        if analysis_result:
-            info_text = f"COL Analysis: {entry_name}\n"
-            info_text += f"Size: {len(col_data):,} bytes\n"
-            info_text += f"Models: {analysis_result.get('model_count', 0)}\n"
-            info_text += f"Version: {analysis_result.get('version', 'Unknown')}\n"
-            
-            QMessageBox.information(main_window, "COL Analysis", info_text)
-            col_debug_log(main_window, f"COL analysis completed for {entry_name}", 'COL_ANALYSIS', 'SUCCESS')
+            img_debugger.debug("COL file detection integrated")
             return True
         else:
-            col_debug_log(main_window, f"COL analysis failed for {entry_name}", 'COL_ANALYSIS', 'ERROR')
+            img_debugger.warning("No populate table function found for COL detection")
             return False
             
     except Exception as e:
-        col_debug_log(main_window, f"Error analyzing COL: {e}", 'COL_ANALYSIS', 'ERROR')
+        img_debugger.error(f"Error adding COL file detection: {e}")
         return False
 
+def detect_col_version_from_data(data: bytes) -> Optional[dict]: #vers 1
+    """Detect COL version and basic info from raw data"""
+    if len(data) < 8:
+        return None
+    
+    try:
+        # Check signature
+        signature = data[:4]
+        version = 0
+        models = 0
+        
+        if signature == b'COLL':
+            version = 1
+        elif signature == b'COL\x02':
+            version = 2
+        elif signature == b'COL\x03':
+            version = 3
+        elif signature == b'COL\x04':
+            version = 4
+        else:
+            return None
+        
+        # Count models (simplified)
+        offset = 0
+        while offset < len(data) - 8:
+            if data[offset:offset+4] in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
+                models += 1
+                # Skip to next potential model
+                try:
+                    import struct
+                    size = struct.unpack('<I', data[offset+4:offset+8])[0]
+                    offset += size + 8
+                except:
+                    break
+            else:
+                break
+        
+        return {
+            'version': version,
+            'models': max(1, models),  # At least 1 model
+            'size': len(data)
+        }
+        
+    except Exception:
+        return None
+
+# COL operation functions
+def open_col_file_dialog(img_factory_instance): #vers 1
+    """Open COL file dialog using IMG debug system"""
+    try:
+        file_path, _ = QFileDialog.getOpenFileName(
+            img_factory_instance, "Open COL File", "", "COL Files (*.col);;All Files (*)"
+        )
+        
+        if file_path:
+            img_debugger.debug(f"Selected COL file: {os.path.basename(file_path)}")
+            
+            if hasattr(img_factory_instance, 'col_list_widget'):
+                img_factory_instance.col_list_widget.load_col_from_path(file_path)
+                # Switch to COL tab
+                if hasattr(img_factory_instance, 'main_tab_widget'):
+                    img_factory_instance.main_tab_widget.setCurrentIndex(1)  # COL tab
+            else:
+                # Fallback to standalone editor
+                from components.col_editor import open_col_editor
+                open_col_editor(img_factory_instance, file_path)
+        
+        return file_path is not None
+        
+    except Exception as e:
+        img_debugger.error(f"Error in COL file dialog: {e}")
+        return False
+
+def create_new_col_file(img_factory_instance): #vers 1
+    """Create new COL file using IMG debug system"""
+    try:
+        img_debugger.debug("Creating new COL file")
+        QMessageBox.information(img_factory_instance, "New COL", "New COL file creation coming soon!")
+        return True
+        
+    except Exception as e:
+        img_debugger.error(f"Error creating new COL file: {e}")
+        return False
+
+def create_col_editor_action(img_factory_instance): #vers 1
+    """Create COL editor action using IMG debug system"""
+    try:
+        from components.col_editor import open_col_editor
+        return open_col_editor(img_factory_instance)
+        
+    except Exception as e:
+        img_debugger.error(f"Error opening COL editor: {e}")
+        return False
+
+def open_col_batch_processor(img_factory_instance): #vers 1
+    """Open COL batch processor using IMG debug system"""
+    try:
+        from components.col_utilities import open_col_batch_processor
+        open_col_batch_processor(img_factory_instance)
+        return True
+        
+    except Exception as e:
+        img_debugger.error(f"Error opening COL batch processor: {e}")
+        return False
+
+def open_col_editor_with_file(img_factory_instance, col_file: COLFile): #vers 1
+    """Open COL editor with specific file using IMG debug system"""
+    try:
+        from components.col_editor import COLEditorDialog
+        editor = COLEditorDialog(img_factory_instance)
+        if col_file.file_path:
+            editor.load_col_file(col_file.file_path)
+        return editor.exec()
+        
+    except Exception as e:
+        img_debugger.error(f"Error opening COL editor with file: {e}")
+        return False
+
+def edit_col_from_img(img_factory_instance, row: int): #vers 1
+    """Edit COL file from IMG entry using IMG debug system"""
+    try:
+        if not hasattr(img_factory_instance, 'current_img') or not img_factory_instance.current_img:
+            return False
+        
+        if row < 0 or row >= len(img_factory_instance.current_img.entries):
+            return False
+        
+        entry = img_factory_instance.current_img.entries[row]
+        
+        # Extract COL data to temporary file
+        col_data = entry.get_data()
+        if col_data:
+            with tempfile.NamedTemporaryFile(suffix='.col', delete=False) as temp_file:
+                temp_file.write(col_data)
+                temp_path = temp_file.name
+            
+            # Open editor with temporary file
+            from components.col_editor import open_col_editor
+            result = open_col_editor(img_factory_instance, temp_path)
+            
+            # Clean up temporary file
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+            
+            return result
+        
+        return False
+        
+    except Exception as e:
+        img_debugger.error(f"Error editing COL from IMG: {e}")
+        QMessageBox.critical(img_factory_instance, "Error", f"Failed to edit COL: {str(e)}")
+        return False
+
+def analyze_col_from_img(img_factory_instance, row: int): #vers 1
+    """Analyze COL file from IMG entry using IMG debug system"""
+    try:
+        if not hasattr(img_factory_instance, 'current_img') or not img_factory_instance.current_img:
+            return False
+        
+        if row < 0 or row >= len(img_factory_instance.current_img.entries):
+            return False
+        
+        entry = img_factory_instance.current_img.entries[row]
+        col_data = entry.get_data()
+        
+        if col_data:
+            # Create temporary COL file for analysis
+            with tempfile.NamedTemporaryFile(suffix='.col', delete=False) as temp_file:
+                temp_file.write(col_data)
+                temp_path = temp_file.name
+            
+            try:
+                # Load and analyze COL file
+                col_file = COLFile(temp_path)
+                if col_file.load():
+                    # Generate analysis report
+                    analysis = []
+                    analysis.append(f"COL Analysis - {entry.name}")
+                    analysis.append("=" * 40)
+                    analysis.append(f"File Size: {len(col_data):,} bytes")
+                    analysis.append(f"Models: {len(col_file.models)}")
+                    analysis.append("")
+                    
+                    for i, model in enumerate(col_file.models):
+                        analysis.append(f"Model {i+1}: {model.name}")
+                        analysis.append(f"  Version: COL {model.version.value}")
+                        analysis.append(f"  Model ID: {model.model_id}")
+                        analysis.append(f"  Spheres: {len(model.spheres)}")
+                        analysis.append(f"  Boxes: {len(model.boxes)}")
+                        analysis.append(f"  Vertices: {len(model.vertices)}")
+                        analysis.append(f"  Faces: {len(model.faces)}")
+                        analysis.append("")
+                    
+                    # Show analysis dialog
+                    dialog = QDialog(img_factory_instance)
+                    dialog.setWindowTitle(f"COL Analysis - {entry.name}")
+                    dialog.setMinimumSize(600, 400)
+                    
+                    layout = QVBoxLayout(dialog)
+                    
+                    text_edit = QTextEdit()
+                    text_edit.setPlainText("\n".join(analysis))
+                    text_edit.setReadOnly(True)
+                    text_edit.setFont(QFont("Courier", 10))
+                    layout.addWidget(text_edit)
+                    
+                    from PyQt6.QtWidgets import QPushButton
+                    close_btn = QPushButton("Close")
+                    close_btn.clicked.connect(dialog.close)
+                    layout.addWidget(close_btn)
+                    
+                    dialog.exec()
+                    
+                    return True
+                else:
+                    QMessageBox.critical(img_factory_instance, "Analysis Error", 
+                                       f"Failed to load COL data: {col_file.load_error}")
+                    return False
+                    
+            finally:
+                # Clean up temporary file
+                try:
+                    os.unlink(temp_path)
+                except:
+                    pass
+        
+        return False
+        
+    except Exception as e:
+        img_debugger.error(f"Error analyzing COL from IMG: {e}")
+        QMessageBox.critical(img_factory_instance, "Error", f"Failed to analyze COL: {str(e)}")
+        return False
+
+# Integration support functions
 def add_col_tools_menu(main_window): #vers 1
     """Add COL tools menu to main window using IMG debug system"""
     try:
@@ -156,7 +537,7 @@ def add_col_tools_menu(main_window): #vers 1
         
         # COL settings
         col_settings_action = col_menu.addAction("COL Settings...")
-        col_settings_action.triggered.connect(lambda: main_window.toggle_col_debug())
+        col_settings_action.triggered.connect(lambda: toggle_col_debug_setting(main_window))
         
         col_debug_log(main_window, "COL tools menu added successfully", 'COL_INTEGRATION', 'SUCCESS')
         return True
@@ -181,7 +562,7 @@ def create_col_file_dialog(main_window): #vers 1
             col_debug_log(main_window, f"Selected COL file: {file_path}", 'COL_DIALOG')
             
             # Load COL file using core loader
-            from components.col_loader import load_col_file_safely
+            from components.col_parsing_functions import load_col_file_safely
             success = load_col_file_safely(main_window, file_path)
             
             if success:
@@ -198,91 +579,23 @@ def create_col_file_dialog(main_window): #vers 1
         col_debug_log(main_window, f"Error in COL file dialog: {e}", 'COL_DIALOG', 'ERROR')
         return False
 
-def create_col_editor_action(main_window): #vers 1
-    """Create COL editor action using IMG debug system"""
+def toggle_col_debug_setting(main_window): #vers 1
+    """Toggle COL debug setting using IMG debug system"""
     try:
-        col_debug_log(main_window, "Opening COL editor", 'COL_EDITOR')
+        from components.col_debug_functions import is_col_debug_enabled, set_col_debug_enabled
         
-        from components.col_editor import COLEditorDialog
+        current_state = is_col_debug_enabled()
+        new_state = not current_state
+        set_col_debug_enabled(new_state)
         
-        editor_dialog = COLEditorDialog(main_window)
-        result = editor_dialog.exec()
+        status = "enabled" if new_state else "disabled"
+        col_debug_log(main_window, f"COL debug {status}", 'COL_SETTINGS', 'SUCCESS')
+        QMessageBox.information(main_window, "COL Settings", f"COL debug output {status}")
         
-        if result:
-            col_debug_log(main_window, "COL editor completed successfully", 'COL_EDITOR', 'SUCCESS')
-        else:
-            col_debug_log(main_window, "COL editor cancelled", 'COL_EDITOR')
-        
-        return result
-        
-    except Exception as e:
-        col_debug_log(main_window, f"Error opening COL editor: {e}", 'COL_EDITOR', 'ERROR')
-        QMessageBox.critical(main_window, "Error", f"Failed to open COL editor: {str(e)}")
-        return False
-
-def open_col_batch_processor(main_window): #vers 1
-    """Open COL batch processor using IMG debug system"""
-    try:
-        col_debug_log(main_window, "Opening COL batch processor", 'COL_BATCH')
-        
-        from components.col_utilities import open_col_batch_proc_dialog
-        
-        result = open_col_batch_proc_dialog(main_window)
-        
-        if result:
-            col_debug_log(main_window, "COL batch processor completed", 'COL_BATCH', 'SUCCESS')
-        else:
-            col_debug_log(main_window, "COL batch processor cancelled", 'COL_BATCH')
-        
-        return result
-        
-    except Exception as e:
-        col_debug_log(main_window, f"Error in COL batch processor: {e}", 'COL_BATCH', 'ERROR')
-        return False
-
-def setup_threaded_col_loading(main_window): #vers 1
-    """Setup threaded COL loading using IMG debug system"""
-    try:
-        col_debug_log(main_window, "Setting up threaded COL loading", 'COL_THREADING')
-        
-        from components.col_threaded_loader import COLBackgroundLoader
-        
-        # Create background loader
-        col_loader = COLBackgroundLoader()
-        
-        # Connect signals
-        if hasattr(main_window, '_on_col_loaded'):
-            col_loader.col_loaded.connect(main_window._on_col_loaded)
-        
-        if hasattr(main_window, '_on_load_progress'):
-            col_loader.progress_updated.connect(main_window._on_load_progress)
-        
-        # Store reference
-        main_window.col_background_loader = col_loader
-        
-        col_debug_log(main_window, "Threaded COL loading setup complete", 'COL_THREADING', 'SUCCESS')
         return True
         
     except Exception as e:
-        col_debug_log(main_window, f"Error setting up threaded COL loading: {e}", 'COL_THREADING', 'ERROR')
-        return False
-
-def setup_col_debug_for_main_window(main_window): #vers 1
-    """Setup COL debug functionality for main window using IMG debug system"""
-    try:
-        from components.col_debug_functions import integrate_col_debug_with_main_window
-        
-        success = integrate_col_debug_with_main_window(main_window)
-        
-        if success:
-            col_debug_log(main_window, "COL debug system integrated with main window", 'COL_INTEGRATION', 'SUCCESS')
-        else:
-            col_debug_log(main_window, "COL debug integration failed", 'COL_INTEGRATION', 'ERROR')
-        
-        return success
-        
-    except Exception as e:
-        col_debug_log(main_window, f"Error setting up COL debug: {e}", 'COL_INTEGRATION', 'ERROR')
+        col_debug_log(main_window, f"Error toggling COL debug: {e}", 'COL_SETTINGS', 'ERROR')
         return False
 
 def export_col_to_img_format(main_window, col_file_path: str, output_img_path: str): #vers 1
@@ -363,105 +676,60 @@ def integrate_complete_col_system(main_window): #vers 1
         
         # Check settings for initial debug state
         try:
-            if hasattr(main_window, 'app_settings'):
-                debug_mode = main_window.app_settings.current_settings.get('debug_mode', False)
-                debug_categories = main_window.app_settings.current_settings.get('debug_categories', [])
-
-                # Enable COL debug only if debug mode is on AND COL categories are enabled
-                col_debug = debug_mode and any('COL' in cat for cat in debug_categories)
+            if hasattr(main_window, 'app_settings') and hasattr(main_window.app_settings, 'debug_enabled'):
                 from components.col_debug_functions import set_col_debug_enabled
-                set_col_debug_enabled(col_debug)
-
-                if col_debug:
-                    col_debug_log(main_window, "COL debug enabled from settings", 'COL_INTEGRATION')
-                else:
-                    col_debug_log(main_window, "COL debug disabled for performance", 'COL_INTEGRATION')
-            else:
-                # Default to disabled for performance
-                from components.col_debug_functions import set_col_debug_enabled
-                set_col_debug_enabled(False)
-                col_debug_log(main_window, "COL debug disabled (no settings)", 'COL_INTEGRATION')
-                
-        except Exception as e:
-            col_debug_log(main_window, f"Error checking settings: {e}", 'COL_INTEGRATION', 'WARNING')
-
-        # Setup full integration
-        success = setup_col_integration_full(main_window)
+                set_col_debug_enabled(main_window.app_settings.debug_enabled)
+        except:
+            pass
         
-        if success:
-            # Add COL file detection
-            add_col_file_detection(main_window)
-            
-            # Add show COL info function
-            def show_col_info_func():
-                """Show COL file information"""
-                if not main_window.current_col:
-                    QMessageBox.information(main_window, "COL Info", "No COL file loaded")
-                    return
-                
-                try:
-                    file_name = getattr(main_window.current_col, 'file_path', 'Unknown')
-                    file_name = os.path.basename(file_name) if file_name != 'Unknown' else 'Unknown'
-                    
-                    model_count = len(main_window.current_col.models) if hasattr(main_window.current_col, 'models') else 0
-                    
-                    file_size = getattr(main_window.current_col, 'file_size', 0)
-                    file_size_str = f"{file_size:,} bytes ({file_size / (1024*1024):.2f} MB)" if file_size else "Unknown"
-                    
-                    version = getattr(main_window.current_col, 'version', 'Unknown')
-                    version_str = str(version) if version else "Unknown"
-                    
-                    # Get detailed statistics if available
-                    stats = {}
-                    if hasattr(main_window.current_col, 'get_collision_statistics'):
-                        try:
-                            stats = main_window.current_col.get_collision_statistics()
-                        except:
-                            pass
-                    
-                    # Build info text
-                    info_text = f"COL File: {file_name}\n"
-                    info_text += f"Models: {model_count}\n"
-                    info_text += f"Size: {file_size_str}\n"
-                    info_text += f"Version: {version_str}\n"
-                    
-                    if stats:
-                        info_text += "\nDetailed Statistics:\n"
-                        for key, value in stats.items():
-                            if isinstance(value, int) and key.lower() in ['vertices', 'faces', 'spheres', 'boxes']:
-                                info_text += f"- {key}: {value:,}\n"
-                            else:
-                                info_text += f"- {key}: {str(value)}\n"
-                    
-                    QMessageBox.information(main_window, "COL File Information", info_text)
-                    col_debug_log(main_window, "COL info displayed successfully", 'COL_INFO', 'SUCCESS')
-                    
-                except Exception as e:
-                    col_debug_log(main_window, f"Error showing COL info: {str(e)}", 'COL_INFO', 'ERROR')
-                    QMessageBox.critical(main_window, "Error", f"Error getting COL information: {str(e)}")
-            
-            main_window.show_col_info = show_col_info_func
-            
-            col_debug_log(main_window, "Complete COL system integrated successfully", 'COL_INTEGRATION', 'SUCCESS')
-            return True
-        else:
-            col_debug_log(main_window, "Complete COL system integration failed", 'COL_INTEGRATION', 'ERROR')
-            return False
+        # Setup full integration
+        return setup_col_integration_full(main_window)
         
     except Exception as e:
-        col_debug_log(main_window, f"Error integrating complete COL system: {str(e)}", 'COL_INTEGRATION', 'ERROR')
+        col_debug_log(main_window, f"Complete COL integration failed: {e}", 'COL_INTEGRATION', 'ERROR')
         return False
 
-# Export main functions
-__all__ = [
-    'add_col_file_detection',
-    'add_col_tools_menu', 
-    'analyze_col_from_img',
-    'create_col_editor_action',
-    'create_col_file_dialog',
-    'export_col_to_img_format',
-    'integrate_complete_col_system',
-    'setup_col_debug_for_main_window',
-    'setup_col_integration_full',
-    'setup_threaded_col_loading'
-]
+def setup_col_debug_for_main_window(main_window): #vers 1
+    """Setup COL debug functionality for main window using IMG debug system"""
+    try:
+        from components.col_debug_functions import set_col_debug_enabled
+        
+        # Enable COL debug based on main debug state
+        if hasattr(main_window, 'debug_enabled') and main_window.debug_enabled:
+            set_col_debug_enabled(True)
+        else:
+            set_col_debug_enabled(False)
+        
+        col_debug_log(main_window, "COL debug system integrated with main window", 'COL_INTEGRATION', 'SUCCESS')
+        return True
+        
+    except Exception as e:
+        col_debug_log(main_window, f"Error setting up COL debug: {e}", 'COL_INTEGRATION', 'ERROR')
+        return False
+
+def setup_threaded_col_loading(main_window): #vers 1
+    """Setup threaded COL loading using IMG debug system"""
+    try:
+        col_debug_log(main_window, "Setting up threaded COL loading", 'COL_THREADING')
+        
+        from components.col_threaded_loader import COLBackgroundLoader
+        
+        # Create background loader
+        col_loader = COLBackgroundLoader()
+        
+        # Connect signals
+        if hasattr(main_window, '_on_col_loaded'):
+            col_loader.load_complete.connect(main_window._on_col_loaded)
+        
+        if hasattr(main_window, '_on_load_progress'):
+            col_loader.progress_update.connect(main_window._on_load_progress)
+        
+        # Store reference
+        main_window.col_background_loader = col_loader
+        
+        col_debug_log(main_window, "Threaded COL loading setup complete", 'COL_THREADING', 'SUCCESS')
+        return True
+        
+    except Exception as e:
+        col_debug_log(main_window, f"Error setting up threaded COL loading: {e}", 'COL_THREADING', 'ERROR')
+        return False

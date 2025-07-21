@@ -1,398 +1,258 @@
 #this belongs in methods/populate_col_table.py - Version: 5
-# X-Seti - July18 2025 - Img Factory 1.5 - Updated COL Table Population
+# X-Seti - July20 2025 - IMG Factory 1.5 - COL Table Population Methods
+# Table population methods for COL files using IMG debug system
 
 """
-COL Table Population Methods - UPDATED VERSION
-Consolidated and updated table population functions using working parser
-Integrates with fixed COL parsing system
+COL Table Population Methods
+Handles populating the main table widget with COL file data
 """
 
 import os
-from typing import Optional, Any, Dict
+from typing import Optional
 from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
 from PyQt6.QtCore import Qt
 
+# Import IMG debug system and COL classes
+from components.img_debug_functions import img_debugger
+from components.col_core_classes import COLFile, COLModel
+
 ##Methods list -
-# create_table_item
-# format_collision_display  
-# format_file_size
-# populate_col_table
+# load_col_file_object
+# load_col_file_safely
+# populate_table_with_col_data_debug
+# setup_col_tab
+# setup_col_tab_integration
 # setup_col_table_structure
 
-def create_table_item(text: str, data=None) -> QTableWidgetItem: #vers 5
-    """Create standardized table widget item with optional data"""
-    item = QTableWidgetItem(str(text))
-    item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
-    if data is not None:
-        item.setData(Qt.ItemDataRole.UserRole, data)
-    return item
-
-def format_collision_display(model_info: Dict[str, Any]) -> str: #vers 5
-    """Format collision types for table display"""
-    if not isinstance(model_info, dict):
-        return "Unknown"
-    
-    collision_types = model_info.get('collision_types', [])
-    if not collision_types:
-        return "No collision"
-    
-    return ", ".join(collision_types)
-
-def setup_col_table_structure(main_window) -> bool: #vers 5
-    """Setup table structure for COL data (7 columns)"""
+def setup_col_table_structure(main_window): #vers 1
+    """Setup table structure for COL data display"""
     try:
         if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            main_window.log_message("⚠️ Main table not available")
+            img_debugger.error("No table widget available for COL setup")
             return False
-
+        
         table = main_window.gui_layout.table
         
-        # Configure table for COL data (7 columns)
-        table.setColumnCount(7)
-        table.setHorizontalHeaderLabels([
-            "Model", "Type", "Size", "Surfaces", "Vertices", "Collision", "Status"
-        ])
-
-        # Set column widths
-        table.setColumnWidth(0, 60)   # Model
-        table.setColumnWidth(1, 80)   # Type  
-        table.setColumnWidth(2, 100)  # Size
-        table.setColumnWidth(3, 80)   # Surfaces
-        table.setColumnWidth(4, 80)   # Vertices
-        table.setColumnWidth(5, 120)  # Collision
-        table.setColumnWidth(6, 80)   # Status
-
-        # Apply scoped COL table styling
-        table.setObjectName("col_table")
-        col_table_style = """
-            QTableWidget#col_table {
-                background-color: #F8F9FA;
-                gridline-color: #E0E0E0;
-                selection-background-color: #E3F2FD;
-            }
-            QTableWidget#col_table::item {
-                padding: 6px;
-                border: none;
-            }
-            QTableWidget#col_table::item:alternate {
-                background-color: #F5F5F5;
-            }
-            QTableWidget#col_table::item:hover {
-                background-color: #E3F2FD;
-            }
-            QTableWidget#col_table::item:selected {
-                background-color: #2196F3;
-                color: white;
-            }
-        """
-
-        # Apply table styling
-        table.setStyleSheet(col_table_style)
-
-        # Apply header styling
-        header = table.horizontalHeader()
-        header.setStyleSheet("""
-            QHeaderView::section {
-                background-color: #BBDEFB;
-                color: #1976D2;
-                font-weight: bold;
-                border: 1px solid #90CAF9;
-                padding: 6px;
-            }
-            QHeaderView::section:hover {
-                background-color: #90CAF9;
-            }
-        """)
-
-        # Clear existing data
-        table.setRowCount(0)
-
-        main_window.log_message("🔧 COL table structure configured")
+        # Setup COL-specific columns
+        col_headers = ["Model Name", "Type", "Version", "Size", "Spheres", "Boxes", "Faces", "Info"]
+        table.setColumnCount(len(col_headers))
+        table.setHorizontalHeaderLabels(col_headers)
+        
+        # Adjust column widths for COL data
+        table.setColumnWidth(0, 200)  # Model Name
+        table.setColumnWidth(1, 80)   # Type
+        table.setColumnWidth(2, 80)   # Version
+        table.setColumnWidth(3, 100)  # Size
+        table.setColumnWidth(4, 80)   # Spheres
+        table.setColumnWidth(5, 80)   # Boxes
+        table.setColumnWidth(6, 80)   # Faces
+        table.setColumnWidth(7, 150)  # Info
+        
+        img_debugger.debug("COL table structure setup complete")
         return True
-
+        
     except Exception as e:
-        main_window.log_message(f"⚠️ Error setting up COL table structure: {str(e)}")
+        img_debugger.error(f"Error setting up COL table structure: {e}")
         return False
 
-def populate_col_table(main_window, col_file: Any) -> bool: #vers 5
-    """Populate table with COL data using working parser - UPDATED VERSION"""
+def populate_table_with_col_data_debug(main_window, col_file: COLFile): #vers 1
+    """Populate table with COL file data using IMG debug system"""
     try:
-        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            main_window.log_message("⚠️ Main table not available")
+        if not col_file or not col_file.models:
+            img_debugger.warning("No COL data to populate")
             return False
-
+        
+        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
+            img_debugger.error("No table widget available")
+            return False
+        
         table = main_window.gui_layout.table
-
+        models = col_file.models
+        
+        img_debugger.debug(f"Populating table with {len(models)} COL models")
+        
         # Setup table structure first
-        if not setup_col_table_structure(main_window):
-            return False
-
-        # Use the working parser from fixed files
-        try:
-            from components.col_parsing_functions import COLParser, format_model_collision_types
-
-            main_window.log_message("🔧 Using working COL parser for real collision data")
+        setup_col_table_structure(main_window)
+        
+        # Set row count
+        table.setRowCount(len(models))
+        
+        # Populate each model
+        for row, model in enumerate(models):
+            # Model Name (Column 0)
+            model_name = model.name or f"Model_{row+1}"
+            table.setItem(row, 0, QTableWidgetItem(model_name))
             
-            # Create parser instance
-            parser = COLParser(debug=True)
-            parsed_models = parser.parse_col_file_structure(col_file.file_path)
-
-            if not parsed_models:
-                main_window.log_message("⚠️ Parser found no models")
-                table.setRowCount(0)
-                return True
-
-            # Set row count
-            table.setRowCount(len(parsed_models))
-            main_window.log_message(f"🔧 Populating table with {len(parsed_models)} COL models")
-
-            # Populate rows with real parsed collision data
-            for i, model_info in enumerate(parsed_models):
-                try:
-                    # Model index
-                    table.setItem(i, 0, create_table_item(str(i)))
-                    
-                    # Type (COL version)
-                    version = model_info.get('version', 1)
-                    version_str = f"COL{version}"
-                    table.setItem(i, 1, create_table_item(version_str))
-                    
-                    # Size (collision object count)
-                    total_objects = (model_info.get('spheres', 0) + 
-                                   model_info.get('boxes', 0) + 
-                                   model_info.get('vertices', 0))
-                    size_str = f"{total_objects} objects"
-                    table.setItem(i, 2, create_table_item(size_str))
-                    
-                    # Surfaces (face count)
-                    faces = model_info.get('faces', 0)
-                    table.setItem(i, 3, create_table_item(str(faces)))
-                    
-                    # Vertices
-                    vertices = model_info.get('vertices', 0)
-                    table.setItem(i, 4, create_table_item(str(vertices)))
-                    
-                    # Collision types
-                    collision_display = format_model_collision_types(model_info)
-                    table.setItem(i, 5, create_table_item(collision_display))
-                    
-                    # Status
-                    status = "✅ Loaded"
-                    table.setItem(i, 6, create_table_item(status))
-                    
-                except Exception as e:
-                    main_window.log_message(f"⚠️ Error populating row {i}: {str(e)}")
-                    # Fill with error data
-                    table.setItem(i, 0, create_table_item(str(i)))
-                    table.setItem(i, 1, create_table_item("ERROR"))
-                    table.setItem(i, 2, create_table_item("0 objects"))
-                    table.setItem(i, 3, create_table_item("0"))
-                    table.setItem(i, 4, create_table_item("0"))
-                    table.setItem(i, 5, create_table_item("Parse Error"))
-                    table.setItem(i, 6, create_table_item("❌ Error"))
-
-            main_window.log_message(f"✅ COL table populated with real data: {len(parsed_models)} models")
-            return True
-
-        except ImportError as e:
-            main_window.log_message(f"❌ Working COL parser not available: {str(e)}")
-            # Fallback to basic COL file data
-            return _populate_col_table_fallback(main_window, col_file)
-
+            # Type (Column 1)
+            table.setItem(row, 1, QTableWidgetItem("COL"))
+            
+            # Version (Column 2)
+            version_text = f"v{model.version.value}"
+            table.setItem(row, 2, QTableWidgetItem(version_text))
+            
+            # Size (Column 3) - Estimate based on data
+            sphere_count = len(model.spheres)
+            box_count = len(model.boxes)
+            vertex_count = len(model.vertices)
+            face_count = len(model.faces)
+            
+            estimated_size = (sphere_count * 20) + (box_count * 32) + (vertex_count * 12) + (face_count * 20)
+            size_text = f"{estimated_size:,} bytes" if estimated_size > 0 else "Unknown"
+            table.setItem(row, 3, QTableWidgetItem(size_text))
+            
+            # Spheres (Column 4)
+            table.setItem(row, 4, QTableWidgetItem(str(sphere_count)))
+            
+            # Boxes (Column 5)
+            table.setItem(row, 5, QTableWidgetItem(str(box_count)))
+            
+            # Faces (Column 6)
+            table.setItem(row, 6, QTableWidgetItem(str(face_count)))
+            
+            # Info (Column 7)
+            info_parts = []
+            if model.has_sphere_data:
+                info_parts.append("Spheres")
+            if model.has_box_data:
+                info_parts.append("Boxes")
+            if model.has_mesh_data:
+                info_parts.append("Mesh")
+            
+            info_text = ", ".join(info_parts) if info_parts else "Basic COL"
+            table.setItem(row, 7, QTableWidgetItem(info_text))
+        
+        # Enable sorting
+        table.setSortingEnabled(True)
+        
+        img_debugger.success(f"COL table populated with {len(models)} models")
+        return True
+        
     except Exception as e:
-        main_window.log_message(f"❌ Error populating COL table: {str(e)}")
+        img_debugger.error(f"Error populating COL table: {e}")
         return False
 
-def _populate_col_table_fallback(main_window, col_file) -> bool: #vers 5
-    """Fallback COL table population when parser unavailable"""
+def load_col_file_object(main_window, file_path: str) -> Optional[COLFile]: #vers 1
+    """Load COL file object using IMG debug system"""
     try:
-        table = main_window.gui_layout.table
-        main_window.log_message("⚠️ Using fallback COL table population")
-
-        if not hasattr(col_file, 'models') or not col_file.models:
-            table.setRowCount(0)
-            return True
-
-        table.setRowCount(len(col_file.models))
+        from components.col_validator import validate_col_file
         
-        for i, model in enumerate(col_file.models):
-            try:
-                # Basic model info
-                table.setItem(i, 0, create_table_item(str(i)))
-                table.setItem(i, 1, create_table_item("COL"))
-                table.setItem(i, 2, create_table_item("Unknown"))
-                table.setItem(i, 3, create_table_item("0"))
-                table.setItem(i, 4, create_table_item("0"))
-                table.setItem(i, 5, create_table_item("Parser unavailable"))
-                table.setItem(i, 6, create_table_item("⚠ Limited"))
-                
-            except Exception as e:
-                main_window.log_message(f"⚠️ Error in fallback row {i}: {str(e)}")
+        # Validate file first
+        if not validate_col_file(main_window, file_path):
+            return None
+        
+        img_debugger.debug(f"Loading COL file object: {os.path.basename(file_path)}")
+        
+        # Create and load COL file
+        col_file = COLFile(file_path)
+        
+        if col_file.load():
+            img_debugger.success(f"COL file loaded: {len(col_file.models)} models")
+            return col_file
+        else:
+            error_msg = col_file.load_error or "Unknown loading error"
+            img_debugger.error(f"COL file loading failed: {error_msg}")
+            return None
+            
+    except Exception as e:
+        img_debugger.error(f"Error loading COL file object: {e}")
+        return None
 
-        main_window.log_message(f"⚠️ COL table populated with fallback data: {len(col_file.models)} models")
+def load_col_file_safely(main_window, file_path: str) -> bool: #vers 1
+    """Load COL file safely with full error handling using IMG debug system"""
+    try:
+        img_debugger.debug(f"Starting safe COL file load: {os.path.basename(file_path)}")
+        
+        # Validate file first
+        from components.col_validator import validate_col_file
+        if not validate_col_file(main_window, file_path):
+            return False
+        
+        # Setup tab
+        tab_index = setup_col_tab(main_window, file_path)
+        if tab_index is None:
+            return False
+        
+        # Load COL file
+        col_file = load_col_file_object(main_window, file_path)
+        if col_file is None:
+            return False
+        
+        # Setup table structure for COL data
+        setup_col_table_structure(main_window)
+        
+        # Populate table with COL data
+        populate_table_with_col_data_debug(main_window, col_file)
+        
+        # Update main window state
+        main_window.current_col = col_file
+        main_window.open_files[tab_index]['file_object'] = col_file
+        
+        # Update info bar
+        from gui.gui_infobar import update_col_info_bar_enhanced
+        update_col_info_bar_enhanced(main_window, col_file, file_path)
+        
+        main_window.log_message(f"✅ COL file loaded: {os.path.basename(file_path)}")
+        return True
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Error loading COL file: {str(e)}")
+        return False
+
+def setup_col_tab(main_window, file_path: str) -> Optional[int]: #vers 1
+    """Setup or reuse tab for COL file"""
+    try:
+        current_index = main_window.main_tab_widget.currentIndex()
+        
+        # Check if current tab is empty
+        if not hasattr(main_window, 'open_files') or current_index not in main_window.open_files:
+            main_window.log_message("Using current tab for COL file")
+        else:
+            main_window.log_message("Creating new tab for COL file")
+            if hasattr(main_window, 'close_manager'):
+                main_window.close_manager.create_new_tab()
+                current_index = main_window.main_tab_widget.currentIndex()
+            else:
+                main_window.log_message("⚠️ Close manager not available")
+                return None
+        
+        # Setup tab info
+        file_name = os.path.basename(file_path)
+        file_name_clean = file_name[:-4] if file_name.lower().endswith('.col') else file_name
+        tab_name = f"🛡️ {file_name_clean}"
+        
+        # Store tab info
+        if not hasattr(main_window, 'open_files'):
+            main_window.open_files = {}
+        
+        main_window.open_files[current_index] = {
+            'type': 'COL',
+            'file_path': file_path,
+            'file_object': None,
+            'tab_name': tab_name
+        }
+        
+        # Update tab name
+        main_window.main_tab_widget.setTabText(current_index, tab_name)
+        
+        return current_index
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Error setting up COL tab: {str(e)}")
+        return None
+
+def setup_col_tab_integration(main_window): #vers 1
+    """Setup COL tab integration with main window"""
+    try:
+        # Add COL loading method to main window
+        main_window.load_col_file_safely = lambda file_path: load_col_file_safely(main_window, file_path)
+
+        # Add styling reset method
+        from core.tables_structure import reset_table_styling
+        main_window._reset_table_styling = lambda: reset_table_styling(main_window)
+
+        main_window.log_message("✅ COL tab integration ready")
         return True
 
     except Exception as e:
-        main_window.log_message(f"❌ Fallback population failed: {str(e)}")
+        main_window.log_message(f"❌ COL tab integration failed: {str(e)}")
         return False
-
-def populate_col_table_enhanced(main_window, col_file: Any) -> bool: #vers 5
-    """Enhanced COL table population with detailed statistics and advanced formatting"""
-    try:
-        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            main_window.log_message("⚠️ Main table not available")
-            return False
-
-        table = main_window.gui_layout.table
-        main_window.log_message("🔧 Using enhanced COL table population")
-
-        # Setup enhanced table structure 
-        if not setup_col_table_structure(main_window):
-            return False
-
-        # Try to use COLDisplayManager for advanced features
-        try:
-            from components.col_display import COLDisplayManager
-            
-            main_window.log_message("🎨 Using COLDisplayManager for enhanced display")
-            display_manager = COLDisplayManager(main_window)
-            success = display_manager.populate_col_table(col_file)
-            
-            if success:
-                main_window.log_message("✅ Enhanced COL table populated successfully")
-                return True
-            else:
-                main_window.log_message("⚠️ COLDisplayManager failed, falling back to standard population")
-                
-        except ImportError:
-            main_window.log_message("⚠️ COLDisplayManager not available, using enhanced standard population")
-
-        # Enhanced standard population (fallback)
-        return _populate_col_table_enhanced_standard(main_window, col_file)
-
-    except Exception as e:
-        main_window.log_message(f"❌ Enhanced COL table population failed: {str(e)}")
-        # Final fallback to basic population
-        return populate_col_table(main_window, col_file)
-
-def _populate_col_table_enhanced_standard(main_window, col_file) -> bool: #vers 5
-    """Enhanced standard population without COLDisplayManager dependency"""
-    try:
-        table = main_window.gui_layout.table
-
-        # Use the working parser for enhanced data
-        try:
-            from components.col_parsing_functions import COLParser, format_model_collision_types
-
-            parser = COLParser(debug=True)
-            parsed_models = parser.parse_col_file_structure(col_file.file_path)
-
-            if not parsed_models:
-                main_window.log_message("⚠️ Parser found no models")
-                table.setRowCount(0)
-                return True
-
-            table.setRowCount(len(parsed_models))
-            main_window.log_message(f"🎨 Enhanced population: {len(parsed_models)} models")
-
-            # Enhanced population with better formatting
-            for i, model_info in enumerate(parsed_models):
-                try:
-                    # Enhanced model name with index
-                    model_name = f"Model_{i+1}"
-                    if hasattr(col_file, 'models') and i < len(col_file.models):
-                        model = col_file.models[i]
-                        if hasattr(model, 'name') and model.name:
-                            model_name = model.name
-                    
-                    table.setItem(i, 0, create_table_item(model_name))
-                    
-                    # Enhanced type with detailed version
-                    version = model_info.get('version', 1)
-                    version_str = f"COL{version}"
-                    if version == 1:
-                        version_str += " (Legacy)"
-                    elif version >= 3:
-                        version_str += " (Modern)"
-                    table.setItem(i, 1, create_table_item(version_str))
-                    
-                    # Enhanced size calculation
-                    spheres = model_info.get('spheres', 0)
-                    boxes = model_info.get('boxes', 0) 
-                    vertices = model_info.get('vertices', 0)
-                    total_objects = spheres + boxes + vertices
-                    
-                    if total_objects > 0:
-                        size_str = f"{total_objects} obj"
-                        if spheres > 0 and boxes > 0 and vertices > 0:
-                            size_str += " (Mixed)"
-                        elif vertices > 0:
-                            size_str += " (Mesh)"
-                        else:
-                            size_str += " (Simple)"
-                    else:
-                        size_str = "No collision"
-                    table.setItem(i, 2, create_table_item(size_str))
-                    
-                    # Enhanced surface count
-                    faces = model_info.get('faces', 0)
-                    surface_str = str(faces) if faces > 0 else "None"
-                    table.setItem(i, 3, create_table_item(surface_str))
-                    
-                    # Enhanced vertex count with detail
-                    vertex_str = str(vertices) if vertices > 0 else "None"
-                    if vertices > 1000:
-                        vertex_str += " (Complex)"
-                    elif vertices > 100:
-                        vertex_str += " (Detailed)"
-                    table.setItem(i, 4, create_table_item(vertex_str))
-                    
-                    # Enhanced collision types display
-                    collision_display = format_model_collision_types(model_info)
-                    if not collision_display or collision_display == "No collision":
-                        collision_display = "❌ None"
-                    else:
-                        collision_display = f"✅ {collision_display}"
-                    table.setItem(i, 5, create_table_item(collision_display))
-                    
-                    # Enhanced status with more detail
-                    if total_objects > 0:
-                        if vertices > 0:
-                            status = "🎯 Mesh Ready"
-                        else:
-                            status = "🔘 Primitive"
-                    else:
-                        status = "⚠️ Empty"
-                    table.setItem(i, 6, create_table_item(status))
-                    
-                except Exception as e:
-                    main_window.log_message(f"⚠️ Error in enhanced row {i}: {str(e)}")
-                    # Enhanced error display
-                    table.setItem(i, 0, create_table_item(f"Model_{i+1}"))
-                    table.setItem(i, 1, create_table_item("❌ ERROR"))
-                    table.setItem(i, 2, create_table_item("Unknown"))
-                    table.setItem(i, 3, create_table_item("?"))
-                    table.setItem(i, 4, create_table_item("?"))
-                    table.setItem(i, 5, create_table_item("❌ Parse Error"))
-                    table.setItem(i, 6, create_table_item("💥 Failed"))
-
-            main_window.log_message(f"✅ Enhanced COL table populated: {len(parsed_models)} models")
-            return True
-
-        except ImportError as e:
-            main_window.log_message(f"❌ Enhanced parser not available: {str(e)}")
-            return _populate_col_table_fallback(main_window, col_file)
-
-    except Exception as e:
-        main_window.log_message(f"❌ Enhanced standard population failed: {str(e)}")
-        return False
-
-# Export functions
-__all__ = [
-    'populate_col_table',
-    'populate_col_table_enhanced',  # Added enhanced version
-    'setup_col_table_structure', 
-    'create_table_item',
-    'format_file_size',
-    'format_collision_display'
-]

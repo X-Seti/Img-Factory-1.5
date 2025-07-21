@@ -1,10 +1,10 @@
 #this belongs in components/col_loader.py - Version: 4
 # X-Seti - July20 2025 - IMG Factory 1.5 - COL Loading System Fixed
+# Fixed import issues - uses correct function names from ported files
 
 """
-COL Loading System - Fixed table structure conflicts
-Ensures COL files use proper table structure with IMG debug integration
-FIXED: Complete missing functions with existing method calls only
+COL Loading System - Fixed imports
+Uses correct function names from ported COL files
 """
 
 import os
@@ -12,161 +12,272 @@ from typing import Optional, Any
 from PyQt6.QtWidgets import QTableWidgetItem
 from PyQt6.QtCore import Qt
 
-# Import existing functions - NO NEW FUNCTIONS CREATED
+# Import IMG debug system
 from components.img_debug_functions import img_debugger
-from components.col_core_classes import COLFile
-from components.col_validator import validate_col_file
-from methods.populate_col_table import populate_col_table, setup_col_table_structure, create_table_item
-from core.tables_structure import reset_table_styling
 
-## Methods list -
+##Methods list -
+# create_table_item
 # load_col_file_safely
-# validate_col_file
-# setup_col_tab
 # load_col_file_object
 # populate_col_table
+# setup_col_tab
+# setup_col_table_structure
 # update_col_info_bar
-# create_table_item
+# validate_col_file
 
 def load_col_file_safely(main_window, file_path: str) -> bool: #vers 4
-    """Load COL file safely with proper validation and tab management - FIXED"""
+    """Load COL file safely with proper validation and tab management"""
     try:
         main_window.log_message(f"🔧 Loading COL: {os.path.basename(file_path)}")
         
-        # Step 1: Validate file - USE EXISTING FUNCTION
-        if not validate_col_file(main_window, file_path):
-            return False
-        
-        # Step 2: Setup tab - USE EXISTING FUNCTION
-        tab_index = setup_col_tab(main_window, file_path)
-        if tab_index is None:
-            return False
-        
-        # Step 3: Load COL file object - USE EXISTING FUNCTION
-        col_file = load_col_file_object(main_window, file_path)
-        if col_file is None:
-            return False
-        
-        # Step 4: Setup table structure - USE EXISTING FUNCTION
-        setup_col_table_structure(main_window)
-        
-        # Step 5: Populate table with COL data - USE EXISTING FUNCTION
-        if not populate_col_table(main_window, col_file):
-            main_window.log_message("❌ Failed to populate COL table")
-            return False
-        
-        # Step 6: Update main window state
-        main_window.current_col = col_file
-        if hasattr(main_window, 'open_files') and tab_index in main_window.open_files:
-            main_window.open_files[tab_index]['file_object'] = col_file
-        
-        # Step 7: Update info bar - USE EXISTING FUNCTION
-        update_col_info_bar(main_window, col_file, file_path)
-        
-        # Step 8: Reset table styling - USE EXISTING FUNCTION
-        reset_table_styling(main_window)
-        
-        main_window.log_message(f"✅ COL file loaded: {os.path.basename(file_path)}")
-        return True
+        # Use our ported COL parsing functions
+        from components.col_parsing_functions import load_col_file_safely as parse_load_col
+        return parse_load_col(main_window, file_path)
         
     except Exception as e:
-        main_window.log_message(f"❌ Error loading COL file: {str(e)}")
+        main_window.log_message(f"❌ Error in COL loading: {str(e)}")
         return False
 
-
-def setup_col_tab(main_window, file_path: str) -> Optional[int]: #vers 2
-    """Setup COL tab in main window - FIXED"""
+def validate_col_file(main_window, file_path: str) -> bool: #vers 4
+    """Validate COL file before loading"""
     try:
-        filename = os.path.basename(file_path)
+        from components.col_validator import validate_col_file as validator
+        return validator(main_window, file_path)
         
-        # Check if file is already open
-        if hasattr(main_window, 'open_files'):
-            for tab_index, file_info in main_window.open_files.items():
-                if file_info.get('file_path') == file_path:
-                    main_window.main_tab_widget.setCurrentIndex(tab_index)
-                    return tab_index
+    except ImportError:
+        # Fallback validation
+        if not os.path.exists(file_path):
+            main_window.log_message(f"❌ COL file not found: {file_path}")
+            return False
         
-        # Get current tab or create new one
-        current_index = main_window.main_tab_widget.currentIndex()
+        if not os.access(file_path, os.R_OK):
+            main_window.log_message(f"❌ Cannot read COL file: {file_path}")
+            return False
         
-        # Check if current tab is empty
-        if current_index not in main_window.open_files:
-            # Use current empty tab
-            tab_index = current_index
-        else:
-            # Create new tab
-            if hasattr(main_window, 'close_manager'):
-                main_window.close_manager.create_new_tab()
-            tab_index = main_window.main_tab_widget.currentIndex()
-        
-        # Store COL file info
-        tab_name = f"🔧 {filename[:-4] if filename.lower().endswith('.col') else filename}"
-        main_window.open_files[tab_index] = {
-            'type': 'COL',
-            'file_path': file_path,
-            'file_object': None,
-            'tab_name': tab_name
-        }
-        
-        # Update tab name
-        main_window.main_tab_widget.setTabText(tab_index, tab_name)
-        
-        return tab_index
-        
-    except Exception as e:
-        main_window.log_message(f"❌ Error setting up COL tab: {str(e)}")
-        return None
-
-
-def load_col_file_object(main_window, file_path: str) -> Optional[COLFile]: #vers 2
-    """Load COL file object using existing COL core classes - FIXED"""
-    try:
-        # Create COL file object - USE EXISTING COLFile CLASS
-        col_file = COLFile(file_path)
-        
-        # Load the file - USE EXISTING load() METHOD
-        if col_file.load():
-            main_window.log_message(f"✅ COL object loaded: {len(col_file.models)} models")
-            return col_file
-        else:
-            error_msg = col_file.load_error or "Unknown loading error"
-            main_window.log_message(f"❌ Failed to load COL file: {error_msg}")
-            return None
-            
-    except ImportError as e:
-        main_window.log_message(f"❌ COL core classes not available: {str(e)}")
-        return None
-    except Exception as e:
-        main_window.log_message(f"❌ Error loading COL file: {str(e)}")
-        return None
-
-
-def update_col_info_bar(main_window, col_file: Any, file_path: str) -> None: #vers 3
-    """Update info bar with COL file information - FIXED"""
-    try:
-        file_name = os.path.basename(file_path)
         file_size = os.path.getsize(file_path)
-        model_count = len(col_file.models) if hasattr(col_file, 'models') else 0
+        if file_size < 32:
+            main_window.log_message(f"❌ COL file too small ({file_size} bytes)")
+            return False
         
-        # Update window title
-        main_window.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
+        # Check COL signature
+        try:
+            with open(file_path, 'rb') as f:
+                signature = f.read(4)
+                if signature not in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
+                    main_window.log_message(f"❌ Invalid COL signature: {signature}")
+                    return False
+        except Exception as e:
+            main_window.log_message(f"❌ COL validation error: {str(e)}")
+            return False
         
-        # Update status bar if available
-        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'show_progress'):
-            size_text = f"{file_size // 1024}KB" if file_size >= 1024 else f"{file_size}B"
-            main_window.gui_layout.show_progress(-1, f"COL: {model_count} models ({size_text})")
-        
-        # Update info display if available
-        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'update_img_info'):
-            main_window.gui_layout.update_img_info(f"COL: {file_name}")
-        
-        main_window.log_message(f"✅ COL info bar updated: {file_name}")
-        
-    except Exception as e:
-        main_window.log_message(f"❌ Error updating COL info bar: {str(e)}")
+        return True
 
+def setup_col_tab(main_window, file_path: str) -> Optional[int]: #vers 4
+    """Setup or reuse tab for COL file"""
+    try:
+        from methods.populate_col_table import setup_col_tab as methods_setup_tab
+        return methods_setup_tab(main_window, file_path)
+        
+    except ImportError:
+        # Fallback implementation
+        try:
+            file_name = os.path.basename(file_path)
+            file_name_clean = file_name[:-4] if file_name.lower().endswith('.col') else file_name
+            
+            # Simple tab setup
+            if not hasattr(main_window, 'open_files'):
+                main_window.open_files = {}
+            
+            current_index = 0
+            main_window.open_files[current_index] = {
+                'file_path': file_path,
+                'type': 'COL',
+                'tab_name': f"🛡️ {file_name_clean}",
+                'file_object': None
+            }
+            
+            # Update window title
+            main_window.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
+            
+            return current_index
+            
+        except Exception as e:
+            main_window.log_message(f"❌ Error setting up COL tab: {str(e)}")
+            return None
 
-# Export functions - KEEP EXISTING INTERFACE
+def load_col_file_object(main_window, file_path: str) -> Optional[Any]: #vers 4
+    """Load COL file object"""
+    try:
+        from methods.populate_col_table import load_col_file_object as methods_load_object
+        return methods_load_object(main_window, file_path)
+        
+    except ImportError:
+        # Fallback implementation using core classes
+        try:
+            from components.col_core_classes import COLFile
+            
+            main_window.log_message("📖 Loading COL file data...")
+            col_file = COLFile(file_path)
+            
+            if not col_file.load():
+                error_details = getattr(col_file, 'load_error', 'Unknown loading error')
+                main_window.log_message(f"❌ Failed to load COL file: {error_details}")
+                return None
+            
+            model_count = len(col_file.models) if hasattr(col_file, 'models') else 0
+            main_window.log_message(f"✅ COL file loaded: {model_count} models")
+            return col_file
+            
+        except Exception as e:
+            main_window.log_message(f"❌ Error loading COL file: {str(e)}")
+            return None
+
+def setup_col_table_structure(main_window) -> bool: #vers 4
+    """Setup table structure for COL data"""
+    try:
+        from methods.populate_col_table import setup_col_table_structure as methods_setup_structure
+        return methods_setup_structure(main_window)
+        
+    except ImportError:
+        # Fallback implementation
+        try:
+            if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
+                return False
+            
+            table = main_window.gui_layout.table
+            
+            # COL-specific columns
+            col_headers = ["Model Name", "Type", "Version", "Size", "Spheres", "Boxes", "Faces", "Info"]
+            table.setColumnCount(len(col_headers))
+            table.setHorizontalHeaderLabels(col_headers)
+            
+            # Set column widths
+            table.setColumnWidth(0, 200)  # Model Name
+            table.setColumnWidth(1, 80)   # Type
+            table.setColumnWidth(2, 80)   # Version
+            table.setColumnWidth(3, 100)  # Size
+            table.setColumnWidth(4, 80)   # Spheres
+            table.setColumnWidth(5, 80)   # Boxes
+            table.setColumnWidth(6, 80)   # Faces
+            table.setColumnWidth(7, 150)  # Info
+            
+            return True
+            
+        except Exception as e:
+            main_window.log_message(f"❌ Error setting up COL table structure: {str(e)}")
+            return False
+
+def populate_col_table(main_window, col_file: Any) -> bool: #vers 4
+    """Populate table with COL data"""
+    try:
+        from methods.populate_col_table import populate_table_with_col_data_debug
+        return populate_table_with_col_data_debug(main_window, col_file)
+        
+    except ImportError:
+        # Fallback implementation
+        try:
+            if not col_file or not hasattr(col_file, 'models') or not col_file.models:
+                main_window.log_message("❌ No COL models to display")
+                return False
+            
+            if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
+                main_window.log_message("❌ No table widget available")
+                return False
+            
+            table = main_window.gui_layout.table
+            models = col_file.models
+            
+            # Set row count
+            table.setRowCount(len(models))
+            
+            # Populate each model
+            for row, model in enumerate(models):
+                # Model Name
+                model_name = getattr(model, 'name', f"Model_{row+1}")
+                table.setItem(row, 0, create_table_item(model_name))
+                
+                # Type
+                table.setItem(row, 1, create_table_item("COL"))
+                
+                # Version
+                version = getattr(model, 'version', None)
+                version_text = f"v{version.value}" if version else "Unknown"
+                table.setItem(row, 2, create_table_item(version_text))
+                
+                # Size
+                table.setItem(row, 3, create_table_item("Unknown"))
+                
+                # Spheres
+                sphere_count = len(getattr(model, 'spheres', []))
+                table.setItem(row, 4, create_table_item(str(sphere_count)))
+                
+                # Boxes
+                box_count = len(getattr(model, 'boxes', []))
+                table.setItem(row, 5, create_table_item(str(box_count)))
+                
+                # Faces
+                face_count = len(getattr(model, 'faces', []))
+                table.setItem(row, 6, create_table_item(str(face_count)))
+                
+                # Info
+                info_parts = []
+                if sphere_count > 0:
+                    info_parts.append("Spheres")
+                if box_count > 0:
+                    info_parts.append("Boxes")
+                if face_count > 0:
+                    info_parts.append("Mesh")
+                
+                info_text = ", ".join(info_parts) if info_parts else "Basic COL"
+                table.setItem(row, 7, create_table_item(info_text))
+            
+            # Enable sorting
+            table.setSortingEnabled(True)
+            
+            main_window.log_message(f"✅ COL table populated with {len(models)} models")
+            return True
+            
+        except Exception as e:
+            main_window.log_message(f"❌ Error populating COL table: {str(e)}")
+            return False
+
+def update_col_info_bar(main_window, col_file: Any, file_path: str) -> bool: #vers 4
+    """Update info bar with COL file information"""
+    try:
+        from gui.gui_infobar import update_col_info_bar_enhanced
+        update_col_info_bar_enhanced(main_window, col_file, file_path)
+        return True
+        
+    except ImportError:
+        # Fallback implementation
+        try:
+            file_name = os.path.basename(file_path)
+            file_size = os.path.getsize(file_path)
+            model_count = len(col_file.models) if hasattr(col_file, 'models') else 0
+            
+            # Update window title
+            main_window.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
+            
+            # Update info labels if they exist
+            if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'info_panel'):
+                info_panel = main_window.gui_layout.info_panel
+                if hasattr(info_panel, 'update_info'):
+                    info_panel.update_info(f"COL: {model_count} models", file_size)
+            
+            main_window.log_message(f"✅ COL info updated: {file_name} ({model_count} models)")
+            return True
+            
+        except Exception as e:
+            main_window.log_message(f"❌ Error updating COL info bar: {str(e)}")
+            return False
+
+def create_table_item(text: str) -> QTableWidgetItem: #vers 4
+    """Create a table widget item with text"""
+    item = QTableWidgetItem(str(text))
+    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)  # Make read-only
+    return item
+
+# Export functions
 __all__ = [
     'load_col_file_safely',
     'validate_col_file', 

@@ -113,6 +113,68 @@ class COLValidator:
         img_debugger.success(f"COL validation completed: {result.get_summary()}")
         return result
     
+    def _validate_file_size(self, file_path: str, result: COLValidationResult): #vers 2
+        """Validate COL file size - FIXED for multi-model archives"""
+        try:
+            actual_size = os.path.getsize(file_path)
+
+            with open(file_path, 'rb') as f:
+                # Read first model header
+                signature = f.read(4)
+                if len(signature) < 4:
+                    result.add_error("File too small for COL header")
+                    return
+
+                declared_size = struct.unpack('<I', f.read(4))[0]
+
+            # FIXED: Handle multi-model COL files
+            if signature in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
+                # For single model: declared_size + 8 should equal actual_size
+                expected_single = declared_size + 8
+
+                if actual_size == expected_single:
+                    result.add_info(f"File size matches single model: {actual_size} bytes")
+                elif actual_size > expected_single:
+                    # This is likely a multi-model COL archive
+                    model_count = self._count_col_models(file_path)
+                    if model_count > 1:
+                        result.add_info(f"Multi-model COL archive detected: {model_count} models, {actual_size} bytes")
+                    else:
+                        result.add_warning(f"Size mismatch: first model declares {declared_size}, actual file {actual_size}")
+                else:
+                    result.add_error(f"File truncated: expected {expected_single}, actual {actual_size}")
+            else:
+                result.add_error(f"Invalid COL signature: {signature}")
+
+        except Exception as e:
+            result.add_error(f"Error validating file size: {str(e)}")
+
+    def _count_col_models(self, file_path: str) -> int: #vers 1
+        """Count number of COL models in file"""
+        try:
+            model_count = 0
+            with open(file_path, 'rb') as f:
+                data = f.read()
+                offset = 0
+
+                while offset < len(data) - 8:
+                    signature = data[offset:offset+4]
+                    if signature in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
+                        model_count += 1
+                        try:
+                            # Read model size and skip to next model
+                            model_size = struct.unpack('<I', data[offset+4:offset+8])[0]
+                            offset += model_size + 8
+                        except:
+                            break
+                    else:
+                        offset += 1
+
+            return model_count
+
+        except Exception:
+            return 1  # Default to single model
+
     @staticmethod
     def _validate_col_format(data: bytes, result: COLValidationResult): #vers 1
         """Validate COL file format and signature"""

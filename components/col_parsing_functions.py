@@ -1,200 +1,99 @@
-#this belongs in components/col_parsing_functions.py - Version: 9
-# X-Seti - July18 2025 - Img Factory 1.5 - Fixed COL Parser with IMG Debug
+#this belongs in components/col_parsing_functions.py - Version: 5
+# X-Seti - July20 2025 - IMG Factory 1.5 - COL Parsing Functions
+# Complete COL parsing functions with safe parsing and IMG debug system
 
 """
-COL Parser - Complete collision file parsing using IMG debug system
-Handles all COL format versions (COL1/COL2/COL3/COL4) with working collision data parsing
-PORTED FROM WORKING OLD FILES - Updated debug system only
+COL Parsing Functions - Safe COL file parsing
+Provides safe collision file parsing with debug control and error handling
 """
 
 import struct
 import os
 from typing import Dict, List, Tuple, Optional
-
-# Use IMG debug system instead of broken COL debug
-try:
-    from components.img_debug_functions import img_debugger
-    debug_available = True
-except ImportError:
-    debug_available = False
-    print("⚠️ IMG debug system not available")
+from components.img_debug_functions import img_debugger
+from components.col_core_classes import is_col_debug_enabled
 
 ##Methods list -
-# _load_col_file
-# _setup_col_tab
-# setup_col_tab_integration
-# _validate_col_file
-# format_model_collision_types
-# get_model_collision_stats
-# parse_col_file_with_debug
+# load_col_file_safely
 # reset_table_styling
+# safe_parse_col_file_structure
+# safe_parse_single_model
+# setup_col_tab_integration
 
-##class COLParser: -
-#__init__
-# _calculate_model_end_offset
-# _is_multi_model_archive
-# _parse_collision_data
-# _parse_multi_model_archive
-# clear_debug_log
-# format_collision_types
-# get_debug_log
-# get_model_stats_by_index
-# log
-# parse_col_file_structure
-# parse_single_model
-# set_debug
-
-
-# Quick fix for COL loading hang - Add this to your COL parser
-
-def safe_parse_col_file_structure(self, file_path):
-    """Parse COL file with hang prevention - FIXED VERSION"""
+def load_col_file_safely(main_window, file_path): #vers 1
+    """Load COL file safely with proper tab management"""
     try:
-        with open(file_path, 'rb') as f:
-            data = f.read()
+        # Import required functions
+        from components.col_validator import validate_col_file
+        from methods.populate_col_table import setup_col_tab, load_col_file_object, setup_col_table_structure, populate_table_with_col_data_debug
+        from gui.gui_infobar import update_col_info_bar_enhanced
+        
+        # Validate file
+        if not validate_col_file(main_window, file_path):
+            return False
 
-        # Limit file size to prevent memory issues
-        if len(data) > 50 * 1024 * 1024:  # 50MB limit
-            self.log(f"COL file too large: {len(data)} bytes")
-            return []
+        # Setup tab
+        tab_index = setup_col_tab(main_window, file_path)
+        if tab_index is None:
+            return False
 
-        self.log(f"Parsing COL file: {os.path.basename(file_path)} ({len(data)} bytes)")
+        # Load COL file
+        col_file = load_col_file_object(main_window, file_path)
+        if col_file is None:
+            return False
 
-        models = []
-        offset = 0
-        model_index = 0
-        max_iterations = 500  # Safety limit
-        iteration_count = 0
+        # Setup table structure for COL data
+        setup_col_table_structure(main_window)
 
-        while offset < len(data) and iteration_count < max_iterations:
-            iteration_count += 1
+        # Populate table with COL data
+        populate_table_with_col_data_debug(main_window, col_file)
 
-            # CRITICAL: Safety checks
-            if offset + 32 > len(data):
-                self.log(f"Not enough data remaining: {len(data) - offset} bytes")
-                break
+        # Update main window state
+        main_window.current_col = col_file
+        main_window.open_files[tab_index]['file_object'] = col_file
 
-            # Parse this model with timeout protection
-            initial_offset = offset
-            model_info, new_offset = self.safe_parse_single_model(data, offset, model_index)
+        # Update info bar
+        update_col_info_bar_enhanced(main_window, col_file, file_path)
 
-            # CRITICAL: Check for infinite loop conditions
-            if new_offset <= initial_offset:
-                self.log(f"HANG PREVENTION: Offset didn't advance (was {initial_offset}, now {new_offset})")
-                break
-
-            if model_info is None:
-                self.log(f"Failed to parse model {model_index}, stopping")
-                break
-
-            models.append(model_info)
-            offset = new_offset
-            model_index += 1
-
-            self.log(f"Model {model_index - 1} parsed, next offset: {offset}")
-
-            # Additional safety checks
-            if model_index > 200:
-                self.log("Safety limit reached (200 models)")
-                break
-
-            if offset >= len(data):
-                self.log("Reached end of data")
-                break
-
-        if iteration_count >= max_iterations:
-            self.log("HANG PREVENTION: Maximum iterations reached")
-
-        self.log(f"Parsing complete: {len(models)} models found")
-        return models
+        main_window.log_message(f"✅ COL file loaded: {os.path.basename(file_path)}")
+        return True
 
     except Exception as e:
-        self.log(f"Error parsing COL file: {str(e)}")
-        return []
+        main_window.log_message(f"❌ Error loading COL file: {str(e)}")
+        return False
 
-def safe_parse_single_model(self, data, offset, model_index):
-    """Parse single model with hang prevention"""
+def reset_table_styling(main_window): #vers 1
+    """Reset table styling to default - moved to core/tables_structure.py"""
     try:
-        start_offset = offset
+        from core.tables_structure import reset_table_styling
+        reset_table_styling(main_window)
+        
+    except ImportError:
+        # Fallback implementation
+        try:
+            if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
+                return
 
-        # Read signature with bounds check
-        if offset + 8 > len(data):
-            return None, offset
+            table = main_window.gui_layout.table
+            header = table.horizontalHeader()
 
-        signature = data[offset:offset+4]
+            # Clear all styling
+            table.setStyleSheet("")
+            header.setStyleSheet("")
+            table.setObjectName("")
 
-        # Validate signature
-        valid_signatures = [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']
-        if signature not in valid_signatures:
-            self.log(f"Invalid signature: {signature}")
-            return None, offset + 1  # Advance by 1 to prevent infinite loop
+            # Reset to basic alternating colors
+            table.setAlternatingRowColors(True)
 
-        # Read file size
-        file_size = struct.unpack('<I', data[offset+4:offset+8])[0]
+            main_window.log_message("🔧 Table styling completely reset")
 
-        # CRITICAL: Validate file size to prevent hang
-        if file_size <= 0 or file_size > 10 * 1024 * 1024:  # 10MB limit per model
-            self.log(f"Invalid model size: {file_size}")
-            return None, offset + 8  # Skip header
-
-        total_size = file_size + 8
-
-        # Check bounds
-        if offset + total_size > len(data):
-            self.log(f"Model size exceeds data: need {total_size}, have {len(data) - offset}")
-            return None, offset + 8  # Skip header
-
-        # Create basic model info without deep parsing (to prevent hang)
-        model_info = {
-            'index': model_index,
-            'version': 1 if signature == b'COLL' else 2,
-            'size': file_size,
-            'offset': offset,
-            'signature': signature,
-            'spheres': 0,    # Set to 0 for now
-            'boxes': 0,      # Set to 0 for now
-            'vertices': 0,   # Set to 0 for now
-            'faces': 0,      # Set to 0 for now
-            'collision_types': ['Basic COL (safe mode)']  # Simple fallback
-        }
-
-        self.log(f"Model {model_index} parsed safely (size: {file_size})")
-
-        # Return with safe offset advancement
-        return model_info, offset + total_size
-
-    except Exception as e:
-        self.log(f"Error parsing single model: {str(e)}")
-        return None, offset + 8  # Safe advancement
-
-# REPLACE the hanging method with this:
-# Replace: self.parse_col_file_structure = safe_parse_col_file_structure
-# Replace: self.parse_single_model = safe_parse_single_model
-
-def reset_table_styling(main_window):
-    """Completely reset table styling to default"""
-    try:
-        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            return
-
-        table = main_window.gui_layout.table
-        header = table.horizontalHeader()
-
-        # Clear all styling
-        table.setStyleSheet("")
-        header.setStyleSheet("")
-        table.setObjectName("")
-
-        # Reset to basic alternating colors
-        table.setAlternatingRowColors(True)
-
-        main_window.log_message("🔧 Table styling completely reset")
-
+        except Exception as e:
+            main_window.log_message(f"⚠️ Error resetting table styling: {str(e)}")
+    
     except Exception as e:
         main_window.log_message(f"⚠️ Error resetting table styling: {str(e)}")
 
-
-def setup_col_tab_integration(main_window):
+def setup_col_tab_integration(main_window): #vers 1
     """Setup COL tab integration with main window"""
     try:
         # Add COL loading method to main window
@@ -210,88 +109,123 @@ def setup_col_tab_integration(main_window):
         main_window.log_message(f"❌ COL tab integration failed: {str(e)}")
         return False
 
-
-def _validate_col_file(main_window, file_path): #vers 1
-    """Validate COL file before loading"""
+# Safe parsing functions from old working code
+def safe_parse_col_file_structure(main_window, file_path: str) -> Optional[dict]: #vers 1
+    """Safely parse COL file structure without full loading"""
     try:
         if not os.path.exists(file_path):
-            main_window.log_message(f"❌ COL file not found: {file_path}")
-            return False
-
-        if not file_path.lower().endswith('.col'):
-            main_window.log_message(f"❌ Not a COL file: {file_path}")
-            return False
-
-        # Check file size
-        file_size = os.path.getsize(file_path)
-        if file_size < 8:
-            main_window.log_message(f"❌ COL file too small: {file_size} bytes")
-            return False
-
-        # Check COL signature
-        with open(file_path, 'rb') as f:
-            signature = f.read(4)
-            if signature not in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
-                main_window.log_message(f"❌ Invalid COL signature: {signature}")
-                return False
-
-        return True
-
-    except Exception as e:
-        main_window.log_message(f"❌ COL validation error: {str(e)}")
-        return False
-
-
-def _setup_col_tab(main_window, file_path): #vers 1
-    """Setup COL tab in main window"""
-    try:
-        filename = os.path.basename(file_path)
-        
-        # Check if file is already open
-        for i, open_file in enumerate(main_window.open_files):
-            if open_file['path'] == file_path:
-                main_window.tab_widget.setCurrentIndex(i)
-                return i
-
-        # Create new tab
-        tab_index = main_window.tab_widget.addTab(main_window.gui_layout.central_widget, filename)
-        main_window.tab_widget.setCurrentIndex(tab_index)
-
-        # Add to open files
-        main_window.open_files.append({
-            'path': file_path,
-            'type': 'COL',
-            'file_object': None
-        })
-
-        return tab_index
-
-    except Exception as e:
-        main_window.log_message(f"❌ Error setting up COL tab: {str(e)}")
-        return None
-
-
-def _load_col_file(main_window, file_path): #vers 1
-    """Load COL file using working COL core classes"""
-    try:
-        # Import COL core classes
-        from components.col_core_classes import COLFile
-        
-        # Create COL file object
-        col_file = COLFile(file_path)
-        
-        # Load the file
-        if col_file.load():
-            main_window.log_message(f"✅ COL file loaded successfully: {len(col_file.models)} models")
-            return col_file
-        else:
-            main_window.log_message(f"❌ Failed to load COL file: {col_file.load_error}")
+            img_debugger.error(f"COL file not found: {file_path}")
             return None
-
+        
+        with open(file_path, 'rb') as f:
+            data = f.read(32)  # Read first 32 bytes for header
+        
+        if len(data) < 8:
+            img_debugger.error("COL file too small for header")
+            return None
+        
+        # Check signature
+        signature = data[:4]
+        if signature not in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
+            img_debugger.error(f"Invalid COL signature: {signature}")
+            return None
+        
+        # Read file size
+        file_size = struct.unpack('<I', data[4:8])[0]
+        
+        # Determine version
+        version = 1
+        if signature == b'COL\x02':
+            version = 2
+        elif signature == b'COL\x03':
+            version = 3
+        elif signature == b'COL\x04':
+            version = 4
+        
+        structure_info = {
+            'version': version,
+            'signature': signature.decode('ascii', errors='ignore'),
+            'file_size': file_size,
+            'actual_size': os.path.getsize(file_path),
+            'models': 1,  # Conservative estimate
+            'format': f'COL Version {version}'
+        }
+        
+        if is_col_debug_enabled():
+            img_debugger.debug(f"COL structure parsed: {structure_info}")
+        
+        return structure_info
+        
     except Exception as e:
-        main_window.log_message(f"❌ Error loading COL file: {str(e)}")
+        img_debugger.error(f"Error parsing COL structure: {e}")
         return None
 
+def safe_parse_single_model(main_window, data: bytes, offset: int = 0) -> Tuple[Optional[dict], int]: #vers 1
+    """Safely parse single COL model without crashing"""
+    try:
+        if offset + 8 > len(data):
+            return None, offset
+        
+        # Read header safely
+        signature = data[offset:offset+4]
+        if signature not in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
+            return None, offset + 4  # Skip invalid signature
+        
+        # Read size safely
+        try:
+            file_size = struct.unpack('<I', data[offset+4:offset+8])[0]
+        except struct.error:
+            return None, offset + 8
+        
+        total_size = min(file_size + 8, len(data) - offset)  # Prevent overflow
+        
+        # Determine version
+        version = 1
+        if signature == b'COL\x02':
+            version = 2
+        elif signature == b'COL\x03':
+            version = 3
+        elif signature == b'COL\x04':
+            version = 4
+        
+        # Extract name if possible (safe)
+        model_name = "Unknown"
+        try:
+            if version == 1 and offset + 30 <= len(data):
+                name_start = offset + 8
+                name_data = data[name_start:name_start+22]
+                model_name = name_data.split(b'\x00')[0].decode('ascii', errors='ignore')
+            elif version > 1 and offset + 48 <= len(data):
+                # Skip bounding data (40 bytes) then read name
+                name_start = offset + 48
+                if name_start + 22 <= len(data):
+                    name_data = data[name_start:name_start+22]
+                    model_name = name_data.split(b'\x00')[0].decode('ascii', errors='ignore')
+        except:
+            model_name = f"Model_v{version}"
+        
+        if not model_name or len(model_name.strip()) == 0:
+            model_name = f"Model_v{version}_{offset}"
+        
+        model_info = {
+            'name': model_name,
+            'version': version,
+            'signature': signature.decode('ascii', errors='ignore'),
+            'size': file_size,
+            'offset': offset,
+            'formats': [f'COL Version {version}'],
+            'collision_types': ['Basic COL (safe mode)']  # Simple fallback
+        }
+
+        if is_col_debug_enabled():
+            img_debugger.debug(f"Model {offset} parsed safely (size: {file_size})")
+
+        # Return with safe offset advancement
+        return model_info, offset + total_size
+
+    except Exception as e:
+        img_debugger.error(f"Error parsing single model: {str(e)}")
+        return None, offset + 8  # Safe advancement
 
 # COL Parser Class - WORKING VERSION FROM OLD FILES
 class COLParser:
@@ -299,357 +233,173 @@ class COLParser:
     
     def __init__(self, debug=None): #vers 1
         """Initialize COL parser with IMG debug control"""
+        debug_available = True
+        try:
+            from components.img_debug_functions import img_debugger
+        except ImportError:
+            debug_available = False
+            
         self.debug = debug if debug is not None else debug_available
         self.log_messages = []
     
     def log(self, message): #vers 1
         """Log debug message using IMG debug system"""
-        if self.debug and debug_available:
-            img_debugger.debug(f"COLParser: {message}")
+        if self.debug:
+            try:
+                img_debugger.debug(f"COLParser: {message}")
+            except:
+                print(f"COLParser: {message}")  # Fallback
         self.log_messages.append(message)
     
-    def set_debug(self, enabled): #vers 1
-        """Update debug setting"""
+    def set_debug(self, enabled: bool): #vers 1
+        """Enable/disable debug output"""
         self.debug = enabled
+        if enabled:
+            self.log("COL parser debug enabled")
+        else:
+            self.log("COL parser debug disabled")
     
-    def parse_col_file_structure(self, file_path): #vers 1
-        """Parse complete COL file and return structure info for all models - WORKING VERSION"""
+    def parse_col_file_structure(self, file_path: str) -> Optional[dict]: #vers 1
+        """Parse COL file structure safely"""
         try:
+            self.log(f"Parsing COL structure: {os.path.basename(file_path)}")
+            
+            if not os.path.exists(file_path):
+                self.log(f"File not found: {file_path}")
+                return None
+            
+            file_size = os.path.getsize(file_path)
+            if file_size < 8:
+                self.log(f"File too small: {file_size} bytes")
+                return None
+            
             with open(file_path, 'rb') as f:
-                data = f.read()
-            
-            self.log(f"Parsing COL file: {os.path.basename(file_path)} ({len(data)} bytes)")
-            
-            # CRITICAL FIX: First check if this is a multi-model COL archive
-            if self._is_multi_model_archive(data):
-                return self._parse_multi_model_archive(data)
-            
-            # Single model parsing (original working approach)
-            models = []
-            offset = 0
-            model_index = 0
-            
-            while offset < len(data):
-                self.log(f"--- Model {model_index} at offset {offset} ---")
+                # Read header
+                signature = f.read(4)
+                if signature not in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
+                    self.log(f"Invalid signature: {signature}")
+                    return None
                 
-                # Check if we have enough data for a model
-                if offset + 32 > len(data):
-                    self.log(f"Not enough data for model header (need 32, have {len(data) - offset})")
-                    break
+                # Determine version
+                version = 1
+                if signature == b'COL\x02':
+                    version = 2
+                elif signature == b'COL\x03':
+                    version = 3
+                elif signature == b'COL\x04':
+                    version = 4
                 
-                # Parse this model
-                model_info, new_offset = self.parse_single_model(data, offset, model_index)
+                # Read size
+                size_data = f.read(4)
+                if len(size_data) < 4:
+                    return None
                 
-                if model_info is None:
-                    self.log(f"Failed to parse model {model_index}, stopping")
-                    break
+                model_size = struct.unpack('<I', size_data)[0]
                 
-                models.append(model_info)
+                structure = {
+                    'version': version,
+                    'signature': signature.decode('ascii', errors='ignore'),
+                    'model_size': model_size,
+                    'file_size': file_size,
+                    'valid': True
+                }
                 
-                # Check if we advanced
-                if new_offset <= offset:
-                    self.log(f"Offset didn't advance (was {offset}, now {new_offset}), stopping")
-                    break
+                self.log(f"COL structure parsed: version {version}, size {model_size}")
+                return structure
                 
-                offset = new_offset
-                model_index += 1
-                
-                self.log(f"Model {model_index - 1} parsed successfully, next offset: {offset}")
-                
-                # Safety check - don't parse more than 200 models
-                if model_index > 200:
-                    self.log("Safety limit reached (200 models), stopping")
-                    break
-            
-            self.log(f"Parsing complete: {len(models)} models found")
-            return models
-            
         except Exception as e:
-            self.log(f"Error parsing COL file: {str(e)}")
-            return []
+            self.log(f"Error parsing COL structure: {e}")
+            return None
     
-    def parse_single_model(self, data, offset, model_index): #vers 1
-        """Parse single COL model - WORKING VERSION"""
+    def parse_single_model(self, data: bytes, offset: int = 0) -> Tuple[Optional[dict], int]: #vers 1
+        """Parse single COL model from data"""
         try:
-            # Check for valid COL signature
             if offset + 8 > len(data):
                 return None, offset
             
+            # Read signature
             signature = data[offset:offset+4]
             if signature not in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
-                self.log(f"Invalid signature at offset {offset}: {signature}")
-                return None, offset
+                return None, offset + 1  # Skip 1 byte and continue
             
-            # Read model size
+            # Read size
             model_size = struct.unpack('<I', data[offset+4:offset+8])[0]
-            total_model_size = model_size + 8
+            total_size = model_size + 8
             
-            if offset + total_model_size > len(data):
-                self.log(f"Model size exceeds data bounds: need {total_model_size}, have {len(data) - offset}")
-                return None, offset
+            if offset + total_size > len(data):
+                self.log(f"Model size exceeds data length: {total_size} > {len(data) - offset}")
+                return None, len(data)  # Skip to end
             
-            # Determine COL version
-            if signature == b'COLL':
-                version = 1
-            elif signature == b'COL\x02':
+            # Determine version
+            version = 1
+            if signature == b'COL\x02':
                 version = 2
             elif signature == b'COL\x03':
                 version = 3
             elif signature == b'COL\x04':
                 version = 4
-            else:
-                version = 1
             
-            # Parse model data
-            model_data = data[offset+8:offset+total_model_size]
             model_info = {
-                'index': model_index,
                 'version': version,
+                'signature': signature.decode('ascii', errors='ignore'),
                 'size': model_size,
                 'offset': offset,
-                'signature': signature,
-                'spheres': 0,
-                'boxes': 0,
-                'vertices': 0,
-                'faces': 0,
-                'collision_types': []
+                'data': data[offset:offset+total_size]
             }
             
-            # Parse collision data based on version
-            if version == 1:
-                self._parse_col1_collision_data(model_data, model_info)
-            else:
-                self._parse_col23_collision_data(model_data, model_info)
+            # Extract model name based on version
+            try:
+                if version == 1:
+                    # COL1: name at offset 8, 22 bytes
+                    name_start = offset + 8
+                    if name_start + 22 <= len(data):
+                        name_data = data[name_start:name_start+22]
+                        model_info['name'] = name_data.split(b'\x00')[0].decode('ascii', errors='ignore')
+                else:
+                    # COL2/3/4: skip bounding data (40 bytes), then name
+                    name_start = offset + 48
+                    if name_start + 22 <= len(data):
+                        name_data = data[name_start:name_start+22]
+                        model_info['name'] = name_data.split(b'\x00')[0].decode('ascii', errors='ignore')
+                
+                if not model_info.get('name'):
+                    model_info['name'] = f"Model_{version}_{offset}"
+                    
+            except Exception as e:
+                model_info['name'] = f"Model_{version}_{offset}"
+                self.log(f"Error extracting model name: {e}")
             
-            return model_info, offset + total_model_size
+            self.log(f"Parsed model: {model_info['name']} (v{version})")
+            return model_info, offset + total_size
             
         except Exception as e:
-            self.log(f"Error parsing single model: {str(e)}")
-            return None, offset
+            self.log(f"Error parsing model at offset {offset}: {e}")
+            return None, offset + 8  # Skip 8 bytes and continue
     
-    def _is_multi_model_archive(self, data): #vers 1
-        """Check if this is a multi-model COL archive"""
+    def _is_multi_model_archive(self, data: bytes) -> bool: #vers 1
+        """Check if data contains multiple COL models"""
         try:
-            if len(data) < 16:
-                return False
-            
-            # Check for multiple COL signatures
-            signatures_found = 0
+            model_count = 0
             offset = 0
             
             while offset < len(data) - 8:
-                chunk = data[offset:offset+4]
-                if chunk in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
-                    signatures_found += 1
-                    if signatures_found > 1:
+                signature = data[offset:offset+4]
+                if signature in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
+                    model_count += 1
+                    if model_count > 1:
                         return True
                     
-                    # Skip past this model
+                    # Skip this model
                     try:
-                        size = struct.unpack('<I', data[offset+4:offset+8])[0]
-                        offset += size + 8
+                        model_size = struct.unpack('<I', data[offset+4:offset+8])[0]
+                        offset += model_size + 8
                     except:
                         break
                 else:
                     offset += 1
             
+            return model_count > 1
+            
+        except Exception as e:
+            self.log(f"Error checking multi-model archive: {e}")
             return False
-            
-        except Exception as e:
-            self.log(f"Error checking multi-model archive: {str(e)}")
-            return False
-    
-    def _parse_multi_model_archive(self, data): #vers 1
-        """Parse multi-model COL archive"""
-        models = []
-        offset = 0
-        model_index = 0
-        
-        while offset < len(data) - 8:
-            chunk = data[offset:offset+4]
-            if chunk in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
-                model_info, new_offset = self.parse_single_model(data, offset, model_index)
-                if model_info:
-                    models.append(model_info)
-                    model_index += 1
-                
-                if new_offset <= offset:
-                    break
-                offset = new_offset
-            else:
-                offset += 1
-        
-        return models
-    
-    def _parse_col1_collision_data(self, data, model_info): #vers 1
-        """Parse COL1 collision data"""
-        try:
-            if len(data) < 40:
-                return
-            
-            # COL1 structure parsing
-            offset = 0
-            
-            # Skip bounding info (40 bytes)
-            offset += 40
-            
-            # Read sphere count
-            if offset + 4 <= len(data):
-                sphere_count = struct.unpack('<I', data[offset:offset+4])[0]
-                model_info['spheres'] = sphere_count
-                offset += 4 + (sphere_count * 20)  # Each sphere is 20 bytes
-            
-            # Read box count
-            if offset + 4 <= len(data):
-                box_count = struct.unpack('<I', data[offset:offset+4])[0]
-                model_info['boxes'] = box_count
-                offset += 4 + (box_count * 72)  # Each box is 72 bytes
-            
-            # Read vertex count
-            if offset + 4 <= len(data):
-                vertex_count = struct.unpack('<I', data[offset:offset+4])[0]
-                model_info['vertices'] = vertex_count
-                offset += 4 + (vertex_count * 12)  # Each vertex is 12 bytes
-            
-            # Read face count
-            if offset + 4 <= len(data):
-                face_count = struct.unpack('<I', data[offset:offset+4])[0]
-                model_info['faces'] = face_count
-            
-            # Determine collision types
-            collision_types = []
-            if model_info['spheres'] > 0:
-                collision_types.append(f"Spheres ({model_info['spheres']})")
-            if model_info['boxes'] > 0:
-                collision_types.append(f"Boxes ({model_info['boxes']})")
-            if model_info['vertices'] > 0:
-                collision_types.append(f"Mesh ({model_info['vertices']} verts)")
-            
-            model_info['collision_types'] = collision_types
-            
-        except Exception as e:
-            self.log(f"Error parsing COL1 collision data: {str(e)}")
-    
-    def _parse_col23_collision_data(self, data, model_info): #vers 1
-        """Parse COL2/COL3 collision data"""
-        try:
-            if len(data) < 40:
-                return
-            
-            # COL2/3 structure parsing
-            offset = 0
-            
-            # Skip bounding info (40 bytes)
-            offset += 40
-            
-            # Read sphere count
-            if offset + 4 <= len(data):
-                sphere_count = struct.unpack('<I', data[offset:offset+4])[0]
-                model_info['spheres'] = sphere_count
-                offset += 4 + (sphere_count * 20)
-            
-            # Read box count  
-            if offset + 4 <= len(data):
-                box_count = struct.unpack('<I', data[offset:offset+4])[0]
-                model_info['boxes'] = box_count
-                offset += 4 + (box_count * 72)
-            
-            # Read vertex count
-            if offset + 4 <= len(data):
-                vertex_count = struct.unpack('<I', data[offset:offset+4])[0]
-                model_info['vertices'] = vertex_count
-                offset += 4 + (vertex_count * 12)
-            
-            # Read face count
-            if offset + 4 <= len(data):
-                face_count = struct.unpack('<I', data[offset:offset+4])[0]
-                model_info['faces'] = face_count
-            
-            # Determine collision types
-            collision_types = []
-            if model_info['spheres'] > 0:
-                collision_types.append(f"Spheres ({model_info['spheres']})")
-            if model_info['boxes'] > 0:
-                collision_types.append(f"Boxes ({model_info['boxes']})")
-            if model_info['vertices'] > 0:
-                collision_types.append(f"Mesh ({model_info['vertices']} verts)")
-            
-            model_info['collision_types'] = collision_types
-            
-        except Exception as e:
-            self.log(f"Error parsing COL2/3 collision data: {str(e)}")
-    
-    def clear_debug_log(self): #vers 1
-        """Clear debug log messages"""
-        self.log_messages = []
-    
-    def get_debug_log(self): #vers 1
-        """Get debug log messages"""
-        return self.log_messages
-    
-    def format_collision_types(self, model_info): #vers 1
-        """Format collision types for display"""
-        if not model_info.get('collision_types'):
-            return "No collision"
-        return ", ".join(model_info['collision_types'])
-    
-    def get_model_stats_by_index(self, models, index): #vers 1
-        """Get model statistics by index"""
-        if not models or index >= len(models):
-            return None
-        return models[index]
-
-
-# Helper functions for table population
-def format_model_collision_types(model_info): #vers 1
-    """Format model collision types for display"""
-    if not isinstance(model_info, dict):
-        return "Unknown"
-    
-    collision_types = model_info.get('collision_types', [])
-    if not collision_types:
-        return "No collision"
-    
-    return ", ".join(collision_types)
-
-
-def get_model_collision_stats(model_info): #vers 1
-    """Get collision statistics from model info"""
-    if not isinstance(model_info, dict):
-        return "N/A"
-    
-    stats = []
-    if model_info.get('spheres', 0) > 0:
-        stats.append(f"S:{model_info['spheres']}")
-    if model_info.get('boxes', 0) > 0:
-        stats.append(f"B:{model_info['boxes']}")
-    if model_info.get('vertices', 0) > 0:
-        stats.append(f"V:{model_info['vertices']}")
-    if model_info.get('faces', 0) > 0:
-        stats.append(f"F:{model_info['faces']}")
-    
-    return " | ".join(stats) if stats else "No data"
-
-
-def parse_col_file_with_debug(file_path, debug=False): #vers 1
-    """Parse COL file with debug output"""
-    parser = COLParser(debug=debug)
-    models = parser.parse_col_file_structure(file_path)
-    
-    if debug and debug_available:
-        img_debugger.debug(f"Parsed {len(models)} models from {file_path}")
-        for i, model in enumerate(models):
-            img_debugger.debug(f"Model {i}: {format_model_collision_types(model)}")
-    
-    return models, parser.get_debug_log()
-
-
-# Export main functions
-__all__ = [
-    'COLParser',
-    'setup_col_tab_integration',
-    'reset_table_styling',
-    'format_model_collision_types',
-    'get_model_collision_stats',
-    'parse_col_file_with_debug'
-]

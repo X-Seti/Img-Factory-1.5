@@ -1,58 +1,31 @@
-#this belongs in core/ tables_structure.py - Version: 2
-# X-Seti - July16 2025 - IMG Factory 1.5 - Table Structure Functions
+#this belongs in core/tables_structure.py - Version: 5
+# X-Seti - July20 2025 - IMG Factory 1.5 - Table Structure Functions
+# Table styling and structure management functions using IMG debug system
 
 """
-Table Structure Functions
-Handles table population and setup for both IMG and COL files
+Table Structure Functions - Table management and styling
+Provides table styling reset, structure setup, and management functions
 """
 
-import os
-from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
+from typing import Optional
+from PyQt6.QtWidgets import QTableWidget, QHeaderView
 from PyQt6.QtCore import Qt
 
+# Import IMG debug system
+from components.img_debug_functions import img_debugger
 
-# Methods list.
-# estimate_col_model_size_bytes
+##Methods list -
 # reset_table_styling
-# setup_col_table_structure
+# setup_table_for_col_data
+# setup_table_for_img_data
+# setup_table_structure
 
-
-def estimate_col_model_size_bytes(model): #vers 4
-    """Estimate COL model size in bytes (similar to IMG entry sizes)"""
-    try:
-        if not hasattr(model, 'get_stats'):
-            return 1024  # Default 1KB
-
-        stats = model.get_stats()
-
-        # Rough estimation based on collision elements
-        size = 100  # Base model overhead (header, name, etc.)
-        size += stats.get('spheres', 0) * 16     # 16 bytes per sphere
-        size += stats.get('boxes', 0) * 24       # 24 bytes per box
-        size += stats.get('vertices', 0) * 12    # 12 bytes per vertex
-        size += stats.get('faces', 0) * 8        # 8 bytes per face
-        size += stats.get('face_groups', 0) * 8  # 8 bytes per face group
-
-        # Add version-specific overhead
-        if hasattr(model, 'version') and hasattr(model.version, 'value'):
-            if model.version.value >= 3:
-                size += stats.get('shadow_vertices', 0) * 12
-                size += stats.get('shadow_faces', 0) * 8
-                size += 64  # COL3+ additional headers
-            elif model.version.value >= 2:
-                size += 48  # COL2 headers
-
-        return max(size, 64)  # Minimum 64 bytes
-
-    except Exception:
-        return 1024  # Default 1KB on error
-
-
-def reset_table_styling(main_window): #vers 4
-    """Completely reset table styling to default"""
+def reset_table_styling(main_window): #vers 1
+    """Completely reset table styling to default using IMG debug system"""
     try:
         if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            return
+            img_debugger.warning("No table widget available for styling reset")
+            return False
 
         table = main_window.gui_layout.table
         header = table.horizontalHeader()
@@ -65,145 +38,202 @@ def reset_table_styling(main_window): #vers 4
         # Reset to basic alternating colors
         table.setAlternatingRowColors(True)
 
+        # Reset selection behavior
+        table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
+
+        # Reset header properties
+        header.setStretchLastSection(True)
+        header.setSectionsClickable(True)
+        header.setSortIndicatorShown(True)
+
         main_window.log_message("🔧 Table styling completely reset")
-
-    except Exception as e:
-        main_window.log_message(f"⚠️ Error resetting table styling: {str(e)}")
-
-
-def setup_col_table_structure(main_window): #vers 4
-    """Setup table structure for COL data"""
-    try:
-        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            return False
-
-        table = main_window.gui_layout.table
-
-        # Set up 7-column structure (same as IMG)
-        table.setColumnCount(7)
-        table.setHorizontalHeaderLabels([
-            "Name", "Type", "Size", "Offset", "Version", "Compression", "Status"
-        ])
-
-        # Configure table properties
-        table.setAlternatingRowColors(True)
-        table.setSelectionBehavior(table.SelectionBehavior.SelectRows)
-        table.setSortingEnabled(True)
-
-        # Auto-resize columns
-        header = table.horizontalHeader()
-        if hasattr(header, 'setSectionResizeMode'):
-            from PyQt6.QtWidgets import QHeaderView
-            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Name column
-            header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Type
-            header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Size
-            header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Offset
-            header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Version
-            header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Compression
-            header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Status
-
-        main_window.log_message("✅ COL table structure setup complete")
+        img_debugger.debug("Table styling reset to default")
         return True
 
     except Exception as e:
-        main_window.log_message(f"❌ Error setting up COL table structure: {str(e)}")
+        error_msg = f"Error resetting table styling: {str(e)}"
+        main_window.log_message(f"⚠️ {error_msg}")
+        img_debugger.error(error_msg)
         return False
 
-def _setup_col_table_structure(main_window): #vers 11
-    """Setup table structure for COL data display with enhanced usability"""
+def setup_table_structure(main_window, file_type: str = "IMG"): #vers 1
+    """Setup table structure based on file type using IMG debug system"""
     try:
         if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            main_window.log_message("⚠️ Main table not available")
-            return
-
+            img_debugger.error("No table widget available for structure setup")
+            return False
+        
         table = main_window.gui_layout.table
+        
+        if file_type.upper() == "COL":
+            return setup_table_for_col_data(table)
+        else:
+            return setup_table_for_img_data(table)
+        
+    except Exception as e:
+        img_debugger.error(f"Error setting up table structure: {e}")
+        return False
 
-        # Configure table for COL data (7 columns)
-        table.setColumnCount(7)
-        table.setHorizontalHeaderLabels([
-            "Model", "Type", "Size", "Surfaces", "Vertices", "Collision", "Status"
-        ])
-
-        # Enable column dragging and resizing
-        from PyQt6.QtWidgets import QHeaderView
-        header = table.horizontalHeader()
-        header.setSectionsMovable(True)  # Allow dragging columns
-        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)  # Allow resizing
-        header.setDefaultSectionSize(120)  # Default column width
-
-        # Set specific column widths for better visibility
-        table.setColumnWidth(0, 150)  # Model name - wider for readability
+def setup_table_for_img_data(table: QTableWidget) -> bool: #vers 1
+    """Setup table structure for IMG file data"""
+    try:
+        # IMG file columns
+        img_headers = ["Name", "Type", "Size", "Offset", "RW Version", "Info"]
+        table.setColumnCount(len(img_headers))
+        table.setHorizontalHeaderLabels(img_headers)
+        
+        # Set column widths for IMG data
+        table.setColumnWidth(0, 200)  # Name
         table.setColumnWidth(1, 80)   # Type
         table.setColumnWidth(2, 100)  # Size
-        table.setColumnWidth(3, 80)   # Surfaces
-        table.setColumnWidth(4, 80)   # Vertices
-        table.setColumnWidth(5, 200)  # Collision - wider for collision types
-        table.setColumnWidth(6, 80)   # Status
-
-        # Enable alternating row colors with light blue theme
-        table.setAlternatingRowColors(True)
-
-        # Set object name for specific styling
-        table.setObjectName("col_table")
-
-        # Apply COL-specific styling ONLY to this table
-        col_table_style = """
-            QTableWidget#col_table {
-                alternate-background-color: #E3F2FD;
-                background-color: #F5F5F5;
-                gridline-color: #CCCCCC;
-                selection-background-color: #2196F3;
-                selection-color: white;
-            }
-            QTableWidget#col_table::item {
-                padding: 4px;
-                border-bottom: 1px solid #E0E0E0;
-                background-color: transparent;
-            }
-            QTableWidget#col_table::item:alternate {
-                background-color: #E3F2FD;
-            }
-            QTableWidget#col_table::item:selected {
-                background-color: #2196F3;
-                color: white;
-            }
-        """
-
-        # Apply header styling separately to avoid affecting other headers
-        header_style = """
-            background-color: #BBDEFB;
-            color: #1976D2;
-            font-weight: bold;
-            border: 1px solid #90CAF9;
-            padding: 6px;
-        """
-
-        # Apply table styling
-        table.setStyleSheet(col_table_style)
-
-        # Apply header styling directly to the header widget
-        header = table.horizontalHeader()
-        header.setStyleSheet(f"""
-            QHeaderView::section {{
-                {header_style}
-            }}
-            QHeaderView::section:hover {{
-                background-color: #90CAF9;
-            }}
-        """)
-
-        # Clear existing data
-        table.setRowCount(0)
-
-        main_window.log_message("🔧 Table structure configured for COL data with scoped styling")
-
+        table.setColumnWidth(3, 100)  # Offset
+        table.setColumnWidth(4, 120)  # RW Version
+        table.setColumnWidth(5, 150)  # Info
+        
+        # Enable sorting
+        table.setSortingEnabled(True)
+        
+        img_debugger.debug("Table structure setup for IMG data")
+        return True
+        
     except Exception as e:
-        main_window.log_message(f"⚠️ Error setting up table structure: {str(e)}")
+        img_debugger.error(f"Error setting up IMG table structure: {e}")
+        return False
 
+def setup_table_for_col_data(table: QTableWidget) -> bool: #vers 1
+    """Setup table structure for COL file data"""
+    try:
+        # COL file columns
+        col_headers = ["Model Name", "Type", "Version", "Size", "Spheres", "Boxes", "Faces", "Info"]
+        table.setColumnCount(len(col_headers))
+        table.setHorizontalHeaderLabels(col_headers)
+        
+        # Set column widths for COL data
+        table.setColumnWidth(0, 200)  # Model Name
+        table.setColumnWidth(1, 80)   # Type
+        table.setColumnWidth(2, 80)   # Version
+        table.setColumnWidth(3, 100)  # Size
+        table.setColumnWidth(4, 80)   # Spheres
+        table.setColumnWidth(5, 80)   # Boxes
+        table.setColumnWidth(6, 80)   # Faces
+        table.setColumnWidth(7, 150)  # Info
+        
+        # Enable sorting
+        table.setSortingEnabled(True)
+        
+        img_debugger.debug("Table structure setup for COL data")
+        return True
+        
+    except Exception as e:
+        img_debugger.error(f"Error setting up COL table structure: {e}")
+        return False
 
-# Export functions
-__all__ = [
-    'estimate_col_model_size_bytes',
-    'reset_table_styling',
-    'setup_col_table_structure'
-]
+def apply_table_theme(main_window, theme_name: str = "default"): #vers 1
+    """Apply specific theme to table using IMG debug system"""
+    try:
+        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
+            img_debugger.warning("No table widget available for theme application")
+            return False
+
+        table = main_window.gui_layout.table
+        
+        if theme_name == "dark":
+            # Dark theme styling
+            table.setStyleSheet("""
+                QTableWidget {
+                    background-color: #2a2a2a;
+                    color: #ffffff;
+                    gridline-color: #555555;
+                    selection-background-color: #0078d4;
+                }
+                QTableWidget::item:alternate {
+                    background-color: #333333;
+                }
+                QHeaderView::section {
+                    background-color: #404040;
+                    color: #ffffff;
+                    padding: 4px;
+                    border: 1px solid #555555;
+                }
+            """)
+        elif theme_name == "light":
+            # Light theme styling
+            table.setStyleSheet("""
+                QTableWidget {
+                    background-color: #ffffff;
+                    color: #000000;
+                    gridline-color: #d0d0d0;
+                    selection-background-color: #0078d4;
+                }
+                QTableWidget::item:alternate {
+                    background-color: #f5f5f5;
+                }
+                QHeaderView::section {
+                    background-color: #e0e0e0;
+                    color: #000000;
+                    padding: 4px;
+                    border: 1px solid #d0d0d0;
+                }
+            """)
+        else:
+            # Default system theme
+            reset_table_styling(main_window)
+            return True
+        
+        img_debugger.debug(f"Applied '{theme_name}' theme to table")
+        return True
+        
+    except Exception as e:
+        img_debugger.error(f"Error applying table theme: {e}")
+        return False
+
+def optimize_table_performance(table: QTableWidget, row_count: int = 0) -> bool: #vers 1
+    """Optimize table performance for large datasets"""
+    try:
+        if row_count > 1000:
+            # Disable sorting during population for performance
+            table.setSortingEnabled(False)
+            
+            # Set uniform row heights for performance
+            table.setUniformRowHeights(True)
+            
+            # Reduce update frequency
+            table.setUpdatesEnabled(False)
+            
+            img_debugger.debug(f"Table performance optimized for {row_count} rows")
+        else:
+            # Enable normal features for smaller datasets
+            table.setSortingEnabled(True)
+            table.setUniformRowHeights(False)
+            table.setUpdatesEnabled(True)
+            
+            img_debugger.debug(f"Table configured for normal operation ({row_count} rows)")
+        
+        return True
+        
+    except Exception as e:
+        img_debugger.error(f"Error optimizing table performance: {e}")
+        return False
+
+def finalize_table_setup(table: QTableWidget) -> bool: #vers 1
+    """Finalize table setup after data population"""
+    try:
+        # Re-enable updates and sorting
+        table.setUpdatesEnabled(True)
+        table.setSortingEnabled(True)
+        
+        # Resize columns to content if reasonable
+        if table.rowCount() < 1000:  # Only for smaller datasets
+            table.resizeColumnsToContents()
+        
+        # Ensure first column is visible
+        if table.columnCount() > 0:
+            table.scrollToItem(table.item(0, 0) if table.rowCount() > 0 else None)
+        
+        img_debugger.debug("Table setup finalized")
+        return True
+        
+    except Exception as e:
+        img_debugger.error(f"Error finalizing table setup: {e}")
+        return False
