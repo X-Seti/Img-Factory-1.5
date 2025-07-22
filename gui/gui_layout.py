@@ -1,4 +1,4 @@
-#this belongs in gui/ gui_layout.py - Version: 14
+#this belongs in gui/ gui_layout.py - Version: 15
 # X-Seti - JULY03 2025 - Img Factory 1.5 - GUI Layout Module - Fixed Button Connections
 
 #adjectments, Refrash button renamed from update-list, Reload button.
@@ -676,7 +676,7 @@ class IMGFactoryGUILayout:
                 'dump_entries': lambda: dump_all_function(main_window),
                 'dump_all_entries': lambda: dump_all_function(main_window),
                 'refresh_table': main_window.refresh_table if hasattr(main_window, 'refresh_table') else lambda: main_window.log_message("Refresh requested"),
-                'reload_table': main_window.refresh_table if hasattr(main_window, 'reload_table') else lambda: main_window.log_message("reload requested"),
+                'reload_table': main_window.reload_table if hasattr(main_window, 'reload_table') else lambda: main_window.log_message("reload requested"),
             }
             # Add all method names to main_window
             for method_name, method_func in method_mappings.items():

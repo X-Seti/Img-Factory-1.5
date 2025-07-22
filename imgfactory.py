@@ -1,9 +1,8 @@
-
 #!/usr/bin/env python3
 """
-X-Seti - July22 2025 - IMG Factory 1.5
+X-Seti - July22 2025 - IMG Factory 1.5 - AtariST version
+#this belongs in root /imgfactory.py - version 66
 """
-#this belongs in root /imgfactory.py - version 65
 import sys
 import os
 import mimetypes
@@ -51,15 +50,16 @@ from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_validator import IMGValidator
 from components.img_core_classes import (
     IMGFile, IMGEntry, IMGVersion, Platform,
-    IMGEntriesTable, FilterPanel, IMGFileInfoPanel, format_file_size,
-    TabFilterWidget, integrate_filtering, create_entries_table_panel)
-from components.col_loader import load_col_file_safely
+    IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel)
+from components.img_core_classes import format_file_size
+from components.col_parsing_functions import load_col_file_safely
 from components.rw_unknown_snapshot import integrate_unknown_rw_detection
 from components.col_integration_main import integrate_complete_col_system
 from components.col_functions import setup_complete_col_integration
 from components.col_debug_functions import set_col_debug_enabled
 from components.col_parsing_functions import load_col_file_safely
 from components.unified_debug_functions import integrate_all_improvements, install_debug_control_system
+from components.enh_debug_system import integrate_enhanced_debug_error
 
 #core
 from core.close_func import install_close_functions, setup_close_manager
@@ -76,6 +76,7 @@ from core.right_click_actions import integrate_right_click_actions
 from core.shortcuts import setup_all_shortcuts
 from core.integration import integrate_complete_core_system
 from core.connections import connect_all_buttons_safely
+
 #from core.tables_structure import (populate_img_table, populate_col_table_img_format, populate_col_table_enhanced, setup_col_table_structure)
 
 #gui-layout
@@ -264,6 +265,7 @@ class IMGFactory(QMainWindow):
         self.setWindowTitle("IMG Factory 1.5")
         self.setGeometry(100, 100, 1200, 800)
 
+        integrate_enhanced_debug_error(self)
         # Initialize template manager - FIXED INDENTATION
         try:
             from components.img_templates import IMGTemplateManager
@@ -368,6 +370,7 @@ class IMGFactory(QMainWindow):
 
         integrate_right_click_actions(self)
 
+        self.reload_table = self.reload_current_file
         # Log startup
         self.log_message("IMG Factory 1.5 initialized")
 
@@ -1283,6 +1286,11 @@ class IMGFactory(QMainWindow):
         self.log_message("✅ IMG UI updated successfully")
 
 
+    def reload_table(self): #vers 1
+        """Reload current file - called by reload button"""
+        return self.reload_current_file()
+
+
     def load_file_unified(self, file_path: str): #vers 8
         """Unified file loader for IMG and COL files"""
         try:
@@ -1772,7 +1780,7 @@ class IMGFactory(QMainWindow):
             return "Unknown"
 
 
-    def _format_file_size(self, size_bytes): #vers 2 #Restore
+    def format_file_size(size_bytes): #vers 2 #Restore
         """Format file size same as IMG entries"""
         try:
             # Use the same formatting as IMG entries
@@ -2367,207 +2375,6 @@ class IMGFactory(QMainWindow):
         self.log_message("Export via tool functionality coming soon")
 
 
-    def remove_all_entries(self):
-        """Remove all entries from IMG"""
-        if not self.current_img:
-            QMessageBox.warning(self, "Warning", "No IMG file loaded")
-            return
-
-        try:
-            reply = QMessageBox.question(self, "Remove All",
-                                        "Remove all entries from IMG?")
-            if reply == QMessageBox.StandardButton.Yes:
-                self.current_img.entries.clear()
-                self._update_ui_for_loaded_img()
-                self.log_message("All entries removed")
-        except Exception as e:
-            self.log_message(f"❌ Error in remove_all_entries: {str(e)}")
-
-
-    def quick_export(self):
-        """Quick export selected files to default location"""
-        if not self.current_img:
-            QMessageBox.warning(self, "Warning", "No IMG file loaded")
-            return
-
-        try:
-            # Check if we have a selection method available
-            if hasattr(self.gui_layout, 'table') and hasattr(self.gui_layout.table, 'selectionModel'):
-                selected_rows = self.gui_layout.table.selectionModel().selectedRows()
-            else:
-                selected_rows = []
-
-            if not selected_rows:
-                QMessageBox.warning(self, "Warning", "No entries selected")
-                return
-
-            # Use Documents/IMG_Exports as default
-            export_dir = os.path.join(os.path.expanduser("~"), "Documents", "IMG_Exports")
-            os.makedirs(export_dir, exist_ok=True)
-
-            self.log_message(f"Quick exporting {len(selected_rows)} files to {export_dir}")
-            QMessageBox.information(self, "Info", "Quick export functionality coming soon")
-        except Exception as e:
-            self.log_message(f"❌ Error in quick_export: {str(e)}")
-
-
-
-    def export_selected_via(self): #vers 1
-        """Export selected entries via IDE file"""
-        from core.exporter import export_via_function
-        export_via_function(self)
-
-    def quick_export_selected(self): #vers 1
-        """Quick export selected entries"""
-        from core.exporter import quick_export_function
-        quick_export_function(self)
-
-    def dump_entries(self): #vers 1
-        """Dump all entries"""
-        try:
-            from core.exporter import dump_all_function
-            dump_all_function(self)
-        except Exception as e:
-            self.log_message(f"❌ Dump error: {str(e)}")
-
-
-    def import_files_via(self): #vers 1
-        """Import files via IDE file"""
-        try:
-            from core.importer import import_via_function
-            import_via_function(self)
-        except Exception as e:
-            self.log_message(f"❌ Import via error: {str(e)}")
-
-
-    def remove_via_entries(self):
-        """Remove entries via IDE file"""
-        try:
-            from core.remove import remove_via_entries_function
-            remove_via_entries_function(self)
-        except Exception as e:
-            self.log_message(f"❌ Remove via error: {str(e)}")
-
-
-    def pin_selected(self): #vers 1
-        """Pin selected entries to top of list"""
-        try:
-            if hasattr(self.gui_layout, 'table') and hasattr(self.gui_layout.table, 'selectionModel'):
-                selected_rows = self.gui_layout.table.selectionModel().selectedRows()
-            else:
-                selected_rows = []
-
-            if not selected_rows:
-                QMessageBox.information(self, "Pin", "No entries selected")
-                return
-
-            self.log_message(f"Pinned {len(selected_rows)} entries")
-        except Exception as e:
-            self.log_message(f"❌ Error in pin_selected: {str(e)}")
-
-
-
-    def apply_search_and_performance_fixes(self): #vers 2
-        """Apply search and performance fixes"""
-        try:
-            self.log_message("🔧 Applying search and performance fixes...")
-
-            # 1. Setup our new consolidated search system
-            from core.guisearch import install_search_system
-            if install_search_system(self):
-                self.log_message("✅ New search system installed")
-            else:
-                self.log_message("⚠️ Search system setup failed")
-
-            # 2. COL debug control (keep your existing code)
-            try:
-                def toggle_col_debug():
-                    """Simple COL debug toggle"""
-                    try:
-                        import components.col_core_classes as col_module
-                        current = getattr(col_module, '_global_debug_enabled', False)
-                        col_module._global_debug_enabled = not current
-
-                        if col_module._global_debug_enabled:
-                            self.log_message("🔊 COL debug enabled")
-                        else:
-                            self.log_message("🔇 COL debug disabled")
-
-                    except Exception as e:
-                        self.log_message(f"❌ COL debug toggle error: {e}")
-
-                # Add to main window
-                self.toggle_col_debug = toggle_col_debug
-
-                # Start with debug disabled for performance
-                import components.col_core_classes as col_module
-                col_module._global_debug_enabled = False
-
-                self.log_message("✅ COL performance mode enabled")
-
-            except Exception as e:
-                self.log_message(f"⚠️ COL setup issue: {e}")
-
-            self.log_message("✅ Search and performance fixes applied")
-
-        except Exception as e:
-            self.log_message(f"❌ Apply fixes error: {e}")
-
-
-    # COL and editor functions
-    def open_col_editor(self): #vers 1
-        """Open COL file editor"""
-        self.log_message("COL editor functionality coming soon")
-
-    def open_txd_editor(self): #vers 1
-        """Open TXD texture editor"""
-        self.log_message("TXD editor functionality coming soon")
-
-    def open_dff_editor(self): #vers 1
-        """Open DFF model editor"""
-        self.log_message("DFF editor functionality coming soon")
-
-    def open_ipf_editor(self): #vers 1
-        """Open IPF animation editor"""
-        self.log_message("IPF editor functionality coming soon")
-
-    def open_ipl_editor(self): #vers 1
-        """Open IPL item placement editor"""
-        self.log_message("IPL editor functionality coming soon")
-
-    def open_ide_editor(self): #vers 1
-        """Open IDE item definition editor"""
-        self.log_message("IDE editor functionality coming soon")
-
-    def open_dat_editor(self): #vers 1
-        """Open DAT file editor"""
-        self.log_message("DAT editor functionality coming soon")
-
-    def open_zons_editor(self): #vers 1
-        """Open zones editor"""
-        self.log_message("Zones editor functionality coming soon")
-
-    def open_weap_editor(self): #vers 1
-        """Open weapons editor"""
-        self.log_message("Weapons editor functionality coming soon")
-
-    def open_vehi_editor(self): #vers 1
-        """Open vehicles editor"""
-        self.log_message("Vehicles editor functionality coming soon")
-
-    def open_radar_map(self): #vers 1
-        """Open radar map editor"""
-        self.log_message("Radar map functionality coming soon")
-
-    def open_paths_map(self): #vers 1
-        """Open paths map editor"""
-        self.log_message("Paths map functionality coming soon")
-
-    def open_waterpro(self): #vers 1
-        """Open water properties editor"""
-        self.log_message("Water properties functionality coming soon")
-
-
     def rebuild_img(self):
         """Rebuild current IMG file"""
         if not self.current_img:
@@ -2760,6 +2567,7 @@ class IMGFactory(QMainWindow):
                 self.gui_layout.show_progress(-1, "Export error")
             QMessageBox.critical(self, "Export Error", error_msg)
 
+
     def export_all(self):
         """Export all entries"""
         if not self.current_img:
@@ -2873,6 +2681,251 @@ class IMGFactory(QMainWindow):
             error_msg = f"Error removing entries: {str(e)}"
             self.log_message(error_msg)
             QMessageBox.critical(self, "Removal Error", error_msg)
+
+
+    def remove_all_entries(self):
+        """Remove all entries from IMG"""
+        if not self.current_img:
+            QMessageBox.warning(self, "Warning", "No IMG file loaded")
+            return
+
+        try:
+            reply = QMessageBox.question(self, "Remove All",
+                                        "Remove all entries from IMG?")
+            if reply == QMessageBox.StandardButton.Yes:
+                self.current_img.entries.clear()
+                self._update_ui_for_loaded_img()
+                self.log_message("All entries removed")
+        except Exception as e:
+            self.log_message(f"❌ Error in remove_all_entries: {str(e)}")
+
+
+    def quick_export(self):
+        """Quick export selected files to default location"""
+        if not self.current_img:
+            QMessageBox.warning(self, "Warning", "No IMG file loaded")
+            return
+
+        try:
+            # Check if we have a selection method available
+            if hasattr(self.gui_layout, 'table') and hasattr(self.gui_layout.table, 'selectionModel'):
+                selected_rows = self.gui_layout.table.selectionModel().selectedRows()
+            else:
+                selected_rows = []
+
+            if not selected_rows:
+                QMessageBox.warning(self, "Warning", "No entries selected")
+                return
+
+            # Use Documents/IMG_Exports as default
+            export_dir = os.path.join(os.path.expanduser("~"), "Documents", "IMG_Exports")
+            os.makedirs(export_dir, exist_ok=True)
+
+            self.log_message(f"Quick exporting {len(selected_rows)} files to {export_dir}")
+            QMessageBox.information(self, "Info", "Quick export functionality coming soon")
+        except Exception as e:
+            self.log_message(f"❌ Error in quick_export: {str(e)}")
+
+
+    def reload_current_file(self): #vers 1
+        """Reload current IMG or COL file (close and reopen)"""
+        try:
+            if self.current_img and self.current_img.file_path:
+                # Store current IMG path
+                img_path = self.current_img.file_path
+                self.log_message(f"🔄 Reloading IMG file: {os.path.basename(img_path)}")
+
+                # Close current file
+                self.close_img_file()
+
+                # Reopen the file
+                self.load_img_file(img_path)
+                self.log_message("✅ IMG file reloaded")
+                return True
+
+            elif self.current_col and hasattr(self.current_col, 'file_path'):
+                # Store current COL path
+                col_path = self.current_col.file_path
+                self.log_message(f"🔄 Reloading COL file: {os.path.basename(col_path)}")
+
+                # Close current COL
+                self.current_col = None
+
+                # Reopen the COL file
+                if hasattr(self, 'load_col_file_safely'):
+                    self.load_col_file_safely(col_path)
+                    self.log_message("✅ COL file reloaded")
+                    return True
+
+            else:
+                self.log_message("❌ No file to reload")
+                return False
+
+        except Exception as e:
+            self.log_message(f"❌ Reload failed: {str(e)}")
+            return False
+
+    # Add aliases for button connections
+    def reload_file(self):
+        return self.reload_current_file()
+
+    def reload_table(self):
+        return self.reload_current_file()
+
+    def export_selected_via(self): #vers 1
+        """Export selected entries via IDE file"""
+        from core.exporter import export_via_function
+        export_via_function(self)
+
+    def quick_export_selected(self): #vers 1
+        """Quick export selected entries"""
+        from core.exporter import quick_export_function
+        quick_export_function(self)
+
+    def dump_entries(self): #vers 1
+        """Dump all entries"""
+        try:
+            from core.exporter import dump_all_function
+            dump_all_function(self)
+        except Exception as e:
+            self.log_message(f"❌ Dump error: {str(e)}")
+
+
+    def import_files_via(self): #vers 1
+        """Import files via IDE file"""
+        try:
+            from core.importer import import_via_function
+            import_via_function(self)
+        except Exception as e:
+            self.log_message(f"❌ Import via error: {str(e)}")
+
+
+    def remove_via_entries(self):
+        """Remove entries via IDE file"""
+        try:
+            from core.remove import remove_via_entries_function
+            remove_via_entries_function(self)
+        except Exception as e:
+            self.log_message(f"❌ Remove via error: {str(e)}")
+
+
+    def pin_selected(self): #vers 1
+        """Pin selected entries to top of list"""
+        try:
+            if hasattr(self.gui_layout, 'table') and hasattr(self.gui_layout.table, 'selectionModel'):
+                selected_rows = self.gui_layout.table.selectionModel().selectedRows()
+            else:
+                selected_rows = []
+
+            if not selected_rows:
+                QMessageBox.information(self, "Pin", "No entries selected")
+                return
+
+            self.log_message(f"Pinned {len(selected_rows)} entries")
+        except Exception as e:
+            self.log_message(f"❌ Error in pin_selected: {str(e)}")
+
+
+
+    def apply_search_and_performance_fixes(self): #vers 2
+        """Apply search and performance fixes"""
+        try:
+            self.log_message("🔧 Applying search and performance fixes...")
+
+            # 1. Setup our new consolidated search system
+            from core.guisearch import install_search_system
+            if install_search_system(self):
+                self.log_message("✅ New search system installed")
+            else:
+                self.log_message("⚠️ Search system setup failed")
+
+            # 2. COL debug control (keep your existing code)
+            try:
+                def toggle_col_debug():
+                    """Simple COL debug toggle"""
+                    try:
+                        import components.col_core_classes as col_module
+                        current = getattr(col_module, '_global_debug_enabled', False)
+                        col_module._global_debug_enabled = not current
+
+                        if col_module._global_debug_enabled:
+                            self.log_message("🔊 COL debug enabled")
+                        else:
+                            self.log_message("🔇 COL debug disabled")
+
+                    except Exception as e:
+                        self.log_message(f"❌ COL debug toggle error: {e}")
+
+                # Add to main window
+                self.toggle_col_debug = toggle_col_debug
+
+                # Start with debug disabled for performance
+                import components.col_core_classes as col_module
+                col_module._global_debug_enabled = False
+
+                self.log_message("✅ COL performance mode enabled")
+
+            except Exception as e:
+                self.log_message(f"⚠️ COL setup issue: {e}")
+
+            self.log_message("✅ Search and performance fixes applied")
+
+        except Exception as e:
+            self.log_message(f"❌ Apply fixes error: {e}")
+
+
+    # COL and editor functions
+    def open_col_editor(self): #vers 1
+        """Open COL file editor"""
+        self.log_message("COL editor functionality coming soon")
+
+    def open_txd_editor(self): #vers 1
+        """Open TXD texture editor"""
+        self.log_message("TXD editor functionality coming soon")
+
+    def open_dff_editor(self): #vers 1
+        """Open DFF model editor"""
+        self.log_message("DFF editor functionality coming soon")
+
+    def open_ipf_editor(self): #vers 1
+        """Open IPF animation editor"""
+        self.log_message("IPF editor functionality coming soon")
+
+    def open_ipl_editor(self): #vers 1
+        """Open IPL item placement editor"""
+        self.log_message("IPL editor functionality coming soon")
+
+    def open_ide_editor(self): #vers 1
+        """Open IDE item definition editor"""
+        self.log_message("IDE editor functionality coming soon")
+
+    def open_dat_editor(self): #vers 1
+        """Open DAT file editor"""
+        self.log_message("DAT editor functionality coming soon")
+
+    def open_zons_editor(self): #vers 1
+        """Open zones editor"""
+        self.log_message("Zones editor functionality coming soon")
+
+    def open_weap_editor(self): #vers 1
+        """Open weapons editor"""
+        self.log_message("Weapons editor functionality coming soon")
+
+    def open_vehi_editor(self): #vers 1
+        """Open vehicles editor"""
+        self.log_message("Vehicles editor functionality coming soon")
+
+    def open_radar_map(self): #vers 1
+        """Open radar map editor"""
+        self.log_message("Radar map functionality coming soon")
+
+    def open_paths_map(self): #vers 1
+        """Open paths map editor"""
+        self.log_message("Paths map functionality coming soon")
+
+    def open_waterpro(self): #vers 1
+        """Open water properties editor"""
+        self.log_message("Water properties functionality coming soon")
 
 
     def validate_img(self): #vers 3

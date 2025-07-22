@@ -1,7 +1,5 @@
-#this belongs in components/col_functions.py - Version: 5
+#this belongs in components/col_functions.py - Version: 7
 # X-Seti - July20 2025 - IMG Factory 1.5 - COL Functions
-# COL integration functions and UI components using IMG debug system
-
 """
 COL Functions - Integration and UI components
 Provides COL integration functions, widgets, and menu actions
@@ -210,28 +208,6 @@ def add_col_tools_menu(main_window): #vers 1
         
     except Exception as e:
         col_debug_log(main_window, f"Error adding COL tools menu: {e}", 'COL_MENU', 'ERROR')
-        return False
-
-def add_col_context_menu_to_entries_table(main_window): #vers 1
-    """Add COL context menu items to entries table using IMG debug system"""
-    try:
-        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            col_debug_log(main_window, "No entries table available for COL context menu", 'COL_CONTEXT', 'ERROR')
-            return False
-        
-        # Use existing context menu system
-        from gui.gui_context import add_col_context_menu_to_entries_table
-        result = add_col_context_menu_to_entries_table(main_window)
-        
-        if result:
-            col_debug_log(main_window, "COL context menu added to entries table", 'COL_CONTEXT', 'SUCCESS')
-        else:
-            col_debug_log(main_window, "Failed to add COL context menu", 'COL_CONTEXT', 'ERROR')
-        
-        return result
-        
-    except Exception as e:
-        col_debug_log(main_window, f"Error adding COL context menu: {e}", 'COL_CONTEXT', 'ERROR')
         return False
 
 def open_col_file_dialog(main_window) -> bool: #vers 1

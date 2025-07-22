@@ -1,4 +1,4 @@
-# #this belongs in gui/ gui_context.py - Version: 7
+# #this belongs in gui/ gui_context.py - Version: 8
 # X-Seti - July16 2025 - IMG Factory 1.5 - Context Menu Functions
 
 """
@@ -12,8 +12,9 @@ from pathlib import Path
 from PyQt6.QtWidgets import QMenu
 from PyQt6.QtCore import pyqtSignal, QMimeData, Qt, QThread, QTimer, QSettings
 from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent, QFont, QIcon, QPixmap, QShortcut
+from components.img_core_classes import format_file_size
 
-print(f"[DEBUG] gui_context calling: with args={Path}")
+#print(f"[DEBUG] gui_context calling: with args={Path}")
 
 ## Methods list
 # add_col_context_menu_to_entries_table

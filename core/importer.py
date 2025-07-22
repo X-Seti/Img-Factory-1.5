@@ -1,4 +1,4 @@
-#this belongs in core/importer.py - Version: 4
+#this belongs in core/importer.py - Version: 5
 # X-Seti - July15 2025 - Img Factory 1.5
 # Import functions for IMG Factory
 
@@ -7,6 +7,7 @@ import shutil
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox, QComboBox, QProgressBar, QMessageBox, QFileDialog, QGroupBox, QGridLayout, QTextEdit
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QFont
+from components.img_core_classes import format_file_size
 
 ##Methods list
 # import_files

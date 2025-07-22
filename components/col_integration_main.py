@@ -189,20 +189,6 @@ def add_col_tab(img_factory_instance): #vers 1
         img_debugger.error(f"Error adding COL tab: {e}")
         return False
 
-def add_col_context_menu_items(img_factory_instance): #vers 1
-    """Add COL-specific context menu items to IMG entries using IMG debug system"""
-    try:
-        # Use existing context menu system from gui.gui_context
-        if hasattr(img_factory_instance, 'gui_layout') and hasattr(img_factory_instance.gui_layout, 'table'):
-            from gui.gui_context import add_col_context_menu_to_entries_table
-            return add_col_context_menu_to_entries_table(img_factory_instance)
-        else:
-            img_debugger.warning("No entries table available for COL context menu")
-            return False
-            
-    except Exception as e:
-        img_debugger.error(f"Error adding COL context menu items: {e}")
-        return False
 
 def add_col_file_detection(img_factory_instance): #vers 1
     """Add COL file type detection using IMG debug system"""
