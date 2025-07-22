@@ -1,10 +1,9 @@
 
 #!/usr/bin/env python3
 """
-X-Seti - JUNE25 2025 - IMG Factory 1.5 - Main Application Entry Point
-Clean Qt6-based implementation for IMG archive management
+X-Seti - July22 2025 - IMG Factory 1.5 - AtariST version :D
 """
-#this belongs in root /imgfactory.py - version 62
+#this belongs in root /imgfactory.py - version 65
 import sys
 import os
 import mimetypes
