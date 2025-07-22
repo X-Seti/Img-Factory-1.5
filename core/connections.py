@@ -8,6 +8,7 @@ Provides methods that GUI files expect, using their exact naming conventions
 """
 
 ##Methods list -
+# _update_button_states
 # connect_all_buttons_safely
 # connect_working_buttons  
 # setup_stub_button_connections
@@ -19,6 +20,46 @@ Provides methods that GUI files expect, using their exact naming conventions
 # _stub_close_img
 # _stub_gui_settings
 # _stub_validate
+
+def _update_button_states(self, has_selection):
+    """Update button enabled/disabled states based on selection"""
+    # Enable/disable buttons based on selection and loaded IMG
+    has_img = self.current_img is not None
+    has_col = self.current_col is not None
+
+    # Log the button state changes for debugging
+    self.log_message(f"Button states updated: selection={has_selection}, img_loaded={has_img}, col_loaded={has_col}")
+
+    # Find buttons in GUI layout and update their states
+    # These buttons need both an IMG and selection
+    selection_dependent_buttons = [
+        'export_btn', 'export_selected_btn', 'remove_btn', 'remove_selected_btn', 'reload_btn', 'extract_btn', 'quick_export_btn'
+    ]
+
+    for btn_name in selection_dependent_buttons:
+        if hasattr(self.gui_layout, btn_name):
+            button = getattr(self.gui_layout, btn_name)
+            if hasattr(button, 'setEnabled'):
+                # Enable for IMG files with selection, disable for COL files
+                button.setEnabled(has_selection and has_img and not has_col)
+
+    # These buttons only need an IMG (no selection required) - DISABLE for COL
+    img_dependent_buttons = [
+        'import_btn', 'import_files_btn', 'rebuild_btn', 'close_btn',
+        'validate_btn', 'refresh_btn',  'reload_btn'
+    ]
+
+    for btn_name in img_dependent_buttons:
+        if hasattr(self.gui_layout, btn_name):
+            button = getattr(self.gui_layout, btn_name)
+            if hasattr(button, 'setEnabled'):
+                # Special handling for rebuild - disable for COL files
+                if btn_name == 'rebuild_btn':
+                    button.setEnabled(has_img and not has_col)
+                else:
+                    button.setEnabled(has_img or has_col)
+
+
 
 def fix_context_menu_lambda_issue(main_window): #vers 1
     """Fix context menu lambda parameter mismatch"""
@@ -321,10 +362,3 @@ def connect_all_buttons_safely(main_window): #vers 1
         return False
 
 
-# INTEGRATION INSTRUCTIONS:
-# 1. Save this file as core/connections.py
-# 2. In imgfactory.py, import and use:
-#    from core.connections import connect_all_buttons_safely
-#    connect_all_buttons_safely(self)  # Call after GUI setup
-# 3. You can remove the _update_button_states() method from imgfactory.py (~30 lines)
-# 4. This provides working buttons + informative stubs + better button state management

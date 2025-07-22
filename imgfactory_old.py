@@ -204,6 +204,8 @@ def setup_debug_mode(self):
             self.menu_bar_system.settings_menu.addSeparator()
             self.menu_bar_system.settings_menu.addAction(debug_action)
 
+
+
 def toggle_debug_mode(self):
     """Toggle debug mode with user feedback"""
     enabled = self.debug.toggle_debug_mode()
@@ -414,7 +416,6 @@ class IMGFactory(QMainWindow):
 
         # Setup close manager for tab handling
         install_close_functions(self)
-        # COL Integration - FIXED: Move to end and use correct import
 
         if integrate_remove_functions(self):
             self.log_message("✅ Remove functions integrated")
@@ -571,6 +572,7 @@ class IMGFactory(QMainWindow):
         from components.unified_signal_handler import signal_handler
         signal_handler.status_update_requested.connect(self._update_status_from_signal)
 
+
     def debug_img_entries(self):
         """Debug function to check what entries are actually loaded"""
         if not self.current_img or not self.current_img.entries:
@@ -624,6 +626,7 @@ class IMGFactory(QMainWindow):
 
     # Part 2
     def _unified_double_click_handler(self, row, filename, item):
+        #vers 1
         """Handle double-click through unified system"""
         # Get the actual filename from the first column (index 0)
         if row < self.gui_layout.table.rowCount():
@@ -641,6 +644,8 @@ class IMGFactory(QMainWindow):
                 self.log_message(f"Double-clicked row {row} (no filename found)")
         else:
             self.log_message(f"Double-clicked: {filename}")
+
+
 
     def _unified_selection_handler(self, selected_rows, selection_count):
         """Handle selection changes through unified system"""
@@ -662,6 +667,7 @@ class IMGFactory(QMainWindow):
                         self.log_message(f"Selected: {name_item.text()}")
         else:
             self.log_message(f"Selected {selection_count} entries")
+
 
     def _update_button_states(self, has_selection):
         """Update button enabled/disabled states based on selection"""
@@ -701,6 +707,7 @@ class IMGFactory(QMainWindow):
                         button.setEnabled(has_img and not has_col)
                     else:
                         button.setEnabled(has_img or has_col)
+
 
     def _update_status_from_signal(self, message):
         """Update status from unified signal system"""
@@ -1171,6 +1178,7 @@ class IMGFactory(QMainWindow):
         else:
             self.log_message(f"Progress: {progress}% - {status}")
 
+
     def _on_img_load_error(self, error_message: str):
         """Handle IMG loading error"""
         self.log_message(f"❌ {error_message}")
@@ -1183,9 +1191,11 @@ class IMGFactory(QMainWindow):
 
         QMessageBox.critical(self, "IMG Load Error", error_message)
 
+
     def open_img_file(self):
         """Open file dialog - REDIRECTS to unified loader"""
         self.open_file_dialog()
+
 
     def _update_ui_for_no_img(self):
         """Update UI when no IMG file is loaded"""
@@ -1751,6 +1761,7 @@ class IMGFactory(QMainWindow):
             error_msg = f"Error closing file: {str(e)}"
             self.log_message(f"❌ {error_msg}")
             # Don't show error dialog, just log it
+
 
     def close_all_img(self):
         """Close all IMG files - Wrapper for close_all_tabs"""

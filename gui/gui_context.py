@@ -1,4 +1,4 @@
-#this belongs in gui/ gui_context.py - Version: 7
+# #this belongs in gui/ gui_context.py - Version: 7
 # X-Seti - July16 2025 - IMG Factory 1.5 - Context Menu Functions
 
 """
@@ -360,7 +360,7 @@ def open_col_editor_dialog(main_window): #vers 2
         QMessageBox.critical(main_window, "Error", f"Failed to open COL editor: {str(e)}")
 
 
-def open_col_file_dialog(main_window): #vers 1
+def open_col_file_dialog(main_window): #vers 2
     """Open COL file dialog"""
     try:
         from PyQt6.QtWidgets import QFileDialog, QMessageBox
@@ -379,6 +379,26 @@ def open_col_file_dialog(main_window): #vers 1
         from PyQt6.QtWidgets import QMessageBox
         QMessageBox.critical(main_window, "Error", f"Failed to open COL file: {str(e)}")
 
+"""
+def open_col_file_dialog(self): #vers 1
+    #Open COL file dialog
+    try:
+        if hasattr(self, 'load_col_file_safely'):
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "Open COL File", "", "COL Files (*.col);;All Files (*)"
+            )
+
+            if file_path:
+                return self.handle_col_file_open(file_path)
+        else:
+            QMessageBox.warning(self, "COL Support", "COL integration not available")
+
+        return False
+
+    except Exception as e:
+        QMessageBox.critical(self, "Error", f"Failed to open COL file: {str(e)}")
+        return False
+"""
 
 def show_entry_properties(main_window, row): #vers 1
     """Show entry properties"""
