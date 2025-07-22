@@ -89,6 +89,8 @@ from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.gui_menu import IMGFactoryMenuBar
 from gui.gui_context import (enhanced_context_menu_event, add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
+#from gui.cross_platform_theme import integrate_cross_platform_theme_system
+#from gui.cross_platform_theme import force_readable_text_colors
 
 #methods
 from methods.populate_img_table import install_img_table_populator
@@ -262,6 +264,8 @@ class IMGFactory(QMainWindow):
         super().__init__()
         self.settings = settings
         self.app_settings = settings if hasattr(settings, 'themes') else AppSettings()
+        #integrate_cross_platform_theme_system(self)
+        #force_readable_text_colors(self)
         self.setWindowTitle("IMG Factory 1.5")
         self.setGeometry(100, 100, 1200, 800)
 
