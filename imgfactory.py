@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-X-Seti - July22 2025 - IMG Factory 1.5 - AtariST version
+X-Seti - July22 2025 - IMG Factory 1.5 - AtariST version :D
 #this belongs in root /imgfactory.py - version 66
 """
 import sys
@@ -59,7 +59,7 @@ from components.col_functions import setup_complete_col_integration
 from components.col_debug_functions import set_col_debug_enabled
 from components.col_parsing_functions import load_col_file_safely
 from components.unified_debug_functions import integrate_all_improvements, install_debug_control_system
-from components.enh_debug_system import integrate_enhanced_debug_error
+#from components.enh_debug_system import integrate_enhanced_debug_error
 
 #core
 from core.close_func import install_close_functions, setup_close_manager
@@ -269,7 +269,8 @@ class IMGFactory(QMainWindow):
         self.setWindowTitle("IMG Factory 1.5")
         self.setGeometry(100, 100, 1200, 800)
 
-        integrate_enhanced_debug_error(self)
+        #bugged function
+        #integrate_enhanced_debug_error(self)
         # Initialize template manager - FIXED INDENTATION
         try:
             from components.img_templates import IMGTemplateManager
@@ -344,6 +345,8 @@ class IMGFactory(QMainWindow):
 
         # Create gui_backend
         self.gui_backend = GUIBackend(self)
+
+        # Debug system
         install_debug_control_system(self)
 
         # After GUI setup in __init__:
