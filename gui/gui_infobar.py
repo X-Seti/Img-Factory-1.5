@@ -18,7 +18,6 @@ from components.img_debug_functions import img_debugger
 ##Methods list -
 # get_col_file_statistics
 # update_col_info_bar
-# update_col_info_bar_enhanced
 # update_img_info_bar
 # update_main_info_display
 
@@ -130,8 +129,9 @@ def update_col_info_bar(main_window, col_file, file_path: str) -> bool: #vers 1
         col_debug_log(main_window, f"Error updating basic COL info bar: {str(e)}", 'COL_INFOBAR', 'ERROR')
         return False
 
-def update_col_info_bar_enhanced(main_window, col_file, file_path: str) -> bool: #vers 1
-    """Enhanced COL info bar update - CONSOLIDATED from components/col_display.py"""
+
+""" old_ prefix
+def old_update_col_info_bar_enhanced(main_window, col_file, file_path: str) -> bool: #vers 1
     try:
         col_debug_log(main_window, "Updating COL info bar (enhanced)", 'COL_INFOBAR')
         
@@ -190,6 +190,7 @@ def update_col_info_bar_enhanced(main_window, col_file, file_path: str) -> bool:
         col_debug_log(main_window, f"Error updating enhanced COL info bar: {str(e)}", 'COL_INFOBAR', 'ERROR')
         # Fallback to basic update
         return update_col_info_bar(main_window, col_file, file_path)
+"""
 
 def update_img_info_bar(main_window, img_file, file_path: str) -> bool: #vers 1
     """Update info bar for IMG files with IMG debug integration"""

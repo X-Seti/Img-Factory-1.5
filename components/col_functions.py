@@ -1,4 +1,4 @@
-#this belongs in components/col_functions.py - Version: 7
+#this belongs in components/col_functions.py - Version: 8
 # X-Seti - July20 2025 - IMG Factory 1.5 - COL Functions
 """
 COL Functions - Integration and UI components
@@ -210,57 +210,61 @@ def add_col_tools_menu(main_window): #vers 1
         col_debug_log(main_window, f"Error adding COL tools menu: {e}", 'COL_MENU', 'ERROR')
         return False
 
-def open_col_file_dialog(main_window) -> bool: #vers 1
+
+def open_col_file_dialog(main_window): #vers 4
     """Open COL file dialog using IMG debug system"""
     try:
-        col_debug_log(main_window, "Opening COL file dialog", 'COL_DIALOG')
-        
         file_path, _ = QFileDialog.getOpenFileName(
             main_window, "Open COL File", "", "COL Files (*.col);;All Files (*)"
         )
-        
+
         if file_path:
-            col_debug_log(main_window, f"COL file selected: {os.path.basename(file_path)}", 'COL_DIALOG')
-            
-            from methods.populate_col_table import load_col_file_safely
+            # Use the COL loading system
+            from components.col_parsing_functions import load_col_file_safely
             success = load_col_file_safely(main_window, file_path)
-            
+
             if success:
-                col_debug_log(main_window, f"COL file loaded successfully: {file_path}", 'COL_DIALOG', 'SUCCESS')
+                img_debugger.success(f"COL file opened: {os.path.basename(file_path)}")
             else:
-                col_debug_log(main_window, f"Failed to load COL file: {file_path}", 'COL_DIALOG', 'ERROR')
-            
+                img_debugger.error(f"Failed to open COL file: {os.path.basename(file_path)}")
+
             return success
-        else:
-            col_debug_log(main_window, "COL file dialog cancelled", 'COL_DIALOG')
-            return False
-            
-    except Exception as e:
-        col_debug_log(main_window, f"Error in COL file dialog: {e}", 'COL_DIALOG', 'ERROR')
+
         return False
+
+    except Exception as e:
+        img_debugger.error(f"Error opening COL file dialog: {str(e)}")
+        return False
+
 
 def create_new_col_file(main_window): #vers 1
     """Create new COL file using IMG debug system"""
     try:
-        col_debug_log(main_window, "Creating new COL file", 'COL_CREATE')
-        
-        # Try to open COL creator if available
-        try:
-            from components.col_creator import COLCreatorDialog
-            creator = COLCreatorDialog(main_window)
-            result = creator.exec()
-            
-            if result:
-                col_debug_log(main_window, "New COL file created successfully", 'COL_CREATE', 'SUCCESS')
-            else:
-                col_debug_log(main_window, "COL file creation cancelled", 'COL_CREATE')
-        except ImportError:
-            QMessageBox.information(main_window, "COL Creator", 
-                "COL creator will be available in a future version.")
-                
+        file_path, _ = QFileDialog.getSaveFileName(
+            main_window,
+            "Create New COL File",
+            "",
+            "COL Files (*.col);;All Files (*)"
+        )
+
+        if file_path:
+            # Create basic COL1 file structure
+            col_header = struct.pack('<4sI22sH', b'COLL', 32, b'new_collision\x00' * 22, 0)
+
+            with open(file_path, 'wb') as f:
+                f.write(col_header)
+                # Add minimal COL1 data structure
+                f.write(b'\x00' * 32)  # Basic collision data
+
+            QMessageBox.information(main_window, "Success", f"Created new COL file: {os.path.basename(file_path)}")
+            img_debugger.success(f"Created new COL file: {os.path.basename(file_path)}")
+            return True
+
     except Exception as e:
-        col_debug_log(main_window, f"Error creating COL file: {e}", 'COL_CREATE', 'ERROR')
+        img_debugger.error(f"Failed to create COL file: {str(e)}")
         QMessageBox.critical(main_window, "Error", f"Failed to create COL file: {str(e)}")
+        return False
+
 
 def open_col_editor(main_window): #vers 1
     """Open COL editor using IMG debug system"""
@@ -273,74 +277,138 @@ def open_col_editor(main_window): #vers 1
     except Exception as e:
         col_debug_log(main_window, f"Error opening COL editor: {e}", 'COL_EDITOR', 'ERROR')
 
-def import_col_to_current_img(main_window): #vers 1
+
+def import_col_to_current_img(main_window): #vers 2
     """Import COL file to current IMG using IMG debug system"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
-            QMessageBox.warning(main_window, "No IMG", "Please open an IMG file first.")
-            return
-        
-        col_debug_log(main_window, "Importing COL to current IMG", 'COL_IMPORT')
-        
-        file_path, _ = QFileDialog.getOpenFileName(
-            main_window, "Select COL File to Import", "", "COL Files (*.col);;All Files (*)"
-        )
-        
-        if file_path:
-            # Implementation for importing COL to IMG
-            col_debug_log(main_window, f"COL import to IMG will be implemented: {file_path}", 'COL_IMPORT')
-            QMessageBox.information(main_window, "Import COL", "COL import functionality will be available soon.")
-        
-    except Exception as e:
-        col_debug_log(main_window, f"Error importing COL to IMG: {e}", 'COL_IMPORT', 'ERROR')
-        QMessageBox.critical(main_window, "Error", f"Failed to import COL: {str(e)}")
+            QMessageBox.warning(main_window, "No IMG", "Please open an IMG file first")
+            return False
 
-def export_all_col_from_img(main_window): #vers 1
+        file_path, _ = QFileDialog.getOpenFileName(
+            main_window, "Import COL File to IMG", "", "COL Files (*.col);;All Files (*)"
+        )
+
+        if file_path:
+            with open(file_path, 'rb') as f:
+                col_data = f.read()
+
+            # Validate it's a COL file
+            from components.col_integration_main import detect_col_version_from_data
+            analysis = detect_col_version_from_data(col_data)
+            if not analysis:
+                QMessageBox.warning(main_window, "Invalid File", "Selected file is not a valid COL file")
+                return False
+
+            entry_name = os.path.basename(file_path)
+            main_window.current_img.add_entry(entry_name, col_data)
+
+            QMessageBox.information(main_window, "Success", f"COL imported as {entry_name}")
+            img_debugger.success(f"COL imported to IMG: {entry_name}")
+
+            # Refresh the entries table
+            if hasattr(main_window, 'populate_entries_table'):
+                main_window.populate_entries_table()
+
+            return True
+
+    except Exception as e:
+        img_debugger.error(f"Failed to import COL to IMG: {str(e)}")
+        QMessageBox.critical(main_window, "Error", f"Failed to import COL: {str(e)}")
+        return False
+
+
+def export_all_col_from_img(main_window): #vers 3
     """Export all COL files from current IMG using IMG debug system"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
-            QMessageBox.warning(main_window, "No IMG", "Please open an IMG file first.")
-            return
-        
-        col_debug_log(main_window, "Exporting all COL from current IMG", 'COL_EXPORT')
-        
-        # Find COL entries in IMG
-        col_entries = []
-        for entry in main_window.current_img.entries:
-            if entry.name.lower().endswith('.col'):
-                col_entries.append(entry)
-        
-        if not col_entries:
-            QMessageBox.information(main_window, "No COL Files", "No COL files found in current IMG.")
-            return
-        
-        # Select output directory
-        output_dir = QFileDialog.getExistingDirectory(main_window, "Select Output Directory")
-        if output_dir:
-            col_debug_log(main_window, f"Exporting {len(col_entries)} COL files to: {output_dir}", 'COL_EXPORT')
-            QMessageBox.information(main_window, "Export COL", "COL export functionality will be available soon.")
-        
-    except Exception as e:
-        col_debug_log(main_window, f"Error exporting COL from IMG: {e}", 'COL_EXPORT', 'ERROR')
-        QMessageBox.critical(main_window, "Error", f"Failed to export COL: {str(e)}")
+            QMessageBox.warning(main_window, "No IMG", "Please open an IMG file first")
+            return False
 
-def edit_col_from_img_entry(main_window, row): #vers 1
+        output_dir = QFileDialog.getExistingDirectory(
+            main_window, "Export COL Files to Directory"
+        )
+
+        if output_dir:
+            exported_count = 0
+            failed_count = 0
+
+            # Find and export all COL files
+            for entry in main_window.current_img.entries:
+                if entry.name.lower().endswith('.col'):
+                    try:
+                        output_path = os.path.join(output_dir, entry.name)
+                        entry.extract_to_file(output_path)
+                        exported_count += 1
+                        img_debugger.debug(f"Exported: {entry.name}")
+                    except Exception as e:
+                        failed_count += 1
+                        img_debugger.warning(f"Failed to export {entry.name}: {e}")
+
+            # Show results
+            if exported_count > 0:
+                message = f"Exported {exported_count} COL files to {output_dir}"
+                if failed_count > 0:
+                    message += f"\n{failed_count} files failed to export"
+                QMessageBox.information(main_window, "Export Complete", message)
+                img_debugger.success(f"COL export complete: {exported_count} files")
+            else:
+                QMessageBox.information(main_window, "No COL Files", "No COL files found in current IMG")
+                img_debugger.warning("No COL files found to export")
+
+            return exported_count > 0
+
+    except Exception as e:
+        img_debugger.error(f"Failed to export COL files: {str(e)}")
+        QMessageBox.critical(main_window, "Error", f"Failed to export COL files: {str(e)}")
+        return False
+
+
+def edit_col_from_img_entry(main_window, row): #vers 3
     """Edit COL file from IMG entry using IMG debug system"""
     try:
-        from components.col_utilities import edit_col_from_img_entry
-        edit_col_from_img_entry(main_window, row)
-        
+        # Get entry from row
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            entries = main_window.current_img.entries
+            if row < len(entries):
+                entry = entries[row]
+
+                # Use the function from col_integration_main
+                from components.col_integration_main import edit_col_from_img_entry
+                edit_col_from_img_entry(main_window, row)
+                return True
+
+        img_debugger.warning("Invalid row or no IMG loaded for COL editing")
+        return False
+
     except Exception as e:
-        col_debug_log(main_window, f"Error editing COL from IMG entry: {e}", 'COL_EDIT', 'ERROR')
+        img_debugger.error(f"Failed to edit COL from IMG entry: {str(e)}")
+        QMessageBox.critical(main_window, "Error", f"Failed to edit COL: {str(e)}")
+        return False
+
 
 def analyze_col_from_img_entry(main_window, row): #vers 1
     """Analyze COL file from IMG entry using IMG debug system"""
     try:
-        from components.col_utilities import analyze_col_from_img_entry
-        analyze_col_from_img_entry(main_window, row)
-        
+        # Get entry from row
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            entries = main_window.current_img.entries
+            if row < len(entries):
+                entry = entries[row]
+
+                # Use the function from col_integration_main
+                from components.col_integration_main import analyze_col_from_img_entry
+                analyze_col_from_img_entry(main_window, row)
+                return True
+
+        img_debugger.warning("Invalid row or no IMG loaded for COL analysis")
+        return False
+
     except Exception as e:
-        col_debug_log(main_window, f"Error analyzing COL from IMG entry: {e}", 'COL_ANALYZE', 'ERROR')
+        img_debugger.error(f"Failed to analyze COL from IMG entry: {str(e)}")
+        QMessageBox.critical(main_window, "Error", f"Failed to analyze COL: {str(e)}")
+        return False
+
 
 def setup_threaded_col_loading(main_window): #vers 1
     """Setup threaded COL loading using IMG debug system"""

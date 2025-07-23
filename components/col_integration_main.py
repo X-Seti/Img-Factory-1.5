@@ -1,4 +1,4 @@
-#this belongs in components/col_integration_main.py - Version: 6
+#this belongs in components/col_integration_main.py - Version: 8
 # X-Seti - July20 2025 - IMG Factory 1.5 - COL Integration Main
 # Complete COL integration for IMG Factory using IMG debug system
 
@@ -31,15 +31,18 @@ from components.col_core_classes import COLFile, COLModel, COLVersion
 # analyze_col_from_img
 # create_col_editor_action
 # create_col_file_dialog
-# create_new_col_file
 # detect_col_version_from_data
 # edit_col_from_img
+# export_col_from_img
 # export_col_to_img_format
+# import_col_to_img
 # integrate_col_functionality
 # integrate_complete_col_system
+# load_col_from_img_entry
 # open_col_batch_processor
+# open_col_editor
 # open_col_editor_with_file
-# open_col_file_dialog
+# replace_col_in_img
 # setup_col_debug_for_main_window
 # setup_col_integration_full
 # setup_threaded_col_loading
@@ -247,6 +250,150 @@ def add_col_file_detection(img_factory_instance): #vers 1
         img_debugger.error(f"Error adding COL file detection: {e}")
         return False
 
+def open_col_editor(img_factory_instance, file_path=None): #vers 1
+    """Open COL editor"""
+    try:
+        # Try to open COL editor if available
+        try:
+            from components.col_editor import COLEditorDialog
+            editor = COLEditorDialog(img_factory_instance)
+            if file_path:
+                editor.load_col_file(file_path)
+            editor.exec()
+        except ImportError:
+            QMessageBox.information(img_factory_instance, "COL Editor",
+                "COL editor will be available in a future version.")
+    except Exception as e:
+        img_debugger.error(f"Failed to open COL editor: {str(e)}")
+
+def replace_col_in_img(img_factory_instance, entry): #vers 1
+    """Replace COL file in IMG with new one"""
+    try:
+        # Get new COL file to replace with
+        file_path, _ = QFileDialog.getOpenFileName(
+            img_factory_instance, "Replace COL File", "", "COL Files (*.col);;All Files (*)"
+        )
+
+        if file_path:
+            with open(file_path, 'rb') as f:
+                new_data = f.read()
+
+            entry.set_data(new_data)
+
+            QMessageBox.information(img_factory_instance, "Success", "COL entry replaced successfully")
+
+            # Refresh the entries table
+            if hasattr(img_factory_instance, 'populate_entries_table'):
+                img_factory_instance.populate_entries_table()
+
+    except Exception as e:
+        img_debugger.error(f"Failed to replace COL: {str(e)}")
+
+def import_col_to_img(img_factory_instance): #vers 1
+    """Import COL file to current IMG"""
+    try:
+        if not hasattr(img_factory_instance, 'current_img') or not img_factory_instance.current_img:
+            QMessageBox.warning(img_factory_instance, "No IMG", "Please open an IMG file first")
+            return
+
+        # Get COL file to import
+        file_path, _ = QFileDialog.getOpenFileName(
+            img_factory_instance, "Import COL File", "", "COL Files (*.col);;All Files (*)"
+        )
+
+        if file_path:
+            with open(file_path, 'rb') as f:
+                col_data = f.read()
+
+            entry_name = os.path.basename(file_path)
+            img_factory_instance.current_img.add_entry(entry_name, col_data)
+
+            QMessageBox.information(img_factory_instance, "Success", f"COL imported as {entry_name}")
+
+            # Refresh the entries table
+            if hasattr(img_factory_instance, 'populate_entries_table'):
+                img_factory_instance.populate_entries_table()
+
+    except Exception as e:
+        img_debugger.error(f"Failed to import COL: {str(e)}")
+
+def export_col_from_img(img_factory_instance): #vers 1
+    """Export COL files from current IMG"""
+    try:
+        if not hasattr(img_factory_instance, 'current_img') or not img_factory_instance.current_img:
+            QMessageBox.warning(img_factory_instance, "No IMG", "Please open an IMG file first")
+            return
+
+        # Get directory to export to
+        output_dir = QFileDialog.getExistingDirectory(
+            img_factory_instance, "Export COL Files to Directory"
+        )
+
+        if output_dir:
+            exported_count = 0
+
+            # Find and export all COL files
+            for entry in img_factory_instance.current_img.entries:
+                if entry.name.lower().endswith('.col'):
+                    try:
+                        output_path = os.path.join(output_dir, entry.name)
+                        entry.extract_to_file(output_path)
+                        exported_count += 1
+                    except Exception as e:
+                        img_debugger.warning(f"Failed to export {entry.name}: {e}")
+
+            QMessageBox.information(img_factory_instance, "Export Complete",
+                f"Exported {exported_count} COL files to {output_dir}")
+
+    except Exception as e:
+        img_debugger.error(f"Failed to export COL files: {str(e)}")
+
+
+def load_col_from_img_entry(img_factory_instance, entry): #vers 1
+    """Load COL file from IMG entry"""
+    try:
+        img_debugger.debug(f"Loading COL from IMG entry: {entry.name}")
+
+        # Extract COL data
+        col_data = entry.get_data()
+
+        # Validate it's a COL file
+        analysis = detect_col_version_from_data(col_data)
+        if not analysis:
+            img_debugger.warning(f"{entry.name} is not a valid COL file")
+            return False
+
+        # Create temporary COL file
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.col', delete=False) as temp_file:
+            temp_file.write(col_data)
+            temp_path = temp_file.name
+
+        # Load using the COL loading system
+        from components.col_parsing_functions import load_col_file_safely
+        success = load_col_file_safely(img_factory_instance, temp_path)
+
+        # Clean up temp file
+        try:
+            os.unlink(temp_path)
+        except:
+            pass
+
+        if success:
+            img_debugger.success(f"COL loaded successfully: {entry.name}")
+        else:
+            img_debugger.error(f"Failed to load COL: {entry.name}")
+
+        return success
+
+    except Exception as e:
+        img_debugger.error(f"Failed to load COL from IMG entry: {e}")
+        return False
+
+#non-replace
+
+
+
 def detect_col_version_from_data(data: bytes) -> Optional[dict]: #vers 1
     """Detect COL version and basic info from raw data"""
     if len(data) < 8:
@@ -294,42 +441,6 @@ def detect_col_version_from_data(data: bytes) -> Optional[dict]: #vers 1
         return None
 
 # COL operation functions
-def open_col_file_dialog(img_factory_instance): #vers 1
-    """Open COL file dialog using IMG debug system"""
-    try:
-        file_path, _ = QFileDialog.getOpenFileName(
-            img_factory_instance, "Open COL File", "", "COL Files (*.col);;All Files (*)"
-        )
-        
-        if file_path:
-            img_debugger.debug(f"Selected COL file: {os.path.basename(file_path)}")
-            
-            if hasattr(img_factory_instance, 'col_list_widget'):
-                img_factory_instance.col_list_widget.load_col_from_path(file_path)
-                # Switch to COL tab
-                if hasattr(img_factory_instance, 'main_tab_widget'):
-                    img_factory_instance.main_tab_widget.setCurrentIndex(1)  # COL tab
-            else:
-                # Fallback to standalone editor
-                from components.col_editor import open_col_editor
-                open_col_editor(img_factory_instance, file_path)
-        
-        return file_path is not None
-        
-    except Exception as e:
-        img_debugger.error(f"Error in COL file dialog: {e}")
-        return False
-
-def create_new_col_file(img_factory_instance): #vers 1
-    """Create new COL file using IMG debug system"""
-    try:
-        img_debugger.debug("Creating new COL file")
-        QMessageBox.information(img_factory_instance, "New COL", "New COL file creation coming soon!")
-        return True
-        
-    except Exception as e:
-        img_debugger.error(f"Error creating new COL file: {e}")
-        return False
 
 def create_col_editor_action(img_factory_instance): #vers 1
     """Create COL editor action using IMG debug system"""

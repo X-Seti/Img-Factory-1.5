@@ -1,7 +1,7 @@
 === IMG Factory Debug Log ===
-Started: 2025-07-23 13:30:43
+Started: 2025-07-23 15:52:40
 Python: 3.13.5 (main, Jun 21 2025, 09:35:00) [GCC 15.1.1 20250425]
 Platform: linux
 ==================================================
 
-[13:30:44] DEBUG: img_debug_functions.py:95 in debug() - 🛡️ COL debug system DISABLED for performance
+[15:52:41] DEBUG: img_debug_functions.py:99 in debug() - 🛡️ COL debug system DISABLED for performance

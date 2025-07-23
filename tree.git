@@ -88,9 +88,9 @@
 │   │   ├── col_debug_control.py
 │   │   ├── col_display.py
 │   │   ├── col_editor.py
-│   │   ├── col_functions.py
-│   │   ├── col_main_integration.py
-│   │   ├── col_parsing_functions.py
+│   │   ├── col_functions.py -done
+│   │   ├── col_main_integration.py -done
+│   │   ├── col_parsing_functions.py -done
 │   │   ├── col_structure_manager.py
 │   │   ├── col_tabs_functions.py
 │   │   ├── col_threaded_loader.py

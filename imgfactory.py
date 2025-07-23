@@ -84,7 +84,7 @@ from core.connections import connect_all_buttons_safely
 #gui
 from gui.gui_backend import ButtonDisplayMode, GUIBackend
 from gui.main_window import IMGFactoryMainWindow
-from gui.gui_infobar import update_col_info_bar_enhanced
+from gui.col_display import update_col_info_bar_enhanced
 from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.gui_menu import IMGFactoryMenuBar
@@ -683,7 +683,7 @@ class IMGFactory(QMainWindow):
 
     # FIX: Close manager tab widget issue
     def fix_close_manager_tab_reference(main_window): #vers 1
-        """Fix close manager missing main_tab_widget reference"""
+        #"""Fix close manager missing main_tab_widget reference#"""
         try:
             if hasattr(main_window, 'close_manager'):
                 # Add missing reference
