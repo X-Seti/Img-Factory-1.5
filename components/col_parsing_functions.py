@@ -59,42 +59,130 @@ def setup_col_tab_integration(main_window): #vers 1
         img_debugger.error(f"COL tab integration failed: {str(e)}")
         return False
 
-def load_col_file_safely(main_window, file_path): #vers 1
-    """Load COL file safely with proper tab management"""
+
+def load_col_file_safely(main_window, file_path): #vers 6
+    """Load COL file safely with complete error handling and debugging"""
     try:
-        # Validate file
-        if not _validate_col_file(main_window, file_path):
+        main_window.log_message(f"🔧 Loading COL: {os.path.basename(file_path)}")
+        img_debugger.debug(f"Starting COL load: {file_path}")
+
+        # Validate file first
+        if not os.path.exists(file_path):
+            error_msg = f"COL file not found: {file_path}"
+            main_window.log_message(f"❌ {error_msg}")
+            img_debugger.error(error_msg)
             return False
 
-        # Setup tab
-        tab_index = _setup_col_tab(main_window, file_path)
-        if tab_index is None:
+        if not os.access(file_path, os.R_OK):
+            error_msg = f"Cannot read COL file: {file_path}"
+            main_window.log_message(f"❌ {error_msg}")
+            img_debugger.error(error_msg)
             return False
 
-        # Load COL file
-        col_file = _load_col_file(main_window, file_path)
-        if col_file is None:
+        file_size = os.path.getsize(file_path)
+        if file_size < 32:
+            error_msg = f"COL file too small ({file_size} bytes, minimum 32 bytes required)"
+            main_window.log_message(f"❌ {error_msg}")
+            img_debugger.error(error_msg)
             return False
 
-        # Setup table structure for COL data
-        _setup_col_table_structure(main_window)
+        img_debugger.debug(f"COL file validation passed: {file_size} bytes")
 
-        # Populate table with enhanced COL data
-        _populate_col_table_enhanced(main_window, col_file)
+        # Check COL signature
+        try:
+            with open(file_path, 'rb') as f:
+                signature = f.read(4)
+                img_debugger.debug(f"COL signature read: {signature}")
 
-        # Update main window state
+                if signature not in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
+                    error_msg = f"Invalid COL signature: {signature} (expected COLL, COL\\x02, COL\\x03, or COL\\x04)"
+                    main_window.log_message(f"❌ {error_msg}")
+                    img_debugger.error(error_msg)
+                    return False
+
+                img_debugger.debug(f"COL signature valid: {signature}")
+
+        except Exception as e:
+            error_msg = f"Failed to read COL signature: {str(e)}"
+            main_window.log_message(f"❌ {error_msg}")
+            img_debugger.error(error_msg)
+            return False
+
+        # Import our complete COL classes
+        try:
+            from components.col_core_classes import COLFile
+            img_debugger.debug("COL classes imported successfully")
+        except ImportError as e:
+            error_msg = f"Failed to import COL classes: {str(e)}"
+            main_window.log_message(f"❌ {error_msg}")
+            img_debugger.error(error_msg)
+            return False
+
+        # Create COL file object
+        img_debugger.debug("Creating COL file object...")
+        col_file = COLFile(file_path)
+
+        # Load the COL file
+        img_debugger.debug("Starting COL file parsing...")
+        success = col_file.load()
+
+        if not success:
+            # Get specific error from COL file
+            error_msg = col_file.load_error if hasattr(col_file, 'load_error') and col_file.load_error else "Unknown COL parsing error"
+
+            # Additional debugging
+            img_debugger.error(f"COL parsing failed. Error: {error_msg}")
+
+            # Try to get more details
+            if hasattr(col_file, 'models'):
+                img_debugger.debug(f"COL models found: {len(col_file.models) if col_file.models else 0}")
+
+            main_window.log_message(f"❌ Failed to load COL file: {error_msg}")
+            return False
+
+        # Check if models were loaded
+        if not hasattr(col_file, 'models') or not col_file.models:
+            error_msg = "COL file parsed but contains no models"
+            main_window.log_message(f"❌ {error_msg}")
+            img_debugger.error(error_msg)
+            return False
+
+        img_debugger.debug(f"COL file loaded successfully: {len(col_file.models)} models found")
+
+        # Success - store the loaded COL file
         main_window.current_col = col_file
-        main_window.open_files[tab_index]['file_object'] = col_file
 
-        # Update info bar with enhanced data
-        _update_col_info_bar_enhanced(main_window, col_file, file_path)
+        # Update UI
+        if hasattr(main_window, '_update_ui_for_loaded_col'):
+            try:
+                main_window._update_ui_for_loaded_col()
+                img_debugger.debug("UI updated for loaded COL")
+            except Exception as e:
+                img_debugger.warning(f"Failed to update UI for COL: {e}")
 
-        img_debugger.success(f"COL file loaded: {os.path.basename(file_path)}")
+        # Calculate statistics
+        model_count = len(col_file.models)
+        total_objects = 0
+        for model in col_file.models:
+            if hasattr(model, 'spheres'):
+                total_objects += len(model.spheres)
+            if hasattr(model, 'boxes'):
+                total_objects += len(model.boxes)
+
+        success_msg = f"COL loaded: {model_count} models, {total_objects} collision objects"
+        main_window.log_message(f"✅ {success_msg}")
+        img_debugger.success(success_msg)
+
         return True
 
     except Exception as e:
-        img_debugger.error(f"Error loading COL file: {str(e)}")
+        error_msg = f"COL loading exception: {str(e)}"
+        main_window.log_message(f"❌ {error_msg}")
+        img_debugger.error(f"COL loading exception: {e}")
+        import traceback
+        img_debugger.error(f"COL loading traceback: {traceback.format_exc()}")
         return False
+
 
 #def _populate_col_table_enhanced(main_window, col_file): #vers 1 #moved to methods/populate_col_table_enhanced.py
 

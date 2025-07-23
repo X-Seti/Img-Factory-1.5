@@ -51,6 +51,12 @@ from components.img_validator import IMGValidator
 from components.img_core_classes import (
     IMGFile, IMGEntry, IMGVersion, Platform,
     IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel)
+from components.col_core_classes import (
+    COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup,
+    COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox,
+    diagnose_col_file, set_col_debug_enabled, is_col_debug_enabled
+)
+
 from components.img_core_classes import format_file_size
 from components.col_parsing_functions import load_col_file_safely
 from components.rw_unknown_snapshot import integrate_unknown_rw_detection
@@ -58,6 +64,7 @@ from components.col_integration_main import integrate_complete_col_system
 from components.col_functions import setup_complete_col_integration
 from components.col_debug_functions import set_col_debug_enabled
 from components.col_parsing_functions import load_col_file_safely
+from components.col_structure_manager import COLStructureManager
 from components.unified_debug_functions import integrate_all_improvements, install_debug_control_system
 #from components.enh_debug_system import integrate_enhanced_debug_error
 
@@ -68,6 +75,7 @@ from core.file_extraction import setup_complete_extraction_integration
 from core.tables_structure import reset_table_styling
 #from core.loadcol import load_col_file_safely
 from core.remove import integrate_remove_functions
+from core.file_type_filter import integrate_file_filtering
 from core.importer import (import_files_function,
     import_via_function, import_via_ide_file, import_from_folder,
     get_selected_entries, integrate_import_functions)
@@ -76,8 +84,6 @@ from core.right_click_actions import integrate_right_click_actions
 from core.shortcuts import setup_all_shortcuts
 from core.integration import integrate_complete_core_system
 from core.connections import connect_all_buttons_safely
-
-#from core.tables_structure import (populate_img_table, populate_col_table_img_format, populate_col_table_enhanced, setup_col_table_structure)
 
 #gui-layout
 
@@ -89,6 +95,10 @@ from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.gui_menu import IMGFactoryMenuBar
 from gui.gui_context import (enhanced_context_menu_event, add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
+
+
+
+
 #from gui.cross_platform_theme import integrate_cross_platform_theme_system
 #from gui.cross_platform_theme import force_readable_text_colors
 
@@ -341,6 +351,15 @@ class IMGFactory(QMainWindow):
             setup_complete_extraction_integration(self)
         except Exception as e:
             self.log_message(f"⚠️ Failed to setup extraction integration: {str(e)}")
+
+        # Integrate complete extraction system
+        setup_complete_extraction_integration(self)
+
+        # Integrate file filtering
+        integrate_file_filtering(self)
+
+        # Enable COL debug if needed
+        set_col_debug_enabled(True)  # Optional
 
 
         # Create gui_backend

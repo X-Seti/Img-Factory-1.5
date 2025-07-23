@@ -10,10 +10,13 @@
 │   ├── col_loader.py
 │   ├── col_manager.py
 │   ├── col_parsing_functions.py
+│   ├── col_structure_manager.py
 │   ├── col_threaded_loader.py
 │   ├── col_utilities.py
 │   ├── col_validator.py
 │   ├── enh_debug_system.py
+│   ├── file_extraction_functions.py
+│   ├── file_type_filter.py
 │   ├── gta_file_editors.py
 │   ├── img_compression.py
 │   ├── img_core_classes.py
@@ -84,25 +87,25 @@
 │   └── populate_img_table.py
 ├── old-ignore-folder
 │   ├── components
-│   │   ├── col_core_classes.py
+│   │   ├── col_core_classes.py-old
 │   │   ├── col_debug_control.py
-│   │   ├── col_display.py
-│   │   ├── col_editor.py
+│   │   ├── col_display.py -done
+│   │   ├── col_editor.py-old
 │   │   ├── col_functions.py -done
 │   │   ├── col_main_integration.py -done
 │   │   ├── col_parsing_functions.py -done
-│   │   ├── col_structure_manager.py
-│   │   ├── col_tabs_functions.py
-│   │   ├── col_threaded_loader.py
-│   │   ├── col_utilities.py
-│   │   ├── file_extraction_functions.py
-│   │   ├── file_type_filter.py
+│   │   ├── col_structure_manager.py-old
+│   │   ├── col_tabs_functions.py-old
+│   │   ├── col_threaded_loader.py-old
+│   │   ├── col_utilities.py-old
+│   │   ├── file_extraction_functions.py-old
+│   │   ├── file_type_filter.py-old
 │   │   ├── gta_file_editors.py
 │   │   ├── txd_converter.py
 │   │   ├── unified_debug_functions.py
-│   │   └── unified_signal_handler.py
+│   │   └── unified_signal_handler.py-old
 │   ├── gui
-│   │   ├── col_gui_integration.py
+│   │   ├── col_gui_integration.py-old
 │   │   ├── col_tab_css_theme.css
 │   │   ├── dialogs.py
 │   │   ├── gui_layout.py
@@ -303,4 +306,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-57 directories, 247 files
+57 directories, 250 files

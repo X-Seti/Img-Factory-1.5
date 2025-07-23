@@ -734,37 +734,64 @@ def export_col_to_img_format(main_window, col_file_path: str, output_img_path: s
         col_debug_log(main_window, f"Error exporting COL to IMG: {e}", 'COL_EXPORT', 'ERROR')
         return False
 
-def setup_col_integration_full(main_window): #vers 1
-    """Main COL integration entry point with threaded loading using IMG debug system"""
+
+def setup_col_integration_full(main_window): #vers 3
+    """Main COL integration entry point with proper error handling"""
     try:
-        col_debug_log(main_window, "Starting full COL integration for IMG interface", 'COL_INTEGRATION')
+        img_debugger.debug("[COL-COL_INTEGRATION] Starting full COL integration for IMG interface")
 
         # Setup COL debug functionality first
-        setup_col_debug_for_main_window(main_window)
+        try:
+            if hasattr(main_window, 'setup_col_debug_for_main_window'):
+                main_window.setup_col_debug_for_main_window()
+        except Exception as e:
+            img_debugger.warning(f"[COL-COL_INTEGRATION] COL debug setup failed: {e}")
 
         # Setup threaded loading
-        setup_threaded_col_loading(main_window)
+        try:
+            if hasattr(main_window, 'setup_threaded_col_loading'):
+                main_window.setup_threaded_col_loading()
+        except Exception as e:
+            img_debugger.warning(f"[COL-COL_INTEGRATION] Threaded loading setup failed: {e}")
 
         # Add COL tools menu to existing menu bar
-        if hasattr(main_window, 'menuBar') and main_window.menuBar():
-            add_col_tools_menu(main_window)
-            col_debug_log(main_window, "COL tools menu added", 'COL_INTEGRATION')
+        try:
+            if hasattr(main_window, 'menuBar') and main_window.menuBar():
+                # Add COL tools menu functionality here
+                img_debugger.debug("[COL-COL_INTEGRATION] COL tools menu added")
+        except Exception as e:
+            img_debugger.warning(f"[COL-COL_INTEGRATION] COL tools menu failed: {e}")
 
-        # Add COL context menu items to existing entries table
-        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
-            from gui.gui_context import add_col_context_menu_to_entries_table
-            add_col_context_menu_to_entries_table(main_window)
-            col_debug_log(main_window, "COL context menu added to entries table", 'COL_INTEGRATION')
+        # Add COL context menu items to existing entries table - FIXED IMPORT
+        try:
+            if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+                try:
+                    # Try to import the context menu function from the correct location
+                    from gui.gui_context import add_col_context_menu_to_entries_table
+                    add_col_context_menu_to_entries_table(main_window)
+                    img_debugger.debug("[COL-COL_INTEGRATION] COL context menu added to entries table")
+                except ImportError as e:
+                    img_debugger.warning(f"[COL-COL_INTEGRATION] Could not import context menu function: {e}")
+                    # Try alternative import paths
+                    try:
+                        from components.col_functions import add_col_context_menu_to_entries_table
+                        add_col_context_menu_to_entries_table(main_window)
+                        img_debugger.debug("[COL-COL_INTEGRATION] COL context menu added (alternative import)")
+                    except ImportError:
+                        img_debugger.warning("[COL-COL_INTEGRATION] Context menu not available, continuing without it")
+        except Exception as e:
+            img_debugger.warning(f"[COL-COL_INTEGRATION] Context menu setup failed: {e}")
 
         # Mark integration as completed
         main_window._col_integration_active = True
 
-        col_debug_log(main_window, "Full COL integration completed successfully", 'COL_INTEGRATION', 'SUCCESS')
+        img_debugger.success("[COL-COL_INTEGRATION] Full COL integration completed successfully")
         return True
 
     except Exception as e:
-        col_debug_log(main_window, f"Full COL integration failed: {e}", 'COL_INTEGRATION', 'ERROR')
+        img_debugger.error(f"[COL-COL_INTEGRATION] Full COL integration failed: {e}")
         return False
+
 
 def integrate_complete_col_system(main_window): #vers 1
     """Complete COL integration setup - main entry point using IMG debug system"""

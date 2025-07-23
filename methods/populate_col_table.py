@@ -312,6 +312,124 @@ def update_col_info_bar_enhanced(main_window, col_file, file_path): #vers 1
         img_debugger.error(f"Enhanced info bar update failed: {str(e)}")
         raise
 
+
+def setup_col_table_structure(main_window): #vers 1
+    """Setup table structure for COL data"""
+    try:
+        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
+            img_debugger.error("Table widget not found")
+            return False
+
+        table = main_window.gui_layout.table
+
+        # COL-specific columns
+        col_headers = ["Model Name", "Type", "Version", "Size", "Spheres", "Boxes", "Vertices", "Faces"]
+        table.setColumnCount(len(col_headers))
+        table.setHorizontalHeaderLabels(col_headers)
+
+        # Set column widths for better display
+        table.setColumnWidth(0, 200)  # Model Name
+        table.setColumnWidth(1, 80)   # Type
+        table.setColumnWidth(2, 80)   # Version
+        table.setColumnWidth(3, 100)  # Size
+        table.setColumnWidth(4, 80)   # Spheres
+        table.setColumnWidth(5, 80)   # Boxes
+        table.setColumnWidth(6, 80)   # Vertices
+        table.setColumnWidth(7, 80)   # Faces
+
+        # Enable sorting
+        table.setSortingEnabled(True)
+
+        img_debugger.debug("COL table structure setup complete")
+        return True
+
+    except Exception as e:
+        img_debugger.error(f"Error setting up COL table structure: {str(e)}")
+        return False
+
+def populate_table_with_col_data_debug(main_window, col_file): #vers 1
+    """Populate table with COL data with debug output"""
+    try:
+        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
+            img_debugger.error("Table widget not found")
+            return False
+
+        table = main_window.gui_layout.table
+
+        if not col_file or not hasattr(col_file, 'models'):
+            img_debugger.warning("No COL models to display")
+            table.setRowCount(0)
+            return False
+
+        models = col_file.models
+        img_debugger.debug(f"Populating table with {len(models)} COL models")
+
+        # Set row count
+        table.setRowCount(len(models))
+
+        for row, model in enumerate(models):
+            try:
+                # Model Name
+                model_name = getattr(model, 'name', f'Model_{row+1}')
+                table.setItem(row, 0, QTableWidgetItem(str(model_name)))
+
+                # Type
+                table.setItem(row, 1, QTableWidgetItem("COL"))
+
+                # Version
+                version = getattr(model, 'version', 'Unknown')
+                if hasattr(version, 'value'):
+                    version_text = f"COL{version.value}"
+                else:
+                    version_text = str(version)
+                table.setItem(row, 2, QTableWidgetItem(version_text))
+
+                # Size (approximate)
+                size_text = "~"
+                if hasattr(model, 'get_stats'):
+                    stats = model.get_stats()
+                    # Estimate size based on object counts
+                    estimated_size = (stats.get('vertices', 0) * 12 +
+                                    stats.get('faces', 0) * 16 +
+                                    stats.get('spheres', 0) * 20 +
+                                    stats.get('boxes', 0) * 32)
+                    if estimated_size > 1024:
+                        size_text = f"~{estimated_size//1024}KB"
+                    else:
+                        size_text = f"~{estimated_size}B"
+                table.setItem(row, 3, QTableWidgetItem(size_text))
+
+                # Spheres
+                spheres_count = len(getattr(model, 'spheres', []))
+                table.setItem(row, 4, QTableWidgetItem(str(spheres_count)))
+
+                # Boxes
+                boxes_count = len(getattr(model, 'boxes', []))
+                table.setItem(row, 5, QTableWidgetItem(str(boxes_count)))
+
+                # Vertices
+                vertices_count = len(getattr(model, 'vertices', []))
+                table.setItem(row, 6, QTableWidgetItem(str(vertices_count)))
+
+                # Faces
+                faces_count = len(getattr(model, 'faces', []))
+                table.setItem(row, 7, QTableWidgetItem(str(faces_count)))
+
+            except Exception as e:
+                img_debugger.error(f"Error populating row {row}: {str(e)}")
+                # Fill with error data
+                table.setItem(row, 0, QTableWidgetItem(f"Error_Model_{row}"))
+                for col in range(1, 8):
+                    table.setItem(row, col, QTableWidgetItem("Error"))
+
+        img_debugger.success(f"COL table populated with {len(models)} models")
+        return True
+
+    except Exception as e:
+        img_debugger.error(f"Error populating COL table: {str(e)}")
+        return False
+
+
 def load_col_file_safely(main_window, file_path): #vers 1
     """Load COL file safely with proper tab management"""
     try:
