@@ -1,2 +1,8 @@
 
 *.log
+/dff_sample
+/gui/__pycache__
+/core/__pycache__
+/utils/__pycache__
+/components/__pycache__
+/openrw

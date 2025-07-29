@@ -76,6 +76,7 @@ from core.tables_structure import reset_table_styling
 #from core.loadcol import load_col_file_safely
 from core.remove import integrate_remove_functions
 from core.file_type_filter import integrate_file_filtering
+from core.exporter import integrate_img_export_methods
 from core.importer import (import_files_function,
     import_via_function, import_via_ide_file, import_from_folder,
     get_selected_entries, integrate_import_functions)
@@ -95,8 +96,6 @@ from gui.gui_layout import IMGFactoryGUILayout
 from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.gui_menu import IMGFactoryMenuBar
 from gui.gui_context import (enhanced_context_menu_event, add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
-
-
 
 
 #from gui.cross_platform_theme import integrate_cross_platform_theme_system
@@ -352,6 +351,10 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"⚠️ Failed to setup extraction integration: {str(e)}")
 
+
+        # After your main window is set up, call:
+        integrate_img_export_methods(self)
+
         # Integrate complete extraction system
         setup_complete_extraction_integration(self)
 
@@ -399,7 +402,6 @@ class IMGFactory(QMainWindow):
         self.reload_table = self.reload_current_file
         # Log startup
         self.log_message("IMG Factory 1.5 initialized")
-
 
     def show_debug_settings(self): #vers 1
         """Show debug settings dialog"""
@@ -2571,7 +2573,10 @@ class IMGFactory(QMainWindow):
 
                     # Check if IMG has export_entry method
                     if hasattr(self.current_img, 'export_entry'):
-                        if self.current_img.export_entry(row, export_dir):
+                        #if self.current_img.export_entry(row, export_dir):
+                        entry = self.current_img.entries[row]
+                        output_path = os.path.join(export_dir, entry.name)
+                        if self.current_img.export_entry(entry, output_path):
                             exported_count += 1
                             self.log_message(f"Exported: {entry_name}")
                     else:
@@ -2619,7 +2624,10 @@ class IMGFactory(QMainWindow):
 
                     # Check if IMG has export_entry method
                     if hasattr(self.current_img, 'export_entry'):
-                        if self.current_img.export_entry(i, export_dir):
+                        #if self.current_img.export_entry(i, export_dir):
+                        entry = self.current_img.entries[i]
+                        output_path = os.path.join(export_dir, entry.name)
+                        if self.current_img.export_entry(entry, output_path):
                             exported_count += 1
                             self.log_message(f"Exported: {entry_name}")
                     else:

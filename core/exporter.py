@@ -1,35 +1,388 @@
-#this belongs in core/export.py - Version: 7
+#this belongs in core/export.py - Version: 8
 # X-Seti - July15 2025 - Img Factory 1.5
 # Export functions for IMG Factory
 
 import os
 import shutil
+from typing import List, Dict, Set
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox, QComboBox, QProgressBar, QMessageBox, QFileDialog, QGroupBox, QGridLayout, QTextEdit
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QFont
 
+#from components.img_core_classes import IMGFile, IMGEntry
 
 def get_selected_entries(main_window): #vers 2
     """Get currently selected entries from the table"""
     try:
         selected_entries = []
-        
+
         if hasattr(main_window.gui_layout, 'table'):
             table = main_window.gui_layout.table
             selected_rows = set()
-            
+
             for item in table.selectedItems():
                 selected_rows.add(item.row())
-            
+
             for row in selected_rows:
                 if row < len(main_window.current_img.entries):
                     selected_entries.append(main_window.current_img.entries[row])
-        
+
         return selected_entries
-        
+
     except Exception:
         return []
 
+
+class IDEParser:
+    """Parses GTA IDE files for different game versions"""
+
+    def __init__(self): #vers 1
+        self.current_section = None
+        self.files_to_extract = set()
+
+    def parse_ide_file(self, ide_path: str) -> Set[str]: #vers 1
+        """Parse IDE file and return set of files to extract"""
+        try:
+            with open(ide_path, 'r', encoding='utf-8', errors='ignore') as f:
+                lines = f.readlines()
+
+            self.files_to_extract.clear()
+            self.current_section = None
+
+            for line_num, line in enumerate(lines, 1):
+                line = line.strip()
+
+                # Skip empty lines and comments
+                if not line or line.startswith('#') or line.startswith('//'):
+                    continue
+
+                # Check for section headers
+                if line.lower() in ['objs', 'tobj', 'aext', 'anim', 'txdp', 'hier', 'cars', 'peds', '2dfx', 'path', 'weap']:
+                    self.current_section = line.lower()
+                    continue
+
+                # Check for section end
+                if line.lower() == 'end':
+                    self.current_section = None
+                    continue
+
+                # Parse section content
+                if self.current_section:
+                    self._parse_section_line(line, line_num)
+
+            return self.files_to_extract
+
+        except Exception as e:
+            print(f"[ERROR] Failed to parse IDE file {ide_path}: {e}")
+            return set()
+
+    def _parse_section_line(self, line: str, line_num: int): #vers 1
+        """Parse individual line based on current section"""
+        try:
+            # Skip 2dfx section entirely
+            if self.current_section == '2dfx':
+                return
+
+            parts = [part.strip() for part in line.split(',')]
+            if len(parts) < 2:
+                return
+
+            if self.current_section == 'objs':
+                # OBJS: ID, ModelName, TxdName, MeshCount, DrawDist, Flags
+                if len(parts) >= 3:
+                    model_name = parts[1].strip()
+                    txd_name = parts[2].strip()
+
+                    if model_name:
+                        # Add all possible file types with this base name
+                        self._add_all_file_types(model_name)
+
+                    if txd_name and txd_name != model_name:
+                        self._add_all_file_types(txd_name)
+
+            elif self.current_section == 'tobj':
+                # TOBJ: ID, ModelName, TxdName, MeshCount, DrawDist, Flags, TimeOn, TimeOff
+                if len(parts) >= 3:
+                    model_name = parts[1].strip()
+                    txd_name = parts[2].strip()
+
+                    if model_name:
+                        self._add_all_file_types(model_name)
+
+                    if txd_name and txd_name != model_name:
+                        self._add_all_file_types(txd_name)
+            elif self.current_section == 'aext':
+                        # AEXT: ID, ModelName, TxdName, [timing variables: secs, mins, hours, day, month, year]
+                        if len(parts) >= 3:
+                            model_name = parts[1].strip()
+                            txd_name = parts[2].strip()
+
+                            if model_name:
+                                self._add_all_file_types(model_name)
+
+                            if txd_name and txd_name != model_name:
+                                self._add_all_file_types(txd_name)
+            elif self.current_section == 'anim':
+                # ANIM: AnimName, IfpFile, AnimType, BlendTime
+                if len(parts) >= 2:
+                    anim_name = parts[0].strip()
+                    ifp_name = parts[1].strip()
+
+                    if anim_name:
+                        self._add_all_file_types(anim_name)
+                    if ifp_name and ifp_name != anim_name:
+                        self._add_all_file_types(ifp_name)
+
+            elif self.current_section == 'txdp':
+                # TXDP: TxdName, ParentTxd
+                if len(parts) >= 1:
+                    txd_name = parts[0].strip()
+                    if txd_name:
+                        self._add_all_file_types(txd_name)
+
+            elif self.current_section == 'cars':
+                # CARS: ID, ModelName, TxdName, Type, HandlingId, GameName, AnimFile, Class, Freq, Level, CompRules, WheelModelId, WheelScale
+                if len(parts) >= 3:
+                    model_name = parts[1].strip()
+                    txd_name = parts[2].strip()
+
+                    if model_name:
+                        self._add_all_file_types(model_name)
+
+                    if txd_name and txd_name != model_name:
+                        self._add_all_file_types(txd_name)
+
+            elif self.current_section == 'peds':
+                # PEDS: ID, ModelName, TxdName, Type, Stat, AnimGroup, CarsCanDrive, Flags, AnimFile, Radio1, Radio2
+                if len(parts) >= 3:
+                    model_name = parts[1].strip()
+                    txd_name = parts[2].strip()
+
+                    if model_name:
+                        self._add_all_file_types(model_name)
+
+                    if txd_name and txd_name != model_name:
+                        self._add_all_file_types(txd_name)
+
+            elif self.current_section == 'weap':
+                # WEAP: ID, ModelName, TxdName, AnimName, MeshCount, DrawDist, Flags
+                if len(parts) >= 3:
+                    model_name = parts[1].strip()
+                    txd_name = parts[2].strip()
+
+                    if model_name:
+                        self._add_all_file_types(model_name)
+
+                    if txd_name and txd_name != model_name:
+                        self._add_all_file_types(txd_name)
+
+        except Exception as e:
+            print(f"[WARNING] Error parsing IDE line {line_num}: {line} - {e}")
+
+    def _add_all_file_types(self, base_name: str): #vers 1
+        """Add all possible file extensions for a base name"""
+        if not base_name:
+            return
+
+        # Common GTA file extensions (excluding .ide files)
+        extensions = [
+            '.dff',    # 3D Models
+            '.txd',    # Texture Dictionary
+            '.col',    # Collision
+            '.ifp',    # Animation
+            '.ipl',    # Item Placement List
+            '.rrr',    # Audio/Radio
+            '.dat',    # Data files
+            '.cfg',    # Configuration
+            '.scm',    # Script
+            '.img',    # Archive (nested)
+            '.wav',    # Audio
+            '.mp3',    # Audio
+            '.bmp',    # Bitmap
+            '.tga',    # Texture
+            '.png',    # Image
+            '.jpg',    # Image
+            '.jpeg',   # Image
+            '.3ds',    # 3D Model
+            '.obj',    # 3D Model
+            '.mdl',    # Model
+            '.anim',   # Animation
+            '.cut',    # Cutscene
+            '.raw',    # Raw data
+            '.bin'     # Binary data
+        ]
+
+        for ext in extensions:
+            self.files_to_extract.add(f"{base_name}{ext}")
+
+
+def export_via_function(main_window): #vers 3
+    """Export files matching IDE file to chosen folder - COMPLETE REWRITE"""
+    try:
+        if not hasattr(main_window, 'current_img') or not main_window.current_img:
+            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
+            return
+
+        # Get IDE file
+        ide_file, _ = QFileDialog.getOpenFileName(
+            main_window,
+            "Select IDE file",
+            "",
+            "IDE Files (*.ide);;All Files (*)"
+        )
+
+        if not ide_file:
+            return
+
+        # Get export folder
+        export_dir = QFileDialog.getExistingDirectory(main_window, "Select Export Folder")
+        if not export_dir:
+            return
+
+        # Create subfolder based on IDE filename
+        ide_name = os.path.splitext(os.path.basename(ide_file))[0]
+        final_export_dir = os.path.join(export_dir, ide_name)
+        os.makedirs(final_export_dir, exist_ok=True)
+
+        main_window.log_message(f"📤 Export Via IDE: {os.path.basename(ide_file)}")
+
+        # Parse IDE file using proper parser
+        ide_parser = IDEParser()
+        files_to_export = ide_parser.parse_ide_file(ide_file)
+
+        if not files_to_export:
+            QMessageBox.information(main_window, "No Files Found",
+                                  f"No files found in IDE file {os.path.basename(ide_file)}")
+            return
+
+        main_window.log_message(f"📋 IDE file contains {len(files_to_export)} file references")
+
+        # Find matching entries in IMG
+        img_entries = []
+        found_files = []
+
+        for file_to_export in files_to_export:
+            for img_entry in main_window.current_img.entries:
+                img_entry_name = getattr(img_entry, 'name', '')
+                if img_entry_name.lower() == file_to_export.lower():
+                    img_entries.append(img_entry)
+                    found_files.append(file_to_export)
+                    break
+
+        if not img_entries:
+            QMessageBox.information(main_window, "No Matches",
+                                  f"No files from IDE found in current IMG archive.\n\n"
+                                  f"IDE references {len(files_to_export)} files:\n" +
+                                  '\n'.join(sorted(list(files_to_export))[:10]) +
+                                  ('\n...' if len(files_to_export) > 10 else ''))
+            return
+
+        main_window.log_message(f"✅ Found {len(img_entries)} matching files in IMG")
+
+        # Export matching entries
+        exported_count = 0
+        for i, entry in enumerate(img_entries):
+            try:
+                output_path = os.path.join(final_export_dir, entry.name)
+
+                if main_window.current_img.export_entry(entry, output_path):
+                    exported_count += 1
+                    main_window.log_message(f"📤 Exported: {entry.name}")
+                else:
+                    main_window.log_message(f"❌ Failed: {entry.name}")
+
+            except Exception as e:
+                main_window.log_message(f"❌ Error exporting {entry.name}: {str(e)}")
+
+        # Show results
+        QMessageBox.information(main_window, "Export Via IDE Complete",
+                              f"IDE Analysis:\n"
+                              f"• IDE file: {os.path.basename(ide_file)}\n"
+                              f"• Files referenced: {len(files_to_export)}\n"
+                              f"• Files found in IMG: {len(img_entries)}\n"
+                              f"• Files exported: {exported_count}\n\n"
+                              f"Exported to: {final_export_dir}")
+
+        main_window.log_message(f"🎯 Export Via IDE complete: {exported_count}/{len(img_entries)} files exported")
+
+    except Exception as e:
+        main_window.log_message(f"❌ Export Via IDE error: {str(e)}")
+        QMessageBox.critical(main_window, "Export Via IDE Error", f"Export Via IDE failed:\n{str(e)}")
+
+class IMGExportMethods:
+    """Adds missing export functionality to IMGFile class"""
+
+    @staticmethod
+    def add_export_methods_to_imgfile(): #vers 1
+        """Add missing export methods to IMGFile class"""
+        try:
+            from components.img_core_classes import IMGFile
+
+            def export_entry(self, entry, output_path): #vers 1
+                """Export a single entry to file"""
+                try:
+                    # Use existing read_entry_data method
+                    entry_data = self.read_entry_data(entry)
+                    if entry_data:
+                        # Ensure output directory exists
+                        import os
+                        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+                        # Write data to file
+                        with open(output_path, 'wb') as f:
+                            f.write(entry_data)
+                        return True
+                    return False
+
+                except Exception as e:
+                    print(f"[ERROR] Failed to export entry {getattr(entry, 'name', 'unknown')}: {e}")
+                    return False
+
+            def export_entries(self, entries, output_dir, organize_by_type=True): #vers 1
+                """Export multiple entries to directory"""
+                import os
+                exported_count = 0
+
+                for entry in entries:
+                    try:
+                        # Determine output path
+                        if organize_by_type:
+                            ext = os.path.splitext(entry.name)[1].lower()
+                            if ext in ['.dff', '.3ds', '.obj']:
+                                subfolder = 'models'
+                            elif ext in ['.txd', '.png', '.jpg', '.bmp']:
+                                subfolder = 'textures'
+                            elif ext in ['.col']:
+                                subfolder = 'collision'
+                            elif ext in ['.ifp']:
+                                subfolder = 'animations'
+                            else:
+                                subfolder = 'other'
+
+                            output_path = os.path.join(output_dir, subfolder, entry.name)
+                        else:
+                            output_path = os.path.join(output_dir, entry.name)
+
+                        # Export entry
+                        if self.export_entry(entry, output_path):
+                            exported_count += 1
+
+                    except Exception as e:
+                        print(f"[ERROR] Failed to export {entry.name}: {e}")
+                        continue
+
+                return exported_count
+
+            # Add methods to IMGFile class
+            IMGFile.export_entry = export_entry
+            IMGFile.export_entries = export_entries
+
+            print("✅ Added export methods to IMGFile class")
+            return True
+
+        except Exception as e:
+            print(f"❌ Failed to add export methods to IMGFile class: {e}")
+            return False
 
 class ExportOptionsDialog(QDialog):
     """Export options dialog"""
@@ -284,7 +637,10 @@ class ExportThread(QThread):
 
                     # Check if IMG has export_entry method
                     if hasattr(self.current_img, 'export_entry'):
-                        if self.current_img.export_entry(row, export_dir):
+                        #if self.current_img.export_entry(row, export_dir):
+                        entry = self.current_img.entries[row]
+                        output_path = os.path.join(export_dir, entry.name)
+                        if self.current_img.export_entry(entry, output_path):
                             exported_count += 1
                             self.log_message(f"Exported: {entry_name}")
                     else:
@@ -331,7 +687,10 @@ class ExportThread(QThread):
 
                     # Check if IMG has export_entry method
                     if hasattr(self.current_img, 'export_entry'):
-                        if self.current_img.export_entry(i, export_dir):
+                        #if self.current_img.export_entry(i, export_dir):
+                        entry = self.current_img.entries[i]
+                        output_path = os.path.join(export_dir, entry.name)
+                        if self.current_img.export_entry(entry, output_path):
                             exported_count += 1
                             self.log_message(f"Exported: {entry_name}")
                     else:
@@ -415,81 +774,6 @@ def export_selected_function(main_window): #vers 3
     except Exception as e:
         main_window.log_message(f"❌ Export error: {str(e)}")
         QMessageBox.critical(main_window, "Export Error", f"Export failed: {str(e)}")
-
-
-def export_via_function(main_window): #vers 2
-    """Export files matching IDE file to chosen folder"""
-    try:
-        if not hasattr(main_window, 'current_img') or not main_window.current_img:
-            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first.")
-            return
-
-        # Get IDE file
-        ide_file, _ = QFileDialog.getOpenFileName(
-            main_window,
-            "Select IDE file",
-            "",
-            "IDE Files (*.ide);;All Files (*)"
-        )
-
-        if not ide_file:
-            return
-
-        # Get export folder
-        export_dir = QFileDialog.getExistingDirectory(main_window, "Select Export Folder")
-        if not export_dir:
-            return
-
-        # Check if project folder is set for subfolder creation
-        ide_name = os.path.splitext(os.path.basename(ide_file))[0]
-        if hasattr(main_window, 'settings') and main_window.settings.get('project_folder'):
-            export_dir = os.path.join(export_dir, ide_name)
-            os.makedirs(export_dir, exist_ok=True)
-
-        main_window.log_message(f"📤 Export Via IDE: {ide_file}")
-
-        # Parse IDE file to get entry names
-        entries_to_export = []
-        try:
-            with open(ide_file, 'r', encoding='utf-8', errors='ignore') as f:
-                for line in f:
-                    line = line.strip()
-                    if not line or line.startswith('#') or line.startswith('//'):
-                        continue
-
-                    # Extract filename from IDE line
-                    parts = line.split(',')
-                    if parts:
-                        filename = parts[0].strip().strip('"\'')
-                        if filename:
-                            entries_to_export.append(filename)
-
-        except Exception as e:
-            main_window.log_message(f"❌ Error reading IDE file: {str(e)}")
-            QMessageBox.critical(main_window, "IDE Parse Error", f"Could not parse IDE file:\n{str(e)}")
-            return
-
-        # Find matching entries in IMG
-        img_entries = []
-        for entry_name in entries_to_export:
-            for img_entry in main_window.current_img.entries:
-                img_entry_name = getattr(img_entry, 'name', '')
-                if img_entry_name.lower() == entry_name.lower():
-                    img_entries.append(img_entry)
-                    break
-
-        if not img_entries:
-            QMessageBox.information(main_window, "No Matches", "No entries from IDE file found in IMG.")
-            return
-
-        # Export using dialog
-        dialog = ExportOptionsDialog(main_window, img_entries, "IDE")
-        dialog.folder_path.setText(export_dir)
-        dialog.exec()
-
-    except Exception as e:
-        main_window.log_message(f"❌ Export Via error: {str(e)}")
-        QMessageBox.critical(main_window, "Export Via Error", f"Export Via failed: {str(e)}")
 
 
 def quick_export_function(main_window): #vers 3
@@ -595,7 +879,20 @@ def integrate_export_functions(main_window): #vers 2
         main_window.log_message(f"❌ Failed to integrate export functions: {str(e)}")
         return False
 
+def integrate_img_export_methods(main_window): #vers 1
+    """Integrate IMG export methods into main window"""
+    try:
+        # Add the missing methods to IMGFile class
+        if IMGExportMethods.add_export_methods_to_imgfile():
+            main_window.log_message("✅ IMG export/import methods added - functions should now work")
+            return True
+        else:
+            main_window.log_message("❌ Failed to add IMG export/import methods")
+            return False
 
+    except Exception as e:
+        main_window.log_message(f"❌ IMG export integration failed: {str(e)}")
+        return False
 
 # Export functions
 __all__ = [

@@ -92,7 +92,7 @@ class IMGVersion1Creator:
         dummy_entry.extension = "dff"
         dummy_entry.offset = 0  # First entry at offset 0
         dummy_entry.size = size
-        dummy_entry.file_type = FileType.MODEL
+        dummy_entry.file_type = FileType.dff
         dummy_entry.is_new_entry = True
         
         self.entries.append(dummy_entry)

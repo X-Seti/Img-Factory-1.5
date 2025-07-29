@@ -1,4 +1,4 @@
-#this belongs in components/img_core_classes.py - Version: 6
+#this belongs in components/img_core_classes.py - Version: 8
 # X-Seti - July20 2025 - IMG Factory 1.5 - IMG Core Classes with Fixed RW Version Detection
 
 """
@@ -71,6 +71,18 @@ class FileType(Enum):
     DAT = "dat"         # Data files
     WAV = "wav"         # Audio files
     UNKNOWN = "unknown"
+        # Aliases for backwards compatibility
+    dff = DFF           # Lowercase alias
+    txd = TXD           # Lowercase alias
+    col = COL           # Lowercase alias
+    ifp = IFP           # Lowercase alias
+    ipl = IPL           # Lowercase alias
+    dat = DAT           # Lowercase alias
+    wav = WAV           # Lowercase alias
+    unknown = UNKNOWN   # Lowercase alias
+
+    # Legacy alias
+    MODEL = DFF         # Old name alias
 
 class Platform(Enum):
     """Platform types for IMG files"""
@@ -207,6 +219,7 @@ class IMGEntry:
         except Exception as e:
             if hasattr(img_debugger, 'error'):
                 img_debugger.error(f"Error detecting file type/version for {self.name}: {e}")
+
 
     def detect_file_type_and_version(self): #vers 1
         """ADDED: Detect file type and RW version from file data"""
@@ -561,6 +574,214 @@ class IMGFile:
 
         except Exception as e:
             print(f"❌ Error creating IMG file: {e}")
+            return False
+
+    def save_img_file(self) -> bool: #vers 1
+        """Save IMG file with current entries"""
+        try:
+            if not self.file_path or not self.entries:
+                return False
+
+            # Create backup first
+            import shutil
+            backup_path = self.file_path + '.backup'
+            shutil.copy2(self.file_path, backup_path)
+
+            # Rebuild the IMG file
+            return self.rebuild_img_file()
+
+        except Exception as e:
+            print(f"[ERROR] Failed to save IMG file: {e}")
+            return False
+
+    def rebuild_img_file(self) -> bool: #vers 1
+        """Rebuild IMG file with current entries"""
+        try:
+            import struct
+            import os
+
+            if self.version == IMGVersion.VERSION_1:
+                return self._rebuild_version1()
+            else:
+                return self._rebuild_version2()
+
+        except Exception as e:
+            print(f"[ERROR] Failed to rebuild IMG file: {e}")
+            return False
+
+    def _rebuild_version2(self) -> bool: #vers 1
+        """Rebuild Version 2 IMG file (SA format)"""
+        try:
+            import struct
+            import os
+
+            # Calculate sizes
+            entry_count = len(self.entries)
+            directory_size = entry_count * 32  # 32 bytes per entry
+            data_start = directory_size
+
+            # Collect entry data
+            entry_data_list = []
+            current_offset = data_start
+
+            for entry in self.entries:
+                # Get entry data
+                if hasattr(entry, '_cached_data') and entry._cached_data:
+                    data = entry._cached_data
+                else:
+                    data = self.read_entry_data(entry)
+
+                entry_data_list.append(data)
+
+                # Update entry with new offset/size
+                entry.offset = current_offset
+                entry.size = len(data)
+
+                # Align to sector boundary (2048 bytes)
+                aligned_size = ((len(data) + 2047) // 2048) * 2048
+                current_offset += aligned_size
+
+            # Write new IMG file
+            with open(self.file_path, 'wb') as f:
+                # Write directory
+                for i, entry in enumerate(self.entries):
+                    # Convert to sectors
+                    offset_sectors = entry.offset // 2048
+                    size_sectors = ((entry.size + 2047) // 2048)
+
+                    # Pack entry: offset(4), size(4), name(24)
+                    entry_data = struct.pack('<II', offset_sectors, size_sectors)
+                    name_bytes = entry.name.encode('ascii')[:24].ljust(24, b'\x00')
+                    entry_data += name_bytes
+
+                    f.write(entry_data)
+
+                # Write file data
+                for i, data in enumerate(entry_data_list):
+                    f.seek(self.entries[i].offset)
+                    f.write(data)
+
+                    # Pad to sector boundary
+                    current_pos = f.tell()
+                    sector_end = ((current_pos + 2047) // 2048) * 2048
+                    if current_pos < sector_end:
+                        f.write(b'\x00' * (sector_end - current_pos))
+
+            print(f"✅ Rebuilt IMG file: {entry_count} entries")
+            return True
+
+        except Exception as e:
+            print(f"[ERROR] Failed to rebuild Version 2 IMG: {e}")
+            return False
+
+    def _rebuild_version1(self) -> bool: #vers 1
+        """Rebuild Version 1 IMG file (DIR/IMG pair)"""
+        try:
+            import struct
+            import os
+
+            # Get DIR and IMG paths
+            dir_path = self.file_path
+            img_path = self.file_path.replace('.dir', '.img')
+
+            entry_count = len(self.entries)
+
+            # Collect entry data and calculate offsets
+            entry_data_list = []
+            current_offset = 0
+
+            for entry in self.entries:
+                # Get entry data
+                if hasattr(entry, '_cached_data') and entry._cached_data:
+                    data = entry._cached_data
+                else:
+                    data = self.read_entry_data(entry)
+
+                entry_data_list.append(data)
+
+                # Update entry with new offset/size
+                entry.offset = current_offset
+                entry.size = len(data)
+
+                # Align to sector boundary
+                aligned_size = ((len(data) + 2047) // 2048) * 2048
+                current_offset += aligned_size
+
+            # Write DIR file
+            with open(dir_path, 'wb') as f:
+                for entry in self.entries:
+                    # Convert to sectors
+                    offset_sectors = entry.offset // 2048
+                    size_sectors = ((entry.size + 2047) // 2048)
+
+                    # Pack entry: offset(4), size(4), name(24)
+                    entry_data = struct.pack('<II', offset_sectors, size_sectors)
+                    name_bytes = entry.name.encode('ascii')[:24].ljust(24, b'\x00')
+                    entry_data += name_bytes
+
+                    f.write(entry_data)
+
+            # Write IMG file
+            with open(img_path, 'wb') as f:
+                for i, data in enumerate(entry_data_list):
+                    f.seek(self.entries[i].offset)
+                    f.write(data)
+
+                    # Pad to sector boundary
+                    current_pos = f.tell()
+                    sector_end = ((current_pos + 2047) // 2048) * 2048
+                    if current_pos < sector_end:
+                        f.write(b'\x00' * (sector_end - current_pos))
+
+            print(f"✅ Rebuilt DIR/IMG pair: {entry_count} entries")
+            return True
+
+        except Exception as e:
+            print(f"[ERROR] Failed to rebuild Version 1 IMG: {e}")
+            return False
+
+    def import_file(self, file_path: str) -> bool: #vers 1
+        """Import file into IMG"""
+        try:
+            import os
+            filename = os.path.basename(file_path)
+
+            # Read file data
+            with open(file_path, 'rb') as f:
+                data = f.read()
+
+            # Use add_entry method
+            return self.add_entry(filename, data)
+
+        except Exception as e:
+            print(f"[ERROR] Failed to import file {file_path}: {e}")
+            return False
+
+    def add_entry(self, filename: str, data: bytes) -> bool: #vers 1
+        """Add new entry to IMG file"""
+        try:
+            print(f"[DEBUG] add_entry called with: {filename}, data size: {len(data)}")
+
+            # Create new IMGEntry
+            new_entry = IMGEntry()
+            new_entry.name = filename
+            new_entry.size = len(data)
+            new_entry.set_img_file(self)
+            new_entry._cached_data = data
+
+            print(f"[DEBUG] Created entry: {new_entry.name}")
+
+            # Add to entries list
+            self.entries.append(new_entry)
+            print(f"[DEBUG] Added to entries list. Total entries: {len(self.entries)}")
+
+            return self.save_img_file()
+
+        except Exception as e:
+            print(f"[ERROR] Failed to add entry {filename}: {e}")
+            print(f"[ERROR] Exception type: {type(e)}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def detect_version(self) -> IMGVersion: #vers 4

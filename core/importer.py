@@ -196,6 +196,24 @@ class ImportThread(QThread):
         """Import a single file"""
         try:
             filename = os.path.basename(file_path)
+
+            print(f"[IMPORT_DEBUG] Importing: {filename}, size: {len(file_data)}")
+            print(f"[IMPORT_DEBUG] Available IMG methods: {[m for m in dir(self.main_window.current_img) if not m.startswith('_')]}")
+
+            # Method 1: Use IMG's add_entry method
+            if hasattr(self.main_window.current_img, 'add_entry'):
+                print(f"[IMPORT_DEBUG] Found add_entry method")
+                try:
+                    result = self.main_window.current_img.add_entry(filename, file_data)
+                    print(f"[IMPORT_DEBUG] add_entry returned: {result}")
+                    if result:
+                        return True
+                except Exception as e:
+                    print(f"[IMPORT_DEBUG] add_entry exception: {e}")
+            else:
+                print(f"[IMPORT_DEBUG] add_entry method NOT FOUND")
+
+
             
             # Read file data
             with open(file_path, 'rb') as f:

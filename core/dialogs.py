@@ -414,59 +414,6 @@ class ImportThread(QThread):
         except Exception as e:
             self.finished.emit(False, f"Import error: {str(e)}")
     
-    def import_file(self, file_path): #vers 4
-        """Import a single file"""
-        try:
-            filename = os.path.basename(file_path)
-            
-            # Read file data
-            with open(file_path, 'rb') as f:
-                file_data = f.read()
-            
-            # Method 1: Use IMG's add_entry method
-            if hasattr(self.main_window.current_img, 'add_entry'):
-                try:
-                    if self.main_window.current_img.add_entry(filename, file_data):
-                        return True
-                except Exception:
-                    pass
-            
-            # Method 2: Use IMG's import_file method
-            if hasattr(self.main_window.current_img, 'import_file'):
-                try:
-                    if self.main_window.current_img.import_file(file_path):
-                        return True
-                except Exception:
-                    pass
-            
-            # Method 3: Create entry directly
-            if hasattr(self.main_window.current_img, 'entries'):
-                try:
-                    # Create new entry
-                    new_entry = type('Entry', (), {
-                        'name': filename,
-                        'data': file_data,
-                        'size': len(file_data),
-                        'get_data': lambda: file_data
-                    })()
-                    
-                    # Remove existing entry if replacing
-                    if self.replace_existing:
-                        self.main_window.current_img.entries = [
-                            e for e in self.main_window.current_img.entries 
-                            if getattr(e, 'name', '').lower() != filename.lower()
-                        ]
-                    
-                    self.main_window.current_img.entries.append(new_entry)
-                    return True
-                except Exception:
-                    pass
-            
-            return False
-            
-        except Exception:
-            return False
-
 
 class ExportThread(QThread):
     """Background export thread"""
@@ -529,42 +476,6 @@ class ExportThread(QThread):
         except Exception as e:
             self.finished.emit(False, f"Export error: {str(e)}")
     
-    def export_entry(self, entry, output_path): #vers 6
-        """Export a single entry using multiple methods"""
-        try:
-            # Method 1: Use IMG file's export_entry method
-            if hasattr(self.main_window.current_img, 'export_entry'):
-                try:
-                    if self.main_window.current_img.export_entry(entry, output_path):
-                        return True
-                except Exception:
-                    pass
-            
-            # Method 2: Use entry's get_data method
-            if hasattr(entry, 'get_data'):
-                try:
-                    entry_data = entry.get_data()
-                    if entry_data:
-                        with open(output_path, 'wb') as f:
-                            f.write(entry_data)
-                        return True
-                except Exception:
-                    pass
-            
-            # Method 3: Direct data access
-            if hasattr(entry, 'data'):
-                try:
-                    with open(output_path, 'wb') as f:
-                        f.write(entry.data)
-                    return True
-                except Exception:
-                    pass
-            
-            return False
-            
-        except Exception:
-            return False
-
 
 # Dialog utility functions
 def show_img_properties_dialog(img_file, parent=None): #vers 1
