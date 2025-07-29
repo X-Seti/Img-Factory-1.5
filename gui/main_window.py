@@ -83,6 +83,7 @@ class IMGFactoryMainWindow(QMainWindow):
         # Show window
         self.show()
     
+
     def import_files_via(self):
         """Import files via IDE or folder"""
         try:

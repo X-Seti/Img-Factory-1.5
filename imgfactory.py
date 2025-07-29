@@ -82,9 +82,11 @@ from core.importer import (import_files_function,
     get_selected_entries, integrate_import_functions)
 from core.rw_versions import get_rw_version_name
 from core.right_click_actions import integrate_right_click_actions
+from core.save_img_entry import integrate_img_save_functions, save_img_file_with_backup
 from core.shortcuts import setup_all_shortcuts
 from core.integration import integrate_complete_core_system
 from core.connections import connect_all_buttons_safely
+#from core.save_img_entry import save_img_file_with_backup
 
 #gui-layout
 
@@ -354,6 +356,9 @@ class IMGFactory(QMainWindow):
 
         # After your main window is set up, call:
         integrate_img_export_methods(self)
+
+        # Save filetable.
+        integrate_img_save_functions(self)
 
         # Integrate complete extraction system
         setup_complete_extraction_integration(self)

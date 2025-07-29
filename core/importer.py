@@ -175,8 +175,10 @@ class ImportThread(QThread):
             for i, file_path in enumerate(self.files):
                 if self.import_file(file_path):
                     imported_count += 1
+                    print(f"[IMPORT_DEBUG] Success: {os.path.basename(file_path)}")
                 else:
                     failed_count += 1
+                    print(f"[IMPORT_DEBUG] Failed: {os.path.basename(file_path)}")
                 
                 self.progress.emit(i + 1)
             

@@ -757,11 +757,9 @@ class IMGFile:
             print(f"[ERROR] Failed to import file {file_path}: {e}")
             return False
 
-    def add_entry(self, filename: str, data: bytes) -> bool: #vers 1
+    def add_entry(self, filename: str, data: bytes, auto_save: bool = True) -> bool: #vers 1
         """Add new entry to IMG file"""
         try:
-            print(f"[DEBUG] add_entry called with: {filename}, data size: {len(data)}")
-
             # Create new IMGEntry
             new_entry = IMGEntry()
             new_entry.name = filename
@@ -769,19 +767,17 @@ class IMGFile:
             new_entry.set_img_file(self)
             new_entry._cached_data = data
 
-            print(f"[DEBUG] Created entry: {new_entry.name}")
-
             # Add to entries list
             self.entries.append(new_entry)
-            print(f"[DEBUG] Added to entries list. Total entries: {len(self.entries)}")
+            print(f"[DEBUG] Adding entry: {filename} (total entries before: {len(self.entries)})")
+            # Only save if requested (for batch operations)
+            if auto_save:
+                return self.save_img_file()
 
-            return self.save_img_file()
+            return True
 
         except Exception as e:
             print(f"[ERROR] Failed to add entry {filename}: {e}")
-            print(f"[ERROR] Exception type: {type(e)}")
-            import traceback
-            traceback.print_exc()
             return False
 
     def detect_version(self) -> IMGVersion: #vers 4

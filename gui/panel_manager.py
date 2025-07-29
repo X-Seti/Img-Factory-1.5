@@ -21,7 +21,28 @@ from PyQt6.QtGui import QDrag, QPixmap, QPainter, QCursor, QIcon, QAction
 
 # Import required classes
 from .tear_off import TearOffPanel
-from .panel_controls import ButtonPanel, ButtonPresetManager
+#from .panel_controls import ButtonPanel, ButtonPresetManager
+
+def lighten_color(color, factor):
+    """Lighten a hex color by factor"""
+    try:
+        color = color.lstrip('#')
+        rgb = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
+        rgb = tuple(min(255, int(c + (255 - c) * factor)) for c in rgb)
+        return f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
+    except:
+        return color
+
+
+def darken_color(color, factor):
+    """Darken a hex color by factor"""
+    try:
+        color = color.lstrip('#')
+        rgb = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
+        rgb = tuple(max(0, int(c * (1 - factor))) for c in rgb)
+        return f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
+    except:
+        return color
 
 
 class PanelManager:

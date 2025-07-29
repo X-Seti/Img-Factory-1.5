@@ -1,4 +1,4 @@
-#this belongs in gui/ gui_layout.py - Version: 15
+#this belongs in gui/ gui_layout.py - Version: 20
 # X-Seti - JULY03 2025 - Img Factory 1.5 - GUI Layout Module - Fixed Button Connections
 
 #adjectments, Refrash button renamed from update-list, Reload button.
@@ -10,12 +10,21 @@ from PyQt6.QtWidgets import (
     QDialog, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSplitter,
     QTableWidget, QTableWidgetItem, QTextEdit, QGroupBox, QLabel,
     QPushButton, QComboBox, QLineEdit, QHeaderView, QAbstractItemView,
-    QMenuBar, QStatusBar, QProgressBar, QTabWidget, QCheckBox, QMessageBox
+    QMenuBar, QStatusBar, QProgressBar, QTabWidget, QCheckBox, QSpinBox,
+    QMessageBox, QSizePolicy, QButtonGroup, QListWidget, QListWidgetItem,
+    QFormLayout, QScrollArea, QFrame
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, QSize, pyqtSignal, QPoint
 from PyQt6.QtGui import QFont, QAction, QIcon, QShortcut, QKeySequence
 from core.gui_search import ASearchDialog, SearchManager
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Callable
+from dataclasses import dataclass, field
+
+
+def create_control_panel(main_window):
+    """Create the main control panel - LEGACY FUNCTION"""
+    # Use the new right panel function for consistency
+    self.create_right_panel_with_pastel_buttons(main_window)
 
 class IMGFactoryGUILayout:
     """Handles the complete GUI layout for IMG Factory 1.5"""
@@ -26,10 +35,9 @@ class IMGFactoryGUILayout:
         self.table = None
         self.log = None
         self.main_splitter = None
-        self.img_buttons = []       #_create_right_panel_with_pastel_buttons
-        self.entry_buttons = []     #_create_right_panel_with_pastel_buttons
+        self.img_buttons = []
+        self.entry_buttons = []
         self.options_buttons = []
-        #_create_right_panel_with_pastel_buttons
 
         # Status bar components
         self.status_bar = None
@@ -120,7 +128,7 @@ class IMGFactoryGUILayout:
         left_panel = self._create_left_three_section_panel()
         
         # Right side - control buttons with pastel colors
-        right_panel = self._create_right_panel_with_pastel_buttons()
+        right_panel = self.create_right_panel_with_pastel_buttons()
         
         # Add panels to splitter
         self.main_splitter.addWidget(left_panel)
@@ -651,6 +659,16 @@ class IMGFactoryGUILayout:
 
             # Add all possible method names that buttons might call
             method_mappings = {
+                # IMG/COL Operation
+                'create_new_img' : lambda: create_new_img_function(main_window),
+                'open_img_file'
+                'reload_img'
+                'close_img_file'
+                'rebuild_img'
+                'Rebuild_all'
+                'Merge'
+                'Split_via'
+                'save_img_entry': lambda: save_img_entry_function(main_window),
                 # Import methods
                 'import_files': lambda: import_files_function(main_window),
                 'import_files_via': lambda: import_via_function(main_window),
@@ -689,7 +707,7 @@ class IMGFactoryGUILayout:
             main_window.log_message(f"❌ Error adding button methods: {str(e)}")
             return False
 
-    def _create_right_panel_with_pastel_buttons(self):
+    def create_right_panel_with_pastel_buttons(self):
         """Create right panel with pastel colored buttons - FIXED BUTTON CONNECTIONS"""
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
@@ -708,8 +726,8 @@ class IMGFactoryGUILayout:
             ("Close", "close", "window-close", "#FFF3E0", "close_img_file"),
             ("Close All", "close_all", "edit-clear", "#FFF3E0", "close_all_img"),
             ("Rebuild", "rebuild", "view-rebuild", "#E8F5E8", "rebuild_img"),
-            ("Rebuild As", "rebuild_as", "document-save-as", "#E8F5E8", "rebuild_img_as"),
             ("Rebuild All", "rebuild_all", "document-save", "#E8F5E8", "rebuild_all_img"),
+            ("Save Entry", "save_entry", "document-save-entry", "#E8F5E8", "save_img_entry"),
             ("Merge", "merge", "document-merge", "#F3E5F5", "merge_img"),
             ("Split via", "split", "edit-cut", "#F3E5F5", "split_img"),
             ("Convert", "convert", "transform", "#FFF8E1", "convert_img_format"),
@@ -883,8 +901,8 @@ class IMGFactoryGUILayout:
             "Reload": "Reload",
             " ": " ",
             "Rebuild": "Rebld",
-            "Rebuild As": "Rebld As",
             "Rebuild All": "Rebld Al",
+            "Save Entry": "Save",
             "Merge": "Merge",
             "Split": "Split",
             "Convert": "Conv",
@@ -1442,3 +1460,8 @@ class IMGFactoryGUILayout:
     def update_img_info(self, info_text):
         """Update IMG info - compatibility method (alias for update_file_info)"""
         self.update_file_info(info_text)
+
+__all__ = [
+    'create_right_panel_with_pastel_buttons',  # MAIN FUNCTION
+    'create_control_panel',  # Legacy compatibility
+]

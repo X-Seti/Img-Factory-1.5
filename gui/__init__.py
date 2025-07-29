@@ -10,16 +10,11 @@ Modular GUI components for IMG Factory 1.5
 
 # Import main GUI components
 from .main_window import IMGFactoryMainWindow, create_main_window
-from .panel_controls import (
-    create_control_panel, 
-    create_right_panel_with_pastel_buttons,
-    update_button_states,
-    DraggableButton,
-    ButtonPreset,
-    ButtonFactory,
-    ButtonPresetManager,
-    ButtonPanel
-)
+#from .panel_controls import ( update_button_states,     DraggableButton, ButtonPreset, ButtonFactory,   ButtonPresetManager, ButtonPanel)
+
+from .gui_layout import create_control_panel
+#create_right_panel_with_pastel_buttons
+
 from .panel_manager import PanelManager
 from .tear_off import (
     TearOffPanel,
