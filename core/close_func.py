@@ -97,7 +97,6 @@ class IMGCloseManager:
             self.log_message(f"❌ {error_msg}")
             # Don't show error dialog, just log it
 
-
     def close_all_img(self): #vers 2
         """Close all IMG files - Wrapper for close_all_tabs"""
         try:

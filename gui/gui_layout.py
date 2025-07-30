@@ -1,9 +1,10 @@
-#this belongs in gui/ gui_layout.py - Version: 20
-# X-Seti - JULY03 2025 - Img Factory 1.5 - GUI Layout Module - Fixed Button Connections
+#this belongs in gui/ gui_layout.py - Version: 21
+# X-Seti - JULY29 2025 - Img Factory 1.5 - GUI Layout Module - METHOD_MAPPINGS INTEGRATION
 
-#adjectments, Refrash button renamed from update-list, Reload button.
-#first button block needs adjucting.
+#adjustments, Refresh button renamed from update-list, Reload button.
+#first button block needs adjusting.
 #_get_short_text moved to gui_backend.py
+# UPDATED: Now uses centralized method_mappings instead of direct method calls
 
 import re
 from PyQt6.QtWidgets import (
@@ -19,7 +20,16 @@ from PyQt6.QtGui import QFont, QAction, QIcon, QShortcut, QKeySequence
 from core.gui_search import ASearchDialog, SearchManager
 from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
-
+from core.importer import import_files_function, import_via_function
+from core.exporter import export_selected_function, export_via_function, quick_export_function, export_all_function, dump_all_function
+from core.remove import remove_selected_function, remove_via_entries_function
+from core.save_img_entry import save_img_entry_function
+#from core.close_func import close_img_file, close_all_img
+from core.close_func import install_close_functions, setup_close_manager
+from core.split_img import split_img
+from core.merge_img import merge_img
+from core.convert import convert_img, convert_img_format
+from core.rename import rename_entry
 
 def create_control_panel(main_window):
     """Create the main control panel - LEGACY FUNCTION"""
@@ -50,14 +60,94 @@ class IMGFactoryGUILayout:
         self.tab_widget = None
         self.left_vertical_splitter = None
 
-        # Fix button mappings and connections
-        self.add_button_methods()
+        # UPDATED: Initialize method_mappings FIRST before buttons
+        self.method_mappings = self._create_method_mappings()
 
         # Initialize tab settings and button icons after a short delay
         # This ensures the main window is fully initialized
         from PyQt6.QtCore import QTimer
         QTimer.singleShot(100, self._delayed_initialization)
     
+    def _create_method_mappings(self):
+        """Create centralized method mappings for all buttons"""
+
+        # Create method mappings dictionary
+        method_mappings = {
+                # IMG/COL Operations
+                'create_new_img': lambda: self.create_new_img(main_window),
+                'open_img_file': lambda: self.open_img_file(main_window),
+                'reload_table': lambda: self.reload_current_file(main_window),
+                'useless_button': lambda: self._safe_log("🎯 useless_button!"),
+                'close_img_file': lambda: self.close_img_file(main_window),
+                'close_all_img': lambda: self.close_all_img(main_window),
+                'rebuild_img': lambda: self.rebuild_img(main_window),
+                'rebuild_all_img': lambda: self.rebuild_all_img(main_window),
+                'save_img_entry': lambda: save_img_entry_function(main_window),
+                'merge_img': lambda: self.merge_img(main_window),
+                'split_img': lambda: self.split_img(main_window),
+                'convert_img_format': lambda: self.convert_img_format(main_window),
+
+                # Import methods
+                'import_files': lambda: import_files_function(self.main_window),
+                'import_files_via': lambda: import_via_function(self.main_window),
+                'refresh_table': lambda: refresh_table(self.main_window),
+
+                # Export methods
+                'export_selected': lambda: export_selected_function(self.main_window),
+                'export_selected_via': lambda: export_via_function(self.main_window),
+                'quick_export_selected': lambda: quick_export_function(self.main_window),
+
+                # Remove methods
+                'remove_selected': lambda: remove_selected_function(self.main_window),
+                'remove_via_entries': lambda: remove_via_entries_function(self.main_window),
+                'dump_entries': lambda: dump_all_function(self.main_window),
+
+                # Selection methods
+                'select_all_entries': lambda: select_all_entries(self.main_window),
+                'select_inverse': lambda: self._log_missing_method('select_inverse'),
+                'sort_entries': lambda: self._log_missing_method('sort_entries'),
+                'pin_selected_entries': lambda: self._log_missing_method('pin_selected_entries'),
+
+                # Edit methods (placeholders for now)
+                'rename_selected': lambda: self._log_missing_method('rename_selected'),
+                'replace_selected': lambda: self._log_missing_method('replace_selected'),
+
+                # Editor methods (placeholders)
+                'edit_col_file': lambda: self._log_missing_method('edit_col_file'),
+                'edit_txd_file': lambda: self._log_missing_method('edit_txd_file'),
+                'edit_dff_file': lambda: self._log_missing_method('edit_dff_file'),
+                'edit_ipf_file': lambda: self._log_missing_method('edit_ipf_file'),
+                'edit_ide_file': lambda: self._log_missing_method('edit_ide_file'),
+                'edit_ipl_file': lambda: self._log_missing_method('edit_ipl_file'),
+                'edit_dat_file': lambda: self._log_missing_method('edit_dat_file'),
+                'edit_zones_cull': lambda: self._log_missing_method('edit_zones_cull'),
+                'edit_weap_file': lambda: self._log_missing_method('edit_weap_file'),
+                'edit_vehi_file': lambda: self._log_missing_method('edit_vehi_file'),
+                'edit_peds_file': lambda: self._log_missing_method('edit_peds_file'),
+                'edit_radar_map': lambda: self._log_missing_method('edit_radar_map'),
+                'edit_paths_map': lambda: self._log_missing_method('edit_paths_map'),
+                'edit_waterpro': lambda: self._log_missing_method('edit_waterpro'),
+                'edit_weather': lambda: self._log_missing_method('edit_weather'),
+                'edit_handling': lambda: self._log_missing_method('edit_handling'),
+                'edit_objects': lambda: self._log_missing_method('edit_objects'),
+                'editscm': lambda: self._log_missing_method('editscm'),
+                'editgxt': lambda: self._log_missing_method('editgxt'),
+                'editmenu': lambda: self._log_missing_method('editmenu'),
+        }
+
+        # Don't log during initialization to avoid circular dependency
+        print(f"✅ Method mappings created: {len(method_mappings)} methods")
+        print(f"✅ Available methods: {list(method_mappings.keys())[:10]}...")  # Show first 10
+        return method_mappings
+
+    def _log_missing_method(self, method_name):
+        """Log missing method - unified placeholder"""
+        # Check if main_window is fully initialized before logging
+        if hasattr(self.main_window, 'log_message') and hasattr(self.main_window, 'gui_layout'):
+            self.main_window.log_message(f"⚠️ Method '{method_name}' not yet implemented")
+        else:
+            print(f"⚠️ Method '{method_name}' not yet implemented")
+
     def _delayed_initialization(self):
         """Perform delayed initialization after main window is ready"""
         try:
@@ -630,7 +720,6 @@ class IMGFactoryGUILayout:
         title_layout.addWidget(self.status_label)
         
         status_layout.addLayout(title_layout)
-     
         # Log with scrollbars
         self.log = QTextEdit()
         self.log.setReadOnly(True)
@@ -646,69 +735,9 @@ class IMGFactoryGUILayout:
         status_layout.addWidget(self.log)
         
         return status_window
-    
-    def add_button_methods(main_window): # we keep this version
-        """Add any missing button method names that GUI might be calling"""
-        try:
-            # Import the functions we need
-            from components.img_import_export_functions import (
-                import_files_function, import_via_function, export_selected_function,
-                export_via_function, quick_export_function, export_all_function,
-                remove_selected_function, remove_via_entries_function, dump_all_function  # ADD THIS
-            )
-
-            # Add all possible method names that buttons might call
-            method_mappings = {
-                # IMG/COL Operation
-                'create_new_img' : lambda: create_new_img_function(main_window),
-                'open_img_file'
-                'reload_img'
-                'close_img_file'
-                'rebuild_img'
-                'Rebuild_all'
-                'Merge'
-                'Split_via'
-                'save_img_entry': lambda: save_img_entry_function(main_window),
-                # Import methods
-                'import_files': lambda: import_files_function(main_window),
-                'import_files_via': lambda: import_via_function(main_window),
-                'import_files_advanced': lambda: import_via_function(main_window),
-
-                # Export methods
-                'export_selected': lambda: export_selected_function(main_window),
-                'export_selected_via': lambda: export_via_function(main_window),
-                'export_selected_advanced': lambda: export_via_function(main_window),
-                'export_selected_entries': lambda: export_selected_function(main_window),
-                'quick_export_selected': lambda: quick_export_function(main_window),
-                'quick_export': lambda: quick_export_function(main_window),
-                'export_all_entries': lambda: export_all_function(main_window),
-                'export_all': lambda: export_all_function(main_window),
-
-                # Remove methods
-                'remove_selected': lambda: remove_selected_function(main_window),
-                'remove_selected_entries': lambda: remove_selected_function(main_window),
-                'remove_all_entries': lambda: remove_selected_function(main_window),
-                'remove_via_entries': lambda: remove_via_entries_function(main_window),  # ADD THIS LINE
-
-                # Other methods
-                'dump_entries': lambda: dump_all_function(main_window),
-                'dump_all_entries': lambda: dump_all_function(main_window),
-                'refresh_table': main_window.refresh_table if hasattr(main_window, 'refresh_table') else lambda: main_window.log_message("Refresh requested"),
-                'reload_table': main_window.reload_table if hasattr(main_window, 'reload_table') else lambda: main_window.log_message("reload requested"),
-            }
-            # Add all method names to main_window
-            for method_name, method_func in method_mappings.items():
-                setattr(main_window, method_name, method_func)
-
-            main_window.log_message(f"✅ Added {len(method_mappings)} button method mappings")
-            return True
-
-        except Exception as e:
-            main_window.log_message(f"❌ Error adding button methods: {str(e)}")
-            return False
 
     def create_right_panel_with_pastel_buttons(self):
-        """Create right panel with pastel colored buttons - FIXED BUTTON CONNECTIONS"""
+        """Create right panel with pastel colored buttons - UPDATED: Uses method_mappings"""
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(4, 4, 4, 4)
@@ -841,16 +870,10 @@ class IMGFactoryGUILayout:
         return right_panel
     
     def _create_pastel_button(self, label, action_type, icon, bg_color, method_name):
-        """Create a button with pastel coloring and connect to method"""
+        """Create a button with pastel coloring and connect to method_mappings - UPDATED"""
         btn = QPushButton(label)
         btn.setMaximumHeight(22)
         btn.setMinimumHeight(20)
-
-        """
-        # Set icon if provided
-        if icon:
-            btn.setIcon(QIcon.fromTheme(icon))
-        """
 
         # Apply pastel styling
         btn.setStyleSheet(f"""
@@ -875,27 +898,38 @@ class IMGFactoryGUILayout:
         # Set action type property
         btn.setProperty("action-type", action_type)
 
-        # Connect to main window method
+        # UPDATED: Connect to method_mappings instead of direct method calls
         try:
-            if hasattr(self.main_window, method_name):
-                method = getattr(self.main_window, method_name)
-                btn.clicked.connect(method)
-                print(f"✅ Connected '{label}' to {method_name}")
+            if method_name in self.method_mappings:
+                btn.clicked.connect(self.method_mappings[method_name])
+                # Don't print during initialization - only after GUI is ready
+                if hasattr(self.main_window, 'gui_layout'):
+                    print(f"✅ Connected '{label}' to method_mappings[{method_name}]")
             else:
-                # Create placeholder that logs the missing method
-                btn.clicked.connect(lambda: self.main_window.log_message(f"Method '{method_name}' not implemented"))
-                print(f"⚠️ Method '{method_name}' not found for '{label}'")
+                # Fallback for missing mappings
+                btn.clicked.connect(lambda: self._safe_log(f"⚠️ Method '{method_name}' not in method_mappings"))
+                if hasattr(self.main_window, 'gui_layout'):
+                    print(f"⚠️ Method '{method_name}' not found in method_mappings for '{label}'")
         except Exception as e:
-            print(f"❌ Error connecting button '{label}': {e}")
-            btn.clicked.connect(lambda: self.main_window.log_message(f"Button '{label}' connection error"))
+            if hasattr(self.main_window, 'gui_layout'):
+                print(f"❌ Error connecting button '{label}': {e}")
+            btn.clicked.connect(lambda: self._safe_log(f"Button '{label}' connection error"))
 
         return btn
+
+    def _safe_log(self, message):
+        """Safe logging that won't cause circular dependency"""
+        if hasattr(self.main_window, 'log_message') and hasattr(self.main_window, 'gui_layout'):
+            self.main_window.log_message(message)
+        else:
+            print(f"GUI Layout: {message}")
     
     def _get_short_text(self, label):
         """Get short text for button"""
         short_map = {
             "New": "New",
             "Open": "Open",
+            "Create Img": "New",
             "Close": "Close",
             "Close All": "Close A",
             "Reload": "Reload",
@@ -904,14 +938,14 @@ class IMGFactoryGUILayout:
             "Rebuild All": "Rebld Al",
             "Save Entry": "Save",
             "Merge": "Merge",
-            "Split": "Split",
+            "Split via": "Split",
             "Convert": "Conv",
             "Import": "Imp",
             "Import via": "Imp via",
             "Refresh": "Refresh",
             "Export": "Exp",
             "Export via": "Exp via",
-            "Quick Export": "Q Exp",
+            "Quick Exp": "Q Exp",
             "Remove": "Rem",
             "Remove via": "Rem via",
             "Dump": "Dump",
@@ -919,8 +953,8 @@ class IMGFactoryGUILayout:
             "Rename": "Rename",
             "Replace": "Replace",
             "Select All": "Select",
-            "Sel Inverse": "Inverse",
-            "Sort": "Sort",
+            "Inverse": "Inverse",
+            "Sort via": "Sort",
             # Editing Options
             "Col Edit": "Col Edit",
             "Txd Edit": "Txd Edit",
@@ -939,10 +973,9 @@ class IMGFactoryGUILayout:
             "Weather": "Weather",
             "Handling": "Handling",
             "Objects": "Objects",
-            "SCM Code": "SCM Code",
-            "GXT Edit": "GXT Edit",
+            "SCM code": "SCM Code",
+            "GXT font": "GXT Edit",
             "Menu Edit": "Menu Ed",
-
         }
 
         return short_map.get(label, label)
@@ -1360,7 +1393,6 @@ class IMGFactoryGUILayout:
                     "button_height": button_height_spin.value(),
                     "button_font_size": button_font_size_spin.value(),
                     "button_font_family": font_combo.currentText(),
-                    #"show_icons": show_icons_check.isChecked(),
                     "adaptive_button_text": adaptive_text_check.isChecked(),
                     "show_tooltips": show_tooltips_check.isChecked(),
                     "color_scheme": color_scheme_combo.currentText(),
@@ -1371,7 +1403,7 @@ class IMGFactoryGUILayout:
             self.log_message(f"GUI settings applied: {width}px panel, {font_combo.currentText()} font")
             dialog.accept()
         
-        #apply_btn.clicked.connect(apply_changes)
+        apply_btn.clicked.connect(apply_changes)
         button_layout.addWidget(apply_btn)
         
         reset_btn = QPushButton("🔄 Reset to Defaults")
@@ -1383,7 +1415,6 @@ class IMGFactoryGUILayout:
             button_height_spin.setValue(22)
             button_font_size_spin.setValue(8)
             font_combo.setCurrentText("Segoe UI")
-            #show_icons_check.setChecked(False)
             adaptive_text_check.setChecked(True)
             show_tooltips_check.setChecked(True)
             color_scheme_combo.setCurrentText("Default Pastel")

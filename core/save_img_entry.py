@@ -1,4 +1,4 @@
-#this belongs in core/save_img_entry.py - Version: 1
+#this belongs in core/save_img_entry.py - Version: 3
 # X-Seti - July28 2025 - IMG Factory 1.5 - IMG Save Entry Functions
 
 """
@@ -17,26 +17,26 @@ import shutil
 # rebuild_version1_img
 # rebuild_version2_img
 # save_img_file_with_backup
+# Save_Img_entry_function
 
-class SaveImgEntry:
-    def Save_Img_entry_function(main_window): #vers 1
-        """Save current IMG entries - manual save button"""
-        try:
-            if not hasattr(main_window, 'current_img') or not main_window.current_img:
-                QMessageBox.warning(main_window, "No IMG File", "No IMG file is currently loaded.")
-                return
 
-            if main_window.current_img.save_img_file():
-                main_window.log_message("✅ IMG file saved successfully")
-                QMessageBox.information(main_window, "Save Complete", "IMG file saved successfully.")
-            else:
-                main_window.log_message("❌ Failed to save IMG file")
-                QMessageBox.critical(main_window, "Save Error", "Failed to save IMG file.")
+def save_img_entry_function(main_window): #vers 1
+    """Save current IMG entries - manual save button"""
+    try:
+        if not hasattr(main_window, 'current_img') or not main_window.current_img:
+            QMessageBox.warning(main_window, "No IMG File", "No IMG file is currently loaded.")
+            return
 
-        except Exception as e:
-            main_window.log_message(f"❌ Save error: {str(e)}")
-            QMessageBox.critical(main_window, "Save Error", f"Save failed: {str(e)}")
+        if main_window.current_img.save_img_file():
+            main_window.log_message("✅ IMG file saved successfully")
+            QMessageBox.information(main_window, "Save Complete", "IMG file saved successfully.")
+        else:
+            main_window.log_message("❌ Failed to save IMG file")
+            QMessageBox.critical(main_window, "Save Error", "Failed to save IMG file.")
 
+    except Exception as e:
+        main_window.log_message(f"❌ Save error: {str(e)}")
+        QMessageBox.critical(main_window, "Save Error", f"Save failed: {str(e)}")
 
 
 def save_img_file_with_backup(img_file) -> bool: #vers 1
@@ -244,5 +244,6 @@ __all__ = [
     'rebuild_version1_img',
     'rebuild_version2_img',
     'add_save_methods_to_imgfile',
+    'Save_Img_entry_function',
     'integrate_img_save_functions'
 ]

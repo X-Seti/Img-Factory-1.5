@@ -86,6 +86,7 @@ from core.save_img_entry import integrate_img_save_functions, save_img_file_with
 from core.shortcuts import setup_all_shortcuts
 from core.integration import integrate_complete_core_system
 from core.connections import connect_all_buttons_safely
+from core.convert import convert_img, convert_img_format
 #from core.save_img_entry import save_img_file_with_backup
 
 #gui-layout
@@ -847,7 +848,6 @@ class IMGFactory(QMainWindow):
             self._update_ui_for_loaded_img()
         elif self.current_col:
             self._update_ui_for_loaded_col()
-
 
     def select_all_entries(self): #vers 3
         """Select all entries in current table"""
@@ -2341,60 +2341,6 @@ class IMGFactory(QMainWindow):
             QMessageBox.critical(self, "Rebuild All Error", error_msg)
 
 
-    def merge_img(self): #vers 1
-        """Merge multiple IMG files"""
-        try:
-            files, _ = QFileDialog.getOpenFileNames(
-                self, "Select IMG files to merge", "", "IMG Files (*.img)"
-            )
-            if len(files) < 2:
-                QMessageBox.warning(self, "Warning", "Select at least 2 IMG files")
-                return
-
-            output_file, _ = QFileDialog.getSaveFileName(
-                self, "Save merged IMG as", "", "IMG Files (*.img)"
-            )
-            if output_file:
-                self.log_message(f"Merging {len(files)} IMG files...")
-                QMessageBox.information(self, "Info", "Merge functionality coming soon")
-        except Exception as e:
-            self.log_message(f"❌ Error in merge_img: {str(e)}")
-
-
-    def split_img(self): #vers 1
-        """Split IMG file into smaller parts"""
-        if not self.current_img:
-            QMessageBox.warning(self, "Warning", "No IMG file loaded")
-            return
-
-        try:
-            dialog = QMessageBox.question(self, "Split IMG",
-                                        "Split current IMG into multiple files?")
-            if dialog == QMessageBox.StandardButton.Yes:
-                self.log_message("IMG split functionality coming soon")
-        except Exception as e:
-            self.log_message(f"❌ Error in split_img: {str(e)}")
-
-
-    def convert_img(self): #vers 1
-        """Convert IMG between versions"""
-        if not self.current_img:
-            QMessageBox.warning(self, "Warning", "No IMG file loaded")
-            return
-
-        try:
-            self.log_message("IMG conversion functionality coming soon")
-            QMessageBox.information(self, "Info", "IMG conversion functionality coming soon")
-        except Exception as e:
-            self.log_message(f"❌ Error in convert_img: {str(e)}")
-
-
-    def convert_img_format(self): #vers 1
-        """Convert IMG format - Placeholder"""
-        self.log_message("🔄 Convert IMG format requested")
-        # TODO: Implement format conversion
-
-
     def import_via_tool(self): #vers 1
         """Import files using external tool"""
         self.log_message("Import via tool functionality coming soon")
@@ -2804,12 +2750,21 @@ class IMGFactory(QMainWindow):
             self.log_message(f"❌ Reload failed: {str(e)}")
             return False
 
-    # Add aliases for button connections
+    # Add aliases for button connections To-Do
     def reload_file(self):
         return self.reload_current_file()
 
-    def reload_table(self):
-        return self.reload_current_file()
+    def split_img(self):
+        return self.split_img()
+
+    def merge_img(self):
+        return self.merge_img()
+
+    def convert_img(self):
+        return self.convert_img()
+
+    def rename(self):
+        return self.name()
 
     def export_selected_via(self): #vers 1
         """Export selected entries via IDE file"""
