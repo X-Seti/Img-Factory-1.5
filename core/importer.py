@@ -194,7 +194,7 @@ def import_via_function(main_window): #vers 3
                 main_window, 
                 "No Files Found",
                 f"No files found in directory that match IDE definitions.\n\n"
-                f"Looking for {len(ide_parser.models * 2)} files based on IDE data."
+                f"Looking for {len(ide_parser.models) * 2} files based on IDE data."
             )
             return
         

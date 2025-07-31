@@ -155,11 +155,15 @@ class IMGPropertiesDialog(QDialog):
 class ExportOptionsDialog(QDialog):
     """Export options dialog"""
     
-    def __init__(self, parent=None, entry_count=0): #vers 5
+    def __init__(self, parent=None, entry_count=0): #vers 6
         super().__init__(parent)
         self.entry_count = entry_count
+        self.files_list = []
+        self.operation_type = "export"
+        self.file_count = entry_count
         self.setWindowTitle("Export Options")
         self.setMinimumWidth(400)
+
         self._create_ui()
     
     def _create_ui(self): #vers 10
@@ -231,11 +235,11 @@ class ExportOptionsDialog(QDialog):
 class ImportOptionsDialog(QDialog):
     """Import options dialog"""
     
-    def __init__(self, parent=None, file_count=0): #vers 5
+    def __init__(self, parent=None, file_count=0): #vers 6
         super().__init__(parent)
-        self.files_list = files_list or []
-        self.operation_type = operation_type
-        self.file_count = len(self.files_list)
+        self.files_list = []
+        self.operation_type = "import"
+        self.file_count = file_count
         self.setWindowTitle("Import Options")
         self.setMinimumWidth(400)
         self._create_ui()

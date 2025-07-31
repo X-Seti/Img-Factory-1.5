@@ -222,7 +222,7 @@ def export_via_function(main_window): #vers 3
         if hasattr(ide_parser, 'file_path') and ide_parser.file_path:
             ide_name = os.path.splitext(os.path.basename(ide_parser.file_path))[0]
             default_dir = os.path.join(os.path.expanduser("~/Desktop"), f"{ide_name}_export")
-            dialog.folder_path.setText(default_dir)
+            dialog.folder_input.setText(default_dir)
         
         dialog.exec()
         
