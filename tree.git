@@ -36,7 +36,6 @@
 │   ├── unified_debug_functions.py
 │   └── unified_signal_handler.py
 ├── core
-│   ├── close_func.py
 │   ├── close.py
 │   ├── connections.py
 │   ├── convert.py
@@ -3809,10 +3808,10 @@
 │   ├── gui_backend.py
 │   ├── gui_context.py
 │   ├── gui_infobar.py
-│   ├── gui_layout_old.py
 │   ├── gui_layout.py
 │   ├── gui_menu.py
 │   ├── gui_settings.py
+│   ├── ide_dialog.py
 │   ├── __init__.py
 │   ├── log_panel.py
 │   ├── main_window.py
@@ -3826,6 +3825,8 @@
 ├── imgfactory.settings.json
 ├── launch_imgfactory.py
 ├── methods
+│   ├── detect_file_type_version.py
+│   ├── ide_parser.py
 │   ├── populate_col_table.py
 │   └── populate_img_table.py
 ├── old-ignore-folder
@@ -5326,4 +5327,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-992 directories, 4335 files
+992 directories, 4336 files
