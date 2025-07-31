@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 X-Seti - July22 2025 - IMG Factory 1.5 - AtariST version :D
-#this belongs in root /imgfactory.py - version 66
+#this belongs in root /imgfactory.py - version 68
 """
 import sys
 import os
@@ -1091,18 +1091,20 @@ class IMGFactory(QMainWindow):
         except:
             return False
 
-
-    def _on_img_loaded(self, img_file: IMGFile): #vers 5
+    def _on_img_loaded(self, img_file: IMGFile): #vers 7
         """Handle IMG loading completion from background thread - FIXED"""
         try:
             # Store the loaded IMG file in tab system
             current_index = self.main_tab_widget.currentIndex()
-
             if current_index in self.open_files:
                 self.open_files[current_index]['file_object'] = img_file
 
             # Set current IMG reference
             self.current_img = img_file
+
+            # CRITICAL: Clear ONLY table data, NOT headers/structure
+            if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
+                self.gui_layout.table.setRowCount(0)  # Clear rows but keep headers
 
             # Update UI using fixed method
             self._update_ui_for_loaded_img()
@@ -1129,7 +1131,7 @@ class IMGFactory(QMainWindow):
             QMessageBox.critical(self, "IMG Processing Error", error_msg)
 
 
-    def _update_ui_for_loaded_img(self): #vers 3
+    def _update_ui_for_loaded_img(self): #vers 5
         """Update UI when IMG file is loaded - FIXED: Use standalone populate_img_table"""
         if not self.current_img:
             self.log_message("⚠️ _update_ui_for_loaded_img called but no current_img")
@@ -1144,12 +1146,16 @@ class IMGFactory(QMainWindow):
             # Import and use the standalone function from methods/
             from methods.populate_img_table import populate_img_table
 
-            # Setup IMG table structure first
+            # CRITICAL: Clear table completely first
             table = self.gui_layout.table
-            table.setColumnCount(6)
+            table.clear()  # Clear all data
+            table.setRowCount(0)  # Reset row count
+            table.setColumnCount(6)  # Reset column count
             table.setHorizontalHeaderLabels([
                 "Name", "Type", "Size", "Offset", "RW Version", "Info"
             ])
+
+
             # Set IMG column widths
             table.setColumnWidth(0, 200)  # Name
             table.setColumnWidth(1, 80)   # Type

@@ -225,6 +225,8 @@ def populate_img_table(table, img_file: IMGFile): #vers 2
     """Standalone function - uses IMGTablePopulator for backward compatibility - FIXED"""
     try:
         # FIXED: Create dummy main window object that inherits from QWidget
+        table.clear()
+        table.setRowCount(0)
         class DummyMainWindow(QWidget):
             def __init__(self):
                 super().__init__()  # Initialize QWidget
