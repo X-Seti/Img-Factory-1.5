@@ -74,11 +74,11 @@ from core.file_extraction import setup_complete_extraction_integration
 from core.tables_structure import reset_table_styling
 #from core.loadcol import load_col_file_safely
 from core.file_type_filter import integrate_file_filtering
+# Replace existing integrations with new ones
+from core.importer import integrate_import_functions
+from core.exporter import integrate_export_functions
 from core.remove import integrate_remove_functions
-from core.exporter import integrate_img_export_methods
-from core.importer import (import_files_function,
-    import_via_function, import_via_ide_file, import_from_folder,
-    get_selected_entries, integrate_import_functions)
+# This will automatically integrate the shared IDE system too
 from core.rw_versions import get_rw_version_name
 from core.right_click_actions import integrate_right_click_actions
 from core.save_img_entry import integrate_img_save_functions, save_img_file_with_backup
@@ -87,12 +87,13 @@ from core.integration import integrate_complete_core_system
 from core.connections import connect_all_buttons_safely
 from core.convert import convert_img, convert_img_format
 from core.create_img import (create_new_img, detect_and_open_file, open_file_dialog, detect_file_type)
-from core.close_func import install_close_functions, setup_close_manager
-
+from core.close import install_close_functions, setup_close_manager
+from core.split_img import integrate_split_functions
+from methods.ide_parser import integrate_ide_parser
 
 #gui-layout
 
-#gui
+from gui.ide_dialog import integrate_ide_dialog
 from gui.gui_backend import ButtonDisplayMode, GUIBackend
 from gui.main_window import IMGFactoryMainWindow
 from gui.col_display import update_col_info_bar_enhanced
@@ -340,8 +341,6 @@ class IMGFactory(QMainWindow):
             self.log_message("✅ Remove functions integrated")
 
         install_img_table_populator(self)
-        self.setup_col_integration()
-
 
         #integrate_right_click_actions(self)
         integrate_unknown_rw_detection(self)
@@ -355,10 +354,6 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"⚠️ Failed to setup extraction integration: {str(e)}")
 
-
-        # After your main window is set up, call:
-        integrate_img_export_methods(self)
-
         # Save filetable.
         integrate_img_save_functions(self)
 
@@ -368,18 +363,13 @@ class IMGFactory(QMainWindow):
         # Integrate file filtering
         integrate_file_filtering(self)
 
-        # Enable COL debug if needed
-        set_col_debug_enabled(True)  # Optional
-
         # Create gui_backend
         self.gui_backend = GUIBackend(self)
-
-        # Debug system
-        install_debug_control_system(self)
 
         # After GUI setup in __init__:
         setup_all_shortcuts(self)
         create_debug_keyboard_shortcuts(self)
+        install_debug_control_system(self)
 
         # Debug: Check what methods gui_backend has
         print("🔍 GUI Backend methods:")
@@ -399,12 +389,16 @@ class IMGFactory(QMainWindow):
         if hasattr(self.app_settings, 'themes'):
             apply_theme_to_app(QApplication.instance(), self.app_settings)
 
-        from components.col_functions import setup_complete_col_integration
-        from components.col_parsing_functions import load_col_file_safely
-        setup_complete_col_integration(self)
-        self.load_col_file_safely = lambda file_path: load_col_file_safely(self, file_path)
+        integrate_import_functions(self)
+        integrate_export_functions(self)
+        integrate_remove_functions(self)
+
+        # Integrate IDE system
+        integrate_ide_parser(self)
+        integrate_ide_dialog(self)
 
         integrate_right_click_actions(self)
+        integrate_split_functions(self)
 
         self.reload_table = self.reload_current_file
         # Log startup

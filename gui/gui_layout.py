@@ -33,6 +33,7 @@ from core.rename import rename_entry
 from core.reload import reload_current_file
 from core.create_img import create_new_img, detect_and_open_file,  open_file_dialog, detect_file_type
 from core.close import close_img_file, close_all_img
+from core.close import install_close_functions, setup_close_manager
 
 def create_control_panel(main_window):
     """Create the main control panel - LEGACY FUNCTION"""
@@ -751,7 +752,7 @@ class IMGFactoryGUILayout:
         img_layout = QGridLayout()
         img_layout.setSpacing(2)
         img_buttons_data = [
-            ("Create Img", "new", "document-new", "#EEFAFA", "create_new_img"),
+            ("Create", "new", "document-new", "#EEFAFA", "create_new_img"),
             ("Open", "open", "document-open", "#E3F2FD", "open_img_file"),
             ("Reload", "reload", "document-reload", "#F9FBE7", "reload_table"),
             ("     ", "space", "placeholder", "#FEFEFE", "useless_button"),
@@ -759,7 +760,7 @@ class IMGFactoryGUILayout:
             ("Close All", "close_all", "edit-clear", "#FFF3E0", "close_all_img"),
             ("Rebuild", "rebuild", "view-rebuild", "#E8F5E8", "rebuild_img"),
             ("Rebuild All", "rebuild_all", "document-save", "#E8F5E8", "rebuild_all_img"),
-            ("Save Entry", "save_entry", "document-save-entry", "#E8F5E8", "save_img_entry"),
+            ("Save Entry", "save_entry", "document-save-entry", "#F8BBD9", "save_img_entry"),
             ("Merge", "merge", "document-merge", "#F3E5F5", "merge_img"),
             ("Split via", "split", "edit-cut", "#F3E5F5", "split_img"),
             ("Convert", "convert", "transform", "#FFF8E1", "convert_img_format"),
@@ -817,12 +818,12 @@ class IMGFactoryGUILayout:
             ("Dff Edit", "dff_edit", "dff-edit", "#E1F5FE", "edit_dff_file"),
             ("Ipf Edit", "ipf_edit", "ipf-edit", "#FFF3E0", "edit_ipf_file"),
             ("IDE Edit", "ide_edit", "ide-edit", "#F8BBD9", "edit_ide_file"),
-            ("IPL Edit", "ipl_edit", "ipl-edit", "#E1F5FE", "edit_ipl_file"),
-            ("Dat Edit", "dat_edit", "dat-edit", "#E3F2FD", "edit_dat_file"),
+            ("IPL Edit", "ipl_edit", "ipl-edit", "#C1F6FF", "edit_ipl_file"),
+            ("Dat Edit", "dat_edit", "dat-edit", "#D3F2AD", "edit_dat_file"),
             ("Zons Cull Ed", "zones_cull", "zones-cull", "#E8F5E8", "edit_zones_cull"),
             ("Weap Edit", "weap_edit", "weap-edit", "#E1F5FE", "edit_weap_file"),
-            ("Vehi Edit", "vehi_edit", "vehi-edit", "#E3F2FD", "edit_vehi_file"),
-            ("Peds Edit", "peds_edit", "peds-edit", "#F8BBD9", "edit_peds_file"),
+            ("Vehi Edit", "vehi_edit", "vehi-edit", "#E3F2BD", "edit_vehi_file"),
+            ("Peds Edit", "peds_edit", "peds-edit", "#F8ABA9", "edit_peds_file"),
             ("Radar Map", "radar_map", "radar-map", "#F8BBD9", "edit_radar_map"),
             ("Paths Map", "paths_map", "paths-map", "#E1F5FE", "edit_paths_map"),
             ("Waterpro", "timecyc", "timecyc", "#E3F2FD", "edit_waterpro"),
