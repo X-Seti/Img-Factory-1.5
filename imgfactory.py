@@ -69,13 +69,12 @@ from components.unified_debug_functions import integrate_all_improvements, insta
 #from components.enh_debug_system import integrate_enhanced_debug_error
 
 #core
-from core.close_func import install_close_functions, setup_close_manager
 from core.img_formats import GameSpecificIMGDialog, IMGCreator
 from core.file_extraction import setup_complete_extraction_integration
 from core.tables_structure import reset_table_styling
 #from core.loadcol import load_col_file_safely
-from core.remove import integrate_remove_functions
 from core.file_type_filter import integrate_file_filtering
+from core.remove import integrate_remove_functions
 from core.exporter import integrate_img_export_methods
 from core.importer import (import_files_function,
     import_via_function, import_via_ide_file, import_from_folder,
@@ -83,11 +82,13 @@ from core.importer import (import_files_function,
 from core.rw_versions import get_rw_version_name
 from core.right_click_actions import integrate_right_click_actions
 from core.save_img_entry import integrate_img_save_functions, save_img_file_with_backup
-from core.shortcuts import setup_all_shortcuts
+from core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
 from core.integration import integrate_complete_core_system
 from core.connections import connect_all_buttons_safely
 from core.convert import convert_img, convert_img_format
-#from core.save_img_entry import save_img_file_with_backup
+from core.create_img import (create_new_img, detect_and_open_file, open_file_dialog, detect_file_type)
+from core.close_func import install_close_functions, setup_close_manager
+
 
 #gui-layout
 
@@ -370,7 +371,6 @@ class IMGFactory(QMainWindow):
         # Enable COL debug if needed
         set_col_debug_enabled(True)  # Optional
 
-
         # Create gui_backend
         self.gui_backend = GUIBackend(self)
 
@@ -379,6 +379,7 @@ class IMGFactory(QMainWindow):
 
         # After GUI setup in __init__:
         setup_all_shortcuts(self)
+        create_debug_keyboard_shortcuts(self)
 
         # Debug: Check what methods gui_backend has
         print("🔍 GUI Backend methods:")
@@ -674,40 +675,6 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Error updating COL UI: {str(e)}")
 
-
-    def _basic_col_table_fallback(self, file_name): #vers 1 #restore
-        """Basic COL table fallback when methods/ not available"""
-        table = self.gui_layout.table
-
-        # Setup basic COL structure
-        col_headers = ["Model Name", "Type", "Version", "Size", "Spheres", "Boxes", "Faces", "Info"]
-        table.setColumnCount(len(col_headers))
-        table.setHorizontalHeaderLabels(col_headers)
-
-        # Set COL column widths
-        table.setColumnWidth(0, 200)  # Model Name
-        table.setColumnWidth(1, 80)   # Type
-        table.setColumnWidth(2, 80)   # Version
-        table.setColumnWidth(3, 100)  # Size
-        table.setColumnWidth(4, 80)   # Spheres
-        table.setColumnWidth(5, 80)   # Boxes
-        table.setColumnWidth(6, 80)   # Faces
-        table.setColumnWidth(7, 150)  # Info
-
-        # Basic placeholder row
-        table.setRowCount(1)
-        table.setItem(0, 0, QTableWidgetItem(file_name))
-        table.setItem(0, 1, QTableWidgetItem("COL"))
-        table.setItem(0, 2, QTableWidgetItem("Unknown"))
-        table.setItem(0, 3, QTableWidgetItem("N/A"))
-        table.setItem(0, 4, QTableWidgetItem("N/A"))
-        table.setItem(0, 5, QTableWidgetItem("N/A"))
-        table.setItem(0, 6, QTableWidgetItem("N/A"))
-        table.setItem(0, 7, QTableWidgetItem("COL loaded - methods/ not available"))
-
-        self.log_message("⚠️ Using basic COL fallback display")
-
-
     # FIX: Close manager tab widget issue
     def fix_close_manager_tab_reference(main_window): #vers 1
         #"""Fix close manager missing main_tab_widget reference#"""
@@ -836,6 +803,9 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Error handling COL file: {str(e)}")
             return False
+
+    def create_new_img(self): #vers 5
+        """Show new IMG creation dialog - FIXED: No signal connections"""
 
 
     def refresh_table(self): #vers 4 -
@@ -1069,114 +1039,6 @@ class IMGFactory(QMainWindow):
             # Fallback - create a simple log in status bar
             if hasattr(self, 'statusBar'):
                 self.statusBar().showMessage(message)
-
-    def create_new_img(self): #vers 5
-        """Show new IMG creation dialog - FIXED: No signal connections"""
-        try:
-            dialog = GameSpecificIMGDialog(self)
-            dialog.template_manager = self.template_manager
-
-            # Execute dialog and check result
-            if dialog.exec() == QDialog.DialogCode.Accepted:
-                # Get the output path from the dialog
-                if hasattr(dialog, 'output_path') and dialog.output_path:
-                    output_path = dialog.output_path
-                    self.log_message(f"✅ Created: {os.path.basename(output_path)}")
-
-                    # Load the created IMG file in a new tab
-                    self._load_img_file_in_new_tab(output_path)
-        except Exception as e:
-            self.log_message(f"❌ Error creating new IMG: {str(e)}")
-
-
-    def _detect_and_open_file(self, file_path: str) -> bool: #vers 5
-        """Detect file type and open with appropriate handler"""
-        try:
-            # First check by extension
-            file_ext = os.path.splitext(file_path)[1].lower()
-
-            if file_ext == '.img':
-                self.load_img_file(file_path)
-                return True
-            elif file_ext == '.col':
-                self._load_col_file_safely(file_path)
-                return True
-
-            # If extension is ambiguous, check file content
-            with open(file_path, 'rb') as f:
-                header = f.read(16)
-
-            if len(header) < 4:
-                return False
-
-            # Check for IMG signatures
-            if header[:4] in [b'VER2', b'VER3']:
-                self.log_message(f"🔍 Detected IMG file by signature")
-                self.load_img_file(file_path)
-                return True
-
-            # Check for COL signatures
-            elif header[:4] in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
-                self.log_message(f"🔍 Detected COL file by signature")
-                self._load_col_file_safely(file_path)
-                return True
-
-            # Try reading as IMG version 1 (no header signature)
-            elif len(header) >= 8:
-                # Could be IMG v1 or unknown format
-                self.log_message(f"🔍 Attempting to open as IMG file")
-                self.load_img_file(file_path)
-                return True
-
-            return False
-
-        except Exception as e:
-            self.log_message(f"❌ Error detecting file type: {str(e)}")
-            return False
-
-
-    def open_file_dialog(self): #vers 4
-        """Unified file dialog for IMG and COL files"""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open IMG/COL Archive", "",
-            "All Supported (*.img *.col);;IMG Archives (*.img);;COL Archives (*.col);;All Files (*)")
-
-        if file_path:
-            self.load_file_unified(file_path)
-
-
-    def _detect_file_type(self, file_path: str) -> str: #vers 3
-        """Detect file type by extension and content"""
-        try:
-            file_ext = os.path.splitext(file_path)[1].lower()
-
-            if file_ext == '.img':
-                return "IMG"
-            elif file_ext == '.col':
-                return "COL"
-
-            # Check file content if extension is ambiguous
-            with open(file_path, 'rb') as f:
-                header = f.read(16)
-
-            if len(header) < 4:
-                return "UNKNOWN"
-
-            # Check for IMG signatures
-            if header[:4] in [b'VER2', b'VER3']:
-                return "IMG"
-
-            # Check for COL signatures
-            elif header[:4] in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
-                return "COL"
-
-            # Default to IMG for unknown formats
-            return "IMG"
-
-        except Exception as e:
-            self.log_message(f"❌ Error detecting file type: {str(e)}")
-            return "UNKNOWN"
-
 
     def _load_col_file_safely(self, file_path): #vers 2 #Restore
         """Load COL file safely - REDIRECTS to col_tab_integration"""
@@ -2711,6 +2573,11 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Error in quick_export: {str(e)}")
 
+    def close_img_file(self): #vers1
+        """placeholder - close img debug"""
+
+    def close_all_file(self): #vers1
+        """placeholder - close all debug"""
 
     def reload_current_file(self): #vers 1
         """Reload current IMG or COL file (close and reopen)"""
@@ -2753,18 +2620,6 @@ class IMGFactory(QMainWindow):
     # Add aliases for button connections To-Do
     def reload_file(self):
         return self.reload_current_file()
-
-    def split_img(self):
-        return self.split_img()
-
-    def merge_img(self):
-        return self.merge_img()
-
-    def convert_img(self):
-        return self.convert_img()
-
-    def rename(self):
-        return self.name()
 
     def export_selected_via(self): #vers 1
         """Export selected entries via IDE file"""

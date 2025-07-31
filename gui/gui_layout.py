@@ -20,16 +20,19 @@ from PyQt6.QtGui import QFont, QAction, QIcon, QShortcut, QKeySequence
 from core.gui_search import ASearchDialog, SearchManager
 from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
+from components.img_creator import NewIMGDialog, IMGCreationThread
 from core.importer import import_files_function, import_via_function
 from core.exporter import export_selected_function, export_via_function, quick_export_function, export_all_function, dump_all_function
 from core.remove import remove_selected_function, remove_via_entries_function
 from core.save_img_entry import save_img_entry_function
-#from core.close_func import close_img_file, close_all_img
-from core.close_func import install_close_functions, setup_close_manager
+from core.rebuild import rebuild_current_img, rebuild_all_img
 from core.split_img import split_img
-from core.merge_img import merge_img
+from core.merge_img import merge_img_function
 from core.convert import convert_img, convert_img_format
 from core.rename import rename_entry
+from core.reload import reload_current_file
+from core.create_img import create_new_img, detect_and_open_file,  open_file_dialog, detect_file_type
+from core.close import close_img_file, close_all_img
 
 def create_control_panel(main_window):
     """Create the main control panel - LEGACY FUNCTION"""
@@ -73,66 +76,66 @@ class IMGFactoryGUILayout:
 
         # Create method mappings dictionary
         method_mappings = {
-                # IMG/COL Operations
-                'create_new_img': lambda: self.create_new_img(main_window),
-                'open_img_file': lambda: self.open_img_file(main_window),
-                'reload_table': lambda: self.reload_current_file(main_window),
-                'useless_button': lambda: self._safe_log("🎯 useless_button!"),
-                'close_img_file': lambda: self.close_img_file(main_window),
-                'close_all_img': lambda: self.close_all_img(main_window),
-                'rebuild_img': lambda: self.rebuild_img(main_window),
-                'rebuild_all_img': lambda: self.rebuild_all_img(main_window),
-                'save_img_entry': lambda: save_img_entry_function(main_window),
-                'merge_img': lambda: self.merge_img(main_window),
-                'split_img': lambda: self.split_img(main_window),
-                'convert_img_format': lambda: self.convert_img_format(main_window),
+            # IMG/COL Operations
+            'create_new_img': lambda: create_new_img(self.main_window),
+            'open_img_file': lambda: open_file_dialog(self.main_window),
+            'reload_table': lambda: reload_current_file(self.main_window),
+            'useless_button': lambda: self._safe_log("🎯 useless_button!"),
+            'close_img_file': lambda: close_img_file(self.main_window),
+            'close_all_img': lambda: close_all_img(self.main_window),
+            'rebuild_img': lambda: rebuild_current_img(self.main_window),
+            'rebuild_all_img': lambda: rebuild_all_img(self.main_window),
+            'save_img_entry': lambda: save_img_entry_function(self.main_window),
+            'merge_img': lambda: merge_img_function(self.main_window),
+            'split_img': lambda: split_img(self.main_window),
+            'convert_img_format': lambda: convert_img_format(self.main_window),
 
-                # Import methods
-                'import_files': lambda: import_files_function(self.main_window),
-                'import_files_via': lambda: import_via_function(self.main_window),
-                'refresh_table': lambda: refresh_table(self.main_window),
+            # Import methods
+            'import_files': lambda: import_files_function(self.main_window),
+            'import_files_via': lambda: import_via_function(self.main_window),
+            'refresh_table': lambda: refresh_table(self.main_window),
 
-                # Export methods
-                'export_selected': lambda: export_selected_function(self.main_window),
-                'export_selected_via': lambda: export_via_function(self.main_window),
-                'quick_export_selected': lambda: quick_export_function(self.main_window),
+            # Export methods
+            'export_selected': lambda: export_selected_function(self.main_window),
+            'export_selected_via': lambda: export_via_function(self.main_window),
+            'quick_export_selected': lambda: quick_export_function(self.main_window),
 
-                # Remove methods
-                'remove_selected': lambda: remove_selected_function(self.main_window),
-                'remove_via_entries': lambda: remove_via_entries_function(self.main_window),
-                'dump_entries': lambda: dump_all_function(self.main_window),
+            # Remove methods
+            'remove_selected': lambda: remove_selected_function(self.main_window),
+            'remove_via_entries': lambda: remove_via_entries_function(self.main_window),
+            'dump_entries': lambda: dump_all_function(self.main_window),
 
-                # Selection methods
-                'select_all_entries': lambda: select_all_entries(self.main_window),
-                'select_inverse': lambda: self._log_missing_method('select_inverse'),
-                'sort_entries': lambda: self._log_missing_method('sort_entries'),
-                'pin_selected_entries': lambda: self._log_missing_method('pin_selected_entries'),
+            # Selection methods
+            'select_all_entries': lambda: select_all_entries(self.main_window),
+            'select_inverse': lambda: self._log_missing_method('select_inverse'),
+            'sort_entries': lambda: self._log_missing_method('sort_entries'),
+            'pin_selected_entries': lambda: self._log_missing_method('pin_selected_entries'),
 
-                # Edit methods (placeholders for now)
-                'rename_selected': lambda: self._log_missing_method('rename_selected'),
-                'replace_selected': lambda: self._log_missing_method('replace_selected'),
+            # Edit methods (placeholders for now)
+            'rename_selected': lambda: self._log_missing_method('rename_selected'),
+            'replace_selected': lambda: self._log_missing_method('replace_selected'),
 
-                # Editor methods (placeholders)
-                'edit_col_file': lambda: self._log_missing_method('edit_col_file'),
-                'edit_txd_file': lambda: self._log_missing_method('edit_txd_file'),
-                'edit_dff_file': lambda: self._log_missing_method('edit_dff_file'),
-                'edit_ipf_file': lambda: self._log_missing_method('edit_ipf_file'),
-                'edit_ide_file': lambda: self._log_missing_method('edit_ide_file'),
-                'edit_ipl_file': lambda: self._log_missing_method('edit_ipl_file'),
-                'edit_dat_file': lambda: self._log_missing_method('edit_dat_file'),
-                'edit_zones_cull': lambda: self._log_missing_method('edit_zones_cull'),
-                'edit_weap_file': lambda: self._log_missing_method('edit_weap_file'),
-                'edit_vehi_file': lambda: self._log_missing_method('edit_vehi_file'),
-                'edit_peds_file': lambda: self._log_missing_method('edit_peds_file'),
-                'edit_radar_map': lambda: self._log_missing_method('edit_radar_map'),
-                'edit_paths_map': lambda: self._log_missing_method('edit_paths_map'),
-                'edit_waterpro': lambda: self._log_missing_method('edit_waterpro'),
-                'edit_weather': lambda: self._log_missing_method('edit_weather'),
-                'edit_handling': lambda: self._log_missing_method('edit_handling'),
-                'edit_objects': lambda: self._log_missing_method('edit_objects'),
-                'editscm': lambda: self._log_missing_method('editscm'),
-                'editgxt': lambda: self._log_missing_method('editgxt'),
-                'editmenu': lambda: self._log_missing_method('editmenu'),
+            # Editor methods (placeholders)
+            'edit_col_file': lambda: self._log_missing_method('edit_col_file'),
+            'edit_txd_file': lambda: self._log_missing_method('edit_txd_file'),
+            'edit_dff_file': lambda: self._log_missing_method('edit_dff_file'),
+            'edit_ipf_file': lambda: self._log_missing_method('edit_ipf_file'),
+            'edit_ide_file': lambda: self._log_missing_method('edit_ide_file'),
+            'edit_ipl_file': lambda: self._log_missing_method('edit_ipl_file'),
+            'edit_dat_file': lambda: self._log_missing_method('edit_dat_file'),
+            'edit_zones_cull': lambda: self._log_missing_method('edit_zones_cull'),
+            'edit_weap_file': lambda: self._log_missing_method('edit_weap_file'),
+            'edit_vehi_file': lambda: self._log_missing_method('edit_vehi_file'),
+            'edit_peds_file': lambda: self._log_missing_method('edit_peds_file'),
+            'edit_radar_map': lambda: self._log_missing_method('edit_radar_map'),
+            'edit_paths_map': lambda: self._log_missing_method('edit_paths_map'),
+            'edit_waterpro': lambda: self._log_missing_method('edit_waterpro'),
+            'edit_weather': lambda: self._log_missing_method('edit_weather'),
+            'edit_handling': lambda: self._log_missing_method('edit_handling'),
+            'edit_objects': lambda: self._log_missing_method('edit_objects'),
+            'editscm': lambda: self._log_missing_method('editscm'),
+            'editgxt': lambda: self._log_missing_method('editgxt'),
+            'editmenu': lambda: self._log_missing_method('editmenu'),
         }
 
         # Don't log during initialization to avoid circular dependency
