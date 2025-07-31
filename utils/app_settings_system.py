@@ -1353,7 +1353,7 @@ class SettingsDialog(QDialog):
             ("Import Files", "import", "Import files to archive"),
             ("Export Selected", "export", "Export selected entries"),
             ("Remove Entry", "remove", "Remove selected entry"),
-            ("Update List", "update", "Refresh entry list"),
+            ("Refresh", "update", "Refresh entry list"),
             ("Convert Format", "convert", "Convert file format"),
             ("Save Archive", None, "Save current archive"),
             ("Settings", None, "Open settings dialog")

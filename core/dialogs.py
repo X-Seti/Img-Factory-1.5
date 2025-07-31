@@ -233,7 +233,9 @@ class ImportOptionsDialog(QDialog):
     
     def __init__(self, parent=None, file_count=0): #vers 5
         super().__init__(parent)
-        self.file_count = file_count
+        self.files_list = files_list or []
+        self.operation_type = operation_type
+        self.file_count = len(self.files_list)
         self.setWindowTitle("Import Options")
         self.setMinimumWidth(400)
         self._create_ui()
@@ -263,7 +265,14 @@ class ImportOptionsDialog(QDialog):
         layout.addWidget(options_group)
         
         # Info
-        info_label = QLabel(f"Ready to import {self.file_count} files")
+        operation_text = {
+            "import": "import",
+            "folder": "import from folder",
+            "files": "import"
+        }.get(self.operation_type, "import")
+
+        info_label = QLabel(f"Ready to {operation_text} {self.file_count} files")
+
         info_label.setStyleSheet("color: #666666; font-style: italic;")
         layout.addWidget(info_label)
         

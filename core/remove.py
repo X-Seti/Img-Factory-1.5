@@ -1,4 +1,4 @@
-#this belongs in core/remove.py - Version: 3
+#this belongs in core/remove.py - Version: 4
 # X-Seti - July31 2025 - IMG Factory 1.5 - Remove Functions with Shared IDE System
 
 """
@@ -167,6 +167,10 @@ def remove_selected_function(main_window): #vers 3
         def remove_finished(success, message, stats):
             progress_dialog.close()
             
+            # Wait for thread to finish properly
+            if remove_thread.isRunning():
+                remove_thread.wait(1000)
+            
             # Refresh table after removal
             if hasattr(main_window, 'refresh_table'):
                 main_window.refresh_table()
@@ -189,7 +193,7 @@ def remove_selected_function(main_window): #vers 3
         main_window.log_message(f"❌ Remove selected error: {str(e)}")
         QMessageBox.critical(main_window, "Remove Error", f"Remove failed: {str(e)}")
 
-def remove_via_entries_function(main_window): #vers 3
+def remove_via_entries_function(main_window): #vers 4
     """Remove entries via IDE definitions - REWRITTEN with shared IDE system"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
@@ -198,7 +202,7 @@ def remove_via_entries_function(main_window): #vers 3
         
         # Use shared IDE dialog
         from gui.ide_dialog import show_ide_dialog
-        
+
         ide_parser = show_ide_dialog(main_window, "remove")
         if not ide_parser:
             return  # User cancelled
@@ -272,6 +276,10 @@ def remove_via_entries_function(main_window): #vers 3
         def remove_finished(success, message, stats):
             progress_dialog.close()
             
+            # Wait for thread to finish properly
+            if remove_thread.isRunning():
+                remove_thread.wait(1000)
+            
             # Refresh table after removal
             if hasattr(main_window, 'refresh_table'):
                 main_window.refresh_table()
@@ -294,7 +302,7 @@ def remove_via_entries_function(main_window): #vers 3
         main_window.log_message(f"❌ Remove via IDE error: {str(e)}")
         QMessageBox.critical(main_window, "Remove Via IDE Error", f"Remove via IDE failed: {str(e)}")
 
-def remove_all_function(main_window): #vers 1
+def remove_all_function(main_window): #vers 2
     """Remove all entries with confirmation"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
@@ -335,6 +343,10 @@ def remove_all_function(main_window): #vers 1
         
         def remove_finished(success, message, stats):
             progress_dialog.close()
+            
+            # Wait for thread to finish properly
+            if remove_thread.isRunning():
+                remove_thread.wait(1000)
             
             # Refresh table after removal
             if hasattr(main_window, 'refresh_table'):

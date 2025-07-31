@@ -140,7 +140,7 @@ def import_files_function(main_window): #vers 3
         main_window.log_message(f"📥 Selected {len(files)} files for import")
         
         # Show import options dialog
-        dialog = ImportOptionsDialog(main_window, files, "files")
+        dialog = ImportOptionsDialog(main_window, len(files))
         dialog.exec()
         
     except Exception as e:
@@ -206,7 +206,7 @@ def import_via_function(main_window): #vers 3
         main_window.log_message(f"📋 {result_msg}")
         
         # Show import options dialog
-        dialog = ImportOptionsDialog(main_window, files_to_import, "IDE")
+        dialog = ImportOptionsDialog(main_window, len(files_to_import))
         dialog.exec()
         
     except Exception as e:
@@ -262,7 +262,7 @@ def import_from_folder(main_window): #vers 3
         main_window.log_message(f"📁 Import from folder: {len(files_to_import)} files found")
         
         # Show import options dialog
-        dialog = ImportOptionsDialog(main_window, files_to_import, "folder")
+        dialog = ImportOptionsDialog(main_window, len(files_to_import))
         dialog.exec()
         
     except Exception as e:

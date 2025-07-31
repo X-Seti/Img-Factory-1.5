@@ -298,7 +298,6 @@ class GUIBackend:
             for btn in all_buttons:
                 btn_text = btn.text()
 
-                # Change "Update List" to "Refresh"
                 if any(text in btn_text.lower() for text in ["update list", "update lst"]):
                     btn.setText("🔄 Refresh")
                     try:

@@ -158,7 +158,7 @@ def export_selected_function(main_window): #vers 3
         main_window.log_message(f"📤 Exporting {len(selected_entries)} selected entries")
         
         # Show export options dialog
-        dialog = ExportOptionsDialog(main_window, selected_entries, "selected")
+        dialog = ExportOptionsDialog(main_window, len(selected_entries))
         dialog.exec()
         
     except Exception as e:
@@ -216,7 +216,7 @@ def export_via_function(main_window): #vers 3
         main_window.log_message(f"📋 {result_msg}")
         
         # Show export options dialog
-        dialog = ExportOptionsDialog(main_window, matching_entries, "IDE")
+        dialog = ExportOptionsDialog(main_window, len(matching_entries))
         
         # Set default export directory based on IDE filename
         if hasattr(ide_parser, 'file_path') and ide_parser.file_path:
@@ -310,7 +310,7 @@ def export_all_function(main_window): #vers 3
         main_window.log_message(f"📤 Exporting all {len(all_entries)} entries")
         
         # Show export options dialog
-        dialog = ExportOptionsDialog(main_window, all_entries, "all")
+        dialog = ExportOptionsDialog(main_window, len(all_entries))
         dialog.exec()
         
     except Exception as e:
