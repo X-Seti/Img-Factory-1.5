@@ -72,6 +72,94 @@ class IMGFactoryGUILayout:
         from PyQt6.QtCore import QTimer
         QTimer.singleShot(100, self._delayed_initialization)
     
+    def apply_table_theme(self): #vers 1
+        """Apply theme styling to the table - MISSING METHOD FIX"""
+        if hasattr(self, 'table') and self.table:
+            self._apply_table_theme_styling()
+        if hasattr(self, 'log') and self.log:
+            self._apply_log_theme_styling()
+
+    def _apply_dynamic_tab_styling(self, main_height, tab_height, font_size, padding, container_height): #vers 1
+        """Apply dynamic tab styling - called from settings - MISSING METHOD FIX"""
+        if hasattr(self, 'main_type_tabs'):
+            # Update tab widget height
+            self.main_type_tabs.setMaximumHeight(main_height)
+            # Update styling
+            self.main_type_tabs.setStyleSheet(f"""
+                QTabWidget::pane {{
+                    border: 1px solid #cccccc;
+                    border-radius: 3px;
+                    background-color: #ffffff;
+                }}
+                QTabBar::tab {{
+                    background-color: #f0f0f0;
+                    border: 1px solid #cccccc;
+                    padding: {padding}px;
+                    font-size: {font_size}pt;
+                    height: {tab_height}px;
+                }}
+            """)
+
+    def load_tab_settings_from_app_settings(self, app_settings=None): #vers 1
+        """Load tab settings from app settings - MISSING METHOD FIX"""
+        try:
+            if not app_settings and hasattr(self.main_window, 'app_settings'):
+                app_settings = self.main_window.app_settings
+            if hasattr(app_settings, 'current_settings'):
+                # Load tab-related settings
+                tab_height = app_settings.current_settings.get('main_tab_height', 20)
+                if hasattr(self, 'main_tab_widget'):
+                    self.main_tab_widget.setStyleSheet(f"""
+                    QTabWidget::tab-bar {{
+                        height: {tab_height}px;
+                    }}
+                    """)
+            return True
+        except Exception as e:
+            print(f"Error loading tab settings: {e}")
+            return False
+
+
+        def update_file_window_only(self, img_file): #vers 1
+            """Update ONLY the file window/table, isolate from other panels"""
+            try:
+                # Get direct reference to file window table
+                if not hasattr(self, 'table') or not self.table:
+                    if hasattr(self.main_window, 'log_message'):
+                        self.main_window.log_message("⚠️ No table found for isolated update")
+                    return False
+
+                # ISOLATION: Temporarily disconnect table from signals
+                self.table.blockSignals(True)
+
+                # Clear ONLY table data (preserve headers)
+                self.table.setRowCount(0)
+
+                # Populate with new data using isolated method
+                from methods.populate_img_table import populate_img_table
+                populate_img_table(self.table, img_file)
+
+                # Re-enable signals
+                self.table.blockSignals(False)
+
+                # Update ONLY file window title bar (not main window title)
+                if hasattr(self, 'tab_widget') and self.tab_widget:
+                    file_name = os.path.basename(img_file.file_path)
+                    # Update just the file tab, not the main window
+                    self.tab_widget.setTabText(0, f"📁 {file_name}")
+
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"🔄 File window updated (isolated): {len(img_file.entries)} entries")
+                return True
+
+            except Exception as e:
+                # Re-enable signals even on error
+                if hasattr(self, 'table') and self.table:
+                    self.table.blockSignals(False)
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"❌ Isolated update error: {str(e)}")
+                return False
+
     def _create_method_mappings(self):
         """Create centralized method mappings for all buttons"""
 
@@ -748,7 +836,7 @@ class IMGFactoryGUILayout:
         right_layout.setSpacing(6)
 
         # IMG Section with pastel colors
-        img_box = QGroupBox("IMG, COL Files")
+        img_box = QGroupBox("IMG, COL, TXD Files")
         img_layout = QGridLayout()
         img_layout.setSpacing(2)
         img_buttons_data = [

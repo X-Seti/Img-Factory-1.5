@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 X-Seti - July22 2025 - IMG Factory 1.5 - AtariST version :D
-#this belongs in root /imgfactory.py - version 68
+#this belongs in root /imgfactory.py - version 69
 """
 import sys
 import os
@@ -102,12 +102,16 @@ from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.gui_menu import IMGFactoryMenuBar
 from gui.gui_context import (enhanced_context_menu_event, add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
 
+# Debug helper
+from debug_patch_file import integrate_debug_patch, remove_debug_patch
+from visibility_fix import apply_visibility_fix
 
 #from gui.cross_platform_theme import integrate_cross_platform_theme_system
 #from gui.cross_platform_theme import force_readable_text_colors
 
 #methods
 from methods.populate_img_table import install_img_table_populator
+from methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate_update_ui_for_loaded_img
 
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
@@ -337,10 +341,17 @@ class IMGFactory(QMainWindow):
         # Setup close manager for tab handling
         install_close_functions(self)
 
+        #debug debug debug
+        integrate_debug_patch(self)
+        apply_visibility_fix(self)
+
         if integrate_remove_functions(self):
             self.log_message("✅ Remove functions integrated")
 
         install_img_table_populator(self)
+
+        # Integrate standalone UI update method
+        integrate_update_ui_for_loaded_img(self)
 
         #integrate_right_click_actions(self)
         integrate_unknown_rw_detection(self)
@@ -974,12 +985,25 @@ class IMGFactory(QMainWindow):
         # Add tab with "No file" label
         self.main_tab_widget.addTab(tab_widget, "📁 No File")
 
-    def _on_tab_changed(self, index): #vers 4
-        """Handle tab change - FIXED"""
+
+    def _on_tab_changed(self, index): #vers 7
+        """Handle tab change - FIND AND UPDATE ACTUAL TABLE IN CURRENT TAB"""
         if index == -1:
             return
 
         self.log_message(f"🔄 Tab changed to: {index}")
+
+        # CRITICAL FIX: Find the actual table widget in the current tab
+        current_tab_widget = self.main_tab_widget.widget(index)
+        actual_table = None
+
+        if current_tab_widget:
+            from PyQt6.QtWidgets import QTableWidget
+            tables = current_tab_widget.findChildren(QTableWidget)
+            if tables:
+                actual_table = tables[0]  # Get the first table in this tab
+                # Update the gui_layout.table reference to point to THIS tab's table
+                self.gui_layout.table = actual_table
 
         # Update current file based on tab
         if index in self.open_files:
@@ -993,13 +1017,21 @@ class IMGFactory(QMainWindow):
                 self.current_col = file_info['file_object']
                 self.current_img = None
 
-            # Update UI for current file
+            # Update UI for current file (will now use the correct table)
             self._update_ui_for_current_file()
         else:
-            # No file in this tab
+            # No file in this tab - clear it
             self.log_message(f"📭 Tab {index} is empty")
             self.current_img = None
             self.current_col = None
+
+            # Clear the actual table in this tab
+            if actual_table:
+                actual_table.clear()
+                actual_table.setRowCount(0)
+                actual_table.setColumnCount(1)
+                actual_table.setHorizontalHeaderLabels(["No file loaded"])
+
             self._update_ui_for_no_img()
 
 
@@ -1091,10 +1123,22 @@ class IMGFactory(QMainWindow):
         except:
             return False
 
-    def _on_img_loaded(self, img_file: IMGFile): #vers 7
-        """Handle IMG loading completion from background thread - FIXED"""
+    def open_img_file(self): #vers 2
+        """Open file dialog - FIXED: Call imported function correctly"""
         try:
-            # Store the loaded IMG file in tab system
+            open_file_dialog(self)  # Call function with self parameter
+        except Exception as e:
+            self.log_message(f"❌ Error opening file dialog: {str(e)}")
+
+    def open_file_dialog(self): #vers 1
+        """Unified file dialog - imported from core"""
+        from core.create_img import open_file_dialog
+        return open_file_dialog(self)
+
+    def _clean_on_img_loaded(self, img_file: IMGFile): #vers 6
+        """Handle IMG loading - USES ISOLATED FILE WINDOW"""
+        try:
+            # Store the loaded IMG file
             current_index = self.main_tab_widget.currentIndex()
             if current_index in self.open_files:
                 self.open_files[current_index]['file_object'] = img_file
@@ -1102,83 +1146,17 @@ class IMGFactory(QMainWindow):
             # Set current IMG reference
             self.current_img = img_file
 
-            # CRITICAL: Clear ONLY table data, NOT headers/structure
-            if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
-                self.gui_layout.table.setRowCount(0)  # Clear rows but keep headers
+            # Use isolated file window update
+            success = self.gui_layout.update_file_window_only(img_file)
 
-            # Update UI using fixed method
-            self._update_ui_for_loaded_img()
+            # Properly hide progress and ensure GUI visibility
+            self.gui_layout.hide_progress_properly()
 
-            # Hide progress - CHECK if method exists first
-            if hasattr(self.gui_layout, 'hide_progress'):
-                self.gui_layout.hide_progress()
-            else:
-                self.log_message("⚠️ gui_layout.hide_progress not available")
-
-            # Log success
-            self.log_message(f"✅ Loaded: {os.path.basename(img_file.file_path)} ({len(img_file.entries)} entries)")
+            if success:
+                self.log_message(f"✅ Loaded (isolated): {os.path.basename(img_file.file_path)} ({len(img_file.entries)} entries)")
 
         except Exception as e:
-            error_msg = f"Error processing loaded IMG: {str(e)}"
-            self.log_message(f"❌ {error_msg}")
-
-            # Hide progress - CHECK if method exists first
-            if hasattr(self.gui_layout, 'hide_progress'):
-                self.gui_layout.hide_progress()
-            else:
-                self.log_message("⚠️ gui_layout.hide_progress not available")
-
-            QMessageBox.critical(self, "IMG Processing Error", error_msg)
-
-
-    def _update_ui_for_loaded_img(self): #vers 5
-        """Update UI when IMG file is loaded - FIXED: Use standalone populate_img_table"""
-        if not self.current_img:
-            self.log_message("⚠️ _update_ui_for_loaded_img called but no current_img")
-            return
-
-        # Update window title
-        file_name = os.path.basename(self.current_img.file_path)
-        self.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
-
-        # Populate table with IMG entries using STANDALONE method
-        if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
-            # Import and use the standalone function from methods/
-            from methods.populate_img_table import populate_img_table
-
-            # CRITICAL: Clear table completely first
-            table = self.gui_layout.table
-            table.clear()  # Clear all data
-            table.setRowCount(0)  # Reset row count
-            table.setColumnCount(6)  # Reset column count
-            table.setHorizontalHeaderLabels([
-                "Name", "Type", "Size", "Offset", "RW Version", "Info"
-            ])
-
-
-            # Set IMG column widths
-            table.setColumnWidth(0, 200)  # Name
-            table.setColumnWidth(1, 80)   # Type
-            table.setColumnWidth(2, 100)  # Size
-            table.setColumnWidth(3, 100)  # Offset
-            table.setColumnWidth(4, 120)  # RW Version
-            table.setColumnWidth(5, 150)  # Info
-
-            # Populate table
-            populate_img_table(self.gui_layout.table, self.current_img)
-            self.log_message(f"📋 Table populated with {len(self.current_img.entries)} entries")
-        else:
-            self.log_message("⚠️ GUI layout or table not available")
-
-        # Update status
-        if hasattr(self, 'gui_layout'):
-            entry_count = len(self.current_img.entries) if self.current_img.entries else 0
-            self.gui_layout.show_progress(-1, f"Loaded: {entry_count} entries")
-
-            if hasattr(self.gui_layout, 'update_img_info'):
-                self.gui_layout.update_img_info(f"IMG: {file_name}")
-
-        self.log_message("✅ IMG UI updated successfully")
+            self.log_message(f"❌ Loading error: {str(e)}")
 
 
     def reload_table(self): #vers 1
@@ -1407,11 +1385,6 @@ class IMGFactory(QMainWindow):
         QMessageBox.critical(self, "IMG Load Error", error_message)
 
 
-    def open_img_file(self): #vers 5
-        """Open file dialog - REDIRECTS to unified loader"""
-        self.open_file_dialog()
-
-
     def _update_ui_for_no_img(self): #vers 5
         """Update UI when no IMG file is loaded"""
         # Clear current data
@@ -1422,8 +1395,13 @@ class IMGFactory(QMainWindow):
         self.setWindowTitle("IMG Factory 1.5")
 
         # Clear table if it exists
+       # Clear table if it exists
         if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
-            self.gui_layout.table.setRowCount(0)
+            table = self.gui_layout.table
+            table.clear()  # Clear everything
+            table.setRowCount(0)
+            table.setColumnCount(1)
+            table.setHorizontalHeaderLabels(["No file loaded"])  # ✅ Empty state header
 
         # Update status - CHECK if methods exist first
         if hasattr(self, 'gui_layout'):

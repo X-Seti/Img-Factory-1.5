@@ -1,4 +1,4 @@
-#this belongs in core/close.py - Version: 6
+#this belongs in core/close.py - Version: 9
 # X-Seti - July31 2025 - IMG Factory 1.5 - Close and Tab Management Functions
 
 """
@@ -74,44 +74,22 @@ class IMGCloseManager:
         self.main_window = main_window
         self.log_message = main_window.log_message
 
-    def close_current_file(self): #vers 1
-        """Close current file (IMG or COL) - FIXED: Clean implementation"""
+    def close_current_file(self): #vers 2
+        """Close current file (IMG or COL) - FIXED: Remove tab or clear it"""
         try:
             current_index = self.main_window.main_tab_widget.currentIndex()
 
-            # Clear the current file data
-            old_img = self.main_window.current_img
-            old_col = getattr(self.main_window, 'current_col', None)
-            self.main_window.current_img = None
-            if hasattr(self.main_window, 'current_col'):
-                self.main_window.current_col = None
-
-            # Remove from open_files if exists
-            if hasattr(self.main_window, 'open_files') and current_index in self.main_window.open_files:
-                file_info = self.main_window.open_files[current_index]
-                file_path = file_info.get('file_path', 'Unknown file')
-                file_type = file_info.get('type', 'Unknown')
-                self.log_message(f"🗂️ Closing {file_type}: {os.path.basename(file_path)}")
-                del self.main_window.open_files[current_index]
-
-            # Reset tab name to "No File"
-            self.main_window.main_tab_widget.setTabText(current_index, "📁 No File")
-            
-            # Update UI for no file state
-            self.main_window._update_ui_for_no_img()
-
-            # Log what was closed
-            if old_img:
-                self.log_message("✅ IMG file closed")
-            elif old_col:
-                self.log_message("✅ COL file closed")
+            # If we have multiple tabs, remove this tab completely
+            if self.main_window.main_tab_widget.count() > 1:
+                self.close_tab(current_index)
             else:
-                self.log_message("✅ Tab cleared")
+                # Only one tab left, just clear it
+                self._clear_current_tab()
 
         except Exception as e:
             self.log_message(f"❌ Error closing file: {str(e)}")
 
-    def close_all_tabs(self): #vers 2
+    def close_all_tabs(self): #vers 3
         """Close all tabs - Handle both IMG and COL"""
         try:
             tab_count = self.main_window.main_tab_widget.count()
@@ -129,6 +107,12 @@ class IMGCloseManager:
             # Ensure we have at least one empty tab
             if self.main_window.main_tab_widget.count() == 0:
                 self.create_new_tab()
+
+            # CRITICAL FIX: Clear the file window display
+            self.main_window.current_img = None
+            if hasattr(self.main_window, 'current_col'):
+                self.main_window.current_col = None
+            self.main_window._update_ui_for_no_img()
 
             self.log_message("✅ All tabs closed")
 
@@ -169,19 +153,23 @@ class IMGCloseManager:
         except Exception as e:
             self.log_message(f"❌ Error closing tab {index}: {str(e)}")
 
-    def create_new_tab(self): #vers 1
-        """Create a new empty tab"""
+    def create_new_tab(self): #vers 2
+        """Create a new empty tab with proper GUI components"""
         try:
             new_tab = QWidget()
             new_layout = QVBoxLayout(new_tab)
-            
+            new_layout.setContentsMargins(0, 0, 0, 0)
+
+            # CRITICAL FIX: Create GUI components for the new tab
+            self.main_window.gui_layout.create_main_ui_with_splitters(new_layout)
+
             # Add the tab
             new_index = self.main_window.main_tab_widget.addTab(new_tab, "📁 No File")
             self.main_window.main_tab_widget.setCurrentIndex(new_index)
-            
-            self.log_message(f"✅ Created new tab {new_index}")
+
+            self.log_message(f"✅ Created new tab {new_index} with GUI components")
             return new_index
-            
+
         except Exception as e:
             self.log_message(f"❌ Error creating new tab: {str(e)}")
             return None

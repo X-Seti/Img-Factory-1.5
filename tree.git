@@ -64,6 +64,7 @@
 │   ├── split_img.py
 │   ├── tables_structure.py
 │   └── utils.py
+├── debug_patch_file.py
 ├── dff_sample
 │   ├── Air_brway_030.dff
 │   ├── Air_brway_31.dff
@@ -3828,7 +3829,8 @@
 │   ├── detect_file_type_version.py
 │   ├── ide_parser.py
 │   ├── populate_col_table.py
-│   └── populate_img_table.py
+│   ├── populate_img_table.py
+│   └── update_ui_for_loaded_img.py
 ├── old-ignore-folder
 │   ├── components
 │   │   ├── col_core_classes.py-old
@@ -4289,6 +4291,7 @@
 │   ├── generated_signal_cleanup.py
 │   ├── themer_settings.json
 │   └── update_themes_script.py
+├── visibility_fix.py
 ├── windows_launcher.bat
 └── windows source
     ├── BXCF
@@ -5327,4 +5330,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-992 directories, 4336 files
+992 directories, 4339 files
