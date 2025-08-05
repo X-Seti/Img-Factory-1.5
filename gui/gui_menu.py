@@ -93,7 +93,7 @@ class MenuDefinition:
                 MenuAction("img_info", "IMG &Information", "F4"),
                 MenuAction("img_validate", "&Validate IMG", "F5"),
                 MenuAction("img_rebuild", "&Rebuild IMG", "F6"),
-                MenuAction("img_rebuild_as", "Rebuild &As...", "Shift+F6"),
+                MenuAction("img_save_entry", "Save Entry.", "Shift+F6"),
                 MenuAction("sep1", ""),
                 MenuAction("img_extract", "&Extract All"),
                 MenuAction("img_merge", "&Merge IMG Files"),

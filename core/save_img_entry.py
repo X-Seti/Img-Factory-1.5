@@ -1,4 +1,4 @@
-#this belongs in core/save_img_entry.py - Version: 3
+#this belongs in core/save_img_entry.py - Version: 5
 # X-Seti - July28 2025 - IMG Factory 1.5 - IMG Save Entry Functions
 
 """
@@ -9,6 +9,9 @@ Separates save functionality from core classes for better organization
 import struct
 import os
 import shutil
+from PyQt6.QtWidgets import QMessageBox, QFileDialog  # Added QMessageBox import
+import os
+from typing import Optional
 
 ##Methods list -
 # add_save_methods_to_imgfile

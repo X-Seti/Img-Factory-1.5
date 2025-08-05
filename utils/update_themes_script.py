@@ -175,7 +175,7 @@ def add_menu_structure_to_theme(theme_data: Dict[str, Any]):
                 ],
                 "IMG": [
                     {"text": "Rebuild", "icon": "document-save", "action": "rebuild_img"},
-                    {"text": "Rebuild As...", "icon": "document-save-as", "action": "rebuild_img_as"},
+                    {"text": "Save Entry.", "icon": "document-save-entry", "action": "save_img_entry"},
                     {"separator": True},
                     {"text": "Merge IMG Files", "icon": "document-merge"},
                     {"text": "Split IMG File", "icon": "edit-cut"},
@@ -212,7 +212,7 @@ def add_button_structure_to_theme(theme_data: Dict[str, Any]):
                 {"text": "Close", "action": "close", "icon": "window-close", "color": "#FFF3E0"},
                 {"text": "Close All", "action": "close_all", "icon": "edit-clear", "color": "#FFF3E0"},
                 {"text": "Rebuild", "action": "rebuild", "icon": "view-refresh", "color": "#E8F5E8"},
-                {"text": "Rebuild As", "action": "rebuild_as", "icon": "document-save-as", "color": "#E8F5E8"},
+                {"text": "Save Entry", "action": "save_img_entry", "icon": "document-save-entry", "color": "#E8F5E8"},
                 {"text": "Rebuild All", "action": "rebuild_all", "icon": "document-save", "color": "#E8F5E8"},
                 {"text": "Merge", "action": "merge", "icon": "document-merge", "color": "#F3E5F5"},
                 {"text": "Split", "action": "split", "icon": "edit-cut", "color": "#F3E5F5"},

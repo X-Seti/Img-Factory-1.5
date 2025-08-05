@@ -345,33 +345,6 @@ class GUIBackend:
         except Exception as e:
             self.log_message(f"❌ Error updating info labels: {str(e)}")
 
-    def enable_buttons_by_context(self, img_loaded=False, entries_selected=False):
-        """Enable/disable buttons based on context"""
-        try:
-            # IMG buttons that need an IMG loaded
-            img_dependent_buttons = ["close", "rebuild", "rebuild_as", "rebuild_all", "merge", "split", "convert"]
-
-            # Entry buttons that need entries selected
-            selection_dependent_buttons = ["export", "export_via", "quick_export", "remove", "rename", "replace", "pin_selected"]
-
-            # Update IMG buttons
-            for btn in self.img_buttons:
-                if hasattr(btn, 'full_text'):
-                    button_action = btn.full_text.lower().replace(" ", "_")
-                    if button_action in img_dependent_buttons:
-                        btn.setEnabled(img_loaded)
-
-            # Update Entry buttons
-            for btn in self.entry_buttons:
-                if hasattr(btn, 'full_text'):
-                    button_action = btn.full_text.lower().replace(" ", "_")
-                    if button_action in selection_dependent_buttons:
-                        btn.setEnabled(entries_selected and img_loaded)
-                    elif button_action in ["import", "import_via", "refresh", "select_all", "sel_inverse", "sort"]:
-                        btn.setEnabled(img_loaded)
-        except Exception as e:
-            self.log_message(f"❌ Error enabling buttons: {str(e)}")
-
     def create_adaptive_button(self, label, action_type=None, icon=None, callback=None, bold=False):
         """Create adaptive button with theme support"""
         btn = QPushButton(label)

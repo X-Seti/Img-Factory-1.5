@@ -148,9 +148,9 @@
       ],
       "IMG": [
         {
-          "text": "Rebuild",
-          "icon": "document-save",
-          "action": "rebuild_img"
+          "text": "Save Entry...",
+          "icon": "document-save-entry",
+          "action": "save_img_entry"
         },
         {
           "text": "Rebuild As...",
@@ -265,10 +265,10 @@
         "color": "#E8F5E8"
       },
       {
-        "text": "Rebuild As",
-        "action": "rebuild_as",
-        "icon": "document-save-as",
-        "color": "#E8F5E8"
+       "text": "Save Entry...",
+       "icon": "document-save-entry",
+       "action": "save_img_entry",
+       "color": "#E8F5E8"
       },
       {
         "text": "Rebuild All",
@@ -333,7 +333,7 @@
         "color": "#FFEBEE"
       },
       {
-        "text": "Update list",
+        "text": "Refresh",
         "action": "update",
         "icon": "view-refresh",
         "color": "#F9FBE7"

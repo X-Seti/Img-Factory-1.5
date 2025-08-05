@@ -12,10 +12,10 @@ from typing import Optional, Dict, Any, List, Tuple
 from PyQt6.QtWidgets import QMessageBox, QFileDialog, QProgressDialog
 from PyQt6.QtCore import QThread, pyqtSignal, Qt
 
+#Rebuild_As function was removed and no longer needed.
 
 ##Method list
 # rebuild_current_img
-# rebuild_img_as
 # rebuild_all_img
 # quick_rebuild
 # integrate_rebuild_functions
@@ -476,41 +476,6 @@ def _update_rebuild_progress(main_window, progress: int, message: str): #vers 3
     except Exception as e:
         print(f"Progress update error: {e}")
 
-
-def rebuild_img_as(main_window) -> bool: #vers 1
-    """Rebuild IMG file with new name (Save As functionality)"""
-    try:
-        if not hasattr(main_window, 'current_img') or not main_window.current_img:
-            QMessageBox.warning(main_window, "No IMG", "No IMG file is currently loaded.")
-            return False
-
-        # Get save path from user
-        file_path, _ = QFileDialog.getSaveFileName(
-            main_window, "Rebuild IMG As", "",
-            "IMG Archives (*.img);;All Files (*)"
-        )
-
-        if not file_path:
-            return False  # User cancelled
-
-        main_window.log_message(f"Rebuilding IMG as: {os.path.basename(file_path)}")
-
-        # Create rebuild options
-        options = {
-            'create_backup': False,  # Don't backup when saving as new file
-            'optimize_structure': True,
-            'remove_gaps': True
-        }
-
-        # Start rebuild thread
-        rebuild_thread = RebuildThread(main_window, main_window.current_img, file_path, options)
-
-        # Connect progress signals
-        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'show_progress'):
-            rebuild_thread.progress_updated.connect(
-                lambda progress, status: main_window.gui_layout.show_progress(progress, status)
-            )
-
         # Connect completion signal
         def on_rebuild_complete(success, message, stats): #vers 2
             if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'show_progress'):
@@ -640,7 +605,6 @@ def integrate_rebuild_functions(main_window) -> bool: #vers 3
 # Export functions
 __all__ = [
     'rebuild_current_img',
-    'rebuild_img_as',
     'rebuild_all_img',
     'quick_rebuild',
     'integrate_rebuild_functions',

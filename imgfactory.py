@@ -1422,7 +1422,7 @@ class IMGFactory(QMainWindow):
 
         # Disable buttons that require an IMG to be loaded
         buttons_to_disable = [
-            'close_img_btn', 'rebuild_btn', 'rebuild_as_btn', 'validate_btn',
+            'close_img_btn', 'rebuild_btn', 'save_img_entry', 'validate_btn',
             'import_btn', 'export_all_btn', 'merge_btn', 'split_btn'
         ]
 
@@ -2230,49 +2230,6 @@ class IMGFactory(QMainWindow):
                 self.gui_layout.show_progress(-1, "Error")
             QMessageBox.critical(self, "Rebuild Error", error_msg)
 
-    def rebuild_img_as(self):
-        """Rebuild IMG file with new name"""
-        if not self.current_img:
-            QMessageBox.warning(self, "No IMG", "No IMG file is currently loaded.")
-            return
-
-        try:
-            file_path, _ = QFileDialog.getSaveFileName(
-                self, "Rebuild IMG As", "",
-                "IMG Archives (*.img);;All Files (*)"
-            )
-
-            if file_path:
-                self.log_message(f"Rebuilding IMG as: {os.path.basename(file_path)}")
-
-                # Show progress - CHECK if method exists first
-                if hasattr(self.gui_layout, 'show_progress'):
-                    self.gui_layout.show_progress(0, "Rebuilding...")
-
-                # Check if IMG has rebuild_as method
-                if hasattr(self.current_img, 'rebuild_as'):
-                    if self.current_img.rebuild_as(file_path):
-                        self.log_message("IMG file rebuilt successfully")
-                        if hasattr(self.gui_layout, 'show_progress'):
-                            self.gui_layout.show_progress(-1, "Rebuild complete")
-                        QMessageBox.information(self, "Success", f"IMG file rebuilt as {os.path.basename(file_path)}")
-                    else:
-                        self.log_message("Failed to rebuild IMG file")
-                        if hasattr(self.gui_layout, 'show_progress'):
-                            self.gui_layout.show_progress(-1, "Rebuild failed")
-                        QMessageBox.critical(self, "Error", "Failed to rebuild IMG file")
-                else:
-                    self.log_message("❌ Error rebuilding IMG: 'IMGFile' object has no attribute 'rebuild_as'")
-                    QMessageBox.critical(self, "Error", "Rebuild As method not available in IMG file class")
-
-        except Exception as e:
-            error_msg = f"Error rebuilding IMG: {str(e)}"
-            self.log_message(error_msg)
-            if hasattr(self.gui_layout, 'show_progress'):
-                self.gui_layout.show_progress(-1, "Error")
-            QMessageBox.critical(self, "Rebuild Error", error_msg)
-
-    # Part 4
     def import_files(self):
         """Import files into current IMG"""
         if not self.current_img:

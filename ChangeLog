@@ -1,0 +1,42 @@
+What's fixed.
+
+Added new Function for themes.
+
+        {
+          "text": "Save Entry...",
+          "icon": "document-save-entry",
+          "action": "save_img_entry"
+        },
+
+        {
+        "text": "Save Entry...",
+        "icon": "document-save-entry",
+        "action": "save_img_entry",
+        "color": "#E8F5E8"
+        },
+
+Rebuild_As removed from all files.
+Loading single img.
+Loading Multiple Img.
+Closing Single Img.
+Closing Multiple Img.
+Rebuild_As removed - Save Entires semmed more logical.
+Update_list > refresh_table
+       ("Refresh", "update", "view-refresh", "#F9FBE7", "refresh_table"),
+
+Replaced with..
+      {
+        "text": "Refresh",
+        "action": "update",
+        "icon": "view-refresh",
+        "color": "#F9FBE7"
+      },
+
+
+Progress bar doesn't reset after function is done.
+
+
+Bug's:
+
+Reload fails, no error
+Rebuild img, Rebuild all imgs fails.
