@@ -1,6 +1,5 @@
-#this belongs in gui/ gui_layout.py - Version: 21
-# X-Seti - JULY29 2025 - Img Factory 1.5 - GUI Layout Module - METHOD_MAPPINGS INTEGRATION
-
+#this belongs in gui/ gui_layout.py - Version: 22
+# X-Seti - JULY29 2025 - Img Factory 1.5 - GUI Layout Module - CLEAN THEME-CONTROLLED VERSION
 
 import re
 from PyQt6.QtWidgets import (
@@ -12,7 +11,7 @@ from PyQt6.QtWidgets import (
     QFormLayout, QScrollArea, QFrame
 )
 from PyQt6.QtCore import Qt, QTimer, QSize, pyqtSignal, QPoint
-from PyQt6.QtGui import QFont, QAction, QIcon, QShortcut, QKeySequence
+from PyQt6.QtGui import QFont, QAction, QIcon, QShortcut, QKeySequence, QPalette
 from core.gui_search import ASearchDialog, SearchManager
 from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
@@ -27,23 +26,17 @@ from core.merge_img import merge_img_function
 from core.convert import convert_img, convert_img_format
 from core.rename import rename_entry
 from core.reload import reload_current_file
-from core.create_img import create_new_img, detect_and_open_file,  open_file_dialog, detect_file_type
+from core.create_img import create_new_img, detect_and_open_file, open_file_dialog, detect_file_type
 from core.close import close_img_file, close_all_img
 from core.close import install_close_functions, setup_close_manager
 from methods.colour_ui_for_loaded_img import integrate_color_ui_system
 
-def create_control_panel(main_window):
-    """Create the main control panel - LEGACY FUNCTION"""
-    # Use the new right panel function for consistency
-    # self.create_right_panel_with_pastel_buttons(main_window)
-
-    #todo - look for other pastel functions and add dark botton maode.
 
 class IMGFactoryGUILayout:
-    """Handles the complete GUI layout for IMG Factory 1.5"""
+    """Handles the complete GUI layout for IMG Factory 1.5 with theme system"""
     
     def __init__(self, main_window):
-        """Initialize GUI layout with tab settings support"""
+        """Initialize GUI layout with theme-controlled components"""
         self.main_window = main_window
         self.table = None
         self.log = None
@@ -55,66 +48,21 @@ class IMGFactoryGUILayout:
         # Status bar components
         self.status_bar = None
         self.status_label = None
-        self.progress_bar = None    #show_progres
+        self.progress_bar = None
         self.img_info_label = None
 
         # Tab-related components
         self.main_type_tabs = None
         self.tab_widget = None
         self.left_vertical_splitter = None
-        #integrate_color_ui_system(self)
+        self.status_window = None
+        self.info_bar = None
 
-        # UPDATED: Initialize method_mappings FIRST before buttons
+        # Initialize method_mappings FIRST before buttons
         self.method_mappings = self._create_method_mappings()
-
-        # Initialize tab settings and button icons after a short delay
-
-        # This ensures the main window is fully initialized
-
-        def update_file_window_only(self, img_file): #vers 1
-            """Update ONLY the file window/table, isolate from other panels"""
-            try:
-                # Get direct reference to file window table
-                if not hasattr(self, 'table') or not self.table:
-                    if hasattr(self.main_window, 'log_message'):
-                        self.main_window.log_message("⚠️ No table found for isolated update")
-                    return False
-
-                # ISOLATION: Temporarily disconnect table from signals
-                self.table.blockSignals(True)
-
-                # Clear ONLY table data (preserve headers)
-                self.table.setRowCount(0)
-
-                # Populate with new data using isolated method
-                from methods.populate_img_table import populate_img_table
-                populate_img_table(self.table, img_file)
-
-                # Re-enable signals
-                self.table.blockSignals(False)
-
-                # Update ONLY file window title bar (not main window title)
-                if hasattr(self, 'tab_widget') and self.tab_widget:
-                    file_name = os.path.basename(img_file.file_path)
-                    # Update just the file tab, not the main window
-                    self.tab_widget.setTabText(0, f"📁 {file_name}")
-
-                if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"🔄 File window updated (isolated): {len(img_file.entries)} entries")
-                return True
-
-            except Exception as e:
-                # Re-enable signals even on error
-                if hasattr(self, 'table') and self.table:
-                    self.table.blockSignals(False)
-                if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"❌ Isolated update error: {str(e)}")
-                return False
 
     def _create_method_mappings(self):
         """Create centralized method mappings for all buttons"""
-
-        # Create method mappings dictionary
         method_mappings = {
             # IMG/COL Operations
             'create_new_img': lambda: create_new_img(self.main_window),
@@ -133,7 +81,7 @@ class IMGFactoryGUILayout:
             # Import methods
             'import_files': lambda: import_files_function(self.main_window),
             'import_files_via': lambda: import_via_function(self.main_window),
-            'refresh_table': lambda: refresh_table(self.main_window),
+            'refresh_table': lambda: self._log_missing_method('refresh_table'),
 
             # Export methods
             'export_selected': lambda: export_selected_function(self.main_window),
@@ -146,16 +94,16 @@ class IMGFactoryGUILayout:
             'dump_entries': lambda: dump_all_function(self.main_window),
 
             # Selection methods
-            'select_all_entries': lambda: select_all_entries(self.main_window),
+            'select_all_entries': lambda: self._log_missing_method('select_all_entries'),
             'select_inverse': lambda: self._log_missing_method('select_inverse'),
             'sort_entries': lambda: self._log_missing_method('sort_entries'),
             'pin_selected_entries': lambda: self._log_missing_method('pin_selected_entries'),
 
-            # Edit methods (placeholders for now)
+            # Edit methods
             'rename_selected': lambda: self._log_missing_method('rename_selected'),
             'replace_selected': lambda: self._log_missing_method('replace_selected'),
 
-            # Editor methods (placeholders)
+            # Editor methods
             'edit_col_file': lambda: self._log_missing_method('edit_col_file'),
             'edit_txd_file': lambda: self._log_missing_method('edit_txd_file'),
             'edit_dff_file': lambda: self._log_missing_method('edit_dff_file'),
@@ -178,66 +126,398 @@ class IMGFactoryGUILayout:
             'editmenu': lambda: self._log_missing_method('editmenu'),
         }
 
-        # Don't log during initialization to avoid circular dependency
         print(f"✅ Method mappings created: {len(method_mappings)} methods")
-        print(f"✅ Available methods: {list(method_mappings.keys())[:10]}...")  # Show first 10
         return method_mappings
 
     def _log_missing_method(self, method_name):
         """Log missing method - unified placeholder"""
-        # Check if main_window is fully initialized before logging
         if hasattr(self.main_window, 'log_message') and hasattr(self.main_window, 'gui_layout'):
             self.main_window.log_message(f"⚠️ Method '{method_name}' not yet implemented")
         else:
             print(f"⚠️ Method '{method_name}' not yet implemented")
 
+    # =============================================================================
+    # THEME SYSTEM - Button Templates & Color Management
+    # =============================================================================
 
-    def apply_settings_changes(self, settings):
-        """Apply settings changes to the GUI layout"""
+    def _get_button_theme_template(self, theme_name="default"):
+        """Get button color templates based on theme"""
+        if self._is_dark_theme():
+            return {
+                # Dark Theme Button Colors
+                'create_action': '#2D4A4A',     # Dark teal for create/new actions
+                'open_action': '#2D3A4F',       # Dark blue for open/load actions  
+                'reload_action': '#3A4A2D',     # Dark green for refresh/reload
+                'close_action': '#4A3A2D',      # Dark orange for close actions
+                'build_action': '#2D4A3A',      # Dark mint for build/rebuild
+                'save_action': '#4A2D4A',       # Dark purple for save actions
+                'merge_action': '#3A2D4A',      # Dark violet for merge/split
+                'convert_action': '#4A4A2D',    # Dark yellow for convert
+                'import_action': '#2D4A4F',     # Dark cyan for import
+                'export_action': '#2D4A3A',     # Dark emerald for export
+                'remove_action': '#4A2D2D',     # Dark red for remove/delete
+                'edit_action': '#4A3A2D',       # Dark amber for edit actions
+                'select_action': '#3A4A2D',     # Dark lime for select actions
+                'editor_col': '#2D3A4F',        # Dark blue for COL editor
+                'editor_txd': '#4A2D4A',        # Dark magenta for TXD editor
+                'editor_dff': '#2D4A4F',        # Dark cyan for DFF editor
+                'editor_data': '#3A4A2D',       # Dark olive for data editors
+                'editor_map': '#4A2D4A',        # Dark purple for map editors
+                'editor_vehicle': '#2D4A3A',    # Dark teal for vehicle editors
+                'editor_script': '#4A3A2D',     # Dark gold for script editors
+                'placeholder': '#2A2A2A',       # Dark gray for spacers
+            }
+        else:
+            return {
+                # Light Theme Button Colors  
+                'create_action': '#EEFAFA',     # Light teal for create/new actions
+                'open_action': '#E3F2FD',       # Light blue for open/load actions
+                'reload_action': '#F9FBE7',     # Light green for refresh/reload  
+                'close_action': '#FFF3E0',      # Light orange for close actions
+                'build_action': '#E8F5E8',      # Light mint for build/rebuild
+                'save_action': '#F8BBD9',       # Light pink for save actions
+                'merge_action': '#F3E5F5',      # Light violet for merge/split
+                'convert_action': '#FFF8E1',    # Light yellow for convert
+                'import_action': '#E1F5FE',     # Light cyan for import
+                'export_action': '#E8F5E8',     # Light emerald for export
+                'remove_action': '#FFEBEE',     # Light red for remove/delete
+                'edit_action': '#FFF8E1',       # Light amber for edit actions
+                'select_action': '#F1F8E9',     # Light lime for select actions
+                'editor_col': '#E3F2FD',        # Light blue for COL editor
+                'editor_txd': '#F8BBD9',        # Light pink for TXD editor
+                'editor_dff': '#E1F5FE',        # Light cyan for DFF editor
+                'editor_data': '#D3F2AD',       # Light lime for data editors
+                'editor_map': '#F8BBD9',        # Light pink for map editors
+                'editor_vehicle': '#E3F2BD',    # Light olive for vehicle editors
+                'editor_script': '#FFD0BD',     # Light peach for script editors
+                'placeholder': '#FEFEFE',       # Light gray for spacers
+            }
+
+    def _get_img_buttons_data(self):
+        """Get IMG buttons data with theme colors"""
+        colors = self._get_button_theme_template()
+        return [
+            ("Create", "new", "document-new", colors['create_action'], "create_new_img"),
+            ("Open", "open", "document-open", colors['open_action'], "open_img_file"),
+            ("Reload", "reload", "document-reload", colors['reload_action'], "reload_table"),
+            ("     ", "space", "placeholder", colors['placeholder'], "useless_button"),
+            ("Close", "close", "window-close", colors['close_action'], "close_img_file"),
+            ("Close All", "close_all", "edit-clear", colors['close_action'], "close_all_img"),
+            ("Rebuild", "rebuild", "view-rebuild", colors['build_action'], "rebuild_img"),
+            ("Rebuild All", "rebuild_all", "document-save", colors['build_action'], "rebuild_all_img"),
+            ("Save Entry", "save_entry", "document-save-entry", colors['save_action'], "save_img_entry"),
+            ("Merge", "merge", "document-merge", colors['merge_action'], "merge_img"),
+            ("Split via", "split", "edit-cut", colors['merge_action'], "split_img"),
+            ("Convert", "convert", "transform", colors['convert_action'], "convert_img_format"),
+        ]
+
+    def _get_entry_buttons_data(self):
+        """Get Entry buttons data with theme colors"""
+        colors = self._get_button_theme_template()
+        return [
+            ("Import", "import", "document-import", colors['import_action'], "import_files"),
+            ("Import via", "import_via", "document-import", colors['import_action'], "import_files_via"),
+            ("Refresh", "update", "view-refresh", colors['reload_action'], "refresh_table"),
+            ("Export", "export", "document-export", colors['export_action'], "export_selected"),
+            ("Export via", "export_via", "document-export", colors['export_action'], "export_selected_via"),
+            ("Quick Exp", "quick_export", "document-send", colors['export_action'], "quick_export_selected"),
+            ("Remove", "remove", "edit-delete", colors['remove_action'], "remove_selected"),
+            ("Remove via", "remove_via", "document-remvia", colors['remove_action'], "remove_via_entries"),
+            ("Dump", "dump", "document-dump", colors['merge_action'], "dump_entries"),
+            ("Rename", "rename", "edit-rename", colors['edit_action'], "rename_selected"),
+            ("Replace", "replace", "edit-copy", colors['edit_action'], "replace_selected"),
+            ("Select All", "select_all", "edit-select-all", colors['select_action'], "select_all_entries"),
+            ("Inverse", "sel_inverse", "edit-select", colors['select_action'], "select_inverse"),
+            ("Sort via", "sort", "view-sort", colors['select_action'], "sort_entries"),
+            ("Pin selected", "pin_selected", "pin", colors['select_action'], "pin_selected_entries"),
+        ]
+
+    def _get_options_buttons_data(self):
+        """Get Options buttons data with theme colors"""
+        colors = self._get_button_theme_template()
+        return [
+            ("Col Edit", "col_edit", "col-edit", colors['editor_col'], "edit_col_file"),
+            ("Txd Edit", "txd_edit", "txd-edit", colors['editor_txd'], "edit_txd_file"),
+            ("Dff Edit", "dff_edit", "dff-edit", colors['editor_dff'], "edit_dff_file"),
+            ("Ipf Edit", "ipf_edit", "ipf-edit", colors['editor_data'], "edit_ipf_file"),
+            ("IDE Edit", "ide_edit", "ide-edit", colors['editor_data'], "edit_ide_file"),
+            ("IPL Edit", "ipl_edit", "ipl-edit", colors['editor_data'], "edit_ipl_file"),
+            ("Dat Edit", "dat_edit", "dat-edit", colors['editor_data'], "edit_dat_file"),
+            ("Zons Cull Ed", "zones_cull", "zones-cull", colors['editor_data'], "edit_zones_cull"),
+            ("Weap Edit", "weap_edit", "weap-edit", colors['editor_vehicle'], "edit_weap_file"),
+            ("Vehi Edit", "vehi_edit", "vehi-edit", colors['editor_vehicle'], "edit_vehi_file"),
+            ("Peds Edit", "peds_edit", "peds-edit", colors['editor_vehicle'], "edit_peds_file"),
+            ("Radar Map", "radar_map", "radar-map", colors['editor_map'], "edit_radar_map"),
+            ("Paths Map", "paths_map", "paths-map", colors['editor_map'], "edit_paths_map"),
+            ("Waterpro", "timecyc", "timecyc", colors['editor_data'], "edit_waterpro"),
+            ("Weather", "timecyc", "timecyc", colors['editor_data'], "edit_weather"),
+            ("Handling", "handling", "handling", colors['editor_vehicle'], "edit_handling"),
+            ("Objects", "ojs_breakble", "ojs-breakble", colors['editor_data'], "edit_objects"),
+            ("SCM code", "scm_code", "scm-code", colors['editor_script'], "editscm"),
+            ("GXT font", "gxt_font", "gxt-font", colors['editor_script'], "editgxt"),
+            ("Menu Edit", "menu_font", "menu-font", colors['editor_script'], "editmenu"),
+        ]
+
+    def _is_dark_theme(self):
+        """Detect if the application is using a dark theme"""
         try:
-            # Apply tab settings if they exist
-            if any(key.startswith('tab_') or key in ['main_tab_height', 'individual_tab_height', 'tab_font_size', 'tab_padding', 'tab_container_height'] for key in settings.keys()):
-                main_height = settings.get("main_tab_height", 30)
-                tab_height = settings.get("individual_tab_height", 24)
-                font_size = settings.get("tab_font_size", 9)
-                padding = settings.get("tab_padding", 4)
-                container_height = settings.get("tab_container_height", 40)
+            # Method 1: Check if main window has theme property or setting
+            if hasattr(self.main_window, 'current_theme'):
+                return 'dark' in self.main_window.current_theme.lower()
+            
+            # Method 2: Check app_settings for theme
+            if hasattr(self.main_window, 'app_settings'):
+                current_settings = getattr(self.main_window.app_settings, 'current_settings', {})
+                theme_name = current_settings.get('theme', '').lower()
+                if theme_name:
+                    return 'dark' in theme_name
+            
+            # Method 3: Check if you have a theme_mode property
+            if hasattr(self, 'theme_mode'):
+                return self.theme_mode == 'dark'
 
-                self._apply_dynamic_tab_styling(
-                    main_height, tab_height, font_size, padding, container_height
-                )
-
-            # Apply button icon settings
-            if 'show_button_icons' in settings:
-                self._update_button_icons_state(settings['show_button_icons'])
-
-            # Apply other GUI settings as needed
-            if 'table_row_height' in settings:
-                self._update_table_row_height(settings['table_row_height'])
-
-            if 'widget_spacing' in settings:
-                self._update_widget_spacing(settings['widget_spacing'])
+            # Method 4: Check application palette as fallback
+            from PyQt6.QtWidgets import QApplication
+            palette = QApplication.palette()
+            window_color = palette.color(QPalette.ColorRole.Window)
+            # If window background is darker, assume dark theme
+            return window_color.lightness() < 128
 
         except Exception as e:
-            if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Error applying settings changes: {str(e)}")
+            # Fallback to light theme if detection fails
+            print(f"Theme detection failed: {e}, defaulting to light theme")
+            return False
 
-    def _update_table_row_height(self, height):
-        """Update table row height"""
-        try:
-            if hasattr(self, 'table') and self.table:
-                self.table.verticalHeader().setDefaultSectionSize(height)
-        except Exception:
-            pass
+    def set_theme_mode(self, theme_name):
+        """Set the current theme mode and refresh all styling"""
+        self.theme_mode = 'dark' if 'dark' in theme_name.lower() else 'light'
+        print(f"Theme mode set to: {self.theme_mode}")
+        
+        # Force refresh all buttons with new theme colors
+        self._refresh_all_buttons()
+        
+        # Apply all window themes
+        self.apply_all_window_themes()
 
-    def _update_widget_spacing(self, spacing):
-        """Update widget spacing"""
+    def _refresh_all_buttons(self):
+        """Refresh all buttons with current theme colors"""
         try:
-            if hasattr(self, 'main_splitter') and self.main_splitter:
-                # Update splitter spacing
-                self.main_splitter.setHandleWidth(max(4, spacing))
-        except Exception:
+            # Get new theme colors
+            img_colors = self._get_img_buttons_data()
+            entry_colors = self._get_entry_buttons_data() 
+            options_colors = self._get_options_buttons_data()
+            
+            # Update IMG buttons
+            if hasattr(self, 'img_buttons'):
+                for i, btn in enumerate(self.img_buttons):
+                    if i < len(img_colors):
+                        label, action_type, icon, color, method_name = img_colors[i]
+                        self._update_button_theme(btn, color)
+            
+            # Update Entry buttons
+            if hasattr(self, 'entry_buttons'):
+                for i, btn in enumerate(self.entry_buttons):
+                    if i < len(entry_colors):
+                        label, action_type, icon, color, method_name = entry_colors[i]
+                        self._update_button_theme(btn, color)
+                        
+            # Update Options buttons
+            if hasattr(self, 'options_buttons'):
+                for i, btn in enumerate(self.options_buttons):
+                    if i < len(options_colors):
+                        label, action_type, icon, color, method_name = options_colors[i]
+                        self._update_button_theme(btn, color)
+                        
+            print(f"✅ Refreshed {len(self.img_buttons + self.entry_buttons + self.options_buttons)} buttons for theme")
+                        
+        except Exception as e:
+            print(f"❌ Error refreshing buttons: {e}")
+
+    def _update_button_theme(self, btn, bg_color):
+        """Update a single button's theme styling"""
+        try:
+            is_dark_theme = self._is_dark_theme()
+
+            if is_dark_theme:
+                # Dark theme styling
+                button_bg = self._darken_color(bg_color, 0.4)
+                border_color = self._lighten_color(bg_color, 1.3)
+                text_color = self._lighten_color(bg_color, 1.5)
+                hover_bg = self._darken_color(bg_color, 0.3)
+                hover_border = self._lighten_color(bg_color, 1.4)
+                pressed_bg = self._darken_color(bg_color, 0.5)
+            else:
+                # Light theme styling
+                button_bg = bg_color
+                border_color = self._darken_color(bg_color, 0.6)
+                text_color = self._darken_color(bg_color, 1.8)
+                hover_bg = self._darken_color(bg_color, 0.9)
+                hover_border = self._darken_color(bg_color, 0.5)
+                pressed_bg = self._darken_color(bg_color, 0.8)
+
+            # Apply updated styling
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {button_bg};
+                    border: 1px solid {border_color};
+                    border-radius: 3px;
+                    padding: 2px 6px;
+                    font-size: 8pt;
+                    font-weight: bold;
+                    color: {text_color};
+                }}
+                QPushButton:hover {{
+                    background-color: {hover_bg};
+                    border: 1px solid {hover_border};
+                }}
+                QPushButton:pressed {{
+                    background-color: {pressed_bg};
+                }}
+            """)
+        except Exception as e:
+            print(f"❌ Error updating button theme: {e}")
+
+    def _get_theme_colors(self, theme_name):
+        """Get theme colors - fallback for missing theme system"""
+        try:
+            if hasattr(self.main_window, 'app_settings') and hasattr(self.main_window.app_settings, 'themes'):
+                theme_data = self.main_window.app_settings.themes.get(theme_name, {})
+                return theme_data.get('colors', {})
+        except:
             pass
+        return {}
+
+    # =============================================================================
+    # BUTTON CREATION & MANAGEMENT
+    # =============================================================================
+
+    def create_pastel_button(self, label, action_type, icon, bg_color, method_name):
+        """Create a button with pastel coloring that adapts to light/dark themes"""
+        btn = QPushButton(label)
+        btn.setMaximumHeight(22)
+        btn.setMinimumHeight(20)
+
+        # Detect if we're using a dark theme
+        is_dark_theme = self._is_dark_theme()
+
+        if is_dark_theme:
+            # Dark theme: darker pastel background, lighter edges, light text
+            button_bg = self._darken_color(bg_color, 0.4)  # Much darker pastel
+            border_color = self._lighten_color(bg_color, 1.3)  # Light border
+            text_color = self._lighten_color(bg_color, 1.5)   # Light text
+            hover_bg = self._darken_color(bg_color, 0.3)      # Slightly lighter on hover
+            hover_border = self._lighten_color(bg_color, 1.4)  # Even lighter border on hover
+            pressed_bg = self._darken_color(bg_color, 0.5)    # Darker when pressed
+        else:
+            # Light theme: light pastel background, dark edges, dark text
+            button_bg = bg_color  # Original pastel color
+            border_color = self._darken_color(bg_color, 0.6)  # Dark border
+            text_color = self._darken_color(bg_color, 1.8)    # Dark text
+            hover_bg = self._darken_color(bg_color, 0.9)      # Slightly darker on hover
+            hover_border = self._darken_color(bg_color, 0.5)  # Darker border on hover
+            pressed_bg = self._darken_color(bg_color, 0.8)    # Darker when pressed
+
+        # Apply theme-aware styling
+        btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {button_bg};
+                border: 1px solid {border_color};
+                border-radius: 3px;
+                padding: 2px 6px;
+                font-size: 8pt;
+                font-weight: bold;
+                color: {text_color};
+            }}
+            QPushButton:hover {{
+                background-color: {hover_bg};
+                border: 1px solid {hover_border};
+            }}
+            QPushButton:pressed {{
+                background-color: {pressed_bg};
+            }}
+        """)
+
+        # Set action type property
+        btn.setProperty("action-type", action_type)
+
+        # Connect to method_mappings
+        try:
+            if method_name in self.method_mappings:
+                btn.clicked.connect(self.method_mappings[method_name])
+                if hasattr(self.main_window, 'gui_layout'):
+                    print(f"✅ Connected '{label}' to method_mappings[{method_name}]")
+            else:
+                btn.clicked.connect(lambda: self._safe_log(f"⚠️ Method '{method_name}' not in method_mappings"))
+                if hasattr(self.main_window, 'gui_layout'):
+                    print(f"⚠️ Method '{method_name}' not found in method_mappings for '{label}'")
+        except Exception as e:
+            if hasattr(self.main_window, 'gui_layout'):
+                print(f"❌ Error connecting button '{label}': {e}")
+            btn.clicked.connect(lambda: self._safe_log(f"Button '{label}' connection error"))
+
+        return btn
+
+    def _lighten_color(self, color, factor):
+        """Lighten a hex color by factor (>1.0 lightens, <1.0 darkens)"""
+        try:
+            if not color.startswith('#'):
+                return color
+            
+            color = color.lstrip('#')
+            r, g, b = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
+            
+            # Lighten by moving towards white
+            r = min(255, int(r + (255 - r) * (factor - 1.0)))
+            g = min(255, int(g + (255 - g) * (factor - 1.0)))
+            b = min(255, int(b + (255 - b) * (factor - 1.0)))
+            
+            return f"#{r:02x}{g:02x}{b:02x}"
+        except:
+            return color
+
+    def _darken_color(self, color, factor):
+        """Darken a hex color by factor (0.0-1.0, where 0.8 = 20% darker)"""
+        try:
+            if not color.startswith('#'):
+                return color
+                
+            color = color.lstrip('#')
+            r, g, b = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
+            
+            # Darken by multiplying by factor
+            r = max(0, int(r * factor))
+            g = max(0, int(g * factor))
+            b = max(0, int(b * factor))
+            
+            return f"#{r:02x}{g:02x}{b:02x}"
+        except:
+            return color
+
+    def _get_short_text(self, label):
+        """Get short text for button"""
+        short_map = {
+            "Create": "New", "Open": "Open", "Reload": "Reload", "     ": " ",
+            "Close": "Close", "Close All": "Close A", "Rebuild": "Rebld",
+            "Rebuild All": "Rebld Al", "Save Entry": "Save", "Merge": "Merge",
+            "Split via": "Split", "Convert": "Conv", "Import": "Imp",
+            "Import via": "Imp via", "Refresh": "Refresh", "Export": "Exp",
+            "Export via": "Exp via", "Quick Exp": "Q Exp", "Remove": "Rem",
+            "Remove via": "Rem via", "Dump": "Dump", "Pin selected": "Pin",
+            "Rename": "Rename", "Replace": "Replace", "Select All": "Select",
+            "Inverse": "Inverse", "Sort via": "Sort", "Col Edit": "Col Edit",
+            "Txd Edit": "Txd Edit", "Dff Edit": "Dff Edit", "Ipf Edit": "Ipf Edit",
+            "IDE Edit": "IDE Edit", "IPL Edit": "IPL Edit", "Dat Edit": "Dat Edit",
+            "Zons Cull Ed": "Zons Cull", "Weap Edit": "Weap Edit", "Vehi Edit": "Vehi Edit",
+            "Peds Edit": "Peds Edit", "Radar Map": "Radar Map", "Paths Map": "Paths Map",
+            "Waterpro": "Waterpro", "Weather": "Weather", "Handling": "Handling",
+            "Objects": "Objects", "SCM code": "SCM Code", "GXT font": "GXT Edit",
+            "Menu Edit": "Menu Ed",
+        }
+        return short_map.get(label, label)
+
+    # =============================================================================
+    # MAIN UI LAYOUT CREATION
+    # =============================================================================
 
     def create_main_ui_with_splitters(self, main_layout):
         """Create the main UI with correct 3-section layout"""
@@ -254,38 +534,15 @@ class IMGFactoryGUILayout:
         self.main_splitter.addWidget(left_panel)
         self.main_splitter.addWidget(right_panel)
         
-        # FIXED: Set splitter proportions and force constraints
+        # Set splitter proportions and force constraints
         self.main_splitter.setSizes([1000, 280])  # Fixed right panel to 280px
         
-        # FIXED: Add size constraints to force the right panel width
+        # Add size constraints to force the right panel width
         right_panel.setMaximumWidth(280)  # Fixed at 280px
         right_panel.setMinimumWidth(280)  # Fixed at 280px
         
         # Style the main horizontal splitter handle with theme colors
-        theme_colors = self._get_theme_colors("default")
-        splitter_bg = theme_colors.get('splitter_color_background', 'default')
-        splitter_shine = theme_colors.get('splitter_color_shine', 'default')
-        splitter_shadow = theme_colors.get('splitter_color_shadow', 'default')
-        
-        self.main_splitter.setStyleSheet(f"""
-            QSplitter::handle:horizontal {{
-                background-color: #{splitter_bg};
-                border: 1px solid #{splitter_shine};
-                border-left: 1px solid #{splitter_shadow};
-                width: 8px;
-                margin: 2px 1px;
-                border-radius: 3px;
-            }}
-            
-            QSplitter::handle:horizontal:hover {{
-                background-color: #{splitter_shine};
-                border-color: #{splitter_shadow};
-            }}
-            
-            QSplitter::handle:horizontal:pressed {{
-                background-color: #{splitter_shadow};
-            }}
-        """)
+        self._apply_main_splitter_theme()
         
         # Prevent panels from collapsing completely
         self.main_splitter.setCollapsible(0, False)  # Left panel
@@ -293,101 +550,38 @@ class IMGFactoryGUILayout:
         
         # Add splitter to main layout
         main_layout.addWidget(self.main_splitter)
-    
+
     def _create_left_three_section_panel(self):
-        """Create left panel with 3 sections: Main Tabs, File Window, Status Window - UPDATED HEIGHTS"""
+        """Create left panel with 3 sections: File Window, Status Window"""
         left_container = QWidget()
         left_layout = QVBoxLayout(left_container)
         left_layout.setContentsMargins(3, 3, 3, 3)
         left_layout.setSpacing(0)  # No spacing - splitter handles this
 
-        # Create vertical splitter for the 3 sections
+        # Create vertical splitter for the sections
         self.left_vertical_splitter = QSplitter(Qt.Orientation.Vertical)
 
-        # 1. TOP: Main Tabs (IMG, COL, TXD) - COMPACT HEIGHT
-        #main_tabs = self._create_main_tabs_section()
-        #self.left_vertical_splitter.addWidget(main_tabs)
-
-        # 2. MIDDLE: File Window (table with sub-tabs)
+        # 1. MIDDLE: File Window (table with sub-tabs)
         file_window = self._create_file_window()
         self.left_vertical_splitter.addWidget(file_window)
 
-        # 3. BOTTOM: Status Window (log and status)
+        # 2. BOTTOM: Status Window (log and status)
         status_window = self.create_status_window()
         self.left_vertical_splitter.addWidget(status_window)
 
-        # Set section proportions: MainTabs(40px), File(720px), Status(200px)
-        # Total height ~960px, tabs take minimal space
-        self.left_vertical_splitter.setSizes([ 760, 200])
+        # Set section proportions: File(760px), Status(200px)
+        self.left_vertical_splitter.setSizes([760, 200])
 
         # Prevent sections from collapsing completely
-        self.left_vertical_splitter.setCollapsible(1, False)  # File window
-        self.left_vertical_splitter.setCollapsible(2, False)  # Status window
+        self.left_vertical_splitter.setCollapsible(0, False)  # File window
+        self.left_vertical_splitter.setCollapsible(1, False)  # Status window
 
         # Apply theme styling to vertical splitter
         self._apply_vertical_splitter_theme()
 
         left_layout.addWidget(self.left_vertical_splitter)
-
         return left_container
 
-
-    def _create_information_bar(self):
-        """Create information bar with file details"""
-        info_bar = QWidget()
-        info_layout = QVBoxLayout(info_bar)
-        info_layout.setContentsMargins(5, 5, 5, 5)
-        info_layout.setSpacing(3)
-        
-        # Title
-        title_label = QLabel("IMG Archive Information")
-        title_label.setStyleSheet("font-weight: bold; font-size: 10pt; color: #333;")
-        info_layout.addWidget(title_label)
-        
-        # File details in horizontal layout
-        details_layout = QHBoxLayout()
-        
-        # File name
-        self.file_name_label = QLabel("File: No file loaded")
-        details_layout.addWidget(self.file_name_label)
-        
-        # Separator
-        sep1 = QLabel(" | ")
-        sep1.setStyleSheet("color: #666;")
-        details_layout.addWidget(sep1)
-        
-        # Entry count
-        self.entry_count_label = QLabel("Entries: 0")
-        details_layout.addWidget(self.entry_count_label)
-        
-        # Separator
-        sep2 = QLabel(" | ")
-        sep2.setStyleSheet("color: #666;")
-        details_layout.addWidget(sep2)
-        
-        # File size
-        self.file_size_label = QLabel("Size: 0 bytes")
-        details_layout.addWidget(self.file_size_label)
-        
-        # Separator
-        sep3 = QLabel(" | ")
-        sep3.setStyleSheet("color: #666;")
-        details_layout.addWidget(sep3)
-        
-        # Format version
-        self.format_version_label = QLabel("Format: Unknown")
-        details_layout.addWidget(self.format_version_label)
-        
-        # Stretch to push everything left
-        details_layout.addStretch()
-        
-        info_layout.addLayout(details_layout)
-        
-        # Apply theme styling
-        self._apply_info_bar_theme_styling(info_bar)
-        
-        return info_bar
-    
     def _create_file_window(self):
         """Create file window with tabs for different views"""
         file_window = QWidget()
@@ -405,8 +599,10 @@ class IMGFactoryGUILayout:
         
         # Create main table
         self.table = QTableWidget()
-        self.table.setColumnCount(7)
-        self.table.setHorizontalHeaderLabels(["Num", "Name", "Extension", "Size", "Hash", "Hex", "Version", "Compression", "Status"])
+        self.table.setColumnCount(9)
+        self.table.setHorizontalHeaderLabels([
+            "Num", "Name", "Extension", "Size", "Hash", "Hex", "Version", "Compression", "Status"
+        ])
         
         # Table configuration
         self.table.setAlternatingRowColors(True)
@@ -416,14 +612,15 @@ class IMGFactoryGUILayout:
         
         # Column sizing
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Name
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Extension
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Size
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Hash
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Hex Value
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Version
-        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Compression
-        header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Status
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Num
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Name
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Extension
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Size
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Hash
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Hex Value
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Version
+        header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Compression
+        header.setSectionResizeMode(8, QHeaderView.ResizeMode.ResizeToContents)  # Status
         
         # Apply theme styling to table
         self._apply_table_theme_styling()
@@ -455,39 +652,29 @@ class IMGFactoryGUILayout:
 
         self.tab_widget.addTab(search_tab, "Search Results")
 
-        file_layout.addWidget(self.tab_widget)
+        # Apply theme styling to file window tabs
+        self._apply_file_list_window_theme_styling()
 
+        file_layout.addWidget(self.tab_widget)
         return file_window
-    
 
     def create_right_panel_with_pastel_buttons(self):
-        """Create right panel with pastel colored buttons - UPDATED: Uses method_mappings"""
+        """Create right panel with theme-controlled pastel buttons"""
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(4, 4, 4, 4)
         right_layout.setSpacing(6)
 
-        # IMG Section with pastel colors
+        # IMG Section with theme colors
         img_box = QGroupBox("IMG, COL, TXD Files")
         img_layout = QGridLayout()
         img_layout.setSpacing(2)
-        img_buttons_data = [
-            ("Create", "new", "document-new", "#EEFAFA", "create_new_img"),
-            ("Open", "open", "document-open", "#E3F2FD", "open_img_file"),
-            ("Reload", "reload", "document-reload", "#F9FBE7", "reload_table"),
-            ("     ", "space", "placeholder", "#FEFEFE", "useless_button"),
-            ("Close", "close", "window-close", "#FFF3E0", "close_img_file"),
-            ("Close All", "close_all", "edit-clear", "#FFF3E0", "close_all_img"),
-            ("Rebuild", "rebuild", "view-rebuild", "#E8F5E8", "rebuild_img"),
-            ("Rebuild All", "rebuild_all", "document-save", "#E8F5E8", "rebuild_all_img"),
-            ("Save Entry", "save_entry", "document-save-entry", "#F8BBD9", "save_img_entry"),
-            ("Merge", "merge", "document-merge", "#F3E5F5", "merge_img"),
-            ("Split via", "split", "edit-cut", "#F3E5F5", "split_img"),
-            ("Convert", "convert", "transform", "#FFF8E1", "convert_img_format"),
-        ]
+        
+        # Use theme-controlled button data
+        img_buttons_data = self._get_img_buttons_data()
         
         for i, (label, action_type, icon, color, method_name) in enumerate(img_buttons_data):
-            btn = self._create_pastel_button(label, action_type, icon, color, method_name)
+            btn = self.create_pastel_button(label, action_type, icon, color, method_name)
             btn.full_text = label
             btn.short_text = self._get_short_text(label)
             self.img_buttons.append(btn)
@@ -496,30 +683,16 @@ class IMGFactoryGUILayout:
         img_box.setLayout(img_layout)
         right_layout.addWidget(img_box)
 
-        # Entries Section with pastel colors
+        # Entries Section with theme colors  
         entries_box = QGroupBox("File Entries")
         entries_layout = QGridLayout()
         entries_layout.setSpacing(2)
-        entry_buttons_data = [
-            ("Import", "import", "document-import", "#E1F5FE", "import_files"),
-            ("Import via", "import_via", "document-import", "#E1F5FE", "import_files_via"),
-            ("Refresh", "update", "view-refresh", "#F9FBE7", "refresh_table"),
-            ("Export", "export", "document-export", "#E8F5E8", "export_selected"),
-            ("Export via", "export_via", "document-export", "#E8F5E8", "export_selected_via"),
-            ("Quick Exp", "quick_export", "document-send", "#E8F5E8", "quick_export_selected"),
-            ("Remove", "remove", "edit-delete", "#FFEBEE", "remove_selected"),
-            ("Remove via", "remove_via", "document-remvia", "#FFEBEE", "remove_via_entries"),
-            ("Dump", "dump", "document-dump", "#F3E5F5", "dump_entries"),
-            ("Rename", "rename", "edit-rename", "#FFF8E1", "rename_selected"),
-            ("Replace", "replace", "edit-copy", "#FFF8E1", "replace_selected"),
-            ("Select All", "select_all", "edit-select-all", "#F1F8E9", "select_all_entries"),
-            ("Inverse", "sel_inverse", "edit-select", "#F1F8E9", "select_inverse"),
-            ("Sort via", "sort", "view-sort", "#F1F8E9", "sort_entries"),
-            ("Pin selected", "pin_selected", "pin", "#E8EAF6", "pin_selected_entries"),
-        ]
+        
+        # Use theme-controlled button data
+        entry_buttons_data = self._get_entry_buttons_data()
         
         for i, (label, action_type, icon, color, method_name) in enumerate(entry_buttons_data):
-            btn = self._create_pastel_button(label, action_type, icon, color, method_name)
+            btn = self.create_pastel_button(label, action_type, icon, color, method_name)
             btn.full_text = label
             btn.short_text = self._get_short_text(label)
             self.entry_buttons.append(btn)
@@ -528,35 +701,16 @@ class IMGFactoryGUILayout:
         entries_box.setLayout(entries_layout)
         right_layout.addWidget(entries_box)
 
-        # Options Section with pastel colors
+        # Options Section with theme colors
         options_box = QGroupBox("Editing Options")
         options_layout = QGridLayout()
         options_layout.setSpacing(2)
-        options_buttons_data = [
-            ("Col Edit", "col_edit", "col-edit", "#E3F2FD", "edit_col_file"),
-            ("Txd Edit", "txd_edit", "txd-edit", "#F8BBD9", "edit_txd_file"),
-            ("Dff Edit", "dff_edit", "dff-edit", "#E1F5FE", "edit_dff_file"),
-            ("Ipf Edit", "ipf_edit", "ipf-edit", "#FFF3E0", "edit_ipf_file"),
-            ("IDE Edit", "ide_edit", "ide-edit", "#F8BBD9", "edit_ide_file"),
-            ("IPL Edit", "ipl_edit", "ipl-edit", "#C1F6FF", "edit_ipl_file"),
-            ("Dat Edit", "dat_edit", "dat-edit", "#D3F2AD", "edit_dat_file"),
-            ("Zons Cull Ed", "zones_cull", "zones-cull", "#E8F5E8", "edit_zones_cull"),
-            ("Weap Edit", "weap_edit", "weap-edit", "#E1F5FE", "edit_weap_file"),
-            ("Vehi Edit", "vehi_edit", "vehi-edit", "#E3F2BD", "edit_vehi_file"),
-            ("Peds Edit", "peds_edit", "peds-edit", "#F8ABA9", "edit_peds_file"),
-            ("Radar Map", "radar_map", "radar-map", "#F8BBD9", "edit_radar_map"),
-            ("Paths Map", "paths_map", "paths-map", "#E1F5FE", "edit_paths_map"),
-            ("Waterpro", "timecyc", "timecyc", "#E3F2FD", "edit_waterpro"),
-            ("Weather", "timecyc", "timecyc", "#E0F2F1", "edit_weather"),
-            ("Handling", "handling", "handling", "#E4E3ED", "edit_handling"),
-            ("Objects", "ojs_breakble", "ojs-breakble", "#FFE0B2", "edit_objects"),
-            ("SCM code", "scm_code", "scm-code", "#FFD0BD", "editscm"),
-            ("GXT font", "gxt_font", "gxt-font", "#CFD0BD", "editgxt"),
-            ("Menu Edit", "menu_font", "menu-font", "#AFD0BD", "editmenu"),
-        ]
+        
+        # Use theme-controlled button data
+        options_buttons_data = self._get_options_buttons_data()
         
         for i, (label, action_type, icon, color, method_name) in enumerate(options_buttons_data):
-            btn = self._create_pastel_button(label, action_type, icon, color, method_name)
+            btn = self.create_pastel_button(label, action_type, icon, color, method_name)
             btn.full_text = label
             btn.short_text = self._get_short_text(label)
             self.options_buttons.append(btn)
@@ -590,56 +744,266 @@ class IMGFactoryGUILayout:
 
         # Add stretch to push everything up
         right_layout.addStretch()
-
         return right_panel
-    
-    def _create_pastel_button(self, label, action_type, icon, bg_color, method_name):
-        """Create a button with pastel coloring and connect to method_mappings - UPDATED"""
-        btn = QPushButton(label)
-        btn.setMaximumHeight(22)
-        btn.setMinimumHeight(20)
 
-        # Apply pastel styling
-        btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {bg_color};
-                border: 1px solid {self._darken_color(bg_color, 0.85)};
+    def create_status_window(self):
+        """Create status window with log"""
+        self.status_window = QWidget()
+        status_layout = QVBoxLayout(self.status_window)
+        status_layout.setContentsMargins(5, 5, 5, 5)
+        status_layout.setSpacing(3)
+
+        # Title
+        title_layout = QHBoxLayout()
+        title_label = QLabel("Activity Log")
+        title_label.setStyleSheet("font-weight: bold; font-size: 10pt;")
+        title_layout.addWidget(title_label)
+
+        # Status indicators
+        title_layout.addStretch()
+
+        # Status label
+        self.status_label = QLabel("Ready")
+        title_layout.addWidget(self.status_label)
+        status_layout.addLayout(title_layout)
+
+        # Log with scrollbars
+        self.log = QTextEdit()
+        self.log.setReadOnly(True)
+        self.log.setPlaceholderText("Activity log will appear here...")
+
+        # Enable scrollbars for log
+        self.log.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.log.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+        # Apply theme styling to log
+        self._apply_log_theme_styling()
+        status_layout.addWidget(self.log)
+
+        # Apply theme styling to status window
+        self._apply_status_window_theme_styling()
+        
+        return self.status_window
+
+    # =============================================================================
+    # THEME STYLING METHODS - All UI Components
+    # =============================================================================
+
+    def _apply_main_splitter_theme(self):
+        """Apply theme styling to main horizontal splitter"""
+        theme_colors = self._get_theme_colors("default")
+        
+        if self._is_dark_theme():
+            splitter_bg = theme_colors.get('splitter_color_background', '404040')
+            splitter_shine = theme_colors.get('splitter_color_shine', '606060')
+            splitter_shadow = theme_colors.get('splitter_color_shadow', '2a2a2a')
+        else:
+            splitter_bg = theme_colors.get('splitter_color_background', 'e0e0e0')
+            splitter_shine = theme_colors.get('splitter_color_shine', 'f0f0f0')
+            splitter_shadow = theme_colors.get('splitter_color_shadow', 'c0c0c0')
+        
+        self.main_splitter.setStyleSheet(f"""
+            QSplitter::handle:horizontal {{
+                background-color: #{splitter_bg};
+                border: 1px solid #{splitter_shine};
+                border-left: 1px solid #{splitter_shadow};
+                width: 8px;
+                margin: 2px 1px;
                 border-radius: 3px;
-                padding: 2px 6px;
-                font-size: 8pt;
-                font-weight: bold;
-                color: #333333;
             }}
-            QPushButton:hover {{
-                background-color: {self._darken_color(bg_color, 0.85)};
-                border: 1px solid {self._lighten_color(bg_color, 0.85)};
+            
+            QSplitter::handle:horizontal:hover {{
+                background-color: #{splitter_shine};
+                border-color: #{splitter_shadow};
             }}
-            QPushButton:pressed {{
-                background-color: {self._darken_color(bg_color, 0.7)};
+            
+            QSplitter::handle:horizontal:pressed {{
+                background-color: #{splitter_shadow};
             }}
         """)
 
-        # Set action type property
-        btn.setProperty("action-type", action_type)
+    def _apply_vertical_splitter_theme(self):
+        """Apply theme styling to the vertical splitter"""
+        theme_colors = self._get_theme_colors("default")
+        
+        if self._is_dark_theme():
+            splitter_bg = theme_colors.get('splitter_color_background', '404040')
+            border_color = theme_colors.get('splitter_border_color', '606060')  
+            hover_color = theme_colors.get('splitter_hover_color', '666666')
+        else:
+            splitter_bg = theme_colors.get('splitter_color_background', 'e0e0e0')
+            border_color = theme_colors.get('splitter_border_color', 'cccccc')
+            hover_color = theme_colors.get('splitter_hover_color', '999999')
+        
+        self.left_vertical_splitter.setStyleSheet(f"""
+            QSplitter::handle:vertical {{
+                background-color: #{splitter_bg};
+                border: 1px solid #{border_color};
+                height: 4px;
+                margin: 1px 2px;
+                border-radius: 2px;
+            }}
+            QSplitter::handle:vertical:hover {{
+                background-color: #{hover_color};
+            }}
+        """)
 
-        # UPDATED: Connect to method_mappings instead of direct method calls
-        try:
-            if method_name in self.method_mappings:
-                btn.clicked.connect(self.method_mappings[method_name])
-                # Don't print during initialization - only after GUI is ready
-                if hasattr(self.main_window, 'gui_layout'):
-                    print(f"✅ Connected '{label}' to method_mappings[{method_name}]")
-            else:
-                # Fallback for missing mappings
-                btn.clicked.connect(lambda: self._safe_log(f"⚠️ Method '{method_name}' not in method_mappings"))
-                if hasattr(self.main_window, 'gui_layout'):
-                    print(f"⚠️ Method '{method_name}' not found in method_mappings for '{label}'")
-        except Exception as e:
-            if hasattr(self.main_window, 'gui_layout'):
-                print(f"❌ Error connecting button '{label}': {e}")
-            btn.clicked.connect(lambda: self._safe_log(f"Button '{label}' connection error"))
+    def _apply_table_theme_styling(self):
+        """Apply theme styling to the table widget"""
+        theme_colors = self._get_theme_colors("default")
+        
+        if self._is_dark_theme():
+            bg_color = theme_colors.get('table_background', '2d2d2d')
+            alt_bg_color = theme_colors.get('table_alt_background', '353535')
+            border_color = theme_colors.get('table_border', '404040')
+            gridline_color = theme_colors.get('table_gridline', '404040')
+            text_color = theme_colors.get('table_text', 'cccccc')
+            selection_bg = theme_colors.get('table_selection_bg', '1e3a5f')
+            selection_text = theme_colors.get('table_selection_text', '87ceeb')
+            header_bg = theme_colors.get('table_header_bg', '404040')
+            header_text = theme_colors.get('table_header_text', 'cccccc')
+        else:
+            bg_color = theme_colors.get('table_background', 'ffffff')
+            alt_bg_color = theme_colors.get('table_alt_background', 'f8f8f8')
+            border_color = theme_colors.get('table_border', 'cccccc')
+            gridline_color = theme_colors.get('table_gridline', 'e0e0e0')
+            text_color = theme_colors.get('table_text', '333333')
+            selection_bg = theme_colors.get('table_selection_bg', 'e3f2fd')
+            selection_text = theme_colors.get('table_selection_text', '1976d2')
+            header_bg = theme_colors.get('table_header_bg', 'f0f0f0')
+            header_text = theme_colors.get('table_header_text', '333333')
+        
+        self.table.setStyleSheet(f"""
+            QTableWidget {{
+                background-color: #{bg_color};
+                alternate-background-color: #{alt_bg_color};
+                border: 1px solid #{border_color};
+                border-radius: 3px;
+                gridline-color: #{gridline_color};
+                color: #{text_color};
+                font-size: 9pt;
+            }}
+            QTableWidget::item {{
+                padding: 5px;
+                border: none;
+            }}
+            QTableWidget::item:selected {{
+                background-color: #{selection_bg};
+                color: #{selection_text};
+            }}
+            QHeaderView::section {{
+                background-color: #{header_bg};
+                color: #{header_text};
+                padding: 5px;
+                border: 1px solid #{border_color};
+                font-weight: bold;
+                font-size: 9pt;
+            }}
+        """)
 
-        return btn
+    def _apply_log_theme_styling(self):
+        """Apply theme styling to the log widget"""
+        theme_colors = self._get_theme_colors("default")
+        
+        if self._is_dark_theme():
+            bg_color = theme_colors.get('log_background', '2d2d2d')
+            text_color = theme_colors.get('log_text', 'cccccc')
+            border_color = theme_colors.get('log_border', '404040')
+        else:
+            bg_color = theme_colors.get('log_background', 'ffffff')
+            text_color = theme_colors.get('log_text', '333333')
+            border_color = theme_colors.get('log_border', 'cccccc')
+        
+        self.log.setStyleSheet(f"""
+            QTextEdit {{
+                background-color: #{bg_color};
+                color: #{text_color};
+                border: 1px solid #{border_color};
+                border-radius: 3px;
+                padding: 5px;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 9pt;
+            }}
+        """)
+
+    def _apply_status_window_theme_styling(self):
+        """Apply theme styling to the status window"""
+        theme_colors = self._get_theme_colors("default")
+        
+        if self._is_dark_theme():
+            bg_color = theme_colors.get('status_window_background', '2d2d2d')
+            border_color = theme_colors.get('status_window_border', '404040')
+            title_color = theme_colors.get('status_window_title', 'cccccc')
+        else:
+            bg_color = theme_colors.get('status_window_background', 'f8f8f8')
+            border_color = theme_colors.get('status_window_border', 'cccccc')
+            title_color = theme_colors.get('status_window_title', '333333')
+        
+        if hasattr(self, 'status_window'):
+            self.status_window.setStyleSheet(f"""
+                QWidget {{
+                    background-color: #{bg_color};
+                    border: 1px solid #{border_color};
+                    border-radius: 3px;
+                }}
+                QLabel {{
+                    color: #{title_color};
+                    font-weight: bold;
+                }}
+            """)
+
+    def _apply_file_list_window_theme_styling(self):
+        """Apply theme styling to the file list window"""
+        theme_colors = self._get_theme_colors("default")
+        
+        if self._is_dark_theme():
+            bg_color = theme_colors.get('file_window_background', '2d2d2d')
+            border_color = theme_colors.get('file_window_border', '404040')
+            tab_bg = theme_colors.get('file_window_tab_bg', '404040')
+            tab_text = theme_colors.get('file_window_tab_text', 'cccccc')
+        else:
+            bg_color = theme_colors.get('file_window_background', 'ffffff')
+            border_color = theme_colors.get('file_window_border', 'cccccc')
+            tab_bg = theme_colors.get('file_window_tab_bg', 'f0f0f0')
+            tab_text = theme_colors.get('file_window_tab_text', '333333')
+        
+        if hasattr(self, 'tab_widget'):
+            self.tab_widget.setStyleSheet(f"""
+                QTabWidget::pane {{
+                    background-color: #{bg_color};
+                    border: 1px solid #{border_color};
+                    border-radius: 3px;
+                }}
+                QTabBar::tab {{
+                    background-color: #{tab_bg};
+                    color: #{tab_text};
+                    padding: 5px 10px;
+                    margin: 2px;
+                    border-radius: 3px;
+                }}
+                QTabBar::tab:selected {{
+                    background-color: #{bg_color};
+                    border: 1px solid #{border_color};
+                }}
+            """)
+
+    def apply_all_window_themes(self):
+        """Apply theme styling to all windows"""
+        self._apply_table_theme_styling()
+        self._apply_log_theme_styling()
+        self._apply_vertical_splitter_theme()
+        self._apply_main_splitter_theme()
+        self._apply_status_window_theme_styling()
+        self._apply_file_list_window_theme_styling()
+
+    def apply_table_theme(self):
+        """Legacy method - Apply theme styling to table and related components"""
+        # This method is called by main application for compatibility
+        self.apply_all_window_themes()
+
+    # =============================================================================
+    # UTILITY & HELPER METHODS
+    # =============================================================================
 
     def _safe_log(self, message):
         """Safe logging that won't cause circular dependency"""
@@ -647,208 +1011,79 @@ class IMGFactoryGUILayout:
             self.main_window.log_message(message)
         else:
             print(f"GUI Layout: {message}")
-    
-    def _get_short_text(self, label):
-        """Get short text for button"""
-        short_map = {
-            "New": "New",
-            "Open": "Open",
-            "Create Img": "New",
-            "Close": "Close",
-            "Close All": "Close A",
-            "Reload": "Reload",
-            " ": " ",
-            "Rebuild": "Rebld",
-            "Rebuild All": "Rebld Al",
-            "Save Entry": "Save",
-            "Merge": "Merge",
-            "Split via": "Split",
-            "Convert": "Conv",
-            "Import": "Imp",
-            "Import via": "Imp via",
-            "Refresh": "Refresh",
-            "Export": "Exp",
-            "Export via": "Exp via",
-            "Quick Exp": "Q Exp",
-            "Remove": "Rem",
-            "Remove via": "Rem via",
-            "Dump": "Dump",
-            "Pin selected": "Pin",
-            "Rename": "Rename",
-            "Replace": "Replace",
-            "Select All": "Select",
-            "Inverse": "Inverse",
-            "Sort via": "Sort",
-            # Editing Options
-            "Col Edit": "Col Edit",
-            "Txd Edit": "Txd Edit",
-            "Dff Edit": "Dff Edit",
-            "Ipf Edit": "Ipf Edit",
-            "IDE Edit": "IDE Edit",
-            "IPL Edit": "IPL Edit",
-            "Dat Edit": "Dat Edit",
-            "Zons Cull Ed": "Zons Cull",
-            "Weap Edit": "Weap Edit",
-            "Vehi Edit": "Vehi Edit",
-            "Peds Edit": "Peds Edit",
-            "Radar Map": "Radar Map",
-            "Paths Map": "Paths Map",
-            "Waterpro": "Waterpro",
-            "Weather": "Weather",
-            "Handling": "Handling",
-            "Objects": "Objects",
-            "SCM code": "SCM Code",
-            "GXT font": "GXT Edit",
-            "Menu Edit": "Menu Ed",
-        }
 
-        return short_map.get(label, label)
+    def log_message(self, message):
+        """Add message to activity log"""
+        if self.log:
+            from PyQt6.QtCore import QDateTime
+            timestamp = QDateTime.currentDateTime().toString("hh:mm:ss")
+            self.log.append(f"[{timestamp}] {message}")
+            # Auto-scroll to bottom
+            self.log.verticalScrollBar().setValue(
+                self.log.verticalScrollBar().maximum()
+            )
 
-    def _handle_button_click(self, button_label, method_name):
-        """Handle button clicks for methods that don't exist yet"""
-        if hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"🔘 {button_label} clicked (method: {method_name})")
-        else:
-            print(f"Button clicked: {button_label} -> {method_name}")
-    
-    def _darken_color(self, color, factor=0.8):
-        """Darken a color by a factor"""
+    # =============================================================================
+    # SETTINGS & CONFIGURATION
+    # =============================================================================
+
+    def apply_settings_changes(self, settings):
+        """Apply settings changes to the GUI layout"""
         try:
-            # Simple darkening - multiply RGB values
-            if color.startswith('#'):
-                hex_color = color[1:]
-                if len(hex_color) == 6:
-                    r = int(hex_color[0:2], 16)
-                    g = int(hex_color[2:4], 16)
-                    b = int(hex_color[4:6], 16)
+            # Apply tab settings if they exist
+            if any(key.startswith('tab_') or key in ['main_tab_height', 'individual_tab_height', 'tab_font_size', 'tab_padding', 'tab_container_height'] for key in settings.keys()):
+                main_height = settings.get("main_tab_height", 30)
+                tab_height = settings.get("individual_tab_height", 24)
+                font_size = settings.get("tab_font_size", 9)
+                padding = settings.get("tab_padding", 4)
+                container_height = settings.get("tab_container_height", 40)
 
-                    # Darken each component
-                    r = int(r * factor)
-                    g = int(g * factor)
-                    b = int(b * factor)
+                self._apply_dynamic_tab_styling(
+                    main_height, tab_height, font_size, padding, container_height
+                )
 
-                    return f"#{r:02x}{g:02x}{b:02x}"
-            return color
-        except:
-            return color
-    
-    def _lighten_color(self, color, factor):
-        """Lighten a hex color by factor (0.0 to 1.0)"""
+            # Apply button icon settings
+            if 'show_button_icons' in settings:
+                self._update_button_icons_state(settings['show_button_icons'])
+
+            # Apply other GUI settings as needed
+            if 'table_row_height' in settings:
+                self._update_table_row_height(settings['table_row_height'])
+
+            if 'widget_spacing' in settings:
+                self._update_widget_spacing(settings['widget_spacing'])
+
+            # Apply theme changes
+            if 'theme_changed' in settings:
+                self.apply_all_window_themes()
+
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Error applying settings changes: {str(e)}")
+
+    def _update_table_row_height(self, height):
+        """Update table row height"""
         try:
-            color = color.lstrip('#')
-            r, g, b = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
-
-            r = min(255, int(r + (255 - r) * factor))
-            g = min(255, int(g + (255 - g) * factor))
-            b = min(255, int(b + (255 - b) * factor))
-
-            return f"#{r:02x}{g:02x}{b:02x}"
-        except:
-            return color
-
-
-    def _apply_log_theme_styling(self):
-        """Apply theme styling to the log widget"""
-        theme_colors = self._get_theme_colors("default")
-        
-        bg_color = theme_colors.get('log_background', 'ffffff')
-        text_color = theme_colors.get('log_text', '333333')
-        
-        self.log.setStyleSheet(f"""
-            QTextEdit {{
-                background-color: #{bg_color};
-                color: #{text_color};
-                border: 1px solid #cccccc;
-                border-radius: 3px;
-                padding: 5px;
-                font-family: 'Consolas', 'Monaco', monospace;
-                font-size: 9pt;
-            }}
-        """)
-    
-    def _apply_table_theme_styling(self):
-        """Apply theme styling to the table widget"""
-        theme_colors = self._get_theme_colors("default")
-        
-        self.table.setStyleSheet("""
-            QTableWidget {
-                background-color: white;
-                alternate-background-color: #f8f8f8;
-                border: 1px solid #cccccc;
-                border-radius: 3px;
-                gridline-color: #e0e0e0;
-                font-size: 9pt;
-            }
-            QTableWidget::item {
-                padding: 5px;
-                border: none;
-            }
-            QTableWidget::item:selected {
-                background-color: #e3f2fd;
-                color: #1976d2;
-            }
-            QHeaderView::section {
-                background-color: #f0f0f0;
-                padding: 5px;
-                border: 1px solid #cccccc;
-                font-weight: bold;
-                font-size: 9pt;
-            }
-        """)
-    
-    def _apply_info_bar_theme_styling(self, info_bar):
-        """Apply theme styling to the info bar"""
-        info_bar.setStyleSheet("""
-            QWidget {
-                background-color: #f8f8f8;
-                border: 1px solid #cccccc;
-                border-radius: 3px;
-                padding: 3px;
-            }
-            QLabel {
-                border: none;
-                font-size: 9pt;
-            }
-        """)
-    
-    def _apply_vertical_splitter_theme(self):
-        """Apply theme styling to the vertical splitter"""
-        theme_colors = self._get_theme_colors("default")
-        splitter_bg = theme_colors.get('splitter_color_background', 'default')
-        
-        self.left_vertical_splitter.setStyleSheet(f"""
-            QSplitter::handle:vertical {{
-                background-color: #{splitter_bg};
-                border: 1px solid #cccccc;
-                height: 4px;
-                margin: 1px 2px;
-                border-radius: 2px;
-            }}
-            QSplitter::handle:vertical:hover {{
-                background-color: #999999;
-            }}
-        """)
-
-    def _get_theme_colors(self, theme_name):
-        """Get theme colors - fallback for missing theme system"""
-        try:
-            if hasattr(self.main_window, 'app_settings') and hasattr(self.main_window.app_settings, 'themes'):
-                theme_data = self.main_window.app_settings.themes.get(theme_name, {})
-                return theme_data.get('colors', {})
-        except:
+            if hasattr(self, 'table') and self.table:
+                self.table.verticalHeader().setDefaultSectionSize(height)
+        except Exception:
             pass
-        return
-    
-    def apply_table_theme(self):
-        """Apply theme styling to the table - called from main window when theme changes"""
-        if hasattr(self, 'table') and self.table:
-            self._apply_table_theme_styling()
-        if hasattr(self, 'log') and self.log:
-            self._apply_log_theme_styling()
+
+    def _update_widget_spacing(self, spacing):
+        """Update widget spacing"""
+        try:
+            if hasattr(self, 'main_splitter') and self.main_splitter:
+                # Update splitter spacing
+                self.main_splitter.setHandleWidth(max(4, spacing))
+        except Exception:
+            pass
+
+    # =============================================================================
+    # RESPONSIVE DESIGN & ADAPTIVE LAYOUT
+    # =============================================================================
 
     def handle_resize_event(self, event):
         """Handle window resize to adapt button text"""
-        # Use GUI layout's adaptive method
         if self.main_splitter:
             sizes = self.main_splitter.sizes()
             if len(sizes) > 1:
@@ -879,296 +1114,13 @@ class IMGFactoryGUILayout:
                     # Icon only mode
                     button.setText("")
 
-    def resizeEvent(self, event):
-        """Handle window resize to adapt button text"""
-        super().resizeEvent(event)
-        
-        # Get right panel width
-        if hasattr(self, 'main_splitter'):
-            sizes = self.main_splitter.sizes()
-            if len(sizes) > 1:
-                right_panel_width = sizes[1]
-                self._adapt_buttons_to_width(right_panel_width)
+    # =============================================================================
+    # PROGRESS & STATUS MANAGEMENT
+    # =============================================================================
 
-    def _adapt_buttons_to_width(self, width):
-        """Adapt button text based on available width"""
-        all_buttons = []
-        if hasattr(self, 'img_buttons'):
-            all_buttons.extend(self.img_buttons)
-        if hasattr(self, 'entry_buttons'):
-            all_buttons.extend(self.entry_buttons)
-        if hasattr(self, 'options_buttons'):
-            all_buttons.extend(self.options_buttons)
-        
-        for button in all_buttons:
-            if hasattr(button, 'full_text'):
-                if width > 280:
-                    button.setText(button.full_text)
-                elif width > 200:
-                    # Medium text - remove some words
-                    text = button.full_text.replace(' via', '>').replace(' lst', '')
-                    button.setText(text)
-                elif width > 150:
-                    button.setText(button.short_text)
-                else:
-                    # Icon only mode
-                    button.setText("")
-
-    # logging
-    def log_message(self, message): #vers 3 #keep
-        """Add message to activity log"""
-        if self.log:
-            from PyQt6.QtCore import QDateTime
-            timestamp = QDateTime.currentDateTime().toString("hh:mm:ss")
-            self.log.append(f"[{timestamp}] {message}")
-            # Auto-scroll to bottom
-            self.log.verticalScrollBar().setValue(
-                self.log.verticalScrollBar().maximum()
-            )
-
-    def show_gui_layout_settings(self):
-        """Show comprehensive GUI Layout settings dialog - called from Settings menu"""
-        from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, 
-                                     QPushButton, QGroupBox, QCheckBox, QComboBox, QTabWidget, 
-                                     QWidget, QSlider, QFormLayout)
-        
-        dialog = QDialog(self.main_window)
-        dialog.setWindowTitle("GUI Layout Settings")
-        dialog.setMinimumSize(600, 500)
-        
-        layout = QVBoxLayout(dialog)
-        
-        # Create tab widget for different settings categories
-        tabs = QTabWidget()
-        
-        # === TAB 1: Panel Layout ===
-        panel_tab = QWidget()
-        panel_layout = QVBoxLayout(panel_tab)
-        
-        # Right Panel Width
-        width_group = QGroupBox("Right Panel Width")
-        width_layout = QVBoxLayout(width_group)
-        
-        current_width = self.main_splitter.sizes()[1] if len(self.main_splitter.sizes()) > 1 else 280
-        
-        # Width spinner
-        width_form = QFormLayout()
-        width_spin = QSpinBox()
-        width_spin.setRange(180, 400)
-        width_spin.setValue(current_width)
-        width_spin.setSuffix(" px")
-        width_form.addRow("Panel Width:", width_spin)
-        
-        # Preview label
-        preview_label = QLabel(f"Current: {current_width}px")
-        preview_label.setStyleSheet("font-style: italic;")
-        width_form.addRow("Preview:", preview_label)
-        width_layout.addLayout(width_form)
-        
-        def update_preview():
-            new_width = width_spin.value()
-            preview_label.setText(f"Preview: {new_width}px")
-            # Live preview
-            self._apply_right_panel_width(new_width)
-        
-        width_spin.valueChanged.connect(update_preview)
-        
-        panel_layout.addWidget(width_group)
-        
-        # Button Layout Settings
-        button_group = QGroupBox("🔘 Button Layout")
-        button_layout = QVBoxLayout(button_group)
-        
-        button_form = QFormLayout()
-        
-        # Section spacing
-        section_spacing_spin = QSpinBox()
-        section_spacing_spin.setRange(2, 20)
-        section_spacing_spin.setValue(6)
-        section_spacing_spin.setSuffix(" px")
-        button_form.addRow("Section Spacing:", section_spacing_spin)
-        
-        # Button spacing
-        button_spacing_spin = QSpinBox()
-        button_spacing_spin.setRange(1, 10)
-        button_spacing_spin.setValue(2)
-        button_spacing_spin.setSuffix(" px")
-        button_form.addRow("Button Spacing:", button_spacing_spin)
-        
-        # Panel margins
-        panel_margins_spin = QSpinBox()
-        panel_margins_spin.setRange(0, 15)
-        panel_margins_spin.setValue(4)
-        panel_margins_spin.setSuffix(" px")
-        button_form.addRow("Panel Margins:", panel_margins_spin)
-        
-        button_layout.addLayout(button_form)
-        panel_layout.addWidget(button_group)
-        
-        tabs.addTab(panel_tab, "📐 Panel Layout")
-        
-        # === TAB 2: Button Appearance ===
-        button_tab = QWidget()
-        button_tab_layout = QVBoxLayout(button_tab)
-        
-        # Button Height
-        height_group = QGroupBox("📏 Button Dimensions")
-        height_layout = QVBoxLayout(height_group)
-        
-        height_form = QFormLayout()
-        
-        button_height_spin = QSpinBox()
-        button_height_spin.setRange(18, 40)
-        button_height_spin.setValue(22)
-        button_height_spin.setSuffix(" px")
-        height_form.addRow("Button Height:", button_height_spin)
-        
-        button_font_size_spin = QSpinBox()
-        button_font_size_spin.setRange(6, 12)
-        button_font_size_spin.setValue(8)
-        button_font_size_spin.setSuffix(" pt")
-        height_form.addRow("Font Size:", button_font_size_spin)
-        
-        height_layout.addLayout(height_form)
-        button_tab_layout.addWidget(height_group)
-        
-        # Button Font
-        font_group = QGroupBox("🔤 Button Font")
-        font_layout = QVBoxLayout(font_group)
-        
-        font_form = QFormLayout()
-        
-        font_combo = QComboBox()
-        font_combo.addItems(["Segoe UI", "Arial", "Helvetica", "Tahoma", "Verdana"])
-        font_form.addRow("Font Family:", font_combo)
-        
-        font_layout.addLayout(font_form)
-        button_tab_layout.addWidget(font_group)
-        
-        # Button Behavior
-        behavior_group = QGroupBox("⚙️ Button Behavior")
-        behavior_layout = QVBoxLayout(behavior_group)
-        
-        show_icons_check = QCheckBox("Show button icons")
-        show_icons_check.setChecked(False)
-        behavior_layout.addWidget(show_icons_check)
-        
-        adaptive_text_check = QCheckBox("Adaptive text (resize with panel)")
-        adaptive_text_check.setChecked(True)
-        behavior_layout.addWidget(adaptive_text_check)
-        
-        show_tooltips_check = QCheckBox("Show tooltips")
-        show_tooltips_check.setChecked(True)
-        behavior_layout.addWidget(show_tooltips_check)
-        
-        button_tab_layout.addWidget(behavior_group)
-        
-        tabs.addTab(button_tab, "🔘 Button Style")
-        
-        # === TAB 3: Color Scheme ===
-        color_tab = QWidget()
-        color_tab_layout = QVBoxLayout(color_tab)
-        
-        color_group = QGroupBox("🎨 Color Scheme")
-        color_layout = QVBoxLayout(color_group)
-        
-        color_form = QFormLayout()
-        
-        color_scheme_combo = QComboBox()
-        color_scheme_combo.addItems(["Default Pastel", "High Contrast", "Dark Theme", "Light Theme"])
-        color_form.addRow("Color Scheme:", color_scheme_combo)
-        
-        opacity_slider = QSlider(Qt.Orientation.Horizontal)
-        opacity_slider.setRange(70, 100)
-        opacity_slider.setValue(95)
-        opacity_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        opacity_slider.setTickInterval(10)
-        color_form.addRow("Panel Opacity:", opacity_slider)
-        
-        color_layout.addLayout(color_form)
-        color_tab_layout.addWidget(color_group)
-        
-        tabs.addTab(color_tab, "🎨 Colors")
-        
-        layout.addWidget(tabs)
-        
-        # Buttons
-        button_layout = QHBoxLayout()
-        
-        apply_btn = QPushButton("✅ Apply Changes")
-        def apply_changes():
-            # Apply settings
-            width = width_spin.value()
-            self._apply_right_panel_width(width)
-            
-            # Save settings
-            if hasattr(self.main_window, 'app_settings'):
-                self.main_window.app_settings.current_settings.update({
-                    "right_panel_width": width,
-                    "section_spacing": section_spacing_spin.value(),
-                    "button_spacing": button_spacing_spin.value(),
-                    "panel_margins": panel_margins_spin.value(),
-                    "button_height": button_height_spin.value(),
-                    "button_font_size": button_font_size_spin.value(),
-                    "button_font_family": font_combo.currentText(),
-                    "adaptive_button_text": adaptive_text_check.isChecked(),
-                    "show_tooltips": show_tooltips_check.isChecked(),
-                    "color_scheme": color_scheme_combo.currentText(),
-                    "panel_opacity": opacity_slider.value()
-                })
-                self.main_window.app_settings.save_settings()
-            
-            self.log_message(f"GUI settings applied: {width}px panel, {font_combo.currentText()} font")
-            dialog.accept()
-        
-        apply_btn.clicked.connect(apply_changes)
-        button_layout.addWidget(apply_btn)
-        
-        reset_btn = QPushButton("🔄 Reset to Defaults")
-        def reset_defaults():
-            width_spin.setValue(280)
-            section_spacing_spin.setValue(6)
-            button_spacing_spin.setValue(2)
-            panel_margins_spin.setValue(4)
-            button_height_spin.setValue(22)
-            button_font_size_spin.setValue(8)
-            font_combo.setCurrentText("Segoe UI")
-            adaptive_text_check.setChecked(True)
-            show_tooltips_check.setChecked(True)
-            color_scheme_combo.setCurrentText("Default Pastel")
-            opacity_slider.setValue(95)
-            update_preview()
-        
-        reset_btn.clicked.connect(reset_defaults)
-        button_layout.addWidget(reset_btn)
-        
-        cancel_btn = QPushButton("❌ Cancel")
-        cancel_btn.clicked.connect(dialog.reject)
-        button_layout.addWidget(cancel_btn)
-        
-        layout.addLayout(button_layout)
-        
-        dialog.exec()
-    
-    def _apply_right_panel_width(self, width):
-        """Apply right panel width immediately"""
-        # Update splitter sizes
-        sizes = self.main_splitter.sizes()
-        if len(sizes) >= 2:
-            left_size = sizes[0]
-            self.main_splitter.setSizes([left_size, width])
-        
-        # Update right panel widget constraints
-        right_widget = self.main_splitter.widget(1)
-        if right_widget:
-            right_widget.setMaximumWidth(width + 60)  # Allow some flexibility
-            right_widget.setMinimumWidth(max(180, width - 40))
-
-
-    def show_progress(self, value, text="Working..."): #vers 2
-        """Show progress - DEPRECATED: Use unified progress system"""
+    def show_progress(self, value, text="Working..."):
+        """Show progress using unified progress system"""
         try:
-            # Import and use unified progress system
             from methods.progressbar import show_progress as unified_show_progress
             unified_show_progress(self.main_window, value, text)
         except ImportError:
@@ -1184,68 +1136,8 @@ class IMGFactoryGUILayout:
                 if hasattr(self.main_window, 'statusBar'):
                     self.main_window.statusBar().showMessage(f"{text} ({value}%)")
 
-    def update_file_info(self, info_text): #vers 2
-        """Update file info - UPDATED: Uses unified progress for completion"""
-        if hasattr(self.main_window, 'update_img_status'):
-            # Extract info from text if possible
-            if "entries" in info_text:
-                try:
-                    count = int(info_text.split()[0])
-                    self.main_window.update_img_status(entry_count=count)
-                except:
-                    pass
-
-        # Also update info labels if available
-        if hasattr(self, 'file_name_label'):
-            self.update_info_labels(entry_count=info_text)
-
-    def update_img_info(self, info_text): #vers 2
-        """Update IMG info - DEPRECATED: Alias for update_file_info"""
-        self.update_file_info(info_text)
-
-    # REMOVE THIS ENTIRE create_status_window_with_progress METHOD - Replace with simple version:
-    def create_status_window(self):
-        """Create status window with log - UPDATED: Removed embedded progress bar"""
-        status_window = QWidget()
-        status_layout = QVBoxLayout(status_window)
-        status_layout.setContentsMargins(5, 5, 5, 5)
-        status_layout.setSpacing(3)
-
-        # Title without progress indicators (now handled by unified system)
-        title_layout = QHBoxLayout()
-
-        title_label = QLabel("Activity Log")
-
-        title_layout.addWidget(title_label)
-
-        # Status indicators
-        title_layout.addStretch()
-
-        # Status label (progress now handled by main status bar)
-        self.status_label = QLabel("Ready")
-
-        title_layout.addWidget(self.status_label)
-
-        status_layout.addLayout(title_layout)
-
-        # Log with scrollbars
-        self.log = QTextEdit()
-        self.log.setReadOnly(True)
-        self.log.setPlaceholderText("Activity log will appear here...")
-
-        # Enable scrollbars for log
-        self.log.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.log.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-
-        # Apply theme styling to log
-        self._apply_log_theme_styling()
-        status_layout.addWidget(self.log)
-
-        return status_window
-
-    # Add this compatibility method for legacy code:
-    def hide_progress(self): #vers 1
-        """Hide progress - DEPRECATED: Use unified progress system"""
+    def hide_progress(self):
+        """Hide progress using unified progress system"""
         try:
             from methods.progressbar import hide_progress as unified_hide_progress
             unified_hide_progress(self.main_window, "Ready")
@@ -1256,9 +1148,19 @@ class IMGFactoryGUILayout:
             elif hasattr(self.main_window, 'statusBar'):
                 self.main_window.statusBar().showMessage("Ready")
 
-    # UPDATE create_status_bar method to integrate unified progress:
-    def create_status_bar(self): #vers 2
-        """Create status bar - UPDATED: Integrates unified progress system"""
+    def update_file_info(self, info_text):
+        """Update file info using unified progress for completion"""
+        if hasattr(self.main_window, 'update_img_status'):
+            # Extract info from text if possible
+            if "entries" in info_text:
+                try:
+                    count = int(info_text.split()[0])
+                    self.main_window.update_img_status(entry_count=count)
+                except:
+                    pass
+
+    def create_status_bar(self):
+        """Create status bar with unified progress integration"""
         try:
             from gui.status_bar import create_status_bar
             create_status_bar(self.main_window)
@@ -1281,8 +1183,19 @@ class IMGFactoryGUILayout:
             self.log_message(f"❌ Status bar creation error: {str(e)}")
 
 
+# =============================================================================
+# LEGACY COMPATIBILITY FUNCTIONS
+# =============================================================================
+
+def create_control_panel(main_window):
+    """Create the main control panel - LEGACY FUNCTION"""
+    # Redirect to new method for compatibility
+    if hasattr(main_window, 'gui_layout'):
+        return main_window.gui_layout.create_right_panel_with_pastel_buttons()
+    return None
+
 
 __all__ = [
-    'create_right_panel_with_pastel_buttons',  # MAIN FUNCTION
+    'IMGFactoryGUILayout',
     'create_control_panel',  # Legacy compatibility
 ]

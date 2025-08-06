@@ -11,7 +11,6 @@ Modular GUI components for IMG Factory 1.5 with proper dark/light theme integrat
 
 # Import main GUI components
 from .main_window import IMGFactoryMainWindow, create_main_window
-from .gui_layout import create_control_panel
 from .panel_manager import PanelManager
 from .tear_off import (
     TearOffPanel,
