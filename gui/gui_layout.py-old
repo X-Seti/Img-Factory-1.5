@@ -1,6 +1,10 @@
 #this belongs in gui/ gui_layout.py - Version: 21
 # X-Seti - JULY29 2025 - Img Factory 1.5 - GUI Layout Module - METHOD_MAPPINGS INTEGRATION
 
+#adjustments, Refresh button renamed from update-list, Reload button.
+#first button block needs adjusting.
+#_get_short_text moved to gui_backend.py
+# UPDATED: Now uses centralized method_mappings instead of direct method calls
 
 import re
 from PyQt6.QtWidgets import (
@@ -35,9 +39,7 @@ from methods.colour_ui_for_loaded_img import integrate_color_ui_system
 def create_control_panel(main_window):
     """Create the main control panel - LEGACY FUNCTION"""
     # Use the new right panel function for consistency
-    # self.create_right_panel_with_pastel_buttons(main_window)
-
-    #todo - look for other pastel functions and add dark botton maode.
+    self.create_right_panel_with_pastel_buttons(main_window)
 
 class IMGFactoryGUILayout:
     """Handles the complete GUI layout for IMG Factory 1.5"""
@@ -68,8 +70,58 @@ class IMGFactoryGUILayout:
         self.method_mappings = self._create_method_mappings()
 
         # Initialize tab settings and button icons after a short delay
-
         # This ensures the main window is fully initialized
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(100, self._delayed_initialization)
+    
+
+    def apply_table_theme(self): #vers 1
+        """Apply theme styling to the table - MISSING METHOD FIX"""
+        if hasattr(self, 'table') and self.table:
+            self._apply_table_theme_styling()
+        if hasattr(self, 'log') and self.log:
+            self._apply_log_theme_styling()
+
+    def _aapply_dynamic_tab_styling(self, main_height, tab_height, font_size, padding, container_height): #vers 1
+        """Apply dynamic tab styling - called from settings - MISSING METHOD FIX"""
+        if hasattr(self, 'main_type_tabs'):
+            # Update tab widget height
+            self.main_type_tabs.setMaximumHeight(main_height)
+            # Update styling
+            self.main_type_tabs.setStyleSheet(f"""
+                QTabWidget::pane {{
+                    border: 1px solid #cccccc;
+                    border-radius: 3px;
+                    background-color: #ffffff;
+                }}
+                QTabBar::tab {{
+                    background-color: #f0f0f0;
+                    border: 1px solid #cccccc;
+                    padding: {padding}px;
+                    font-size: {font_size}pt;
+                    height: {tab_height}px;
+                }}
+            """)
+
+    def load_tab_settings_from_app_settings(self, app_settings=None): #vers 1
+        """Load tab settings from app settings - MISSING METHOD FIX"""
+        try:
+            if not app_settings and hasattr(self.main_window, 'app_settings'):
+                app_settings = self.main_window.app_settings
+            if hasattr(app_settings, 'current_settings'):
+                # Load tab-related settings
+                tab_height = app_settings.current_settings.get('main_tab_height', 20)
+                if hasattr(self, 'main_tab_widget'):
+                    self.main_tab_widget.setStyleSheet(f"""
+                    QTabWidget::tab-bar {{
+                        height: {tab_height}px;
+                    }}
+                    """)
+            return True
+        except Exception as e:
+            print(f"Error loading tab settings: {e}")
+            return False
+
 
         def update_file_window_only(self, img_file): #vers 1
             """Update ONLY the file window/table, isolate from other panels"""
@@ -191,13 +243,26 @@ class IMGFactoryGUILayout:
         else:
             print(f"⚠️ Method '{method_name}' not yet implemented")
 
+    def _delayed_initialization(self):
+        """Perform delayed initialization after main window is ready"""
+        try:
+            # Load tab settings from app settings
+            self.load_tab_settings_from_app_settings()
+
+            # Enable button icons based on settings
+            #self.enable_button_icons()
+
+        except Exception as e:
+            # Don't crash on initialization issues
+            if hasattr(self.main_window, 'app_settings'):
+                self.load_tab_settings_from_app_settings(self.main_window.app_settings)
 
     def apply_settings_changes(self, settings):
         """Apply settings changes to the GUI layout"""
         try:
             # Apply tab settings if they exist
             if any(key.startswith('tab_') or key in ['main_tab_height', 'individual_tab_height', 'tab_font_size', 'tab_padding', 'tab_container_height'] for key in settings.keys()):
-                main_height = settings.get("main_tab_height", 30)
+                main_height = settings.get("main_tab_height", 35)
                 tab_height = settings.get("individual_tab_height", 24)
                 font_size = settings.get("tab_font_size", 9)
                 padding = settings.get("tab_padding", 4)
@@ -331,6 +396,257 @@ class IMGFactoryGUILayout:
 
         return left_container
 
+    def update_main_tab_info(self, file_type, file_path=None, stats=None):
+        """Update main tab info - called from main window"""
+        if hasattr(self, 'gui_layout'):
+            self.gui_layout.update_ultra_compact_file_info(file_type, file_path, stats)
+
+    def load_tab_settings_from_app_settings(self, app_settings):
+        """Load tab settings from app settings - MISSING METHOD FIX"""
+        try:
+            if hasattr(app_settings, 'current_settings'):
+                # Load tab-related settings
+                tab_height = app_settings.current_settings.get('main_tab_height', 20)
+                tab_style = app_settings.current_settings.get('tab_style', 'Compact')
+
+                # Apply tab settings if main_tab_widget exists
+                if hasattr(self, 'main_tab_widget'):
+                    # Apply basic tab styling
+                    self.main_tab_widget.setStyleSheet(f"""
+                    QTabWidget::tab-bar {{
+                        height: {tab_height}px;
+                    }}
+                    """)
+
+            return True
+
+        except Exception as e:
+            print(f"Error loading tab settings: {e}")
+            return False
+
+    def _create_ultra_compact_file_status(self, file_type):
+        """Create ultra compact file status widget - single line"""
+        status_widget = QWidget()
+        status_layout = QHBoxLayout(status_widget)
+        status_layout.setContentsMargins(3, 1, 3, 1)  # Minimal margins
+        status_layout.setSpacing(8)
+
+        # Combined file info in one line
+        file_info_label = QLabel(f"No {file_type} file loaded")
+        file_info_label.setStyleSheet("color: #666; font-size: 8pt;")
+        status_layout.addWidget(file_info_label)
+
+        # Store references for updates
+        if file_type == "IMG":
+            self.img_combined_label = file_info_label
+        elif file_type == "COL":
+            self.col_combined_label = file_info_label
+        elif file_type == "TXD":
+            self.txd_combined_label = file_info_label
+
+        # Add stretch to push everything left
+        status_layout.addStretch()
+
+        # Quick action button (optional)
+        action_btn = QPushButton("...")
+        action_btn.setMaximumSize(16, 16)
+        action_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f0f0f0;
+                border: 1px solid #ccc;
+                border-radius: 2px;
+                font-size: 7pt;
+                padding: 0px;
+            }
+            QPushButton:hover {
+                background-color: #e0e0e0;
+            }
+        """)
+        action_btn.clicked.connect(lambda: self._show_file_actions(file_type))
+        status_layout.addWidget(action_btn)
+
+        status_widget.setMaximumHeight(20)  # Ultra compact height
+
+        return status_widget
+
+    def _show_file_actions(self, file_type):
+        """Show quick actions for file type"""
+        from PyQt6.QtWidgets import QMenu
+
+        menu = QMenu(self.main_window)
+
+        if file_type == "IMG":
+            menu.addAction("📂 Open IMG File", self.main_window.open_img_file)
+            menu.addAction("📋 File Info", lambda: self._show_file_info_popup(file_type))
+            if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
+                menu.addAction("✅ Validate IMG", self.main_window.validate_img)
+        elif file_type == "COL":
+            menu.addAction("📂 Open COL File", self.main_window.open_col_file)
+            menu.addAction("📋 File Info", lambda: self._show_file_info_popup(file_type))
+        elif file_type == "TXD":
+            menu.addAction("📂 Open TXD File", lambda: self._open_txd_file())
+            menu.addAction("📋 File Info", lambda: self._show_file_info_popup(file_type))
+
+        # Show menu at button position
+        button = self.main_window.sender()
+        if button:
+            menu.exec(button.mapToGlobal(button.rect().bottomLeft()))
+
+    def _show_show_file_actions(self, file_type):
+        """Show file info popup for current file"""
+        if file_type == "IMG" and hasattr(self.main_window, 'current_img') and self.main_window.current_img:
+            self._show_detailed_file_info(file_type, self.main_window.current_img.file_path, self.main_window.current_img)
+        elif file_type == "COL" and hasattr(self.main_window, 'current_col') and self.main_window.current_col:
+            self._show_detailed_file_info(file_type, self.main_window.current_col.get('file_path', ''), self.main_window.current_col)
+        else:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(self.main_window, f"{file_type} Info", f"No {file_type} file currently loaded")
+
+    def update_ultra_compact_file_info(self, file_type, file_path=None, stats=None):
+        """Update ultra compact file info display"""
+        if file_type == "IMG":
+            if hasattr(self, 'img_combined_label'):
+                if file_path:
+                    name = os.path.basename(file_path)
+                    count = stats.get('entries', 0) if stats else 0
+                    self.img_combined_label.setText(f"{name} ({count} entries)")
+                else:
+                    self.img_combined_label.setText("No IMG file loaded")
+
+        elif file_type == "COL":
+            if hasattr(self, 'col_combined_label'):
+                if file_path:
+                    name = os.path.basename(file_path)
+                    count = stats.get('models', 0) if stats else 0
+                    self.col_combined_label.setText(f"{name} ({count} models)")
+                else:
+                    self.col_combined_label.setText("No COL file loaded")
+
+        elif file_type == "TXD":
+            if hasattr(self, 'txd_combined_label'):
+                if file_path:
+                    name = os.path.basename(file_path)
+                    count = stats.get('textures', 0) if stats else 0
+                    self.txd_combined_label.setText(f"{name} ({count} textures)")
+                else:
+                    self.txd_combined_label.setText("No TXD file loaded")
+
+
+    def _create_compact_file_status(self, file_type):
+        """Create compact file status widget for a specific file type"""
+        status_widget = QWidget()
+        status_layout = QHBoxLayout(status_widget)
+        status_layout.setContentsMargins(5, 2, 5, 2)
+        status_layout.setSpacing(10)
+
+        # File name
+        file_label = QLabel(f"{file_type} File:")
+        file_label.setStyleSheet("font-weight: bold; color: #333;")
+        status_layout.addWidget(file_label)
+
+        file_name_label = QLabel("No file loaded")
+        file_name_label.setStyleSheet("color: #666;")
+        status_layout.addWidget(file_name_label)
+
+        # Store references for updates
+        if file_type == "IMG":
+            self.img_file_name_label = file_name_label
+        elif file_type == "COL":
+            self.col_file_name_label = file_name_label
+        elif file_type == "TXD":
+            self.txd_file_name_label = file_name_label
+
+        # Add stretch to push everything left
+        status_layout.addStretch()
+
+        # Quick stats
+        stats_label = QLabel("Items: 0")
+        stats_label.setStyleSheet("color: #666; font-size: 9pt;")
+        status_layout.addWidget(stats_label)
+
+        # Store reference for updates
+        if file_type == "IMG":
+            self.img_stats_label = stats_label
+        elif file_type == "COL":
+            self.col_stats_label = stats_label
+        elif file_type == "TXD":
+            self.txd_stats_label = stats_label
+
+        return status_widget
+
+    def _on_main_tab_changed(self, index):
+        """Handle main tab change between IMG/COL/TXD"""
+        tab_names = ["IMG", "COL", "TXD"]
+        if 0 <= index < len(tab_names):
+            current_type = tab_names[index]
+            self.main_window.log_message(f"Switched to {current_type} mode")
+
+            # Update the file window based on current type
+            self._update_file_window_for_type(current_type)
+
+            # Emit signal for main window to handle
+            if hasattr(self.main_window, 'on_main_file_type_changed'):
+                self.main_window.on_main_file_type_changed(current_type)
+
+    def _update_file_window_for_type(self, file_type):
+        """Update file window content based on selected type"""
+        if file_type == "IMG":
+            # Show IMG-specific table columns
+            self._configure_table_for_img()
+        elif file_type == "COL":
+            # Show COL-specific table columns
+            self._configure_table_for_col()
+        elif file_type == "TXD":
+            # Show TXD-specific table columns
+            self._configure_table_for_txd()
+
+    def _configure_table_for_img(self):
+        """Configure table for IMG file display"""
+        if hasattr(self, 'table'):
+            self.table.setColumnCount(7)
+            self.table.setHorizontalHeaderLabels([
+                "Name", "Extension", "Size", "Hash", "Version", "Compression", "Status"
+            ])
+
+    def _configure_table_for_col(self):
+        """Configure table for COL file display"""
+        if hasattr(self, 'table'):
+            self.table.setColumnCount(6)
+            self.table.setHorizontalHeaderLabels([
+                "Model", "Type", "Surfaces", "Vertices", "Collision", "Status"
+            ])
+
+    def _configure_table_for_txd(self):
+        """Configure table for TXD file display"""
+        if hasattr(self, 'table'):
+            self.table.setColumnCount(6)
+            self.table.setHorizontalHeaderLabels([
+                "Texture", "Format", "Width", "Height", "Mipmaps", "Status"
+            ])
+
+    def update_file_info_for_type(self, file_type, file_path=None, stats=None):
+        """Update file info for specific type"""
+        if file_type == "IMG":
+            if hasattr(self, 'img_file_name_label'):
+                name = os.path.basename(file_path) if file_path else "No file loaded"
+                self.img_file_name_label.setText(name)
+            if hasattr(self, 'img_stats_label') and stats:
+                self.img_stats_label.setText(f"Items: {stats.get('entries', 0)}")
+
+        elif file_type == "COL":
+            if hasattr(self, 'col_file_name_label'):
+                name = os.path.basename(file_path) if file_path else "No file loaded"
+                self.col_file_name_label.setText(name)
+            if hasattr(self, 'col_stats_label') and stats:
+                self.col_stats_label.setText(f"Models: {stats.get('models', 0)}")
+
+        elif file_type == "TXD":
+            if hasattr(self, 'txd_file_name_label'):
+                name = os.path.basename(file_path) if file_path else "No file loaded"
+                self.txd_file_name_label.setText(name)
+            if hasattr(self, 'txd_stats_label') and stats:
+                self.txd_stats_label.setText(f"Textures: {stats.get('textures', 0)}")
+
 
     def _create_information_bar(self):
         """Create information bar with file details"""
@@ -406,7 +722,9 @@ class IMGFactoryGUILayout:
         # Create main table
         self.table = QTableWidget()
         self.table.setColumnCount(7)
-        self.table.setHorizontalHeaderLabels(["Num", "Name", "Extension", "Size", "Hash", "Hex", "Version", "Compression", "Status"])
+        self.table.setHorizontalHeaderLabels([
+            "Name", "Extension", "Size", "Hash", "Version", "Compression", "Status"
+        ])
         
         # Table configuration
         self.table.setAlternatingRowColors(True)
@@ -420,16 +738,15 @@ class IMGFactoryGUILayout:
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Extension
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Size
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Hash
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Hex Value
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Version
-        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Compression
-        header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Status
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Version
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Compression
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Status
         
         # Apply theme styling to table
         self._apply_table_theme_styling()
         
         entries_layout.addWidget(self.table)
-        self.tab_widget.addTab(entries_tab, "File Entries")
+        self.tab_widget.addTab(entries_tab, "📁 File Entries")
         
         # Tab 2: Directory Tree (future enhancement)
         tree_tab = QWidget()
@@ -438,10 +755,10 @@ class IMGFactoryGUILayout:
         
         tree_placeholder = QLabel("Directory tree view will be implemented here")
         tree_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        tree_placeholder.setStyleSheet("font-style: italic;")
+        tree_placeholder.setStyleSheet("color: #666; font-style: italic;")
         tree_layout.addWidget(tree_placeholder)
         
-        self.tab_widget.addTab(tree_tab, "Directory Tree")
+        self.tab_widget.addTab(tree_tab, "🌳 Directory Tree")
         
         # Tab 3: Search Results (future enhancement)
         search_tab = QWidget()
@@ -450,10 +767,10 @@ class IMGFactoryGUILayout:
 
         search_placeholder = QLabel("Search results will be displayed here")
         search_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        search_placeholder.setStyleSheet("font-style: italic;")
+        search_placeholder.setStyleSheet("color: #666; font-style: italic;")
         search_layout.addWidget(search_placeholder)
 
-        self.tab_widget.addTab(search_tab, "Search Results")
+        self.tab_widget.addTab(search_tab, "🔍 Search Results")
 
         file_layout.addWidget(self.tab_widget)
 
@@ -603,7 +920,7 @@ class IMGFactoryGUILayout:
         btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {bg_color};
-                border: 1px solid {self._darken_color(bg_color, 0.85)};
+                border: 1px solid #cccccc;
                 border-radius: 3px;
                 padding: 2px 6px;
                 font-size: 8pt;
@@ -612,7 +929,7 @@ class IMGFactoryGUILayout:
             }}
             QPushButton:hover {{
                 background-color: {self._darken_color(bg_color, 0.85)};
-                border: 1px solid {self._lighten_color(bg_color, 0.85)};
+                border: 1px solid #999999;
             }}
             QPushButton:pressed {{
                 background-color: {self._darken_color(bg_color, 0.7)};
@@ -837,7 +1154,13 @@ class IMGFactoryGUILayout:
                 return theme_data.get('colors', {})
         except:
             pass
-        return
+        return {
+            'log_background': 'ffffff',
+            'log_text': '333333',
+            'splitter_color_background': 'default',
+            'splitter_color_shine': 'default',
+            'splitter_color_shadow': 'default'
+        }
     
     def apply_table_theme(self):
         """Apply theme styling to the table - called from main window when theme changes"""
@@ -933,7 +1256,7 @@ class IMGFactoryGUILayout:
                                      QWidget, QSlider, QFormLayout)
         
         dialog = QDialog(self.main_window)
-        dialog.setWindowTitle("GUI Layout Settings")
+        dialog.setWindowTitle("🖥️ GUI Layout Settings")
         dialog.setMinimumSize(600, 500)
         
         layout = QVBoxLayout(dialog)
@@ -946,7 +1269,7 @@ class IMGFactoryGUILayout:
         panel_layout = QVBoxLayout(panel_tab)
         
         # Right Panel Width
-        width_group = QGroupBox("Right Panel Width")
+        width_group = QGroupBox("📏 Right Panel Width")
         width_layout = QVBoxLayout(width_group)
         
         current_width = self.main_splitter.sizes()[1] if len(self.main_splitter.sizes()) > 1 else 280
@@ -961,7 +1284,7 @@ class IMGFactoryGUILayout:
         
         # Preview label
         preview_label = QLabel(f"Current: {current_width}px")
-        preview_label.setStyleSheet("font-style: italic;")
+        preview_label.setStyleSheet("color: #666; font-style: italic;")
         width_form.addRow("Preview:", preview_label)
         width_layout.addLayout(width_form)
         
@@ -1215,7 +1538,7 @@ class IMGFactoryGUILayout:
         title_layout = QHBoxLayout()
 
         title_label = QLabel("Activity Log")
-
+        title_label.setStyleSheet("font-weight: bold; font-size: 10pt; color: #333;")
         title_layout.addWidget(title_label)
 
         # Status indicators
@@ -1223,7 +1546,16 @@ class IMGFactoryGUILayout:
 
         # Status label (progress now handled by main status bar)
         self.status_label = QLabel("Ready")
-
+        self.status_label.setStyleSheet("""
+            QLabel {
+                background-color: #e8f5e8;
+                border: 1px solid #4caf50;
+                border-radius: 3px;
+                padding: 2px 8px;
+                font-size: 8pt;
+                color: #2e7d32;
+            }
+        """)
         title_layout.addWidget(self.status_label)
 
         status_layout.addLayout(title_layout)
@@ -1239,6 +1571,7 @@ class IMGFactoryGUILayout:
 
         # Apply theme styling to log
         self._apply_log_theme_styling()
+
         status_layout.addWidget(self.log)
 
         return status_window

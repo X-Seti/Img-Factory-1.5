@@ -187,10 +187,10 @@ class IDEDialog(QDialog):
         
         # Operation-specific button
         operation_text = {
-            'import': '📥 Import with IDE',
-            'export': '📤 Export with IDE', 
-            'remove': '🗑️ Remove with IDE',
-            'split': '✂️ Split with IDE'
+            'import': 'Import with IDE',
+            'export': 'Export with IDE',
+            'remove': 'Remove with IDE',
+            'split': 'Split with IDE'
         }.get(self.operation, f'✅ Continue with IDE')
         
         self.continue_btn = QPushButton(operation_text)

@@ -262,8 +262,8 @@ class AppSettings:
             "debug_categories": ["IMG_LOADING", "TABLE_POPULATION", "BUTTON_ACTIONS"]
         }
         self.defaults = {
-            "theme": "just green2",
-            "name": "just green2",
+            "theme": "Default Green Theme",
+            "name": "Default Green",
             "font_family": "Segoe UI",
             "font_size": 9,
             "panel_opacity": 95,
@@ -345,9 +345,9 @@ class AppSettings:
                     "action_convert": "#9c27b0"
                 }
             },
-            "just green2": {
-                "theme": "just green2",
-                "name": "just green2",
+            "Default Green": {
+                "theme": "Default Green",
+                "name": "Default Green",
                 "description": "Clean light green theme 💚",
                 "category": "🌿 Nature",
                 "author": "X-Seti",
@@ -1314,7 +1314,7 @@ class SettingsDialog(QDialog):
         self.theme_info_label = QLabel()
         self.theme_info_label.setWordWrap(True)
         self.theme_info_label.setMinimumHeight(100)
-        self.theme_info_label.setStyleSheet("padding: 8px; background: #f5f5f5; border-radius: 4px;")
+        #self.theme_info_label.setStyleSheet("padding: 8px; background: #f5f5f5; border-radius: 4px;")
         info_layout.addWidget(self.theme_info_label)
 
         left_layout.addWidget(info_group)

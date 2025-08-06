@@ -3,10 +3,7 @@
 # FIXED: DummyMainWindow inherits from QWidget to fix QMenu parent issue
 
 """
-IMG Table Population Methods - COMPLETE FIXED VERSION
-Contains all IMG-specific table population functions with RW version detection
-Uses ONLY existing functions from core/rw_versions.py - NO fallback code
-FIXED: DummyMainWindow now inherits from QWidget for proper QMenu parent
+IMG Table Population Methods
 """
 
 import os
@@ -63,16 +60,17 @@ class IMGTablePopulator:
         # Configure table
         table.setColumnCount(6)
         table.setHorizontalHeaderLabels([
-            "Name", "Type", "Offset", "Size", "RW Version", "Status"
+            "Name", "Type", "Offset", "Size", "Hex", "RW Version", "Status"
         ])
 
         # Set column widths
-        table.setColumnWidth(0, 180)  # Name
+        table.setColumnWidth(0, 120)  # Name
         table.setColumnWidth(1, 80)   # Type
         table.setColumnWidth(2, 100)  # Offset
         table.setColumnWidth(3, 100)  # Size
-        table.setColumnWidth(4, 120)  # RW Version
-        table.setColumnWidth(5, 80)   # Status
+        table.setColumnWidth(4, 100)  # Hex
+        table.setColumnWidth(5, 120)  # RW Version
+        table.setColumnWidth(6, 80)   # Status
 
         # Populate rows
         table.setRowCount(len(img_file.entries))
@@ -97,7 +95,7 @@ class IMGTablePopulator:
                 size_text = self.format_img_entry_size(entry)
                 size_item = self.create_img_table_item(size_text)
                 table.setItem(i, 3, size_item)
-
+                table.setItem(i, 4, hex_item)
                 # RW Version - Use entry's own version detection
                 if hasattr(entry, 'rw_version_name') and entry.rw_version_name:
                     # Entry already has version detected
@@ -123,11 +121,11 @@ class IMGTablePopulator:
                         img_debugger.debug(f"RW version detection failed for {entry.name}: {e}")
                 else:
                     rw_item = self.create_img_table_item("N/A")
-                table.setItem(i, 4, rw_item)
+                table.setItem(i, 5, rw_item)
 
                 # Status
                 status_item = self.create_img_table_item("✅ Ready")
-                table.setItem(i, 5, status_item)
+                table.setItem(i, 6, status_item)
 
             except Exception as e:
                 img_debugger.error(f"Error populating row {i}: {e}")
@@ -136,8 +134,9 @@ class IMGTablePopulator:
                 table.setItem(i, 1, self.create_img_table_item("ERROR"))
                 table.setItem(i, 2, self.create_img_table_item("N/A"))
                 table.setItem(i, 3, self.create_img_table_item("0 bytes"))
-                table.setItem(i, 4, self.create_img_table_item("Unknown"))
-                table.setItem(i, 5, self.create_img_table_item("❌ Error"))
+                table.setItem(i, 4, self.create_img_table_item("TODO"))
+                table.setItem(i, 5, self.create_img_table_item("Unknown"))
+                table.setItem(i, 6, self.create_img_table_item("❌ Error"))
 
         # Update selection info
         self.update_img_table_selection_info()

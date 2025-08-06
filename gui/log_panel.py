@@ -64,7 +64,7 @@ class IMGFactoryLogWidget(QTextEdit):
         self.setStyleSheet("""
             QTextEdit {
                 background-color: #1e1e1e;
-                color: #ffffff;
+                color: #faaaff;
                 border: 1px solid #444444;
                 border-radius: 4px;
                 padding: 4px;

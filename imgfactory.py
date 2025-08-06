@@ -98,7 +98,8 @@ from gui.gui_backend import ButtonDisplayMode, GUIBackend
 from gui.main_window import IMGFactoryMainWindow
 from gui.col_display import update_col_info_bar_enhanced
 from gui.gui_layout import IMGFactoryGUILayout
-from gui.pastel_button_theme import apply_pastel_theme_to_buttons
+#from gui.pastel_button_theme import apply_pastel_theme_to_buttons
+from gui.unified_button_theme import apply_unified_button_theme
 from gui.gui_menu import IMGFactoryMenuBar
 from gui.gui_context import (enhanced_context_menu_event, add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
 
@@ -283,9 +284,13 @@ class IMGFactory(QMainWindow):
         super().__init__()
         self.settings = settings
         self.app_settings = settings if hasattr(settings, 'themes') else AppSettings()
+
+        #apply_unified_button_theme(self.app_settings)
+
         #integrate_cross_platform_theme_system(self)
-        #force_readable_text_colors(self)
-        self.setWindowTitle("IMG Factory 1.5")
+        # force_readable_text_colors(self)
+
+        self.setWindowTitle("IMG Factory 1.5 - X-Seti Aug06-2025")
         self.setGeometry(100, 100, 1200, 800)
 
         #bugged function
@@ -317,7 +322,7 @@ class IMGFactory(QMainWindow):
         self.gui_layout = IMGFactoryGUILayout(self)
 
         # Setup menu bar system
-        self.menubar = self.menuBar()
+        #self.menubar = self.menuBar() < old
         self.menu_bar_system = IMGFactoryMenuBar(self)
 
         # Setup menu callbacks - FIXED TO USE WORKING METHOD
