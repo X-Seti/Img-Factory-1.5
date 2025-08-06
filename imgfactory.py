@@ -89,6 +89,8 @@ from core.convert import convert_img, convert_img_format
 from core.create_img import (create_new_img, detect_and_open_file, open_file_dialog, detect_file_type)
 from core.close import install_close_functions, setup_close_manager
 from core.split_img import integrate_split_functions
+from core.theme_integration import integrate_theme_system
+
 from methods.ide_parser import integrate_ide_parser
 
 #gui-layout
@@ -324,6 +326,8 @@ class IMGFactory(QMainWindow):
         # Setup menu bar system
         #self.menubar = self.menuBar() < old
         self.menu_bar_system = IMGFactoryMenuBar(self)
+
+        integrate_theme_system(self)
 
         # Setup menu callbacks - FIXED TO USE WORKING METHOD
         callbacks = {

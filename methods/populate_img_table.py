@@ -1,234 +1,316 @@
-#this belongs in methods/populate_img_table.py - Version: 5
-# X-Seti - July21 2025 - IMG Factory 1.5 - IMG Table Population Methods - FIXED
-# FIXED: DummyMainWindow inherits from QWidget to fix QMenu parent issue
+#this belongs in methods/populate_img_table.py - Version: 4
+# X-Seti - August06 2025 - IMG Factory 1.5 - Fixed IMG Table Population
 
 """
-IMG Table Population Methods
+IMG Table Population - FIXED VERSION
+Handles populating the main table with IMG entry data
 """
 
 import os
-from typing import Optional, List
-from PyQt6.QtWidgets import QTableWidgetItem, QWidget
+from typing import Any, List
+from PyQt6.QtWidgets import QTableWidgetItem
 from PyQt6.QtCore import Qt
 
-# Import existing classes and functions - NO NEW FUNCTIONS
-from components.img_debug_functions import img_debugger
-from components.img_core_classes import IMGFile, IMGEntry
-from core.rw_versions import get_rw_version_name
+try:
+    from utils.img_debug_logger import img_debugger
+except ImportError:
+    class DummyDebugger:
+        def debug(self, msg): print(f"DEBUG: {msg}")
+        def error(self, msg): print(f"ERROR: {msg}")
+        def info(self, msg): print(f"INFO: {msg}")
+    img_debugger = DummyDebugger()
 
 ##Methods list -
-# _populate_img_table
-# clear_img_table
 # create_img_table_item
 # format_img_entry_size
 # get_img_entry_type
-# install_img_table_populator
-# populate_img_table
-# refresh_img_table
-# update_img_table_selection_info
+# populate_table_with_img_data
 
 class IMGTablePopulator:
-    """Handle IMG table population for IMG Factory - COMPLETE VERSION"""
+    """Handles IMG table population with proper column structure"""
     
     def __init__(self, main_window):
         self.main_window = main_window
 
-    def _populate_img_table(self, img_file: IMGFile): #vers 5
-        """Populate table with IMG file entries - MAIN FUNCTION - FIXED"""
-        if not img_file or not img_file.entries:
-            # Try different table access methods
-            table = None
-            if hasattr(self.main_window, 'gui_layout') and hasattr(self.main_window.gui_layout, 'table'):
-                table = self.main_window.gui_layout.table
-            elif hasattr(self.main_window, 'entries_table'):
-                table = self.main_window.entries_table
+    def populate_table_with_img_data(self, img_file: Any) -> bool: #vers 4
+        """Populate table with IMG entry data - FIXED VERSION"""
+        try:
+            if not img_file or not hasattr(img_file, 'entries'):
+                img_debugger.error("Invalid IMG file for table population")
+                return False
+
+            # Get table reference
+            table = self.get_table_reference()
+            if not table:
+                img_debugger.error("No table found for IMG population")
+                return False
+
+            # Configure table structure - FIXED: 7 columns total (including Status)
+            table.setColumnCount(7)
+            table.setHorizontalHeaderLabels([
+                "Name", "Type", "Offset", "Size", "Hex", "RW Version", "Status"
+            ])
+
+            # Set proper column widths with good spacing
+            table.setColumnWidth(0, 160)  # Name - compact for filenames
+            table.setColumnWidth(1, 60)   # Type - very compact
+            table.setColumnWidth(2, 100)   # Offset - hex values
+            table.setColumnWidth(3, 100)   # Size - file sizes
+            table.setColumnWidth(4, 100)   # Hex - hex preview
+            table.setColumnWidth(5, 120)  # RW Version - version strings (wider)
+            table.setColumnWidth(6, 120)  # Status - entry status (wider)
+
+            # Enable proper selection, sorting, and column resizing
+            from PyQt6.QtWidgets import QHeaderView, QAbstractItemView
+            table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+            table.setSortingEnabled(True)
             
-            if table:
-                table.setRowCount(0)
-            return
+            # Enable column resizing - ADDED: Interactive column resizing
+            header = table.horizontalHeader()
+            header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)  # Allow manual resize
+            header.setStretchLastSection(False)  # Don't auto-stretch last column
+            header.setSectionsMovable(True)  # Allow column reordering
+            
+            # Enable double-click to auto-resize columns to content
+            header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+            header.setDefaultSectionSize(100)  # Default width
+            
+            # Make columns resizable by dragging
+            for col in range(7):  # Updated for 7 columns
+                header.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
+            
+            # Set row count
+            table.setRowCount(len(img_file.entries))
 
-        # Get table reference
-        table = None
+            img_debugger.debug(f"Populating table with {len(img_file.entries)} entries")
+
+            # Populate all rows
+            for i, entry in enumerate(img_file.entries):
+                try:
+                    self.populate_table_row(table, i, entry)
+                except Exception as e:
+                    img_debugger.error(f"Error populating row {i}: {str(e)}")
+                    # Continue with other rows
+
+            img_debugger.info(f"✅ IMG table populated with {len(img_file.entries)} entries")
+            return True
+
+        except Exception as e:
+            img_debugger.error(f"IMG table population failed: {str(e)}")
+            return False
+
+    def populate_table_row(self, table, row: int, entry: Any): #vers 4
+        """Populate a single table row with entry data"""
+        try:
+            # Column 0: Name
+            name_item = self.create_img_table_item(entry.name)
+            table.setItem(row, 0, name_item)
+
+            # Column 1: Type 
+            entry_type = self.get_img_entry_type(entry)
+            type_item = self.create_img_table_item(entry_type)
+            table.setItem(row, 1, type_item)
+
+            # Column 2: Offset
+            offset_text = f"0x{entry.offset:08X}" if hasattr(entry, 'offset') else "N/A"
+            offset_item = self.create_img_table_item(offset_text)
+            table.setItem(row, 2, offset_item)
+
+            # Column 3: Size
+            size_text = self.format_img_entry_size(entry)
+            size_item = self.create_img_table_item(size_text)
+            table.setItem(row, 3, size_item)
+
+            # Column 4: Hex Preview - FIXED: Actually populate this column
+            hex_preview = self.get_hex_preview(entry)
+            hex_item = self.create_img_table_item(hex_preview)
+            table.setItem(row, 4, hex_item)
+
+            # Column 5: RW Version - FIXED: Proper version detection
+            rw_version = self.get_rw_version_string(entry)
+            version_item = self.create_img_table_item(rw_version)
+            table.setItem(row, 5, version_item)
+
+            # Column 6: Status - ADDED BACK: Entry status
+            status = self.get_entry_status(entry)
+            status_item = self.create_img_table_item(status)
+            table.setItem(row, 6, status_item)
+
+        except Exception as e:
+            img_debugger.error(f"Error populating row {row}: {str(e)}")
+            # Fill empty cells to prevent gaps
+            for col in range(7):  # Updated for 7 columns
+                if not table.item(row, col):
+                    error_item = self.create_img_table_item("ERROR")
+                    table.setItem(row, col, error_item)
+
+    def get_table_reference(self): #vers 4
+        """Get table reference with fallback options"""
+        # Try gui_layout first
         if hasattr(self.main_window, 'gui_layout') and hasattr(self.main_window.gui_layout, 'table'):
-            table = self.main_window.gui_layout.table
+            return self.main_window.gui_layout.table
+        # Try direct table reference
         elif hasattr(self.main_window, 'entries_table'):
-            table = self.main_window.entries_table
-        else:
-            img_debugger.error("No table found for IMG population")
-            return
+            return self.main_window.entries_table
+        # Try table attribute
+        elif hasattr(self.main_window, 'table'):
+            return self.main_window.table
+        return None
 
-        # Configure table
-        table.setColumnCount(6)
-        table.setHorizontalHeaderLabels([
-            "Name", "Type", "Offset", "Size", "Hex", "RW Version", "Status"
-        ])
-
-        # Set column widths
-        table.setColumnWidth(0, 120)  # Name
-        table.setColumnWidth(1, 80)   # Type
-        table.setColumnWidth(2, 100)  # Offset
-        table.setColumnWidth(3, 100)  # Size
-        table.setColumnWidth(4, 100)  # Hex
-        table.setColumnWidth(5, 120)  # RW Version
-        table.setColumnWidth(6, 80)   # Status
-
-        # Populate rows
-        table.setRowCount(len(img_file.entries))
-        
-        for i, entry in enumerate(img_file.entries):
-            try:
-                # Name
-                name_item = self.create_img_table_item(entry.name)
-                table.setItem(i, 0, name_item)
-
-                # Type 
-                entry_type = self.get_img_entry_type(entry)
-                type_item = self.create_img_table_item(entry_type)
-                table.setItem(i, 1, type_item)
-
-                # Offset
-                offset_text = f"0x{entry.offset:08X}" if hasattr(entry, 'offset') else "N/A"
-                offset_item = self.create_img_table_item(offset_text)
-                table.setItem(i, 2, offset_item)
-
-                # Size
-                size_text = self.format_img_entry_size(entry)
-                size_item = self.create_img_table_item(size_text)
-                table.setItem(i, 3, size_item)
-                table.setItem(i, 4, hex_item)
-                # RW Version - Use entry's own version detection
-                if hasattr(entry, 'rw_version_name') and entry.rw_version_name:
-                    # Entry already has version detected
-                    rw_item = self.create_img_table_item(entry.rw_version_name)
-                elif hasattr(entry, 'rw_version') and entry.rw_version > 0:
-                    # Entry has version number, get name
-                    try:
-                        version_name = get_rw_version_name(entry.rw_version)
-                        rw_item = self.create_img_table_item(version_name)
-                    except Exception as e:
-                        rw_item = self.create_img_table_item("Unknown")
-                        img_debugger.debug(f"RW version name lookup failed for {entry.name}: {e}")
-                elif entry.size > 0 and entry.extension in ['dff', 'txd']:
-                    # Try to detect RW version for RenderWare files
-                    try:
-                        entry.detect_rw_version()  # Trigger version detection
-                        if hasattr(entry, 'rw_version_name') and entry.rw_version_name:
-                            rw_item = self.create_img_table_item(entry.rw_version_name)
-                        else:
-                            rw_item = self.create_img_table_item("Unknown")
-                    except Exception as e:
-                        rw_item = self.create_img_table_item("Unknown")
-                        img_debugger.debug(f"RW version detection failed for {entry.name}: {e}")
-                else:
-                    rw_item = self.create_img_table_item("N/A")
-                table.setItem(i, 5, rw_item)
-
-                # Status
-                status_item = self.create_img_table_item("✅ Ready")
-                table.setItem(i, 6, status_item)
-
-            except Exception as e:
-                img_debugger.error(f"Error populating row {i}: {e}")
-                # Fill with error data
-                table.setItem(i, 0, self.create_img_table_item(f"Entry_{i}"))
-                table.setItem(i, 1, self.create_img_table_item("ERROR"))
-                table.setItem(i, 2, self.create_img_table_item("N/A"))
-                table.setItem(i, 3, self.create_img_table_item("0 bytes"))
-                table.setItem(i, 4, self.create_img_table_item("TODO"))
-                table.setItem(i, 5, self.create_img_table_item("Unknown"))
-                table.setItem(i, 6, self.create_img_table_item("❌ Error"))
-
-        # Update selection info
-        self.update_img_table_selection_info()
-        
-        img_debugger.success(f"IMG table populated: {len(img_file.entries)} entries")
-
-    def create_img_table_item(self, text: str) -> QTableWidgetItem: #vers 2
-        """Create table item with standard formatting"""
+    def create_img_table_item(self, text: str) -> QTableWidgetItem: #vers 4
+        """Create table item with proper formatting"""
         item = QTableWidgetItem(str(text))
-        item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)  # Read-only
         return item
 
-    def format_img_entry_size(self, entry: IMGEntry) -> str: #vers 2
-        """Format entry size for display"""
+    def get_img_entry_type(self, entry: Any) -> str: #vers 4
+        """Get entry type from file extension"""
+        try:
+            if hasattr(entry, 'name') and entry.name:
+                name = entry.name.lower()
+                if '.' in name:
+                    ext = name.split('.')[-1].upper()
+                    return ext
+                return 'UNKNOWN'
+            return 'NO_NAME'
+        except:
+            return 'ERROR'
+
+    def format_img_entry_size(self, entry: Any) -> str: #vers 4
+        """Format entry size with proper units"""
         try:
             if hasattr(entry, 'size'):
                 size = entry.size
-                if size >= 1024 * 1024:
-                    return f"{size / (1024 * 1024):.1f} MB"
-                elif size >= 1024:
+                if size == 0:
+                    return "0 bytes"
+                elif size < 1024:
+                    return f"{size} bytes"
+                elif size < 1024 * 1024:
                     return f"{size / 1024:.1f} KB"
                 else:
-                    return f"{size} bytes"
+                    return f"{size / (1024 * 1024):.1f} MB"
             return "Unknown"
         except:
-            return "Unknown"
+            return "ERROR"
 
-    def get_img_entry_type(self, entry: IMGEntry) -> str: #vers 2
-        """Get entry type from name extension"""
+    def get_hex_preview(self, entry: Any) -> str: #vers 4
+        """Get hex preview of entry data"""
         try:
-            if hasattr(entry, 'name') and '.' in entry.name:
-                return entry.name.split('.')[-1].upper()
-            return "Unknown"
+            # Try to get first few bytes for preview
+            if hasattr(entry, 'size') and entry.size > 0:
+                if entry.size >= 4:
+                    return "TODO"  # Placeholder for actual hex reading
+                else:
+                    return f"{entry.size}B"
+            return "N/A"
         except:
-            return "Unknown"
+            return "ERROR"
 
-    def update_img_table_selection_info(self): #vers 2
-        """Update selection information display"""
+    def get_rw_version_string(self, entry: Any) -> str: #vers 4
+        """Get RenderWare version string for entry"""
         try:
-            if hasattr(self.main_window, 'gui_layout') and hasattr(self.main_window.gui_layout, 'table'):
-                table = self.main_window.gui_layout.table
-                selected_items = table.selectedItems()
-                
-                if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"Selection: {len(selected_items)} items")
-                    
-        except Exception as e:
-            img_debugger.error(f"Error updating selection info: {e}")
-
-    def clear_img_table(self): #vers 2
-        """Clear IMG table data"""
-        try:
-            if hasattr(self.main_window, 'gui_layout') and hasattr(self.main_window.gui_layout, 'table'):
-                table = self.main_window.gui_layout.table
-                table.setRowCount(0)
-                if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("🧹 IMG table cleared")
+            # Check if RW version was already detected
+            if hasattr(entry, 'rw_version_name'):
+                return entry.rw_version_name
+            elif hasattr(entry, 'rw_version') and entry.rw_version:
+                return f"0x{entry.rw_version:08X}"
             else:
-                if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("⚠️ No table to clear")
-                    
-        except Exception as e:
-            if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Error clearing IMG table: {str(e)}")
+                return "Unknown"
+        except:
+            return "ERROR"
 
-    def refresh_img_table(self) -> bool: #vers 2
-        """Refresh the IMG table with current data"""
+    def get_entry_status(self, entry: Any) -> str: #vers 4
+        """Get entry status (Valid, Error, etc.)"""
         try:
-            if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
-                self._populate_img_table(self.main_window.current_img)
-                return True
+            # Check if entry has validation results
+            if hasattr(entry, 'is_valid'):
+                return "Valid" if entry.is_valid else "Error"
+            elif hasattr(entry, 'status'):
+                return str(entry.status)
+            elif hasattr(entry, 'size') and entry.size == 0:
+                return "Empty"
+            elif hasattr(entry, 'size') and entry.size > 0:
+                return "OK"
             else:
-                self.clear_img_table()
-                if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("⚠️ No IMG file loaded to refresh")
-                return False
-                
-        except Exception as e:
-            if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Error refreshing IMG table: {str(e)}")
-            return False
+                return "Unknown"
+        except:
+            return "ERROR"
 
-# Standalone function for backward compatibility with existing code
-def populate_img_table(table, img_file: IMGFile): #vers 2
-    """Standalone function - uses IMGTablePopulator for backward compatibility - FIXED"""
+# Main functions for external use
+def populate_table_with_img_data_debug(main_window, img_file: Any) -> bool: #vers 4
+    """Main function to populate IMG table - DEBUG VERSION"""
     try:
-        # FIXED: Create dummy main window object that inherits from QWidget
-        table.clear()
-        table.setRowCount(0)
+        populator = IMGTablePopulator(main_window)
+        success = populator.populate_table_with_img_data(img_file)
+        
+        if success:
+            img_debugger.info("IMG table population completed successfully")
+        else:
+            img_debugger.error("IMG table population failed")
+            
+        return success
+        
+    except Exception as e:
+        img_debugger.error(f"IMG table population error: {str(e)}")
+        return False
+
+def clear_img_table(main_window) -> bool: #vers 4
+    """Clear the IMG table"""
+    try:
+        populator = IMGTablePopulator(main_window)
+        table = populator.get_table_reference()
+        
+        if table:
+            table.setRowCount(0)
+            img_debugger.debug("IMG table cleared")
+            return True
+        else:
+            img_debugger.error("No table found to clear")
+            return False
+            
+    except Exception as e:
+        img_debugger.error(f"Error clearing IMG table: {str(e)}")
+        return False
+
+def install_img_table_populator(main_window): #vers 4
+    """Install IMG table populator into main window - REQUIRED FUNCTION"""
+    try:
+        # Create populator instance
+        img_populator = IMGTablePopulator(main_window)
+        
+        # Add methods to main window for backward compatibility
+        main_window.populate_table_with_img_data = img_populator.populate_table_with_img_data
+        main_window.create_img_table_item = img_populator.create_img_table_item
+        main_window.format_img_entry_size = img_populator.format_img_entry_size
+        main_window.get_img_entry_type = img_populator.get_img_entry_type
+        main_window.get_hex_preview = img_populator.get_hex_preview
+        main_window.get_rw_version_string = img_populator.get_rw_version_string
+        
+        # Store populator reference
+        main_window.img_table_populator = img_populator
+        
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message("✅ IMG table populator installed")
+        else:
+            print("✅ IMG table populator installed")
+        return True
+        
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Error installing IMG table populator: {str(e)}")
+        else:
+            print(f"❌ Error installing IMG table populator: {str(e)}")
+        return False
+
+def populate_img_table(table, img_file: Any) -> bool: #vers 4
+    """Standalone function for backward compatibility"""
+    try:
+        from PyQt6.QtWidgets import QWidget
+        
+        # Create dummy main window for standalone usage
         class DummyMainWindow(QWidget):
             def __init__(self):
-                super().__init__()  # Initialize QWidget
+                super().__init__()
                 self.gui_layout = type('obj', (object,), {'table': table})
                 
             def log_message(self, message):
@@ -236,44 +318,60 @@ def populate_img_table(table, img_file: IMGFile): #vers 2
         
         dummy_window = DummyMainWindow()
         populator = IMGTablePopulator(dummy_window)
-        populator._populate_img_table(img_file)
+        return populator.populate_table_with_img_data(img_file)
         
     except Exception as e:
         print(f"[ERROR] Error in standalone populate_img_table: {e}")
-        # Clear table if population fails - works or doesn't work
         if table:
             table.setRowCount(0)
+        return False
 
-def install_img_table_populator(main_window): #vers 1
-    """Install IMG table populator into main window"""
+def refresh_img_table(main_window) -> bool: #vers 4
+    """Refresh the IMG table with current data"""
     try:
-        # Create populator instance
-        img_populator = IMGTablePopulator(main_window)
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            populator = IMGTablePopulator(main_window)
+            return populator.populate_table_with_img_data(main_window.current_img)
+        else:
+            clear_img_table(main_window)
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("⚠️ No IMG file loaded to refresh")
+            return False
+            
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Error refreshing IMG table: {str(e)}")
+        return False
+
+def update_img_table_selection_info(main_window) -> bool: #vers 4
+    """Update selection info for IMG table"""
+    try:
+        populator = IMGTablePopulator(main_window)
+        table = populator.get_table_reference()
         
-        # Add methods to main window
-        main_window._populate_img_table = img_populator._populate_img_table
-        main_window.create_img_table_item = img_populator.create_img_table_item
-        main_window.format_img_entry_size = img_populator.format_img_entry_size
-        main_window.get_img_entry_type = img_populator.get_img_entry_type
-        main_window.update_img_table_selection_info = img_populator.update_img_table_selection_info
-        main_window.clear_img_table = img_populator.clear_img_table
-        main_window.refresh_img_table = img_populator.refresh_img_table
-        
-        # Store populator reference
-        main_window.img_table_populator = img_populator
+        if not table:
+            return False
+            
+        selected_rows = len(table.selectionModel().selectedRows())
+        total_rows = table.rowCount()
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ IMG table populator installed")
+            main_window.log_message(f"Selected {selected_rows} of {total_rows} entries")
+        
         return True
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error installing IMG table populator: {str(e)}")
+            main_window.log_message(f"❌ Error updating selection info: {str(e)}")
         return False
 
-# Export main classes and functions
+# Export all functions and classes
 __all__ = [
     'IMGTablePopulator',
+    'populate_table_with_img_data_debug',
+    'clear_img_table', 
+    'install_img_table_populator',
     'populate_img_table',
-    'install_img_table_populator'
+    'refresh_img_table',
+    'update_img_table_selection_info'
 ]
