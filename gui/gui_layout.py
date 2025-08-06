@@ -34,6 +34,7 @@ from core.reload import reload_current_file
 from core.create_img import create_new_img, detect_and_open_file,  open_file_dialog, detect_file_type
 from core.close import close_img_file, close_all_img
 from core.close import install_close_functions, setup_close_manager
+from methods.colour_ui_for_loaded_img import integrate_color_ui_system
 
 def create_control_panel(main_window):
     """Create the main control panel - LEGACY FUNCTION"""
@@ -63,6 +64,7 @@ class IMGFactoryGUILayout:
         self.main_type_tabs = None
         self.tab_widget = None
         self.left_vertical_splitter = None
+        integrate_color_ui_system(self)
 
         # UPDATED: Initialize method_mappings FIRST before buttons
         self.method_mappings = self._create_method_mappings()
@@ -72,6 +74,7 @@ class IMGFactoryGUILayout:
         from PyQt6.QtCore import QTimer
         QTimer.singleShot(100, self._delayed_initialization)
     
+
     def apply_table_theme(self): #vers 1
         """Apply theme styling to the table - MISSING METHOD FIX"""
         if hasattr(self, 'table') and self.table:
@@ -375,7 +378,7 @@ class IMGFactoryGUILayout:
         self.left_vertical_splitter.addWidget(file_window)
 
         # 3. BOTTOM: Status Window (log and status)
-        status_window = self._create_status_window()
+        status_window = self.create_status_window()
         self.left_vertical_splitter.addWidget(status_window)
 
         # Set section proportions: MainTabs(40px), File(720px), Status(200px)
@@ -773,60 +776,6 @@ class IMGFactoryGUILayout:
 
         return file_window
     
-    def _create_status_window(self):
-        """Create status window with log and status indicators"""
-        status_window = QWidget()
-        status_layout = QVBoxLayout(status_window)
-        status_layout.setContentsMargins(5, 5, 5, 5)
-        status_layout.setSpacing(3)
-        
-        # Title with status indicators
-        title_layout = QHBoxLayout()
-        
-        title_label = QLabel("Activity Log")
-        title_label.setStyleSheet("font-weight: bold; font-size: 10pt; color: #333;")
-        title_layout.addWidget(title_label)
-        
-        # Status indicators
-        title_layout.addStretch()
-        
-        # Progress indicator (initially hidden)
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setMaximumWidth(100)
-        self.progress_bar.setMaximumHeight(16)
-        self.progress_bar.setVisible(False)
-        title_layout.addWidget(self.progress_bar)
-        
-        # Status label
-        self.status_label = QLabel("Ready")
-        self.status_label.setStyleSheet("""
-            QLabel {
-                background-color: #e8f5e8;
-                border: 1px solid #4caf50;
-                border-radius: 3px;
-                padding: 2px 8px;
-                font-size: 8pt;
-                color: #2e7d32;
-            }
-        """)
-        title_layout.addWidget(self.status_label)
-        
-        status_layout.addLayout(title_layout)
-        # Log with scrollbars
-        self.log = QTextEdit()
-        self.log.setReadOnly(True)
-        self.log.setPlaceholderText("Activity log will appear here...")
-        
-        # Enable scrollbars for log
-        self.log.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.log.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        
-        # Apply theme styling to log
-        self._apply_log_theme_styling()
-        
-        status_layout.addWidget(self.log)
-        
-        return status_window
 
     def create_right_panel_with_pastel_buttons(self):
         """Create right panel with pastel colored buttons - UPDATED: Uses method_mappings"""
@@ -1537,36 +1486,29 @@ class IMGFactoryGUILayout:
         if right_widget:
             right_widget.setMaximumWidth(width + 60)  # Allow some flexibility
             right_widget.setMinimumWidth(max(180, width - 40))
-    
-    def create_status_bar(self):
-        """Create status bar - called from imgfactory.py _create_ui method"""
+
+
+    def show_progress(self, value, text="Working..."): #vers 2
+        """Show progress - DEPRECATED: Use unified progress system"""
         try:
-            from gui.status_bar import create_status_bar
-            create_status_bar(self.main_window)
-            self.log_message("Status bar created successfully")
+            # Import and use unified progress system
+            from methods.progressbar import show_progress as unified_show_progress
+            unified_show_progress(self.main_window, value, text)
         except ImportError:
-            # Fallback - create basic status bar
-            self.main_window.setStatusBar(QStatusBar())
-            self.main_window.statusBar().showMessage("Ready")
-            self.log_message("Basic status bar created (gui.status_bar not available)")
-        except Exception as e:
-            self.log_message(f"Status bar creation error: {str(e)}")
-    
-    def show_progress(self, value, text="Working..."):
-        """Show progress - compatibility method"""
-        if hasattr(self.main_window, 'show_progress'):
-            self.main_window.show_progress(text, 0, 100)
-            self.main_window.update_progress(value)
-        elif hasattr(self.main_window, 'progress_bar'):
-            self.main_window.progress_bar.setValue(value)
-            self.main_window.progress_bar.setVisible(value >= 0)
-        else:
-            # Fallback to status bar
-            if hasattr(self.main_window, 'statusBar'):
-                self.main_window.statusBar().showMessage(f"{text} ({value}%)")
-    
-    def update_file_info(self, info_text):
-        """Update file info - compatibility method"""
+            # Fallback to old system if unified not available
+            if hasattr(self.main_window, 'show_progress'):
+                self.main_window.show_progress(text, 0, 100)
+                self.main_window.update_progress(value)
+            elif hasattr(self.main_window, 'progress_bar'):
+                self.main_window.progress_bar.setValue(value)
+                self.main_window.progress_bar.setVisible(value >= 0)
+            else:
+                # Final fallback to status bar
+                if hasattr(self.main_window, 'statusBar'):
+                    self.main_window.statusBar().showMessage(f"{text} ({value}%)")
+
+    def update_file_info(self, info_text): #vers 2
+        """Update file info - UPDATED: Uses unified progress for completion"""
         if hasattr(self.main_window, 'update_img_status'):
             # Extract info from text if possible
             if "entries" in info_text:
@@ -1575,14 +1517,103 @@ class IMGFactoryGUILayout:
                     self.main_window.update_img_status(entry_count=count)
                 except:
                     pass
-        
+
         # Also update info labels if available
         if hasattr(self, 'file_name_label'):
             self.update_info_labels(entry_count=info_text)
-    
-    def update_img_info(self, info_text):
-        """Update IMG info - compatibility method (alias for update_file_info)"""
+
+    def update_img_info(self, info_text): #vers 2
+        """Update IMG info - DEPRECATED: Alias for update_file_info"""
         self.update_file_info(info_text)
+
+    # REMOVE THIS ENTIRE create_status_window_with_progress METHOD - Replace with simple version:
+    def create_status_window(self):
+        """Create status window with log - UPDATED: Removed embedded progress bar"""
+        status_window = QWidget()
+        status_layout = QVBoxLayout(status_window)
+        status_layout.setContentsMargins(5, 5, 5, 5)
+        status_layout.setSpacing(3)
+
+        # Title without progress indicators (now handled by unified system)
+        title_layout = QHBoxLayout()
+
+        title_label = QLabel("Activity Log")
+        title_label.setStyleSheet("font-weight: bold; font-size: 10pt; color: #333;")
+        title_layout.addWidget(title_label)
+
+        # Status indicators
+        title_layout.addStretch()
+
+        # Status label (progress now handled by main status bar)
+        self.status_label = QLabel("Ready")
+        self.status_label.setStyleSheet("""
+            QLabel {
+                background-color: #e8f5e8;
+                border: 1px solid #4caf50;
+                border-radius: 3px;
+                padding: 2px 8px;
+                font-size: 8pt;
+                color: #2e7d32;
+            }
+        """)
+        title_layout.addWidget(self.status_label)
+
+        status_layout.addLayout(title_layout)
+
+        # Log with scrollbars
+        self.log = QTextEdit()
+        self.log.setReadOnly(True)
+        self.log.setPlaceholderText("Activity log will appear here...")
+
+        # Enable scrollbars for log
+        self.log.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.log.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+        # Apply theme styling to log
+        self._apply_log_theme_styling()
+
+        status_layout.addWidget(self.log)
+
+        return status_window
+
+    # Add this compatibility method for legacy code:
+    def hide_progress(self): #vers 1
+        """Hide progress - DEPRECATED: Use unified progress system"""
+        try:
+            from methods.progressbar import hide_progress as unified_hide_progress
+            unified_hide_progress(self.main_window, "Ready")
+        except ImportError:
+            # Fallback to old system
+            if hasattr(self.main_window, 'hide_progress'):
+                self.main_window.hide_progress()
+            elif hasattr(self.main_window, 'statusBar'):
+                self.main_window.statusBar().showMessage("Ready")
+
+    # UPDATE create_status_bar method to integrate unified progress:
+    def create_status_bar(self): #vers 2
+        """Create status bar - UPDATED: Integrates unified progress system"""
+        try:
+            from gui.status_bar import create_status_bar
+            create_status_bar(self.main_window)
+
+            # Integrate unified progress system
+            try:
+                from methods.progressbar import integrate_progress_system
+                integrate_progress_system(self.main_window)
+                self.log_message("✅ Status bar with unified progress created")
+            except ImportError:
+                self.log_message("✅ Status bar created (unified progress not available)")
+
+        except ImportError:
+            # Fallback - create basic status bar
+            from PyQt6.QtWidgets import QStatusBar
+            self.main_window.setStatusBar(QStatusBar())
+            self.main_window.statusBar().showMessage("Ready")
+            self.log_message("⚠️ Basic status bar created (gui.status_bar not available)")
+        except Exception as e:
+            self.log_message(f"❌ Status bar creation error: {str(e)}")
+
+
 
 __all__ = [
     'create_right_panel_with_pastel_buttons',  # MAIN FUNCTION

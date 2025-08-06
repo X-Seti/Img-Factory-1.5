@@ -35,7 +35,8 @@ class MenuAction:
         self.enabled = True
         self.visible = True
         self.separator_after = False
-
+        #integrate_settings_menu(self)
+        #integrate_color_ui_system(self)
 
 class MenuDefinition:
     """Defines the complete menu structure"""

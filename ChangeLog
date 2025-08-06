@@ -1,5 +1,13 @@
-What's fixed.
+What's fixed and still todo.
 
+Fixed - Aug6
+Reload now works - once again
+
+Fixed - Aug6
+Status / Progress Bar appears to be fixed and moved;
+Now a shared function in methods/Progressbar.py
+
+Added - Aug6
 Added new Function for themes.
 
         {
@@ -15,11 +23,22 @@ Added new Function for themes.
         "color": "#E8F5E8"
         },
 
+Removed - Aug6
 Rebuild_As removed from all files.
+
+Checked - Aug4
 Loading single img.
+
+Checked - Aug4
 Loading Multiple Img.
+
+Checked - Aug4
 Closing Single Img.
+
+Checked - Aug4
 Closing Multiple Img.
+
+Checked - July31
 Rebuild_As removed - Save Entires semmed more logical.
 Update_list > refresh_table
        ("Refresh", "update", "view-refresh", "#F9FBE7", "refresh_table"),
@@ -32,11 +51,4 @@ Replaced with..
         "color": "#F9FBE7"
       },
 
-
-Progress bar doesn't reset after function is done.
-
-
-Bug's:
-
-Reload fails, no error
-Rebuild img, Rebuild all imgs fails.
+Start of new changelog (July/August)

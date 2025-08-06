@@ -1,4 +1,4 @@
-#this belongs in core/rebuild.py - Version: 6
+def _show_rebuild_stats(main_window, stats: Dict[str, Any]): #vers 2#this belongs in core/rebuild.py - Version: 6
 # X-Seti - August05 2025 - IMG Factory 1.5 - Rebuild Functions
 
 """
@@ -11,13 +11,10 @@ import shutil
 from typing import Optional, Dict, Any, List, Tuple
 from PyQt6.QtWidgets import QMessageBox, QFileDialog, QProgressDialog
 from PyQt6.QtCore import QThread, pyqtSignal, Qt
-from methods.progressbar import update_progress, hide_progress
-#other files.
-#from methods.progressbar import show_progress, update_progress, hide_progress
 
 ##Methods list -
 # integrate_rebuild_functions
-# quick_rebuild
+# quick_rebuild  
 # rebuild_all_img
 # rebuild_current_img
 # _get_rebuild_options
@@ -298,10 +295,10 @@ def rebuild_all_img(main_window) -> bool: #vers 4
             try:
                 main_window.log_message(f"🔧 Rebuilding {i+1}/{len(img_files)}: {os.path.basename(img_info['file_path'])}")
                 
-                # Update progress using unified system
-                from methods.progressbar import update_progress
-                progress = int((i / len(img_files)) * 100)
-                update_progress(main_window, progress, f"Rebuilding {i+1}/{len(img_files)}")
+                # Update progress
+                if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'show_progress'):
+                    progress = int((i / len(img_files)) * 100)
+                    main_window.gui_layout.show_progress(progress, f"Rebuilding {i+1}/{len(img_files)}")
                 
                 # Set as current for rebuild
                 original_img = main_window.current_img
@@ -331,12 +328,9 @@ def rebuild_all_img(main_window) -> bool: #vers 4
                 failed_files.append(f"{os.path.basename(img_info['file_path'])} ({str(e)})")
                 main_window.log_message(f"❌ Error rebuilding {os.path.basename(img_info['file_path'])}: {str(e)}")
         
-        # Hide progress using unified system
-        from methods.progressbar import hide_progress
-        if success_count == len(img_files):
-            hide_progress(main_window, "All rebuilds complete")
-        else:
-            hide_progress(main_window, f"Batch complete: {success_count}/{len(img_files)}")
+        # Clear progress
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'show_progress'):
+            main_window.gui_layout.show_progress(-1, "Ready")
         
         # Show results
         if success_count == len(img_files):
@@ -456,28 +450,26 @@ def _get_rebuild_options(main_window) -> Optional[Dict[str, Any]]: #vers 3
         return None
 
 
-def _update_rebuild_progress(main_window, progress: int, message: str): #vers 4
-    """Update rebuild progress using unified system"""
+def _update_rebuild_progress(main_window, progress: int, message: str): #vers 3
+    """Update rebuild progress in UI"""
     try:
-        from methods.progressbar import update_progress
-        update_progress(main_window, progress, message)
         main_window.log_message(f"🔧 {message}")
+        
+        # Update progress bar if available
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'show_progress'):
+            main_window.gui_layout.show_progress(progress, message)
+            
     except Exception as e:
         print(f"Progress update error: {e}")
-        # Fallback logging
-        main_window.log_message(f"🔧 {message}")
 
 
 def _handle_rebuild_completion(main_window, success: bool, message: str, stats: Dict[str, Any], 
-                              output_path: str, original_path: str): #vers 4
-    """Handle rebuild completion using unified system"""
+                              output_path: str, original_path: str): #vers 3
+    """Handle rebuild completion"""
     try:
-        # Hide progress using unified system
-        from methods.progressbar import hide_progress
-        if success:
-            hide_progress(main_window, "Rebuild complete")
-        else:
-            hide_progress(main_window, "Rebuild failed")
+        # Clear progress bar first
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'show_progress'):
+            main_window.gui_layout.show_progress(-1, "Ready")
         
         if success:
             main_window.log_message(f"✅ {message}")
@@ -526,7 +518,7 @@ def _rebuild_single_file_sync(main_window, img_file, options: Dict[str, Any]) ->
         return False
 
 
-def _show_rebuild_stats(main_window, stats: Dict[str, Any]): #vers 2
+
     """Show rebuild statistics to user"""
     try:
         original_entries = stats.get('original_entries', 0)

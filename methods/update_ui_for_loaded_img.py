@@ -9,6 +9,7 @@ Standalone method to update UI when IMG file is loaded - FIXED VERSION
 import os
 from PyQt6.QtWidgets import QTableWidgetItem
 
+
 ##Methods list -
 # update_ui_for_loaded_img
 
@@ -33,7 +34,7 @@ def update_ui_for_loaded_img(main_window): #vers 5
             table = main_window.gui_layout.table
             table.setColumnCount(6)
             table.setHorizontalHeaderLabels([
-                "Name", "Type", "Size", "Offset", "RW Version", "Info"
+                "Name", "Type", "Size", "Offset","Hex", "RW Version", "Info"
             ])
             # Set IMG column widths
             table.setColumnWidth(0, 200)  # Name
@@ -63,7 +64,7 @@ def update_ui_for_loaded_img(main_window): #vers 5
             if hasattr(main_window.gui_layout, 'hide_progress'):
                 main_window.gui_layout.hide_progress()
             
-            if hasattr(main_window.gui_layout, 'progress_bar'):
+            if hasattr(main_window.gui_layout, 'progress_bar') and main_window.gui_layout.progress_bar is not None:
                 main_window.gui_layout.progress_bar.setVisible(False)
                 main_window.gui_layout.progress_bar.setValue(0)
             

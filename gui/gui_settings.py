@@ -37,7 +37,9 @@ class GUISettingsDialog(QDialog):
         
         self._create_ui()
         self._load_current_settings()
-    
+        #integrate_settings_menu(self)
+        #integrate_color_ui_system(self)
+
     def _safe_load_icon(self, icon_name):
         """Safely load icon with fallback - ADDED TO FIX QIcon.fromTheme issues"""
         try:
@@ -1247,6 +1249,168 @@ class GUISettingsDialog(QDialog):
             self.tab_style_combo.setCurrentText("Compact")
             
             QMessageBox.information(self, "Reset Complete", "Tab settings have been reset to default values.")
+
+    def create_settings_menu(main_window):
+        """Example of adding file window color option to settings menu"""
+
+        # If you have a QMenuBar
+        if hasattr(main_window, 'menuBar'):
+            settings_menu = main_window.menuBar().addMenu("⚙️ Settings")
+
+            # Add file window color option
+            color_action = settings_menu.addAction("🎨 File Window Colors")
+            color_action.triggered.connect(main_window.show_file_window_color_selector)
+
+            # Add separator
+            settings_menu.addSeparator()
+
+            # Quick theme submenu
+            theme_submenu = settings_menu.addMenu("🌈 Quick Themes")
+
+            # Add popular themes as quick actions
+            quick_themes = [
+                ("Light Pink", "🌸"),
+                ("Dark Blue", "🌙"),
+                ("Green", "🟢"),
+                ("Black & Red", "⚫"),
+                ("Purple", "🟣"),
+                ("Orange", "🟠")
+            ]
+
+            for theme_name, emoji in quick_themes:
+                action = theme_submenu.addAction(f"{emoji} {theme_name}")
+                action.triggered.connect(lambda checked, theme=theme_name: main_window.apply_file_window_theme(theme))
+
+            # Add separator and other settings
+            settings_menu.addSeparator()
+
+            # Other settings can go here
+            general_action = settings_menu.addAction("⚙️ General Settings")
+            # general_action.triggered.connect(main_window.show_general_settings)
+
+            return settings_menu
+
+        # Alternative: If you have a settings dialog
+        elif hasattr(main_window, 'settings_dialog'):
+            return add_color_options_to_dialog(main_window.settings_dialog)
+
+        return None
+
+
+    def add_color_options_to_dialog(settings_dialog):
+        """Add color options to an existing settings dialog"""
+        from PyQt6.QtWidgets import QGroupBox, QVBoxLayout, QPushButton, QHBoxLayout, QLabel
+
+        # Create appearance group
+        appearance_group = QGroupBox("🎨 Appearance")
+        appearance_layout = QVBoxLayout(appearance_group)
+
+        # Current theme display
+        current_theme_label = QLabel("Current File Window Theme:")
+        current_theme_display = QLabel("Light Pink")  # This should be updated with actual current theme
+        current_theme_display.setStyleSheet("font-weight: bold; color: #EC4899; padding: 5px;")
+
+        appearance_layout.addWidget(current_theme_label)
+        appearance_layout.addWidget(current_theme_display)
+
+        # Theme selection button
+        theme_button_layout = QHBoxLayout()
+
+        select_theme_btn = QPushButton("🎨 Choose File Window Colors")
+        select_theme_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #EC4899;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 10px 15px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #BE185D;
+            }
+        """)
+
+        # This would need to be connected to the main window's method
+        # select_theme_btn.clicked.connect(main_window.show_file_window_color_selector)
+
+        theme_button_layout.addWidget(select_theme_btn)
+        theme_button_layout.addStretch()
+
+        appearance_layout.addLayout(theme_button_layout)
+
+        # Quick theme buttons
+        quick_themes_label = QLabel("Quick Themes:")
+        appearance_layout.addWidget(quick_themes_label)
+
+        quick_buttons_layout = QHBoxLayout()
+
+        quick_themes = [
+            ("🌸", "Light Pink", "#F472B6"),
+            ("🌙", "Dark Blue", "#3B82F6"),
+            ("🟢", "Green", "#22C55E"),
+            ("⚫", "Black & Red", "#F87171")
+        ]
+
+        for emoji, theme_name, color in quick_themes:
+            btn = QPushButton(f"{emoji}")
+            btn.setFixedSize(40, 40)
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {color};
+                    border: 2px solid #999;
+                    border-radius: 20px;
+                    font-size: 16px;
+                }}
+                QPushButton:hover {{
+                    border: 3px solid #333;
+                }}
+            """)
+            btn.setToolTip(theme_name)
+            # btn.clicked.connect(lambda checked, theme=theme_name: main_window.apply_file_window_theme(theme))
+            quick_buttons_layout.addWidget(btn)
+
+        quick_buttons_layout.addStretch()
+        appearance_layout.addLayout(quick_buttons_layout)
+
+        # Add to settings dialog (this depends on your dialog structure)
+        # settings_dialog.layout().addWidget(appearance_group)
+
+        return appearance_group
+
+
+    def integrate_settings_menu(main_window):
+        """Complete integration of color settings into main window"""
+        try:
+            # First integrate the color UI system
+            from methods.colour_ui_for_loaded_img import integrate_color_ui_system
+            integrate_color_ui_system(main_window)
+
+            # Create or update settings menu
+            settings_menu = create_settings_menu(main_window)
+
+            # Add toolbar button for quick access (optional)
+            if hasattr(main_window, 'toolbar'):
+                color_toolbar_action = main_window.toolbar.addAction("🎨")
+                color_toolbar_action.setToolTip("Change File Window Colors")
+                color_toolbar_action.triggered.connect(main_window.show_file_window_color_selector)
+
+            # Add status bar indicator (optional)
+            if hasattr(main_window, 'statusBar'):
+                current_theme = getattr(main_window, '_current_file_window_theme', 'Light Pink')
+                theme_indicator = f"Theme: {current_theme}"
+                main_window.statusBar().addPermanentWidget(QLabel(theme_indicator))
+
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("🎨 Settings menu with color options integrated")
+
+            return True
+
+        except Exception as e:
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"❌ Error integrating settings menu: {str(e)}")
+            return False
+
 
     def _apply_tab_style_preset(self, style_name):
         """Apply preset tab style configurations"""
