@@ -1,5 +1,32 @@
 What's fixed and still todo.
 
+Partly Fixed - Aug7
+Import function needs work, import_via ide gives an error, no .ide file found or no files in .ide.
+
+Todo, Add options for folder contents import.
+
+Todo, Add import via textfile.txt list, could be either modelname.dff, textuename.txd in a single list, in no order.
+- function needs to be smart to understand and read the file contents.
+
+Todo, Drag and Drop files/ folders onto the imgfactory app, to be imported.
+
+Todo, fix the highlighting function, 28/28 files, when I know 10 of them already existed.
+
+Todo, Fix the Save Entry function.
+
+Todo, Theme switching - Status bar and UI elements don't update when theme changes.
+
+Todo, Export, Export Via, Quick Export need to be checked against the windows source.
+
+Todo, Restore, Collision system integration - Connect existing collision system to main IMG interface (COL Edit button, etc.)
+
+
+------------ completed ---- >
+
+Fixed - Aug7
+Light / Dark theming system updated - Still needs work.
+core/theme_integration.py - needs adjusting for other theming styles.
+
 Fixed - Aug6
 File Window Display List
 Status Window theming.
