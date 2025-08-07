@@ -142,38 +142,38 @@ def apply_table_theme(main_window, theme_name: str = "default"): #vers 1
             # Dark theme styling
             table.setStyleSheet("""
                 QTableWidget {
-                    background-color: #2a2a2a;
-                    color: #ffffff;
-                    gridline-color: #555555;
-                    selection-background-color: #0078d4;
+                    background-color: {colors["panel_bg"]};
+                    color: {colors["text_primary"]};
+                    gridline-color: {colors["grid"]};
+                    selection-background-color: {colors["bg_tertiary"]};
                 }
                 QTableWidget::item:alternate {
-                    background-color: #333333;
+                    background-color: {colors["bg_primary"]};
                 }
                 QHeaderView::section {
-                    background-color: #404040;
-                    color: #ffffff;
+                    background-color: {colors["bg_secondary"]};
+                    color: {colors["text_secondary"]};
                     padding: 4px;
-                    border: 1px solid #555555;
+                    border: 2px solid {colors["bg_tertiary"]};
                 }
             """)
         elif theme_name == "light":
             # Light theme styling
             table.setStyleSheet("""
                 QTableWidget {
-                    background-color: #ffffff;
-                    color: #000000;
-                    gridline-color: #d0d0d0;
-                    selection-background-color: #0078d4;
+                    background-color: {colors["panel_bg"]};
+                    color: {colors["text_primary"]};
+                    gridline-color: {colors["grid"]};
+                    selection-background-color: {colors["bg_tertiary"]};
                 }
                 QTableWidget::item:alternate {
-                    background-color: #f5f5f5;
+                    background-color: {colors["bg_primary"]};
                 }
                 QHeaderView::section {
-                    background-color: #e0e0e0;
-                    color: #000000;
+                    background-color: {colors["bg_secondary"]};
+                    color: {colors["text_secondary"]};
                     padding: 4px;
-                    border: 1px solid #d0d0d0;
+                    border: 2px solid {colors["bg_tertiary"]};
                 }
             """)
         else:

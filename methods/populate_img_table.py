@@ -1,59 +1,44 @@
-#this belongs in methods/populate_img_table.py - Version: 6
-# X-Seti - August07 2025 - IMG Factory 1.5 - IMG Table Population with Highlighting
+# this belongs in methods/populate_img_table.py - Version: 5
+# X-Seti - August07 2025 - IMG Factory 1.5 - Updated IMG Table Population with RW Hex Column
 
 """
-IMG Table Population - COMPLETE VERSION
-Handles populating the main table with IMG entry data
-Preserves 100% of original functionality + adds highlighting support
+IMG Table Population
 """
 
 import os
 from typing import Any, List
 from PyQt6.QtWidgets import QTableWidgetItem
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QBrush, QFont
 
 try:
     from utils.img_debug_logger import img_debugger
 except ImportError:
-    try:
-        from components.img_debug_functions import img_debugger
-    except ImportError:
-        class DummyDebugger:
-            def debug(self, msg): print(f"DEBUG: {msg}")
-            def error(self, msg): print(f"ERROR: {msg}")
-            def info(self, msg): print(f"INFO: {msg}")
-            def success(self, msg): print(f"SUCCESS: {msg}")
-            def warning(self, msg): print(f"WARNING: {msg}")
-        img_debugger = DummyDebugger()
+    class DummyDebugger:
+        def debug(self, msg): print(f"DEBUG: {msg}")
+        def error(self, msg): print(f"ERROR: {msg}")
+        def info(self, msg): print(f"INFO: {msg}")
+    img_debugger = DummyDebugger()
 
 ##Methods list -
-# clear_img_table
-# create_highlighted_img_table_item
 # create_img_table_item
-# enable_import_highlighting
 # format_img_entry_size
-# get_entry_status
-# get_highlight_type_for_entry
+# get_hex_preview
 # get_img_entry_type
-# install_img_table_populator
-# integrate_highlighting_with_img_table
-# populate_img_table
-# populate_table_with_img_data_debug
+# get_rw_version_hex
+# get_rw_version_string
+# populate_table_row
+# populate_table_with_img_data
 # refresh_img_table
 # update_img_table_selection_info
 
-##Classes -
-# IMGTablePopulator
-
 class IMGTablePopulator:
-    """Handles IMG table population with proper column structure and highlighting support"""
+    """Handles IMG table population with proper column structure"""
     
     def __init__(self, main_window):
         self.main_window = main_window
 
-    def populate_table_with_img_data(self, img_file: Any) -> bool: #vers 6
-        """Populate table with IMG entry data - ENHANCED with highlighting support"""
+    def populate_table_with_img_data(self, img_file: Any) -> bool: #vers 5
+        """Populate table with IMG entry data - UPDATED with RW Hex column"""
         try:
             if not img_file or not hasattr(img_file, 'entries'):
                 img_debugger.error("Invalid IMG file for table population")
@@ -65,46 +50,38 @@ class IMGTablePopulator:
                 img_debugger.error("No table found for IMG population")
                 return False
 
-            # Configure table structure - PRESERVED: 7 columns total (including Status)
+            # Configure table structure - UPDATED: 7 columns including RW Hex
             table.setColumnCount(7)
             table.setHorizontalHeaderLabels([
-                "Name", "Type", "Offset", "Size", "Hex", "RW Version", "Status"
+                "Name", "Type", "Size", "Offset", "RW Version", "RW Hex", "Info"
             ])
 
-            # Set proper column widths with good spacing - PRESERVED
-            table.setColumnWidth(0, 160)  # Name - compact for filenames
-            table.setColumnWidth(1, 60)   # Type - very compact
-            table.setColumnWidth(2, 100)   # Offset - hex values
-            table.setColumnWidth(3, 100)   # Size - file sizes
-            table.setColumnWidth(4, 100)   # Hex - hex preview
-            table.setColumnWidth(5, 120)  # RW Version - version strings (wider)
-            table.setColumnWidth(6, 120)  # Status - entry status (wider)
+            # Set proper column widths - UPDATED for RW Hex column
+            table.setColumnWidth(0, 200)  # Name
+            table.setColumnWidth(1, 80)   # Type
+            table.setColumnWidth(2, 100)  # Size
+            table.setColumnWidth(3, 100)  # Offset
+            table.setColumnWidth(4, 120)  # RW Version
+            table.setColumnWidth(5, 100)  # RW Hex - NEW COLUMN
+            table.setColumnWidth(6, 150)  # Info
 
-            # Enable proper selection, sorting, and column resizing - PRESERVED
+            # Enable proper selection, sorting, and column resizing
             from PyQt6.QtWidgets import QHeaderView, QAbstractItemView
             table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
             table.setSortingEnabled(True)
             
-            # Enable column resizing - PRESERVED: Interactive column resizing
+            # Enable column resizing
             header = table.horizontalHeader()
-            header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)  # Allow manual resize
-            header.setStretchLastSection(False)  # Don't auto-stretch last column
-            header.setSectionsMovable(True)  # Allow column reordering
-            
-            # Enable double-click to auto-resize columns to content
             header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-            header.setDefaultSectionSize(100)  # Default width
-            
-            # Make columns resizable by dragging
-            for col in range(7):  # Updated for 7 columns
-                header.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
+            header.setStretchLastSection(False)
+            header.setSectionsMovable(True)
             
             # Set row count
             table.setRowCount(len(img_file.entries))
 
             img_debugger.debug(f"Populating table with {len(img_file.entries)} entries")
 
-            # Populate all rows - ENHANCED with highlighting support
+            # Populate all rows
             for i, entry in enumerate(img_file.entries):
                 try:
                     self.populate_table_row(table, i, entry)
@@ -119,298 +96,211 @@ class IMGTablePopulator:
             img_debugger.error(f"IMG table population failed: {str(e)}")
             return False
 
-    def populate_table_row(self, table, row: int, entry: Any): #vers 6
-        """Populate a single table row with entry data - ENHANCED with highlighting"""
+    def populate_table_row(self, table, row: int, entry: Any): #vers 5
+        """Populate a single table row with entry data - UPDATED with RW Hex"""
         try:
-            # Check if this entry should be highlighted - NEW FEATURE
-            highlight_type = get_highlight_type_for_entry(self.main_window, entry.name)
-            
-            # Column 0: Name (with optional highlighting)
-            if highlight_type:
-                name_item = create_highlighted_img_table_item(entry.name, highlight_type)
-            else:
-                name_item = self.create_img_table_item(entry.name)
+            # Column 0: Name
+            name_item = self.create_img_table_item(entry.name)
             table.setItem(row, 0, name_item)
 
-            # Column 1: Type (with optional highlighting)
+            # Column 1: Type 
             entry_type = self.get_img_entry_type(entry)
-            if highlight_type:
-                type_item = create_highlighted_img_table_item(entry_type, highlight_type)
-            else:
-                type_item = self.create_img_table_item(entry_type)
+            type_item = self.create_img_table_item(entry_type)
             table.setItem(row, 1, type_item)
 
-            # Column 2: Offset (with optional highlighting)
-            offset_text = f"0x{entry.offset:08X}" if hasattr(entry, 'offset') else "N/A"
-            if highlight_type:
-                offset_item = create_highlighted_img_table_item(offset_text, highlight_type)
-            else:
-                offset_item = self.create_img_table_item(offset_text)
-            table.setItem(row, 2, offset_item)
-
-            # Column 3: Size (with optional highlighting)
+            # Column 2: Size
             size_text = self.format_img_entry_size(entry)
-            if highlight_type:
-                size_item = create_highlighted_img_table_item(size_text, highlight_type)
-            else:
-                size_item = self.create_img_table_item(size_text)
-            table.setItem(row, 3, size_item)
+            size_item = self.create_img_table_item(size_text)
+            table.setItem(row, 2, size_item)
 
-            # Column 4: Hex Preview - PRESERVED: Actually populate this column (with highlighting)
-            hex_preview = self.get_hex_preview(entry)
-            if highlight_type:
-                hex_item = create_highlighted_img_table_item(hex_preview, highlight_type)
-            else:
-                hex_item = self.create_img_table_item(hex_preview)
-            table.setItem(row, 4, hex_item)
+            # Column 3: Offset
+            offset_text = f"0x{entry.offset:08X}" if hasattr(entry, 'offset') else "N/A"
+            offset_item = self.create_img_table_item(offset_text)
+            table.setItem(row, 3, offset_item)
 
-            # Column 5: RW Version - PRESERVED: Proper version detection (with highlighting)
+            # Column 4: RW Version
             rw_version = self.get_rw_version_string(entry)
-            if highlight_type:
-                version_item = create_highlighted_img_table_item(rw_version, highlight_type)
-            else:
-                version_item = self.create_img_table_item(rw_version)
-            table.setItem(row, 5, version_item)
+            version_item = self.create_img_table_item(rw_version)
+            table.setItem(row, 4, version_item)
 
-            # Column 6: Status - PRESERVED: Entry status (with highlighting)
-            status = self.get_entry_status(entry)
-            if highlight_type:
-                status_item = create_highlighted_img_table_item(status, highlight_type)
-            else:
-                status_item = self.create_img_table_item(status)
-            table.setItem(row, 6, status_item)
+            # Column 5: RW Hex - NEW COLUMN
+            rw_hex = self.get_rw_version_hex(entry)
+            hex_item = self.create_img_table_item(rw_hex)
+            table.setItem(row, 5, hex_item)
+
+            # Column 6: Info
+            info_text = self.get_entry_info(entry)
+            info_item = self.create_img_table_item(info_text)
+            table.setItem(row, 6, info_item)
 
         except Exception as e:
-            img_debugger.error(f"Error populating row {row}: {str(e)}")
-            # Fill empty cells to prevent gaps - PRESERVED
-            for col in range(7):  # Updated for 7 columns
-                if not table.item(row, col):
-                    error_item = self.create_img_table_item("ERROR")
-                    table.setItem(row, col, error_item)
+            img_debugger.error(f"Error populating table row {row}: {str(e)}")
 
-    def get_table_reference(self): #vers 6
-        """Get table reference with fallback options - PRESERVED"""
-        # Try gui_layout first
-        if hasattr(self.main_window, 'gui_layout') and hasattr(self.main_window.gui_layout, 'table'):
-            return self.main_window.gui_layout.table
-        # Try direct table reference
-        elif hasattr(self.main_window, 'entries_table'):
-            return self.main_window.entries_table
-        # Try table attribute
-        elif hasattr(self.main_window, 'table'):
-            return self.main_window.table
-        return None
+    def get_table_reference(self):
+        """Get table widget reference"""
+        try:
+            if hasattr(self.main_window, 'gui_layout') and hasattr(self.main_window.gui_layout, 'table'):
+                return self.main_window.gui_layout.table
+            elif hasattr(self.main_window, 'table'):
+                return self.main_window.table
+            else:
+                return None
+        except Exception:
+            return None
 
-    def create_img_table_item(self, text: str) -> QTableWidgetItem: #vers 6
-        """Create table item with proper formatting - PRESERVED"""
+    def create_img_table_item(self, text: str) -> QTableWidgetItem: #vers 1
+        """Create table item with proper formatting"""
         item = QTableWidgetItem(str(text))
-        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)  # Read-only
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)  # Make read-only
         return item
 
-    def get_img_entry_type(self, entry: Any) -> str: #vers 6
-        """Get entry type from file extension - PRESERVED"""
+    def format_img_entry_size(self, entry: Any) -> str: #vers 1
+        """Format entry size in human readable format"""
         try:
-            if hasattr(entry, 'name') and entry.name:
-                name = entry.name.lower()
-                if '.' in name:
-                    ext = name.split('.')[-1].upper()
-                    return ext
-                return 'UNKNOWN'
-            return 'NO_NAME'
-        except:
-            return 'ERROR'
-
-    def format_img_entry_size(self, entry: Any) -> str: #vers 6
-        """Format entry size with proper units - PRESERVED"""
-        try:
-            if hasattr(entry, 'size'):
-                size = entry.size
-                if size == 0:
-                    return "0 bytes"
-                elif size < 1024:
-                    return f"{size} bytes"
-                elif size < 1024 * 1024:
-                    return f"{size / 1024:.1f} KB"
-                else:
-                    return f"{size / (1024 * 1024):.1f} MB"
-            return "Unknown"
-        except:
-            return "ERROR"
-
-    def get_hex_preview(self, entry: Any) -> str: #vers 6
-        """Get hex preview of entry data - PRESERVED"""
-        try:
-            # Try to get first few bytes for preview
-            if hasattr(entry, 'size') and entry.size > 0:
-                if entry.size >= 4:
-                    return "TODO"  # Placeholder for actual hex reading
-                else:
-                    return f"{entry.size}B"
+            if not hasattr(entry, 'size'):
+                return "N/A"
+            
+            size = entry.size
+            if size < 1024:
+                return f"{size} B"
+            elif size < 1024 * 1024:
+                return f"{size / 1024:.1f} KB"
+            else:
+                return f"{size / (1024 * 1024):.1f} MB"
+        except Exception:
             return "N/A"
-        except:
-            return "ERROR"
 
-    def get_rw_version_string(self, entry: Any) -> str: #vers 6
-        """Get RenderWare version string for entry - PRESERVED"""
+    def get_img_entry_type(self, entry: Any) -> str: #vers 1
+        """Get entry file type"""
         try:
-            # Check if RW version was already detected
-            if hasattr(entry, 'rw_version_name'):
+            if hasattr(entry, 'extension') and entry.extension:
+                return entry.extension.upper()
+            elif hasattr(entry, 'name') and '.' in entry.name:
+                return entry.name.split('.')[-1].upper()
+            else:
+                return "Unknown"
+        except Exception:
+            return "Unknown"
+
+    def get_rw_version_string(self, entry: Any) -> str: #vers 1
+        """Get RW version string"""
+        try:
+            if hasattr(entry, 'rw_version_name') and entry.rw_version_name:
+                if entry.rw_version_name in ["Unknown", ""]:
+                    return "N/A"
                 return entry.rw_version_name
-            elif hasattr(entry, 'rw_version') and entry.rw_version:
+            elif hasattr(entry, 'rw_version') and entry.rw_version > 0:
+                # Fallback version lookup
+                version_map = {
+                    0x1003FFFF: "3.1.0.1",
+                    0x1803FFFF: "3.6.0.3", 
+                    0x34003: "3.4.0.3",
+                    0x35000: "3.5.0.0",
+                    0x35002: "3.5.0.2"
+                }
+                return version_map.get(entry.rw_version, f"0x{entry.rw_version:X}")
+            else:
+                return "N/A"
+        except Exception:
+            return "N/A"
+
+    def get_rw_version_hex(self, entry: Any) -> str: #vers 1
+        """Get RW version hex value - NEW METHOD"""
+        try:
+            if hasattr(entry, 'rw_version') and entry.rw_version > 0:
                 return f"0x{entry.rw_version:08X}"
             else:
-                return "Unknown"
-        except:
-            return "ERROR"
+                return "N/A"
+        except Exception:
+            return "N/A"
 
-    def get_entry_status(self, entry: Any) -> str: #vers 6
-        """Get entry status (Valid, Error, etc.) - PRESERVED"""
+    def get_entry_info(self, entry: Any) -> str: #vers 1
+        """Get entry info string"""
         try:
-            # Check if entry has validation results
-            if hasattr(entry, 'is_valid'):
-                return "Valid" if entry.is_valid else "Error"
-            elif hasattr(entry, 'status'):
-                return str(entry.status)
-            elif hasattr(entry, 'size') and entry.size == 0:
-                return "Empty"
-            elif hasattr(entry, 'size') and entry.size > 0:
-                return "OK"
+            info_parts = []
+            
+            # File type info
+            if hasattr(entry, 'file_type'):
+                file_type = str(entry.file_type.value).upper() if hasattr(entry.file_type, 'value') else str(entry.file_type)
+                if file_type != "UNKNOWN":
+                    info_parts.append(file_type)
+            
+            # Status info
+            if hasattr(entry, 'is_new_entry') and entry.is_new_entry:
+                info_parts.append("New")
+            if hasattr(entry, 'is_replaced') and entry.is_replaced:
+                info_parts.append("Replaced")
+            
+            # Compression info
+            if hasattr(entry, 'compression_type') and hasattr(entry.compression_type, 'value'):
+                if entry.compression_type.value != 0:  # Not NONE
+                    info_parts.append("Compressed")
+            
+            return " • ".join(info_parts) if info_parts else "OK"
+            
+        except Exception:
+            return "OK"
+
+    def get_hex_preview(self, entry: Any) -> str: #vers 1
+        """Get hex preview of entry data - PRESERVED for compatibility"""
+        try:
+            if hasattr(entry, '_cached_data') and entry._cached_data:
+                data = entry._cached_data[:8]  # First 8 bytes
+            elif hasattr(entry, 'get_data'):
+                try:
+                    data = entry.get_data()[:8]
+                except Exception:
+                    return "..."
             else:
-                return "Unknown"
-        except:
-            return "ERROR"
-
-# HIGHLIGHTING SUPPORT FUNCTIONS - NEW ADDITIONS
-
-def create_highlighted_img_table_item(text: str, highlight_type: str = None) -> QTableWidgetItem: #vers 1
-    """Create table item with optional import highlighting - NEW FUNCTION"""
-    item = QTableWidgetItem(str(text))
-    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)  # Make read-only
-    
-    if highlight_type == "imported":
-        # Light green background for newly imported files
-        item.setBackground(QBrush(QColor(200, 255, 200)))  # Light green
-        item.setForeground(QBrush(QColor(0, 100, 0)))      # Dark green text
-        
-        # Make text bold
-        font = item.font()
-        font.setBold(True)
-        item.setFont(font)
-        
-        # Add tooltip
-        item.setToolTip("📥 Recently imported file")
-        
-    elif highlight_type == "replaced":
-        # Light yellow background for replaced files
-        item.setBackground(QBrush(QColor(255, 255, 200)))  # Light yellow
-        item.setForeground(QBrush(QColor(150, 100, 0)))    # Dark orange text
-        
-        # Make text bold
-        font = item.font()
-        font.setBold(True)
-        item.setFont(font)
-        
-        # Add tooltip
-        item.setToolTip("🔄 Recently replaced file")
-        
-    return item
-
-def get_highlight_type_for_entry(main_window, entry_name: str) -> str: #vers 1
-    """Check if entry should be highlighted - NEW FUNCTION"""
-    try:
-        if hasattr(main_window, '_import_highlight_manager'):
-            highlight_manager = main_window._import_highlight_manager
-            is_highlighted, is_replaced = highlight_manager.is_file_highlighted(entry_name)
+                return "..."
             
-            if is_highlighted:
-                return "replaced" if is_replaced else "imported"
-        
-        return None
-        
-    except Exception:
-        return None
+            if data:
+                hex_str = ' '.join([f'{b:02X}' for b in data])
+                return hex_str
+            else:
+                return "..."
+        except Exception:
+            return "..."
 
-def integrate_highlighting_with_img_table(main_window): #vers 1
-    """Integrate highlighting support with existing IMG table populator - NEW FUNCTION"""
-    try:
-        # The highlighting is now built into the populate_table_row method
-        # This function ensures the main window has the highlighting manager
-        if not hasattr(main_window, '_import_highlight_manager'):
-            try:
-                from methods.import_highlight_system import ImportHighlightManager
-                main_window._import_highlight_manager = ImportHighlightManager(main_window)
-                img_debugger.info("✅ Import highlight manager created")
-            except ImportError:
-                img_debugger.warning("⚠️ Import highlighting system not available")
-                return False
-        
-        img_debugger.info("✅ IMG table highlighting integrated")
-        return True
-        
-    except Exception as e:
-        img_debugger.error(f"❌ Failed to integrate table highlighting: {str(e)}")
-        return False
-
-# MAIN FUNCTIONS FOR EXTERNAL USE - ALL PRESERVED
-
-def populate_table_with_img_data_debug(main_window, img_file: Any) -> bool: #vers 6
-    """Main function to populate IMG table - PRESERVED FUNCTION"""
-    try:
-        populator = IMGTablePopulator(main_window)
-        success = populator.populate_table_with_img_data(img_file)
-        
-        if success:
-            img_debugger.info("IMG table population completed successfully")
-        else:
-            img_debugger.error("IMG table population failed")
-            
-        return success
-        
-    except Exception as e:
-        img_debugger.error(f"IMG table population error: {str(e)}")
-        return False
-
-def clear_img_table(main_window) -> bool: #vers 6
-    """Clear the IMG table - PRESERVED FUNCTION"""
+def clear_img_table(main_window) -> bool: #vers 1
+    """Clear IMG table contents"""
     try:
         populator = IMGTablePopulator(main_window)
         table = populator.get_table_reference()
         
         if table:
             table.setRowCount(0)
-            img_debugger.debug("IMG table cleared")
+            table.clearContents()
             return True
         else:
-            img_debugger.error("No table found to clear")
             return False
             
     except Exception as e:
         img_debugger.error(f"Error clearing IMG table: {str(e)}")
         return False
 
-def install_img_table_populator(main_window): #vers 6
-    """Install IMG table populator into main window - PRESERVED FUNCTION"""
+def install_img_table_populator(main_window) -> bool: #vers 1
+    """Install IMG table populator methods into main window"""
     try:
         # Create populator instance
         img_populator = IMGTablePopulator(main_window)
         
-        # Add methods to main window for backward compatibility - PRESERVED
+        # Add methods to main window for backward compatibility
         main_window.populate_table_with_img_data = img_populator.populate_table_with_img_data
         main_window.create_img_table_item = img_populator.create_img_table_item
         main_window.format_img_entry_size = img_populator.format_img_entry_size
         main_window.get_img_entry_type = img_populator.get_img_entry_type
         main_window.get_hex_preview = img_populator.get_hex_preview
         main_window.get_rw_version_string = img_populator.get_rw_version_string
-        main_window.get_entry_status = img_populator.get_entry_status
+        main_window.get_rw_version_hex = img_populator.get_rw_version_hex  # NEW METHOD
         
-        # Store populator reference - PRESERVED
+        # Store populator reference
         main_window.img_table_populator = img_populator
-        main_window._img_table_populator = img_populator  # Alternative reference
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ IMG table populator installed")
+            main_window.log_message("✅ IMG table populator with RW Hex column installed")
         else:
-            print("✅ IMG table populator installed")
+            print("✅ IMG table populator with RW Hex column installed")
         return True
         
     except Exception as e:
@@ -420,8 +310,8 @@ def install_img_table_populator(main_window): #vers 6
             print(f"❌ Error installing IMG table populator: {str(e)}")
         return False
 
-def populate_img_table(table, img_file: Any) -> bool: #vers 6
-    """Standalone function for backward compatibility - PRESERVED FUNCTION"""
+def populate_img_table(table, img_file: Any) -> bool: #vers 5
+    """Standalone function for backward compatibility"""
     try:
         from PyQt6.QtWidgets import QWidget
         
@@ -483,53 +373,12 @@ def update_img_table_selection_info(main_window) -> bool: #vers 6
             main_window.log_message(f"❌ Error updating selection info: {str(e)}")
         return False
 
-def enable_import_highlighting(main_window): #vers 1
-    """Enable import highlighting for the IMG table - NEW FUNCTION"""
-    try:
-        img_debugger.info("⚠️ Import highlighting system loading...")
-        
-        # First create the highlighting system
-        try:
-            from methods.import_highlight_system import integrate_import_highlighting
-            integrate_import_highlighting(main_window)
-        except ImportError:
-            img_debugger.warning("💡 Import highlighting files not found - creating minimal system")
-            # Create minimal highlighting manager
-            class MinimalHighlightManager:
-                def __init__(self, main_window):
-                    self.main_window = main_window
-                    self.imported_files = set()
-                    self.replaced_files = set()
-                def is_file_highlighted(self, filename):
-                    return (False, False)
-                def track_multiple_files(self, imported, replaced):
-                    pass
-            main_window._import_highlight_manager = MinimalHighlightManager(main_window)
-        
-        # Then integrate with the table populator
-        integrate_highlighting_with_img_table(main_window)
-        
-        img_debugger.success("✨ Import highlighting system enabled")
-        return True
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Failed to enable highlighting: {str(e)}")
-        else:
-            print(f"❌ Failed to enable highlighting: {str(e)}")
-        return False
-
-# Export all functions and classes - PRESERVED + NEW
+# Export functions
 __all__ = [
     'IMGTablePopulator',
-    'clear_img_table', 
-    'create_highlighted_img_table_item',
-    'enable_import_highlighting',
-    'get_highlight_type_for_entry',
-    'install_img_table_populator',
-    'integrate_highlighting_with_img_table',
     'populate_img_table',
-    'populate_table_with_img_data_debug',
     'refresh_img_table',
+    'clear_img_table',
+    'install_img_table_populator',
     'update_img_table_selection_info'
 ]

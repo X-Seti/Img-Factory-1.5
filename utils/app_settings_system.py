@@ -924,7 +924,7 @@ class SettingsDialog(QDialog):
         # Add any other simple settings here
         return settings
 
-    # this belongs in root/App_settings_system.py
+
     # REPLACE: Improved Demo tab with better layout and complete functionality
 
     def get_contrast_text_color(self, bg_color: str) -> str:

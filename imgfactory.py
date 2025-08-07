@@ -100,7 +100,7 @@ from gui.gui_backend import ButtonDisplayMode, GUIBackend
 from gui.main_window import IMGFactoryMainWindow
 from gui.col_display import update_col_info_bar_enhanced
 from gui.gui_layout import IMGFactoryGUILayout
-#from gui.pastel_button_theme import apply_pastel_theme_to_buttons
+#from gui.pastel_button_theme import apply_pastel_theme_to_buttons # old
 from gui.unified_button_theme import apply_unified_button_theme
 from gui.gui_menu import IMGFactoryMenuBar
 from gui.autosave_menu import integrate_autosave_menu
@@ -111,9 +111,10 @@ from debug_patch_file import integrate_debug_patch, remove_debug_patch
 from visibility_fix import apply_visibility_fix
 
 #methods
-from methods.populate_img_table import install_img_table_populator, enable_import_highlighting
+from methods.populate_img_table import install_img_table_populator # enable_import_highlighting
 from methods.progressbar import integrate_progress_system
 from methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate_update_ui_for_loaded_img
+from methods.import_highlight_system import enable_import_highlighting
 
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
@@ -1191,7 +1192,7 @@ class IMGFactory(QMainWindow):
                 # IMG file loading - tab hang issues
                 self.log_message(f"📁 Loading IMG file: {file_name}")
                 self._load_img_file_in_new_tab(file_path)
-                return True
+                #return True
                 try:
                     # Import IMG loading components directly
                     from components.img_core_classes import IMGFile

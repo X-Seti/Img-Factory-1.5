@@ -379,16 +379,6 @@ class IMGFactoryGUILayout:
         except Exception as e:
             print(f"❌ Error updating button theme: {e}")
 
-    def _get_theme_colors(self, theme_name):
-        """Get theme colors - fallback for missing theme system"""
-        try:
-            if hasattr(self.main_window, 'app_settings') and hasattr(self.main_window.app_settings, 'themes'):
-                theme_data = self.main_window.app_settings.themes.get(theme_name, {})
-                return theme_data.get('colors', {})
-        except:
-            pass
-        return {}
-
 
     def create_pastel_button(self, label, action_type, icon, bg_color, method_name):
         """Create a button with pastel coloring that adapts to light/dark themes"""
@@ -789,98 +779,27 @@ class IMGFactoryGUILayout:
         return self.status_window
 
 
-    def _apply_main_splitter_theme(self):
-        """Apply theme styling to main horizontal splitter"""
-        theme_colors = self._get_theme_colors("default")
-        
-        if self._is_dark_theme():
-            splitter_bg = theme_colors.get('splitter_color_background', '404040')
-            splitter_shine = theme_colors.get('splitter_color_shine', '606060')
-            splitter_shadow = theme_colors.get('splitter_color_shadow', '2a2a2a')
-        else:
-            splitter_bg = theme_colors.get('splitter_color_background', 'e0e0e0')
-            splitter_shine = theme_colors.get('splitter_color_shine', 'f0f0f0')
-            splitter_shadow = theme_colors.get('splitter_color_shadow', 'c0c0c0')
-        
-        self.main_splitter.setStyleSheet(f"""
-            QSplitter::handle:horizontal {{
-                background-color: #{splitter_bg};
-                border: 1px solid #{splitter_shine};
-                border-left: 1px solid #{splitter_shadow};
-                width: 8px;
-                margin: 2px 1px;
-                border-radius: 3px;
-            }}
-            
-            QSplitter::handle:horizontal:hover {{
-                background-color: #{splitter_shine};
-                border-color: #{splitter_shadow};
-            }}
-            
-            QSplitter::handle:horizontal:pressed {{
-                background-color: #{splitter_shadow};
-            }}
-        """)
-
-    def _apply_vertical_splitter_theme(self):
-        """Apply theme styling to the vertical splitter"""
-        theme_colors = self._get_theme_colors("default")
-        
-        if self._is_dark_theme():
-            splitter_bg = theme_colors.get('splitter_color_background', '404040')
-            border_color = theme_colors.get('splitter_border_color', '606060')  
-            hover_color = theme_colors.get('splitter_hover_color', '666666')
-        else:
-            splitter_bg = theme_colors.get('splitter_color_background', 'e0e0e0')
-            border_color = theme_colors.get('splitter_border_color', 'cccccc')
-            hover_color = theme_colors.get('splitter_hover_color', '999999')
-        
-        self.left_vertical_splitter.setStyleSheet(f"""
-            QSplitter::handle:vertical {{
-                background-color: #{splitter_bg};
-                border: 1px solid #{border_color};
-                height: 4px;
-                margin: 1px 2px;
-                border-radius: 2px;
-            }}
-            QSplitter::handle:vertical:hover {{
-                background-color: #{hover_color};
-            }}
-        """)
-
-    def _apply_table_theme_styling(self):
+    def _apply_table_theme_styling(self): #vers 5
         """Apply theme styling to the table widget"""
         theme_colors = self._get_theme_colors("default")
-        
-        if self._is_dark_theme():
-            bg_color = theme_colors.get('table_background', '2d2d2d')
-            alt_bg_color = theme_colors.get('table_alt_background', '353535')
-            border_color = theme_colors.get('table_border', '404040')
-            gridline_color = theme_colors.get('table_gridline', '404040')
-            text_color = theme_colors.get('table_text', 'cccccc')
-            selection_bg = theme_colors.get('table_selection_bg', '1e3a5f')
-            selection_text = theme_colors.get('table_selection_text', '87ceeb')
-            header_bg = theme_colors.get('table_header_bg', '404040')
-            header_text = theme_colors.get('table_header_text', 'cccccc')
-        else:
-            bg_color = theme_colors.get('table_background', 'ffffff')
-            alt_bg_color = theme_colors.get('table_alt_background', 'f8f8f8')
-            border_color = theme_colors.get('table_border', 'cccccc')
-            gridline_color = theme_colors.get('table_gridline', 'e0e0e0')
-            text_color = theme_colors.get('table_text', '333333')
-            selection_bg = theme_colors.get('table_selection_bg', 'e3f2fd')
-            selection_text = theme_colors.get('table_selection_text', '1976d2')
-            header_bg = theme_colors.get('table_header_bg', 'f0f0f0')
-            header_text = theme_colors.get('table_header_text', '333333')
-        
+
+        # Use standard theme variables from app_settings_system.py
+        panel_bg = theme_colors.get('panel_bg', '#ffffff')
+        bg_secondary = theme_colors.get('bg_secondary', '#f8f9fa')
+        bg_tertiary = theme_colors.get('bg_tertiary', '#e9ecef')
+        border = theme_colors.get('border', '#dee2e6')
+        text_primary = theme_colors.get('text_primary', '#000000')
+        text_secondary = theme_colors.get('text_secondary', '#495057')
+        accent_primary = theme_colors.get('accent_primary', '#1976d2')
+
         self.table.setStyleSheet(f"""
             QTableWidget {{
-                background-color: #{bg_color};
-                alternate-background-color: #{alt_bg_color};
-                border: 1px solid #{border_color};
+                background-color: {bg_secondary};
+                alternate-background-color: {bg_tertiary};
+                border: 1px solid {border};
                 border-radius: 3px;
-                gridline-color: #{gridline_color};
-                color: #{text_color};
+                gridline-color: {border};
+                color: {text_primary};
                 font-size: 9pt;
             }}
             QTableWidget::item {{
@@ -888,37 +807,86 @@ class IMGFactoryGUILayout:
                 border: none;
             }}
             QTableWidget::item:selected {{
-                background-color: #{selection_bg};
-                color: #{selection_text};
+                background-color: {accent_primary};
+                color: white;
             }}
             QHeaderView::section {{
-                background-color: #{header_bg};
-                color: #{header_text};
+                background-color: {panel_bg};
+                color: {text_secondary};
                 padding: 5px;
-                border: 1px solid #{border_color};
+                border: 1px solid {border};
                 font-weight: bold;
                 font-size: 9pt;
             }}
         """)
 
-    def _apply_log_theme_styling(self):
+
+    def _apply_main_splitter_theme(self): #vers 6
+        """Apply theme styling to main horizontal splitter"""
+        theme_colors = self._get_theme_colors("default")
+
+        # Extract variables FIRST
+        bg_secondary = theme_colors.get('bg_secondary', '#f8f9fa')
+        bg_primary = theme_colors.get('bg_primary', '#ffffff')
+        bg_tertiary = theme_colors.get('bg_tertiary', '#e9ecef')
+
+        self.main_splitter.setStyleSheet(f"""
+            QSplitter::handle:horizontal {{
+                background-color: {bg_secondary};
+                border: 1px solid {bg_primary};
+                border-left: 1px solid {bg_tertiary};
+                width: 8px;
+                margin: 2px 1px;
+                border-radius: 3px;
+            }}
+
+            QSplitter::handle:horizontal:hover {{
+                background-color: {bg_primary};
+                border-color: {bg_tertiary};
+            }}
+
+            QSplitter::handle:horizontal:pressed {{
+                background-color: {bg_tertiary};
+            }}
+        """)
+
+
+    def _apply_vertical_splitter_theme(self): #vers 6
+        """Apply theme styling to the vertical splitter"""
+        theme_colors = self._get_theme_colors("default")
+
+        # Extract variables FIRST
+        bg_secondary = theme_colors.get('bg_secondary', '#f8f9fa')
+        bg_tertiary = theme_colors.get('bg_tertiary', '#e9ecef')
+
+        self.left_vertical_splitter.setStyleSheet(f"""
+            QSplitter::handle:vertical {{
+                background-color: {bg_secondary};
+                border: 1px solid {bg_tertiary};
+                height: 4px;
+                margin: 1px 2px;
+                border-radius: 2px;
+            }}
+            QSplitter::handle:vertical:hover {{
+                background-color: {bg_tertiary};
+            }}
+        """)
+
+
+    def _apply_log_theme_styling(self): #vers 7
         """Apply theme styling to the log widget"""
         theme_colors = self._get_theme_colors("default")
-        
-        if self._is_dark_theme():
-            bg_color = theme_colors.get('log_background', '2d2d2d')
-            text_color = theme_colors.get('log_text', 'cccccc')
-            border_color = theme_colors.get('log_border', '404040')
-        else:
-            bg_color = theme_colors.get('log_background', 'ffffff')
-            text_color = theme_colors.get('log_text', '333333')
-            border_color = theme_colors.get('log_border', 'cccccc')
-        
+
+        # Extract variables FIRST
+        panel_bg = theme_colors.get('panel_bg', '#f0f0f0')
+        text_primary = theme_colors.get('text_primary', '#000000')
+        border = theme_colors.get('border', '#dee2e6')
+
         self.log.setStyleSheet(f"""
             QTextEdit {{
-                background-color: #{bg_color};
-                color: #{text_color};
-                border: 1px solid #{border_color};
+                background-color: {panel_bg};
+                color: {text_primary};
+                border: 1px solid {border};
                 border-radius: 3px;
                 padding: 5px;
                 font-family: 'Consolas', 'Monaco', monospace;
@@ -926,66 +894,98 @@ class IMGFactoryGUILayout:
             }}
         """)
 
-    def _apply_status_window_theme_styling(self):
+    def _apply_status_window_theme_styling(self): #vers 1
         """Apply theme styling to the status window"""
         theme_colors = self._get_theme_colors("default")
-        
-        if self._is_dark_theme():
-            bg_color = theme_colors.get('status_window_background', '2d2d2d')
-            border_color = theme_colors.get('status_window_border', '404040')
-            title_color = theme_colors.get('status_window_title', 'cccccc')
-        else:
-            bg_color = theme_colors.get('status_window_background', 'f8f8f8')
-            border_color = theme_colors.get('status_window_border', 'cccccc')
-            title_color = theme_colors.get('status_window_title', '333333')
-        
         if hasattr(self, 'status_window'):
+             # Extract variables FIRST
+            panel_bg = theme_colors.get('panel_bg', '#f0f0f0')
+            text_primary = theme_colors.get('text_primary', '#000000')
+            border = theme_colors.get('border', '#dee2e6')
+
             self.status_window.setStyleSheet(f"""
                 QWidget {{
-                    background-color: #{bg_color};
-                    border: 1px solid #{border_color};
+                    background-color: {panel_bg};
+                    border: 1px solid {border};
                     border-radius: 3px;
                 }}
                 QLabel {{
-                    color: #{title_color};
+                    color: #{text_primary};
                     font-weight: bold;
                 }}
             """)
 
-    def _apply_file_list_window_theme_styling(self):
+
+    def _apply_file_list_window_theme_styling(self): #vers 7
         """Apply theme styling to the file list window"""
         theme_colors = self._get_theme_colors("default")
-        
-        if self._is_dark_theme():
-            bg_color = theme_colors.get('file_window_background', '2d2d2d')
-            border_color = theme_colors.get('file_window_border', '404040')
-            tab_bg = theme_colors.get('file_window_tab_bg', '404040')
-            tab_text = theme_colors.get('file_window_tab_text', 'cccccc')
-        else:
-            bg_color = theme_colors.get('file_window_background', 'ffffff')
-            border_color = theme_colors.get('file_window_border', 'cccccc')
-            tab_bg = theme_colors.get('file_window_tab_bg', 'f0f0f0')
-            tab_text = theme_colors.get('file_window_tab_text', '333333')
-        
+
+        # Extract variables FIRST
+        bg_secondary = theme_colors.get('bg_secondary', '#f8f9fa')
+        border = theme_colors.get('border', '#dee2e6')
+        button_normal = theme_colors.get('button_normal', '#e0e0e0')
+        text_primary = theme_colors.get('text_primary', '#000000')
+        bg_tertiary = theme_colors.get('bg_tertiary', '#e9ecef')
+
         if hasattr(self, 'tab_widget'):
             self.tab_widget.setStyleSheet(f"""
                 QTabWidget::pane {{
-                    background-color: #{bg_color};
-                    border: 1px solid #{border_color};
+                    background-color: {bg_secondary};
+                    border: 1px solid {border};
                     border-radius: 3px;
                 }}
                 QTabBar::tab {{
-                    background-color: #{tab_bg};
-                    color: #{tab_text};
+                    background-color: {button_normal};
+                    color: {text_primary};
                     padding: 5px 10px;
                     margin: 2px;
                     border-radius: 3px;
                 }}
                 QTabBar::tab:selected {{
-                    background-color: #{bg_color};
-                    border: 1px solid #{border_color};
+                    background-color: {bg_tertiary};
+                    border: 1px solid {border};
                 }}
             """)
+
+
+    def _get_theme_colors(self, theme_name):
+        """Get theme colors - properly connected to app_settings_system"""
+        try:
+            # Method 1: Use app_settings get_theme_colors() method
+            if hasattr(self.main_window, 'app_settings') and hasattr(self.main_window.app_settings, 'get_theme_colors'):
+                colors = self.main_window.app_settings.get_theme_colors()
+                if colors:
+                    print(f"✅ Using app_settings theme colors: {len(colors)} colors loaded")
+                    return colors
+
+            # Method 2: Try direct theme access
+            if hasattr(self.main_window, 'app_settings') and hasattr(self.main_window.app_settings, 'themes'):
+                current_theme = self.main_window.app_settings.current_settings.get("theme", "IMG_Factory")
+                theme_data = self.main_window.app_settings.themes.get(current_theme, {})
+                colors = theme_data.get('colors', {})
+                if colors:
+                    print(f"✅ Using direct theme access: {current_theme}")
+                    return colors
+
+        except Exception as e:
+            print(f"❌ Theme color lookup error: {e}")
+
+        # Fallback with proper theme variables
+        print("⚠️ Using fallback theme colors")
+        is_dark = self._is_dark_theme()
+        if is_dark:
+            return {
+                'bg_primary': '#2b2b2b', 'bg_secondary': '#3c3c3c', 'bg_tertiary': '#4a4a4a',
+                'panel_bg': '#333333', 'text_primary': '#ffffff', 'text_secondary': '#cccccc',
+                'border': '#666666', 'accent_primary': '#0078d4', 'button_normal': '#404040'
+            }
+        else:
+            return {
+                'bg_primary': '#ffffff', 'bg_secondary': '#f8f9fa', 'bg_tertiary': '#e9ecef',
+                'panel_bg': '#f0f0f0', 'text_primary': '#000000', 'text_secondary': '#495057',
+                'border': '#dee2e6', 'accent_primary': '#1976d2', 'button_normal': '#e0e0e0'
+            }
+
 
     def apply_all_window_themes(self):
         """Apply theme styling to all windows"""
@@ -1001,9 +1001,6 @@ class IMGFactoryGUILayout:
         # This method is called by main application for compatibility
         self.apply_all_window_themes()
 
-    # =============================================================================
-    # UTILITY & HELPER METHODS
-    # =============================================================================
 
     def _safe_log(self, message):
         """Safe logging that won't cause circular dependency"""

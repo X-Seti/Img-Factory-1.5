@@ -1,8 +1,8 @@
 #this belongs in methods/populate_img_table.py - Version: 4
-# X-Seti - August06 2025 - IMG Factory 1.5 - Fixed IMG Table Population
+# X-Seti - August06 2025 - IMG Factory 1.5 - IMG Table Population
 
 """
-IMG Table Population - FIXED VERSION
+IMG Table Population -
 Handles populating the main table with IMG entry data
 """
 
