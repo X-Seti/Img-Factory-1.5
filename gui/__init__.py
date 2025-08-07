@@ -203,7 +203,6 @@ MODULE_INFO = {
     'description': 'GUI components with universal theme support for IMG Factory',
     'components': [
         'main_window - Main application window with theme integration',
-        'panel_controls - Button and panel system with universal theming', 
         'tear_off - Tear-off panel functionality',
         'log_panel - Activity log and message display',
         'status_bar - Status information with universal theme support',

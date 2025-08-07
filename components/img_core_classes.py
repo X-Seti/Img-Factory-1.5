@@ -757,28 +757,184 @@ class IMGFile:
             print(f"[ERROR] Failed to import file {file_path}: {e}")
             return False
 
-    def add_entry(self, filename: str, data: bytes, auto_save: bool = True) -> bool: #vers 1
-        """Add new entry to IMG file"""
+
+    def add_entry(self, filename: str, data: bytes, auto_save: bool = True) -> bool: #vers 2
+        """Add new entry to IMG file - FIXED VERSION based on windows_source patterns"""
         try:
-            # Create new IMGEntry
-            new_entry = IMGEntry()
-            new_entry.name = filename
-            new_entry.size = len(data)
-            new_entry.set_img_file(self)
-            new_entry._cached_data = data
+            print(f"[DEBUG] Adding entry: {filename} (current entries: {len(self.entries)})")
 
-            # Add to entries list
-            self.entries.append(new_entry)
-            print(f"[DEBUG] Adding entry: {filename} (total entries before: {len(self.entries)})")
-            # Only save if requested (for batch operations)
+            # Check for duplicate entries (replace if exists)
+            existing_entry = None
+            for i, entry in enumerate(self.entries):
+                if entry.name == filename:
+                    existing_entry = entry
+                    print(f"[DEBUG] Replacing existing entry: {filename}")
+                    break
+
+            # Calculate proper offset for new entry
+            if self.entries and not existing_entry:
+                # Find the end of the last entry
+                last_entry = max(self.entries, key=lambda e: e.offset + e.size)
+                # Align to sector boundary (2048 bytes for IMG files)
+                last_end = last_entry.offset + last_entry.size
+                new_offset = ((last_end + 2047) // 2048) * 2048
+            else:
+                # First entry or replacing existing
+                if self.version == IMGVersion.VERSION_1:
+                    new_offset = 0  # Version 1 starts at beginning of .img file
+                else:
+                    # Version 2: Calculate directory size first
+                    directory_size = len(self.entries) * 32  # 32 bytes per entry
+                    new_offset = directory_size
+
+            # Create new IMGEntry with proper setup
+            if existing_entry:
+                # Replace existing entry data
+                new_entry = existing_entry
+                new_entry._cached_data = data
+                new_entry.size = len(data)
+                # Keep existing offset for replacement
+            else:
+                # Create brand new entry
+                new_entry = IMGEntry()
+                new_entry.name = filename
+                new_entry.size = len(data)
+                new_entry.offset = new_offset
+                new_entry.set_img_file(self)
+                new_entry._cached_data = data
+
+                # Detect file type and RW version from data
+                new_entry.detect_file_type_and_version()
+
+                # Add to entries list
+                self.entries.append(new_entry)
+
+            print(f"[DEBUG] Entry added: {filename} at offset 0x{new_entry.offset:08X}, size {new_entry.size} bytes")
+            print(f"[DEBUG] Total entries now: {len(self.entries)}")
+
+            # Only save if requested (for batch operations, set auto_save=False)
             if auto_save:
-                return self.save_img_file()
+                print(f"[DEBUG] Auto-saving IMG file...")
+                success = self.save_img_file()
+                if success:
+                    print(f"[DEBUG] IMG file saved successfully")
+                else:
+                    print(f"[ERROR] Failed to save IMG file after adding {filename}")
+                return success
 
+            # Entry added successfully but not saved
             return True
 
         except Exception as e:
             print(f"[ERROR] Failed to add entry {filename}: {e}")
             return False
+
+    def calculate_next_offset(self) -> int: #vers 1
+        """Calculate the next available offset for a new entry - HELPER METHOD"""
+        try:
+            if not self.entries:
+                # First entry
+                if self.version == IMGVersion.VERSION_1:
+                    return 0  # Version 1 starts at beginning
+                else:
+                    return 0  # Version 2 will be recalculated during save
+
+            # Find the entry that ends the latest
+            max_end = 0
+            for entry in self.entries:
+                entry_end = entry.offset + entry.size
+                if entry_end > max_end:
+                    max_end = entry_end
+
+            # Align to sector boundary (2048 bytes)
+            aligned_offset = ((max_end + 2047) // 2048) * 2048
+            return aligned_offset
+
+        except Exception as e:
+            print(f"[ERROR] Failed to calculate next offset: {e}")
+            return 0
+
+    def remove_entry(self, filename: str) -> bool: #vers 1
+        """Remove entry by filename - HELPER METHOD"""
+        try:
+            for i, entry in enumerate(self.entries):
+                if entry.name == filename:
+                    removed_entry = self.entries.pop(i)
+                    print(f"[DEBUG] Removed entry: {filename}")
+                    return True
+
+            print(f"[WARNING] Entry not found for removal: {filename}")
+            return False
+
+        except Exception as e:
+            print(f"[ERROR] Failed to remove entry {filename}: {e}")
+            return False
+
+    def has_entry(self, filename: str) -> bool: #vers 1
+        """Check if entry exists by filename - HELPER METHOD"""
+        try:
+            return any(entry.name == filename for entry in self.entries)
+        except Exception:
+            return False
+
+    def get_entry(self, filename: str) -> Optional['IMGEntry']: #vers 1
+        """Get entry by filename - HELPER METHOD"""
+        try:
+            for entry in self.entries:
+                if entry.name == filename:
+                    return entry
+            return None
+        except Exception:
+            return None
+
+    def add_multiple_entries(self, file_data_pairs: List[tuple], auto_save: bool = True) -> int: #vers 1
+        """Add multiple entries efficiently - BATCH METHOD"""
+        try:
+            added_count = 0
+
+            print(f"[DEBUG] Adding {len(file_data_pairs)} entries in batch mode...")
+
+            for filename, data in file_data_pairs:
+                # Add without auto-save for efficiency
+                if self.add_entry(filename, data, auto_save=False):
+                    added_count += 1
+                else:
+                    print(f"[WARNING] Failed to add {filename} in batch")
+
+            # Save once at the end if requested
+            if auto_save and added_count > 0:
+                print(f"[DEBUG] Batch save: {added_count} entries added")
+                if self.save_img_file():
+                    print(f"[DEBUG] Batch save successful")
+                else:
+                    print(f"[ERROR] Batch save failed")
+                    return 0
+
+            print(f"[SUCCESS] Batch add complete: {added_count}/{len(file_data_pairs)} entries added")
+            return added_count
+
+        except Exception as e:
+            print(f"[ERROR] Batch add failed: {e}")
+            return 0
+
+    def integrate_fixed_add_entry_methods(img_file_class): #vers 1
+        """Integrate all fixed methods into IMGFile class"""
+        try:
+            # Add the fixed methods to the class
+            img_file_class.add_entry = add_entry
+            img_file_class.calculate_next_offset = calculate_next_offset
+            img_file_class.remove_entry = remove_entry
+            img_file_class.has_entry = has_entry
+            img_file_class.get_entry = get_entry
+            img_file_class.add_multiple_entries = add_multiple_entries
+
+            print("✅ Fixed add_entry methods integrated into IMGFile class")
+            return True
+
+        except Exception as e:
+            print(f"❌ Failed to integrate fixed add_entry methods: {e}")
+            return False
+
 
     def detect_version(self) -> IMGVersion: #vers 4
         """Detect IMG version and platform from file"""

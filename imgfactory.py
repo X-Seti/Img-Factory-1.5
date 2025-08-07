@@ -110,11 +110,8 @@ from gui.gui_context import (add_col_context_menu_to_entries_table, open_col_fil
 from debug_patch_file import integrate_debug_patch, remove_debug_patch
 from visibility_fix import apply_visibility_fix
 
-#from gui.cross_platform_theme import integrate_cross_platform_theme_system
-#from gui.cross_platform_theme import force_readable_text_colors
-
 #methods
-from methods.populate_img_table import install_img_table_populator
+from methods.populate_img_table import install_img_table_populator, enable_import_highlighting
 from methods.progressbar import integrate_progress_system
 from methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate_update_ui_for_loaded_img
 
@@ -411,6 +408,9 @@ class IMGFactory(QMainWindow):
         # Apply theme
         if hasattr(self.app_settings, 'themes'):
             apply_theme_to_app(QApplication.instance(), self.app_settings)
+
+        # Enable highlighting system
+        enable_import_highlighting(self)
 
         integrate_import_functions(self)
         integrate_export_functions(self)

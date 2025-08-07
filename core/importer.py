@@ -1,187 +1,283 @@
-#this belongs in core/importer.py - Version: 4
-# X-Seti - August07 2025 - IMG Factory 1.5 - Import Functions Fix
-# Fixed: Table refresh after import, proper completion handling
+#this belongs in core/importer.py - Version: 5
+# X-Seti - August07 2025 - IMG Factory 1.5 - Import Functions Fixed
 
 """
-Import Functions - FIXED VERSION
-Properly refreshes table after import completion
+Import Functions - FIXED based on original windows_source IMGF patterns
+Preserves autosave functionality and proper IMG integration
+Replaces broken version 4 with working implementation
 """
 
 import os
-from typing import List, Dict, Any
-from PyQt6.QtWidgets import QFileDialog, QMessageBox
-from PyQt6.QtCore import QThread, pyqtSignal
+from typing import List, Dict, Any, Optional
+from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog
+from PyQt6.QtCore import QThread, pyqtSignal, Qt
 
 ##Methods list -
+# add_file_to_img
+# check_autosave_enabled
 # get_selected_entries
 # import_files_function
-# import_via_function
-# import_from_folder
-# integrate_import_functions
-# refresh_table_after_import
+# import_via_function  
+# integrate_import_functions_fixed
+# refresh_img_table
+# validate_import_file
 
 ##Classes -
-# ImportThread
+# ImportWorker
 
-class ImportThread(QThread): #vers 2
-    """Background thread for importing files with proper completion handling"""
+class ImportWorker(QThread): #vers 1
+    """Background import worker based on windows_source patterns"""
     
-    progress_updated = pyqtSignal(int, str)
-    import_completed = pyqtSignal(bool, str, dict)
+    progress_update = pyqtSignal(str)
+    file_imported = pyqtSignal(str, bool)
+    import_complete = pyqtSignal(int, int)  # imported_count, total_count
     
-    def __init__(self, main_window, files_to_import, import_options):
+    def __init__(self, main_window, files_to_import: List[str], options: Dict):
         super().__init__()
         self.main_window = main_window
         self.files_to_import = files_to_import
-        self.import_options = import_options
-        self.stats = {'imported': 0, 'failed': 0, 'skipped': 0}
-    
-    def run(self): #vers 2
-        """Import files with proper table refresh"""
+        self.options = options
+        self.imported_count = 0
+        self.imported_files = []  # Track successfully imported files
+        self.replaced_files = []  # Track files that were replaced
+        
+    def run(self): #vers 1
+        """Import files using IMG core functionality"""
         try:
-            if not hasattr(self.main_window, 'current_img') or not self.main_window.current_img:
-                self.import_completed.emit(False, "No IMG file open", self.stats)
-                return
-            
             total_files = len(self.files_to_import)
             
             for i, file_path in enumerate(self.files_to_import):
                 filename = os.path.basename(file_path)
-                progress = int((i / total_files) * 90)  # Reserve 10% for refresh
+                self.progress_update.emit(f"Importing {filename}...")
                 
-                self.progress_updated.emit(progress, f"Importing {filename}...")
+                # Import single file
+                success = self._import_single_file(file_path)
                 
-                try:
-                    # Read file data
-                    with open(file_path, 'rb') as f:
-                        file_data = f.read()
+                if success:
+                    self.imported_count += 1
+                    self.imported_files.append(file_path)
                     
-                    # Check if entry exists
-                    if self.import_options.get('replace_existing', True):
-                        existing_entries = [e for e in self.main_window.current_img.entries if e.name == filename]
-                        for entry in existing_entries:
-                            self.main_window.current_img.entries.remove(entry)
+                    # Check if this was a replacement
+                    filename = os.path.basename(file_path)
+                    if self._was_file_replaced(filename):
+                        self.replaced_files.append(file_path)
                     
-                    # Add to IMG
-                    if hasattr(self.main_window.current_img, 'add_entry'):
-                        success = self.main_window.current_img.add_entry(filename, file_data, auto_save=False)
-                        if success:
-                            self.stats['imported'] += 1
-                        else:
-                            self.stats['failed'] += 1
-                    else:
-                        self.stats['failed'] += 1
-                        
-                except Exception as e:
-                    self.stats['failed'] += 1
-                    print(f"Error importing {filename}: {e}")
-            
-            # DISABLED: Save IMG - causes segfault, save manually instead
-            # if self.import_options.get('auto_save', True):
-            #     self.progress_updated.emit(95, "Saving IMG file...")
-            #     if hasattr(self.main_window.current_img, 'save_img_file'):
-            #         self.main_window.current_img.save_img_file()
-            
-            self.progress_updated.emit(95, "⚠️ Import complete - manual save required")
-            
-            # DISABLED: Table refresh causes segfault - manual refresh required
-            # self.progress_updated.emit(98, "Refreshing table...")
-            # refresh_table_after_import(self.main_window)
-            
-            self.progress_updated.emit(100, "Import completed!")
-            
-            success_msg = f"Import completed: {self.stats['imported']} imported, {self.stats['failed']} failed"
-            self.import_completed.emit(True, success_msg, self.stats)
+                self.file_imported.emit(filename, success)
+                
+            self.import_complete.emit(self.imported_count, total_files)
             
         except Exception as e:
-            self.import_completed.emit(False, f"Import failed: {str(e)}", self.stats)
+            self.main_window.log_message(f"❌ Import worker error: {str(e)}")
+    
+    def save_img_after_batch_import(self): #vers 1
+        """Save IMG file after all imports are complete"""
+        try:
+            if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
+                # Use the save method from the IMG file
+                if hasattr(self.main_window.current_img, 'save_img_file'):
+                    return self.main_window.current_img.save_img_file()
+                else:
+                    # Fallback to save entry function
+                    from core.save_img_entry import save_img_file_with_backup
+                    return save_img_file_with_backup(self.main_window.current_img)
+            return False
+        except Exception as e:
+            print(f"Error saving IMG after batch import: {e}")
+            return False
+            
+    def _was_file_replaced(self, filename: str) -> bool: #vers 1
+        """Check if file was replaced (existed before import)"""
+        try:
+            if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
+                # Check if entry already existed before import
+                return any(entry.name == filename for entry in self.main_window.current_img.entries)
+            return False
+        except Exception:
+            return False
+            
+    def _import_single_file(self, file_path: str) -> bool: #vers 1
+        """Import single file using IMG core methods"""
+        try:
+            if not hasattr(self.main_window, 'current_img') or not self.main_window.current_img:
+                return False
+                
+            filename = os.path.basename(file_path)
+            
+            # Check if file exists and is valid
+            if not validate_import_file(file_path):
+                return False
+                
+            # Read file data
+            with open(file_path, 'rb') as f:
+                file_data = f.read()
+                
+            # Use IMG core add_entry method
+            success = add_file_to_img(self.main_window.current_img, filename, file_data, self.options)
+            
+            return success
+            
+        except Exception as e:
+            print(f"Error importing {file_path}: {e}")
+            return False
 
-def refresh_table_after_import(main_window): #vers 1
-    """Refresh the table after import completion"""
+def validate_import_file(file_path: str) -> bool: #vers 1
+    """Validate file before import"""
     try:
-        # Method 1: Try populate_entries_table (most common)
-        if hasattr(main_window, 'populate_entries_table'):
-            main_window.populate_entries_table()
-            main_window.log_message("✅ Table refreshed after import")
+        if not os.path.exists(file_path):
+            return False
+            
+        if not os.path.isfile(file_path):
+            return False
+            
+        # Check file size
+        file_size = os.path.getsize(file_path)
+        if file_size == 0:
+            return False
+            
+        if file_size > 50 * 1024 * 1024:  # 50MB limit
+            return False
+            
+        return True
+        
+    except Exception:
+        return False
+
+def add_file_to_img(img_file, filename: str, file_data: bytes, options: Dict) -> bool: #vers 1
+    """Add file to IMG using core functionality with batch mode support"""
+    try:
+        # Check for existing entry
+        if options.get('replace_existing', True):
+            # Remove existing entry with same name
+            if hasattr(img_file, 'entries'):
+                img_file.entries = [e for e in img_file.entries if e.name != filename]
+        
+        # Add to IMG using core method with auto_save=False for batch mode
+        if hasattr(img_file, 'add_entry'):
+            return img_file.add_entry(filename, file_data, auto_save=False)
+        elif hasattr(img_file, 'entries'):
+            # Manual entry creation if add_entry doesn't exist
+            from components.img_core_classes import IMGEntry
+            
+            entry = IMGEntry()
+            entry.name = filename
+            entry._cached_data = file_data
+            entry.size = len(file_data)
+            entry.offset = 0  # Will be calculated during save
+            
+            img_file.entries.append(entry)
             return True
-        
-        # Method 2: Try refresh_table from utils
-        if hasattr(main_window, 'refresh_table'):
-            main_window.refresh_table()
-            main_window.log_message("✅ Table refreshed via refresh_table")
-            return True
-        
-        # Method 3: Try reload_table
-        if hasattr(main_window, 'reload_table'):
-            main_window.reload_table()
-            main_window.log_message("✅ Table refreshed via reload_table")
-            return True
-        
-        # Method 4: Manual table update
-        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
-            table = main_window.gui_layout.table
-            if hasattr(main_window, 'current_img') and main_window.current_img:
-                # Clear table
-                table.setRowCount(0)
-                
-                # Repopulate with current IMG entries
-                entries = main_window.current_img.entries
-                table.setRowCount(len(entries))
-                
-                for row, entry in enumerate(entries):
-                    table.setItem(row, 0, table.item(row, 0).__class__(entry.name))
-                    table.setItem(row, 1, table.item(row, 0).__class__(entry.type if hasattr(entry, 'type') else 'Unknown'))
-                    table.setItem(row, 2, table.item(row, 0).__class__(str(entry.offset) if hasattr(entry, 'offset') else 'N/A'))
-                    table.setItem(row, 3, table.item(row, 0).__class__(str(entry.size) if hasattr(entry, 'size') else '0'))
-                
-                main_window.log_message("✅ Table manually refreshed after import")
-                return True
-        
-        main_window.log_message("⚠️ Could not refresh table - no refresh method found")
+            
         return False
         
     except Exception as e:
-        main_window.log_message(f"❌ Error refreshing table after import: {str(e)}")
+        print(f"Error adding file to IMG: {e}")
         return False
 
-def get_selected_entries(main_window) -> List: #vers 2
-    """Get currently selected entries from table"""
+def refresh_img_table(main_window) -> bool: #vers 1
+    """Refresh IMG table after import"""
+    try:
+        # Method 1: Use populate_entries_table if available
+        if hasattr(main_window, 'populate_entries_table') and callable(main_window.populate_entries_table):
+            main_window.populate_entries_table()
+            return True
+            
+        # Method 2: Use table manager if available
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'populate_entries_table'):
+            main_window.gui_layout.populate_entries_table()
+            return True
+            
+        # Method 3: Manual table refresh
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            table = main_window.gui_layout.table
+            
+            if hasattr(main_window, 'current_img') and main_window.current_img and hasattr(main_window.current_img, 'entries'):
+                entries = main_window.current_img.entries
+                
+                # Clear and repopulate table
+                table.setRowCount(len(entries))
+                
+                for row, entry in enumerate(entries):
+                    from PyQt6.QtWidgets import QTableWidgetItem
+                    
+                    # Name column
+                    name_item = QTableWidgetItem(entry.name)
+                    table.setItem(row, 0, name_item)
+                    
+                    # Type column
+                    file_ext = entry.name.split('.')[-1].upper() if '.' in entry.name else 'Unknown'
+                    type_item = QTableWidgetItem(file_ext)
+                    table.setItem(row, 1, type_item)
+                    
+                    # Offset column
+                    offset_item = QTableWidgetItem(str(getattr(entry, 'offset', 'N/A')))
+                    table.setItem(row, 2, offset_item)
+                    
+                    # Size column
+                    size_item = QTableWidgetItem(str(getattr(entry, 'size', len(getattr(entry, 'data', b'')))))
+                    table.setItem(row, 3, size_item)
+                    
+                    # RW Version column (if exists)
+                    if table.columnCount() > 4:
+                        rw_item = QTableWidgetItem(getattr(entry, 'rw_version', 'Unknown'))
+                        table.setItem(row, 4, rw_item)
+                
+                return True
+                
+        return False
+        
+    except Exception as e:
+        print(f"Error refreshing table: {e}")
+        return False
+
+def check_autosave_enabled(main_window) -> bool: #vers 1
+    """Check if autosave is enabled from autosave menu"""
+    try:
+        # Import autosave functionality
+        from gui.autosave_menu import is_autosave_enabled
+        return is_autosave_enabled(main_window)
+    except ImportError:
+        # Fallback to attribute check
+        return getattr(main_window, 'autosave_enabled', False)
+
+def get_selected_entries(main_window) -> List: #vers 1
+    """Get selected entries from table"""
     selected_entries = []
     
     try:
-        # Try different table access methods
         table = None
+        
+        # Find the table
         if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
             table = main_window.gui_layout.table
         elif hasattr(main_window, 'entries_table'):
             table = main_window.entries_table
-        
+            
         if not table:
             return selected_entries
-        
+            
         # Get selected rows
         selected_rows = set()
         for item in table.selectedItems():
             selected_rows.add(item.row())
-        
+            
         # Get entries for selected rows
-        if hasattr(main_window, 'current_img') and main_window.current_img:
+        if hasattr(main_window, 'current_img') and main_window.current_img and hasattr(main_window.current_img, 'entries'):
             for row in selected_rows:
                 if row < len(main_window.current_img.entries):
                     selected_entries.append(main_window.current_img.entries[row])
                     
     except Exception as e:
         print(f"Error getting selected entries: {e}")
-    
+        
     return selected_entries
 
-def import_files_function(main_window): #vers 3
-    """Import files with file dialog - FIXED VERSION"""
+def import_files_function(main_window): #vers 1
+    """Import files with file dialog"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
             QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first")
             return
-        
+            
         # Get files to import
         files, _ = QFileDialog.getOpenFileNames(
             main_window,
@@ -192,46 +288,105 @@ def import_files_function(main_window): #vers 3
         
         if not files:
             return
-        
+            
         main_window.log_message(f"📁 Import files: {len(files)} files selected")
         
-        # Simple import options
+        # Import options
         import_options = {
             'replace_existing': True,
-            'auto_save': True
+            'validate_files': True
         }
         
-        # Start import thread
-        import_thread = ImportThread(main_window, files, import_options)
+        # Create progress dialog
+        progress = QProgressDialog("Importing files...", "Cancel", 0, 0, main_window)
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.show()
         
-        # Connect completion signal
-        def on_import_completed(success, message, stats):
-            main_window.log_message(message)
-            if success:
-                QMessageBox.information(main_window, "Import Complete", message)
-            else:
-                QMessageBox.critical(main_window, "Import Failed", message)
+        # Create worker thread
+        worker = ImportWorker(main_window, files, import_options)
         
-        import_thread.import_completed.connect(on_import_completed)
-        import_thread.progress_updated.connect(lambda p, s: main_window.log_message(f"Import: {s}"))
+        def on_progress_update(message):
+            progress.setLabelText(message)
+            
+        def on_import_complete(imported_count, total_count):
+            progress.close()
+            
+            # Collect imported filenames for highlighting
+            imported_filenames = [os.path.basename(f) for f in files if f in worker.imported_files]
+            replaced_filenames = [os.path.basename(f) for f in files if f in worker.replaced_files]
+            
+            # BATCH SAVE: Save IMG file once after all imports
+            save_successful = False
+            if imported_count > 0 and check_autosave_enabled(main_window):
+                main_window.log_message(f"💾 Auto-saving IMG file after batch import ({imported_count} files)...")
+                try:
+                    save_successful = worker.save_img_after_batch_import()
+                    if save_successful:
+                        main_window.log_message("✅ IMG file auto-saved successfully")
+                    else:
+                        main_window.log_message("⚠️ Auto-save failed - manual save required")
+                except Exception as e:
+                    main_window.log_message(f"⚠️ Auto-save failed: {str(e)}")
+            elif imported_count > 0:
+                main_window.log_message("💾 Remember to save your IMG file manually (auto-save disabled)")
+            
+            # Refresh table with highlighting
+            try:
+                from methods.import_highlight_system import highlight_imported_files
+                if highlight_imported_files(main_window, imported_filenames, replaced_filenames):
+                    main_window.log_message("✅ Table refreshed with import highlights")
+                else:
+                    # Fallback to standard refresh
+                    if refresh_img_table(main_window):
+                        main_window.log_message("✅ Table refreshed after import")
+            except ImportError:
+                # Fallback if highlighting system not available
+                if refresh_img_table(main_window):
+                    main_window.log_message("✅ Table refreshed after import")
+                
+            # Show completion message
+            success_msg = f"Import completed: {imported_count}/{total_count} files imported"
+            if save_successful:
+                success_msg += "\n💾 IMG file saved automatically"
+            elif imported_count > 0:
+                success_msg += "\n💾 Remember to save your IMG file manually"
+            if imported_filenames:
+                success_msg += f"\n✨ {len(imported_filenames)} files highlighted in green"
+            if replaced_filenames:
+                success_msg += f"\n🔄 {len(replaced_filenames)} files replaced (highlighted in yellow)"
+            main_window.log_message(f"✅ {success_msg}")
+            QMessageBox.information(main_window, "Import Complete", success_msg)
+            
+        def on_file_imported(filename, success):
+            status = "✅" if success else "❌"
+            main_window.log_message(f"{status} {filename}")
+            
+        # Connect signals
+        worker.progress_update.connect(on_progress_update)
+        worker.file_imported.connect(on_file_imported)
+        worker.import_complete.connect(on_import_complete)
         
-        # Store thread reference to prevent garbage collection
-        main_window._import_thread = import_thread
+        # Connect cancel
+        progress.canceled.connect(worker.terminate)
+        
+        # Store worker reference
+        main_window._import_worker = worker
         
         # Start import
-        import_thread.start()
+        worker.start()
         
     except Exception as e:
         main_window.log_message(f"❌ Import files error: {str(e)}")
         QMessageBox.critical(main_window, "Import Error", f"Import failed: {str(e)}")
 
-def import_via_function(main_window): #vers 3
-    """Import files listed in IDE file - FIXED VERSION"""
+def import_via_function(main_window): #vers 1
+    """Import files listed in IDE file"""
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
             QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first")
             return
-        
+            
         # Get IDE file
         ide_file, _ = QFileDialog.getOpenFileName(
             main_window,
@@ -242,172 +397,210 @@ def import_via_function(main_window): #vers 3
         
         if not ide_file:
             return
-        
+            
         # Parse IDE file to get list of files
         files_to_import = []
         missing_files = []
         base_dir = os.path.dirname(ide_file)
         
-        with open(ide_file, 'r', encoding='utf-8', errors='ignore') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#'):
-                    # Simple parsing - assumes filename is first part
-                    parts = line.split(',')
-                    if parts:
-                        filename = parts[0].strip()
-                        file_path = os.path.join(base_dir, filename)
-                        
-                        if os.path.exists(file_path):
-                            files_to_import.append(file_path)
-                        else:
-                            missing_files.append(filename)
-        
-        if not files_to_import:
-            QMessageBox.information(main_window, "No Files Found", 
-                                   f"No files found from IDE file: {os.path.basename(ide_file)}")
+        try:
+            with open(ide_file, 'r', encoding='utf-8', errors='ignore') as f:
+                for line_num, line in enumerate(f, 1):
+                    line = line.strip()
+                    if line and not line.startswith('#') and ',' in line:
+                        # Parse IDE line - filename is typically first part
+                        parts = [p.strip() for p in line.split(',')]
+                        if parts:
+                            filename = parts[0]
+                            file_path = os.path.join(base_dir, filename)
+                            
+                            if os.path.exists(file_path):
+                                files_to_import.append(file_path)
+                            else:
+                                missing_files.append(f"{filename} (line {line_num})")
+                                
+        except Exception as e:
+            QMessageBox.critical(main_window, "IDE Parse Error", f"Failed to parse IDE file: {str(e)}")
             return
-        
+            
+        if not files_to_import:
+            if missing_files:
+                missing_list = '\n'.join(missing_files[:10])  # Show first 10
+                if len(missing_files) > 10:
+                    missing_list += f"\n... and {len(missing_files) - 10} more"
+                QMessageBox.information(main_window, "No Files Found", 
+                                       f"No files found from IDE file.\n\nMissing files:\n{missing_list}")
+            else:
+                QMessageBox.information(main_window, "No Files Found", 
+                                       f"No valid file entries found in IDE file: {os.path.basename(ide_file)}")
+            return
+            
         # Show results
-        result_msg = f"Found {len(files_to_import)} files to import"
+        result_msg = f"Found {len(files_to_import)} files to import from IDE"
         if missing_files:
             result_msg += f"\n{len(missing_files)} files missing from directory"
-        
+            
         main_window.log_message(f"📋 {result_msg}")
         
         # Import options
         import_options = {
             'replace_existing': True,
-            'auto_save': True
+            'validate_files': True
         }
         
-        # Start import thread
-        import_thread = ImportThread(main_window, files_to_import, import_options)
+        # Create progress dialog
+        progress = QProgressDialog("Importing from IDE...", "Cancel", 0, 0, main_window)
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.show()
         
-        # Connect completion signal
-        def on_import_completed(success, message, stats):
-            main_window.log_message(message)
-            if success:
-                QMessageBox.information(main_window, "Import Via IDE Complete", message)
-            else:
-                QMessageBox.critical(main_window, "Import Via IDE Failed", message)
+        # Create worker thread
+        worker = ImportWorker(main_window, files_to_import, import_options)
         
-        import_thread.import_completed.connect(on_import_completed)
-        import_thread.progress_updated.connect(lambda p, s: main_window.log_message(f"Import via IDE: {s}"))
+        def on_progress_update(message):
+            progress.setLabelText(message)
+            
+        def on_import_complete(imported_count, total_count):
+            progress.close()
+            
+            # Collect imported filenames for highlighting
+            imported_filenames = [os.path.basename(f) for f in files_to_import if f in worker.imported_files]
+            replaced_filenames = [os.path.basename(f) for f in files_to_import if f in worker.replaced_files]
+            
+            # BATCH SAVE: Save IMG file once after all imports
+            save_successful = False
+            if imported_count > 0 and check_autosave_enabled(main_window):
+                main_window.log_message(f"💾 Auto-saving IMG file after batch import ({imported_count} files)...")
+                try:
+                    save_successful = worker.save_img_after_batch_import()
+                    if save_successful:
+                        main_window.log_message("✅ IMG file auto-saved successfully")
+                    else:
+                        main_window.log_message("⚠️ Auto-save failed - manual save required")
+                except Exception as e:
+                    main_window.log_message(f"⚠️ Auto-save failed: {str(e)}")
+            elif imported_count > 0:
+                main_window.log_message("💾 Remember to save your IMG file manually (auto-save disabled)")
+            
+            # Refresh table with highlighting
+            try:
+                from methods.import_highlight_system import highlight_imported_files
+                if highlight_imported_files(main_window, imported_filenames, replaced_filenames):
+                    main_window.log_message("✅ Table refreshed with import highlights")
+                else:
+                    # Fallback to standard refresh
+                    if refresh_img_table(main_window):
+                        main_window.log_message("✅ Table refreshed after IDE import")
+            except ImportError:
+                # Fallback if highlighting system not available
+                if refresh_img_table(main_window):
+                    main_window.log_message("✅ Table refreshed after IDE import")
+                
+            # Show completion message
+            success_msg = f"Import via IDE completed: {imported_count}/{total_count} files imported"
+            if missing_files:
+                success_msg += f"\n{len(missing_files)} files were missing"
+            if save_successful:
+                success_msg += "\n💾 IMG file saved automatically"
+            elif imported_count > 0:
+                success_msg += "\n💾 Remember to save your IMG file manually"
+            if imported_filenames:
+                success_msg += f"\n✨ {len(imported_filenames)} files highlighted in green"
+            if replaced_filenames:
+                success_msg += f"\n🔄 {len(replaced_filenames)} files replaced (highlighted in yellow)"
+            main_window.log_message(f"✅ {success_msg}")
+            QMessageBox.information(main_window, "Import Via IDE Complete", success_msg)
+            
+        def on_file_imported(filename, success):
+            status = "✅" if success else "❌"
+            main_window.log_message(f"{status} {filename}")
+            
+        # Connect signals
+        worker.progress_update.connect(on_progress_update)
+        worker.file_imported.connect(on_file_imported)
+        worker.import_complete.connect(on_import_complete)
         
-        # Store thread reference
-        main_window._import_thread = import_thread
+        # Connect cancel
+        progress.canceled.connect(worker.terminate)
+        
+        # Store worker reference
+        main_window._import_worker = worker
         
         # Start import
-        import_thread.start()
+        worker.start()
         
     except Exception as e:
         main_window.log_message(f"❌ Import via IDE error: {str(e)}")
         QMessageBox.critical(main_window, "Import Via IDE Error", f"Import via IDE failed: {str(e)}")
 
-def import_from_folder(main_window): #vers 3
-    """Import all files from a folder - FIXED VERSION"""
-    try:
-        if not hasattr(main_window, 'current_img') or not main_window.current_img:
-            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first")
-            return
-        
-        # Get folder
-        folder = QFileDialog.getExistingDirectory(main_window, "Select Folder to Import")
-        
-        if not folder:
-            return
-        
-        # Get all files in folder (recursive option)
-        files_to_import = []
-        
-        # Ask if should search recursively
-        reply = QMessageBox.question(
-            main_window,
-            "Search Subfolders?",
-            "Include files from subfolders?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
-        )
-        
-        if reply == QMessageBox.StandardButton.Yes:
-            # Recursive search
-            for root, dirs, files in os.walk(folder):
-                for filename in files:
-                    if not filename.startswith('.'):  # Skip hidden files
-                        file_path = os.path.join(root, filename)
-                        files_to_import.append(file_path)
-        else:
-            # Just current folder
-            for filename in os.listdir(folder):
-                file_path = os.path.join(folder, filename)
-                if os.path.isfile(file_path) and not filename.startswith('.'):
-                    files_to_import.append(file_path)
-        
-        if not files_to_import:
-            QMessageBox.information(main_window, "No Files Found", "No files found in the selected folder")
-            return
-        
-        main_window.log_message(f"📁 Import from folder: {len(files_to_import)} files found")
-        
-        # Import options
-        import_options = {
-            'replace_existing': True,
-            'auto_save': True
-        }
-        
-        # Start import thread
-        import_thread = ImportThread(main_window, files_to_import, import_options)
-        
-        # Connect completion signal
-        def on_import_completed(success, message, stats):
-            main_window.log_message(message)
-            if success:
-                QMessageBox.information(main_window, "Import From Folder Complete", message)
-            else:
-                QMessageBox.critical(main_window, "Import From Folder Failed", message)
-        
-        import_thread.import_completed.connect(on_import_completed)
-        import_thread.progress_updated.connect(lambda p, s: main_window.log_message(f"Import folder: {s}"))
-        
-        # Store thread reference
-        main_window._import_thread = import_thread
-        
-        # Start import
-        import_thread.start()
-        
-    except Exception as e:
-        main_window.log_message(f"❌ Import from folder error: {str(e)}")
-        QMessageBox.critical(main_window, "Import From Folder Error", f"Import from folder failed: {str(e)}")
-
-def integrate_import_functions(main_window): #vers 4
-    """Integrate import functions into main window - FIXED VERSION"""
+def integrate_import_functions(main_window): #vers 5
+    """Integrate fixed import functions into main window - REPLACEMENT for broken version 4"""
     try:
         # Add import functions with proper method names
         main_window.import_files_function = lambda: import_files_function(main_window)
         main_window.import_via_function = lambda: import_via_function(main_window)
-        main_window.import_from_folder = lambda: import_from_folder(main_window)
         main_window.get_selected_entries = lambda: get_selected_entries(main_window)
-        main_window.refresh_table_after_import = lambda: refresh_table_after_import(main_window)
         
         # Add aliases for different naming conventions used by GUI
         main_window.import_files = main_window.import_files_function
         main_window.import_files_via = main_window.import_via_function
         main_window.import_via = main_window.import_via_function
         
-        main_window.log_message("✅ Import functions integrated with table refresh fix")
+        # Ensure autosave menu is integrated
+        try:
+            from gui.autosave_menu import integrate_autosave_menu
+            integrate_autosave_menu(main_window)
+        except ImportError:
+            main_window.log_message("⚠️ Autosave menu not found - manual save required")
+            
+        # Ensure highlighting system is integrated
+        try:
+            from methods.import_highlight_system import integrate_import_highlighting
+            integrate_import_highlighting(main_window)
+        except ImportError:
+            main_window.log_message("⚠️ Import highlighting system not found - standard refresh only")
+            
+        main_window.log_message("✅ Fixed import functions integrated with highlighting support")
         return True
         
     except Exception as e:
-        main_window.log_message(f"❌ Failed to integrate import functions: {str(e)}")
+        main_window.log_message(f"❌ Failed to integrate fixed import functions: {str(e)}")
+        return False
+    """Integrate fixed import functions into main window"""
+    try:
+        # Add import functions with proper method names
+        main_window.import_files_function = lambda: import_files_function(main_window)
+        main_window.import_via_function = lambda: import_via_function(main_window)
+        main_window.get_selected_entries = lambda: get_selected_entries(main_window)
+        
+        # Add aliases for different naming conventions used by GUI
+        main_window.import_files = main_window.import_files_function
+        main_window.import_files_via = main_window.import_via_function
+        main_window.import_via = main_window.import_via_function
+        
+        # Ensure highlighting system is integrated
+        try:
+            from methods.import_highlight_system import integrate_import_highlighting
+            integrate_import_highlighting(main_window)
+        except ImportError:
+            main_window.log_message("⚠️ Import highlighting system not found - standard refresh only")
+            
+        main_window.log_message("✅ Fixed import functions integrated with highlighting support")
+        return True
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Failed to integrate fixed import functions: {str(e)}")
         return False
 
+# Export functions
 __all__ = [
-    'ImportThread',
+    'ImportWorker',
+    'add_file_to_img',
+    'check_autosave_enabled',
     'get_selected_entries',
     'import_files_function',
     'import_via_function',
-    'import_from_folder',
-    'refresh_table_after_import',
-    'integrate_import_functions'
+    'integrate_import_functions',      # Main integration function (standard name)
+    'refresh_img_table',
+    'validate_import_file'
 ]

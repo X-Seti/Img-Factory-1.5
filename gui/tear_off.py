@@ -128,18 +128,6 @@ class TearOffPanel(QFrame):
         
         menu.exec(QCursor.pos())
     
-    def _show_customization_dialog(self):
-        """Show customization dialog"""
-        if hasattr(self, 'preset_manager'):
-            # Import here to avoid circular imports
-            try:
-                from .panel_controls import ButtonCustomizationDialog
-                dialog = ButtonCustomizationDialog(self.preset_manager, self)
-                dialog.preset_changed.connect(self.apply_preset)
-                dialog.exec()
-            except ImportError:
-                pass
-    
     def apply_preset(self, preset_name: str):
         """Apply preset (to be overridden by subclasses)"""
         pass

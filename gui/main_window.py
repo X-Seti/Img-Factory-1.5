@@ -19,10 +19,6 @@ from PyQt6.QtGui import QAction
 
 # Import consolidated GUI components
 try:
-    from .panel_controls import (
-        create_right_panel_with_pastel_buttons,
-        create_control_panel
-    )
     from .panel_manager import PanelManager  # Fixed import location
     from .tear_off import TearOffPanelManager, setup_tear_off_system
     from .log_panel import create_log_panel, setup_logging_for_main_window
