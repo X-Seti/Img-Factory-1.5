@@ -244,9 +244,7 @@ def setup_stub_button_connections(main_window): #vers 2
         main_window.quick_export = lambda: main_window.log_message("⚠️ Quick Export: Not yet implemented")
         
         # Import functions (what gui_layout expects)
-        main_window.import_files = lambda: main_window.log_message("⚠️ Import: Function fails - needs fixing")
-        main_window.import_files_via = lambda: main_window.log_message("⚠️ Import via: Crashes app - not implemented")
-        main_window.import_files_advanced = lambda: main_window.log_message("⚠️ Import via: Crashes app - not implemented")
+
         
         # Remove functions (what gui_layout expects)  
         main_window.remove_selected = lambda: main_window.log_message("⚠️ Remove: Can't find entries - needs fixing")

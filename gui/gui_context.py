@@ -25,7 +25,6 @@ from components.img_core_classes import format_file_size
 # edit_col_from_img_entry
 # edit_dff_model
 # edit_txd_textures
-# enhanced_context_menu_event
 # replace_selected_entry
 # open_col_batch_proc_dialog
 # open_col_editor_dialog
@@ -57,91 +56,6 @@ def add_col_context_menu_to_entries_table(main_window): #vers 4
     except Exception as e:
         main_window.log_message(f"❌ Error adding COL context menu: {str(e)}")
         return False
-
-def enhanced_context_menu_event(main_window, event): #vers 5
-    """Enhanced context menu with both IMG and COL support - FIXED"""
-    try:
-        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            return
-
-        entries_table = main_window.gui_layout.table
-
-        # Get selected row
-        item = entries_table.itemAt(event.pos())
-        if not item:
-            return
-
-        row = item.row()
-
-        # FIXED: Create context menu with proper parent
-        menu = QMenu(main_window)  # Use main_window as parent, not entries_table
-
-        # Determine file type and add appropriate actions
-        try:
-            name_item = entries_table.item(row, 0)
-            if name_item:
-                entry_name = name_item.text().lower()
-
-                if entry_name.endswith('.col'):
-                    # Add COL-specific actions
-                    edit_action = QAction("✏️ Edit COL", main_window)
-                    edit_action.triggered.connect(lambda: edit_col_from_img_entry(main_window, row))
-                    menu.addAction(edit_action)
-
-                    analyze_action = QAction("🔍 Analyze COL", main_window)
-                    analyze_action.triggered.connect(lambda: analyze_col_from_img_entry(main_window, row))
-                    menu.addAction(analyze_action)
-
-                    menu.addSeparator()
-
-                elif entry_name.endswith('.txd'):
-                    # Add TXD-specific actions
-                    view_txd_action = QAction("👁️ View Textures", main_window)
-                    view_txd_action.triggered.connect(lambda: view_txd_textures(main_window, row))
-                    menu.addAction(view_txd_action)
-
-                    edit_txd_action = QAction("🎨 Edit TXD", main_window)
-                    edit_txd_action.triggered.connect(lambda: edit_txd_textures(main_window, row))
-                    menu.addAction(edit_txd_action)
-
-                    menu.addSeparator()
-
-                elif entry_name.endswith('.dff'):
-                    # Add DFF-specific actions
-                    view_dff_action = QAction("👁️ View Model", main_window)
-                    view_dff_action.triggered.connect(lambda: view_dff_model(main_window, row))
-                    menu.addAction(view_dff_action)
-
-                    edit_dff_action = QAction("🔧 Edit DFF", main_window)
-                    edit_dff_action.triggered.connect(lambda: edit_dff_model(main_window, row))
-                    menu.addAction(edit_dff_action)
-
-                    menu.addSeparator()
-        except:
-            pass
-
-        # Add standard actions for all file types
-        if hasattr(main_window, 'export_selected'):
-            export_action = QAction("📤 Export", main_window)
-            export_action.triggered.connect(lambda: main_window.export_selected())
-            menu.addAction(export_action)
-
-        if hasattr(main_window, 'remove_selected'):
-            remove_action = QAction("🗑️ Remove", main_window)
-            remove_action.triggered.connect(lambda: main_window.remove_selected())
-            menu.addAction(remove_action)
-
-        # Add properties action
-        props_action = QAction("📋 Properties", main_window)
-        props_action.triggered.connect(lambda: show_entry_properties(main_window, row))
-        menu.addAction(props_action)
-
-        # Show menu at cursor position
-        menu.exec(event.globalPos())
-
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"[TABLE] ❌ Context menu error: {str(e)}")
 
 
 def add_img_context_menu_to_entries_table(main_window): #vers 5
@@ -426,7 +340,6 @@ __all__ = [
     'add_col_context_menu_to_entries_table',
     'add_img_context_menu_to_entries_table',
     'analyze_col_file_dialog',
-    'enhanced_context_menu_event',
     'open_col_batch_proc_dialog',
     'open_col_editor_dialog',
     'open_col_file_dialog'

@@ -1,5 +1,5 @@
 #this belongs in gui/ gui_layout.py - Version: 22
-# X-Seti - JULY29 2025 - Img Factory 1.5 - GUI Layout Module - CLEAN THEME-CONTROLLED VERSION
+# X-Seti - JULY29 2025 - Img Factory 1.5 - GUI Layout Module
 
 import re
 from PyQt6.QtWidgets import (
@@ -136,9 +136,6 @@ class IMGFactoryGUILayout:
         else:
             print(f"⚠️ Method '{method_name}' not yet implemented")
 
-    # =============================================================================
-    # THEME SYSTEM - Button Templates & Color Management
-    # =============================================================================
 
     def _get_button_theme_template(self, theme_name="default"):
         """Get button color templates based on theme"""
@@ -258,6 +255,7 @@ class IMGFactoryGUILayout:
             ("Menu Edit", "menu_font", "menu-font", colors['editor_script'], "editmenu"),
         ]
 
+
     def _is_dark_theme(self):
         """Detect if the application is using a dark theme"""
         try:
@@ -288,6 +286,7 @@ class IMGFactoryGUILayout:
             print(f"Theme detection failed: {e}, defaulting to light theme")
             return False
 
+
     def set_theme_mode(self, theme_name):
         """Set the current theme mode and refresh all styling"""
         self.theme_mode = 'dark' if 'dark' in theme_name.lower() else 'light'
@@ -298,6 +297,7 @@ class IMGFactoryGUILayout:
         
         # Apply all window themes
         self.apply_all_window_themes()
+
 
     def _refresh_all_buttons(self):
         """Refresh all buttons with current theme colors"""
@@ -333,6 +333,7 @@ class IMGFactoryGUILayout:
         except Exception as e:
             print(f"❌ Error refreshing buttons: {e}")
 
+
     def _update_button_theme(self, btn, bg_color):
         """Update a single button's theme styling"""
         try:
@@ -354,6 +355,7 @@ class IMGFactoryGUILayout:
                 hover_bg = self._darken_color(bg_color, 0.9)
                 hover_border = self._darken_color(bg_color, 0.5)
                 pressed_bg = self._darken_color(bg_color, 0.8)
+
 
             # Apply updated styling
             btn.setStyleSheet(f"""
@@ -387,9 +389,6 @@ class IMGFactoryGUILayout:
             pass
         return {}
 
-    # =============================================================================
-    # BUTTON CREATION & MANAGEMENT
-    # =============================================================================
 
     def create_pastel_button(self, label, action_type, icon, bg_color, method_name):
         """Create a button with pastel coloring that adapts to light/dark themes"""
@@ -457,6 +456,7 @@ class IMGFactoryGUILayout:
 
         return btn
 
+
     def _lighten_color(self, color, factor):
         """Lighten a hex color by factor (>1.0 lightens, <1.0 darkens)"""
         try:
@@ -475,6 +475,7 @@ class IMGFactoryGUILayout:
         except:
             return color
 
+
     def _darken_color(self, color, factor):
         """Darken a hex color by factor (0.0-1.0, where 0.8 = 20% darker)"""
         try:
@@ -492,6 +493,7 @@ class IMGFactoryGUILayout:
             return f"#{r:02x}{g:02x}{b:02x}"
         except:
             return color
+
 
     def _get_short_text(self, label):
         """Get short text for button"""
@@ -515,9 +517,6 @@ class IMGFactoryGUILayout:
         }
         return short_map.get(label, label)
 
-    # =============================================================================
-    # MAIN UI LAYOUT CREATION
-    # =============================================================================
 
     def create_main_ui_with_splitters(self, main_layout):
         """Create the main UI with correct 3-section layout"""
@@ -551,6 +550,7 @@ class IMGFactoryGUILayout:
         # Add splitter to main layout
         main_layout.addWidget(self.main_splitter)
 
+
     def _create_left_three_section_panel(self):
         """Create left panel with 3 sections: File Window, Status Window"""
         left_container = QWidget()
@@ -581,6 +581,7 @@ class IMGFactoryGUILayout:
 
         left_layout.addWidget(self.left_vertical_splitter)
         return left_container
+
 
     def _create_file_window(self):
         """Create file window with tabs for different views"""
@@ -657,6 +658,7 @@ class IMGFactoryGUILayout:
 
         file_layout.addWidget(self.tab_widget)
         return file_window
+
 
     def create_right_panel_with_pastel_buttons(self):
         """Create right panel with theme-controlled pastel buttons"""
@@ -746,6 +748,7 @@ class IMGFactoryGUILayout:
         right_layout.addStretch()
         return right_panel
 
+
     def create_status_window(self):
         """Create status window with log"""
         self.status_window = QWidget()
@@ -785,9 +788,6 @@ class IMGFactoryGUILayout:
         
         return self.status_window
 
-    # =============================================================================
-    # THEME STYLING METHODS - All UI Components
-    # =============================================================================
 
     def _apply_main_splitter_theme(self):
         """Apply theme styling to main horizontal splitter"""

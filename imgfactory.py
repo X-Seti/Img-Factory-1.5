@@ -80,7 +80,7 @@ from core.exporter import integrate_export_functions
 from core.remove import integrate_remove_functions
 # This will automatically integrate the shared IDE system too
 from core.rw_versions import get_rw_version_name
-from core.right_click_actions import integrate_right_click_actions
+from core.right_click_actions import integrate_right_click_actions, setup_table_context_menu
 from core.save_img_entry import integrate_img_save_functions, save_img_file_with_backup
 from core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
 from core.integration import integrate_complete_core_system
@@ -103,7 +103,8 @@ from gui.gui_layout import IMGFactoryGUILayout
 #from gui.pastel_button_theme import apply_pastel_theme_to_buttons
 from gui.unified_button_theme import apply_unified_button_theme
 from gui.gui_menu import IMGFactoryMenuBar
-from gui.gui_context import (enhanced_context_menu_event, add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
+from gui.autosave_menu import integrate_autosave_menu
+from gui.gui_context import (add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
 
 # Debug helper
 from debug_patch_file import integrate_debug_patch, remove_debug_patch
@@ -324,8 +325,10 @@ class IMGFactory(QMainWindow):
         self.gui_layout = IMGFactoryGUILayout(self)
 
         # Setup menu bar system
-        #self.menubar = self.menuBar() < old
+        self.menubar = self.menuBar() #< old
         self.menu_bar_system = IMGFactoryMenuBar(self)
+        integrate_autosave_menu(self)
+        self.log_message("✅ Auto-save menu option added")
 
         integrate_theme_system(self)
 
@@ -363,7 +366,6 @@ class IMGFactory(QMainWindow):
         # Integrate standalone UI update method
         integrate_update_ui_for_loaded_img(self)
 
-        #integrate_right_click_actions(self)
         integrate_unknown_rw_detection(self)
 
         # First integrate the functions

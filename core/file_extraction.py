@@ -253,7 +253,7 @@ def patch_img_loading_for_extraction(main_window): #vers 15
         return True
         
     except Exception as e:
-        main_window.log_message(f"⚠️ Error patching IMG loading for extraction: {str(e)}")
+        main_window.log_message(f"Error patching IMG loading for extraction: {str(e)}")
         return False
 
 
@@ -278,129 +278,6 @@ def setup_complete_extraction_integration(main_window): #vers 25
     except Exception as e:
         main_window.log_message(f"❌ Complete extraction integration failed: {str(e)}")
         return False
-
-
-def setup_extraction_context_menu(main_window): #vers 5
-    """Setup right-click context menu with extraction options"""
-    try:
-        if not hasattr(main_window.gui_layout, 'table'):
-            return False
-
-        table = main_window.gui_layout.table
-        original_context_menu = getattr(table, 'contextMenuEvent', None)
-
-        def extraction_context_menu(event):
-            """Context menu with extraction options"""
-            # Get clicked item
-            item = table.itemAt(event.pos())
-            if not item:
-                return
-
-            row = item.row()
-
-            # Create context menu
-            menu = QMenu(table)
-
-            # Get entry info
-            entry_name = ""
-            entry_type = ""
-            if hasattr(main_window, 'current_img') and main_window.current_img:
-                if 0 <= row < len(main_window.current_img.entries):
-                    entry = main_window.current_img.entries[row]
-                    entry_name = entry.name
-                    entry_type = entry.name.split('.')[-1].upper() if '.' in entry.name else 'Unknown'
-
-            # Selection info
-            selected_count = len(table.selectionModel().selectedRows()) if table.selectionModel() else 0
-
-            # Extraction actions
-            if selected_count > 1:
-                extract_action = QAction(f"🚀 Extract {selected_count} Selected Files", table)
-                extract_action.triggered.connect(main_window.extract_selected_files)
-                menu.addAction(extract_action)
-            elif entry_name:
-                extract_action = QAction(f"🚀 Extract '{entry_name}'", table)
-                extract_action.triggered.connect(main_window.extract_selected_files)
-                menu.addAction(extract_action)
-
-            menu.addSeparator()
-
-            # Type-specific actions
-            if entry_type in ['DFF', 'TXD', 'COL', 'IDE', 'IFP', 'WAV']:
-                type_action = QAction(f"📁 Extract All {entry_type} Files", table)
-                type_action.triggered.connect(lambda: main_window.extract_by_type(entry_type))
-                menu.addAction(type_action)
-
-            # Special actions for specific file types
-            if entry_type == 'COL':
-                menu.addSeparator()
-
-                # Edit COL action (if COL integration available)
-                if hasattr(main_window, 'load_col_file_async'):
-                    edit_col_action = QAction("✏️ Edit COL File", table)
-                    edit_col_action.triggered.connect(lambda: edit_col_from_table(main_window, row))
-                    menu.addAction(edit_col_action)
-
-                # Analyze COL action
-                analyze_col_action = QAction("🔍 Analyze COL File", table)
-                analyze_col_action.triggered.connect(lambda: analyze_col_from_table(main_window, row))
-                menu.addAction(analyze_col_action)
-
-            elif entry_type == 'IDE':
-                menu.addSeparator()
-
-                # View IDE definitions
-                ide_view_action = QAction("📋 View IDE Definitions", table)
-                ide_view_action.triggered.connect(lambda: view_ide_definitions(main_window, row))
-                menu.addAction(ide_view_action)
-
-                # Edit IDE file
-                ide_edit_action = QAction("✏️ Edit IDE File", table)
-                ide_edit_action.triggered.connect(lambda: edit_ide_file(main_window, row))
-                menu.addAction(ide_edit_action)
-
-            elif entry_type == 'DFF':
-                menu.addSeparator()
-
-                # View DFF info
-                dff_info_action = QAction("ℹ️ DFF Model Info", table)
-                dff_info_action.triggered.connect(lambda: show_dff_info(main_window, row))
-                menu.addAction(dff_info_action)
-
-            elif entry_type == 'TXD':
-                menu.addSeparator()
-
-                # View TXD textures
-                txd_view_action = QAction("🖼️ View TXD Textures", table)
-                txd_view_action.triggered.connect(lambda: view_txd_textures(main_window, row))
-                menu.addAction(txd_view_action)
-
-            menu.addSeparator()
-
-            # Standard actions
-            if selected_count > 0:
-                remove_action = QAction("🗑️ Remove from IMG", table)
-                remove_action.triggered.connect(main_window.remove_selected)
-                menu.addAction(remove_action)
-
-            # Export action
-            export_action = QAction("📤 Export (Legacy)", table)
-            export_action.triggered.connect(main_window.export_selected)
-            menu.addAction(export_action)
-
-            # Show menu
-            if menu.actions():
-                menu.exec(event.globalPos())
-
-        # Replace context menu
-        table.contextMenuEvent = extraction_context_menu
-
-        return True
-
-    except Exception as e:
-        main_window.log_message(f"❌ Error setting up extraction context menu: {str(e)}")
-        return False
-
 
 def setup_extraction_methods(main_window): #vers 7
     """Add extraction methods to main window"""

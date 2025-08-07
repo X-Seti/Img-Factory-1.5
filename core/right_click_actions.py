@@ -1,37 +1,45 @@
-#this belongs in core/right_click_actions.py - Version: 2
-# X-Seti - July21 2025 - Img Factory 1.5 - Table Right-Click Actions - FIXED
+#this belongs in core/right_click_actions.py - Version: 3
+# X-Seti - August07 2025 - IMG Factory 1.5 - Complete Right-Click Actions
+# Combined: Basic copying + Advanced file operations + Extraction functionality
 
 """
-Right-Click Actions - Table context menu and clipboard operations
-Provides comprehensive right-click functionality for table data copying
-FIXED: Works with both real QWidget and DummyMainWindow objects
+Complete Right-Click Actions - Unified context menu system
+Combines basic clipboard operations with advanced file-specific actions
 """
 
 import os
+import tempfile
 from typing import Optional, List, Any
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication, QMenu, QTableWidget, QWidget
+from PyQt6.QtWidgets import QApplication, QMenu, QTableWidget, QWidget, QMessageBox
 from PyQt6.QtGui import QAction
 
 ##Methods list -
+# analyze_col_from_table
+# copy_file_summary
+# copy_filename_only
 # copy_table_cell
 # copy_table_column_data
 # copy_table_row
 # copy_table_selection
-# copy_filename_only
-# copy_file_summary
+# edit_col_from_table
+# edit_ide_file
+# get_selected_entries_for_extraction
 # integrate_right_click_actions
 # setup_table_context_menu
-# show_table_context_menu
+# show_advanced_context_menu
+# show_dff_info
+# view_ide_definitions
+# view_txd_textures
 
-def setup_table_context_menu(main_window): #vers 2
-    """Setup right-click context menu for the main table - FIXED"""
+def setup_table_context_menu(main_window): #vers 3
+    """Setup comprehensive right-click context menu for the main table"""
     try:
         if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
             table = main_window.gui_layout.table
             table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-            table.customContextMenuRequested.connect(lambda pos: show_table_context_menu(main_window, pos))
-            main_window.log_message("✅ Table right-click context menu enabled")
+            table.customContextMenuRequested.connect(lambda pos: show_advanced_context_menu(main_window, pos))
+            main_window.log_message("✅ Advanced table right-click context menu enabled")
             return True
         else:
             main_window.log_message("⚠️ Table not available for context menu setup")
@@ -40,8 +48,8 @@ def setup_table_context_menu(main_window): #vers 2
         main_window.log_message(f"❌ Error setting up context menu: {str(e)}")
         return False
 
-def show_table_context_menu(main_window, position): #vers 2
-    """Show context menu for table right-click - FIXED for DummyMainWindow"""
+def show_advanced_context_menu(main_window, position): #vers 3
+    """Show comprehensive context menu with file-type specific actions"""
     try:
         table = main_window.gui_layout.table
         item = table.itemAt(position)
@@ -49,50 +57,130 @@ def show_table_context_menu(main_window, position): #vers 2
         if not item:
             return
 
-        # FIXED: Choose proper parent for QMenu
-        # Check if main_window is a proper QWidget
-        menu_parent = table  # Default to table as parent
+        # Choose proper parent for QMenu
+        menu_parent = table
         if isinstance(main_window, QWidget):
             menu_parent = main_window
         
-        # Create context menu with proper parent
+        # Create context menu
         menu = QMenu(menu_parent)
         
         # Get selected data info
         row = item.row()
         col = item.column()
         
-        # Get column header name
+        # Get column header and cell data
         header_item = table.horizontalHeaderItem(col)
         column_name = header_item.text() if header_item else f"Column {col}"
-        
-        # Get cell data
         cell_data = item.text() if item else ""
         
-        # Copy Cell action
+        # Get entry info for file-type specific actions
+        entry_name = ""
+        entry_type = ""
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                entry_name = entry.name
+                entry_type = entry.name.split('.')[-1].upper() if '.' in entry.name else ""
+
+        # FILE-TYPE SPECIFIC ACTIONS (Advanced functionality)
+        if entry_type:
+            if entry_type == 'COL':
+                # COL file specific actions
+                edit_col_action = QAction("🔧 Edit COL File", menu_parent)
+                edit_col_action.triggered.connect(lambda: edit_col_from_table(main_window, row))
+                menu.addAction(edit_col_action)
+                
+                analyze_col_action = QAction("🔍 Analyze COL File", menu_parent)
+                analyze_col_action.triggered.connect(lambda: analyze_col_from_table(main_window, row))
+                menu.addAction(analyze_col_action)
+                
+            elif entry_type == 'IDE':
+                # IDE file specific actions
+                view_ide_action = QAction("📋 View IDE Definitions", menu_parent)
+                view_ide_action.triggered.connect(lambda: view_ide_definitions(main_window, row))
+                menu.addAction(view_ide_action)
+                
+                edit_ide_action = QAction("✏️ Edit IDE File", menu_parent)
+                edit_ide_action.triggered.connect(lambda: edit_ide_file(main_window, row))
+                menu.addAction(edit_ide_action)
+                
+            elif entry_type == 'DFF':
+                # DFF model specific actions
+                dff_info_action = QAction("ℹ️ DFF Model Info", menu_parent)
+                dff_info_action.triggered.connect(lambda: show_dff_info(main_window, row))
+                menu.addAction(dff_info_action)
+                
+            elif entry_type == 'TXD':
+                # TXD texture specific actions
+                txd_view_action = QAction("🖼️ View TXD Textures", menu_parent)
+                txd_view_action.triggered.connect(lambda: view_txd_textures(main_window, row))
+                menu.addAction(txd_view_action)
+            
+            menu.addSeparator()
+
+        # EXTRACTION ACTIONS (if extraction system is available)
+        if hasattr(main_window, 'extract_selected_files'):
+            selected_entries = get_selected_entries_for_extraction(main_window)
+            if selected_entries:
+                extract_selected_action = QAction("📤 Extract Selected", menu_parent)
+                extract_selected_action.triggered.connect(main_window.extract_selected_files)
+                menu.addAction(extract_selected_action)
+            
+            if hasattr(main_window, 'extract_all_files'):
+                extract_all_action = QAction("📦 Extract All", menu_parent)
+                extract_all_action.triggered.connect(main_window.extract_all_files)
+                menu.addAction(extract_all_action)
+            
+            # Quick extract submenu
+            if entry_type in ['IDE', 'COL', 'DFF', 'TXD']:
+                quick_extract_action = QAction(f"⚡ Quick Extract {entry_type} Files", menu_parent)
+                if entry_type == 'IDE' and hasattr(main_window, 'quick_extract_ide_files'):
+                    quick_extract_action.triggered.connect(main_window.quick_extract_ide_files)
+                elif entry_type == 'COL' and hasattr(main_window, 'quick_extract_col_files'):
+                    quick_extract_action.triggered.connect(main_window.quick_extract_col_files)
+                elif entry_type == 'DFF' and hasattr(main_window, 'quick_extract_dff_files'):
+                    quick_extract_action.triggered.connect(main_window.quick_extract_dff_files)
+                elif entry_type == 'TXD' and hasattr(main_window, 'quick_extract_txd_files'):
+                    quick_extract_action.triggered.connect(main_window.quick_extract_txd_files)
+                menu.addAction(quick_extract_action)
+            
+            menu.addSeparator()
+
+        # STANDARD IMG OPERATIONS
+        if hasattr(main_window, 'export_selected'):
+            export_action = QAction("📤 Export", menu_parent)
+            export_action.triggered.connect(main_window.export_selected)
+            menu.addAction(export_action)
+
+        if hasattr(main_window, 'remove_selected'):
+            selected_items = table.selectedItems()
+            if selected_items:
+                remove_action = QAction("🗑️ Remove", menu_parent)
+                remove_action.triggered.connect(main_window.remove_selected)
+                menu.addAction(remove_action)
+
+        menu.addSeparator()
+
+        # CLIPBOARD OPERATIONS (Basic functionality)
         copy_cell_action = QAction(f"📋 Copy Cell ({column_name})", menu_parent)
         copy_cell_action.triggered.connect(lambda: copy_table_cell(main_window, row, col))
         menu.addAction(copy_cell_action)
         
-        # Copy Row action
         copy_row_action = QAction("📄 Copy Row", menu_parent)
         copy_row_action.triggered.connect(lambda: copy_table_row(main_window, row))
         menu.addAction(copy_row_action)
         
-        # Copy Column action
         copy_column_action = QAction(f"📊 Copy Column ({column_name})", menu_parent)
         copy_column_action.triggered.connect(lambda: copy_table_column_data(main_window, col))
         menu.addAction(copy_column_action)
         
-        menu.addSeparator()
-        
-        # Copy Selection action
+        # Copy Selection action (if multiple items selected)
         selected_items = table.selectedItems()
         if len(selected_items) > 1:
             copy_selection_action = QAction(f"🔗 Copy Selection ({len(selected_items)} items)", menu_parent)
             copy_selection_action.triggered.connect(lambda: copy_table_selection(main_window))
             menu.addAction(copy_selection_action)
-            menu.addSeparator()
         
         # Copy filename only (for first column)
         if col == 0:
@@ -109,8 +197,9 @@ def show_table_context_menu(main_window, position): #vers 2
         menu.exec(table.mapToGlobal(position))
         
     except Exception as e:
-        main_window.log_message(f"❌ Context menu error: {str(e)}")
+        main_window.log_message(f"❌ Error showing context menu: {str(e)}")
 
+# CLIPBOARD OPERATIONS
 def copy_table_cell(main_window, row: int, col: int): #vers 1
     """Copy single table cell to clipboard"""
     try:
@@ -121,10 +210,8 @@ def copy_table_cell(main_window, row: int, col: int): #vers 1
             text = item.text()
             QApplication.clipboard().setText(text)
             
-            # Get column name for feedback
             header_item = table.horizontalHeaderItem(col)
             column_name = header_item.text() if header_item else f"Column {col}"
-            
             main_window.log_message(f"📋 Copied {column_name}: '{text}'")
         else:
             main_window.log_message("⚠️ No data in selected cell")
@@ -133,11 +220,10 @@ def copy_table_cell(main_window, row: int, col: int): #vers 1
         main_window.log_message(f"❌ Copy cell error: {str(e)}")
 
 def copy_table_row(main_window, row: int): #vers 1
-    """Copy entire table row to clipboard (tab-separated)"""
+    """Copy entire table row to clipboard"""
     try:
         table = main_window.gui_layout.table
         
-        # Get all data from row
         row_data = []
         for col in range(table.columnCount()):
             item = table.item(row, col)
@@ -146,27 +232,24 @@ def copy_table_row(main_window, row: int): #vers 1
             else:
                 row_data.append("")
         
-        # Join with tabs
         text = "\t".join(row_data)
         QApplication.clipboard().setText(text)
         
-        filename = row_data[0] if row_data else "Unknown"
+        filename = row_data[0] if row_data else f"Row {row}"
         main_window.log_message(f"📄 Copied row: {filename}")
         
     except Exception as e:
         main_window.log_message(f"❌ Copy row error: {str(e)}")
 
 def copy_table_column_data(main_window, col: int): #vers 1
-    """Copy entire column data to clipboard (newline-separated)"""
+    """Copy entire column data to clipboard"""
     try:
         table = main_window.gui_layout.table
         
-        # Get column header
         header_item = table.horizontalHeaderItem(col)
         column_name = header_item.text() if header_item else f"Column {col}"
         
-        # Get all data from column
-        column_data = [column_name]  # Start with header
+        column_data = []
         for row in range(table.rowCount()):
             item = table.item(row, col)
             if item:
@@ -174,7 +257,6 @@ def copy_table_column_data(main_window, col: int): #vers 1
             else:
                 column_data.append("")
         
-        # Join with newlines
         text = "\n".join(column_data)
         QApplication.clipboard().setText(text)
         
@@ -206,7 +288,6 @@ def copy_table_selection(main_window): #vers 1
         lines = []
         for row in sorted(rows_data.keys()):
             row_data = rows_data[row]
-            # Create ordered list of values by column
             ordered_values = []
             for col in sorted(row_data.keys()):
                 ordered_values.append(row_data[col])
@@ -224,11 +305,10 @@ def copy_filename_only(main_window, row: int): #vers 1
     """Copy filename without extension from first column"""
     try:
         table = main_window.gui_layout.table
-        item = table.item(row, 0)  # First column
+        item = table.item(row, 0)
         
         if item:
             full_name = item.text()
-            # Remove extension
             if '.' in full_name:
                 filename_only = '.'.join(full_name.split('.')[:-1])
             else:
@@ -279,12 +359,130 @@ def copy_file_summary(main_window, row: int): #vers 1
     except Exception as e:
         main_window.log_message(f"❌ Copy summary error: {str(e)}")
 
-def integrate_right_click_actions(main_window): #vers 2
-    """Main integration function - call this from imgfactory.py - FIXED"""
+# FILE-TYPE SPECIFIC ACTIONS
+def edit_col_from_table(main_window, row: int): #vers 1
+    """Edit COL file from table row"""
+    try:
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                
+                # Check if COL editor is available
+                if hasattr(main_window, 'open_col_editor'):
+                    main_window.open_col_editor(entry)
+                else:
+                    main_window.log_message("⚠️ COL editor not available")
+    except Exception as e:
+        main_window.log_message(f"❌ COL edit error: {str(e)}")
+
+def analyze_col_from_table(main_window, row: int): #vers 1
+    """Analyze COL file from table row"""
+    try:
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                
+                # Check if COL analyzer is available
+                if hasattr(main_window, 'analyze_col_file'):
+                    main_window.analyze_col_file(entry)
+                else:
+                    main_window.log_message("⚠️ COL analyzer not available")
+    except Exception as e:
+        main_window.log_message(f"❌ COL analysis error: {str(e)}")
+
+def edit_ide_file(main_window, row: int): #vers 1
+    """Edit IDE file from table row"""
+    try:
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                
+                # Check if IDE editor is available
+                if hasattr(main_window, 'open_ide_editor'):
+                    main_window.open_ide_editor(entry)
+                else:
+                    main_window.log_message("⚠️ IDE editor not available")
+    except Exception as e:
+        main_window.log_message(f"❌ IDE edit error: {str(e)}")
+
+def view_ide_definitions(main_window, row: int): #vers 1
+    """View IDE definitions from table row"""
+    try:
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                
+                # Check if IDE viewer is available
+                if hasattr(main_window, 'view_ide_definitions'):
+                    main_window.view_ide_definitions(entry)
+                else:
+                    main_window.log_message("⚠️ IDE viewer not available")
+    except Exception as e:
+        main_window.log_message(f"❌ IDE view error: {str(e)}")
+
+def show_dff_info(main_window, row: int): #vers 1
+    """Show DFF model information"""
+    try:
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                
+                # Check if DFF info viewer is available
+                if hasattr(main_window, 'show_dff_info'):
+                    main_window.show_dff_info(entry)
+                else:
+                    main_window.log_message("⚠️ DFF info viewer not available")
+    except Exception as e:
+        main_window.log_message(f"❌ DFF info error: {str(e)}")
+
+def view_txd_textures(main_window, row: int): #vers 1
+    """View TXD textures from table row"""
+    try:
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                
+                # Check if TXD viewer is available
+                if hasattr(main_window, 'view_txd_textures'):
+                    main_window.view_txd_textures(entry)
+                else:
+                    main_window.log_message("⚠️ TXD viewer not available")
+    except Exception as e:
+        main_window.log_message(f"❌ TXD view error: {str(e)}")
+
+# EXTRACTION SUPPORT
+def get_selected_entries_for_extraction(main_window) -> List: #vers 1
+    """Get currently selected entries for extraction"""
+    try:
+        entries = []
+        
+        if not hasattr(main_window.gui_layout, 'table') or not hasattr(main_window, 'current_img') or not main_window.current_img:
+            return entries
+        
+        table = main_window.gui_layout.table
+        
+        # Get selected rows
+        selected_rows = set()
+        for item in table.selectedItems():
+            selected_rows.add(item.row())
+        
+        # Get corresponding entries
+        for row in selected_rows:
+            if row < len(main_window.current_img.entries):
+                entries.append(main_window.current_img.entries[row])
+        
+        return entries
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Error getting selected entries: {str(e)}")
+        return []
+
+def integrate_right_click_actions(main_window): #vers 3
+    """Main integration function - call this from imgfactory.py"""
     try:
         success = setup_table_context_menu(main_window)
         if success:
-            main_window.log_message("✅ Right-click actions integrated successfully")
+            main_window.log_message("✅ Complete right-click actions integrated successfully")
             
             # Add convenience method to main window
             main_window.setup_table_right_click = lambda: setup_table_context_menu(main_window)
@@ -298,12 +496,19 @@ def integrate_right_click_actions(main_window): #vers 2
 # Export main functions
 __all__ = [
     'setup_table_context_menu',
-    'show_table_context_menu', 
+    'show_advanced_context_menu', 
     'copy_table_cell',
     'copy_table_row',
     'copy_table_column_data',
     'copy_table_selection',
     'copy_filename_only',
     'copy_file_summary',
+    'edit_col_from_table',
+    'analyze_col_from_table',
+    'edit_ide_file',
+    'view_ide_definitions',
+    'show_dff_info',
+    'view_txd_textures',
+    'get_selected_entries_for_extraction',
     'integrate_right_click_actions'
 ]
