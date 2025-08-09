@@ -125,6 +125,76 @@ print("Attempting COL integration...")
 #COL_SETUP_FUNCTION = None
 
 
+def setup_rebuild_system(self): #vers 1
+    """Setup hybrid rebuild system with mode selection"""
+    try:
+        from core.hybrid_rebuild import setup_hybrid_rebuild_methods
+        success = setup_hybrid_rebuild_methods(self)
+
+        if success:
+            self.log_message("✅ Hybrid rebuild system enabled")
+            # Now you have these methods available:
+            # self.rebuild_img() - Shows mode selection dialog
+            # self.rebuild_all_img() - Shows batch mode dialog
+            # self.quick_rebuild() - Fast mode only
+            # self.fast_rebuild() - Direct fast mode
+            # self.safe_rebuild() - Direct safe mode
+        else:
+            self.log_message("⚠️ Hybrid rebuild setup failed")
+
+        return success
+
+    except ImportError:
+        self.log_message("⚠️ Hybrid rebuild not available")
+        return False
+
+def create_rebuild_menu(self): #vers 1
+    """Create rebuild menu with mode options"""
+    try:
+        # Add to your existing menu bar
+        rebuild_menu = self.menuBar().addMenu("🔧 Rebuild")
+
+        # Regular rebuild (shows dialog)
+        rebuild_action = QAction("Rebuild IMG...", self)
+        rebuild_action.setShortcut("Ctrl+R")
+        rebuild_action.setStatusTip("Rebuild current IMG file with mode selection")
+        rebuild_action.triggered.connect(self.rebuild_img)
+        rebuild_menu.addAction(rebuild_action)
+
+        # Quick rebuild (fast mode only)
+        quick_action = QAction("⚡ Quick Rebuild", self)
+        quick_action.setShortcut("Ctrl+Shift+R")
+        quick_action.setStatusTip("Quick rebuild using fast mode")
+        quick_action.triggered.connect(self.quick_rebuild)
+        rebuild_menu.addAction(quick_action)
+
+        rebuild_menu.addSeparator()
+
+        # Direct mode access
+        fast_action = QAction("🚀 Fast Rebuild", self)
+        fast_action.setStatusTip("Direct fast rebuild without dialog")
+        fast_action.triggered.connect(self.fast_rebuild)
+        rebuild_menu.addAction(fast_action)
+
+        safe_action = QAction("🔍 Safe Rebuild", self)
+        safe_action.setStatusTip("Direct safe rebuild with full checking")
+        safe_action.triggered.connect(self.safe_rebuild)
+        rebuild_menu.addAction(safe_action)
+
+        rebuild_menu.addSeparator()
+
+        # Batch rebuild
+        batch_action = QAction("Rebuild All...", self)
+        batch_action.setStatusTip("Batch rebuild multiple IMG files")
+        batch_action.triggered.connect(self.rebuild_all_img)
+        rebuild_menu.addAction(batch_action)
+
+        return True
+
+    except Exception as e:
+        self.log_message(f"❌ Rebuild menu creation failed: {str(e)}")
+        return False
+
 def setup_debug_mode(self): #vers 2
     """Setup debug mode integration"""
     self.debug = DebugSettings(self.app_settings)
@@ -409,6 +479,9 @@ class IMGFactory(QMainWindow):
 
         # Progress system
         integrate_progress_system(self)
+
+        #self.setup_rebuild_system()
+        #self.create_rebuild_menu()
 
         # SINGLE HYBRID INTEGRATION - No conflicts
         try:
@@ -2686,19 +2759,16 @@ class IMGFactory(QMainWindow):
             self.log_message(f"❌ Reload failed: {str(e)}")
             return False
 
-
-    def rebuild_img(self): #vers 7
-        """Rebuild current IMG file - FIXED: Uses new rebuild.py system"""
+    def rebuild_img(self): #vers 8
+        """Rebuild current IMG file - WITH MODE SELECTION DIALOG"""
         try:
             if not hasattr(self, 'current_img') or not self.current_img:
                 QMessageBox.warning(self, "No IMG", "No IMG file is currently loaded.")
                 return False
 
-            self.log_message("🔧 Starting IMG rebuild with new system...")
-
-            # Use the new single rebuild system
-            from core.rebuild import rebuild_current_img
-            success = rebuild_current_img(self)
+            # Use hybrid rebuild with mode selection dialog
+            from core.hybrid_rebuild import hybrid_rebuild_current
+            success = hybrid_rebuild_current(self)
 
             if success:
                 self.log_message("✅ IMG rebuild completed successfully")
@@ -2708,23 +2778,22 @@ class IMGFactory(QMainWindow):
             return success
 
         except ImportError:
-            # Fallback to old system if new rebuild not available
-            self.log_message("⚠️ New rebuild system not available - using fallback")
-            return self._rebuild_img_fallback()
+            # Fallback if hybrid rebuild not available
+            self.log_message("⚠️ Hybrid rebuild not available - using simple rebuild")
+            from core.simple_rebuild import simple_rebuild_current
+            return simple_rebuild_current(self)
         except Exception as e:
             error_msg = f"Error rebuilding IMG: {str(e)}"
             self.log_message(f"❌ {error_msg}")
             QMessageBox.critical(self, "Rebuild Error", error_msg)
             return False
 
-    def rebuild_all_img(self): #vers 7
-        """Rebuild all IMG files - FIXED: Uses new rebuild_all.py system"""
+    def rebuild_all_img(self): #vers 8
+        """Rebuild all IMG files - WITH MODE SELECTION DIALOG"""
         try:
-            self.log_message("🔧 Starting batch IMG rebuild with new system...")
-
-            # Use the new batch rebuild system
-            from core.rebuild_all import rebuild_all_img
-            success = rebuild_all_img(self)
+            # Use hybrid rebuild all with mode selection dialog
+            from core.hybrid_rebuild import hybrid_rebuild_all
+            success = hybrid_rebuild_all(self)
 
             if success:
                 self.log_message("✅ Batch IMG rebuild completed")
@@ -2734,27 +2803,28 @@ class IMGFactory(QMainWindow):
             return success
 
         except ImportError:
-            # Fallback to old system if new rebuild_all not available
-            self.log_message("⚠️ New batch rebuild system not available - using fallback")
-            return self._rebuild_all_img_fallback()
+            # Fallback if hybrid rebuild not available
+            self.log_message("⚠️ Hybrid batch rebuild not available - using simple")
+            from core.simple_rebuild import simple_rebuild_all
+            return simple_rebuild_all(self)
         except Exception as e:
             error_msg = f"Error in batch rebuild: {str(e)}"
             self.log_message(f"❌ {error_msg}")
             QMessageBox.critical(self, "Batch Rebuild Error", error_msg)
             return False
 
-    def quick_rebuild(self): #vers 1
-        """Quick rebuild without prompts - NEW METHOD"""
+    def quick_rebuild(self): #vers 2
+        """Quick rebuild without prompts - FAST MODE ONLY"""
         try:
             if not hasattr(self, 'current_img') or not self.current_img:
                 self.log_message("⚠️ Quick rebuild: No IMG file open")
                 return False
 
-            self.log_message("⚡ Starting quick rebuild...")
+            self.log_message("⚡ Quick rebuild (Fast mode)")
 
-            # Use the new quick rebuild system
-            from core.rebuild import quick_rebuild
-            success = quick_rebuild(self)
+            # Quick rebuild always uses fast mode - no dialog
+            from core.hybrid_rebuild import hybrid_quick_rebuild
+            success = hybrid_quick_rebuild(self)
 
             if success:
                 self.log_message("✅ Quick rebuild completed")
@@ -2764,12 +2834,14 @@ class IMGFactory(QMainWindow):
             return success
 
         except ImportError:
-            self.log_message("⚠️ Quick rebuild system not available")
-            return False
+            # Fallback to simple quick rebuild
+            from core.simple_rebuild import simple_quick_rebuild
+            return simple_quick_rebuild(self)
         except Exception as e:
             error_msg = f"Quick rebuild error: {str(e)}"
             self.log_message(f"❌ {error_msg}")
             return False
+
 
     def rebuild_directory_imgs(self, directory_path: str): #vers 1
         """Rebuild all IMG files in specific directory - NEW METHOD"""

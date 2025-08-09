@@ -594,6 +594,27 @@ class IMGFile:
             print(f"[ERROR] Failed to save IMG file: {e}")
             return False
 
+    def _sanitize_filename(self, filename: str) -> str: #vers 1
+        """CRITICAL: Clean corrupted filenames before encoding"""
+        try:
+            # Remove corrupted bytes that show as garbage in table
+            clean_name = filename.replace('\x00', '').replace('\xcd', '').replace('\xff', '')
+
+            # Remove control characters (except null terminator)
+            clean_name = ''.join(c for c in clean_name if 32 <= ord(c) <= 126)
+
+            # Limit to IMG field size
+            clean_name = clean_name.strip()[:24]
+
+            # Fallback if empty
+            if not clean_name:
+                clean_name = f"file_{len(self.entries):04d}.dat"
+
+            return clean_name
+
+        except Exception:
+            return f"file_{len(self.entries):04d}.dat"
+
     def rebuild_img_file(self) -> bool: #vers 1
         """Rebuild IMG file with current entries"""
         try:
@@ -651,7 +672,17 @@ class IMGFile:
 
                     # Pack entry: offset(4), size(4), name(24)
                     entry_data = struct.pack('<II', offset_sectors, size_sectors)
-                    name_bytes = entry.name.encode('ascii')[:24].ljust(24, b'\x00')
+
+                    #name_bytes = entry.name.encode('ascii')[:24].ljust(24, b'\x00')
+                    # CORRUPTION FIX: Sanitize before encoding
+                    clean_name = self._sanitize_filename(entry.name)
+                    if clean_name != entry.name:
+                        print(f"[CORRUPTION FIX] '{entry.name}' → '{clean_name}'")
+                        entry.name = clean_name
+
+                    name_bytes = clean_name.encode('ascii', errors='replace')[:24]
+                    name_bytes = name_bytes.ljust(24, b'\x00')
+
                     entry_data += name_bytes
 
                     f.write(entry_data)
@@ -762,6 +793,12 @@ class IMGFile:
         """Add new entry to IMG file - FIXED VERSION with enhanced debugging"""
         try:
             print(f"[DEBUG] === ADD_ENTRY START ===")
+            # CRITICAL: Sanitize filename to prevent corruption
+            clean_filename = self._sanitize_filename(filename)
+            if clean_filename != filename:
+                print(f"[DEBUG] Filename sanitized: '{filename}' → '{clean_filename}'")
+                filename = clean_filename
+
             print(f"[DEBUG] add_entry called: {filename} ({len(data)} bytes)")
             print(f"[DEBUG] Current IMG entries before: {len(self.entries)}")
             print(f"[DEBUG] IMG file path: {self.file_path}")

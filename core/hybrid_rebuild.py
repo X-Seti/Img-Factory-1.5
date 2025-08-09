@@ -29,150 +29,209 @@ class RebuildModeDialog(QDialog):
     
     def __init__(self, parent=None, operation_type="single"):
         super().__init__(parent)
-        self.setWindowTitle("Select Rebuild Mode")
+        self.operation_type = operation_type
+
+        if self.operation_type == "batch":
+            self.setWindowTitle("Batch IMG Rebuild Mode Selection")
+        else:
+            self.setWindowTitle("IMG Rebuild Mode Selection")
+
         self.setModal(True)
-        self.setFixedSize(500, 400)
-        self.operation_type = operation_type  # "single" or "batch"
-        
+
+        # FIXED: Larger size to accommodate all content
+        self.setMinimumSize(400, 400)
+        self.setMaximumSize(600, 500)
+        self.resize(500, 460)  # Better default size
+
+        self.operation_type = operation_type
         self.selected_mode = "fast"
         self.selected_options = {}
-        
+
         self.setup_ui()
-        
+
     def setup_ui(self):
-        """Setup the mode selection UI"""
-        layout = QVBoxLayout(self)
-        
-        # Title
-        title = "🔧 IMG Rebuild Mode Selection"
+        """Setup the mode selection UI - FIXED PROPORTIONS"""
+
+        # Title - FIXED: Better spacing
         if self.operation_type == "batch":
-            title = "🔧 Batch IMG Rebuild Mode Selection"
-            
+            title = " "
+        else:
+            title = ""
+
+        layout = QVBoxLayout(self)
+        # FIXED: Better margins and consistent spacing
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(2)  # Consistent spacing throughout
+
+                # FIXED: Controlled spacing after title
+        layout.addSpacing(2)
+
         title_label = QLabel(title)
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_font = QFont()
-        title_font.setPointSize(12)
+        title_font.setPointSize(3)
         title_font.setBold(True)
         title_label.setFont(title_font)
         layout.addWidget(title_label)
-        
-        # Mode selection group
+
+        # FIXED: Controlled spacing after title
+        layout.addSpacing(2)
+
+        # Mode selection group - FIXED: Better height allocation
         mode_group = QGroupBox("Rebuild Mode:")
+        mode_group.setMaximumHeight(180)  # Prevent oversized group
         mode_layout = QVBoxLayout(mode_group)
-        
+        mode_layout.setSpacing(1)
+        mode_layout.setContentsMargins(15, 7, 15, 7)
+
         self.mode_button_group = QButtonGroup()
-        
+
         # Fast mode
         self.fast_radio = QRadioButton("🚀 Fast Mode (Recommended)")
         self.fast_radio.setChecked(True)
         self.fast_radio.toggled.connect(self.on_mode_changed)
         self.mode_button_group.addButton(self.fast_radio)
         mode_layout.addWidget(self.fast_radio)
-        
-        fast_desc = QLabel("• Optimized for speed (10-50x faster)\n"
-                          "• Bulk operations, minimal I/O\n"
-                          "• Basic error handling\n"
-                          "• Best for trusted IMG files")
-        fast_desc.setStyleSheet("margin-left: 20px; color: #666;")
+
+        # FIXED: Compact descriptions that don't get cut off
+        fast_desc = QLabel("• Speed optimized • Minimal checking • Quick defragmentation")
+        fast_desc.setStyleSheet("color: #555; margin-left: 20px; font-size: 9pt; padding: 2px;")
+        fast_desc.setWordWrap(True)
         mode_layout.addWidget(fast_desc)
-        
+
+        # FIXED: Controlled spacing between modes
+        mode_layout.addSpacing(1)
+
         # Safe mode
-        self.safe_radio = QRadioButton("🛡️ Safe Mode (Thorough)")
+        self.safe_radio = QRadioButton("🔍 Safe Mode")
         self.safe_radio.toggled.connect(self.on_mode_changed)
         self.mode_button_group.addButton(self.safe_radio)
         mode_layout.addWidget(self.safe_radio)
-        
-        safe_desc = QLabel("• Comprehensive error checking\n"
-                          "• Detailed progress per file\n"
-                          "• Data validation and verification\n"
-                          "• Best for damaged or untrusted files")
-        safe_desc.setStyleSheet("margin-left: 20px; color: #666;")
+
+        # FIXED: Compact description
+        safe_desc = QLabel("• Thorough checking • Corruption fixes • Complete verification")
+        safe_desc.setStyleSheet("color: #555; margin-left: 20px; font-size: 9pt; padding: 2px;")
+        safe_desc.setWordWrap(True)
         mode_layout.addWidget(safe_desc)
-        
+
         layout.addWidget(mode_group)
-        
-        # Options group
+
+        # Options group - FIXED: Compact layout
         options_group = QGroupBox("Options:")
+        options_group.setMaximumHeight(120)  # Prevent expansion
         options_layout = QVBoxLayout(options_group)
-        
-        self.create_backup_check = QCheckBox("Create backup files (.backup)")
-        self.create_backup_check.setChecked(True)
+        options_layout.setSpacing(1)
+        options_layout.setContentsMargins(15, 7, 15, 7)
+
+        # Create backup option
+        self.create_backup_check = QCheckBox("✅ Create backup before rebuild")
         options_layout.addWidget(self.create_backup_check)
-        
-        self.verify_after_check = QCheckBox("Verify rebuild integrity (Safe mode only)")
+        self.create_backup_check.setChecked(True)
+
+        # Verify integrity option
+        self.verify_after_check = QCheckBox("🔍 Verify integrity after rebuild")
         self.verify_after_check.setChecked(True)
+        self.verify_after_check.setEnabled(False)
         options_layout.addWidget(self.verify_after_check)
-        
+
+        # Batch-specific option
         if self.operation_type == "batch":
-            self.stop_on_error_check = QCheckBox("Stop batch on first error")
+            self.stop_on_error_check = QCheckBox("⏹️ Stop on first error")
             self.stop_on_error_check.setChecked(False)
             options_layout.addWidget(self.stop_on_error_check)
-        
+
         layout.addWidget(options_group)
-        
-        # Performance info
+
+        # Performance info group - FIXED: Smaller, more compact
         perf_group = QGroupBox("Expected Performance:")
+        perf_group.setMaximumHeight(180)  # Limit height
         perf_layout = QVBoxLayout(perf_group)
-        
+        perf_layout.setContentsMargins(15, 7, 15, 7)
+
         self.perf_label = QLabel()
-        self.update_performance_info()
+        self.perf_label.setStyleSheet("""
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 8pt;
+            color: #444;
+            padding: 4px;
+            line-height: 2;
+        """)
+        self.perf_label.setWordWrap(True)
         perf_layout.addWidget(self.perf_label)
-        
+
         layout.addWidget(perf_group)
-        
-        # Dialog buttons
+
+        # FIXED: Small flexible space before buttons
+        layout.addSpacing(8)
+        layout.addStretch(1)  # Minimal stretch
+
+        # Dialog buttons - FIXED: Compact button area
         button_layout = QHBoxLayout()
+        button_layout.setSpacing(12)
         button_layout.addStretch()
-        
+
         cancel_btn = QPushButton("Cancel")
+        cancel_btn.setMinimumSize(90, 34)
         cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(cancel_btn)
-        
+
         self.rebuild_btn = QPushButton("Start Rebuild")
+        self.rebuild_btn.setMinimumSize(110, 34)
         self.rebuild_btn.clicked.connect(self.accept)
         self.rebuild_btn.setDefault(True)
+        self.rebuild_btn.setStyleSheet("""
+            QPushButton {
+                font-weight: bold;
+                background-color:
+                color: white;
+                border: none;
+                border-radius: 4px;
+            }
+            QPushButton:hover { background-color: }
+        """)
         button_layout.addWidget(self.rebuild_btn)
-        
+
         layout.addLayout(button_layout)
-        
+
+        # Initialize display
+        self.update_performance_info()
+
     def on_mode_changed(self):
         """Handle mode selection change"""
         if self.fast_radio.isChecked():
             self.selected_mode = "fast"
             self.verify_after_check.setEnabled(False)
+            self.verify_after_check.setChecked(False)
         else:
             self.selected_mode = "safe"
             self.verify_after_check.setEnabled(True)
-            
+            self.verify_after_check.setChecked(True)
+
         self.update_performance_info()
-        
+
     def update_performance_info(self):
-        """Update performance information display"""
+        """Update performance information - FIXED: Compact formatting"""
         if self.selected_mode == "fast":
             if self.operation_type == "single":
-                perf_text = "🚀 Fast Mode Performance:\n" \
-                           "• Small IMG (100 entries): 1-2 seconds\n" \
-                           "• Medium IMG (500 entries): 3-5 seconds\n" \
-                           "• Large IMG (1000+ entries): 5-15 seconds"
+                perf_text = "🚀 Fast Mode:\n" \
+                           "Small IMG (100 entries): 1-2 sec | Medium (500): 3-5 sec | Large (1000+): 5-15 sec\n" \
+                           "Features: Speed optimized, basic corruption fixes"
             else:
-                perf_text = "🚀 Fast Batch Performance:\n" \
-                           "• 10-20 IMG files: 30-60 seconds\n" \
-                           "• 50+ IMG files: 2-5 minutes\n" \
-                           "• Bulk optimizations active"
+                perf_text = "🚀 Fast Batch:\n" \
+                           "10-20 files: 30-60 sec | 50+ files: 2-5 min\n" \
+                           "Features: Bulk optimizations, parallel processing"
         else:
             if self.operation_type == "single":
-                perf_text = "🛡️ Safe Mode Performance:\n" \
-                           "• Small IMG (100 entries): 10-30 seconds\n" \
-                           "• Medium IMG (500 entries): 30-90 seconds\n" \
-                           "• Large IMG (1000+ entries): 2-5 minutes"
+                perf_text = "🔍 Safe Mode:\n" \
+                           "Small IMG (100 entries): 10-30 sec | Medium (500): 30-90 sec | Large (1000+): 2-5 min\n" \
+                           "Features: Full error checking, corruption fixes, integrity verification"
             else:
-                perf_text = "🛡️ Safe Batch Performance:\n" \
-                           "• 10-20 IMG files: 5-15 minutes\n" \
-                           "• 50+ IMG files: 15-45 minutes\n" \
-                           "• Detailed error checking per file"
-        
+                perf_text = "🔍 Safe Batch:\n" \
+                           "10-20 files: 5-15 min | 50+ files: 15-45 min\n" \
+                           "Features: Detailed per-file checking, comprehensive error reporting"
+
         self.perf_label.setText(perf_text)
-        
+
     def get_rebuild_options(self) -> dict:
         """Get selected rebuild options"""
         options = {
@@ -180,12 +239,11 @@ class RebuildModeDialog(QDialog):
             'create_backup': self.create_backup_check.isChecked(),
             'verify_integrity': self.verify_after_check.isChecked() and self.selected_mode == "safe"
         }
-        
+
         if self.operation_type == "batch":
             options['stop_on_error'] = getattr(self, 'stop_on_error_check', None) and self.stop_on_error_check.isChecked()
-        
-        return options
 
+        return options
 
 def show_rebuild_mode_dialog(main_window, operation_type="single") -> Optional[dict]:
     """Show rebuild mode selection dialog"""
