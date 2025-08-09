@@ -615,20 +615,6 @@ class IMGFile:
         except Exception:
             return f"file_{len(self.entries):04d}.dat"
 
-    def rebuild_img_file(self) -> bool: #vers 1
-        """Rebuild IMG file with current entries"""
-        try:
-            import struct
-            import os
-
-            if self.version == IMGVersion.VERSION_1:
-                return self._rebuild_version1()
-            else:
-                return self._rebuild_version2()
-
-        except Exception as e:
-            print(f"[ERROR] Failed to rebuild IMG file: {e}")
-            return False
 
     def _rebuild_version2(self) -> bool: #vers 1
         """Rebuild Version 2 IMG file (SA format)"""
