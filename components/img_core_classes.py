@@ -198,7 +198,7 @@ class IMGEntry:
                 self.file_type = self._get_file_type_from_extension()
 
             # For RenderWare files, detect version from data
-            if self.is_renderware_file() and self._img_file and not self._version_detected:
+            if self.is_renderware_file() and self._img_file and not self._version_detected: #nroken
                 try:
                     data = self.get_data()
                     if len(data) >= 12:  # Minimum RW header size
@@ -758,17 +758,22 @@ class IMGFile:
             return False
 
 
-    def add_entry(self, filename: str, data: bytes, auto_save: bool = True) -> bool: #vers 2
-        """Add new entry to IMG file - FIXED VERSION based on windows_source patterns"""
+    def add_entry(self, filename: str, data: bytes, auto_save: bool = True) -> bool: #vers 3
+        """Add new entry to IMG file - FIXED VERSION with enhanced debugging"""
         try:
-            print(f"[DEBUG] Adding entry: {filename} (current entries: {len(self.entries)})")
+            print(f"[DEBUG] === ADD_ENTRY START ===")
+            print(f"[DEBUG] add_entry called: {filename} ({len(data)} bytes)")
+            print(f"[DEBUG] Current IMG entries before: {len(self.entries)}")
+            print(f"[DEBUG] IMG file path: {self.file_path}")
+            print(f"[DEBUG] IMG version: {self.version}")
+            print(f"[DEBUG] Auto-save enabled: {auto_save}")
 
             # Check for duplicate entries (replace if exists)
             existing_entry = None
             for i, entry in enumerate(self.entries):
                 if entry.name == filename:
                     existing_entry = entry
-                    print(f"[DEBUG] Replacing existing entry: {filename}")
+                    print(f"[DEBUG] Replacing existing entry at index {i}: {filename}")
                     break
 
             # Calculate proper offset for new entry
@@ -778,56 +783,84 @@ class IMGFile:
                 # Align to sector boundary (2048 bytes for IMG files)
                 last_end = last_entry.offset + last_entry.size
                 new_offset = ((last_end + 2047) // 2048) * 2048
+                print(f"[DEBUG] Calculated new offset: 0x{new_offset:08X} (after last entry)")
             else:
                 # First entry or replacing existing
                 if self.version == IMGVersion.VERSION_1:
                     new_offset = 0  # Version 1 starts at beginning of .img file
+                    print(f"[DEBUG] Version 1 offset: 0x{new_offset:08X}")
                 else:
                     # Version 2: Calculate directory size first
                     directory_size = len(self.entries) * 32  # 32 bytes per entry
                     new_offset = directory_size
+                    print(f"[DEBUG] Version 2 offset: 0x{new_offset:08X} (directory size: {directory_size})")
 
             # Create new IMGEntry with proper setup
             if existing_entry:
                 # Replace existing entry data
+                print(f"[DEBUG] Updating existing entry data...")
                 new_entry = existing_entry
                 new_entry._cached_data = data
                 new_entry.size = len(data)
+                print(f"[DEBUG] Existing entry updated: size={new_entry.size}, offset=0x{new_entry.offset:08X}")
                 # Keep existing offset for replacement
             else:
                 # Create brand new entry
+                print(f"[DEBUG] Creating new IMGEntry...")
                 new_entry = IMGEntry()
                 new_entry.name = filename
                 new_entry.size = len(data)
                 new_entry.offset = new_offset
+                print(f"[DEBUG] Setting IMG file reference...")
                 new_entry.set_img_file(self)
                 new_entry._cached_data = data
 
                 # Detect file type and RW version from data
+                print(f"[DEBUG] Detecting file type and version...")
                 new_entry.detect_file_type_and_version()
 
                 # Add to entries list
+                print(f"[DEBUG] Adding entry to entries list...")
                 self.entries.append(new_entry)
+                print(f"[DEBUG] Entry appended successfully")
 
-            print(f"[DEBUG] Entry added: {filename} at offset 0x{new_entry.offset:08X}, size {new_entry.size} bytes")
+            print(f"[DEBUG] Entry processed: {filename} at offset 0x{new_entry.offset:08X}, size {new_entry.size} bytes")
             print(f"[DEBUG] Total entries now: {len(self.entries)}")
+            new_entry.is_new_entry = True
 
             # Only save if requested (for batch operations, set auto_save=False)
             if auto_save:
                 print(f"[DEBUG] Auto-saving IMG file...")
-                success = self.save_img_file()
+                print(f"[DEBUG] Checking if save_img_file method exists: {hasattr(self, 'save_img_file')}")
+
+                if hasattr(self, 'save_img_file'):
+                    success = self.save_img_file()
+                    print(f"[DEBUG] save_img_file() returned: {success}")
+                else:
+                    print(f"[DEBUG] save_img_file method not found, trying backup save...")
+                    from core.save_img_entry import save_img_file_with_backup
+                    success = save_img_file_with_backup(self)
+                    print(f"[DEBUG] save_img_file_with_backup() returned: {success}")
+
                 if success:
-                    print(f"[DEBUG] IMG file saved successfully")
+                    print(f"[SUCCESS] IMG file saved successfully")
                 else:
                     print(f"[ERROR] Failed to save IMG file after adding {filename}")
+                print(f"[DEBUG] === ADD_ENTRY END (with save) ===")
                 return success
 
             # Entry added successfully but not saved
+            print(f"[SUCCESS] Entry added to memory (auto_save disabled)")
+            print(f"[DEBUG] === ADD_ENTRY END (no save) ===")
             return True
 
         except Exception as e:
             print(f"[ERROR] Failed to add entry {filename}: {e}")
+            import traceback
+            traceback.print_exc()
+            print(f"[DEBUG] === ADD_ENTRY END (error) ===")
             return False
+
 
     def calculate_next_offset(self) -> int: #vers 1
         """Calculate the next available offset for a new entry - HELPER METHOD"""

@@ -75,21 +75,24 @@ from core.tables_structure import reset_table_styling
 #from core.loadcol import load_col_file_safely
 from core.file_type_filter import integrate_file_filtering
 # Replace existing integrations with new ones
-from core.importer import integrate_import_functions
-from core.exporter import integrate_export_functions
-from core.remove import integrate_remove_functions
+#from core.importer import integrate_import_functions #broken
+#from core.exporter import integrate_export_functions #broken
+#from core.remove import integrate_remove_functions
 # This will automatically integrate the shared IDE system too
 from core.rw_versions import get_rw_version_name
+#from core.rebuild import integrate_single_rebuild_functions
+#from core.rebuild_all import integrate_rebuild_all_functions
 from core.right_click_actions import integrate_right_click_actions, setup_table_context_menu
-from core.save_img_entry import integrate_img_save_functions, save_img_file_with_backup
+#from core.save_img_entry import integrate_img_save_functions, save_img_file_with_backup #broken
 from core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
-from core.integration import integrate_complete_core_system
+#from core.integration import integrate_complete_core_system
 from core.connections import connect_all_buttons_safely
 from core.convert import convert_img, convert_img_format
 from core.create_img import (create_new_img, detect_and_open_file, open_file_dialog, detect_file_type)
 from core.close import install_close_functions, setup_close_manager
 from core.split_img import integrate_split_functions
 from core.theme_integration import integrate_theme_system
+from core.img_corruption_analyzer import setup_corruption_analyzer
 
 from methods.ide_parser import integrate_ide_parser
 
@@ -281,59 +284,53 @@ class IMGLoadThread(QThread):
 class IMGFactory(QMainWindow):
     """Main IMG Factory application window"""
 
-    def __init__(self, settings): #vers 60
+    def __init__(self, settings): #vers 61
+        """Initialize IMG Factory with optimized loading order"""
         super().__init__()
+
+        # === PHASE 1: CORE SETUP (Fast) ===
         self.settings = settings
         self.app_settings = settings if hasattr(settings, 'themes') else AppSettings()
 
-        #apply_unified_button_theme(self.app_settings)
-
-        #integrate_cross_platform_theme_system(self)
-        # force_readable_text_colors(self)
-
-        self.setWindowTitle("IMG Factory 1.5 - X-Seti Aug06-2025")
+        # Window setup
+        self.setWindowTitle("IMG Factory 1.5 - X-Seti Aug09-2025")
         self.setGeometry(100, 100, 1200, 800)
 
-        #bugged function
-        #integrate_enhanced_debug_error(self)
-        # Initialize template manager - FIXED INDENTATION
+        # Core data initialization
+        self.current_img: Optional[IMGFile] = None
+        self.current_col: Optional[COLFile] = None
+        self.open_files = {}
+        self.tab_counter = 0
+        self.load_thread: Optional[IMGLoadThread] = None
+
+        # === PHASE 2: ESSENTIAL COMPONENTS (Fast) ===
+
+        # Template manager (with better error handling)
         try:
             from components.img_templates import IMGTemplateManager
             self.template_manager = IMGTemplateManager()
             print("✅ Template manager initialized")
         except Exception as e:
-            print(f"❌ Template manager initialization failed: {str(e)}")
-            # Create dummy template manager as fallback
+            print(f"❌ Template manager failed: {str(e)}")
             class DummyTemplateManager:
                 def get_all_templates(self): return []
                 def get_default_templates(self): return []
                 def get_user_templates(self): return []
             self.template_manager = DummyTemplateManager()
 
-        # Core data
-        self.current_img: Optional[IMGFile] = None
-        self.current_col: Optional[COLFile] = None
-        self.open_files = {}  # Dict to store open files {tab_index: file_info}
-        self.tab_counter = 0  # Counter for unique tab IDs
+        # === PHASE 3: GUI CREATION (Medium) ===
 
-        # Background threads
-        self.load_thread: Optional[IMGLoadThread] = None
-
-        # Initialize GUI layout
+        # Create GUI layout
         self.gui_layout = IMGFactoryGUILayout(self)
 
-        # Setup menu bar system
-        self.menubar = self.menuBar() #< old
+        # Menu system
+        self.menubar = self.menuBar()
         self.menu_bar_system = IMGFactoryMenuBar(self)
-        integrate_autosave_menu(self)
-        self.log_message("✅ Auto-save menu option added")
 
-        integrate_theme_system(self)
-
-        # Setup menu callbacks - FIXED TO USE WORKING METHOD
+        # Menu callbacks
         callbacks = {
             "about": self.show_about,
-            "open_img": self.open_img_file,  # FIXED: Use method that actually works
+            "open_img": self.open_img_file,
             "new_img": self.create_new_img,
             "exit": self.close,
             "img_validate": self.validate_img,
@@ -341,93 +338,156 @@ class IMGFactory(QMainWindow):
         }
         self.menu_bar_system.set_callbacks(callbacks)
 
-        # Initialize UI (but without menu creation in gui_layout)
+        # Create main UI
         self._create_ui()
-        self._restore_settings()
 
-        # Setup close manager for tab handling
-        connect_all_buttons_safely(self)
-        self.setup_missing_utility_functions()
+        # === PHASE 4: ESSENTIAL INTEGRATIONS (Medium) ===
 
-        # Setup close manager for tab handling
-        install_close_functions(self)
-
-        #debug debug debug
-        integrate_debug_patch(self)
-        apply_visibility_fix(self)
-
-        if integrate_remove_functions(self):
-            self.log_message("✅ Remove functions integrated")
-
-        install_img_table_populator(self)
-
-        # Integrate standalone UI update method
-        integrate_update_ui_for_loaded_img(self)
-
-        integrate_unknown_rw_detection(self)
-
-        # First integrate the functions
-        integrate_complete_core_system(self)
 
         try:
-            from core.file_extraction import setup_complete_extraction_integration
-            setup_complete_extraction_integration(self)
+            from core.img_corruption_analyzer import setup_corruption_analyzer
+            setup_corruption_analyzer(self)
+            self.log_message("🔍 IMG corruption analyzer integrated")
         except Exception as e:
-            self.log_message(f"⚠️ Failed to setup extraction integration: {str(e)}")
+            self.log_message(f"⚠️ Corruption analyzer integration failed: {e}")
 
-        # Save filetable.
-        integrate_img_save_functions(self)
 
-        # Integrate complete extraction system
-        setup_complete_extraction_integration(self)
-
-        # Integrate file filtering
-        integrate_file_filtering(self)
-
-        # Create gui_backend
-        self.gui_backend = GUIBackend(self)
-
-        # After GUI setup in __init__:
-        setup_all_shortcuts(self)
-        create_debug_keyboard_shortcuts(self)
-        install_debug_control_system(self)
-
-        # Debug: Check what methods gui_backend has
-        print("🔍 GUI Backend methods:")
-        for method in dir(self.gui_backend):
-            if not method.startswith('_') and callable(getattr(self.gui_backend, method)):
-                print(f"   - {method}")
-
-        # Debug: Check if bridging worked
-        methods_to_check = ['export_selected_via', 'quick_export_selected', 'remove_via_entries', 'dump_entries', 'import_files_via']
-        for method in methods_to_check:
-            if hasattr(self, method):
-                print(f"✅ {method} bridged successfully")
-            else:
-                print(f"❌ {method} NOT bridged")
-
-        # Apply theme
-        if hasattr(self.app_settings, 'themes'):
-            apply_theme_to_app(QApplication.instance(), self.app_settings)
-
-        # Enable highlighting system
-        enable_import_highlighting(self)
-
-        integrate_import_functions(self)
-        integrate_export_functions(self)
-        integrate_remove_functions(self)
-        integrate_progress_system(self)
-
-        # Integrate IDE system
+        # Core parsers (now safe to use log_message)
         integrate_ide_parser(self)
         integrate_ide_dialog(self)
 
-        integrate_right_click_actions(self)
+        # Button connections (essential for functionality)
+        connect_all_buttons_safely(self)
+
+        # File operations
+        install_close_functions(self)
+
+        # Table population (needed for IMG display)
+        install_img_table_populator(self)
+
+        setup_corruption_analyzer(self)
+
+        # Update UI system
+        integrate_update_ui_for_loaded_img(self)
+
+        # === PHASE 5: CORE FUNCTIONALITY (Medium) ===
+
+        # File extraction (single call only!)
+        try:
+            from core.file_extraction import setup_complete_extraction_integration
+            setup_complete_extraction_integration(self)
+            self.log_message("✅ File extraction integrated")
+        except Exception as e:
+            self.log_message(f"⚠️ Extraction integration failed: {str(e)}")
+
+        # File filtering
+        integrate_file_filtering(self)
+
+        # RW detection
+        integrate_unknown_rw_detection(self)
+
+        # === PHASE 6: GUI BACKEND & SHORTCUTS (Medium) ===
+
+        # GUI backend
+        self.gui_backend = GUIBackend(self)
+
+        # Keyboard shortcuts
+        setup_all_shortcuts(self)
+
+        # Context menus
+        setup_table_context_menu(self)
+
+        # === PHASE 7: OPTIONAL FEATURES (Heavy - Can be delayed) ===
+
+        # Auto-save menu
+        integrate_autosave_menu(self)
+
+        # Theme system
+        integrate_theme_system(self)
+        if hasattr(self.app_settings, 'themes'):
+            apply_theme_to_app(QApplication.instance(), self.app_settings)
+
+        # Progress system
+        integrate_progress_system(self)
+
+        # SINGLE HYBRID INTEGRATION - No conflicts
+        try:
+            from core.hybrid_rebuild import setup_hybrid_rebuild_methods
+            setup_hybrid_rebuild_methods(self)
+            self.log_message("✅ Hybrid rebuild system ready")
+        except Exception as e:
+            self.log_message(f"⚠️ Hybrid rebuild setup failed: {e}")
+
+            # Fallback if hybrid fails
+            try:
+                from core.fast_rebuild import setup_fast_rebuild_methods
+                setup_fast_rebuild_methods(self)
+                self.log_message("✅ Fast rebuild fallback ready")
+            except Exception as e:
+                self.log_message(f"❌ All rebuild systems failed: {e}")
+
+        # Split functions
         integrate_split_functions(self)
 
+        # === PHASE 8: DEBUG & DEVELOPMENT (Can be conditional) ===
+
+        # Debug features (only if needed)
+        try:
+            integrate_debug_patch(self)
+            apply_visibility_fix(self)
+            create_debug_keyboard_shortcuts(self)
+            install_debug_control_system(self)
+            self.log_message("✅ Debug features loaded")
+        except Exception as e:
+            self.log_message(f"⚠️ Debug features failed: {str(e)}")
+
+        # === PHASE 9: HIGHLIGHTING & FINAL SETUP ===
+
+        # Import highlighting
+        enable_import_highlighting(self)
+
+        # Restore settings
+        self._restore_settings()
+
+        # Utility functions
+        self.setup_missing_utility_functions()
+
+        # Final reload alias
         self.reload_table = self.reload_current_file
-        # Log startup
-        self.log_message("IMG Factory 1.5 initialized")
+
+        # === STARTUP COMPLETE ===
+        self.log_message("✅ IMG Factory 1.5 initialized - Ready!")
+
+        # Show window (non-blocking)
+        self.show()
+
+
+    # === PERFORMANCE IMPROVEMENTS ===
+
+    def log_message(self, message: str): #vers 2
+        """Optimized logging that works before GUI is ready"""
+        try:
+            # Check if GUI is ready
+            if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'log') and self.gui_layout.log:
+                # Use QTimer to defer log updates to prevent blocking
+                QTimer.singleShot(0, lambda: self._append_log_message(message))
+            else:
+                # Fallback to console if GUI not ready
+                print(f"LOG: {message}")
+        except Exception:
+            print(f"LOG: {message}")
+
+    def _append_log_message(self, message: str): #vers 1
+        """Internal log message append"""
+        try:
+            if hasattr(self.gui_layout, 'log') and self.gui_layout.log:
+                self.gui_layout.log.append(message)
+                # Scroll to bottom
+                scrollbar = self.gui_layout.log.verticalScrollBar()
+                scrollbar.setValue(scrollbar.maximum())
+        except Exception:
+            pass
+
 
     def show_debug_settings(self): #vers 1
         """Show debug settings dialog"""
@@ -444,6 +504,240 @@ class IMGFactory(QMainWindow):
             QMessageBox.information(self, "Debug Settings",
                 "Debug settings: Use F12 to toggle performance mode")
 
+
+    def _append_log_message(self, message: str): #vers 1
+        """Internal log message append"""
+        try:
+            if hasattr(self.gui_layout, 'log') and self.gui_layout.log:
+                self.gui_layout.log.append(message)
+                # Scroll to bottom
+                scrollbar = self.gui_layout.log.verticalScrollBar()
+                scrollbar.setValue(scrollbar.maximum())
+        except Exception:
+            pass
+
+    def analyze_corruption(self):
+        """Analyze and fix IMG corruption"""
+        return self.analyze_img_corruption()
+
+    def analyze_img_corruption(self): #vers 1
+        """Analyze IMG file for corruption - Menu callback"""
+        try:
+            if not hasattr(self, 'current_img') or not self.current_img:
+                QMessageBox.warning(self, "No IMG File",
+                                  "Please open an IMG file first to analyze corruption")
+                return
+
+            self.log_message("🔍 Starting IMG corruption analysis...")
+
+            # Show corruption analysis dialog
+            from core.img_corruption_analyzer import show_corruption_analysis_dialog
+            result = show_corruption_analysis_dialog(self)
+
+            if result:
+                # User wants to apply fixes
+                report = result['report']
+                fix_options = result['fix_options']
+
+                from core.img_corruption_analyzer import fix_corrupted_img
+                success = fix_corrupted_img(self.current_img, report, fix_options, self)
+
+                if success:
+                    self.log_message("✅ IMG corruption fixed successfully")
+                else:
+                    self.log_message("❌ IMG corruption fix failed")
+            else:
+                self.log_message("📊 Corruption analysis completed (no fixes applied)")
+
+        except Exception as e:
+            self.log_message(f"❌ Corruption analysis error: {str(e)}")
+            QMessageBox.critical(self, "Analysis Error",
+                               f"Corruption analysis failed:\n{str(e)}")
+
+    def quick_fix_corruption(self): #vers 1
+        """Quick fix common corruption issues - Menu callback"""
+        try:
+            if not hasattr(self, 'current_img') or not self.current_img:
+                QMessageBox.warning(self, "No IMG File",
+                                  "Please open an IMG file first")
+                return
+
+            self.log_message("🔧 Quick fixing IMG corruption...")
+
+            # Analyze first
+            from core.img_corruption_analyzer import analyze_img_corruption
+            report = analyze_img_corruption(self.current_img, self)
+
+            if 'error' in report:
+                QMessageBox.critical(self, "Analysis Failed",
+                                   f"Could not analyze file:\n{report['error']}")
+                return
+
+            corrupted_count = len(report.get('corrupted_entries', []))
+
+            if corrupted_count == 0:
+                QMessageBox.information(self, "No Corruption",
+                                      "No corruption detected in this IMG file!")
+                return
+
+            # Confirm quick fix
+            reply = QMessageBox.question(self, "Quick Fix Corruption",
+                                       f"Found {corrupted_count} corrupted entries.\n\n"
+                                       f"Quick fix will:\n"
+                                       f"• Clean all filenames\n"
+                                       f"• Remove null bytes\n"
+                                       f"• Fix control characters\n"
+                                       f"• Create backup\n\n"
+                                       f"Continue with quick fix?",
+                                       QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+
+            if reply == QMessageBox.StandardButton.Yes:
+                # Apply quick fix options
+                quick_fix_options = {
+                    'fix_filenames': True,
+                    'remove_invalid': False,  # Don't remove entries in quick fix
+                    'fix_null_bytes': True,
+                    'fix_long_names': True,
+                    'create_backup': True
+                }
+
+                from core.img_corruption_analyzer import fix_corrupted_img
+                success = fix_corrupted_img(self.current_img, report, quick_fix_options, self)
+
+                if success:
+                    self.log_message("✅ Quick corruption fix completed")
+                    QMessageBox.information(self, "Quick Fix Complete",
+                                          f"Successfully fixed {corrupted_count} corrupted entries!\n\n"
+                                          f"The IMG file has been cleaned and rebuilt.")
+                else:
+                    self.log_message("❌ Quick corruption fix failed")
+
+        except Exception as e:
+            self.log_message(f"❌ Quick fix error: {str(e)}")
+            QMessageBox.critical(self, "Quick Fix Error",
+                               f"Quick fix failed:\n{str(e)}")
+
+    def clean_filenames_only(self): #vers 1
+        """Clean only filenames, keep all entries - Menu callback"""
+        try:
+            if not hasattr(self, 'current_img') or not self.current_img:
+                QMessageBox.warning(self, "No IMG File",
+                                  "Please open an IMG file first")
+                return
+
+            self.log_message("🧹 Cleaning filenames only...")
+
+            # Analyze corruption
+            from core.img_corruption_analyzer import analyze_img_corruption
+            report = analyze_img_corruption(self.current_img, self)
+
+            if 'error' in report:
+                QMessageBox.critical(self, "Analysis Failed",
+                                   f"Could not analyze file:\n{report['error']}")
+                return
+
+            corrupted_count = len(report.get('corrupted_entries', []))
+
+            if corrupted_count == 0:
+                QMessageBox.information(self, "No Corruption",
+                                      "No filename corruption detected!")
+                return
+
+            # Apply filename-only cleaning
+            filename_fix_options = {
+                'fix_filenames': True,
+                'remove_invalid': False,  # Never remove entries
+                'fix_null_bytes': True,
+                'fix_long_names': True,
+                'create_backup': True
+            }
+
+            from core.img_corruption_analyzer import fix_corrupted_img
+            success = fix_corrupted_img(self.current_img, report, filename_fix_options, self)
+
+            if success:
+                self.log_message("✅ Filename cleaning completed")
+                QMessageBox.information(self, "Filenames Cleaned",
+                                      f"Successfully cleaned {corrupted_count} filenames!\n\n"
+                                      f"All entries preserved, only filenames fixed.")
+            else:
+                self.log_message("❌ Filename cleaning failed")
+
+        except Exception as e:
+            self.log_message(f"❌ Filename cleaning error: {str(e)}")
+            QMessageBox.critical(self, "Cleaning Error",
+                               f"Filename cleaning failed:\n{str(e)}")
+
+    def export_corruption_report(self): #vers 1
+        """Export corruption report to file - Menu callback"""
+        try:
+            if not hasattr(self, 'current_img') or not self.current_img:
+                QMessageBox.warning(self, "No IMG File",
+                                  "Please open an IMG file first")
+                return
+
+            self.log_message("📄 Generating corruption report...")
+
+            # Analyze corruption
+            from core.img_corruption_analyzer import analyze_img_corruption
+            report = analyze_img_corruption(self.current_img, self)
+
+            if 'error' in report:
+                QMessageBox.critical(self, "Analysis Failed",
+                                   f"Could not analyze file:\n{report['error']}")
+                return
+
+            # Get save filename
+            from PyQt6.QtWidgets import QFileDialog
+            filename, _ = QFileDialog.getSaveFileName(
+                self, "Export Corruption Report",
+                f"{os.path.splitext(os.path.basename(self.current_img.file_path))[0]}_corruption_report.txt",
+                "Text Files (*.txt);;All Files (*)"
+            )
+
+            if filename:
+                # Export detailed report
+                with open(filename, 'w', encoding='utf-8') as f:
+                    f.write(f"IMG Corruption Analysis Report\n")
+                    f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                    f.write(f"File: {self.current_img.file_path}\n")
+                    f.write("=" * 60 + "\n\n")
+
+                    # Summary
+                    total_entries = report.get('total_entries', 0)
+                    corrupted_count = len(report.get('corrupted_entries', []))
+                    f.write(f"Summary:\n")
+                    f.write(f"  Total Entries: {total_entries:,}\n")
+                    f.write(f"  Corrupted Entries: {corrupted_count:,}\n")
+                    f.write(f"  Corruption Level: {(corrupted_count/total_entries*100) if total_entries > 0 else 0:.1f}%\n")
+                    f.write(f"  Severity: {report.get('severity', 'Unknown')}\n\n")
+
+                    # Issue breakdown
+                    f.write(f"Issue Breakdown:\n")
+                    for issue_type, count in report.get('issue_summary', {}).items():
+                        f.write(f"  {issue_type}: {count} entries\n")
+                    f.write("\n")
+
+                    # Detailed corrupted entries
+                    f.write(f"Detailed Corrupted Entries:\n")
+                    f.write("-" * 60 + "\n")
+
+                    for entry in report.get('corrupted_entries', []):
+                        f.write(f"\nEntry #{entry.get('index', 0)}:\n")
+                        f.write(f"  Original Name: {repr(entry.get('original_name', ''))}\n")
+                        f.write(f"  Issues: {', '.join(entry.get('issues', []))}\n")
+                        f.write(f"  Suggested Fix: {entry.get('suggested_fix', '')}\n")
+                        f.write(f"  Size: {entry.get('size', 0):,} bytes\n")
+                        f.write(f"  Offset: 0x{entry.get('offset', 0):08X}\n")
+
+                self.log_message(f"📄 Corruption report exported to: {filename}")
+                QMessageBox.information(self, "Report Exported",
+                                      f"Corruption report exported to:\n{filename}")
+
+        except Exception as e:
+            self.log_message(f"❌ Report export error: {str(e)}")
+            QMessageBox.critical(self, "Export Error",
+                               f"Report export failed:\n{str(e)}")
 
     def setup_unified_signals(self): #vers 6
         """Setup unified signal handler for all table interactions"""
@@ -1062,24 +1356,6 @@ class IMGFactory(QMainWindow):
             self._update_ui_for_no_img()
 
 
-    def log_message(self, message): #vers 3
-        #./gui/gui_layout.py - def log_message(self, message): #vers 3 #keep
-        #./gui/gui_backend.py - def log_message(self, message): #vers 3 #keep
-        """Log a message to the activity log"""
-        print(f"LOG: {message}")  # Temporary - shows in console
-
-        # Try different log methods
-        if hasattr(self.gui_layout, 'log_message'):
-            self.gui_layout.log_message(message)
-        elif hasattr(self.gui_layout, 'log') and hasattr(self.gui_layout.log, 'append'):
-            from PyQt6.QtCore import QDateTime
-            timestamp = QDateTime.currentDateTime().toString("hh:mm:ss")
-            self.gui_layout.log.append(f"[{timestamp}] {message}")
-        else:
-            # Fallback - create a simple log in status bar
-            if hasattr(self, 'statusBar'):
-                self.statusBar().showMessage(message)
-
     def _load_col_file_safely(self, file_path): #vers 2 #Restore
         """Load COL file safely - REDIRECTS to col_tab_integration"""
         try:
@@ -1377,80 +1653,6 @@ class IMGFactory(QMainWindow):
         self.load_thread.start()
 
 
-    def rebuild_img(self): #vers 6
-        """Rebuild current IMG file - UPDATED: Uses unified progress system"""
-        if not self.current_img:
-            QMessageBox.warning(self, "No IMG", "No IMG file is currently loaded.")
-            return
-
-        try:
-            from methods.progressbar import show_progress, hide_progress
-
-            self.log_message("Rebuilding IMG file...")
-            show_progress(self, 0, "Rebuilding...")
-
-            # Check if IMG has rebuild method
-            if hasattr(self.current_img, 'rebuild'):
-                if self.current_img.rebuild():
-                    self.log_message("IMG file rebuilt successfully")
-                    hide_progress(self, "Rebuild complete")
-                    QMessageBox.information(self, "Success", "IMG file rebuilt successfully!")
-                else:
-                    self.log_message("Failed to rebuild IMG file")
-                    hide_progress(self, "Rebuild failed")
-                    QMessageBox.critical(self, "Error", "Failed to rebuild IMG file")
-            else:
-                self.log_message("❌ Error rebuilding IMG: 'IMGFile' object has no attribute 'rebuild'")
-                hide_progress(self, "Error")
-                QMessageBox.critical(self, "Error", "Rebuild method not available in IMG file class")
-
-        except Exception as e:
-            from methods.progressbar import hide_progress
-            error_msg = f"Error rebuilding IMG: {str(e)}"
-            self.log_message(error_msg)
-            hide_progress(self, "Error")
-            QMessageBox.critical(self, "Rebuild Error", error_msg)
-
-    def rebuild_img_as(self): #vers 6
-        """Rebuild IMG file with new name - UPDATED: Uses unified progress system"""
-        if not self.current_img:
-            QMessageBox.warning(self, "No IMG", "No IMG file is currently loaded.")
-            return
-
-        try:
-            file_path, _ = QFileDialog.getSaveFileName(
-                self, "Rebuild IMG As", "",
-                "IMG Archives (*.img);;All Files (*)"
-            )
-
-            if file_path:
-                from methods.progressbar import show_progress, hide_progress
-
-                self.log_message(f"Rebuilding IMG as: {os.path.basename(file_path)}")
-                show_progress(self, 0, "Rebuilding...")
-
-                # Check if IMG has rebuild_as method
-                if hasattr(self.current_img, 'rebuild_as'):
-                    if self.current_img.rebuild_as(file_path):
-                        self.log_message("IMG file rebuilt successfully")
-                        hide_progress(self, "Rebuild complete")
-                        QMessageBox.information(self, "Success", f"IMG file rebuilt as {os.path.basename(file_path)}")
-                    else:
-                        self.log_message("Failed to rebuild IMG file")
-                        hide_progress(self, "Rebuild failed")
-                        QMessageBox.critical(self, "Error", "Failed to rebuild IMG file")
-                else:
-                    self.log_message("❌ Error rebuilding IMG: 'IMGFile' object has no attribute 'rebuild_as'")
-                    hide_progress(self, "Error")
-                    QMessageBox.critical(self, "Error", "Rebuild As method not available in IMG file class")
-
-        except Exception as e:
-            from methods.progressbar import hide_progress
-            error_msg = f"Error rebuilding IMG: {str(e)}"
-            self.log_message(error_msg)
-            hide_progress(self, "Error")
-            QMessageBox.critical(self, "Rebuild Error", error_msg)
-
     def _on_img_load_progress(self, progress: int, status: str): #vers 5
         """Handle IMG loading progress updates - UPDATED: Uses unified progress system"""
         try:
@@ -1459,6 +1661,7 @@ class IMGFactory(QMainWindow):
         except ImportError:
             # Fallback for systems without unified progress
             self.log_message(f"Progress: {progress}% - {status}")
+
 
     def _update_ui_for_no_img(self): #vers 6
         """Update UI when no IMG file is loaded - UPDATED: Uses unified progress system"""
@@ -1534,99 +1737,6 @@ class IMGFactory(QMainWindow):
             self.log_message("⚠️ Unified progress system not available - using fallback")
         except Exception as e:
             self.log_message(f"❌ Progress system integration failed: {str(e)}")
-
-    # Update rebuild_all_img method for batch operations:
-    def rebuild_all_img_updated_progress(self): #vers 4
-        """Rebuild all IMG files - UPDATED: Uses unified progress system"""
-        try:
-            from methods.progressbar import show_progress, update_progress, hide_progress
-
-            # Get directory for batch rebuild
-            directory = QFileDialog.getExistingDirectory(self, "Select Directory with IMG Files")
-            if not directory:
-                return
-
-            # Find IMG files
-            img_files = [f for f in os.listdir(directory) if f.lower().endswith('.img')]
-            if not img_files:
-                QMessageBox.information(self, "No IMG Files", "No IMG files found in selected directory")
-                return
-
-            # Show confirmation
-            reply = QMessageBox.question(
-                self, "Confirm Rebuild All",
-                f"Rebuild {len(img_files)} IMG files?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-            )
-
-            if reply != QMessageBox.StandardButton.Yes:
-                return
-
-            # Start batch rebuild with unified progress
-            self.log_message(f"🔧 Starting rebuild of {len(img_files)} IMG files...")
-            show_progress(self, 0, "Starting batch rebuild...")
-
-            rebuilt_count = 0
-            failed_files = []
-
-            for i, img_file in enumerate(img_files):
-                file_path = os.path.join(directory, img_file)
-                progress = int((i + 1) * 100 / len(img_files))
-
-                update_progress(self, progress, f"Rebuilding {img_file}...")
-                self.log_message(f"🔧 Rebuilding {img_file}...")
-
-                try:
-                    # Import IMG class and attempt to rebuild
-                    from components.img_core_classes import IMGFile
-
-                    # Load IMG file
-                    img = IMGFile(file_path)
-                    if not img.open():
-                        failed_files.append(f"{img_file}: Failed to open")
-                        continue
-
-                    # Attempt rebuild
-                    if hasattr(img, 'rebuild'):
-                        if img.rebuild():
-                            rebuilt_count += 1
-                            self.log_message(f"✅ Rebuilt: {img_file}")
-                        else:
-                            failed_files.append(f"{img_file}: Rebuild failed")
-                            self.log_message(f"❌ Failed: {img_file}")
-                    else:
-                        failed_files.append(f"{img_file}: No rebuild method")
-                        self.log_message(f"❌ No rebuild method: {img_file}")
-
-                    img.close()
-
-                except Exception as e:
-                    failed_files.append(f"{img_file}: {str(e)}")
-                    self.log_message(f"❌ Error: {img_file} - {str(e)}")
-
-            # Show completion status
-            if rebuilt_count == len(img_files):
-                hide_progress(self, f"All {rebuilt_count} files rebuilt")
-                success_msg = f"Successfully rebuilt all {rebuilt_count} IMG files!"
-                self.log_message(f"✅ {success_msg}")
-                QMessageBox.information(self, "Rebuild Complete", success_msg)
-            else:
-                hide_progress(self, f"Completed: {rebuilt_count}/{len(img_files)}")
-                result_msg = f"Rebuilt {rebuilt_count} of {len(img_files)} files."
-                if failed_files:
-                    result_msg += f"\n\nFailed files:\n" + "\n".join(failed_files[:10])
-                    if len(failed_files) > 10:
-                        result_msg += f"\n... and {len(failed_files) - 10} more"
-
-                self.log_message(f"⚠️ Batch rebuild completed: {rebuilt_count}/{len(img_files)}")
-                QMessageBox.warning(self, "Rebuild Results", result_msg)
-
-        except Exception as e:
-            from methods.progressbar import hide_progress
-            error_msg = f"Error in rebuild_all_img: {str(e)}"
-            self.log_message(f"❌ {error_msg}")
-            hide_progress(self, "Rebuild all failed")
-            QMessageBox.critical(self, "Rebuild All Error", error_msg)
 
 
     def _populate_col_table_img_format(self, col_file, file_name):
@@ -2253,8 +2363,6 @@ class IMGFactory(QMainWindow):
         self.log_message("Export via tool functionality coming soon")
 
 
-
-
     def import_files(self):
         """Import files into current IMG"""
         if not self.current_img:
@@ -2422,6 +2530,7 @@ class IMGFactory(QMainWindow):
                 self.gui_layout.show_progress(-1, "Export error")
             QMessageBox.critical(self, "Export Error", error_msg)
 
+
     def remove_selected(self):
         """Remove selected entries"""
         if not self.current_img:
@@ -2576,6 +2685,272 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Reload failed: {str(e)}")
             return False
+
+
+    def rebuild_img(self): #vers 7
+        """Rebuild current IMG file - FIXED: Uses new rebuild.py system"""
+        try:
+            if not hasattr(self, 'current_img') or not self.current_img:
+                QMessageBox.warning(self, "No IMG", "No IMG file is currently loaded.")
+                return False
+
+            self.log_message("🔧 Starting IMG rebuild with new system...")
+
+            # Use the new single rebuild system
+            from core.rebuild import rebuild_current_img
+            success = rebuild_current_img(self)
+
+            if success:
+                self.log_message("✅ IMG rebuild completed successfully")
+            else:
+                self.log_message("❌ IMG rebuild failed")
+
+            return success
+
+        except ImportError:
+            # Fallback to old system if new rebuild not available
+            self.log_message("⚠️ New rebuild system not available - using fallback")
+            return self._rebuild_img_fallback()
+        except Exception as e:
+            error_msg = f"Error rebuilding IMG: {str(e)}"
+            self.log_message(f"❌ {error_msg}")
+            QMessageBox.critical(self, "Rebuild Error", error_msg)
+            return False
+
+    def rebuild_all_img(self): #vers 7
+        """Rebuild all IMG files - FIXED: Uses new rebuild_all.py system"""
+        try:
+            self.log_message("🔧 Starting batch IMG rebuild with new system...")
+
+            # Use the new batch rebuild system
+            from core.rebuild_all import rebuild_all_img
+            success = rebuild_all_img(self)
+
+            if success:
+                self.log_message("✅ Batch IMG rebuild completed")
+            else:
+                self.log_message("❌ Batch IMG rebuild failed or cancelled")
+
+            return success
+
+        except ImportError:
+            # Fallback to old system if new rebuild_all not available
+            self.log_message("⚠️ New batch rebuild system not available - using fallback")
+            return self._rebuild_all_img_fallback()
+        except Exception as e:
+            error_msg = f"Error in batch rebuild: {str(e)}"
+            self.log_message(f"❌ {error_msg}")
+            QMessageBox.critical(self, "Batch Rebuild Error", error_msg)
+            return False
+
+    def quick_rebuild(self): #vers 1
+        """Quick rebuild without prompts - NEW METHOD"""
+        try:
+            if not hasattr(self, 'current_img') or not self.current_img:
+                self.log_message("⚠️ Quick rebuild: No IMG file open")
+                return False
+
+            self.log_message("⚡ Starting quick rebuild...")
+
+            # Use the new quick rebuild system
+            from core.rebuild import quick_rebuild
+            success = quick_rebuild(self)
+
+            if success:
+                self.log_message("✅ Quick rebuild completed")
+            else:
+                self.log_message("❌ Quick rebuild failed")
+
+            return success
+
+        except ImportError:
+            self.log_message("⚠️ Quick rebuild system not available")
+            return False
+        except Exception as e:
+            error_msg = f"Quick rebuild error: {str(e)}"
+            self.log_message(f"❌ {error_msg}")
+            return False
+
+    def rebuild_directory_imgs(self, directory_path: str): #vers 1
+        """Rebuild all IMG files in specific directory - NEW METHOD"""
+        try:
+            self.log_message(f"🔧 Rebuilding IMG files in directory: {directory_path}")
+
+            # Use the new directory rebuild system
+            from core.rebuild_all import rebuild_directory_imgs
+            success = rebuild_directory_imgs(self, directory_path)
+
+            if success:
+                self.log_message("✅ Directory rebuild completed")
+            else:
+                self.log_message("❌ Directory rebuild failed")
+
+            return success
+
+        except ImportError:
+            self.log_message("⚠️ Directory rebuild system not available")
+            return False
+        except Exception as e:
+            error_msg = f"Directory rebuild error: {str(e)}"
+            self.log_message(f"❌ {error_msg}")
+            return False
+
+    # FALLBACK METHODS (for compatibility if new system not available)
+
+    def _rebuild_img_fallback(self): #vers 1
+        """Fallback rebuild method using basic IMG class functionality"""
+        try:
+            if not self.current_img:
+                return False
+
+            # Try to use IMG class rebuild if it exists
+            if hasattr(self.current_img, '_rebuild_version2') or hasattr(self.current_img, '_rebuild_version1'):
+                self.log_message("🔄 Using IMG class rebuild method...")
+
+                # Determine version and call appropriate method
+                if hasattr(self.current_img, 'version') and self.current_img.version == 1:
+                    if hasattr(self.current_img, '_rebuild_version1'):
+                        success = self.current_img._rebuild_version1()
+                    else:
+                        self.log_message("❌ Version 1 rebuild method not available")
+                        return False
+                else:
+                    if hasattr(self.current_img, '_rebuild_version2'):
+                        success = self.current_img._rebuild_version2()
+                    else:
+                        self.log_message("❌ Version 2 rebuild method not available")
+                        return False
+
+                if success:
+                    self.log_message("✅ Fallback rebuild successful")
+                    QMessageBox.information(self, "Success", "IMG file rebuilt successfully!")
+
+                    # Refresh the table to show updated data
+                    if hasattr(self, 'refresh_table'):
+                        self.refresh_table()
+
+                    return True
+                else:
+                    self.log_message("❌ Fallback rebuild failed")
+                    QMessageBox.critical(self, "Error", "Failed to rebuild IMG file")
+                    return False
+            else:
+                self.log_message("❌ No rebuild methods available in IMG class")
+                QMessageBox.critical(self, "Error", "Rebuild functionality not available")
+                return False
+
+        except Exception as e:
+            error_msg = f"Fallback rebuild error: {str(e)}"
+            self.log_message(f"❌ {error_msg}")
+            QMessageBox.critical(self, "Rebuild Error", error_msg)
+            return False
+
+    def _rebuild_all_img_fallback(self): #vers 1
+        """Fallback batch rebuild using old system"""
+        try:
+            # Get directory for batch rebuild
+            directory = QFileDialog.getExistingDirectory(self, "Select Directory with IMG Files")
+            if not directory:
+                return False
+
+            # Find IMG files
+            import glob
+            img_patterns = [
+                os.path.join(directory, "*.img"),
+                os.path.join(directory, "*.dir")
+            ]
+
+            img_files = []
+            for pattern in img_patterns:
+                img_files.extend(glob.glob(pattern))
+
+            if not img_files:
+                QMessageBox.information(self, "No IMG Files", "No IMG files found in selected directory")
+                return False
+
+            # Show confirmation
+            reply = QMessageBox.question(
+                self, "Confirm Rebuild All",
+                f"Rebuild {len(img_files)} IMG files?\n\nThis will modify the original files.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+
+            if reply != QMessageBox.StandardButton.Yes:
+                return False
+
+            # Simple progress dialog
+            from PyQt6.QtWidgets import QProgressDialog
+            progress = QProgressDialog("Rebuilding IMG files...", "Cancel", 0, len(img_files), self)
+            progress.setWindowModality(Qt.WindowModality.WindowModal)
+            progress.show()
+
+            rebuilt_count = 0
+            failed_files = []
+
+            for i, img_file_path in enumerate(img_files):
+                if progress.wasCanceled():
+                    break
+
+                filename = os.path.basename(img_file_path)
+                progress.setValue(i)
+                progress.setLabelText(f"Rebuilding {filename}...")
+                QApplication.processEvents()
+
+                try:
+                    # Load IMG file
+                    from components.img_core_classes import IMGFile
+                    img = IMGFile()
+
+                    if img.load_from_file(img_file_path):
+                        # Try fallback rebuild
+                        if hasattr(img, '_rebuild_version2') or hasattr(img, '_rebuild_version1'):
+                            if hasattr(img, 'version') and img.version == 1:
+                                success = img._rebuild_version1() if hasattr(img, '_rebuild_version1') else False
+                            else:
+                                success = img._rebuild_version2() if hasattr(img, '_rebuild_version2') else False
+
+                            if success:
+                                rebuilt_count += 1
+                                self.log_message(f"✅ Rebuilt: {filename}")
+                            else:
+                                failed_files.append(filename)
+                                self.log_message(f"❌ Failed: {filename}")
+                        else:
+                            failed_files.append(filename)
+                            self.log_message(f"❌ No rebuild method: {filename}")
+                    else:
+                        failed_files.append(filename)
+                        self.log_message(f"❌ Failed to load: {filename}")
+
+                except Exception as e:
+                    failed_files.append(filename)
+                    self.log_message(f"❌ Error: {filename} - {str(e)}")
+
+            progress.close()
+
+            # Show results
+            if rebuilt_count == len(img_files):
+                success_msg = f"Successfully rebuilt all {rebuilt_count} IMG files!"
+                self.log_message(f"✅ {success_msg}")
+                QMessageBox.information(self, "Rebuild Complete", success_msg)
+                return True
+            else:
+                result_msg = f"Rebuilt {rebuilt_count} of {len(img_files)} files."
+                if failed_files:
+                    result_msg += f"\n\nFailed files:\n" + "\n".join(failed_files[:10])
+                    if len(failed_files) > 10:
+                        result_msg += f"\n... and {len(failed_files) - 10} more"
+
+                self.log_message(f"⚠️ {result_msg}")
+                QMessageBox.warning(self, "Partial Success", result_msg)
+                return rebuilt_count > 0
+
+        except Exception as e:
+            error_msg = f"Batch rebuild error: {str(e)}"
+            self.log_message(f"❌ {error_msg}")
+            QMessageBox.critical(self, "Batch Rebuild Error", error_msg)
+            return False
+
 
     # Add aliases for button connections To-Do
     def reload_file(self):

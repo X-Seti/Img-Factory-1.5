@@ -25,40 +25,61 @@ from PyQt6.QtGui import QColor, QBrush, QFont
 ##Classes -
 # ImportHighlightManager
 
-class ImportHighlightManager: #vers 1
+class ImportHighlightManager: #vers 2
     """Manages highlighting of imported files in the table"""
-    
+
     def __init__(self, main_window):
         self.main_window = main_window
         self.imported_files: Set[str] = set()
         self.replaced_files: Set[str] = set()
-        self.highlight_timer: QTimer = None
-        self.highlight_duration = 10000  # 10 seconds
-        
-    def track_imported_file(self, filename: str, was_replaced: bool = False): #vers 1
-        """Track a file that was imported"""
-        if was_replaced:
-            self.replaced_files.add(filename)
-        else:
-            self.imported_files.add(filename)
-            
-        # Start highlight timer
-        self._start_highlight_timer()
-        
-    def track_multiple_files(self, filenames: List[str], replaced_files: List[str] = None): #vers 1
-        """Track multiple imported files"""
+        self.highlighting_enabled = True  # Always on by default
+        #self.highlight_timer: QTimer = None (unused-keep)
+        #self.highlight_duration = 10000  # 10 seconds (unused-keep)
+
+
+    def toggle_highlighting(self): #vers 1
+        """Toggle highlighting on/off"""
+        self.highlighting_enabled = not self.highlighting_enabled
+
+        # Refresh table to apply/remove highlights
+        refresh_table_with_highlights(self.main_window)
+
+        status = "enabled" if self.highlighting_enabled else "disabled"
+        self.main_window.log_message(f"✨ Import highlighting {status}")
+
+        return self.highlighting_enabled
+
+    def track_multiple_files(self, filenames: List[str], replaced_files: List[str] = None): #vers 2
+        """Track multiple imported files - NO TIMER"""
         if replaced_files is None:
             replaced_files = []
-            
+
         for filename in filenames:
             self.imported_files.add(filename)
-            
+
         for filename in replaced_files:
             self.replaced_files.add(filename)
-            
-        self._start_highlight_timer()
-        
-    def _start_highlight_timer(self): #vers 1
+
+        # No timer - highlights stay until manually cleared
+
+    def clear_highlights(self): #vers 2
+        """Clear all import highlights"""
+        self.imported_files.clear()
+        self.replaced_files.clear()
+
+        # Refresh table to remove highlights
+        refresh_table_with_highlights(self.main_window)
+
+    def is_file_highlighted(self, filename: str) -> tuple: #vers 2
+        """Check if file should be highlighted and return (is_highlighted, is_replaced)"""
+        if not self.highlighting_enabled:
+            return (False, False)
+
+        is_imported = filename in self.imported_files
+        is_replaced = filename in self.replaced_files
+        return (is_imported or is_replaced, is_replaced)
+
+    def _start_highlight_timer(self): #vers 1 (unused-keep)
         """Start timer to clear highlights after duration"""
         if self.highlight_timer:
             self.highlight_timer.stop()
@@ -68,19 +89,6 @@ class ImportHighlightManager: #vers 1
         self.highlight_timer.setSingleShot(True)
         self.highlight_timer.start(self.highlight_duration)
         
-    def clear_highlights(self): #vers 1
-        """Clear all import highlights"""
-        self.imported_files.clear()
-        self.replaced_files.clear()
-        
-        # Refresh table to remove highlights
-        refresh_table_with_highlights(self.main_window)
-        
-    def is_file_highlighted(self, filename: str) -> tuple: #vers 1
-        """Check if file should be highlighted and return (is_highlighted, is_replaced)"""
-        is_imported = filename in self.imported_files
-        is_replaced = filename in self.replaced_files
-        return (is_imported or is_replaced, is_replaced)
 
 def create_highlighted_item(text: str, highlight_type: str = "imported") -> QTableWidgetItem: #vers 1
     """Create table item with import highlighting"""
@@ -329,11 +337,22 @@ def track_imported_files(main_window, filenames: List[str], replaced_files: List
         print(f"Error tracking imported files: {e}")
         return False
 
-def integrate_import_highlighting(main_window): #vers 1
+def integrate_import_highlighting(main_window): #vers 2
     """Integrate import highlighting system into main window"""
     try:
         # Create highlight manager
         main_window._import_highlight_manager = ImportHighlightManager(main_window)
+
+        # Add right-click menu
+        add_highlight_context_menu(main_window)
+
+        main_window.log_message("✨ Import highlighting system integrated with right-click control")
+        return True
+
+    except Exception as e:
+        main_window.log_message(f"❌ Failed to integrate import highlighting: {str(e)}")
+        return False
+
         
         # Add highlighting functions to main window
         main_window.highlight_imported_files = lambda files, replaced=None: highlight_imported_files(main_window, files, replaced)
@@ -351,40 +370,129 @@ def integrate_import_highlighting(main_window): #vers 1
         main_window.log_message(f"❌ Failed to integrate import highlighting: {str(e)}")
         return False
 
-def create_highlighted_img_table_item(text: str, highlight_type: str = None) -> Any: #vers 1
-    """Create table item with optional import highlighting"""
+def create_highlighted_img_table_item(text: str, highlight_type: str = None) -> Any: #vers 3
+    """Create table item with theme-aware import highlighting"""
     from PyQt6.QtWidgets import QTableWidgetItem
-    from PyQt6.QtGui import QColor, QBrush, QFont
+    from PyQt6.QtGui import QColor, QBrush
 
     item = QTableWidgetItem(text)
 
     if highlight_type == "imported":
-        # Light green background for newly imported files
-        item.setBackground(QBrush(QColor(200, 255, 200)))  # Light green
-        item.setForeground(QBrush(QColor(0, 100, 0)))      # Dark green text
+        # Theme-aware green highlighting
+        if is_dark_theme():
+            item.setBackground(QBrush(QColor(0, 100, 0)))      # Dark green bg
+            item.setForeground(QBrush(QColor(255, 255, 255)))  # White text
+        else:
+            item.setBackground(QBrush(QColor(220, 255, 220)))  # Light green bg
+            item.setForeground(QBrush(QColor(0, 80, 0)))       # Dark green text
 
-        # Make text bold
-        font = item.font()
-        font.setBold(True)
-        item.setFont(font)
-
-        # Add tooltip
         item.setToolTip("📥 Recently imported file")
 
     elif highlight_type == "replaced":
-        # Light yellow background for replaced files
-        item.setBackground(QBrush(QColor(255, 255, 200)))  # Light yellow
-        item.setForeground(QBrush(QColor(150, 100, 0)))    # Dark orange text
+        # Theme-aware yellow highlighting
+        if is_dark_theme():
+            item.setBackground(QBrush(QColor(120, 120, 0)))    # Dark yellow bg
+            item.setForeground(QBrush(QColor(255, 255, 255)))  # White text
+        else:
+            item.setBackground(QBrush(QColor(255, 255, 180)))  # Light yellow bg
+            item.setForeground(QBrush(QColor(120, 100, 0)))    # Dark yellow text
 
-        # Make text bold
-        font = item.font()
-        font.setBold(True)
-        item.setFont(font)
-
-        # Add tooltip
         item.setToolTip("🔄 Recently replaced file")
 
     return item
+
+def is_dark_theme() -> bool: #vers 2
+    """Enhanced dark theme detection using theme system"""
+    try:
+        # Method 1: Check application palette
+        from PyQt6.QtWidgets import QApplication
+        app = QApplication.instance()
+        if app:
+            palette = app.palette()
+            bg_color = palette.color(palette.ColorRole.Window)
+            if bg_color.lightness() < 128:
+                return True
+
+        # Method 2: Check if we can access theme system
+        # Add your theme system integration here if available
+        # Example: return get_current_theme() == "dark"
+
+        return False  # Default to light theme
+
+    except Exception:
+        return False  # Fallback to light theme
+
+def get_theme_highlight_colors(): #vers 1
+    """Get highlight colors from theme system"""
+    try:
+        # Try to get colors from your theme system
+        # Replace this with your actual theme system calls
+
+        # Example integration:
+        # from core.theme_integration import get_current_theme_colors
+        # theme_colors = get_current_theme_colors()
+        # return theme_colors.get('accent_secondary', '#90EE90')
+
+        # Fallback colors
+        return {
+            'imported_light': QColor(220, 255, 220),
+            'imported_dark': QColor(0, 100, 0),
+            'replaced_light': QColor(255, 255, 180),
+            'replaced_dark': QColor(120, 120, 0)
+        }
+
+    except Exception:
+        # Fallback colors
+        return {
+            'imported_light': QColor(220, 255, 220),
+            'imported_dark': QColor(0, 100, 0),
+            'replaced_light': QColor(255, 255, 180),
+            'replaced_dark': QColor(120, 120, 0)
+        }
+
+def add_highlight_context_menu(main_window): #vers 2
+    """Merge highlighting controls with existing right-click menu - NO OVERWRITE"""
+    try:
+        # Don't overwrite existing context menu - just store the highlighting functions
+        main_window._highlight_menu_functions = {
+            'get_highlight_actions': lambda: get_highlight_menu_actions(main_window),
+            'toggle_highlighting': lambda: main_window._import_highlight_manager.toggle_highlighting() if hasattr(main_window, '_import_highlight_manager') else None,
+            'clear_highlights': lambda: main_window._import_highlight_manager.clear_highlights() if hasattr(main_window, '_import_highlight_manager') else None
+        }
+
+        main_window.log_message("✅ Highlighting functions ready for existing context menu")
+        return True
+
+    except Exception as e:
+        main_window.log_message(f"❌ Failed to prepare highlight menu functions: {str(e)}")
+        return False
+
+def get_highlight_menu_actions(main_window): #vers 1
+    """Get highlighting menu actions for integration with existing menus"""
+    from PyQt6.QtGui import QAction
+
+    actions = []
+
+    try:
+        highlight_mgr = getattr(main_window, '_import_highlight_manager', None)
+        if highlight_mgr:
+            # Toggle highlighting action
+            status = "Disable" if highlight_mgr.highlighting_enabled else "Enable"
+            highlight_action = QAction(f"✨ {status} Import Highlighting")
+            highlight_action.triggered.connect(highlight_mgr.toggle_highlighting)
+            actions.append(highlight_action)
+
+            # Clear highlights action
+            if highlight_mgr.imported_files or highlight_mgr.replaced_files:
+                clear_action = QAction("🧹 Clear Highlights")
+                clear_action.triggered.connect(highlight_mgr.clear_highlights)
+                actions.append(clear_action)
+
+    except Exception as e:
+        print(f"Error getting highlight actions: {e}")
+
+    return actions
+
 
 def get_highlight_type_for_entry(main_window, entry_name: str) -> str: #vers 1
     """Check if entry should be highlighted"""

@@ -51,19 +51,21 @@ class IMGTablePopulator:
                 return False
 
             # Configure table structure - UPDATED: 7 columns including RW Hex
-            table.setColumnCount(7)
+            table.setColumnCount(8)
             table.setHorizontalHeaderLabels([
-                "Name", "Type", "Size", "Offset", "RW Version", "RW Hex", "Info"
+                "Name", "Type", "Size", "Offset", "RW Address", "RW Version", "Info", "Status"
             ])
 
             # Set proper column widths - UPDATED for RW Hex column
-            table.setColumnWidth(0, 200)  # Name
-            table.setColumnWidth(1, 80)   # Type
-            table.setColumnWidth(2, 100)  # Size
+            table.setColumnWidth(0, 190)  # Name
+            table.setColumnWidth(1, 60)   # Type
+            table.setColumnWidth(2, 90)  # Size
             table.setColumnWidth(3, 100)  # Offset
-            table.setColumnWidth(4, 120)  # RW Version
-            table.setColumnWidth(5, 100)  # RW Hex - NEW COLUMN
-            table.setColumnWidth(6, 150)  # Info
+            table.setColumnWidth(5, 100)  # RW Version
+            table.setColumnWidth(4, 100)  # RW Hex - NEW COLUMN
+            table.setColumnWidth(6, 110)  # Info
+            table.setColumnWidth(7, 110)   # Status
+            #TODO - add resizing on columns, file window span to fill 100% window.
 
             # Enable proper selection, sorting, and column resizing
             from PyQt6.QtWidgets import QHeaderView, QAbstractItemView
@@ -121,20 +123,37 @@ class IMGTablePopulator:
             # Column 4: RW Version
             rw_version = self.get_rw_version_string(entry)
             version_item = self.create_img_table_item(rw_version)
-            table.setItem(row, 4, version_item)
+            table.setItem(row, 5, version_item)
 
             # Column 5: RW Hex - NEW COLUMN
             rw_hex = self.get_rw_version_hex(entry)
             hex_item = self.create_img_table_item(rw_hex)
-            table.setItem(row, 5, hex_item)
+            table.setItem(row, 4, hex_item)
 
             # Column 6: Info
             info_text = self.get_entry_info(entry)
             info_item = self.create_img_table_item(info_text)
             table.setItem(row, 6, info_item)
 
+            # Column 7: Status
+            status_text = self.get_entry_status(entry)
+            table.setItem(row, 7, self.create_img_table_item(status_text))
+
         except Exception as e:
             img_debugger.error(f"Error populating table row {row}: {str(e)}")
+
+    def get_entry_status(self, entry: Any) -> str: #vers 1
+        """Get entry status for Status column"""
+        try:
+            if hasattr(entry, 'is_new_entry') and entry.is_new_entry:
+                return "Imported"
+            elif hasattr(entry, 'is_replaced') and entry.is_replaced:
+                return "Replaced"
+            else:
+                return "Original"
+        except Exception:
+            return "Original"
+
 
     def get_table_reference(self):
         """Get table widget reference"""
@@ -214,32 +233,39 @@ class IMGTablePopulator:
         except Exception:
             return "N/A"
 
-    def get_entry_info(self, entry: Any) -> str: #vers 1
-        """Get entry info string"""
+    def get_entry_info(self, entry: Any) -> str: #vers 3
+        """Get entry info string - FIXED redundancy and compression types"""
         try:
             info_parts = []
-            
-            # File type info
-            if hasattr(entry, 'file_type'):
-                file_type = str(entry.file_type.value).upper() if hasattr(entry.file_type, 'value') else str(entry.file_type)
-                if file_type != "UNKNOWN":
-                    info_parts.append(file_type)
-            
+
+            # DON'T add file type here - it's already shown in the Type column
+            # File type info - REMOVED to avoid redundancy
+
             # Status info
             if hasattr(entry, 'is_new_entry') and entry.is_new_entry:
-                info_parts.append("New")
-            if hasattr(entry, 'is_replaced') and entry.is_replaced:
+                info_parts.append("Imported")
+            elif hasattr(entry, 'is_replaced') and entry.is_replaced:
                 info_parts.append("Replaced")
-            
-            # Compression info
+
+            # Compression info - Enhanced
             if hasattr(entry, 'compression_type') and hasattr(entry.compression_type, 'value'):
-                if entry.compression_type.value != 0:  # Not NONE
-                    info_parts.append("Compressed")
-            
-            return " • ".join(info_parts) if info_parts else "OK"
-            
+                if entry.compression_type.value > 1:  # Actually compressed
+                    # Try to detect compression type
+                    comp_type = "zlib"  # Default assumption for RW files
+                    if hasattr(entry, 'compression_method'):
+                        comp_type = entry.compression_method
+                    info_parts.append(f"Compressed ({comp_type})")
+                else:
+                    # Not compressed
+                    info_parts.append("Uncompressed")
+            else:
+                # No compression info available
+                info_parts.append("Uncompressed")
+
+            return " • ".join(info_parts) if info_parts else "Uncompressed"
+
         except Exception:
-            return "OK"
+            return "Uncompressed"
 
     def get_hex_preview(self, entry: Any) -> str: #vers 1
         """Get hex preview of entry data - PRESERVED for compatibility"""
@@ -291,8 +317,9 @@ def install_img_table_populator(main_window) -> bool: #vers 1
         main_window.format_img_entry_size = img_populator.format_img_entry_size
         main_window.get_img_entry_type = img_populator.get_img_entry_type
         main_window.get_hex_preview = img_populator.get_hex_preview
+        main_window.get_rw_version_hex = img_populator.get_rw_version_hex
         main_window.get_rw_version_string = img_populator.get_rw_version_string
-        main_window.get_rw_version_hex = img_populator.get_rw_version_hex  # NEW METHOD
+
         
         # Store populator reference
         main_window.img_table_populator = img_populator

@@ -23,6 +23,9 @@ Todo, Restore, Collision system integration - Connect existing collision system 
 
 ------------ completed ---- >
 
+Fixed - Aug9
+Init startup order fixed - smoother img loading.
+
 Fixed - Aug7
 Light / Dark theming system updated - Still needs work.
 core/theme_integration.py - needs adjusting for other theming styles.

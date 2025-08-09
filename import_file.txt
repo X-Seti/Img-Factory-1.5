@@ -1,0 +1,133 @@
+📋 IMPORT SYSTEM REBUILD PLAN
+🎯 PROJECT: Clean Import System Rebuild
+Current Status: Import system has corruption bugs in save functions and filename handling.
+Goal: Create clean, reliable import system ported from original Windows source.
+
+📁 FILE STRUCTURE:
+New Files to Create:
+
+core/importer.py - Basic file selection import (clean rebuild)
+core/import_via.py - Advanced import methods (new file)
+core/save_img_entries.py - Shared bulletproof save system (new file)
+
+Files to Update:
+
+Remove old import functions from current files
+Update integration calls in imgfactory.py
+
+
+🔧 IMPLEMENTATION PLAN:
+Phase 1: Create Bulletproof Save System
+
+File: core/save_img_entries.py
+Port from: Original Windows source save functions
+Features:
+
+Version 1 (DIR/IMG pair) saving with proper backup
+Version 2 (single IMG) saving
+No filename corruption
+Proper sector alignment
+Comprehensive error handling
+
+
+
+Phase 2: Clean Basic Importer
+
+File: core/importer.py (complete rebuild)
+Features:
+
+File selection dialog
+Single/multiple file import
+Progress tracking
+Integration with new save system
+Proper highlighting integration
+
+
+
+Phase 3: Advanced Import Methods
+
+File: core/import_via.py (new)
+Features:
+
+Import via IDE file + models folder selection
+Import via text file list (mixed .dff/.txd)
+Import whole folder contents
+Drag & drop support (future)
+
+
+
+Phase 4: Integration & Testing
+
+Update imgfactory.py to use new import system
+Remove old corrupted import functions
+Test all import methods thoroughly
+Verify save system reliability
+
+
+🚨 CRITICAL ISSUES TO SOLVE:
+
+Filename corruption (carsontrack.dff → carsontrack.dffmaki)
+Fake save success (reports success but doesn't actually save)
+Missing .dir backup for Version 1 IMG files
+RW data not populated for imported files
+
+
+📋 REQUIREMENTS:
+
+No fallback code - works or fails cleanly
+Port from original source - proven patterns only
+Comprehensive testing - verify each function works
+Clean separation - each file has single responsibility
+Proper error handling - no silent failures
+
+
+🎯 SUCCESS CRITERIA:
+✅ Import files without corruption
+✅ Save system that actually persists data
+✅ Proper backup creation for all IMG versions
+✅ Clean filename handling
+✅ RW data populated correctly
+✅ Visual highlighting working
+✅ All import methods functional
+Copy this plan to start fresh tomorrow! 🚀
+
+
+
+Critical Issues Added:
+Export System Issues:
+
+Export single files - needs fixing/implementation
+Export via IDE - UI flow fix (destination folder selection)
+Dump function crashes app - critical bug
+
+Phase 4: Export System Fixes (New)
+
+File: core/export_single.py (new) - Single file export
+File: core/export_via.py (updated plan)
+File: core/dump_functions.py (fix crash bug)
+
+Export Functions to Create:
+
+Export Selected Files - Clean single/multiple file export
+Export Via IDE - With proper destination selection UI
+Dump All/Selected - Fix crashing bug
+Quick Export - Streamlined export option
+
+Files to Reference:
+
+core/exporter.py - Extract working export functions
+Current dump functions - Identify crash cause
+Export button connections in GUI
+
+
+Tomorrow's Tasks:
+
+Clean removal of broken import system
+Create core/save_img_entries.py
+Create core/importer.py (rebuild)
+Create core/import_via.py (new)
+Create core/export_via.py (UI flow fix)
+Fix export single files ← ADDED
+Fix dump crash bug ← ADDED
+
+Comprehensive import/export system rebuild! 🚀

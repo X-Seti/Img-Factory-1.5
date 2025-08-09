@@ -42,7 +42,7 @@ def setup_table_context_menu(main_window): #vers 3
             main_window.log_message("✅ Advanced table right-click context menu enabled")
             return True
         else:
-            main_window.log_message("⚠️ Table not available for context menu setup")
+            main_window.log_message("! Table not available for context menu setup")
             return False
     except Exception as e:
         main_window.log_message(f"❌ Error setting up context menu: {str(e)}")
@@ -53,7 +53,7 @@ def show_advanced_context_menu(main_window, position): #vers 3
     try:
         table = main_window.gui_layout.table
         item = table.itemAt(position)
-        
+
         if not item:
             return
 
@@ -61,19 +61,19 @@ def show_advanced_context_menu(main_window, position): #vers 3
         menu_parent = table
         if isinstance(main_window, QWidget):
             menu_parent = main_window
-        
+
         # Create context menu
         menu = QMenu(menu_parent)
-        
+
         # Get selected data info
         row = item.row()
         col = item.column()
-        
+
         # Get column header and cell data
         header_item = table.horizontalHeaderItem(col)
         column_name = header_item.text() if header_item else f"Column {col}"
         cell_data = item.text() if item else ""
-        
+
         # Get entry info for file-type specific actions
         entry_name = ""
         entry_type = ""
@@ -87,51 +87,51 @@ def show_advanced_context_menu(main_window, position): #vers 3
         if entry_type:
             if entry_type == 'COL':
                 # COL file specific actions
-                edit_col_action = QAction("🔧 Edit COL File", menu_parent)
+                edit_col_action = QAction("Edit COL File", menu_parent)
                 edit_col_action.triggered.connect(lambda: edit_col_from_table(main_window, row))
                 menu.addAction(edit_col_action)
-                
-                analyze_col_action = QAction("🔍 Analyze COL File", menu_parent)
+
+                analyze_col_action = QAction("Analyze COL File", menu_parent)
                 analyze_col_action.triggered.connect(lambda: analyze_col_from_table(main_window, row))
                 menu.addAction(analyze_col_action)
-                
+
             elif entry_type == 'IDE':
                 # IDE file specific actions
-                view_ide_action = QAction("📋 View IDE Definitions", menu_parent)
+                view_ide_action = QAction("View IDE Definitions", menu_parent)
                 view_ide_action.triggered.connect(lambda: view_ide_definitions(main_window, row))
                 menu.addAction(view_ide_action)
-                
-                edit_ide_action = QAction("✏️ Edit IDE File", menu_parent)
+
+                edit_ide_action = QAction("Edit IDE File", menu_parent)
                 edit_ide_action.triggered.connect(lambda: edit_ide_file(main_window, row))
                 menu.addAction(edit_ide_action)
-                
+
             elif entry_type == 'DFF':
                 # DFF model specific actions
-                dff_info_action = QAction("ℹ️ DFF Model Info", menu_parent)
+                dff_info_action = QAction("DFF Model Info", menu_parent)
                 dff_info_action.triggered.connect(lambda: show_dff_info(main_window, row))
                 menu.addAction(dff_info_action)
-                
+
             elif entry_type == 'TXD':
                 # TXD texture specific actions
-                txd_view_action = QAction("🖼️ View TXD Textures", menu_parent)
+                txd_view_action = QAction("View TXD Textures", menu_parent)
                 txd_view_action.triggered.connect(lambda: view_txd_textures(main_window, row))
                 menu.addAction(txd_view_action)
-            
+
             menu.addSeparator()
 
         # EXTRACTION ACTIONS (if extraction system is available)
         if hasattr(main_window, 'extract_selected_files'):
             selected_entries = get_selected_entries_for_extraction(main_window)
             if selected_entries:
-                extract_selected_action = QAction("📤 Extract Selected", menu_parent)
+                extract_selected_action = QAction("Extract Selected", menu_parent)
                 extract_selected_action.triggered.connect(main_window.extract_selected_files)
                 menu.addAction(extract_selected_action)
-            
+
             if hasattr(main_window, 'extract_all_files'):
-                extract_all_action = QAction("📦 Extract All", menu_parent)
+                extract_all_action = QAction("Extract All", menu_parent)
                 extract_all_action.triggered.connect(main_window.extract_all_files)
                 menu.addAction(extract_all_action)
-            
+
             # Quick extract submenu
             if entry_type in ['IDE', 'COL', 'DFF', 'TXD']:
                 quick_extract_action = QAction(f"⚡ Quick Extract {entry_type} Files", menu_parent)
@@ -144,58 +144,58 @@ def show_advanced_context_menu(main_window, position): #vers 3
                 elif entry_type == 'TXD' and hasattr(main_window, 'quick_extract_txd_files'):
                     quick_extract_action.triggered.connect(main_window.quick_extract_txd_files)
                 menu.addAction(quick_extract_action)
-            
+
             menu.addSeparator()
 
         # STANDARD IMG OPERATIONS
         if hasattr(main_window, 'export_selected'):
-            export_action = QAction("📤 Export", menu_parent)
+            export_action = QAction("Export", menu_parent)
             export_action.triggered.connect(main_window.export_selected)
             menu.addAction(export_action)
 
         if hasattr(main_window, 'remove_selected'):
             selected_items = table.selectedItems()
             if selected_items:
-                remove_action = QAction("🗑️ Remove", menu_parent)
+                remove_action = QAction("Remove", menu_parent)
                 remove_action.triggered.connect(main_window.remove_selected)
                 menu.addAction(remove_action)
 
         menu.addSeparator()
 
         # CLIPBOARD OPERATIONS (Basic functionality)
-        copy_cell_action = QAction(f"📋 Copy Cell ({column_name})", menu_parent)
+        copy_cell_action = QAction(f"Copy Cell ({column_name})", menu_parent)
         copy_cell_action.triggered.connect(lambda: copy_table_cell(main_window, row, col))
         menu.addAction(copy_cell_action)
-        
-        copy_row_action = QAction("📄 Copy Row", menu_parent)
+
+        copy_row_action = QAction("Copy Row", menu_parent)
         copy_row_action.triggered.connect(lambda: copy_table_row(main_window, row))
         menu.addAction(copy_row_action)
-        
-        copy_column_action = QAction(f"📊 Copy Column ({column_name})", menu_parent)
+
+        copy_column_action = QAction(f"Copy Column ({column_name})", menu_parent)
         copy_column_action.triggered.connect(lambda: copy_table_column_data(main_window, col))
         menu.addAction(copy_column_action)
-        
+
         # Copy Selection action (if multiple items selected)
         selected_items = table.selectedItems()
         if len(selected_items) > 1:
-            copy_selection_action = QAction(f"🔗 Copy Selection ({len(selected_items)} items)", menu_parent)
+            copy_selection_action = QAction(f"Copy Selection ({len(selected_items)} items)", menu_parent)
             copy_selection_action.triggered.connect(lambda: copy_table_selection(main_window))
             menu.addAction(copy_selection_action)
-        
+
         # Copy filename only (for first column)
         if col == 0:
-            copy_filename_action = QAction("📁 Copy Filename Only", menu_parent)
+            copy_filename_action = QAction("Copy Filename Only", menu_parent)
             copy_filename_action.triggered.connect(lambda: copy_filename_only(main_window, row))
             menu.addAction(copy_filename_action)
-        
+
         # Copy file summary
-        copy_summary_action = QAction("📋 Copy File Summary", menu_parent)
+        copy_summary_action = QAction("Copy File Summary", menu_parent)
         copy_summary_action.triggered.connect(lambda: copy_file_summary(main_window, row))
         menu.addAction(copy_summary_action)
-        
+
         # Show menu at cursor position
         menu.exec(table.mapToGlobal(position))
-        
+
     except Exception as e:
         main_window.log_message(f"❌ Error showing context menu: {str(e)}")
 

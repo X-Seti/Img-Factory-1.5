@@ -16,11 +16,10 @@ from core.gui_search import ASearchDialog, SearchManager
 from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
 from components.img_creator import NewIMGDialog, IMGCreationThread
-from core.importer import import_files_function, import_via_function
-from core.exporter import export_selected_function, export_via_function, quick_export_function, export_all_function, dump_all_function
-from core.remove import remove_selected_function, remove_via_entries_function
-from core.save_img_entry import save_img_entry_function
-from core.rebuild import rebuild_current_img, rebuild_all_img
+#from core.importer import import_files_function, import_via_function #broken
+#from core.exporter import export_selected_function, export_via_function, quick_export_function, export_all_function, dump_all_function
+#from core.remove import remove_selected_function, remove_via_entries_function
+#from core.save_img_entry import save_img_entry_function #broken
 from core.split_img import split_img
 from core.merge_img import merge_img_function
 from core.convert import convert_img, convert_img_format
@@ -71,8 +70,8 @@ class IMGFactoryGUILayout:
             'useless_button': lambda: self._safe_log("🎯 useless_button!"),
             'close_img_file': lambda: close_img_file(self.main_window),
             'close_all_img': lambda: close_all_img(self.main_window),
-            'rebuild_img': lambda: rebuild_current_img(self.main_window),
-            'rebuild_all_img': lambda: rebuild_all_img(self.main_window),
+            'rebuild_img': lambda: getattr(self.main_window, 'rebuild_img', lambda: self._log_missing_method('rebuild_img'))(),
+            'rebuild_all_img': lambda: getattr(self.main_window, 'rebuild_all_img', lambda: self._log_missing_method('rebuild_all_img'))(),
             'save_img_entry': lambda: save_img_entry_function(self.main_window),
             'merge_img': lambda: merge_img_function(self.main_window),
             'split_img': lambda: split_img(self.main_window),

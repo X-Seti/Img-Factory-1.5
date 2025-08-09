@@ -35,6 +35,7 @@ class MenuAction:
         self.enabled = True
         self.visible = True
         self.separator_after = False
+
         #integrate_settings_menu(self) #double menu
         #integrate_color_ui_system(self) #missing function
 
@@ -94,6 +95,7 @@ class MenuDefinition:
                 MenuAction("img_info", "IMG &Information", "F4"),
                 MenuAction("img_validate", "&Validate IMG", "F5"),
                 MenuAction("img_rebuild", "&Rebuild IMG", "F6"),
+                MenuAction("Img analyze", "&Analyze IMG", "Shift+F7"),
                 MenuAction("img_save_entry", "Save Entry.", "Shift+F6"),
                 MenuAction("sep1", ""),
                 MenuAction("img_extract", "&Extract All"),
@@ -109,7 +111,7 @@ class MenuDefinition:
                 MenuAction("img_compare", "Co&mpare IMG Files"),
             ],
 
-            "Model": [
+            "DFF": [
                 MenuAction("model_view", "&View Model", "F7"),
                 MenuAction("model_export", "&Export Model"),
                 MenuAction("model_import", "&Import Model"),
@@ -127,7 +129,7 @@ class MenuDefinition:
                 MenuAction("model_properties", "Model &Properties"),
             ],
 
-            "Texture": [
+            "TXD": [
                 MenuAction("texture_view", "&View Texture", "F8"),
                 MenuAction("texture_export", "&Export Texture"),
                 MenuAction("texture_import", "&Import Texture"),
@@ -146,7 +148,7 @@ class MenuDefinition:
                 MenuAction("texture_properties", "Texture &Properties"),
             ],
 
-            "Collision": [
+            "Coll": [
                 MenuAction("collision_view", "&View Collision", "F9"),
                 MenuAction("collision_edit", "&Edit Collision", "Ctrl+Shift+C"),
                 MenuAction("collision_export", "&Export Collision"),
@@ -165,7 +167,7 @@ class MenuDefinition:
                 MenuAction("collision_debug", "&Debug Information"),
             ],
 
-            "Animation": [
+            "Anim": [
                 MenuAction("anim_view", "&View Animation"),
                 MenuAction("anim_export", "&Export Animation"),
                 MenuAction("anim_import", "&Import Animation"),
@@ -179,7 +181,7 @@ class MenuDefinition:
                 MenuAction("anim_player", "Animation &Player"),
             ],
 
-            "Item Definition": [
+            "IDE": [
                 MenuAction("ide_view", "&View IDE"),
                 MenuAction("ide_edit", "&Edit IDE"),
                 MenuAction("ide_validate", "&Validate IDE"),
@@ -193,7 +195,7 @@ class MenuDefinition:
                 MenuAction("ide_compare", "&Compare IDE Files"),
             ],
 
-            "Item Placement": [
+            "IPL": [
                 MenuAction("ipl_view", "&View IPL"),
                 MenuAction("ipl_edit", "&Edit IPL"),
                 MenuAction("ipl_validate", "&Validate IPL"),
@@ -405,6 +407,40 @@ class COLMenuBuilder:
         col_menu.addAction(help_action)
 
         return col_menu
+
+    def create_img_menu(self): #vers [your_version + 1]
+        """Create IMG menu with corruption analyzer"""
+        img_menu = self.menubar.addMenu("IMG")
+
+        img_menu.addSeparator()
+
+        # Corruption Analysis submenu
+        corruption_menu = img_menu.addMenu("🔍 Corruption Analysis")
+
+        analyze_action = QAction("🔍 Analyze IMG Corruption", self.main_window)
+        analyze_action.setStatusTip("Analyze IMG file for corrupted entries and filenames")
+        analyze_action.triggered.connect(self.main_window.analyze_img_corruption)
+        corruption_menu.addAction(analyze_action)
+
+        quick_fix_action = QAction("🔧 Quick Fix Corruption", self.main_window)
+        quick_fix_action.setStatusTip("Automatically fix common corruption issues")
+        quick_fix_action.triggered.connect(self.main_window.quick_fix_corruption)
+        corruption_menu.addAction(quick_fix_action)
+
+        # Clean filenames only
+        clean_names_action = QAction("🧹 Clean Filenames Only", self.main_window)
+        clean_names_action.setStatusTip("Fix only filename corruption, keep all entries")
+        clean_names_action.triggered.connect(self.main_window.clean_filenames_only)
+        corruption_menu.addAction(clean_names_action)
+
+        corruption_menu.addSeparator()
+
+        export_report_action = QAction("📄 Export Corruption Report", self.main_window)
+        export_report_action.setStatusTip("Export detailed corruption analysis to file")
+        export_report_action.triggered.connect(self.main_window.export_corruption_report)
+        corruption_menu.addAction(export_report_action)
+
+        return img_menu
 
     @staticmethod
     def _open_col_editor(parent_window):
@@ -626,15 +662,15 @@ class IMGFactoryMenuBar:
         menubar = img_factory_instance.menuBar()
 
         # Create COL menu
-        col_menu = menubar.addMenu("🔧 COL")
+        col_menu = menubar.addMenu("COL")
 
         # File operations
-        open_col_action = QAction("📂 Open COL File", img_factory_instance)
+        open_col_action = QAction("Open COL File", img_factory_instance)
         open_col_action.setShortcut("Ctrl+Shift+O")
         open_col_action.triggered.connect(lambda: open_col_file_dialog(img_factory_instance))
         col_menu.addAction(open_col_action)
 
-        new_col_action = QAction("🆕 New COL File", img_factory_instance)
+        new_col_action = QAction("New COL File", img_factory_instance)
         new_col_action.triggered.connect(lambda: create_new_col_file(img_factory_instance))
         col_menu.addAction(new_col_action)
 
@@ -649,22 +685,22 @@ class IMGFactoryMenuBar:
         col_menu.addSeparator()
 
         # Batch operations
-        batch_process_action = QAction("⚙️ Batch Processor", img_factory_instance)
+        batch_process_action = QAction("Batch Processor", img_factory_instance)
         batch_process_action.triggered.connect(lambda: open_col_batch_processor(img_factory_instance))
         col_menu.addAction(batch_process_action)
 
-        analyze_action = QAction("📊 Analyze COL", img_factory_instance)
+        analyze_action = QAction("Analyze COL", img_factory_instance)
         analyze_action.triggered.connect(lambda: analyze_col_file_dialog(img_factory_instance))
         col_menu.addAction(analyze_action)
 
         col_menu.addSeparator()
 
         # Import/Export
-        import_to_img_action = QAction("📥 Import to IMG", img_factory_instance)
+        import_to_img_action = QAction("Import to IMG", img_factory_instance)
         import_to_img_action.triggered.connect(lambda: import_col_to_img(img_factory_instance))
         col_menu.addAction(import_to_img_action)
 
-        export_from_img_action = QAction("📤 Export from IMG", img_factory_instance)
+        export_from_img_action = QAction("Export from IMG", img_factory_instance)
         export_from_img_action.triggered.connect(lambda: export_col_from_img(img_factory_instance))
         col_menu.addAction(export_from_img_action)
 
