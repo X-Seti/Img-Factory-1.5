@@ -143,6 +143,9 @@ class FileBrowserWidget(QWidget):
         address_layout = QHBoxLayout()
         address_layout.addWidget(QLabel("📁 Location:"))
         
+        font = QFont()
+        font.setPointSize(9)  # Set font size to 9pt
+
         self.address_bar = QLineEdit()
         self.address_bar.setPlaceholderText("Enter path or browse...")
         self.address_bar.returnPressed.connect(self.navigate_to_address)
@@ -150,6 +153,8 @@ class FileBrowserWidget(QWidget):
         
         go_btn = QPushButton("Go")
         go_btn.clicked.connect(self.navigate_to_address)
+        go_btn.setMaximumHeight(25)
+        go_btn.setFont(font)
         address_layout.addWidget(go_btn)
         
         layout.addLayout(address_layout)
@@ -428,34 +433,49 @@ class FileBrowserWidget(QWidget):
         """Create navigation toolbar"""
         toolbar = QWidget()
         layout = QHBoxLayout(toolbar)
-        layout.setContentsMargins(4, 4, 4, 4)
-        
+        layout.setContentsMargins(4, 2, 2, 4)
+        font = QFont()
+        font.setPointSize(9)  # Set font size to 9pt
+
+
         # Navigation buttons
         back_btn = QPushButton("⬅️ Back")
+        back_btn.setMaximumHeight(25)
         back_btn.clicked.connect(self.navigate_back)
+        back_btn.setFont(font)
         layout.addWidget(back_btn)
         
         forward_btn = QPushButton("➡️ Forward")
+        forward_btn.setMaximumHeight(25)
         forward_btn.clicked.connect(self.navigate_forward)
+        forward_btn.setFont(font)
         layout.addWidget(forward_btn)
         
         up_btn = QPushButton("⬆️ Up")
+        up_btn.setMaximumHeight(25)
         up_btn.clicked.connect(self.navigate_up)
+        up_btn.setFont(font)
         layout.addWidget(up_btn)
         
         home_btn = QPushButton("🏠 Home")
+        home_btn.setMaximumHeight(25)
         home_btn.clicked.connect(self.navigate_home)
+        home_btn.setFont(font)
         layout.addWidget(home_btn)
         
         layout.addWidget(QLabel("|"))
         
         # Quick actions
         new_folder_btn = QPushButton("📁 New Folder")
+        new_folder_btn.setMaximumHeight(25)
         new_folder_btn.clicked.connect(self.create_new_folder)
+        new_folder_btn.setFont(font)
         layout.addWidget(new_folder_btn)
         
         delete_btn = QPushButton("🗑️ Delete")
+        delete_btn.setMaximumHeight(25)
         delete_btn.clicked.connect(self.delete_selected)
+        delete_btn.setFont(font)
         layout.addWidget(delete_btn)
         
         layout.addStretch()
@@ -463,6 +483,7 @@ class FileBrowserWidget(QWidget):
         # View options
         view_combo = QComboBox()
         view_combo.addItems(["🌳 Tree", "📋 List", "📊 Details"])
+        view_combo.setMaximumHeight(25)
         view_combo.currentTextChanged.connect(self.on_view_combo_changed)
         layout.addWidget(view_combo)
         
@@ -472,74 +493,111 @@ class FileBrowserWidget(QWidget):
         """Create file information panel"""
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        
+        font = QFont()
+        font.setPointSize(9)  # Set font size to 9pt
+        widget.setMaximumHeight(710)
+
+        # Directory statistics
+        stats_group = QGroupBox("📊 Directory Statistics")
+        stats_layout = QVBoxLayout(stats_group)
+
+        self.stats_label = QLabel("Select a directory to see statistics")
+        self.stats_label.setWordWrap(True)
+        stats_layout.addWidget(self.stats_label)
+        layout.addWidget(stats_group)
+
+        layout.addStretch()
+
         # Selected file info
         self.info_group = QGroupBox("📄 File Information")
+        #self.info_group.setMaximumHeight(200)
         info_layout = QVBoxLayout(self.info_group)
+        info_layout.setSpacing(0)
+        info_layout.setContentsMargins(4, 4, 4, 4)  # Add margins for the group
+
+
+        # Create font for smaller labels
+        small_font = QFont("", 9)
 
         self.file_name_label = QLabel("No file selected")
         self.file_name_label.setFont(QFont("", 10, QFont.Weight.Bold))
         info_layout.addWidget(self.file_name_label)
 
+        # Path label - limit to 3 lines
         self.file_path_label = QLabel("")
         self.file_path_label.setWordWrap(True)
+        self.file_path_label.setMaximumHeight(60)  # ~3 lines at 9pt font
+        self.file_path_label.setFont(small_font)
         info_layout.addWidget(self.file_path_label)
 
         self.file_type_label = QLabel("")
+        self.file_type_label.setFont(small_font)
+        self.file_type_label.setMaximumHeight(45)
         info_layout.addWidget(self.file_type_label)
 
         self.file_size_label = QLabel("")
+        self.file_size_label.setFont(small_font)
+        self.file_size_label.setMaximumHeight(45)
         info_layout.addWidget(self.file_size_label)
 
         self.file_date_label = QLabel("")
+        self.file_date_label.setFont(small_font)
+        self.file_date_label.setMaximumHeight(45)
         info_layout.addWidget(self.file_date_label)
         
         layout.addWidget(self.info_group)
-        
-        # Action buttons in 2x2 grid with 10px height adjustment
+
+        # Action buttons in 2x3 grid
         actions_group = QGroupBox("⚡ Quick Actions")
         actions_layout = QGridLayout(actions_group)
-        actions_layout.setSpacing(4)
-        
+        actions_layout.setSpacing(3)  # ← Changed from 4 to 3
+        actions_layout.setContentsMargins(6, 6, 6, 6)  # Add margins for better appearance
+
         # Row 1
         self.open_btn = QPushButton("📂 Open")
         self.open_btn.setEnabled(False)
-        self.open_btn.setMinimumHeight(25)  # 10px adjustment
+        self.open_btn.setMinimumHeight(25)
+        self.open_btn.setFont(font)
         self.open_btn.clicked.connect(self.open_selected)
         actions_layout.addWidget(self.open_btn, 0, 0)
-        
+
         self.edit_btn = QPushButton("✏️ Edit")
         self.edit_btn.setEnabled(False)
-        self.edit_btn.setMinimumHeight(25)  # 10px adjustment
+        self.edit_btn.setMinimumHeight(25)
+        self.edit_btn.setFont(font)
         self.edit_btn.clicked.connect(self.edit_selected)
         actions_layout.addWidget(self.edit_btn, 0, 1)
-        
+
         # Row 2
         self.copy_btn = QPushButton("📋 Copy")
         self.copy_btn.setEnabled(False)
-        self.copy_btn.setMinimumHeight(25)  # 10px adjustment
+        self.copy_btn.setMinimumHeight(25)
+        self.copy_btn.setFont(font)
         self.copy_btn.clicked.connect(self.copy_files)
         actions_layout.addWidget(self.copy_btn, 1, 0)
-        
+
         self.delete_btn = QPushButton("🗑️ Delete")
         self.delete_btn.setEnabled(False)
-        self.delete_btn.setMinimumHeight(25)  # 10px adjustment
+        self.delete_btn.setFont(font)
+        self.delete_btn.setMinimumHeight(25)
         self.delete_btn.clicked.connect(self.delete_selected)
         actions_layout.addWidget(self.delete_btn, 1, 1)
-        
+
+        # Row 3 - Two spare buttons
+        self.spare1_btn = QPushButton("🔧 Tools")
+        self.spare1_btn.setEnabled(False)
+        self.spare1_btn.setMinimumHeight(25)
+        self.spare1_btn.setFont(font)
+        actions_layout.addWidget(self.spare1_btn, 2, 0)
+
+        self.spare2_btn = QPushButton("⭐ Extra")
+        self.spare2_btn.setEnabled(False)
+        self.spare2_btn.setMinimumHeight(25)
+        self.spare2_btn.setFont(font)
+        actions_layout.addWidget(self.spare2_btn, 2, 1)
+
         layout.addWidget(actions_group)
-        
-        # Directory statistics
-        stats_group = QGroupBox("📊 Directory Statistics")
-        stats_layout = QVBoxLayout(stats_group)
-        
-        self.stats_label = QLabel("Select a directory to see statistics")
-        self.stats_label.setWordWrap(True)
-        stats_layout.addWidget(self.stats_label)
-        
-        layout.addWidget(stats_group)
-        
-        layout.addStretch()
+
         return widget
         
     def setup_tree_view(self): #vers 2
@@ -1161,7 +1219,40 @@ class FileBrowserWidget(QWidget):
                 
         except Exception as e:
             self.log_message(f"❌ Error applying browser styling: {str(e)}")
+
+    def format_file_size(self, size: int) -> str: #vers 2
+        """Format file size for display with better precision"""
+        if size == 0:
+            return "0 B"
+
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if size < 1024:
+                if unit == 'B':
+                    return f"{size:,} {unit}"
+                else:
+                    return f"{size:.1f} {unit}"
+            size /= 1024
+        return f"{size:.1f} PB"
             
+    def get_file_type_display_backend(file_ext: str) -> str: #vers 1
+        """Get display name for file type"""
+        type_map = {
+            '.img': 'IMG Archive',
+            '.dir': 'Directory File',
+            '.ide': 'Item Definition',
+            '.ipl': 'Item Placement',
+            '.dat': 'Data File',
+            '.dff': '3D Model',
+            '.txd': 'Texture Dictionary',
+            '.col': 'Collision File',
+            '.cfg': 'Configuration',
+            '.txt': 'Text File',
+            '.py': 'Python Script',
+            '.json': 'JSON Data',
+            '.log': 'Log File'
+        }
+        return type_map.get(file_ext, 'Unknown File')
+
     def get_theme_colors(self): #vers 1
         """Get theme colors from main window"""
         try:
