@@ -22,15 +22,15 @@ import os
 # create_project_folder_structure
 # validate_game_root_folder
 
-def add_project_menu_items(main_window): #vers 2
-    """Add project-related items to File menu - WORK WITH EXISTING MENU SYSTEM"""
+def add_project_menu_items(main_window): #vers 3
+    """Add project-related items to File menu - WITH DIRECTORY BROWSER"""
     try:
         # Check if main window already has a menu system
         menubar = main_window.menuBar()
         if not menubar:
             main_window.log_message("❌ No menu bar found")
             return False
-        
+
         # Find existing File menu
         file_menu = None
         for action in menubar.actions():
@@ -38,68 +38,275 @@ def add_project_menu_items(main_window): #vers 2
             if menu_text == "File":
                 file_menu = action.menu()
                 break
-        
+
         if not file_menu:
             # Create File menu if it doesn't exist
             file_menu = menubar.addMenu("&File")
             main_window.log_message("✅ Created File menu")
-        
+
         # Check if project items already exist (avoid duplicates)
         existing_actions = [action.text() for action in file_menu.actions()]
         if any("Project Folder" in text for text in existing_actions):
             main_window.log_message("⚠️ Project menu items already exist")
             return True
-        
+
         # Add separator before project items (if menu has other items)
         if file_menu.actions():
             file_menu.addSeparator()
-        
+
         # Project Folder action
         project_folder_action = QAction("📁 Set Project Folder...", main_window)
         project_folder_action.setToolTip("Set folder for organizing exported files")
         project_folder_action.triggered.connect(lambda: handle_set_project_folder(main_window))
         project_folder_action.setShortcut("Ctrl+Shift+P")
         file_menu.addAction(project_folder_action)
-        
-        # Game Root Folder action  
+
+        # Game Root Folder action
         game_root_action = QAction("🎮 Set Game Root Folder...", main_window)
         game_root_action.setToolTip("Set GTA game installation directory")
         game_root_action.triggered.connect(lambda: handle_set_game_root_folder(main_window))
         game_root_action.setShortcut("Ctrl+Shift+G")
         file_menu.addAction(game_root_action)
-        
+
+        # NEW: Directory Browser action
+        directory_browser_action = QAction("🌳 Browse Game Directory...", main_window)
+        directory_browser_action.setToolTip("Browse game directory and switch to Directory Tree tab")
+        directory_browser_action.triggered.connect(lambda: handle_browse_game_directory(main_window))
+        directory_browser_action.setShortcut("Ctrl+Shift+B")
+        file_menu.addAction(directory_browser_action)
+
         # Auto-detect Game action
         auto_detect_action = QAction("🔍 Auto-Detect Game...", main_window)
         auto_detect_action.setToolTip("Automatically find GTA installation")
         auto_detect_action.triggered.connect(lambda: handle_auto_detect_game(main_window))
         file_menu.addAction(auto_detect_action)
-        
+
         file_menu.addSeparator()
-        
+
         # Project Settings action
         project_settings_action = QAction("⚙️ Project Settings...", main_window)
         project_settings_action.setToolTip("Configure project and export settings")
         project_settings_action.triggered.connect(lambda: handle_project_settings(main_window))
         file_menu.addAction(project_settings_action)
-        
+
         # Store actions for later reference
         main_window.project_folder_action = project_folder_action
         main_window.game_root_action = game_root_action
+        main_window.directory_browser_action = directory_browser_action
         main_window.auto_detect_action = auto_detect_action
         main_window.project_settings_action = project_settings_action
-        
+
         # Load saved settings
         load_project_settings(main_window)
-        
+
         main_window.log_message("✅ Project menu items added to existing File menu")
-        main_window.log_message("📋 Use Ctrl+Shift+P for Project Folder, Ctrl+Shift+G for Game Root")
-        
+        main_window.log_message("📋 Use Ctrl+Shift+B for Directory Browser")
+
         return True
-        
+
     except Exception as e:
         main_window.log_message(f"❌ Error adding project menu items: {str(e)}")
         return False
 
+
+def handle_browse_game_directory(main_window): #vers 1
+    """Handle Browse Game Directory menu action - switches to Directory Tree tab"""
+    try:
+        # First check if we have a game root set
+        if not hasattr(main_window, 'game_root') or not main_window.game_root:
+            # No game root set, prompt user to set one
+            result = QMessageBox.question(
+                main_window,
+                "No Game Root Set",
+                "No game root directory is set.\n\nWould you like to set one now?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes
+            )
+
+            if result == QMessageBox.StandardButton.Yes:
+                # Open game root selection dialog
+                if not handle_set_game_root_folder(main_window):
+                    return False
+            else:
+                main_window.log_message("📂 Directory browser cancelled - no game root set")
+                return False
+
+        # Now we should have a game root, switch to Directory Tree tab
+        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'tab_widget'):
+            main_window.log_message("❌ Tab widget not found for directory browser")
+            return False
+
+        tab_widget = main_window.gui_layout.tab_widget
+
+        # Find the Directory Tree tab
+        directory_tab_index = -1
+        for i in range(tab_widget.count()):
+            tab_text = tab_widget.tabText(i)
+            if "Directory Tree" in tab_text or "🌳" in tab_text:
+                directory_tab_index = i
+                break
+
+        if directory_tab_index == -1:
+            main_window.log_message("❌ Directory Tree tab not found")
+            QMessageBox.warning(
+                main_window,
+                "Directory Tree Not Available",
+                "Directory Tree tab is not available.\n\nThe directory tree system may not be integrated."
+            )
+            return False
+
+        # Switch to Directory Tree tab
+        tab_widget.setCurrentIndex(directory_tab_index)
+        main_window.log_message(f"🌳 Switched to Directory Tree tab")
+
+        # Check if we have a directory tree widget and populate it
+        if hasattr(main_window, 'directory_tree') and main_window.directory_tree:
+            # Use existing directory tree widget (could be comprehensive browser or simple tree)
+            directory_widget = main_window.directory_tree
+
+            # Check if it's the comprehensive browser or simple tree
+            if hasattr(directory_widget, 'browse_directory'):
+                # Comprehensive file browser
+                directory_widget.browse_directory(main_window.game_root)
+                main_window.log_message(f"🗂️ File browser populated with: {main_window.game_root}")
+            elif hasattr(directory_widget, 'populate_tree'):
+                # Simple directory tree
+                directory_widget.populate_tree(main_window.game_root)
+                main_window.log_message(f"🌳 Directory tree populated with: {main_window.game_root}")
+
+            # Update the path display
+            if hasattr(directory_widget, 'path_label'):
+                directory_widget.path_label.setText(f"Root: {main_window.game_root}")
+            elif hasattr(directory_widget, 'address_bar'):
+                directory_widget.address_bar.setText(main_window.game_root)
+
+        else:
+            # No directory tree widget, try to integrate it first
+            main_window.log_message("⚠️ Directory tree widget not found, attempting integration...")
+
+            try:
+                from gui.directory_tree_system import integrate_directory_tree_system
+                if integrate_directory_tree_system(main_window):
+                    main_window.log_message("✅ Directory tree integrated successfully")
+
+                    # Now try to populate it
+                    if hasattr(main_window, 'directory_tree') and main_window.directory_tree:
+                        directory_widget = main_window.directory_tree
+                        if hasattr(directory_widget, 'browse_directory'):
+                            directory_widget.browse_directory(main_window.game_root)
+                        elif hasattr(directory_widget, 'populate_tree'):
+                            directory_widget.populate_tree(main_window.game_root)
+                        main_window.log_message(f"📂 Directory widget populated with: {main_window.game_root}")
+                else:
+                    main_window.log_message("❌ Failed to integrate directory tree")
+                    return False
+
+            except ImportError:
+                main_window.log_message("❌ Directory tree system not available")
+                QMessageBox.warning(
+                    main_window,
+                    "Directory Tree System Missing",
+                    "The directory tree system is not available.\n\nPlease ensure all components are installed."
+                )
+                return False
+
+        # Show success message with appropriate features
+        if hasattr(main_window, 'directory_tree') and hasattr(main_window.directory_tree, 'menubar'):
+            # Comprehensive file browser
+            success_message = f"File Browser activated!\n\nBrowsing: {main_window.game_root}\n\nYou can now:\n• Browse files with full menu system\n• Edit, View, and Settings menus\n• Cut, Copy, Paste operations\n• Create new files and folders\n• Search files and calculate sizes\n• Load IMG files by double-clicking"
+        else:
+            # Simple directory tree
+            success_message = f"Directory Tree tab activated!\n\nBrowsing: {main_window.game_root}\n\nYou can now:\n• Browse game files\n• Load IMG files by double-clicking\n• Use context menus for file operations"
+
+        QMessageBox.information(
+            main_window,
+            "Directory Browser",
+            success_message
+        )
+
+        main_window.log_message("✅ Directory browser activated successfully")
+        return True
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error in directory browser: {str(e)}")
+        QMessageBox.critical(
+            main_window,
+            "Directory Browser Error",
+            f"An error occurred while opening the directory browser:\n\n{str(e)}"
+        )
+        return False
+
+
+def handle_set_game_root_folder(main_window): #vers 3
+    """Handle Set Game Root Folder menu action with directory tree integration"""
+    try:
+        current_game_root = getattr(main_window, 'game_root', None)
+        start_dir = current_game_root if current_game_root else os.path.expanduser("~")
+
+        folder = QFileDialog.getExistingDirectory(
+            main_window,
+            "Select GTA Game Root Directory - Where your GTA installation is located",
+            start_dir,
+            QFileDialog.Option.ShowDirsOnly
+        )
+
+        if folder:
+            # Validate game root
+            game_info = validate_game_root_folder(folder)
+            if game_info:
+                main_window.game_root = folder
+                main_window.log_message(f"🎮 Game root set: {folder}")
+                main_window.log_message(f"🎯 Detected: {game_info['name']} ({game_info['version']})")
+
+                # Update directory tree if it exists
+                if hasattr(main_window, 'directory_tree') and main_window.directory_tree:
+                    main_window.directory_tree.game_root = folder
+                    main_window.directory_tree.current_root = folder
+                    if hasattr(main_window.directory_tree, 'path_label'):
+                        main_window.directory_tree.path_label.setText(f"Root: {folder}")
+                    # Auto-populate the tree
+                    if hasattr(main_window.directory_tree, 'populate_tree'):
+                        main_window.directory_tree.populate_tree(folder)
+                        main_window.log_message("🌳 Directory tree auto-populated")
+
+                # Save settings
+                save_project_settings(main_window)
+
+                # Show success dialog with option to browse
+                result = QMessageBox.question(
+                    main_window,
+                    "Game Root Set Successfully",
+                    f"Game root configured:\n{folder}\n\nDetected: {game_info['name']} ({game_info['version']})\n\nWould you like to browse the directory now?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.Yes
+                )
+
+                if result == QMessageBox.StandardButton.Yes:
+                    # Auto-switch to directory browser
+                    handle_browse_game_directory(main_window)
+
+                return True
+            else:
+                # Invalid game root
+                QMessageBox.warning(
+                    main_window,
+                    "Invalid Game Directory",
+                    f"The selected directory does not appear to be a valid GTA installation:\n{folder}\n\nPlease select the main GTA directory (where gta_sa.exe or similar is located)."
+                )
+                main_window.log_message(f"⚠️ Invalid game root selected: {folder}")
+                return False
+        else:
+            main_window.log_message("Game root selection cancelled")
+            return False
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error setting game root: {str(e)}")
+        QMessageBox.critical(
+            main_window,
+            "Error Setting Game Root",
+            f"An error occurred while setting the game root:\n\n{str(e)}"
+        )
+        return False
 
 def handle_set_project_folder(main_window): #vers 1
     """Handle Set Project Folder menu action"""

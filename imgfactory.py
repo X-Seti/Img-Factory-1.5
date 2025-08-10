@@ -111,8 +111,7 @@ from gui.autosave_menu import integrate_autosave_menu
 from gui.gui_context import (add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
 
 from gui.file_menu_integration import add_project_menu_items
-#from gui.directory_tree_system import integrate_directory_tree_system
-
+from gui.directory_tree_system import integrate_directory_tree_system
 
 # Debug helper
 from debug_patch_file import integrate_debug_patch, remove_debug_patch
@@ -399,7 +398,8 @@ class IMGFactory(QMainWindow):
 
         # Create GUI layout
         self.gui_layout = IMGFactoryGUILayout(self)
-        #integrate_directory_tree_system(self)
+        integrate_directory_tree_system(self)
+
         # Menu system
         self.menubar = self.menuBar()
         self.menu_bar_system = IMGFactoryMenuBar(self)
