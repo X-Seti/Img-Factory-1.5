@@ -1,10 +1,11 @@
-#this belongs in core/file_dirtree_browser.py - Version: 1
+#this belongs in core/file_dirtree_browser.py - Version: 2
 # X-Seti - August10 2025 - IMG Factory 1.5 - Complete File Directory Tree Browser
 
 """
 COMPLETE FILE DIRECTORY TREE BROWSER
 Comprehensive file browser with Edit, View, and Settings menus
 Similar to Caja/Dolphin file managers but integrated with IMG Factory
+Backend classes moved to file_dirtree_backend.py for size optimization
 """
 
 import os
@@ -21,6 +22,15 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QThread, pyqtSlot, QTimer, QSettings
 from PyQt6.QtGui import QAction, QIcon, QFont, QKeySequence, QActionGroup
+
+# Import backend classes and functions
+from core.file_dirtree_backend import (
+    BrowserSettingsDialog, FilePropertiesDialog, FileSearchDialog,
+    format_file_size_backend, get_file_type_icon_backend, 
+    get_file_type_display_backend, get_file_attributes_backend,
+    get_folder_size_quick_backend
+)
+
 
 ##Methods list -
 # apply_browser_styling
@@ -42,9 +52,7 @@ from PyQt6.QtGui import QAction, QIcon, QFont, QKeySequence, QActionGroup
 # delete_selected
 # edit_file
 # edit_selected
-# format_file_size
 # get_browser_settings
-# get_file_type_display
 # handle_browser_settings
 # invert_selection
 # load_browser_settings
@@ -98,7 +106,6 @@ from PyQt6.QtGui import QAction, QIcon, QFont, QKeySequence, QActionGroup
 
 ##Classes -
 # FileBrowserWidget
-# BrowserSettingsDialog
 # FilePropertiesDialog
 # FileSearchDialog
 
@@ -165,7 +172,7 @@ class FileBrowserWidget(QWidget):
         splitter.addWidget(info_widget)
         
         # Set splitter proportions
-        splitter.setSizes([700, 300])
+        splitter.setSizes([710, 200])
         
         layout.addWidget(splitter)
         
@@ -469,27 +476,27 @@ class FileBrowserWidget(QWidget):
         # Selected file info
         self.info_group = QGroupBox("📄 File Information")
         info_layout = QVBoxLayout(self.info_group)
-        
+
         self.file_name_label = QLabel("No file selected")
         self.file_name_label.setFont(QFont("", 10, QFont.Weight.Bold))
         info_layout.addWidget(self.file_name_label)
-        
+
         self.file_path_label = QLabel("")
         self.file_path_label.setWordWrap(True)
         info_layout.addWidget(self.file_path_label)
-        
+
         self.file_type_label = QLabel("")
         info_layout.addWidget(self.file_type_label)
-        
+
         self.file_size_label = QLabel("")
         info_layout.addWidget(self.file_size_label)
-        
+
         self.file_date_label = QLabel("")
         info_layout.addWidget(self.file_date_label)
         
         layout.addWidget(self.info_group)
         
-        # Action buttons in 2x2 grid
+        # Action buttons in 2x2 grid with 10px height adjustment
         actions_group = QGroupBox("⚡ Quick Actions")
         actions_layout = QGridLayout(actions_group)
         actions_layout.setSpacing(4)
@@ -497,22 +504,26 @@ class FileBrowserWidget(QWidget):
         # Row 1
         self.open_btn = QPushButton("📂 Open")
         self.open_btn.setEnabled(False)
+        self.open_btn.setMinimumHeight(25)  # 10px adjustment
         self.open_btn.clicked.connect(self.open_selected)
         actions_layout.addWidget(self.open_btn, 0, 0)
         
         self.edit_btn = QPushButton("✏️ Edit")
         self.edit_btn.setEnabled(False)
+        self.edit_btn.setMinimumHeight(25)  # 10px adjustment
         self.edit_btn.clicked.connect(self.edit_selected)
         actions_layout.addWidget(self.edit_btn, 0, 1)
         
         # Row 2
         self.copy_btn = QPushButton("📋 Copy")
         self.copy_btn.setEnabled(False)
+        self.copy_btn.setMinimumHeight(25)  # 10px adjustment
         self.copy_btn.clicked.connect(self.copy_files)
         actions_layout.addWidget(self.copy_btn, 1, 0)
         
         self.delete_btn = QPushButton("🗑️ Delete")
         self.delete_btn.setEnabled(False)
+        self.delete_btn.setMinimumHeight(25)  # 10px adjustment
         self.delete_btn.clicked.connect(self.delete_selected)
         actions_layout.addWidget(self.delete_btn, 1, 1)
         
@@ -827,20 +838,25 @@ class FileBrowserWidget(QWidget):
             else:
                 filtered_items = all_items[:]  # Show all items including hidden
             
-            # Separate directories and files with error handling
+            # Separate directories and files with enhanced debugging
             directories = []
             files = []
             
             for item in filtered_items:
                 item_path = os.path.join(dir_path, item)
                 try:
+                    # More explicit file type checking
                     if os.path.isdir(item_path):
                         directories.append(item)
                     elif os.path.isfile(item_path):
                         files.append(item)
-                    # Skip special items (devices, symlinks, etc.)
-                except (PermissionError, OSError):
-                    # Skip items we can't access
+                    else:
+                        # Log what we're skipping
+                        if current_depth == 0:  # Only log at root level
+                            self.log_message(f"⚠️ Skipping special item: {item} (not file or directory)")
+                except (PermissionError, OSError) as e:
+                    if current_depth == 0:
+                        self.log_message(f"⚠️ Cannot access: {item} ({str(e)})")
                     continue
             
             # Sort items safely
@@ -876,8 +892,8 @@ class FileBrowserWidget(QWidget):
                     
                     # Column 2: Size
                     try:
-                        folder_size = self.get_folder_size_quick(item_path)
-                        tree_item.setText(2, self.format_file_size(folder_size) if folder_size > 0 else "")
+                        folder_size = get_folder_size_quick_backend(item_path)
+                        tree_item.setText(2, format_file_size_backend(folder_size) if folder_size > 0 else "")
                     except:
                         tree_item.setText(2, "")
                     
@@ -892,7 +908,7 @@ class FileBrowserWidget(QWidget):
                     
                     # Column 4: Attributes
                     try:
-                        attrs = self.get_file_attributes(item_path)
+                        attrs = get_file_attributes_backend(item_path)
                         tree_item.setText(4, attrs)
                     except:
                         tree_item.setText(4, "")
@@ -915,11 +931,15 @@ class FileBrowserWidget(QWidget):
                             error_child.setText(4, "")
                             error_child.setText(5, item_path)
                             
+                    directories_added += 1
                 except Exception as e:
                     # If we can't create the tree item, skip this directory
+                    if current_depth == 0:
+                        self.log_message(f"❌ Failed to add directory: {directory} ({str(e)})")
                     continue
             
-            # Add files
+            # Add files with detailed logging
+            files_added = 0
             for file in files:
                 item_path = os.path.join(dir_path, file)
                 
@@ -929,7 +949,7 @@ class FileBrowserWidget(QWidget):
                     
                     # Column 0: Name with icon
                     file_ext = os.path.splitext(file)[1].lower()
-                    icon = self.get_file_type_icon(file_ext)
+                    icon = get_file_type_icon_backend(file_ext)
                     
                     if self.browser_settings.get('show_extensions', True):
                         tree_item.setText(0, f"{icon} {file}")
@@ -938,12 +958,12 @@ class FileBrowserWidget(QWidget):
                         tree_item.setText(0, f"{icon} {name_without_ext}")
                     
                     # Column 1: Type
-                    tree_item.setText(1, self.get_file_type_display(file_ext))
+                    tree_item.setText(1, get_file_type_display_backend(file_ext))
                     
                     # Column 2: Size
                     try:
                         size = os.path.getsize(item_path)
-                        tree_item.setText(2, self.format_file_size(size))
+                        tree_item.setText(2, format_file_size_backend(size))
                     except:
                         tree_item.setText(2, "")
                     
@@ -958,7 +978,7 @@ class FileBrowserWidget(QWidget):
                     
                     # Column 4: Attributes
                     try:
-                        attrs = self.get_file_attributes(item_path)
+                        attrs = get_file_attributes_backend(item_path)
                         tree_item.setText(4, attrs)
                     except:
                         tree_item.setText(4, "")
@@ -966,9 +986,17 @@ class FileBrowserWidget(QWidget):
                     # Column 5: Path
                     tree_item.setText(5, item_path)
                     
+                    files_added += 1
+                    
                 except Exception as e:
                     # If we can't create the tree item, skip this file
+                    if current_depth == 0:
+                        self.log_message(f"❌ Failed to add file: {file} ({str(e)})")
                     continue
+                    
+            # Final debug report
+            if current_depth == 0:
+                self.log_message(f"✅ Successfully added: {directories_added} folders, {files_added} files")
                     
         except Exception as e:
             # Final catch-all error handling
@@ -980,55 +1008,6 @@ class FileBrowserWidget(QWidget):
             error_item.setText(3, "")
             error_item.setText(4, "")
             error_item.setText(5, dir_path)
-            
-    def get_folder_size_quick(self, folder_path: str) -> int: #vers 1
-        """Get folder size quickly (just immediate files, not recursive)"""
-        try:
-            total_size = 0
-            for item in os.listdir(folder_path):
-                item_path = os.path.join(folder_path, item)
-                if os.path.isfile(item_path):
-                    total_size += os.path.getsize(item_path)
-            return total_size
-        except (PermissionError, OSError):
-            return 0
-            
-    def get_file_attributes(self, file_path: str) -> str: #vers 1
-        """Get file attributes string"""
-        try:
-            import stat
-            attrs = []
-            st = os.stat(file_path)
-            
-            # Check permissions
-            if st.st_mode & stat.S_IRUSR:
-                attrs.append('R')
-            if st.st_mode & stat.S_IWUSR:
-                attrs.append('W')
-            if st.st_mode & stat.S_IXUSR:
-                attrs.append('X')
-                
-            # Check if hidden (starts with .)
-            if os.path.basename(file_path).startswith('.'):
-                attrs.append('H')
-                
-            return ''.join(attrs) if attrs else '-'
-        except:
-            return ''
-            
-    def format_file_size(self, size: int) -> str: #vers 2
-        """Format file size for display with better precision"""
-        if size == 0:
-            return "0 B"
-        
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-            if size < 1024:
-                if unit == 'B':
-                    return f"{size:,} {unit}"
-                else:
-                    return f"{size:.1f} {unit}"
-            size /= 1024
-        return f"{size:.1f} PB"
             
     def browse_directory(self, path): #vers 1
         """Browse to specified directory"""
@@ -1558,33 +1537,7 @@ class FileBrowserWidget(QWidget):
         except Exception as e:
             self.log_message(f"❌ Error updating file info: {str(e)}")
             
-    def format_file_size(self, size): #vers 1
-        """Format file size for display"""
-        for unit in ['B', 'KB', 'MB', 'GB']:
-            if size < 1024:
-                return f"{size:.1f} {unit}"
-            size /= 1024
-        return f"{size:.1f} TB"
-        
-    def get_file_type_display(self, file_ext): #vers 1
-        """Get display name for file type"""
-        type_map = {
-            '.img': 'IMG Archive',
-            '.dir': 'Directory File',
-            '.ide': 'Item Definition',
-            '.ipl': 'Item Placement',
-            '.dat': 'Data File',
-            '.dff': '3D Model',
-            '.txd': 'Texture Dictionary',
-            '.col': 'Collision File',
-            '.cfg': 'Configuration',
-            '.txt': 'Text File',
-            '.py': 'Python Script',
-            '.json': 'JSON Data',
-            '.log': 'Log File'
-        }
-        return type_map.get(file_ext, 'Unknown File')
-        
+
     # Additional action methods
     def open_selected(self): #vers 1
         """Open selected file or directory"""
@@ -1786,220 +1739,11 @@ class FileBrowserWidget(QWidget):
                 'show_extensions': True,
                 'view_mode': 'tree',
                 'sort_mode': 'name',
-                'font_size': 13,
+                'font_size': 11,
             }
             self.save_browser_settings()
             self.apply_settings()
             self.log_message("🔄 Browser settings reset to defaults")
-
-
-class BrowserSettingsDialog(QDialog):
-    """Browser settings dialog"""
-    
-    def __init__(self, current_settings, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Browser Settings")
-        self.setModal(True)
-        self.setFixedSize(400, 500)
-        self.current_settings = current_settings.copy()
-        self.setup_ui()
-        
-    def setup_ui(self): #vers 1
-        """Setup settings dialog UI"""
-        layout = QVBoxLayout(self)
-        
-        # Tab widget for different setting categories
-        tabs = QTabWidget()
-        
-        # General tab
-        general_tab = QWidget()
-        general_layout = QFormLayout(general_tab)
-        
-        self.show_hidden_check = QCheckBox()
-        self.show_hidden_check.setChecked(self.current_settings.get('show_hidden', False))
-        general_layout.addRow("Show hidden files:", self.show_hidden_check)
-        
-        self.show_extensions_check = QCheckBox()
-        self.show_extensions_check.setChecked(self.current_settings.get('show_extensions', True))
-        general_layout.addRow("Show file extensions:", self.show_extensions_check)
-        
-        self.font_size_spin = QSpinBox()
-        self.font_size_spin.setRange(8, 24)
-        self.font_size_spin.setValue(self.current_settings.get('font_size', 13))
-        general_layout.addRow("Font size:", self.font_size_spin)
-        
-        tabs.addTab(general_tab, "General")
-        
-        # View tab
-        view_tab = QWidget()
-        view_layout = QFormLayout(view_tab)
-        
-        self.view_mode_combo = QComboBox()
-        self.view_mode_combo.addItems(["tree", "list", "details"])
-        self.view_mode_combo.setCurrentText(self.current_settings.get('view_mode', 'tree'))
-        view_layout.addRow("Default view mode:", self.view_mode_combo)
-        
-        self.sort_mode_combo = QComboBox()
-        self.sort_mode_combo.addItems(["name", "size", "date", "type"])
-        self.sort_mode_combo.setCurrentText(self.current_settings.get('sort_mode', 'name'))
-        view_layout.addRow("Default sort mode:", self.sort_mode_combo)
-        
-        tabs.addTab(view_tab, "View")
-        
-        layout.addWidget(tabs)
-        
-        # Dialog buttons
-        button_layout = QHBoxLayout()
-        
-        ok_btn = QPushButton("OK")
-        ok_btn.clicked.connect(self.accept)
-        button_layout.addWidget(ok_btn)
-        
-        cancel_btn = QPushButton("Cancel")
-        cancel_btn.clicked.connect(self.reject)
-        button_layout.addWidget(cancel_btn)
-        
-        layout.addLayout(button_layout)
-        
-    def get_settings(self): #vers 1
-        """Get updated settings"""
-        return {
-            'show_hidden': self.show_hidden_check.isChecked(),
-            'show_extensions': self.show_extensions_check.isChecked(),
-            'font_size': self.font_size_spin.value(),
-            'view_mode': self.view_mode_combo.currentText(),
-            'sort_mode': self.sort_mode_combo.currentText(),
-        }
-
-
-class FilePropertiesDialog(QDialog):
-    """File properties dialog"""
-    
-    def __init__(self, file_path, parent=None):
-        super().__init__(parent)
-        self.file_path = file_path
-        self.setWindowTitle(f"Properties - {os.path.basename(file_path)}")
-        self.setModal(True)
-        self.setFixedSize(350, 400)
-        self.setup_ui()
-        
-    def setup_ui(self): #vers 1
-        """Setup properties dialog UI"""
-        layout = QVBoxLayout(self)
-        
-        # File icon and name
-        header_layout = QHBoxLayout()
-        
-        # Icon (placeholder)
-        icon_label = QLabel("📄")
-        icon_label.setFont(QFont("", 24))
-        header_layout.addWidget(icon_label)
-        
-        # File name
-        name_label = QLabel(os.path.basename(self.file_path))
-        name_label.setFont(QFont("", 12, QFont.Weight.Bold))
-        header_layout.addWidget(name_label)
-        
-        header_layout.addStretch()
-        layout.addLayout(header_layout)
-        
-        # Properties
-        props_group = QGroupBox("Properties")
-        props_layout = QFormLayout(props_group)
-        
-        # Basic info
-        props_layout.addRow("Location:", QLabel(os.path.dirname(self.file_path)))
-        
-        if os.path.isfile(self.file_path):
-            size = os.path.getsize(self.file_path)
-            props_layout.addRow("Size:", QLabel(self.format_size(size)))
-            
-        # Dates
-        import datetime
-        if os.path.exists(self.file_path):
-            mod_time = os.path.getmtime(self.file_path)
-            mod_date = datetime.datetime.fromtimestamp(mod_time)
-            props_layout.addRow("Modified:", QLabel(mod_date.strftime('%Y-%m-%d %H:%M:%S')))
-            
-        layout.addWidget(props_group)
-        
-        layout.addStretch()
-        
-        # Close button
-        close_btn = QPushButton("Close")
-        close_btn.clicked.connect(self.accept)
-        layout.addWidget(close_btn)
-        
-    def format_size(self, size): #vers 1
-        """Format file size"""
-        for unit in ['B', 'KB', 'MB', 'GB']:
-            if size < 1024:
-                return f"{size:.1f} {unit}"
-            size /= 1024
-        return f"{size:.1f} TB"
-
-
-class FileSearchDialog(QDialog):
-    """File search dialog"""
-    
-    def __init__(self, search_path, parent=None):
-        super().__init__(parent)
-        self.search_path = search_path
-        self.setWindowTitle("Search Files")
-        self.setModal(True)
-        self.setFixedSize(500, 400)
-        self.setup_ui()
-        
-    def setup_ui(self): #vers 1
-        """Setup search dialog UI"""
-        layout = QVBoxLayout(self)
-        
-        # Search criteria
-        criteria_group = QGroupBox("Search Criteria")
-        criteria_layout = QFormLayout(criteria_group)
-        
-        self.name_edit = QLineEdit()
-        self.name_edit.setPlaceholderText("*.txt, *.py, etc.")
-        criteria_layout.addRow("File name:", self.name_edit)
-        
-        self.content_edit = QLineEdit()
-        self.content_edit.setPlaceholderText("Text to search for")
-        criteria_layout.addRow("Content:", self.content_edit)
-        
-        layout.addWidget(criteria_group)
-        
-        # Search button
-        search_btn = QPushButton("🔍 Search")
-        search_btn.clicked.connect(self.perform_search)
-        layout.addWidget(search_btn)
-        
-        # Results
-        results_group = QGroupBox("Search Results")
-        results_layout = QVBoxLayout(results_group)
-        
-        self.results_list = QListWidget()
-        results_layout.addWidget(self.results_list)
-        
-        layout.addWidget(results_group)
-        
-        # Dialog buttons
-        button_layout = QHBoxLayout()
-        
-        ok_btn = QPushButton("OK")
-        ok_btn.clicked.connect(self.accept)
-        button_layout.addWidget(ok_btn)
-        
-        cancel_btn = QPushButton("Cancel")
-        cancel_btn.clicked.connect(self.reject)
-        button_layout.addWidget(cancel_btn)
-        
-        layout.addLayout(button_layout)
-        
-    def perform_search(self): #vers 1
-        """Perform file search"""
-        # Implementation would search for files
-        self.results_list.addItem("Search functionality not yet implemented")
-
 
 # Integration functions
 def create_file_browser_widget(main_window): #vers 1

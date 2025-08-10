@@ -177,7 +177,6 @@ class FilePropertiesDialog(QDialog):
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn)
 
-
 class FileSearchDialog(QDialog):
     """File search dialog"""
     
