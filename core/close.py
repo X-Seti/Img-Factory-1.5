@@ -213,27 +213,15 @@ class IMGCloseManager:
         except Exception as e:
             self.log_message(f"❌ Error clearing tables: {str(e)}")
 
-    def _reindex_open_files(self, removed_index): #vers 1
-        """Reindex open_files after tab removal"""
+    def _reindex_open_files(self, removed_index): #vers 2
+        """FIXED: Use robust reindexing with data preservation"""
         try:
-            if not hasattr(self.main_window, 'open_files'):
-                return
-                
-            new_open_files = {}
-            for old_index, file_info in self.main_window.open_files.items():
-                if old_index > removed_index:
-                    # Shift index down by 1
-                    new_index = old_index - 1
-                    new_open_files[new_index] = file_info
-                elif old_index < removed_index:
-                    # Keep same index
-                    new_open_files[old_index] = file_info
-                # Skip the removed index
-            
-            self.main_window.open_files = new_open_files
-            
-        except Exception as e:
-            self.log_message(f"❌ Error reindexing files: {str(e)}")
+            # Import and use robust reindexing
+            from core.robust_tab_system import _reindex_open_files_robust
+            return _reindex_open_files_robust(self, removed_index)
+        except ImportError:
+            # Fallback to original logic if robust system not available
+            return self._reindex_open_files_original(removed_index)
 
 __all__ = [
     'IMGCloseManager',

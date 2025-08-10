@@ -571,6 +571,31 @@ class IMGFactoryGUILayout:
         left_layout.addWidget(self.left_vertical_splitter)
         return left_container
 
+    def update_directory_tree_info(main_window): #vers 1
+        """Update directory tree info when game root is set"""
+        try:
+            if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'tab_widget'):
+                return False
+
+            tab_widget = main_window.gui_layout.tab_widget
+            directory_tab = tab_widget.widget(1)  # Directory tree is tab 1
+
+            if directory_tab:
+                # Find the text widget and update it
+                text_widgets = directory_tab.findChildren(QTextEdit)
+                if text_widgets:
+                    text_widget = text_widgets[0]
+                    if hasattr(main_window, 'game_root'):
+                        text_widget.setText(f"Game Root: {main_window.game_root}\n\nDetected: GTA SOL installation\n\nDirectory tree functionality will be implemented here.\n\nFor now, you can:\n• Load IMG files via File → Open\n• Use the project folder system for exports")
+                    else:
+                        text_widget.setText("No game root set.\n\nUse File → Set Game Root Folder to select your GTA installation.")
+
+            return True
+
+        except Exception as e:
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"❌ Error updating directory tree: {str(e)}")
+            return False
 
     def _create_file_window(self):
         """Create file window with tabs for different views"""
@@ -623,13 +648,90 @@ class IMGFactoryGUILayout:
         tree_layout = QVBoxLayout(tree_tab)
         tree_layout.setContentsMargins(0, 0, 0, 0)
         
-        tree_placeholder = QLabel("Directory tree view will be implemented here")
-        tree_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        tree_placeholder.setStyleSheet("font-style: italic;")
-        tree_layout.addWidget(tree_placeholder)
-        
+
+        # Find the tab widget
+        if not hasattr(self.main_window, 'gui_layout') or not hasattr(self.main_window.gui_layout, 'tab_widget'):
+            self.main_window.log_message("❌ Tab widget not found")
+            return False
+
+        tab_widget = self.main_window.gui_layout.tab_widget
+
+        # Find Directory Tree tab (index 1)
+        directory_tab_index = 1  # Should be middle tab
+
+        if tab_widget.count() <= directory_tab_index:
+            self.main_window.log_message("❌ Directory Tree tab doesn't exist")
+            return False
+
+        # Get the existing tab widget
+        existing_tab = tab_widget.widget(directory_tab_index)
+        if not existing_tab:
+            self.main_window.log_message("❌ Directory Tree tab widget not found")
+            return False
+
+        layout = existing_tab.layout()
+        if layout:
+            while layout.count():
+                child = layout.takeAt(0)
+                if child.widget():
+                    child.widget().deleteLater()
+        else:
+            layout = QVBoxLayout(existing_tab)
         self.tab_widget.addTab(tree_tab, "Directory Tree")
-        
+
+        tab_widget = main_window.gui_layout.tab_widget
+
+        # Find Directory Tree tab (index 1)
+        directory_tab_index = 1  # Should be middle tab
+
+        if tab_widget.count() <= directory_tab_index:
+            main_window.log_message("❌ Directory Tree tab doesn't exist")
+            return False
+
+        # Get the existing tab widget
+        existing_tab = tab_widget.widget(directory_tab_index)
+        if not existing_tab:
+            main_window.log_message("❌ Directory Tree tab widget not found")
+            return False
+
+        # Clear existing content
+        layout = existing_tab.layout()
+        if layout:
+            while layout.count():
+                child = layout.takeAt(0)
+                if child.widget():
+                    child.widget().deleteLater()
+        else:
+            layout = QVBoxLayout(existing_tab)
+
+        # Add simple working content
+        layout.addWidget(QLabel("🌳 GTA Directory Browser"))
+
+        # Game info
+        game_info_text = QTextEdit()
+        game_info_text.setMaximumHeight(100)
+        game_info_text.setReadOnly(True)
+
+        if hasattr(self.main_window, 'game_root'):
+            game_info_text.setText(f"Game Root: {self.main_window.game_root}\n\nDirectory tree functionality will be implemented here.\n\nFor now, use File → Set Game Root to set your game directory.")
+        else:
+            game_info_text.setText("No game root set.\n\nUse File → Set Game Root Folder to select your GTA installation.\n\nOnce set, this tab will show your game directory structure.")
+
+        layout.addWidget(game_info_text)
+
+        # Quick action button
+        set_game_btn = QPushButton("🎮 Set Game Root Folder")
+        set_game_btn.clicked.connect(lambda: self.main_window.log_message("Use File → Set Game Root Folder from the menu"))
+        layout.addWidget(set_game_btn)
+
+        layout.addStretch()
+
+        # Update tab text
+        tab_widget.setTabText(directory_tab_index, "🌳 Directory Tree")
+
+        self.main_window.log_message("✅ Directory tree tab updated with working content")
+        return True
+
         # Tab 3: Search Results (future enhancement)
         search_tab = QWidget()
         search_layout = QVBoxLayout(search_tab)

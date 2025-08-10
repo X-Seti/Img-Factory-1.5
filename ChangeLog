@@ -23,6 +23,9 @@ Todo, Restore, Collision system integration - Connect existing collision system 
 
 ------------ completed ---- >
 
+Fixed - Aug10
+Tab system for img's are fixed, close first tab fixed.
+
 Fixed - Aug9
 Init startup order fixed - smoother img loading.
 

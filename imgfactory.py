@@ -92,6 +92,7 @@ from core.img_corruption_analyzer import setup_corruption_analyzer
 from core.rebuild import integrate_rebuild_functions
 from core.rebuild_all import integrate_batch_rebuild_functions
 from core.clean import integrate_clean_utilities
+from core.independent_tabs import setup_independent_tab_system, migrate_existing_tabs_to_independent
 
 
 from methods.ide_parser import integrate_ide_parser
@@ -109,6 +110,10 @@ from gui.gui_menu import IMGFactoryMenuBar
 from gui.autosave_menu import integrate_autosave_menu
 from gui.gui_context import (add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
 
+from gui.file_menu_integration import add_project_menu_items
+#from gui.directory_tree_system import integrate_directory_tree_system
+
+
 # Debug helper
 from debug_patch_file import integrate_debug_patch, remove_debug_patch
 from visibility_fix import apply_visibility_fix
@@ -118,6 +123,8 @@ from methods.populate_img_table import install_img_table_populator # enable_impo
 from methods.progressbar import integrate_progress_system
 from methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate_update_ui_for_loaded_img
 from methods.import_highlight_system import enable_import_highlighting
+from methods.img_operations_routing import install_operation_routing
+
 
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
@@ -392,7 +399,7 @@ class IMGFactory(QMainWindow):
 
         # Create GUI layout
         self.gui_layout = IMGFactoryGUILayout(self)
-
+        #integrate_directory_tree_system(self)
         # Menu system
         self.menubar = self.menuBar()
         self.menu_bar_system = IMGFactoryMenuBar(self)
@@ -411,17 +418,24 @@ class IMGFactory(QMainWindow):
         # Create main UI
         self._create_ui()
 
+        add_project_menu_items(self)
+
+
         # === PHASE 4: ESSENTIAL INTEGRATIONS (Medium) ===
 
         # Core parsers (now safe to use log_message)
         integrate_ide_parser(self)
         integrate_ide_dialog(self)
+        install_operation_routing(self)
 
         # Button connections (essential for functionality)
         connect_all_buttons_safely(self)
 
         # File operations
         install_close_functions(self)
+
+        setup_independent_tab_system(self)
+        migrate_existing_tabs_to_independent(self)
 
         # Table population (needed for IMG display)
         install_img_table_populator(self)
@@ -1349,54 +1363,185 @@ class IMGFactory(QMainWindow):
         # Add tab with "No file" label
         self.main_tab_widget.addTab(tab_widget, "📁 No File")
 
-
-    def _on_tab_changed(self, index): #vers 7
-        """Handle tab change - FIND AND UPDATE ACTUAL TABLE IN CURRENT TAB"""
+    def _on_tab_changed(self, index): #vers 8
+        """ROBUST: Handle tab change - Each tab preserves its own data independently"""
         if index == -1:
             return
 
         self.log_message(f"🔄 Tab changed to: {index}")
 
-        # CRITICAL FIX: Find the actual table widget in the current tab
-        current_tab_widget = self.main_tab_widget.widget(index)
-        actual_table = None
+        try:
+            # STEP 1: Update main window references to current tab's widgets
+            if hasattr(self, 'update_tab_manager_references'):
+                success = self.update_tab_manager_references(index)
+                if not success:
+                    self.log_message(f"⚠️ Could not update references for tab {index}")
 
-        if current_tab_widget:
-            from PyQt6.QtWidgets import QTableWidget
-            tables = current_tab_widget.findChildren(QTableWidget)
-            if tables:
-                actual_table = tables[0]  # Get the first table in this tab
-                # Update the gui_layout.table reference to point to THIS tab's table
-                self.gui_layout.table = actual_table
+            # STEP 2: Update current file objects based on tab
+            if index in self.open_files:
+                file_info = self.open_files[index]
+                file_path = file_info.get('file_path', 'Unknown')
+                file_type = file_info.get('type', 'Unknown')
 
-        # Update current file based on tab
-        if index in self.open_files:
-            file_info = self.open_files[index]
-            self.log_message(f"📂 Tab {index} has file: {file_info.get('file_path', 'Unknown')}")
+                self.log_message(f"📂 Tab {index}: {file_type} - {os.path.basename(file_path)}")
 
-            if file_info['type'] == 'IMG':
-                self.current_img = file_info['file_object']
-                self.current_col = None
-            elif file_info['type'] == 'COL':
-                self.current_col = file_info['file_object']
+                # Set current file references
+                if file_type == 'IMG':
+                    self.current_img = file_info['file_object']
+                    self.current_col = None
+                elif file_type == 'COL':
+                    self.current_col = file_info['file_object']
+                    self.current_img = None
+
+                # Update info bar if file is loaded
+                if file_info['file_object']:
+                    self._update_info_bar_for_current_file()
+
+            else:
+                # Empty tab
                 self.current_img = None
+                self.current_col = None
+                self.log_message(f"📂 Tab {index}: Empty tab")
 
-            # Update UI for current file (will now use the correct table)
-            self._update_ui_for_current_file()
-        else:
-            # No file in this tab - clear it
-            self.log_message(f"📭 Tab {index} is empty")
-            self.current_img = None
-            self.current_col = None
+                # Clear info bar for empty tab
+                if hasattr(self, '_update_ui_for_no_img'):
+                    self._update_ui_for_no_img()
 
-            # Clear the actual table in this tab
-            if actual_table:
-                actual_table.clear()
-                actual_table.setRowCount(0)
-                actual_table.setColumnCount(1)
-                actual_table.setHorizontalHeaderLabels(["No file loaded"])
+            # STEP 3: Validate this tab's data integrity (optional debug)
+            current_tab_widget = self.main_tab_widget.widget(index)
+            if current_tab_widget:
+                from core.robust_tab_system import get_tab_table_widget
+                table = get_tab_table_widget(current_tab_widget)
+                if table:
+                    row_count = table.rowCount()
+                    self.log_message(f"📊 Tab {index} table: {row_count} rows")
+                else:
+                    self.log_message(f"⚠️ Tab {index}: No table widget found")
 
-            self._update_ui_for_no_img()
+        except Exception as e:
+            self.log_message(f"❌ Error in tab change: {str(e)}")
+
+
+    def _update_info_bar_for_current_file(self): #vers 1
+        """Update info bar based on current file type"""
+        try:
+            if self.current_img:
+                # Update for IMG file
+                entry_count = len(self.current_img.entries) if self.current_img.entries else 0
+                file_path = getattr(self.current_img, 'file_path', 'Unknown')
+
+                if hasattr(self.gui_layout, 'info_label') and self.gui_layout.info_label:
+                    self.gui_layout.info_label.setText(f"IMG: {os.path.basename(file_path)} | {entry_count} entries")
+
+            elif self.current_col:
+                # Update for COL file
+                model_count = len(self.current_col.models) if hasattr(self.current_col, 'models') and self.current_col.models else 0
+                file_path = getattr(self.current_col, 'file_path', 'Unknown')
+
+                if hasattr(self.gui_layout, 'info_label') and self.gui_layout.info_label:
+                    self.gui_layout.info_label.setText(f"COL: {os.path.basename(file_path)} | {model_count} models")
+
+        except Exception as e:
+            self.log_message(f"❌ Error updating info bar: {str(e)}")
+
+
+    def setup_robust_tab_system(self): #vers 1
+        """Setup robust tab system during initialization"""
+        try:
+            # Import and install robust tab system
+            from core.robust_tab_system import install_robust_tab_system
+
+            if install_robust_tab_system(self):
+                self.log_message("✅ Robust tab system ready")
+
+                # Run initial integrity check
+                if hasattr(self, 'validate_tab_data_integrity'):
+                    self.validate_tab_data_integrity()
+
+                return True
+            else:
+                self.log_message("❌ Failed to setup robust tab system")
+                return False
+
+        except ImportError:
+            self.log_message("⚠️ Robust tab system not available - using basic system")
+            return False
+        except Exception as e:
+            self.log_message(f"❌ Error setting up robust tab system: {str(e)}")
+            return False
+
+
+    # CLOSE MANAGER INTEGRATION
+
+    def _reindex_open_files_robust(self, removed_index): #vers 1
+        """ROBUST: Reindex with data preservation"""
+        try:
+            if not hasattr(self.main_window, 'open_files'):
+                return
+
+            self.log_message(f"🔄 ROBUST reindexing after removing tab {removed_index}")
+
+            # STEP 1: Preserve data for all remaining tabs
+            preserved_data = {}
+            for tab_index in list(self.main_window.open_files.keys()):
+                if tab_index != removed_index:
+                    if hasattr(self.main_window, 'preserve_tab_table_data'):
+                        self.main_window.preserve_tab_table_data(tab_index)
+
+            # STEP 2: Reindex open_files (same as before)
+            new_open_files = {}
+            sorted_items = sorted(self.main_window.open_files.items())
+
+            new_index = 0
+            for old_index, file_info in sorted_items:
+                if old_index == removed_index:
+                    self.log_message(f"⏭️ Skipping removed tab {old_index}")
+                    continue
+
+                new_open_files[new_index] = file_info
+                self.log_message(f"📁 Tab {old_index} → Tab {new_index}: {file_info.get('tab_name', 'Unknown')}")
+                new_index += 1
+
+            self.main_window.open_files = new_open_files
+
+            # STEP 3: Restore data for all tabs in their new positions
+            for new_tab_index in new_open_files.keys():
+                if hasattr(self.main_window, 'restore_tab_table_data'):
+                    self.main_window.restore_tab_table_data(new_tab_index)
+
+            self.log_message("✅ ROBUST reindexing complete with data preservation")
+
+            # STEP 4: Update current tab references
+            current_index = self.main_window.main_tab_widget.currentIndex()
+            if hasattr(self.main_window, 'update_tab_manager_references'):
+                self.main_window.update_tab_manager_references(current_index)
+
+        except Exception as e:
+            self.log_message(f"❌ Error in robust reindexing: {str(e)}")
+
+
+    # INTEGRATION PATCH FOR EXISTING CLOSE MANAGER
+
+    def patch_close_manager_for_robust_tabs(main_window): #vers 1
+        """Patch existing close manager to use robust tab system"""
+        try:
+            if hasattr(main_window, 'close_manager'):
+                # Replace the reindex method with robust version
+                original_reindex = main_window.close_manager._reindex_open_files
+
+                def robust_reindex_wrapper(removed_index):
+                    return _reindex_open_files_robust(main_window.close_manager, removed_index)
+
+                main_window.close_manager._reindex_open_files = robust_reindex_wrapper
+                main_window.log_message("✅ Close manager patched for robust tabs")
+                return True
+            else:
+                main_window.log_message("❌ No close manager found to patch")
+                return False
+
+        except Exception as e:
+            main_window.log_message(f"❌ Error patching close manager: {str(e)}")
+            return False
 
 
     def _update_ui_for_current_file(self): #vers 5
