@@ -43,6 +43,299 @@ except ImportError:
         PIL_AVAILABLE = False
         print("❌ Neither MSS nor PIL available - using Qt fallback")
 
+class ThemeSaveDialog(QDialog):
+    """Enhanced dialog for saving themes with complete metadata"""
+
+    def __init__(self, app_settings, current_theme_data, parent=None):
+        super().__init__(parent)
+        self.app_settings = app_settings
+        self.current_theme_data = current_theme_data
+        self.result_theme_data = None
+
+        self.setWindowTitle("💾 Save Theme - IMG Factory 1.5")
+        self.setMinimumSize(500, 600)
+        self.setModal(True)
+
+        self._setup_ui()
+        self._detect_theme_type()
+
+    def _setup_ui(self):
+        """Create the save dialog UI"""
+        layout = QVBoxLayout(self)
+
+        # Theme Detection Display
+        self.detection_label = QLabel()
+        self.detection_label.setStyleSheet("font-weight: bold; padding: 0px; border-radius: 0px;")
+        layout.addWidget(self.detection_label)
+
+        # Instructions
+        instructions = QLabel("""
+        <b>Theme Naming Guidelines:</b><br>
+        • Dark themes: Add "_Dark" suffix, Light themes: Add "_Light"
+        """)
+        instructions.setWordWrap(True)
+        instructions.setStyleSheet("padding: 6px; border-radius:0px; margin: 0px;")
+        layout.addWidget(instructions)
+
+        # Form Group
+        form_group = QGroupBox("🎨 Theme Information")
+        form_layout = QVBoxLayout(form_group)
+
+        # Use QGridLayout for better alignment
+        grid_layout = QGridLayout()
+
+        # Theme Name
+        grid_layout.addWidget(QLabel("Theme Name:"), 0, 0)
+        self.name_input = QLineEdit()
+        self.name_input.setPlaceholderText("Enter theme name (e.g., 'Ocean_Dark')")
+        self.name_input.textChanged.connect(self._validate_inputs)
+        grid_layout.addWidget(self.name_input, 0, 1, 1, 2)
+
+        # Display Name
+        grid_layout.addWidget(QLabel("Display Name:"), 2, 0)
+        self.display_input = QLineEdit()
+        self.display_input.setPlaceholderText("Human-readable name (e.g., 'Ocean Dark Theme')")
+        grid_layout.addWidget(self.display_input, 2, 1, 1, 2)
+
+        # Description
+        grid_layout.addWidget(QLabel("Description:"), 3, 0)
+        self.description_input = QLineEdit()
+        self.description_input.setPlaceholderText("Brief description of your theme")
+        grid_layout.addWidget(self.description_input, 3, 1, 1, 2)
+
+        # Category
+        grid_layout.addWidget(QLabel("Category:"), 4, 0)
+        self.category_combo = QComboBox()
+        self.category_combo.setEditable(True)
+        categories = [
+            "🏢 Professional",
+            "🌙 Dark Themes",
+            "☀️ Light Themes",
+            "🌿 Nature",
+            "🎨 Creative",
+            "🚀 Gaming",
+            "💼 Business",
+            "🌈 Colorful",
+            "⚡ High Contrast",
+            "🎭 Custom"
+        ]
+        self.category_combo.addItems(categories)
+        grid_layout.addWidget(self.category_combo, 4, 1, 1, 2)
+
+        # Author
+        grid_layout.addWidget(QLabel("Author:"), 5, 0)
+        self.author_input = QLineEdit("Somebody")  # Default author
+        grid_layout.addWidget(self.author_input, 5, 1, 1, 2)
+
+        # Version
+        grid_layout.addWidget(QLabel("Version:"), 6, 0)
+        self.version_input = QLineEdit("1.0")
+        self.version_input.setMaximumWidth(100)
+        grid_layout.addWidget(self.version_input, 6, 1)
+
+        # Set column proportions - labels smaller, inputs larger
+        grid_layout.setColumnStretch(0, 0)  # Labels: fixed width
+        grid_layout.setColumnStretch(1, 1)  # Main input: expandable
+        grid_layout.setColumnStretch(2, 1)  # Second column: expandable
+
+        form_layout.addLayout(grid_layout)
+
+        layout.addWidget(form_group)
+
+        # Color Summary
+        color_group = QGroupBox("🎨 Color Summary")
+        color_layout = QVBoxLayout(color_group)
+
+        self.color_summary = QLabel()
+        self.color_summary.setWordWrap(True)
+        color_layout.addWidget(self.color_summary)
+
+        layout.addWidget(color_group)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+
+        self.auto_detect_btn = QPushButton("🔍 Auto-Detect Theme Type")
+        self.auto_detect_btn.clicked.connect(self._detect_theme_type)
+        button_layout.addWidget(self.auto_detect_btn)
+
+        button_layout.addStretch()
+
+        cancel_btn = QPushButton("❌ Cancel")
+        cancel_btn.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_btn)
+
+        self.save_btn = QPushButton("💾 Save Theme")
+        self.save_btn.clicked.connect(self._save_theme)
+        self.save_btn.setEnabled(False)
+        button_layout.addWidget(self.save_btn)
+
+        layout.addLayout(button_layout)
+
+        # Initialize form
+        self._populate_current_data()
+        self._update_color_summary()
+
+    def _detect_theme_type(self):
+        """Auto-detect if theme is dark or light based on colors"""
+        if not self.current_theme_data or "colors" not in self.current_theme_data:
+            return
+
+        colors = self.current_theme_data["colors"]
+        bg_primary = colors.get("bg_primary", "#ffffff")
+
+        # Calculate brightness of primary background
+        try:
+            hex_color = bg_primary.lstrip('#')
+            if len(hex_color) == 6:
+                r = int(hex_color[0:2], 16)
+                g = int(hex_color[2:4], 16)
+                b = int(hex_color[4:6], 16)
+
+                # Calculate perceived brightness (0-255)
+                brightness = (r * 0.299 + g * 0.587 + b * 0.114)
+
+                if brightness < 128:
+                    theme_type = "Dark"
+                    self.detection_label.setText("🌙 DARK THEME DETECTED")
+                    self.detection_label.setStyleSheet(
+                        "background: #1A1A1A; color: #FFFFFF; padding: 8px; "
+                        "border-radius: 4px; font-weight: bold;"
+                    )
+                    self.category_combo.setCurrentText("🌙 Dark Themes")
+                else:
+                    theme_type = "Light"
+                    self.detection_label.setText("☀️ LIGHT THEME DETECTED")
+                    self.detection_label.setStyleSheet(
+                        "background: #F5F5F5; color: #333333; padding: 8px; "
+                        "border-radius: 4px; font-weight: bold;"
+                    )
+                    self.category_combo.setCurrentText("☀️ Light Themes")
+
+                # Auto-suggest name suffix if not present
+                current_name = self.name_input.text()
+                if current_name and not current_name.endswith(f"_{theme_type}"):
+                    if not current_name.endswith("_Dark") and not current_name.endswith("_Light"):
+                        self.name_input.setText(f"{current_name}_{theme_type}")
+
+        except Exception as e:
+            self.detection_label.setText("⚠️ Could not detect theme type")
+            print(f"Theme detection error: {e}")
+
+    def _add_suffix(self, suffix):
+        """Add suffix to theme name"""
+        current_name = self.name_input.text()
+        if current_name:
+            # Remove existing suffix if present
+            for existing_suffix in ["_Dark", "_Light"]:
+                if current_name.endswith(existing_suffix):
+                    current_name = current_name[:-len(existing_suffix)]
+                    break
+
+            self.name_input.setText(f"{current_name}{suffix}")
+
+    def _populate_current_data(self):
+        """Populate form with current theme data"""
+        if self.current_theme_data:
+            self.display_input.setText(self.current_theme_data.get("name", ""))
+            self.description_input.setText(self.current_theme_data.get("description", ""))
+
+            category = self.current_theme_data.get("category", "🎭 Custom")
+            index = self.category_combo.findText(category)
+            if index >= 0:
+                self.category_combo.setCurrentIndex(index)
+            else:
+                self.category_combo.setCurrentText(category)
+
+            self.author_input.setText(self.current_theme_data.get("author", "X-Seti"))
+            self.version_input.setText(self.current_theme_data.get("version", "1.0"))
+
+    def _update_color_summary(self):
+        """Update color summary display"""
+        if not self.current_theme_data or "colors" not in self.current_theme_data:
+            return
+
+        colors = self.current_theme_data["colors"]
+
+        summary_html = f"""
+        <b>Primary Colors:</b><br>
+        • Background: <span style='background-color: {colors.get('bg_primary', '#fff')};
+          padding: 2px 8px; border: 1px solid #ccc;'>{colors.get('bg_primary', '#fff')}</span><br>
+        • Accent: <span style='background-color: {colors.get('accent_primary', '#000')};
+          color: white; padding: 2px 8px;'>{colors.get('accent_primary', '#000')}</span><br>
+        • Text: <span style='background-color: {colors.get('text_primary', '#000')};
+          color: white; padding: 2px 8px;'>{colors.get('text_primary', '#000')}</span><br>
+        <br>
+        <b>Total Colors:</b> {len(colors)} defined
+        """
+
+        self.color_summary.setText(summary_html)
+
+    def _validate_inputs(self):
+        """Validate form inputs"""
+        name = self.name_input.text().strip()
+        display = self.display_input.text().strip()
+
+        # Check if theme name is valid
+        valid = bool(name and len(name) >= 3)
+
+        # Check for valid characters
+        if valid:
+            import re
+            valid = bool(re.match(r'^[a-zA-Z0-9_\-\s]+$', name))
+
+        # Enable save button
+        self.save_btn.setEnabled(valid)
+
+        # Update button text with validation status
+        if valid:
+            self.save_btn.setText("💾 Save Theme")
+            self.save_btn.setStyleSheet("")
+        else:
+            self.save_btn.setText("❌ Invalid Name")
+            self.save_btn.setStyleSheet("background-color: #ffcccb;")
+
+    def _save_theme(self):
+        """Save the theme with all metadata"""
+        # Collect all form data
+        theme_name = self.name_input.text().strip()
+
+        # Create complete theme data
+        self.result_theme_data = {
+            "name": self.display_input.text().strip() or theme_name,
+            "description": self.description_input.text().strip() or f"Custom theme: {theme_name}",
+            "category": self.category_combo.currentText(),
+            "author": self.author_input.text().strip() or "X-Seti",
+            "version": self.version_input.text().strip() or "1.0",
+            "colors": self.current_theme_data.get("colors", {})
+        }
+
+        # Add creation timestamp
+        from datetime import datetime
+        self.result_theme_data["created"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+        # Save to file
+        success = self.app_settings.save_theme(theme_name, self.result_theme_data)
+
+        if success:
+            QMessageBox.information(self, "✅ Theme Saved",
+                f"Theme '{theme_name}' saved successfully!\n\n"
+                f"Display Name: {self.result_theme_data['name']}\n"
+                f"Category: {self.result_theme_data['category']}\n"
+                f"Colors: {len(self.result_theme_data['colors'])} defined"
+            )
+            self.accept()
+        else:
+            QMessageBox.warning(self, "❌ Save Failed",
+                f"Failed to save theme '{theme_name}'.\n"
+                "Please check file permissions and try again."
+            )
+
+    def get_theme_data(self):
+        """Get the final theme data after dialog closes"""
+        return self.result_theme_data
+
+
 
 class ColorPickerWidget(QWidget):
     """SAFE, simple color picker widget - NO THREADING"""
@@ -50,7 +343,7 @@ class ColorPickerWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedSize(280, 70)
+        self.setFixedSize(280, 35)
         self.current_color = "#ffffff"
         self.picking_active = False
         self.color_display = None
@@ -59,64 +352,62 @@ class ColorPickerWidget(QWidget):
         self._setup_ui()
 
     def _setup_ui(self):
-        # Main layout with better spacing
+        # Main horizontal layout - just the color picker line
         main_layout = QHBoxLayout(self)
-        main_layout.setSpacing(10)
-        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setSpacing(0)
+        main_layout.setContentsMargins(2, 2, 2, 2)
 
-        # Left side - Color display and value in a frame
-        color_frame = QFrame()
-        color_frame.setFrameStyle(QFrame.Shape.StyledPanel)
-        color_frame.setFixedSize(100, 50)
-
-        color_layout = QVBoxLayout(color_frame)
-        color_layout.setContentsMargins(5, 5, 5, 5)
-        color_layout.setSpacing(2)
-
-        # Color display
+        # Color display square
         self.color_display = QLabel()
-        self.color_display.setFixedHeight(25)
-        self.color_display.setStyleSheet("border: 1px solid #999; border-radius: 3px;")
-        color_layout.addWidget(self.color_display)
+        self.color_display.setFixedSize(50, 27)
+        self.color_display.setStyleSheet("border: 1px solid #999; border-radius: 3px; background-color: #ffffff;")
+        main_layout.addWidget(self.color_display)
 
-        # Color value display
+        # Hex value display
         self.color_value = QLabel("#FFFFFF")
+        self.color_value.setFixedWidth(100)
+        self.color_value.setFixedHeight(27)  # Match button height
         self.color_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.color_value.setStyleSheet("font-family: monospace; font-size: 9px; font-weight: bold;")
-        color_layout.addWidget(self.color_value)
-
-        main_layout.addWidget(color_frame)
-
-        # Middle - Instructions
-        info_layout = QVBoxLayout()
-        instruction_label = QLabel("Click for Qt\nColor Dialog")
-        instruction_label.setStyleSheet("font-size: 10px; color: #666;")
-        instruction_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        info_layout.addWidget(instruction_label)
-        main_layout.addLayout(info_layout)
-
-        # Right side - Pick button
-        self.pick_button = QPushButton("🎨 Pick")
-        self.pick_button.setFixedSize(60, 50)
-        self.pick_button.setStyleSheet("""
-            QPushButton {
-                font-weight: bold;
-                border: 2px solid #4CAF50;
-                border-radius: 5px;
-                background-color: #E8F5E8;
-            }
-            QPushButton:hover {
-                background-color: #C8E6C9;
-            }
-            QPushButton:pressed {
-                background-color: #A5D6A7;
-            }
+        self.color_value.setStyleSheet("""
+            font-family: monospace;
+            font-size: 20px;
+            font-weight: bold;
+            color: #000000;
+            background-color: #f0f0f0;
+            border: 1px solid #999;
+            border-radius: 3px;
+            padding: 2px;
         """)
+        main_layout.addWidget(self.color_value)
+
+        # Pick button
+        self.pick_button = QPushButton("Pick")
+        self.pick_button.setFixedSize(60, 27)
         self.pick_button.clicked.connect(self.open_color_dialog)
         main_layout.addWidget(self.pick_button)
 
         # Initialize display
         self.update_color_display("#ffffff")
+
+    def update_color_display(self, hex_color):
+        """Update the color display"""
+        if self.color_display:
+            self.color_display.setStyleSheet(f"border: 1px solid #999; border-radius: 3px; background-color: {hex_color};")
+        if self.color_value:
+            self.color_value.setText(hex_color.upper())
+
+    def open_color_dialog(self):
+        """Open Qt color dialog"""
+        from PyQt6.QtWidgets import QColorDialog
+        from PyQt6.QtGui import QColor
+
+        color = QColorDialog.getColor(QColor("#ffffff"), self)
+        if color.isValid():
+            hex_color = color.name()
+            self.update_color_display(hex_color)
+            # Emit signal if needed
+            if hasattr(self, 'colorPicked'):
+                self.colorPicked.emit(hex_color)
 
     def open_color_dialog(self):
         """Open simple Qt color dialog - SAFE"""
@@ -1615,7 +1906,7 @@ class SettingsDialog(QDialog):
         self.theme_info_label = QLabel()
         self.theme_info_label.setWordWrap(True)
         self.theme_info_label.setMinimumHeight(100)
-        #self.theme_info_label.setStyleSheet("padding: 8px; background: #f5f5f5; border-radius: 4px;")
+        #self.theme_info_label.setStyleSheet("padding: 8px;  border-radius: 4px;")
         info_layout.addWidget(self.theme_info_label)
 
         left_layout.addWidget(info_group)
@@ -2118,6 +2409,7 @@ class SettingsDialog(QDialog):
         left_panel.setMaximumWidth(300)
 
         # Screen Color Picker Group
+
         picker_group = QGroupBox("🎯 Screen Color Picker")
         picker_layout = QVBoxLayout(picker_group)
 
@@ -2129,13 +2421,12 @@ class SettingsDialog(QDialog):
     <b>How to use:</b><br>
     1. Click 'Pick Color from Screen'<br>
     2. Move mouse over any color<br>
-    3. Left-click to select<br>
-    4. Right-click or ESC to cancel<br>
+    3. Left-click to select or "ESC" to cancel<br>
     <br>
     <i>Picked colors can be applied to theme elements →</i>
         """)
         instructions.setWordWrap(True)
-        instructions.setStyleSheet("padding: 8px; background: #f5f5f5; border-radius: 4px;")
+        instructions.setStyleSheet("padding: 8px; border-radius: 4px;")
         picker_layout.addWidget(instructions)
 
         left_layout.addWidget(picker_group)
@@ -2300,8 +2591,9 @@ class SettingsDialog(QDialog):
                 element_name = self.selected_element_combo.currentText()
                 self.demo_log.append(f"🎨 Applied {picked_color} to {element_name}")
 
+
     def _save_current_theme(self):
-        """Save current theme modifications"""
+        """Enhanced save current theme with metadata dialog"""
         current_theme = self.theme_selector_combo.currentText()
 
         # Collect all current colors
@@ -2309,21 +2601,31 @@ class SettingsDialog(QDialog):
         for color_key, editor in self.color_editors.items():
             colors[color_key] = editor.current_value
 
-        # Update theme data
-        if current_theme in self.app_settings.themes:
-            self.app_settings.themes[current_theme]["colors"] = colors
+        # Create theme data for the save dialog
+        current_theme_data = {
+            "name": current_theme,
+            "description": f"Modified version of {current_theme}",
+            "category": "🎭 Custom",
+            "author": "X-Seti",
+            "version": "1.0",
+            "colors": colors
+        }
 
-            # Save to file
-            success = self.app_settings.save_theme(current_theme, self.app_settings.themes[current_theme])
+        # Open enhanced save dialog
+        save_dialog = ThemeSaveDialog(self.app_settings, current_theme_data, self)
 
-            if success:
-                QMessageBox.information(self, "Theme Saved", f"Theme '{current_theme}' saved successfully!")
+        if save_dialog.exec():
+            theme_data = save_dialog.get_theme_data()
+            if theme_data:
+                # Refresh themes in current dialog
+                self.refresh_themes_in_dialog()
+
+                # Log success
                 if hasattr(self, 'demo_log'):
-                    self.demo_log.append(f"💾 Theme '{current_theme}' saved with custom colors")
-            else:
-                QMessageBox.warning(self, "Save Failed", f"Failed to save theme '{current_theme}'")
-        else:
-            QMessageBox.warning(self, "No Theme", "No theme selected to save")
+                    self.demo_log.append(f"💾 Theme saved: {theme_data.get('name', 'Unknown')}")
+                    self.demo_log.append(f"   File: {save_dialog.name_input.text()}.json")
+                    self.demo_log.append(f"   Colors: {len(theme_data.get('colors', {}))}")
+
     
     def _create_interface_tab(self):
         """Create interface settings tab"""
