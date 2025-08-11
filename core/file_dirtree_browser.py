@@ -25,12 +25,8 @@ from PyQt6.QtGui import QAction, QIcon, QFont, QKeySequence, QActionGroup
 
 # Import backend classes and functions
 from core.file_dirtree_backend import (
-    BrowserSettingsDialog, FilePropertiesDialog, FileSearchDialog,
-    format_file_size_backend, get_file_type_icon_backend, 
-    get_file_type_display_backend, get_file_attributes_backend,
-    get_folder_size_quick_backend
+    BrowserSettingsDialog, FilePropertiesDialog, FileSearchDialog, format_file_size_backend, get_file_type_icon_backend, get_file_type_display_backend, get_file_attributes_backend, get_folder_size_quick_backend
 )
-
 
 ##Methods list -
 # apply_browser_styling
@@ -180,12 +176,58 @@ class FileBrowserWidget(QWidget):
         splitter.setSizes([710, 200])
         
         layout.addWidget(splitter)
-        
-        # Status bar
-        self.status_bar = QLabel("Ready")
-        self.status_bar.setStyleSheet("padding: 4px; border-top: 1px solid #ccc;")
-        layout.addWidget(self.status_bar)
-        
+
+    def update_file_info(self, file_path): #vers 1
+        """Update file information panel"""
+        try:
+            if not file_path or not os.path.exists(file_path):
+                return
+
+            # Update file info labels
+            file_name = os.path.basename(file_path)
+            self.file_name_label.setText(file_name)
+            self.file_path_label.setText(file_path)
+
+            # Get file stats
+            stat = os.stat(file_path)
+            file_size = stat.st_size
+
+            # Update info labels
+            if os.path.isfile(file_path):
+                file_ext = os.path.splitext(file_path)[1].lower()
+                self.file_type_label.setText(get_file_type_display_backend(file_ext))
+                self.file_size_label.setText(format_file_size_backend(file_size))
+            else:
+                self.file_type_label.setText("Folder")
+                # Calculate folder size (quick scan)
+                folder_size = get_folder_size_quick_backend(file_path)
+                self.file_size_label.setText(f"{format_file_size_backend(folder_size)} (quick scan)")
+
+            # Update date
+            import datetime
+            mod_time = datetime.datetime.fromtimestamp(stat.st_mtime)
+            self.file_date_label.setText(mod_time.strftime('%Y-%m-%d %H:%M:%S'))
+
+            # Enable action buttons
+            self.open_btn.setEnabled(True)
+            self.edit_btn.setEnabled(os.path.isfile(file_path))
+            self.copy_btn.setEnabled(True)
+            self.delete_btn.setEnabled(True)
+
+        except Exception as e:
+            self.log_message(f"❌ Error updating file info: {str(e)}")
+
+
+    def get_main_window(self): #vers 1
+        """Get main window reference"""
+        parent = self.parent()
+        while parent:
+            if hasattr(parent, 'log_message') and hasattr(parent, 'current_img'):
+                return parent
+            parent = parent.parent()
+        return None
+
+
     def create_menubar(self): #vers 1
         """Create comprehensive menu bar"""
         menubar = QMenuBar()
@@ -1234,24 +1276,6 @@ class FileBrowserWidget(QWidget):
             size /= 1024
         return f"{size:.1f} PB"
             
-    def get_file_type_display_backend(file_ext: str) -> str: #vers 1
-        """Get display name for file type"""
-        type_map = {
-            '.img': 'IMG Archive',
-            '.dir': 'Directory File',
-            '.ide': 'Item Definition',
-            '.ipl': 'Item Placement',
-            '.dat': 'Data File',
-            '.dff': '3D Model',
-            '.txd': 'Texture Dictionary',
-            '.col': 'Collision File',
-            '.cfg': 'Configuration',
-            '.txt': 'Text File',
-            '.py': 'Python Script',
-            '.json': 'JSON Data',
-            '.log': 'Log File'
-        }
-        return type_map.get(file_ext, 'Unknown File')
 
     def get_theme_colors(self): #vers 1
         """Get theme colors from main window"""
@@ -1599,7 +1623,7 @@ class FileBrowserWidget(QWidget):
                 self.file_size_label.setText(f"Size: {self.format_file_size(size)}")
                 
                 file_ext = os.path.splitext(file_path)[1].lower()
-                self.file_type_label.setText(f"Type: {self.get_file_type_display(file_ext)}")
+                self.file_type_label.setText(f"Type: {self.get_file_type_display_backend(file_ext)}")
                 
                 # Modification date
                 import datetime
@@ -1717,7 +1741,7 @@ class FileBrowserWidget(QWidget):
         
     def log_message(self, message): #vers 1
         """Log message to status bar and parent"""
-        self.status_bar.setText(message)
+        # Send message to main window log instead of local status bar
         main_window = self.get_main_window()
         if main_window and hasattr(main_window, 'log_message'):
             main_window.log_message(message)

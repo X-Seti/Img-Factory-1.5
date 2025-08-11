@@ -11,6 +11,9 @@ Settings management without demo code
 import json
 import os
 from pathlib import Path
+from PyQt6.QtCore import Qt, pyqtSignal, QDateTime  # Fixed: Added QDateTime
+from PyQt6.QtGui import QFont
+
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QGridLayout, QButtonGroup, QRadioButton, QLabel, QPushButton,
@@ -18,11 +21,309 @@ from PyQt6.QtWidgets import (
     QLabel, QPushButton, QComboBox, QCheckBox, QSpinBox,
     QSlider, QGroupBox, QTabWidget, QDialog, QMessageBox,
     QFileDialog, QColorDialog, QFontDialog, QTextEdit,
-    QTableWidget, QTableWidgetItem, QHeaderView
+    QTableWidget, QTableWidgetItem, QHeaderView,
+    QScrollArea, QFrame, QLineEdit
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QDateTime  # Fixed: Added QDateTime
-from PyQt6.QtGui import QFont
 
+from PyQt6.QtCore import Qt, pyqtSignal, QDateTime, QTimer, QThread, pyqtSlot
+from PyQt6.QtGui import QFont, QColor, QPixmap, QPainter, QCursor
+
+# Check for screen capture libraries (for robust color picking)
+try:
+    import mss
+    MSS_AVAILABLE = True
+    print("✅ MSS library available - using high-performance screen capture")
+except ImportError:
+    MSS_AVAILABLE = False
+    try:
+        from PIL import ImageGrab
+        PIL_AVAILABLE = True
+        print("⚠️ MSS not available, using PIL fallback")
+    except ImportError:
+        PIL_AVAILABLE = False
+        print("❌ Neither MSS nor PIL available - using Qt fallback")
+
+
+class ColorPickerWidget(QWidget):
+    """SAFE, simple color picker widget - NO THREADING"""
+    colorPicked = pyqtSignal(str)  # Emits hex color
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(280, 70)
+        self.current_color = "#ffffff"
+        self.picking_active = False
+        self.color_display = None
+        self.color_value = None
+        self.pick_button = None
+        self._setup_ui()
+
+    def _setup_ui(self):
+        # Main layout with better spacing
+        main_layout = QHBoxLayout(self)
+        main_layout.setSpacing(10)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+
+        # Left side - Color display and value in a frame
+        color_frame = QFrame()
+        color_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+        color_frame.setFixedSize(100, 50)
+
+        color_layout = QVBoxLayout(color_frame)
+        color_layout.setContentsMargins(5, 5, 5, 5)
+        color_layout.setSpacing(2)
+
+        # Color display
+        self.color_display = QLabel()
+        self.color_display.setFixedHeight(25)
+        self.color_display.setStyleSheet("border: 1px solid #999; border-radius: 3px;")
+        color_layout.addWidget(self.color_display)
+
+        # Color value display
+        self.color_value = QLabel("#FFFFFF")
+        self.color_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.color_value.setStyleSheet("font-family: monospace; font-size: 9px; font-weight: bold;")
+        color_layout.addWidget(self.color_value)
+
+        main_layout.addWidget(color_frame)
+
+        # Middle - Instructions
+        info_layout = QVBoxLayout()
+        instruction_label = QLabel("Click for Qt\nColor Dialog")
+        instruction_label.setStyleSheet("font-size: 10px; color: #666;")
+        instruction_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        info_layout.addWidget(instruction_label)
+        main_layout.addLayout(info_layout)
+
+        # Right side - Pick button
+        self.pick_button = QPushButton("🎨 Pick")
+        self.pick_button.setFixedSize(60, 50)
+        self.pick_button.setStyleSheet("""
+            QPushButton {
+                font-weight: bold;
+                border: 2px solid #4CAF50;
+                border-radius: 5px;
+                background-color: #E8F5E8;
+            }
+            QPushButton:hover {
+                background-color: #C8E6C9;
+            }
+            QPushButton:pressed {
+                background-color: #A5D6A7;
+            }
+        """)
+        self.pick_button.clicked.connect(self.open_color_dialog)
+        main_layout.addWidget(self.pick_button)
+
+        # Initialize display
+        self.update_color_display("#ffffff")
+
+    def open_color_dialog(self):
+        """Open simple Qt color dialog - SAFE"""
+        try:
+            color = QColorDialog.getColor(QColor(self.current_color), self)
+            if color.isValid():
+                hex_color = color.name()
+                self.current_color = hex_color
+                self.update_color_display(hex_color)
+                self.colorPicked.emit(hex_color)
+                print(f"✅ Color selected: {hex_color}")
+        except Exception as e:
+            print(f"Color dialog error: {e}")
+
+    def update_color_display(self, hex_color):
+        """Update the color display safely"""
+        try:
+            if not hex_color or not isinstance(hex_color, str):
+                hex_color = "#ffffff"
+
+            # Ensure valid hex format
+            if not hex_color.startswith('#'):
+                hex_color = '#' + hex_color
+            if len(hex_color) != 7:
+                hex_color = "#ffffff"
+
+            self.current_color = hex_color
+
+            # Update color display
+            if self.color_display:
+                self.color_display.setStyleSheet(
+                    f"background-color: {hex_color}; border: 1px solid #999; border-radius: 3px;"
+                )
+
+            # Update color value
+            if self.color_value:
+                self.color_value.setText(hex_color.upper())
+
+        except Exception as e:
+            print(f"❌ Display update error: {e}")
+
+    def closeEvent(self, event):
+        """Clean up when widget is closed"""
+        super().closeEvent(event)
+
+    def __del__(self):
+        """Clean up when object is destroyed"""
+        pass
+
+class ScreenCaptureThread(QThread):
+    """Background thread for screen capture to avoid blocking UI"""
+    colorCaptured = pyqtSignal(str)  # hex color
+
+    def __init__(self, x, y, parent=None):
+        super().__init__(parent)
+        self.x = x
+        self.y = y
+        self.running = True
+
+    def run(self):
+        """Capture color at coordinates in background thread"""
+        try:
+            if MSS_AVAILABLE:
+                color = self._capture_with_mss()
+            elif PIL_AVAILABLE:
+                color = self._capture_with_pil()
+            else:
+                color = self._capture_with_qt()
+
+            if color and self.running:
+                self.colorCaptured.emit(color)
+        except Exception as e:
+            print(f"Screen capture error: {e}")
+            if self.running:
+                self.colorCaptured.emit("#ffffff")  # Fallback color
+
+    def _capture_with_mss(self):
+        """High-performance capture using MSS library"""
+        try:
+            with mss.mss() as sct:
+                # Capture 1x1 pixel area for maximum efficiency
+                monitor = {"top": self.y, "left": self.x, "width": 1, "height": 1}
+                screenshot = sct.grab(monitor)
+
+                # MSS returns BGRA, we need RGB
+                if len(screenshot.rgb) >= 3:
+                    # screenshot.pixel(0, 0) returns (R, G, B) tuple
+                    pixel = screenshot.pixel(0, 0)
+                    return f"#{pixel[0]:02x}{pixel[1]:02x}{pixel[2]:02x}"
+
+        except Exception as e:
+            print(f"MSS capture error: {e}")
+        return None
+
+    def _capture_with_pil(self):
+        """Fallback capture using PIL/Pillow"""
+        try:
+            # Capture small area around point for efficiency
+            bbox = (self.x, self.y, self.x + 1, self.y + 1)
+            screenshot = ImageGrab.grab(bbox)
+            pixel = screenshot.getpixel((0, 0))
+
+            # Handle both RGB and RGBA
+            if isinstance(pixel, tuple) and len(pixel) >= 3:
+                return f"#{pixel[0]:02x}{pixel[1]:02x}{pixel[2]:02x}"
+
+        except Exception as e:
+            print(f"PIL capture error: {e}")
+        return None
+
+    def _capture_with_qt(self):
+        """Last resort: Qt screen capture"""
+        try:
+            screen = QApplication.primaryScreen()
+            if screen:
+                pixmap = screen.grabWindow(0, self.x, self.y, 1, 1)
+                if not pixmap.isNull():
+                    image = pixmap.toImage()
+                    if not image.isNull():
+                        color = QColor(image.pixel(0, 0))
+                        return color.name()
+        except Exception as e:
+            print(f"Qt capture error: {e}")
+        return None
+
+    def stop(self):
+        """Stop the capture thread"""
+        self.running = False
+
+class ThemeColorEditor(QWidget):
+    """Widget for editing individual theme colors"""
+    colorChanged = pyqtSignal(str, str)  # color_key, hex_value
+
+    def __init__(self, color_key, color_name, current_value, parent=None):
+        super().__init__(parent)
+        self.color_key = color_key
+        self.color_name = color_name
+        self.current_value = current_value
+        self._setup_ui()
+
+    def _setup_ui(self):
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(5, 2, 5, 2)
+
+        # Color name label
+        name_label = QLabel(self.color_name)
+        name_label.setMinimumWidth(120)
+        layout.addWidget(name_label)
+
+        # Color preview
+        self.color_preview = QLabel()
+        self.color_preview.setFixedSize(30, 20)
+        self.update_preview(self.current_value)
+        layout.addWidget(self.color_preview)
+
+        # Color value input
+        self.color_input = QLineEdit(self.current_value)
+        self.color_input.setMaximumWidth(80)
+        self.color_input.setFont(QFont("monospace"))
+        self.color_input.textChanged.connect(self.on_color_changed)
+        layout.addWidget(self.color_input)
+
+        # Color dialog button
+        dialog_btn = QPushButton("🎨")
+        dialog_btn.setFixedSize(25, 25)
+        dialog_btn.clicked.connect(self.open_color_dialog)
+        layout.addWidget(dialog_btn)
+
+        layout.addStretch()
+
+    def update_preview(self, hex_color):
+        """Update color preview"""
+        try:
+            self.color_preview.setStyleSheet(
+                f"background-color: {hex_color}; border: 1px solid #999; border-radius: 3px;"
+            )
+        except:
+            self.color_preview.setStyleSheet("background-color: #ff0000; border: 1px solid #999;")
+
+    def on_color_changed(self, text):
+        """Handle color input change"""
+        if text.startswith('#') and len(text) == 7:
+            try:
+                # Validate hex color
+                QColor(text)
+                self.current_value = text
+                self.update_preview(text)
+                self.colorChanged.emit(self.color_key, text)
+            except:
+                pass
+
+    def open_color_dialog(self):
+        """Open Qt color dialog"""
+        color = QColorDialog.getColor(QColor(self.current_value), self)
+        if color.isValid():
+            hex_color = color.name()
+            self.color_input.setText(hex_color)
+            self.current_value = hex_color
+            self.update_preview(hex_color)
+            self.colorChanged.emit(self.color_key, hex_color)
+
+    def set_color(self, hex_color):
+        """Set color from external source (like color picker)"""
+        self.color_input.setText(hex_color)
+        self.current_value = hex_color
+        self.update_preview(hex_color)
+        self.colorChanged.emit(self.color_key, hex_color)
 
 class DebugSettings:
     """Debug mode settings and utilities"""
@@ -1631,8 +1932,9 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.tabs)
 
         # Existing tabs...
-        self.theme_tab = self._create_theme_tab()
-        self.tabs.addTab(self.theme_tab, "🎨 Themes")
+        # Color picker tab (replaces themes tab)
+        self.color_picker_tab = self._create_color_picker_tab()
+        self.tabs.addTab(self.color_picker_tab, "🎨 Color Picker")
 
         # NEW: Add demo tab
         self.demo_tab = self._create_demo_tab()
@@ -1805,28 +2107,223 @@ class SettingsDialog(QDialog):
     # keep
 
 
-    def _create_theme_tab(self):
-        """Create theme selection tab"""
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        
-        # Theme selection
-        theme_group = QGroupBox("Choose Theme")
-        theme_layout = QVBoxLayout(theme_group)
-        
-        self.theme_buttons = QButtonGroup()
-        
-        for theme_name, theme_data in self.app_settings.themes.items():
-            radio = QRadioButton(theme_data.get("name", theme_name))
-            radio.setToolTip(theme_data.get("description", ""))
-            radio.theme_name = theme_name
-            self.theme_buttons.addButton(radio)
-            theme_layout.addWidget(radio)
-        
-        layout.addWidget(theme_group)
-        layout.addStretch()
-        
-        return widget
+    def _create_color_picker_tab(self):
+        """Create color picker and theme editor tab"""
+        tab = QWidget()
+        main_layout = QHBoxLayout(tab)
+
+        # Left Panel - Color Picker Tools
+        left_panel = QWidget()
+        left_layout = QVBoxLayout(left_panel)
+        left_panel.setMaximumWidth(300)
+
+        # Screen Color Picker Group
+        picker_group = QGroupBox("🎯 Screen Color Picker")
+        picker_layout = QVBoxLayout(picker_group)
+
+        self.color_picker = ColorPickerWidget()
+        picker_layout.addWidget(self.color_picker)
+
+        # Instructions
+        instructions = QLabel("""
+    <b>How to use:</b><br>
+    1. Click 'Pick Color from Screen'<br>
+    2. Move mouse over any color<br>
+    3. Left-click to select<br>
+    4. Right-click or ESC to cancel<br>
+    <br>
+    <i>Picked colors can be applied to theme elements →</i>
+        """)
+        instructions.setWordWrap(True)
+        instructions.setStyleSheet("padding: 8px; background: #f5f5f5; border-radius: 4px;")
+        picker_layout.addWidget(instructions)
+
+        left_layout.addWidget(picker_group)
+
+        # Palette Colors Group
+        palette_group = QGroupBox("🎨 Quick Colors")
+        palette_layout = QGridLayout(palette_group)
+
+        # Common colors
+        palette_colors = [
+            "#000000", "#333333", "#666666", "#999999", "#CCCCCC", "#FFFFFF",
+            "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF",
+            "#FF8000", "#8000FF", "#0080FF", "#80FF00", "#FF0080", "#00FF80",
+            "#800000", "#008000", "#000080", "#808000", "#800080", "#008080"
+        ]
+
+        for i, color in enumerate(palette_colors):
+            color_btn = QPushButton()
+            color_btn.setFixedSize(25, 25)
+            color_btn.setStyleSheet(f"background-color: {color}; border: 1px solid #999;")
+            color_btn.setToolTip(color)
+            color_btn.clicked.connect(lambda checked, c=color: self.color_picker.update_color_display(c))
+
+            row = i // 6
+            col = i % 6
+            palette_layout.addWidget(color_btn, row, col)
+
+        left_layout.addWidget(palette_group)
+        left_layout.addStretch()
+
+        main_layout.addWidget(left_panel)
+
+        # Right Panel - Theme Color Editor
+        right_panel = QWidget()
+        right_layout = QVBoxLayout(right_panel)
+
+        # Theme Selection Header
+        theme_header = QGroupBox("🎨 Theme Color Editor")
+        header_layout = QHBoxLayout(theme_header)
+
+        header_layout.addWidget(QLabel("Current Theme:"))
+        self.theme_selector_combo = QComboBox()
+
+        # Populate with available themes
+        for theme_name in self.app_settings.themes.keys():
+            self.theme_selector_combo.addItem(theme_name)
+        self.theme_selector_combo.setCurrentText(self.app_settings.current_settings["theme"])
+        self.theme_selector_combo.currentTextChanged.connect(self._load_theme_colors)
+
+        header_layout.addWidget(self.theme_selector_combo)
+
+        save_theme_btn = QPushButton("💾 Save Theme")
+        save_theme_btn.clicked.connect(self._save_current_theme)
+        header_layout.addWidget(save_theme_btn)
+
+        right_layout.addWidget(theme_header)
+
+        # Scrollable color editor area
+        scroll_area = QScrollArea()
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+
+        # Theme color definitions
+        self.theme_colors = {
+            "bg_primary": "Primary Background",
+            "bg_secondary": "Secondary Background",
+            "bg_tertiary": "Tertiary Background",
+            "panel_bg": "Panel Background",
+            "accent_primary": "Primary Accent",
+            "accent_secondary": "Secondary Accent",
+            "text_primary": "Primary Text",
+            "text_secondary": "Secondary Text",
+            "text_accent": "Accent Text",
+            "button_normal": "Button Normal",
+            "button_hover": "Button Hover",
+            "button_pressed": "Button Pressed",
+            "button_text_color": "Button Text",
+            "border": "Borders",
+            "success": "Success Color",
+            "warning": "Warning Color",
+            "error": "Error Color",
+            "action_import": "Import Action",
+            "action_export": "Export Action",
+            "action_remove": "Remove Action",
+            "action_update": "Update Action",
+            "action_convert": "Convert Action"
+        }
+
+        # Create color editors
+        self.color_editors = {}
+        for color_key, color_name in self.theme_colors.items():
+            # Get current color value from theme
+            current_value = "#ffffff"  # Default
+            current_theme = self.app_settings.current_settings["theme"]
+            if current_theme in self.app_settings.themes:
+                colors = self.app_settings.themes[current_theme].get("colors", {})
+                current_value = colors.get(color_key, "#ffffff")
+
+            editor = ThemeColorEditor(color_key, color_name, current_value)
+            editor.colorChanged.connect(self._on_theme_color_changed)
+            self.color_editors[color_key] = editor
+            scroll_layout.addWidget(editor)
+
+        scroll_area.setWidget(scroll_widget)
+        scroll_area.setWidgetResizable(True)
+        right_layout.addWidget(scroll_area)
+
+        # Selected element display
+        selection_group = QGroupBox("🎯 Apply Picked Color")
+        selection_layout = QVBoxLayout(selection_group)
+
+        self.selected_element_combo = QComboBox()
+        for color_key, color_name in self.theme_colors.items():
+            self.selected_element_combo.addItem(color_name, color_key)
+        selection_layout.addWidget(self.selected_element_combo)
+
+        apply_color_btn = QPushButton("🎨 Apply Picked Color to Selected Element")
+        apply_color_btn.clicked.connect(self._apply_picked_color)
+        selection_layout.addWidget(apply_color_btn)
+
+        right_layout.addWidget(selection_group)
+
+        main_layout.addWidget(right_panel)
+
+        return tab
+
+    def _load_theme_colors(self, theme_name):
+        """Load colors for selected theme into editors"""
+        if theme_name in self.app_settings.themes:
+            colors = self.app_settings.themes[theme_name].get("colors", {})
+
+            for color_key, editor in self.color_editors.items():
+                color_value = colors.get(color_key, "#ffffff")
+                editor.set_color(color_value)
+
+    def _on_theme_color_changed(self, color_key, hex_value):
+        """Handle individual color changes"""
+        # Update the current theme with new color
+        current_theme = self.theme_selector_combo.currentText()
+        if current_theme in self.app_settings.themes:
+            if "colors" not in self.app_settings.themes[current_theme]:
+                self.app_settings.themes[current_theme]["colors"] = {}
+
+            self.app_settings.themes[current_theme]["colors"][color_key] = hex_value
+
+            # Apply changes if instant preview is enabled
+            if hasattr(self, 'instant_apply_check') and self.instant_apply_check.isChecked():
+                self.app_settings.current_settings["theme"] = current_theme
+                self.themeChanged.emit(current_theme)
+
+    def _apply_picked_color(self):
+        """Apply picked color to selected element"""
+        picked_color = self.color_picker.current_color
+        selected_data = self.selected_element_combo.currentData()
+
+        if selected_data and picked_color:
+            if selected_data in self.color_editors:
+                self.color_editors[selected_data].set_color(picked_color)
+
+            # Log the action
+            if hasattr(self, 'demo_log'):
+                element_name = self.selected_element_combo.currentText()
+                self.demo_log.append(f"🎨 Applied {picked_color} to {element_name}")
+
+    def _save_current_theme(self):
+        """Save current theme modifications"""
+        current_theme = self.theme_selector_combo.currentText()
+
+        # Collect all current colors
+        colors = {}
+        for color_key, editor in self.color_editors.items():
+            colors[color_key] = editor.current_value
+
+        # Update theme data
+        if current_theme in self.app_settings.themes:
+            self.app_settings.themes[current_theme]["colors"] = colors
+
+            # Save to file
+            success = self.app_settings.save_theme(current_theme, self.app_settings.themes[current_theme])
+
+            if success:
+                QMessageBox.information(self, "Theme Saved", f"Theme '{current_theme}' saved successfully!")
+                if hasattr(self, 'demo_log'):
+                    self.demo_log.append(f"💾 Theme '{current_theme}' saved with custom colors")
+            else:
+                QMessageBox.warning(self, "Save Failed", f"Failed to save theme '{current_theme}'")
+        else:
+            QMessageBox.warning(self, "No Theme", "No theme selected to save")
     
     def _create_interface_tab(self):
         """Create interface settings tab"""
@@ -1876,20 +2373,24 @@ class SettingsDialog(QDialog):
     
     def _load_current_settings(self):
         """Load current settings into UI"""
-        # Set theme
-        current_theme = self.app_settings.current_settings.get("theme", "IMG_Factory")
-        for button in self.theme_buttons.buttons():
-            if hasattr(button, 'theme_name') and button.theme_name == current_theme:
-                button.setChecked(True)
-                break
-        
-        # Set interface settings
-        self.font_family_combo.setCurrentText(self.app_settings.current_settings.get("font_family", "Segoe UI"))
-        self.font_size_spin.setValue(self.app_settings.current_settings.get("font_size", 9))
-        self.tooltips_check.setChecked(self.app_settings.current_settings.get("show_tooltips", True))
-        self.menu_icons_check.setChecked(self.app_settings.current_settings.get("show_menu_icons", True))
-        self.button_icons_check.setChecked(self.app_settings.current_settings.get("show_button_icons", False))
-    
+        # Set theme in color picker tab
+        if hasattr(self, 'theme_selector_combo'):
+            current_theme = self.app_settings.current_settings.get("theme", "IMG_Factory")
+            self.theme_selector_combo.setCurrentText(current_theme)
+            self._load_theme_colors(current_theme)
+
+        # Set interface settings (keep the rest as is)
+        if hasattr(self, 'font_family_combo'):
+            self.font_family_combo.setCurrentText(self.app_settings.current_settings.get("font_family", "Segoe UI"))
+        if hasattr(self, 'font_size_spin'):
+            self.font_size_spin.setValue(self.app_settings.current_settings.get("font_size", 9))
+        if hasattr(self, 'tooltips_check'):
+            self.tooltips_check.setChecked(self.app_settings.current_settings.get("show_tooltips", True))
+        if hasattr(self, 'menu_icons_check'):
+            self.menu_icons_check.setChecked(self.app_settings.current_settings.get("show_menu_icons", True))
+        if hasattr(self, 'button_icons_check'):
+            self.button_icons_check.setChecked(self.app_settings.current_settings.get("show_button_icons", False))
+
     def _apply_settings(self):
         """Apply settings permanently including demo theme"""
         new_settings = self._get_dialog_settings()
