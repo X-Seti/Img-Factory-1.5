@@ -1,27 +1,32 @@
-#this belongs in components/col_editor.py - Version: 5
-# X-Seti - July20 2025 - IMG Factory 1.5 - COL Editor
-# Complete COL file editor with 3D visualization using IMG debug system
+#this belongs in components/col_editor.py - Version: 6
+# X-Seti - August13 2025 - IMG Factory 1.5 - Enhanced COL Editor
+# Enhanced version with better integration and 3D viewer improvements
 
 """
-COL Editor - Collision file editor with 3D visualization
+Enhanced COL Editor - Collision file editor with improved 3D visualization
 Provides complete COL editing capabilities with model viewer and property editor
+ENHANCED: Better integration with IMG Factory systems and improved UI
 """
 
 import os
-from typing import Optional, List
+import tempfile
+from typing import Optional, List, Dict, Any
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QSplitter, QTabWidget,
     QListWidget, QListWidgetItem, QTreeWidget, QTreeWidgetItem,
     QLabel, QLineEdit, QSpinBox, QDoubleSpinBox, QPushButton,
     QGroupBox, QCheckBox, QTextEdit, QFileDialog, QMessageBox,
-    QStatusBar, QMenuBar, QToolBar, QComboBox, QSlider
+    QStatusBar, QMenuBar, QToolBar, QComboBox, QSlider, QFormLayout,
+    QTableWidget, QTableWidgetItem, QProgressBar
 )
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QAction, QFont
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
+from PyQt6.QtGui import QAction, QFont, QIcon
 
 # Import IMG debug system and COL classes
 from components.img_debug_functions import img_debugger
 from components.col_core_classes import COLFile, COLModel, COLVersion, Vector3
+from methods.col_operations import get_col_detailed_analysis, create_temporary_col_file, cleanup_temporary_file
+from gui.col_dialogs import show_col_analysis_dialog
 
 ##Methods list -
 # apply_changes
@@ -39,595 +44,993 @@ from components.col_core_classes import COLFile, COLModel, COLVersion, Vector3
 
 ##Classes -
 # COLEditorDialog
-# COLModelListWidget
+# COLModelListWidget  
 # COLPropertiesWidget
 # COLViewer3D
+# COLToolbar
 
-class COLViewer3D(QLabel):
-    """3D viewer widget for COL models (placeholder)"""
+class COLViewer3D(QLabel): #vers 2
+    """Enhanced 3D viewer widget for COL models"""
+    
+    model_selected = pyqtSignal(int)  # Model index selected
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setMinimumSize(400, 300)
-        self.setStyleSheet("border: 1px solid gray; background-color: #2a2a2a;")
-        self.setText("3D Viewer\n(Coming Soon)")
-        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setMinimumSize(500, 400)
+        self.setStyleSheet("""
+            QLabel {
+                border: 2px solid #555555;
+                background-color: #1e1e1e;
+                color: #ffffff;
+                font-family: 'Consolas', monospace;
+                font-size: 11px;
+            }
+        """)
         
         # View options
         self.show_spheres = True
         self.show_boxes = True
         self.show_mesh = True
         self.show_wireframe = False
+        self.show_bounds = True
         
         self.current_model = None
+        self.current_file = None
+        self.selected_model_index = -1
+        
+        self.update_display()
     
-    def set_current_model(self, model: COLModel): #vers 1
+    def set_current_file(self, col_file: COLFile): #vers 1
+        """Set current COL file for display"""
+        self.current_file = col_file
+        self.selected_model_index = -1
+        self.current_model = None
+        self.update_display()
+    
+    def set_current_model(self, model: COLModel, model_index: int = -1): #vers 2
         """Set current model for display"""
         self.current_model = model
+        self.selected_model_index = model_index
+        self.update_display()
+        
         if model:
-            info = f"3D Viewer\nModel: {model.name}\n"
-            info += f"Spheres: {len(model.spheres)}\n"
-            info += f"Boxes: {len(model.boxes)}\n"
-            info += f"Faces: {len(model.faces)}"
-            self.setText(info)
             img_debugger.debug(f"3D Viewer showing model: {model.name}")
-        else:
-            self.setText("3D Viewer\n(No Model)")
+    
+    def set_view_options(self, show_spheres=None, show_boxes=None, show_mesh=None, show_wireframe=None, show_bounds=None): #vers 1
+        """Update view options"""
+        if show_spheres is not None:
+            self.show_spheres = show_spheres
+        if show_boxes is not None:
+            self.show_boxes = show_boxes
+        if show_mesh is not None:
+            self.show_mesh = show_mesh
+        if show_wireframe is not None:
+            self.show_wireframe = show_wireframe
+        if show_bounds is not None:
+            self.show_bounds = show_bounds
+        
+        self.update_display()
+    
+    def update_display(self): #vers 1
+        """Update 3D viewer display"""
+        try:
+            if not self.current_file and not self.current_model:
+                self.setText("3D Viewer\n\nNo COL file loaded\nUse File > Open to load a COL file")
+                return
+            
+            if self.current_file and not self.current_model:
+                # Show file overview
+                model_count = len(self.current_file.models) if hasattr(self.current_file, 'models') else 0
+                display_text = "3D Viewer - File Overview\n\n"
+                display_text += f"COL File: {os.path.basename(getattr(self.current_file, 'file_path', 'Unknown'))}\n"
+                display_text += f"Models: {model_count}\n\n"
+                
+                if model_count > 0 and hasattr(self.current_file, 'models'):
+                    display_text += "Models (click to select):\n"
+                    for i, model in enumerate(self.current_file.models[:10]):  # Show first 10
+                        indicator = "→ " if i == self.selected_model_index else "  "
+                        display_text += f"{indicator}{i+1}: {getattr(model, 'name', f'Model_{i}')}\n"
+                    
+                    if model_count > 10:
+                        display_text += f"  ... and {model_count - 10} more models\n"
+                
+                display_text += "\nView Options:\n"
+                display_text += f"Spheres: {'✅' if self.show_spheres else '❌'}\n"
+                display_text += f"Boxes: {'✅' if self.show_boxes else '❌'}\n"
+                display_text += f"Mesh: {'✅' if self.show_mesh else '❌'}\n"
+                display_text += f"Wireframe: {'✅' if self.show_wireframe else '❌'}\n"
+                display_text += f"Bounds: {'✅' if self.show_bounds else '❌'}\n"
+                
+                self.setText(display_text)
+                return
+            
+            if self.current_model:
+                # Show model details
+                display_text = "3D Viewer - Model View\n\n"
+                display_text += f"Model: {getattr(self.current_model, 'name', 'Unknown')}\n"
+                display_text += f"Version: {getattr(self.current_model, 'version', 'Unknown')}\n\n"
+                
+                # Collision elements
+                spheres = getattr(self.current_model, 'spheres', [])
+                boxes = getattr(self.current_model, 'boxes', [])
+                faces = getattr(self.current_model, 'faces', [])
+                vertices = getattr(self.current_model, 'vertices', [])
+                
+                display_text += "Collision Elements:\n"
+                display_text += f"Spheres: {len(spheres)} {'(shown)' if self.show_spheres else '(hidden)'}\n"
+                display_text += f"Boxes: {len(boxes)} {'(shown)' if self.show_boxes else '(hidden)'}\n"
+                display_text += f"Faces: {len(faces)} {'(shown)' if self.show_mesh else '(hidden)'}\n"
+                display_text += f"Vertices: {len(vertices)}\n\n"
+                
+                # Bounding box info
+                if hasattr(self.current_model, 'bounding_box') and self.current_model.bounding_box:
+                    bbox = self.current_model.bounding_box
+                    display_text += "Bounding Box:\n"
+                    if hasattr(bbox, 'center'):
+                        display_text += f"Center: ({bbox.center.x:.2f}, {bbox.center.y:.2f}, {bbox.center.z:.2f})\n"
+                    if hasattr(bbox, 'radius'):
+                        display_text += f"Radius: {bbox.radius:.2f}\n"
+                
+                display_text += "\n[Future: OpenGL 3D visualization will be displayed here]"
+                self.setText(display_text)
+            
+        except Exception as e:
+            self.setText(f"3D Viewer Error:\n\n{str(e)}")
+            img_debugger.error(f"Error updating 3D viewer display: {str(e)}")
+    
+    def mousePressEvent(self, event): #vers 1
+        """Handle mouse clicks for model selection"""
+        if event.button() == Qt.MouseButton.LeftButton and self.current_file:
+            # Simple model selection - in future this would be 3D picking
+            if hasattr(self.current_file, 'models') and self.current_file.models:
+                # Cycle through models for now
+                current_index = self.selected_model_index
+                next_index = (current_index + 1) % len(self.current_file.models)
+                
+                self.selected_model_index = next_index
+                self.current_model = self.current_file.models[next_index]
+                self.update_display()
+                self.model_selected.emit(next_index)
+        
+        super().mousePressEvent(event)
 
-class COLPropertiesWidget(QWidget):
-    """Properties editor widget for COL elements"""
+class COLPropertiesWidget(QTabWidget): #vers 2
+    """Enhanced properties editor widget for COL elements"""
+    
+    property_changed = pyqtSignal(str, object)  # property_name, new_value
     
     def __init__(self, parent=None):
         super().__init__(parent)
         self.current_model = None
-        self.current_element = None
-        self.setup_ui()
+        
+        self.setup_tabs()
     
-    def setup_ui(self): #vers 1
-        """Setup properties UI"""
-        layout = QVBoxLayout(self)
+    def setup_tabs(self): #vers 1
+        """Setup property tabs"""
+        # Model properties tab
+        self.model_tab = QWidget()
+        self.setup_model_tab()
+        self.addTab(self.model_tab, "📄 Model")
         
-        # Model properties group
-        model_group = QGroupBox("Model Properties")
-        model_layout = QVBoxLayout(model_group)
+        # Spheres tab
+        self.spheres_tab = QWidget()
+        self.setup_spheres_tab()
+        self.addTab(self.spheres_tab, "🔵 Spheres")
         
-        # Model name
-        name_layout = QHBoxLayout()
-        name_layout.addWidget(QLabel("Name:"))
-        self.name_edit = QLineEdit()
-        self.name_edit.textChanged.connect(self.on_property_changed)
-        name_layout.addWidget(self.name_edit)
-        model_layout.addLayout(name_layout)
+        # Boxes tab
+        self.boxes_tab = QWidget()
+        self.setup_boxes_tab()
+        self.addTab(self.boxes_tab, "📦 Boxes")
         
-        # Model ID
-        id_layout = QHBoxLayout()
-        id_layout.addWidget(QLabel("Model ID:"))
-        self.id_spin = QSpinBox()
-        self.id_spin.setRange(0, 999999)
-        self.id_spin.valueChanged.connect(self.on_property_changed)
-        id_layout.addWidget(self.id_spin)
-        model_layout.addLayout(id_layout)
+        # Mesh tab
+        self.mesh_tab = QWidget()
+        self.setup_mesh_tab()
+        self.addTab(self.mesh_tab, "🌐 Mesh")
+    
+    def setup_model_tab(self): #vers 1
+        """Setup model properties tab"""
+        layout = QVBoxLayout(self.model_tab)
         
-        # Version
-        version_layout = QHBoxLayout()
-        version_layout.addWidget(QLabel("Version:"))
-        self.version_combo = QComboBox()
-        self.version_combo.addItems(["COL 1", "COL 2", "COL 3", "COL 4"])
-        self.version_combo.currentTextChanged.connect(self.on_property_changed)
-        version_layout.addWidget(self.version_combo)
-        model_layout.addLayout(version_layout)
+        # Model info group
+        info_group = QGroupBox("Model Information")
+        info_layout = QFormLayout(info_group)
         
-        layout.addWidget(model_group)
+        self.model_name_edit = QLineEdit()
+        self.model_name_edit.textChanged.connect(lambda text: self.property_changed.emit('name', text))
+        info_layout.addRow("Name:", self.model_name_edit)
         
-        # Element properties group
-        element_group = QGroupBox("Element Properties")
-        element_layout = QVBoxLayout(element_group)
+        self.model_version_combo = QComboBox()
+        for version in COLVersion:
+            self.model_version_combo.addItem(f"COL{version.value}", version)
+        self.model_version_combo.currentIndexChanged.connect(self.on_version_changed)
+        info_layout.addRow("Version:", self.model_version_combo)
         
-        self.element_props_widget = QTextEdit()
-        self.element_props_widget.setMaximumHeight(150)
-        self.element_props_widget.setPlainText("Select an element to view properties")
-        element_layout.addWidget(self.element_props_widget)
+        self.model_id_spin = QSpinBox()
+        self.model_id_spin.setRange(0, 65535)
+        self.model_id_spin.valueChanged.connect(lambda value: self.property_changed.emit('model_id', value))
+        info_layout.addRow("Model ID:", self.model_id_spin)
         
-        layout.addWidget(element_group)
+        layout.addWidget(info_group)
         
-        # Statistics group
-        stats_group = QGroupBox("Statistics")
-        stats_layout = QVBoxLayout(stats_group)
+        # Bounding box group
+        bbox_group = QGroupBox("Bounding Box")
+        bbox_layout = QFormLayout(bbox_group)
         
-        self.stats_text = QTextEdit()
-        self.stats_text.setMaximumHeight(100)
-        self.stats_text.setReadOnly(True)
-        stats_layout.addWidget(self.stats_text)
+        # Center coordinates
+        center_layout = QHBoxLayout()
+        self.center_x_spin = QDoubleSpinBox()
+        self.center_x_spin.setRange(-999999, 999999)
+        self.center_x_spin.setDecimals(3)
+        center_layout.addWidget(self.center_x_spin)
         
-        layout.addWidget(stats_group)
+        self.center_y_spin = QDoubleSpinBox()
+        self.center_y_spin.setRange(-999999, 999999)
+        self.center_y_spin.setDecimals(3)
+        center_layout.addWidget(self.center_y_spin)
+        
+        self.center_z_spin = QDoubleSpinBox()
+        self.center_z_spin.setRange(-999999, 999999)
+        self.center_z_spin.setDecimals(3)
+        center_layout.addWidget(self.center_z_spin)
+        
+        bbox_layout.addRow("Center (X,Y,Z):", center_layout)
+        
+        self.radius_spin = QDoubleSpinBox()
+        self.radius_spin.setRange(0, 999999)
+        self.radius_spin.setDecimals(3)
+        bbox_layout.addRow("Radius:", self.radius_spin)
+        
+        layout.addWidget(bbox_group)
+        layout.addStretch()
+    
+    def setup_spheres_tab(self): #vers 1
+        """Setup spheres tab"""
+        layout = QVBoxLayout(self.spheres_tab)
+        
+        # Spheres table
+        self.spheres_table = QTableWidget()
+        self.spheres_table.setColumnCount(5)
+        self.spheres_table.setHorizontalHeaderLabels([
+            "Center X", "Center Y", "Center Z", "Radius", "Material"
+        ])
+        layout.addWidget(self.spheres_table)
+        
+        # Spheres buttons
+        spheres_buttons = QHBoxLayout()
+        
+        self.add_sphere_btn = QPushButton("➕ Add Sphere")
+        self.add_sphere_btn.clicked.connect(self.add_sphere)
+        spheres_buttons.addWidget(self.add_sphere_btn)
+        
+        self.remove_sphere_btn = QPushButton("➖ Remove Sphere")
+        self.remove_sphere_btn.clicked.connect(self.remove_sphere)
+        spheres_buttons.addWidget(self.remove_sphere_btn)
+        
+        spheres_buttons.addStretch()
+        layout.addLayout(spheres_buttons)
+    
+    def setup_boxes_tab(self): #vers 1
+        """Setup boxes tab"""
+        layout = QVBoxLayout(self.boxes_tab)
+        
+        # Boxes table
+        self.boxes_table = QTableWidget()
+        self.boxes_table.setColumnCount(7)
+        self.boxes_table.setHorizontalHeaderLabels([
+            "Min X", "Min Y", "Min Z", "Max X", "Max Y", "Max Z", "Material"
+        ])
+        layout.addWidget(self.boxes_table)
+        
+        # Boxes buttons
+        boxes_buttons = QHBoxLayout()
+        
+        self.add_box_btn = QPushButton("➕ Add Box")
+        self.add_box_btn.clicked.connect(self.add_box)
+        boxes_buttons.addWidget(self.add_box_btn)
+        
+        self.remove_box_btn = QPushButton("➖ Remove Box")
+        self.remove_box_btn.clicked.connect(self.remove_box)
+        boxes_buttons.addWidget(self.remove_box_btn)
+        
+        boxes_buttons.addStretch()
+        layout.addLayout(boxes_buttons)
+    
+    def setup_mesh_tab(self): #vers 1
+        """Setup mesh tab"""
+        layout = QVBoxLayout(self.mesh_tab)
+        
+        # Mesh info
+        info_layout = QFormLayout()
+        
+        self.vertices_count_label = QLabel("0")
+        info_layout.addRow("Vertices:", self.vertices_count_label)
+        
+        self.faces_count_label = QLabel("0")
+        info_layout.addRow("Faces:", self.faces_count_label)
+        
+        layout.addLayout(info_layout)
+        
+        # Mesh buttons
+        mesh_buttons = QHBoxLayout()
+        
+        self.import_mesh_btn = QPushButton("📥 Import Mesh")
+        self.import_mesh_btn.clicked.connect(self.import_mesh)
+        mesh_buttons.addWidget(self.import_mesh_btn)
+        
+        self.export_mesh_btn = QPushButton("📤 Export Mesh")
+        self.export_mesh_btn.clicked.connect(self.export_mesh)
+        mesh_buttons.addWidget(self.export_mesh_btn)
+        
+        mesh_buttons.addStretch()
+        layout.addLayout(mesh_buttons)
         
         layout.addStretch()
     
-    def set_model(self, model: COLModel): #vers 1
-        """Set current model"""
+    def set_current_model(self, model: COLModel): #vers 1
+        """Set current model for editing"""
         self.current_model = model
-        if model:
-            self.name_edit.setText(model.name)
-            self.id_spin.setValue(model.model_id)
-            self.version_combo.setCurrentText(f"COL {model.version.value}")
-            
-            # Update statistics
-            stats = f"Spheres: {len(model.spheres)}\n"
-            stats += f"Boxes: {len(model.boxes)}\n"
-            stats += f"Vertices: {len(model.vertices)}\n"
-            stats += f"Faces: {len(model.faces)}"
-            self.stats_text.setPlainText(stats)
-        else:
-            self.clear_properties()
+        self.update_properties()
     
-    def set_element(self, element_type: str, element_index: int): #vers 1
-        """Set current element for editing"""
+    def update_properties(self): #vers 1
+        """Update property displays"""
+        if not self.current_model:
+            self.clear_properties()
+            return
+        
+        try:
+            # Update model properties
+            if hasattr(self.current_model, 'name'):
+                self.model_name_edit.setText(self.current_model.name)
+            
+            if hasattr(self.current_model, 'version'):
+                version_index = list(COLVersion).index(self.current_model.version)
+                self.model_version_combo.setCurrentIndex(version_index)
+            
+            if hasattr(self.current_model, 'model_id'):
+                self.model_id_spin.setValue(self.current_model.model_id)
+            
+            # Update bounding box
+            if hasattr(self.current_model, 'bounding_box') and self.current_model.bounding_box:
+                bbox = self.current_model.bounding_box
+                if hasattr(bbox, 'center'):
+                    self.center_x_spin.setValue(bbox.center.x)
+                    self.center_y_spin.setValue(bbox.center.y)
+                    self.center_z_spin.setValue(bbox.center.z)
+                if hasattr(bbox, 'radius'):
+                    self.radius_spin.setValue(bbox.radius)
+            
+            # Update spheres table
+            self.update_spheres_table()
+            
+            # Update boxes table
+            self.update_boxes_table()
+            
+            # Update mesh info
+            self.update_mesh_info()
+            
+        except Exception as e:
+            img_debugger.error(f"Error updating properties: {str(e)}")
+    
+    def clear_properties(self): #vers 1
+        """Clear all property displays"""
+        self.model_name_edit.clear()
+        self.model_version_combo.setCurrentIndex(0)
+        self.model_id_spin.setValue(0)
+        self.center_x_spin.setValue(0)
+        self.center_y_spin.setValue(0)
+        self.center_z_spin.setValue(0)
+        self.radius_spin.setValue(0)
+        self.spheres_table.setRowCount(0)
+        self.boxes_table.setRowCount(0)
+        self.vertices_count_label.setText("0")
+        self.faces_count_label.setText("0")
+    
+    def update_spheres_table(self): #vers 1
+        """Update spheres table"""
+        if not hasattr(self.current_model, 'spheres'):
+            self.spheres_table.setRowCount(0)
+            return
+        
+        spheres = self.current_model.spheres
+        self.spheres_table.setRowCount(len(spheres))
+        
+        for i, sphere in enumerate(spheres):
+            if hasattr(sphere, 'center'):
+                self.spheres_table.setItem(i, 0, QTableWidgetItem(f"{sphere.center.x:.3f}"))
+                self.spheres_table.setItem(i, 1, QTableWidgetItem(f"{sphere.center.y:.3f}"))
+                self.spheres_table.setItem(i, 2, QTableWidgetItem(f"{sphere.center.z:.3f}"))
+            if hasattr(sphere, 'radius'):
+                self.spheres_table.setItem(i, 3, QTableWidgetItem(f"{sphere.radius:.3f}"))
+            if hasattr(sphere, 'material'):
+                self.spheres_table.setItem(i, 4, QTableWidgetItem(str(sphere.material)))
+    
+    def update_boxes_table(self): #vers 1
+        """Update boxes table"""
+        if not hasattr(self.current_model, 'boxes'):
+            self.boxes_table.setRowCount(0)
+            return
+        
+        boxes = self.current_model.boxes
+        self.boxes_table.setRowCount(len(boxes))
+        
+        for i, box in enumerate(boxes):
+            if hasattr(box, 'min_point'):
+                self.boxes_table.setItem(i, 0, QTableWidgetItem(f"{box.min_point.x:.3f}"))
+                self.boxes_table.setItem(i, 1, QTableWidgetItem(f"{box.min_point.y:.3f}"))
+                self.boxes_table.setItem(i, 2, QTableWidgetItem(f"{box.min_point.z:.3f}"))
+            if hasattr(box, 'max_point'):
+                self.boxes_table.setItem(i, 3, QTableWidgetItem(f"{box.max_point.x:.3f}"))
+                self.boxes_table.setItem(i, 4, QTableWidgetItem(f"{box.max_point.y:.3f}"))
+                self.boxes_table.setItem(i, 5, QTableWidgetItem(f"{box.max_point.z:.3f}"))
+            if hasattr(box, 'material'):
+                self.boxes_table.setItem(i, 6, QTableWidgetItem(str(box.material)))
+    
+    def update_mesh_info(self): #vers 1
+        """Update mesh information"""
         if not self.current_model:
             return
         
-        props = f"Element Type: {element_type}\nIndex: {element_index}\n\n"
+        vertices_count = len(getattr(self.current_model, 'vertices', []))
+        faces_count = len(getattr(self.current_model, 'faces', []))
         
-        try:
-            if element_type == "sphere" and element_index < len(self.current_model.spheres):
-                sphere = self.current_model.spheres[element_index]
-                props += f"Center: ({sphere.center.x:.2f}, {sphere.center.y:.2f}, {sphere.center.z:.2f})\n"
-                props += f"Radius: {sphere.radius:.2f}\n"
-                props += f"Surface: {sphere.surface}\n"
-                props += f"Piece: {sphere.piece}"
-            elif element_type == "box" and element_index < len(self.current_model.boxes):
-                box = self.current_model.boxes[element_index]
-                props += f"Min: ({box.min.x:.2f}, {box.min.y:.2f}, {box.min.z:.2f})\n"
-                props += f"Max: ({box.max.x:.2f}, {box.max.y:.2f}, {box.max.z:.2f})\n"
-                props += f"Surface: {box.surface}\n"
-                props += f"Piece: {box.piece}"
-            elif element_type == "face" and element_index < len(self.current_model.faces):
-                face = self.current_model.faces[element_index]
-                props += f"Vertices: {face.a}, {face.b}, {face.c}\n"
-                props += f"Surface: {face.surface}\n"
-                props += f"Piece: {face.piece}"
-            
-        except Exception as e:
-            props += f"Error reading element properties: {e}"
-        
-        self.element_props_widget.setPlainText(props)
-        self.current_element = (element_type, element_index)
+        self.vertices_count_label.setText(str(vertices_count))
+        self.faces_count_label.setText(str(faces_count))
     
-    def clear_properties(self): #vers 1
-        """Clear all properties"""
-        self.name_edit.clear()
-        self.id_spin.setValue(0)
-        self.version_combo.setCurrentIndex(0)
-        self.element_props_widget.clear()
-        self.stats_text.clear()
-        self.current_model = None
-        self.current_element = None
-    
-    def on_property_changed(self): #vers 1
-        """Handle property changes"""
+    def on_version_changed(self): #vers 1
+        """Handle version change"""
         if self.current_model:
-            # Update model properties
-            self.current_model.name = self.name_edit.text()
-            self.current_model.model_id = self.id_spin.value()
-            
-            version_text = self.version_combo.currentText()
-            if "1" in version_text:
-                self.current_model.version = COLVersion.COL_1
-            elif "2" in version_text:
-                self.current_model.version = COLVersion.COL_2
-            elif "3" in version_text:
-                self.current_model.version = COLVersion.COL_3
-            elif "4" in version_text:
-                self.current_model.version = COLVersion.COL_4
-
-class COLModelListWidget(QWidget):
-    """Widget for displaying and managing COL models"""
+            new_version = self.model_version_combo.currentData()
+            self.property_changed.emit('version', new_version)
     
-    model_selected = pyqtSignal(object)  # COLModel
-    element_selected = pyqtSignal(str, int)  # element_type, index
+    def add_sphere(self): #vers 1
+        """Add new sphere"""
+        img_debugger.info("Add sphere - not yet implemented")
+    
+    def remove_sphere(self): #vers 1
+        """Remove selected sphere"""
+        img_debugger.info("Remove sphere - not yet implemented")
+    
+    def add_box(self): #vers 1
+        """Add new box"""
+        img_debugger.info("Add box - not yet implemented")
+    
+    def remove_box(self): #vers 1
+        """Remove selected box"""
+        img_debugger.info("Remove box - not yet implemented")
+    
+    def import_mesh(self): #vers 1
+        """Import mesh from file"""
+        img_debugger.info("Import mesh - not yet implemented")
+    
+    def export_mesh(self): #vers 1
+        """Export mesh to file"""
+        img_debugger.info("Export mesh - not yet implemented")
+
+class COLModelListWidget(QListWidget): #vers 1
+    """Enhanced model list widget"""
+    
+    model_selected = pyqtSignal(int)  # Model index
+    model_context_menu = pyqtSignal(int, object)  # Model index, position
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.col_file = None
-        self.setup_ui()
-    
-    def setup_ui(self): #vers 1
-        """Setup model list UI"""
-        layout = QVBoxLayout(self)
+        self.current_file = None
         
-        # Models list
-        models_label = QLabel("Models")
-        layout.addWidget(models_label)
+        # Enable context menu
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_context_menu)
         
-        self.models_list = QListWidget()
-        self.models_list.currentRowChanged.connect(self.on_model_selected)
-        layout.addWidget(self.models_list)
-        
-        # Elements tree
-        elements_label = QLabel("Elements")
-        layout.addWidget(elements_label)
-        
-        self.elements_tree = QTreeWidget()
-        self.elements_tree.setHeaderLabel("Collision Elements")
-        self.elements_tree.itemClicked.connect(self.on_element_clicked)
-        layout.addWidget(self.elements_tree)
-        
-        # Buttons
-        button_layout = QHBoxLayout()
-        
-        add_model_btn = QPushButton("Add Model")
-        add_model_btn.clicked.connect(self.add_model)
-        button_layout.addWidget(add_model_btn)
-        
-        delete_model_btn = QPushButton("Delete Model")
-        delete_model_btn.clicked.connect(self.delete_model)
-        button_layout.addWidget(delete_model_btn)
-        
-        button_layout.addStretch()
-        layout.addLayout(button_layout)
+        # Connect selection
+        self.currentRowChanged.connect(self.on_selection_changed)
     
     def set_col_file(self, col_file: COLFile): #vers 1
-        """Set COL file to display"""
-        self.col_file = col_file
-        self.refresh_model_list()
+        """Set COL file and populate list"""
+        self.current_file = col_file
+        self.populate_models()
     
-    def refresh_model_list(self): #vers 1
-        """Refresh the model list display"""
-        self.models_list.clear()
-        self.elements_tree.clear()
+    def populate_models(self): #vers 1
+        """Populate model list"""
+        self.clear()
         
-        if not self.col_file or not self.col_file.models:
+        if not self.current_file or not hasattr(self.current_file, 'models'):
             return
         
-        for i, model in enumerate(self.col_file.models):
-            item_text = f"{model.name} (v{model.version.value})"
+        for i, model in enumerate(self.current_file.models):
+            name = getattr(model, 'name', f'Model_{i}')
+            version = getattr(model, 'version', COLVersion.COL_1)
+            
+            # Count collision elements
+            spheres = len(getattr(model, 'spheres', []))
+            boxes = len(getattr(model, 'boxes', []))
+            faces = len(getattr(model, 'faces', []))
+            
+            item_text = f"{name} ({version.name} - S:{spheres} B:{boxes} F:{faces})"
+            
             item = QListWidgetItem(item_text)
-            item.setData(Qt.ItemDataRole.UserRole, i)
-            self.models_list.addItem(item)
-        
-        # Select first model by default
-        if self.models_list.count() > 0:
-            self.models_list.setCurrentRow(0)
+            item.setData(Qt.ItemDataRole.UserRole, i)  # Store model index
+            self.addItem(item)
     
-    def on_model_selected(self, row: int): #vers 1
-        """Handle model selection"""
-        if row < 0 or not self.col_file or row >= len(self.col_file.models):
-            return
-        
-        model = self.col_file.models[row]
-        self.model_selected.emit(model)
-        self.populate_elements_tree(model)
+    def on_selection_changed(self, row): #vers 1
+        """Handle selection change"""
+        if row >= 0:
+            self.model_selected.emit(row)
     
-    def populate_elements_tree(self, model: COLModel): #vers 1
-        """Populate elements tree for model"""
-        self.elements_tree.clear()
-        
-        # Spheres
-        if model.spheres:
-            spheres_item = QTreeWidgetItem(["Spheres"])
-            for i, sphere in enumerate(model.spheres):
-                sphere_item = QTreeWidgetItem([f"Sphere {i}"])
-                sphere_item.setData(0, Qt.ItemDataRole.UserRole, ("sphere", i))
-                spheres_item.addChild(sphere_item)
-            self.elements_tree.addTopLevelItem(spheres_item)
-        
-        # Boxes
-        if model.boxes:
-            boxes_item = QTreeWidgetItem(["Boxes"])
-            for i, box in enumerate(model.boxes):
-                box_item = QTreeWidgetItem([f"Box {i}"])
-                box_item.setData(0, Qt.ItemDataRole.UserRole, ("box", i))
-                boxes_item.addChild(box_item)
-            self.elements_tree.addTopLevelItem(boxes_item)
-        
-        # Faces
-        if model.faces:
-            faces_item = QTreeWidgetItem(["Faces"])
-            for i, face in enumerate(model.faces):
-                face_item = QTreeWidgetItem([f"Face {i}"])
-                face_item.setData(0, Qt.ItemDataRole.UserRole, ("face", i))
-                faces_item.addChild(face_item)
-            self.elements_tree.addTopLevelItem(faces_item)
-        
-        # Expand all items
-        self.elements_tree.expandAll()
-    
-    def on_element_clicked(self, item: QTreeWidgetItem, column: int): #vers 1
-        """Handle element click"""
-        data = item.data(0, Qt.ItemDataRole.UserRole)
-        if data:
-            element_type, index = data
-            self.element_selected.emit(element_type, index)
-    
-    def add_model(self): #vers 1
-        """Add new model"""
-        if self.col_file:
-            from components.col_core_classes import COLModel
-            new_model = COLModel()
-            new_model.name = f"Model_{len(self.col_file.models) + 1}"
-            new_model.model_id = len(self.col_file.models)
-            self.col_file.models.append(new_model)
-            self.refresh_model_list()
-            img_debugger.debug(f"Added new COL model: {new_model.name}")
-    
-    def delete_model(self): #vers 1
-        """Delete selected model"""
-        current_row = self.models_list.currentRow()
-        if current_row >= 0 and self.col_file and current_row < len(self.col_file.models):
-            model_name = self.col_file.models[current_row].name
-            del self.col_file.models[current_row]
-            self.refresh_model_list()
-            img_debugger.debug(f"Deleted COL model: {model_name}")
+    def show_context_menu(self, position): #vers 1
+        """Show context menu"""
+        item = self.itemAt(position)
+        if item:
+            model_index = item.data(Qt.ItemDataRole.UserRole)
+            self.model_context_menu.emit(model_index, self.mapToGlobal(position))
 
-class COLEditorDialog(QDialog):
-    """Main COL editor dialog"""
+class COLToolbar(QToolBar): #vers 1
+    """COL editor toolbar"""
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("COL Editor")
-        self.setModal(True)
-        self.resize(1200, 800)
+        self.setMovable(False)
         
-        self.col_file = None
+        self.setup_actions()
+    
+    def setup_actions(self): #vers 1
+        """Setup toolbar actions"""
+        # File actions
+        self.open_action = QAction("📂 Open", self)
+        self.open_action.setShortcut("Ctrl+O")
+        self.addAction(self.open_action)
+        
+        self.save_action = QAction("💾 Save", self)
+        self.save_action.setShortcut("Ctrl+S")
+        self.addAction(self.save_action)
+        
+        self.addSeparator()
+        
+        # View actions
+        self.view_spheres_action = QAction("🔵 Spheres", self)
+        self.view_spheres_action.setCheckable(True)
+        self.view_spheres_action.setChecked(True)
+        self.addAction(self.view_spheres_action)
+        
+        self.view_boxes_action = QAction("📦 Boxes", self)
+        self.view_boxes_action.setCheckable(True)
+        self.view_boxes_action.setChecked(True)
+        self.addAction(self.view_boxes_action)
+        
+        self.view_mesh_action = QAction("🌐 Mesh", self)
+        self.view_mesh_action.setCheckable(True)
+        self.view_mesh_action.setChecked(True)
+        self.addAction(self.view_mesh_action)
+        
+        self.addSeparator()
+        
+        # Analysis action
+        self.analyze_action = QAction("📊 Analyze", self)
+        self.addAction(self.analyze_action)
+
+class COLEditorDialog(QDialog): #vers 3
+    """Enhanced COL Editor Dialog"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("COL Editor - IMG Factory 1.5")
+        self.setModal(False)  # Allow non-modal operation
+        self.resize(1000, 700)
+        
+        self.current_file = None
+        self.current_model = None
         self.file_path = None
         self.is_modified = False
         
         self.setup_ui()
-        self.setup_connections()
+        self.connect_signals()
+        
+        img_debugger.debug("COL Editor dialog created")
     
     def setup_ui(self): #vers 1
         """Setup editor UI"""
         layout = QVBoxLayout(self)
         
-        # Create menu bar
-        self.create_menu_bar()
-        
-        # Create toolbar
-        self.create_toolbar()
+        # Toolbar
+        self.toolbar = COLToolbar(self)
+        layout.addWidget(self.toolbar)
         
         # Main splitter
         main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        layout.addWidget(main_splitter)
         
-        # Left panel - model list
-        self.model_list_widget = COLModelListWidget()
-        main_splitter.addWidget(self.model_list_widget)
+        # Left panel - Model list and properties
+        left_panel = QSplitter(Qt.Orientation.Vertical)
+        left_panel.setFixedWidth(350)
         
-        # Center panel - 3D viewer
+        # Model list
+        models_group = QGroupBox("Models")
+        models_layout = QVBoxLayout(models_group)
+        
+        self.model_list = COLModelListWidget()
+        models_layout.addWidget(self.model_list)
+        
+        left_panel.addWidget(models_group)
+        
+        # Properties
+        properties_group = QGroupBox("Properties")
+        properties_layout = QVBoxLayout(properties_group)
+        
+        self.properties_widget = COLPropertiesWidget()
+        properties_layout.addWidget(self.properties_widget)
+        
+        left_panel.addWidget(properties_group)
+        
+        # Set left panel sizes
+        left_panel.setSizes([200, 400])
+        
+        main_splitter.addWidget(left_panel)
+        
+        # Right panel - 3D viewer
         viewer_group = QGroupBox("3D Viewer")
         viewer_layout = QVBoxLayout(viewer_group)
         
-        # View options
-        options_layout = QHBoxLayout()
-        self.show_spheres_cb = QCheckBox("Spheres")
-        self.show_spheres_cb.setChecked(True)
-        options_layout.addWidget(self.show_spheres_cb)
-        
-        self.show_boxes_cb = QCheckBox("Boxes")
-        self.show_boxes_cb.setChecked(True)
-        options_layout.addWidget(self.show_boxes_cb)
-        
-        self.show_mesh_cb = QCheckBox("Mesh")
-        self.show_mesh_cb.setChecked(True)
-        options_layout.addWidget(self.show_mesh_cb)
-        
-        self.wireframe_cb = QCheckBox("Wireframe")
-        options_layout.addWidget(self.wireframe_cb)
-        
-        options_layout.addStretch()
-        viewer_layout.addLayout(options_layout)
-        
-        # 3D viewer
         self.viewer_3d = COLViewer3D()
         viewer_layout.addWidget(self.viewer_3d)
         
         main_splitter.addWidget(viewer_group)
         
-        # Right panel - properties
-        self.properties_widget = COLPropertiesWidget()
-        main_splitter.addWidget(self.properties_widget)
-        
-        # Set splitter proportions
-        main_splitter.setSizes([250, 500, 300])
-        
-        layout.addWidget(main_splitter)
+        # Set main splitter sizes
+        main_splitter.setSizes([350, 650])
         
         # Status bar
         self.status_bar = QStatusBar()
+        self.status_bar.showMessage("Ready")
         layout.addWidget(self.status_bar)
         
-        self.status_bar.showMessage("Ready")
+        # Progress bar (hidden by default)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        layout.addWidget(self.progress_bar)
     
-    def create_menu_bar(self): #vers 1
-        """Create menu bar"""
-        # Note: In a dialog, we create our own menu bar
-        self.menu_bar = QMenuBar(self)
-        
-        # File menu
-        file_menu = self.menu_bar.addMenu("File")
-        
-        open_action = QAction("Open COL...", self)
-        open_action.setShortcut("Ctrl+O")
-        open_action.triggered.connect(self.open_col_file)
-        file_menu.addAction(open_action)
-        
-        save_action = QAction("Save", self)
-        save_action.setShortcut("Ctrl+S")
-        save_action.triggered.connect(self.save_col_file)
-        file_menu.addAction(save_action)
-        
-        save_as_action = QAction("Save As...", self)
-        save_as_action.triggered.connect(self.save_col_file_as)
-        file_menu.addAction(save_as_action)
-        
-        file_menu.addSeparator()
-        
-        export_action = QAction("Export Model...", self)
-        export_action.triggered.connect(self.export_model)
-        file_menu.addAction(export_action)
-        
-        import_action = QAction("Import Elements...", self)
-        import_action.triggered.connect(self.import_elements)
-        file_menu.addAction(import_action)
-    
-    def create_toolbar(self): #vers 1
-        """Create toolbar"""
-        self.toolbar = QToolBar(self)
-        
-        open_btn = QPushButton("Open")
-        open_btn.clicked.connect(self.open_col_file)
-        self.toolbar.addWidget(open_btn)
-        
-        save_btn = QPushButton("Save")
-        save_btn.clicked.connect(self.save_col_file)
-        self.toolbar.addWidget(save_btn)
-        
-        self.toolbar.addSeparator()
-        
-        new_model_btn = QPushButton("New Model")
-        new_model_btn.clicked.connect(self.create_new_model)
-        self.toolbar.addWidget(new_model_btn)
-    
-    def setup_connections(self): #vers 1
-        """Setup signal connections"""
-        self.model_list_widget.model_selected.connect(self.on_model_selected)
-        self.model_list_widget.element_selected.connect(self.on_element_selected)
+    def connect_signals(self): #vers 1
+        """Connect UI signals"""
+        # Toolbar actions
+        self.toolbar.open_action.triggered.connect(self.open_file)
+        self.toolbar.save_action.triggered.connect(self.save_file)
+        self.toolbar.analyze_action.triggered.connect(self.analyze_file)
         
         # View options
-        self.show_spheres_cb.toggled.connect(self.update_view_options)
-        self.show_boxes_cb.toggled.connect(self.update_view_options)
-        self.show_mesh_cb.toggled.connect(self.update_view_options)
-        self.wireframe_cb.toggled.connect(self.update_view_options)
-    
-    def load_col_file(self, file_path: str = None): #vers 1
-        """Load COL file"""
-        if not file_path:
-            file_path, _ = QFileDialog.getOpenFileName(
-                self, "Open COL File", "", "COL Files (*.col);;All Files (*)"
-            )
+        self.toolbar.view_spheres_action.toggled.connect(
+            lambda checked: self.viewer_3d.set_view_options(show_spheres=checked)
+        )
+        self.toolbar.view_boxes_action.toggled.connect(
+            lambda checked: self.viewer_3d.set_view_options(show_boxes=checked)
+        )
+        self.toolbar.view_mesh_action.toggled.connect(
+            lambda checked: self.viewer_3d.set_view_options(show_mesh=checked)
+        )
         
-        if file_path and os.path.exists(file_path):
-            try:
-                self.col_file = COLFile(file_path)
-                if self.col_file.load():
-                    self.file_path = file_path
-                    self.model_list_widget.set_col_file(self.col_file)
-                    self.setWindowTitle(f"COL Editor - {os.path.basename(file_path)}")
-                    self.status_bar.showMessage(f"Loaded: {os.path.basename(file_path)}")
-                    self.is_modified = False
-                    img_debugger.success(f"COL file loaded in editor: {file_path}")
-                    return True
-                else:
-                    error_msg = self.col_file.load_error or "Unknown error"
-                    QMessageBox.critical(self, "Load Error", f"Failed to load COL file:\n{error_msg}")
-                    img_debugger.error(f"Failed to load COL in editor: {error_msg}")
-                    return False
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Error loading COL file:\n{str(e)}")
-                img_debugger.error(f"Exception loading COL in editor: {e}")
+        # Model selection
+        self.model_list.model_selected.connect(self.on_model_selected)
+        self.viewer_3d.model_selected.connect(self.on_model_selected)
+        
+        # Properties changes
+        self.properties_widget.property_changed.connect(self.on_property_changed)
+    
+    def load_col_file(self, file_path: str) -> bool: #vers 2
+        """Load COL file - ENHANCED VERSION"""
+        try:
+            self.file_path = file_path
+            self.status_bar.showMessage("Loading COL file...")
+            self.progress_bar.setVisible(True)
+            
+            # Load the file
+            self.current_file = COLFile(file_path)
+            
+            if not self.current_file.load():
+                error_msg = getattr(self.current_file, 'load_error', 'Unknown error')
+                QMessageBox.critical(self, "Load Error", f"Failed to load COL file:\n{error_msg}")
+                self.progress_bar.setVisible(False)
+                self.status_bar.showMessage("Ready")
                 return False
+            
+            # Update UI
+            self.model_list.set_col_file(self.current_file)
+            self.viewer_3d.set_current_file(self.current_file)
+            
+            # Select first model if available
+            if hasattr(self.current_file, 'models') and self.current_file.models:
+                self.model_list.setCurrentRow(0)
+            
+            model_count = len(getattr(self.current_file, 'models', []))
+            self.status_bar.showMessage(f"Loaded: {os.path.basename(file_path)} ({model_count} models)")
+            self.progress_bar.setVisible(False)
+            
+            self.setWindowTitle(f"COL Editor - {os.path.basename(file_path)}")
+            self.is_modified = False
+            
+            img_debugger.success(f"COL file loaded: {file_path}")
+            return True
+            
+        except Exception as e:
+            self.progress_bar.setVisible(False)
+            self.status_bar.showMessage("Ready")
+            error_msg = f"Error loading COL file: {str(e)}"
+            QMessageBox.critical(self, "Error", error_msg)
+            img_debugger.error(error_msg)
+            return False
+    
+    def open_file(self): #vers 1
+        """Open file dialog"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Open COL File", "", "COL Files (*.col);;All Files (*)"
+        )
         
-        return False
+        if file_path:
+            self.load_col_file(file_path)
     
-    def open_col_file(self): #vers 1
-        """Open COL file dialog"""
-        self.load_col_file()
-    
-    def save_col_file(self): #vers 1
-        """Save current COL file"""
-        if self.file_path and self.col_file:
-            # COL file saving not yet implemented
-            QMessageBox.information(self, "Save", "COL file saving will be implemented soon.")
-            self.status_bar.showMessage("Save functionality coming soon")
-        else:
-            self.save_col_file_as()
-    
-    def save_col_file_as(self): #vers 1
-        """Save COL file with new name"""
-        if not self.col_file:
+    def save_file(self): #vers 1
+        """Save current file"""
+        if not self.current_file:
+            QMessageBox.warning(self, "Save", "No file loaded to save")
             return
         
+        if not self.file_path:
+            self.save_file_as()
+            return
+        
+        try:
+            self.status_bar.showMessage("Saving COL file...")
+            
+            # TODO: Implement actual saving
+            # For now, just show a message
+            QMessageBox.information(self, "Save", 
+                "COL file saving will be implemented in a future version.\n"
+                "Currently the editor is in view-only mode.")
+            
+            self.status_bar.showMessage("Ready")
+            
+        except Exception as e:
+            error_msg = f"Error saving COL file: {str(e)}"
+            QMessageBox.critical(self, "Save Error", error_msg)
+            img_debugger.error(error_msg)
+    
+    def save_file_as(self): #vers 1
+        """Save file as dialog"""
         file_path, _ = QFileDialog.getSaveFileName(
             self, "Save COL File", "", "COL Files (*.col);;All Files (*)"
         )
         
         if file_path:
-            QMessageBox.information(self, "Save As", "COL file saving will be implemented soon.")
+            self.file_path = file_path
+            self.save_file()
     
-    def create_new_model(self): #vers 1
-        """Create new COL model"""
-        if not self.col_file:
-            # Create new COL file
-            self.col_file = COLFile()
-            self.col_file.models = []
-            self.model_list_widget.set_col_file(self.col_file)
+    def analyze_file(self): #vers 1
+        """Analyze current COL file"""
+        if not self.current_file or not self.file_path:
+            QMessageBox.warning(self, "Analyze", "No file loaded to analyze")
+            return
         
-        self.model_list_widget.add_model()
-        self.is_modified = True
-    
-    def delete_model(self): #vers 1
-        """Delete selected model"""
-        self.model_list_widget.delete_model()
-        self.is_modified = True
-    
-    def export_model(self): #vers 1
-        """Export current model"""
-        QMessageBox.information(self, "Export", "Model export functionality coming soon!")
-    
-    def import_elements(self): #vers 1
-        """Import collision elements"""
-        QMessageBox.information(self, "Import", "Import functionality coming soon!")
-    
-    def on_model_selected(self, model: COLModel): #vers 1
-        """Handle model selection"""
-        self.properties_widget.set_model(model)
-        self.viewer_3d.set_current_model(model)
-        self.status_bar.showMessage(f"Selected model: {model.name}")
-    
-    def on_element_selected(self, element_type: str, element_index: int): #vers 1
-        """Handle element selection"""
-        self.properties_widget.set_element(element_type, element_index)
-        self.status_bar.showMessage(f"Selected {element_type} #{element_index}")
-    
-    def update_view_options(self): #vers 1
-        """Update 3D view options"""
-        self.viewer_3d.show_spheres = self.show_spheres_cb.isChecked()
-        self.viewer_3d.show_boxes = self.show_boxes_cb.isChecked()
-        self.viewer_3d.show_mesh = self.show_mesh_cb.isChecked()
-        self.viewer_3d.show_wireframe = self.wireframe_cb.isChecked()
-    
-    def apply_changes(self): #vers 1
-        """Apply all pending changes"""
-        if self.col_file:
-            # Recalculate bounding boxes and update flags
-            for model in self.col_file.models:
-                model.calculate_bounding_box()
-                model.update_flags()
+        try:
+            self.status_bar.showMessage("Analyzing COL file...")
             
+            # Get detailed analysis
+            analysis_data = get_col_detailed_analysis(self.file_path)
+            
+            if 'error' in analysis_data:
+                QMessageBox.warning(self, "Analysis Error", f"Analysis failed: {analysis_data['error']}")
+                return
+            
+            # Show analysis dialog
+            show_col_analysis_dialog(self, analysis_data, os.path.basename(self.file_path))
+            
+            self.status_bar.showMessage("Ready")
+            
+        except Exception as e:
+            error_msg = f"Error analyzing COL file: {str(e)}"
+            QMessageBox.critical(self, "Analysis Error", error_msg)
+            img_debugger.error(error_msg)
+    
+    def on_model_selected(self, model_index: int): #vers 1
+        """Handle model selection"""
+        try:
+            if not self.current_file or not hasattr(self.current_file, 'models'):
+                return
+            
+            if model_index < 0 or model_index >= len(self.current_file.models):
+                return
+            
+            # Update current model
+            self.current_model = self.current_file.models[model_index]
+            
+            # Update viewer
+            self.viewer_3d.set_current_model(self.current_model, model_index)
+            
+            # Update properties
+            self.properties_widget.set_current_model(self.current_model)
+            
+            # Update list selection if needed
+            if self.model_list.currentRow() != model_index:
+                self.model_list.setCurrentRow(model_index)
+            
+            model_name = getattr(self.current_model, 'name', f'Model_{model_index}')
+            self.status_bar.showMessage(f"Selected: {model_name}")
+            
+            img_debugger.debug(f"Model selected: {model_name} (index {model_index})")
+            
+        except Exception as e:
+            img_debugger.error(f"Error selecting model: {str(e)}")
+    
+    def on_property_changed(self, property_name: str, new_value): #vers 1
+        """Handle property change"""
+        try:
+            if not self.current_model:
+                return
+            
+            # Apply property change
+            if property_name == 'name':
+                self.current_model.name = new_value
+            elif property_name == 'version':
+                self.current_model.version = new_value
+            elif property_name == 'model_id':
+                self.current_model.model_id = new_value
+            
+            # Mark as modified
             self.is_modified = True
-            self.status_bar.showMessage("Changes applied")
-            img_debugger.debug("COL editor changes applied")
-
-# Convenience function for integration with main IMG Factory
-def open_col_editor(parent=None, col_file_path: str = None): #vers 1
-    """Open COL editor dialog"""
-    try:
-        img_debugger.debug("Opening COL editor dialog")
+            self.setWindowTitle(f"COL Editor - {os.path.basename(self.file_path or 'Untitled')} *")
+            
+            # Update displays
+            self.model_list.populate_models()
+            self.viewer_3d.update_display()
+            
+            img_debugger.debug(f"Property changed: {property_name} = {new_value}")
+            
+        except Exception as e:
+            img_debugger.error(f"Error changing property: {str(e)}")
+    
+    def closeEvent(self, event): #vers 1
+        """Handle close event"""
+        if self.is_modified:
+            reply = QMessageBox.question(
+                self, "Unsaved Changes",
+                "The file has unsaved changes. Do you want to save before closing?",
+                QMessageBox.StandardButton.Save | 
+                QMessageBox.StandardButton.Discard | 
+                QMessageBox.StandardButton.Cancel
+            )
+            
+            if reply == QMessageBox.StandardButton.Save:
+                self.save_file()
+                event.accept()
+            elif reply == QMessageBox.StandardButton.Discard:
+                event.accept()
+            else:
+                event.ignore()
+        else:
+            event.accept()
         
+        img_debugger.debug("COL Editor dialog closed")
+
+# Convenience functions
+def open_col_editor(parent=None, file_path: str = None) -> COLEditorDialog: #vers 2
+    """Open COL editor dialog - ENHANCED VERSION"""
+    try:
         editor = COLEditorDialog(parent)
         
-        if col_file_path:
-            editor.load_col_file(col_file_path)
+        if file_path:
+            if editor.load_col_file(file_path):
+                img_debugger.success(f"COL editor opened with file: {file_path}")
+            else:
+                img_debugger.error(f"Failed to load file in COL editor: {file_path}")
         
-        result = editor.exec()
-        
-        if result:
-            img_debugger.success("COL editor completed successfully")
-        else:
-            img_debugger.debug("COL editor cancelled")
-        
-        return result == QDialog.DialogCode.Accepted
+        editor.show()
+        return editor
         
     except Exception as e:
-        img_debugger.error(f"Error opening COL editor: {e}")
+        img_debugger.error(f"Error opening COL editor: {str(e)}")
         if parent:
-            QMessageBox.critical(parent, "Error", f"Failed to open COL editor:\n{str(e)}")
+            QMessageBox.critical(parent, "COL Editor Error", f"Failed to open COL editor:\n{str(e)}")
+        return None
+
+def create_new_model(model_name: str = "New Model") -> COLModel: #vers 1
+    """Create new COL model"""
+    try:
+        model = COLModel()
+        model.name = model_name
+        model.version = COLVersion.COL_2  # Default to COL2
+        model.spheres = []
+        model.boxes = []
+        model.vertices = []
+        model.faces = []
+        
+        # Initialize bounding box
+        if hasattr(model, 'calculate_bounding_box'):
+            model.calculate_bounding_box()
+        
+        img_debugger.debug(f"Created new COL model: {model_name}")
+        return model
+        
+    except Exception as e:
+        img_debugger.error(f"Error creating new COL model: {str(e)}")
+        return None
+
+def delete_model(col_file: COLFile, model_index: int) -> bool: #vers 1
+    """Delete model from COL file"""
+    try:
+        if not hasattr(col_file, 'models') or not col_file.models:
+            return False
+        
+        if model_index < 0 or model_index >= len(col_file.models):
+            return False
+        
+        model_name = getattr(col_file.models[model_index], 'name', f'Model_{model_index}')
+        del col_file.models[model_index]
+        
+        img_debugger.debug(f"Deleted COL model: {model_name}")
+        return True
+        
+    except Exception as e:
+        img_debugger.error(f"Error deleting COL model: {str(e)}")
         return False
+
+def export_model(model: COLModel, file_path: str) -> bool: #vers 1
+    """Export single model to file"""
+    try:
+        # TODO: Implement model export
+        img_debugger.info(f"Model export to {file_path} - not yet implemented")
+        return False
+        
+    except Exception as e:
+        img_debugger.error(f"Error exporting model: {str(e)}")
+        return False
+
+def import_elements(model: COLModel, file_path: str) -> bool: #vers 1
+    """Import collision elements from file"""
+    try:
+        # TODO: Implement element import
+        img_debugger.info(f"Element import from {file_path} - not yet implemented")
+        return False
+        
+    except Exception as e:
+        img_debugger.error(f"Error importing elements: {str(e)}")
+        return False
+
+def refresh_model_list(list_widget: COLModelListWidget, col_file: COLFile): #vers 1
+    """Refresh model list widget"""
+    try:
+        list_widget.set_col_file(col_file)
+        img_debugger.debug("Model list refreshed")
+        
+    except Exception as e:
+        img_debugger.error(f"Error refreshing model list: {str(e)}")
+
+def update_view_options(viewer: COLViewer3D, **options): #vers 1
+    """Update 3D viewer options"""
+    try:
+        viewer.set_view_options(**options)
+        img_debugger.debug(f"View options updated: {options}")
+        
+    except Exception as e:
+        img_debugger.error(f"Error updating view options: {str(e)}")
+
+def apply_changes(editor: COLEditorDialog) -> bool: #vers 1
+    """Apply all pending changes"""
+    try:
+        # TODO: Implement change application
+        img_debugger.info("Apply changes - not yet implemented")
+        return True
+        
+    except Exception as e:
+        img_debugger.error(f"Error applying changes: {str(e)}")
+        return False
+
+# Export classes and functions
+__all__ = [
+    'COLEditorDialog',
+    'COLViewer3D',
+    'COLPropertiesWidget', 
+    'COLModelListWidget',
+    'COLToolbar',
+    'open_col_editor',
+    'create_new_model',
+    'delete_model',
+    'export_model',
+    'import_elements',
+    'refresh_model_list',
+    'update_view_options',
+    'apply_changes'
+]

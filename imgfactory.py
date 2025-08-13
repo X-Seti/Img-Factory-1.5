@@ -115,7 +115,7 @@ from gui.directory_tree_system import integrate_directory_tree_system
 
 # Debug helper
 from debug_patch_file import integrate_debug_patch, remove_debug_patch
-from visibility_fix import apply_visibility_fix
+#from visibility_fix import apply_visibility_fix
 
 #methods
 from methods.populate_img_table import install_img_table_populator # enable_import_highlighting
@@ -452,6 +452,15 @@ class IMGFactory(QMainWindow):
             self.log_message("✅ File extraction integrated")
         except Exception as e:
             self.log_message(f"⚠️ Extraction integration failed: {str(e)}")
+
+        # COL System Integration
+        # Enable COL loading
+        try:
+            from methods.populate_col_table import load_col_file_safely
+            self.load_col_file_safely = lambda file_path: load_col_file_safely(self, file_path)
+            self.log_message("✅ COL file loading enabled")
+        except Exception as e:
+            self.log_message(f"❌ COL loading setup failed: {str(e)}")
 
         # File filtering
         integrate_file_filtering(self)
@@ -2339,12 +2348,11 @@ class IMGFactory(QMainWindow):
         else:
             self.log_message(f"Progress: {progress}% - {status}")
 
-    def _on_img_loaded(self, img_file: IMGFile): #vers 2 #Restore
-        """Handle successful IMG loading"""
+    def _on_img_loaded(self, img_file: IMGFile): #vers 3
+        """Handle successful IMG loading - FIXED WITH VISIBILITY"""
         try:
             # Store the loaded IMG file
             current_index = self.main_tab_widget.currentIndex()
-
             if current_index in self.open_files:
                 self.open_files[current_index]['file_object'] = img_file
 
@@ -2353,6 +2361,41 @@ class IMGFactory(QMainWindow):
 
             # Update UI
             self._update_ui_for_loaded_img()
+
+            # VISIBILITY FIX - Force GUI components to be visible after loading
+            if hasattr(self, 'gui_layout'):
+                # Force main splitter visibility
+                if hasattr(self.gui_layout, 'main_splitter'):
+                    self.gui_layout.main_splitter.setVisible(True)
+                    self.gui_layout.main_splitter.show()
+
+                # Force tab widget visibility (CRITICAL)
+                if hasattr(self.gui_layout, 'tab_widget'):
+                    self.gui_layout.tab_widget.setVisible(True)
+                    self.gui_layout.tab_widget.show()
+
+                    # Make current tab visible
+                    current_tab = self.gui_layout.tab_widget.currentWidget()
+                    if current_tab:
+                        current_tab.setVisible(True)
+                        current_tab.show()
+
+                # Force table visibility
+                if hasattr(self.gui_layout, 'table'):
+                    self.gui_layout.table.setVisible(True)
+                    self.gui_layout.table.show()
+
+            # Force central widget and main window visibility
+            central_widget = self.centralWidget()
+            if central_widget:
+                central_widget.setVisible(True)
+                central_widget.show()
+
+            self.setVisible(True)
+            self.show()
+
+            # Force repaint
+            self.repaint()
 
             # Hide progress - CHECK if method exists first
             if hasattr(self.gui_layout, 'hide_progress'):
@@ -2367,13 +2410,25 @@ class IMGFactory(QMainWindow):
             error_msg = f"Error processing loaded IMG: {str(e)}"
             self.log_message(f"❌ {error_msg}")
 
+            # Even on error, try basic visibility fix
+            try:
+                if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
+                    self.gui_layout.table.setVisible(True)
+                    self.gui_layout.table.show()
+                self.setVisible(True)
+                self.show()
+            except:
+                pass
+
             # Hide progress - CHECK if method exists first
             if hasattr(self.gui_layout, 'hide_progress'):
                 self.gui_layout.hide_progress()
             else:
                 self.log_message("⚠️ gui_layout.hide_progress not available")
 
-            QMessageBox.critical(self, "IMG Processing Error", error_msg)
+            # Just log the error instead of showing dialog
+            self.log_message(f"❌ IMG Processing Error: {error_msg}")
+
 
     def _populate_real_img_table(self, img_file: IMGFile): #vers 2 #Restore
         """Populate table with real IMG file entries - for SA format display"""
@@ -2995,9 +3050,18 @@ class IMGFactory(QMainWindow):
 
 
     # COL and editor functions
-    def open_col_editor(self): #vers 1
-        """Open COL file editor"""
-        self.log_message("COL editor functionality coming soon")
+    def open_col_editor(self): #vers 2
+        """Open COL file editor - WORKING VERSION"""
+        try:
+            from components.col_editor import COLEditorDialog
+            self.log_message("🔧 Opening COL editor...")
+            editor = COLEditorDialog(self)
+            editor.show()
+            self.log_message("✅ COL editor opened")
+        except ImportError:
+            self.log_message("❌ COL editor components not available")
+        except Exception as e:
+            self.log_message(f"❌ Error opening COL editor: {str(e)}")
 
     def open_txd_editor(self): #vers 1
         """Open TXD texture editor"""
