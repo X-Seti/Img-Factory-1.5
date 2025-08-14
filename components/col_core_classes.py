@@ -34,15 +34,26 @@ from components.img_debug_functions import img_debugger
 # Global debug control
 _global_debug_enabled = False
 
-def set_col_debug_enabled(enabled: bool): #vers 2
-    """Enable or disable COL debug output"""
-    global _global_debug_enabled
-    _global_debug_enabled = enabled
-    img_debugger.debug(f"COL debug {'enabled' if enabled else 'disabled'}")
+# Debug system import with fallback
+# Import debug functions from img_debug system
+try:
+    from components.img_debug_functions import img_debugger, set_col_debug_enabled, is_col_debug_enabled
+except ImportError:
+    # Fallback debug system
+    class FallbackDebugger:
+        def debug(self, msg): print(f"DEBUG: {msg}")
+        def error(self, msg): print(f"ERROR: {msg}")
+        def warning(self, msg): print(f"WARNING: {msg}")
+        def success(self, msg): print(f"SUCCESS: {msg}")
+        def info(self, msg): print(f"INFO: {msg}")
 
-def is_col_debug_enabled() -> bool: #vers 2
-    """Check if COL debug is enabled"""
-    return _global_debug_enabled
+    img_debugger = FallbackDebugger()
+
+    def set_col_debug_enabled(enabled: bool):
+        pass
+
+    def is_col_debug_enabled() -> bool:
+        return False
 
 class COLVersion(Enum):
     """COL file format versions"""
@@ -429,29 +440,29 @@ class COLFile:
         """Parse COL1 format model with safe parsing methods"""
         try:
             offset = 0
-            
+
             # Parse model name (22 bytes)
             if len(data) < 22:
                 img_debugger.warning("COL1: Data too small for model name")
                 return
-                
+
             name_bytes = data[offset:offset+22]
             model.name = name_bytes.split(b'\x00')[0].decode('ascii', errors='ignore')
             offset += 22
-            
+
             # Parse model ID (2 bytes)
             if offset + 2 > len(data):
                 img_debugger.warning("COL1: Not enough data for model ID")
                 return
-                
+
             model.model_id = struct.unpack('<H', data[offset:offset+2])[0]
             offset += 2
-            
+
             # Parse bounding data (40 bytes)
             if offset + 40 > len(data):
                 img_debugger.warning("COL1: Not enough data for bounding box")
                 return
-                
+
             bounding_radius = struct.unpack('<f', data[offset:offset+4])[0]
             offset += 4
             bounding_center = struct.unpack('<fff', data[offset:offset+12])
@@ -460,18 +471,18 @@ class COLFile:
             offset += 12
             bounding_max = struct.unpack('<fff', data[offset:offset+12])
             offset += 12
-            
+
             # Set bounding box
             model.bounding_box.center = Vector3(*bounding_center)
             model.bounding_box.min = Vector3(*bounding_min)
             model.bounding_box.max = Vector3(*bounding_max)
             model.bounding_box.radius = bounding_radius
-            
+
             # Parse counts (20 bytes)
             if offset + 20 > len(data):
                 img_debugger.warning("COL1: Not enough data for collision counts")
                 return
-                
+
             num_spheres = struct.unpack('<I', data[offset:offset+4])[0]
             offset += 4
             num_unknown = struct.unpack('<I', data[offset:offset+4])[0]
@@ -482,38 +493,38 @@ class COLFile:
             offset += 4
             num_faces = struct.unpack('<I', data[offset:offset+4])[0]
             offset += 4
-            
+
             img_debugger.debug(f"COL1: Model {model.name} - S:{num_spheres} B:{num_boxes} V:{num_vertices} F:{num_faces}")
-            
+
             # Use safe parsing methods from methods/
             try:
                 from methods.col_parsing_helpers import (
-                    safe_parse_spheres, safe_parse_boxes, 
+                    safe_parse_spheres, safe_parse_boxes,
                     safe_parse_vertices, safe_parse_faces_col1
                 )
-                
+
                 # Parse spheres safely
                 offset = safe_parse_spheres(model, data, offset, num_spheres, "COL1")
-                
+
                 # Skip unknown data
                 offset += num_unknown * 4
-                
+
                 # Parse boxes safely
                 offset = safe_parse_boxes(model, data, offset, num_boxes, "COL1")
-                
+
                 # Parse vertices safely
                 offset = safe_parse_vertices(model, data, offset, num_vertices)
-                
+
                 # Parse faces safely
                 offset = safe_parse_faces_col1(model, data, offset, num_faces)
-                
+
             except ImportError:
                 img_debugger.warning("COL1: Safe parsing methods not available, using basic parsing")
                 # Fall back to basic parsing without bounds checking
                 self._parse_col1_basic(model, data, offset, num_spheres, num_unknown, num_boxes, num_vertices, num_faces)
-            
+
             model.update_flags()
-            
+
         except Exception as e:
             img_debugger.error(f"COL1: Error in model parsing: {e}")
 
@@ -532,14 +543,14 @@ class COLFile:
                 offset += 4
                 flags = struct.unpack('<I', data[offset:offset+4])[0]
                 offset += 4
-                
+
                 material = COLMaterial(material_id, flags=flags)
                 sphere = COLSphere(center, radius, material)
                 model.spheres.append(sphere)
-            
+
             # Skip unknown data
             offset += num_unknown * 4
-            
+
             # Parse boxes (basic)
             for i in range(num_boxes):
                 if offset + 32 > len(data):
@@ -552,11 +563,11 @@ class COLFile:
                 offset += 4
                 flags = struct.unpack('<I', data[offset:offset+4])[0]
                 offset += 4
-                
+
                 material = COLMaterial(material_id, flags=flags)
                 box = COLBox(min_point, max_point, material)
                 model.boxes.append(box)
-            
+
             # Parse vertices (basic)
             for i in range(num_vertices):
                 if offset + 12 > len(data):
@@ -565,38 +576,38 @@ class COLFile:
                 offset += 12
                 vertex = COLVertex(position)
                 model.vertices.append(vertex)
-            
+
             # Parse faces (basic - this is where the original error occurred)
             for i in range(num_faces):
                 if offset + 14 > len(data):  # Need 14 bytes minimum
                     img_debugger.warning(f"COL1: Not enough data for face {i}, stopping")
                     break
-                    
+
                 vertex_indices = struct.unpack('<HHH', data[offset:offset+6])
                 offset += 6
-                
+
                 if offset + 2 > len(data):
                     material_id = 0
                 else:
                     material_id = struct.unpack('<H', data[offset:offset+2])[0]
                     offset += 2
-                
+
                 if offset + 2 > len(data):
                     light = 0
                 else:
                     light = struct.unpack('<H', data[offset:offset+2])[0]
                     offset += 2
-                
+
                 if offset + 4 > len(data):
                     flags = 0
                 else:
                     flags = struct.unpack('<I', data[offset:offset+4])[0]
                     offset += 4
-                
+
                 material = COLMaterial(material_id, flags=flags)
                 face = COLFace(vertex_indices, material, light)
                 model.faces.append(face)
-                
+
         except Exception as e:
             img_debugger.error(f"COL1: Error in basic parsing: {e}")
 
@@ -742,11 +753,6 @@ class COLFile:
                 material = COLMaterial(material_id)
                 face = COLFace(vertex_indices, material, light)
                 model.faces.append(face)
-
-            model.update_flags()
-
-            except ImportError:
-                img_debugger.warning("COL2/3: Safe parsing methods not available, using basic parsing")
 
             model.update_flags()
 
@@ -923,7 +929,7 @@ class COLFile:
         """Get comprehensive file information"""
         lines = []
 
-        lines.append(f"COL File: {os.path.basename(self.file_path) if self.file_path else 'Unknown'}")
+        lines.append(f"COL File: {os.path.basename(self.file_path) if self.file_path else 'Unk LOD?'}")
         lines.append(f"File Size: {self.file_size:,} bytes")
         lines.append(f"Models: {len(self.models)}")
 

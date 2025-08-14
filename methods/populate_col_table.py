@@ -1,9 +1,9 @@
-#this belongs in methods/populate_col_table.py - Version: 3
-# X-Seti - July23 2025 - IMG Factory 1.5 - COL Table Population Methods
-# Ported from old working version
+#this belongs in methods/populate_col_table.py - Version: 4
+# X-Seti - August14 2025 - IMG Factory 1.5 - COL Table Population Methods
+# Fixed populate_col_table_enhanced method
 
 """
-COL Table Population Methods - Ported from working old version
+COL Table Population Methods - Fixed version
 Handles populating the main table widget with COL file data
 Uses IMG debug system instead of old COL debug calls
 """
@@ -122,7 +122,7 @@ def setup_col_table_structure(main_window): #vers 1
         table = main_window.gui_layout.table
         
         # COL-specific columns
-        col_headers = ["Model Name", "Type", "Version", "Size", "Spheres", "Boxes", "Faces", "Info"]
+        col_headers = ["Model Name", "Type", "Version", "Size", "Spheres", "Boxes", "Vertices", "Faces"]
         table.setColumnCount(len(col_headers))
         table.setHorizontalHeaderLabels(col_headers)
         
@@ -133,8 +133,11 @@ def setup_col_table_structure(main_window): #vers 1
         table.setColumnWidth(3, 100)  # Size
         table.setColumnWidth(4, 80)   # Spheres
         table.setColumnWidth(5, 80)   # Boxes
-        table.setColumnWidth(6, 80)   # Faces
-        table.setColumnWidth(7, 150)  # Info
+        table.setColumnWidth(6, 80)   # Vertices
+        table.setColumnWidth(7, 80)   # Faces
+        
+        # Enable sorting
+        table.setSortingEnabled(True)
         
         img_debugger.debug("COL table structure setup complete")
         return True
@@ -143,31 +146,195 @@ def setup_col_table_structure(main_window): #vers 1
         img_debugger.error(f"Error setting up COL table structure: {str(e)}")
         return False
 
-def _populate_col_table_enhanced(main_window, col_file): #vers 1
-    """Populate table using enhanced display manager"""
-    try:
-        from components.col_display import COLDisplayManager
-        
-        display_manager = COLDisplayManager(main_window)
-        display_manager.populate_col_table(col_file)
-        img_debugger.success("Enhanced COL table populated")
-        
-    except Exception as e:
-        img_debugger.error(f"Enhanced table population failed: {str(e)}")
-        raise
 
-def _update_col_info_bar_enhanced(main_window, col_file, file_path): #vers 1
-    """Update info bar using enhanced display manager"""
+    def populate_col_table_enhanced(main_window, col_file): #vers 3
+        """Populate table using direct model data - FIXED SIZE CALCULATION"""
+        try:
+            if not col_file or not hasattr(col_file, 'models') or not col_file.models:
+                img_debugger.warning("No COL data to populate")
+                return False
+
+            if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
+                img_debugger.error("No table widget available")
+                return False
+
+            table = main_window.gui_layout.table
+            models = col_file.models
+
+            img_debugger.debug(f"Populating table with {len(models)} COL models")
+
+            # Set row count
+            table.setRowCount(len(models))
+
+            for row, model in enumerate(models):
+                try:
+                    # Model Name
+                    model_name = getattr(model, 'name', f'Model_{row+1}')
+                    table.setItem(row, 0, QTableWidgetItem(str(model_name)))
+
+                    # Type
+                    table.setItem(row, 1, QTableWidgetItem("COL"))
+
+                    # Version
+                    version = getattr(model, 'version', 'Unknown')
+                    if hasattr(version, 'value'):
+                        version_text = f"COL{version.value}"
+                    else:
+                        version_text = str(version)
+                    table.setItem(row, 2, QTableWidgetItem(version_text))
+
+                    # Size - USE ACTUAL MODEL SIZE NOT ESTIMATED
+                    if hasattr(model, 'model_size') and model.model_size > 0:
+                        # Use actual model size from file
+                        actual_size = model.model_size
+                        if actual_size > 1024:
+                            size_text = f"{actual_size//1024}KB"
+                        else:
+                            size_text = f"{actual_size}B"
+                    else:
+                        # Fallback: minimum viable COL model size
+                        size_text = "64B"
+
+                    table.setItem(row, 3, QTableWidgetItem(size_text))
+
+                    # Collision data counts
+                    spheres_count = len(getattr(model, 'spheres', []))
+                    boxes_count = len(getattr(model, 'boxes', []))
+                    vertices_count = len(getattr(model, 'vertices', []))
+                    faces_count = len(getattr(model, 'faces', []))
+
+                    table.setItem(row, 4, QTableWidgetItem(str(spheres_count)))
+                    table.setItem(row, 5, QTableWidgetItem(str(boxes_count)))
+                    table.setItem(row, 6, QTableWidgetItem(str(vertices_count)))
+                    table.setItem(row, 7, QTableWidgetItem(str(faces_count)))
+
+                except Exception as e:
+                    img_debugger.error(f"Error populating row {row}: {str(e)}")
+                    # Fill with safe defaults
+                    table.setItem(row, 0, QTableWidgetItem(f"Model_{row+1}"))
+                    table.setItem(row, 1, QTableWidgetItem("COL"))
+                    table.setItem(row, 2, QTableWidgetItem("COL1"))
+                    table.setItem(row, 3, QTableWidgetItem("64B"))  # Safe minimum
+                    for col in range(4, 8):
+                        table.setItem(row, col, QTableWidgetItem("0"))
+
+            img_debugger.success(f"COL table populated with {len(models)} models")
+            return True
+
+        except Exception as e:
+            img_debugger.error(f"Enhanced table population failed: {str(e)}")
+            return False
+
+def populate_table_with_col_data_debug(main_window, col_file): #vers 1
+    """Populate table with COL file data using IMG debug system"""
     try:
-        from components.col_display import COLDisplayManager
+        if not col_file or not hasattr(col_file, 'models') or not col_file.models:
+            img_debugger.warning("No COL data to populate")
+            return False
         
-        display_manager = COLDisplayManager(main_window)
-        display_manager.update_col_info_bar(col_file, file_path)
-        img_debugger.success("Enhanced info bar updated")
+        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
+            img_debugger.error("No table widget available")
+            return False
+        
+        table = main_window.gui_layout.table
+        models = col_file.models
+        
+        img_debugger.debug(f"Populating table with {len(models)} COL models")
+        
+        # Setup table structure first
+        setup_col_table_structure(main_window)
+        
+        # Set row count
+        table.setRowCount(len(models))
+        
+        # Populate each model
+        for row, model in enumerate(models):
+            try:
+                # Model Name (Column 0)
+                model_name = model.name if hasattr(model, 'name') and model.name else f"Model_{row+1}"
+                table.setItem(row, 0, QTableWidgetItem(model_name))
+                
+                # Type (Column 1)
+                table.setItem(row, 1, QTableWidgetItem("COL"))
+                
+                # Version (Column 2)
+                if hasattr(model, 'version') and hasattr(model.version, 'value'):
+                    version_text = f"v{model.version.value}"
+                else:
+                    version_text = "Unknown"
+                table.setItem(row, 2, QTableWidgetItem(version_text))
+                
+                # Size (Column 3) - Estimate based on data
+                sphere_count = len(model.spheres) if hasattr(model, 'spheres') else 0
+                box_count = len(model.boxes) if hasattr(model, 'boxes') else 0
+                vertex_count = len(model.vertices) if hasattr(model, 'vertices') else 0
+                face_count = len(model.faces) if hasattr(model, 'faces') else 0
+                
+                estimated_size = (sphere_count * 20) + (box_count * 32) + (vertex_count * 12) + (face_count * 20)
+                if estimated_size > 0:
+                    size_text = f"{estimated_size:,} bytes"
+                else:
+                    # Zero collision data = LOD model
+                    size_text = "0 bytes LOD"
+                #size_text = f"{estimated_size:,} bytes" if estimated_size > 0 else "Unknown"
+
+                table.setItem(row, 3, QTableWidgetItem(size_text))
+                
+                # Spheres (Column 4)
+                table.setItem(row, 4, QTableWidgetItem(str(sphere_count)))
+                
+                # Boxes (Column 5)
+                table.setItem(row, 5, QTableWidgetItem(str(box_count)))
+                
+                # Vertices (Column 6)
+                table.setItem(row, 6, QTableWidgetItem(str(vertex_count)))
+                
+                # Faces (Column 7)
+                table.setItem(row, 7, QTableWidgetItem(str(face_count)))
+
+            except Exception as e:
+                img_debugger.error(f"Error populating row {row}: {str(e)}")
+                # Fill with error data
+                table.setItem(row, 0, QTableWidgetItem(f"Error_Model_{row}"))
+                for col in range(1, 8):
+                    table.setItem(row, col, QTableWidgetItem("Error"))
+
+        img_debugger.success(f"COL table populated with {len(models)} models")
+        return True
+
+    except Exception as e:
+        img_debugger.error(f"Error populating COL table: {str(e)}")
+        return False
+
+def update_col_info_bar_enhanced(main_window, col_file, file_path): #vers 2
+    """Update info bar using direct method - NO col_display dependency"""
+    try:
+        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'info_bar'):
+            img_debugger.warning("Info bar not available")
+            return False
+        
+        if not col_file or not hasattr(col_file, 'models'):
+            return False
+        
+        # Calculate totals
+        total_models = len(col_file.models)
+        total_spheres = sum(len(getattr(model, 'spheres', [])) for model in col_file.models)
+        total_boxes = sum(len(getattr(model, 'boxes', [])) for model in col_file.models)
+        total_vertices = sum(len(getattr(model, 'vertices', [])) for model in col_file.models)
+        total_faces = sum(len(getattr(model, 'faces', [])) for model in col_file.models)
+        
+        # Create info text
+        file_name = os.path.basename(file_path)
+        info_text = f"🛡️ {file_name} | {total_models} models | {total_spheres} spheres | {total_boxes} boxes | {total_vertices} vertices | {total_faces} faces"
+        
+        # Update info bar
+        main_window.gui_layout.info_bar.setText(info_text)
+        img_debugger.success("COL info bar updated")
+        return True
         
     except Exception as e:
         img_debugger.error(f"Enhanced info bar update failed: {str(e)}")
-        raise
+        return False
 
 def reset_table_styling(main_window): #vers 1
     """Completely reset table styling to default"""
@@ -206,229 +373,6 @@ def setup_col_tab_integration(main_window): #vers 1
     except Exception as e:
         img_debugger.error(f"COL tab integration failed: {str(e)}")
         return False
-
-def populate_table_with_col_data_debug(main_window, col_file): #vers 1
-    """Populate table with COL file data using IMG debug system"""
-    try:
-        if not col_file or not hasattr(col_file, 'models') or not col_file.models:
-            img_debugger.warning("No COL data to populate")
-            return False
-        
-        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            img_debugger.error("No table widget available")
-            return False
-        
-        table = main_window.gui_layout.table
-        models = col_file.models
-        
-        img_debugger.debug(f"Populating table with {len(models)} COL models")
-        
-        # Setup table structure first
-        _setup_col_table_structure(main_window)
-        
-        # Set row count
-        table.setRowCount(len(models))
-        
-        # Populate each model
-        for row, model in enumerate(models):
-            # Model Name (Column 0)
-            model_name = model.name if hasattr(model, 'name') and model.name else f"Model_{row+1}"
-            table.setItem(row, 0, QTableWidgetItem(model_name))
-            
-            # Type (Column 1)
-            table.setItem(row, 1, QTableWidgetItem("COL"))
-            
-            # Version (Column 2)
-            if hasattr(model, 'version') and hasattr(model.version, 'value'):
-                version_text = f"v{model.version.value}"
-            else:
-                version_text = "Unknown"
-            table.setItem(row, 2, QTableWidgetItem(version_text))
-            
-            # Size (Column 3) - Estimate based on data
-            sphere_count = len(model.spheres) if hasattr(model, 'spheres') else 0
-            box_count = len(model.boxes) if hasattr(model, 'boxes') else 0
-            vertex_count = len(model.vertices) if hasattr(model, 'vertices') else 0
-            face_count = len(model.faces) if hasattr(model, 'faces') else 0
-            
-            estimated_size = (sphere_count * 20) + (box_count * 32) + (vertex_count * 12) + (face_count * 20)
-            size_text = f"{estimated_size:,} bytes" if estimated_size > 0 else "Unknown"
-            table.setItem(row, 3, QTableWidgetItem(size_text))
-            
-            # Spheres (Column 4)
-            table.setItem(row, 4, QTableWidgetItem(str(sphere_count)))
-            
-            # Boxes (Column 5)
-            table.setItem(row, 5, QTableWidgetItem(str(box_count)))
-            
-            # Faces (Column 6)
-            table.setItem(row, 6, QTableWidgetItem(str(face_count)))
-            
-            # Info (Column 7)
-            info_parts = []
-            if hasattr(model, 'has_sphere_data') and model.has_sphere_data:
-                info_parts.append("Spheres")
-            if hasattr(model, 'has_box_data') and model.has_box_data:
-                info_parts.append("Boxes")
-            if hasattr(model, 'has_mesh_data') and model.has_mesh_data:
-                info_parts.append("Mesh")
-            
-            info_text = ", ".join(info_parts) if info_parts else "Basic COL"
-            table.setItem(row, 7, QTableWidgetItem(info_text))
-        
-        # Enable sorting
-        table.setSortingEnabled(True)
-        
-        img_debugger.success(f"COL table populated with {len(models)} models")
-        return True
-        
-    except Exception as e:
-        img_debugger.error(f"Error populating COL table: {e}")
-        return False
-
-def populate_col_table_enhanced(main_window, col_file): #vers 1
-    """Populate table using enhanced display manager"""
-    try:
-        from components.col_display import COLDisplayManager
-        
-        display_manager = COLDisplayManager(main_window)
-        display_manager.populate_col_table(col_file)
-        img_debugger.success("Enhanced COL table populated")
-        
-    except Exception as e:
-        img_debugger.error(f"Enhanced table population failed: {str(e)}")
-        raise
-
-def update_col_info_bar_enhanced(main_window, col_file, file_path): #vers 1
-    """Update info bar using enhanced display manager"""
-    try:
-        from components.col_display import COLDisplayManager
-        
-        display_manager = COLDisplayManager(main_window)
-        display_manager.update_col_info_bar(col_file, file_path)
-        img_debugger.success("Enhanced info bar updated")
-        
-    except Exception as e:
-        img_debugger.error(f"Enhanced info bar update failed: {str(e)}")
-        raise
-
-
-def setup_col_table_structure(main_window): #vers 1
-    """Setup table structure for COL data"""
-    try:
-        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            img_debugger.error("Table widget not found")
-            return False
-
-        table = main_window.gui_layout.table
-
-        # COL-specific columns
-        col_headers = ["Model Name", "Type", "Version", "Size", "Spheres", "Boxes", "Vertices", "Faces"]
-        table.setColumnCount(len(col_headers))
-        table.setHorizontalHeaderLabels(col_headers)
-
-        # Set column widths for better display
-        table.setColumnWidth(0, 200)  # Model Name
-        table.setColumnWidth(1, 80)   # Type
-        table.setColumnWidth(2, 80)   # Version
-        table.setColumnWidth(3, 100)  # Size
-        table.setColumnWidth(4, 80)   # Spheres
-        table.setColumnWidth(5, 80)   # Boxes
-        table.setColumnWidth(6, 80)   # Vertices
-        table.setColumnWidth(7, 80)   # Faces
-
-        # Enable sorting
-        table.setSortingEnabled(True)
-
-        img_debugger.debug("COL table structure setup complete")
-        return True
-
-    except Exception as e:
-        img_debugger.error(f"Error setting up COL table structure: {str(e)}")
-        return False
-
-def populate_table_with_col_data_debug(main_window, col_file): #vers 1
-    """Populate table with COL data with debug output"""
-    try:
-        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            img_debugger.error("Table widget not found")
-            return False
-
-        table = main_window.gui_layout.table
-
-        if not col_file or not hasattr(col_file, 'models'):
-            img_debugger.warning("No COL models to display")
-            table.setRowCount(0)
-            return False
-
-        models = col_file.models
-        img_debugger.debug(f"Populating table with {len(models)} COL models")
-
-        # Set row count
-        table.setRowCount(len(models))
-
-        for row, model in enumerate(models):
-            try:
-                # Model Name
-                model_name = getattr(model, 'name', f'Model_{row+1}')
-                table.setItem(row, 0, QTableWidgetItem(str(model_name)))
-
-                # Type
-                table.setItem(row, 1, QTableWidgetItem("COL"))
-
-                # Version
-                version = getattr(model, 'version', 'Unknown')
-                if hasattr(version, 'value'):
-                    version_text = f"COL{version.value}"
-                else:
-                    version_text = str(version)
-                table.setItem(row, 2, QTableWidgetItem(version_text))
-
-                # Size (approximate)
-                size_text = "~"
-                if hasattr(model, 'get_stats'):
-                    stats = model.get_stats()
-                    # Estimate size based on object counts
-                    estimated_size = (stats.get('vertices', 0) * 12 +
-                                    stats.get('faces', 0) * 16 +
-                                    stats.get('spheres', 0) * 20 +
-                                    stats.get('boxes', 0) * 32)
-                    if estimated_size > 1024:
-                        size_text = f"~{estimated_size//1024}KB"
-                    else:
-                        size_text = f"~{estimated_size}B"
-                table.setItem(row, 3, QTableWidgetItem(size_text))
-
-                # Spheres
-                spheres_count = len(getattr(model, 'spheres', []))
-                table.setItem(row, 4, QTableWidgetItem(str(spheres_count)))
-
-                # Boxes
-                boxes_count = len(getattr(model, 'boxes', []))
-                table.setItem(row, 5, QTableWidgetItem(str(boxes_count)))
-
-                # Vertices
-                vertices_count = len(getattr(model, 'vertices', []))
-                table.setItem(row, 6, QTableWidgetItem(str(vertices_count)))
-
-                # Faces
-                faces_count = len(getattr(model, 'faces', []))
-                table.setItem(row, 7, QTableWidgetItem(str(faces_count)))
-
-            except Exception as e:
-                img_debugger.error(f"Error populating row {row}: {str(e)}")
-                # Fill with error data
-                table.setItem(row, 0, QTableWidgetItem(f"Error_Model_{row}"))
-                for col in range(1, 8):
-                    table.setItem(row, col, QTableWidgetItem("Error"))
-
-        img_debugger.success(f"COL table populated with {len(models)} models")
-        return True
-
-    except Exception as e:
-        img_debugger.error(f"Error populating COL table: {str(e)}")
-        return False
-
 
 def load_col_file_safely(main_window, file_path): #vers 1
     """Load COL file safely with proper tab management"""
