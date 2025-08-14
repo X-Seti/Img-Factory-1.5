@@ -1,5 +1,5 @@
-#this belongs in core/file_dirtree_backend.py - Version: 1
-# X-Seti - August10 2025 - IMG Factory 1.5 - File Browser Backend Classes
+#this belongs in core/file_dirtree_backend.py - Version: 2
+# X-Seti - August14 2025 - IMG Factory 1.5 - File Browser Backend Classes
 
 """
 FILE BROWSER BACKEND CLASSES
@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QTabWidget,
     QWidget, QLabel, QPushButton, QCheckBox, QSpinBox, QComboBox,
-    QTextBrowser, QListWidget, QMessageBox, QGroupBox
+    QTextBrowser, QListWidget, QMessageBox, QGroupBox, QLineEdit
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
@@ -196,7 +196,6 @@ class FileSearchDialog(QDialog):
         criteria_group = QGroupBox("Search Criteria")
         criteria_layout = QFormLayout(criteria_group)
         
-        from PyQt6.QtWidgets import QLineEdit
         self.name_edit = QLineEdit()
         self.name_edit.setPlaceholderText("*.txt, *.py, etc.")
         criteria_layout.addRow("File name:", self.name_edit)

@@ -11,7 +11,7 @@ import struct
 import os
 from enum import Enum
 from typing import List, Optional, Tuple, Dict, Any
-from components.img_debug_functions import img_debugger
+from img_debug_functions import img_debugger
 
 ##Classes -
 # BoundingBox

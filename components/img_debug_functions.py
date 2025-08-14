@@ -14,8 +14,8 @@ from typing import Any, Dict, List, Optional
 from pathlib import Path
 #from methods.populate_col_table import  _populate_col_table_enhanced
 
-from components.unified_debug_functions import debug_trace
-
+#from components.unified_debug_functions import debug_trace
+from unified_debug_functions import debug_trace
 
 
 class IMGDebugger:
@@ -294,13 +294,13 @@ def debug_img_creation_process(img_creator_dialog):
 def debug_import_errors():
     """Debug component import issues"""
     img_debugger.debug("=== DEBUGGING IMPORT ERRORS ===")
-    
+
     components_to_check = [
-        'components.img_core_classes',
-        'components.img_creator', 
-        'components.img_validator',
-        'components.img_templates',
-        'components.img_manager'
+        'img_core_classes',
+        'img_creator',
+        'img_validator',
+        'img_templates',
+        'img_manager'
     ]
     
     for component in components_to_check:

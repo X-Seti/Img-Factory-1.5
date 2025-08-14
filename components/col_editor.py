@@ -9,6 +9,7 @@ ENHANCED: Better integration with IMG Factory systems and improved UI
 """
 
 import os
+import sys
 import tempfile
 from typing import Optional, List, Dict, Any
 from PyQt6.QtWidgets import (
@@ -17,14 +18,27 @@ from PyQt6.QtWidgets import (
     QLabel, QLineEdit, QSpinBox, QDoubleSpinBox, QPushButton,
     QGroupBox, QCheckBox, QTextEdit, QFileDialog, QMessageBox,
     QStatusBar, QMenuBar, QToolBar, QComboBox, QSlider, QFormLayout,
-    QTableWidget, QTableWidgetItem, QProgressBar
+    QTableWidget, QTableWidgetItem, QProgressBar, QWidget
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QAction, QFont, QIcon
 
-# Import IMG debug system and COL classes
-from components.img_debug_functions import img_debugger
-from components.col_core_classes import COLFile, COLModel, COLVersion, Vector3
+# Add project root to path for standalone execution
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+sys.path.insert(0, project_root)
+
+# Now import everything without try/except
+try:
+    # When running from main app
+    from components.img_debug_functions import img_debugger
+    from components.col_core_classes import COLFile, COLModel, COLVersion, Vector3
+except ImportError:
+    # When running standalone
+    from img_debug_functions import img_debugger
+    from col_core_classes import COLFile, COLModel, COLVersion, Vector3
+
+# These should work now with project root in path
 from methods.col_operations import get_col_detailed_analysis, create_temporary_col_file, cleanup_temporary_file
 from gui.col_dialogs import show_col_analysis_dialog
 

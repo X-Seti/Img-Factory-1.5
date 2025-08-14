@@ -1,10 +1,10 @@
-#this belongs in gui/ menu.py - Version: 19
-# X-Seti - July12 2025 - IMG Factory 1.5
+#this belongs in gui/gui_menu.py - Version: 20
+# X-Seti - August14 2025 - IMG Factory 1.5
 
 #!/usr/bin/env python3
 """
 IMG Factory Menu System - Complete Implementation
-Full menu system with all original entries restored
+Full menu system with all original entries restored + IDE/COL Editor integration
 """
 
 import os
@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
     QFileDialog, QTreeWidget, QTreeWidgetItem, QScrollArea
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QSettings
-from PyQt6.QtGui import QAction, QIcon, QKeySequence, QActionGroup
+from PyQt6.QtGui import QAction, QFont, QPixmap, QIcon, QKeySequence, QActionGroup
 from .panel_manager import PanelManager
 
 
@@ -165,6 +165,8 @@ class MenuDefinition:
                 MenuAction("collision_viewer_3d", "&3D Collision Viewer"),
                 MenuAction("collision_properties", "Collision &Properties"),
                 MenuAction("collision_debug", "&Debug Information"),
+                MenuAction("sep4", ""),
+                MenuAction("col_editor", "&COL Editor"),
             ],
 
             "Anim": [
@@ -193,6 +195,9 @@ class MenuDefinition:
                 MenuAction("sep2", ""),
                 MenuAction("ide_backup", "&Backup IDE"),
                 MenuAction("ide_compare", "&Compare IDE Files"),
+                MenuAction("sep3", ""),
+                MenuAction("sort_img_by_ide", "Sort &IMG by IDE"),
+                MenuAction("sort_col_by_ide", "Sort &COL by IDE"),
             ],
 
             "IPL": [
@@ -626,7 +631,44 @@ class IMGFactoryMenuBar:
         default_callbacks = {
             # File menu
             "exit": self._exit_application,
-            
+
+            # IDE menu callbacks
+            "ide_editor": self._open_ide_editor,
+            "sort_img_by_ide": self._sort_img_by_ide,
+            "sort_col_by_ide": self._sort_col_by_ide,
+            "ide_view": self._view_ide,
+            "ide_edit": self._edit_ide,
+            "ide_validate": self._validate_ide,
+            "ide_search": self._search_ide,
+            "ide_export": self._export_ide,
+            "ide_import": self._import_ide,
+            "ide_convert": self._convert_ide,
+            "ide_backup": self._backup_ide,
+            "ide_compare": self._compare_ide,
+
+            # COL menu callbacks
+            "col_editor": self._open_col_editor,
+            "collision_view": self._view_collision,
+            "collision_edit": self._edit_collision,
+            "collision_export": self._export_collision,
+            "collision_import": self._import_collision,
+            "collision_validate": self._validate_collision,
+            "collision_optimize": self._optimize_collision,
+            "collision_analyze": self._analyze_collision,
+            "collision_batch_export": self._batch_export_collision,
+            "collision_batch_convert": self._batch_convert_collision,
+            "collision_viewer_3d": self._view_collision_3d,
+            "collision_properties": self._collision_properties,
+            "collision_debug": self._collision_debug,
+
+            # Tools menu (duplicate entries for accessibility)
+            "col_editor": self._open_col_editor,
+            "txd_editor": self._open_txd_editor,
+            "dff_editor": self._open_dff_editor,
+            "ifp_editor": self._open_ifp_editor,
+            "ipl_editor": self._open_ipl_editor,
+            "dat_editor": self._open_dat_editor,
+
             # Settings menu
             "preferences": self._show_preferences,
             "customize_interface": self._show_gui_settings,
@@ -634,27 +676,236 @@ class IMGFactoryMenuBar:
             "export_settings": self._export_settings,
             "import_settings": self._import_settings,
             "reset_layout": self._reset_layout,
-            
+
             # View menu
             "toolbar": self._toggle_toolbar,
             "statusbar": self._toggle_statusbar,
             "log_panel": self._toggle_log_panel,
             "fullscreen": self._toggle_fullscreen,
-            
+
             # Help menu
             "about": self._show_about,
             "help_contents": self._show_help,
             "help_shortcuts": self._show_shortcuts,
             "help_formats": self._show_formats,
             "about_qt": self._show_about_qt,
-            
+
             # Debug menu
             "debug_console": self._show_debug_console,
             "debug_clear_log": self._clear_debug_log,
         }
-        
+
         self.set_callbacks(default_callbacks)
-    
+
+    # ========================================================================
+    # NEW IDE MENU CALLBACKS
+    # ========================================================================
+
+
+
+    def _open_ide_editor(self):
+        """Open IDE Editor"""
+        try:
+            from components.ide_editor import open_ide_editor
+            editor = open_ide_editor(self.main_window)
+
+            # Connect signals for integration
+            if hasattr(editor, 'sort_by_ide_requested'):
+                editor.sort_by_ide_requested.connect(self._handle_sort_by_ide)
+            if hasattr(editor, 'selection_sync_requested'):
+                editor.selection_sync_requested.connect(self._handle_selection_sync)
+
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("✅ IDE Editor opened")
+
+        except ImportError:
+            QMessageBox.warning(self.main_window, "IDE Editor", "IDE Editor components not found")
+        except Exception as e:
+            QMessageBox.critical(self.main_window, "Error", f"Failed to open IDE Editor: {str(e)}")
+
+    def _sort_img_by_ide(self):
+        """Sort IMG entries by IDE order"""
+        try:
+            if hasattr(self.main_window, 'sort_img_by_ide_order'):
+                self.main_window.sort_img_by_ide_order()
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("📋 IMG entries sorted by IDE order")
+            else:
+                QMessageBox.information(self.main_window, "Sort IMG",
+                    "Sort IMG by IDE functionality will be available when IDE file is loaded.")
+        except Exception as e:
+            QMessageBox.critical(self.main_window, "Error", f"Failed to sort IMG by IDE: {str(e)}")
+
+    def _sort_col_by_ide(self):
+        """Sort COL entries by IDE order"""
+        try:
+            if hasattr(self.main_window, 'sort_col_by_ide_order'):
+                self.main_window.sort_col_by_ide_order()
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("🛡️ COL entries sorted by IDE order")
+            else:
+                QMessageBox.information(self.main_window, "Sort COL",
+                    "Sort COL by IDE functionality will be available when both IDE and COL files are loaded.")
+        except Exception as e:
+            QMessageBox.critical(self.main_window, "Error", f"Failed to sort COL by IDE: {str(e)}")
+
+    def _handle_sort_by_ide(self, model_order):
+        """Handle sort by IDE request from IDE Editor"""
+        try:
+            # Apply sorting to IMG Factory main window
+            if hasattr(self.main_window, 'apply_ide_sort_order'):
+                self.main_window.apply_ide_sort_order(model_order)
+
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"📋 Applied IDE sort order: {len(model_order)} models")
+
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Error applying IDE sort: {str(e)}")
+
+    def _handle_selection_sync(self, selected_models):
+        """Handle selection sync request from IDE Editor"""
+        try:
+            # Sync selection with COL Editor if open
+            if hasattr(self.main_window, 'sync_col_editor_selection'):
+                self.main_window.sync_col_editor_selection(selected_models)
+
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"🔗 Synced selection: {len(selected_models)} models")
+
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Error syncing selection: {str(e)}")
+
+    def _view_ide(self):
+        """View IDE file"""
+        QMessageBox.information(self.main_window, "View IDE", "IDE viewer coming soon!")
+
+    def _edit_ide(self):
+        """Edit IDE file (alias for IDE Editor)"""
+        self._open_ide_editor()
+
+    def _validate_ide(self):
+        """Validate IDE file"""
+        QMessageBox.information(self.main_window, "Validate IDE", "IDE validation coming soon!")
+
+    def _search_ide(self):
+        """Search IDE entries"""
+        QMessageBox.information(self.main_window, "Search IDE", "IDE search coming soon!")
+
+    def _export_ide(self):
+        """Export IDE to text"""
+        QMessageBox.information(self.main_window, "Export IDE", "IDE export coming soon!")
+
+    def _import_ide(self):
+        """Import IDE from text"""
+        QMessageBox.information(self.main_window, "Import IDE", "IDE import coming soon!")
+
+    def _convert_ide(self):
+        """Convert IDE format"""
+        QMessageBox.information(self.main_window, "Convert IDE", "IDE format conversion coming soon!")
+
+    def _backup_ide(self):
+        """Backup IDE file"""
+        QMessageBox.information(self.main_window, "Backup IDE", "IDE backup coming soon!")
+
+    def _compare_ide(self):
+        """Compare IDE files"""
+        QMessageBox.information(self.main_window, "Compare IDE", "IDE comparison coming soon!")
+
+    # ========================================================================
+    # COL MENU CALLBACKS
+    # ========================================================================
+
+    def _open_col_editor(self):
+        """Open COL Editor"""
+        try:
+            from gui.gui_context import open_col_editor_dialog
+            open_col_editor_dialog(self.main_window)
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("✅ COL Editor opened")
+        except ImportError:
+            QMessageBox.warning(self.main_window, "COL Editor", "COL Editor components not found")
+        except Exception as e:
+            QMessageBox.critical(self.main_window, "Error", f"Failed to open COL Editor: {str(e)}")
+
+    def _view_collision(self):
+        """View collision data"""
+        QMessageBox.information(self.main_window, "View Collision", "COL viewer coming soon!")
+
+    def _edit_collision(self):
+        """Edit collision (alias for COL Editor)"""
+        self._open_col_editor()
+
+    def _export_collision(self):
+        """Export collision data"""
+        QMessageBox.information(self.main_window, "Export Collision", "COL export coming soon!")
+
+    def _import_collision(self):
+        """Import collision data"""
+        QMessageBox.information(self.main_window, "Import Collision", "COL import coming soon!")
+
+    def _validate_collision(self):
+        """Validate collision data"""
+        QMessageBox.information(self.main_window, "Validate COL", "COL validation coming soon!")
+
+    def _optimize_collision(self):
+        """Optimize collision data"""
+        QMessageBox.information(self.main_window, "Optimize COL", "COL optimization coming soon!")
+
+    def _analyze_collision(self):
+        """Analyze collision data"""
+        try:
+            from gui.gui_context import analyze_col_file_dialog
+            analyze_col_file_dialog(self.main_window)
+        except ImportError:
+            QMessageBox.information(self.main_window, "Analyze COL", "COL analyzer coming soon!")
+        except Exception as e:
+            QMessageBox.critical(self.main_window, "Error", f"Failed to analyze COL: {str(e)}")
+
+    def _batch_export_collision(self):
+        """Batch export collision files"""
+        QMessageBox.information(self.main_window, "Batch Export", "COL batch export coming soon!")
+
+    def _batch_convert_collision(self):
+        """Batch convert collision files"""
+        QMessageBox.information(self.main_window, "Batch Convert", "COL batch convert coming soon!")
+
+    def _view_collision_3d(self):
+        """View collision in 3D"""
+        QMessageBox.information(self.main_window, "3D Collision Viewer", "3D COL viewer coming soon!")
+
+    def _collision_properties(self):
+        """Show collision properties"""
+        QMessageBox.information(self.main_window, "COL Properties", "COL properties dialog coming soon!")
+
+    def _collision_debug(self):
+        """Show collision debug info"""
+        QMessageBox.information(self.main_window, "COL Debug", "COL debug information coming soon!")
+
+    # ========================================================================
+    # TOOLS MENU CALLBACKS
+    # ========================================================================
+
+    def _open_txd_editor(self):
+        """Open TXD Editor"""
+        QMessageBox.information(self.main_window, "TXD Editor", "TXD Editor coming soon!")
+
+    def _open_dff_editor(self):
+        """Open DFF Editor"""
+        QMessageBox.information(self.main_window, "DFF Editor", "DFF Editor coming soon!")
+
+    def _open_ifp_editor(self):
+        """Open IFP Editor"""
+        QMessageBox.information(self.main_window, "IFP Editor", "IFP Editor coming soon!")
+
+    def _open_ipl_editor(self):
+        """Open IPL Editor"""
+        QMessageBox.information(self.main_window, "IPL Editor", "IPL Editor coming soon!")
+
+    def _open_dat_editor(self):
+        """Open DAT Editor"""
+        QMessageBox.information(self.main_window, "DAT Editor", "DAT Editor coming soon!")
 
     def add_col_menu(img_factory_instance):
         """Add COL menu to the main menu bar"""
@@ -711,7 +962,7 @@ class IMGFactoryMenuBar:
         """Set menu callbacks"""
         self.callbacks.update(callbacks)
         self._connect_callbacks()
-    
+
     def _connect_callbacks(self):
         """Connect actions to callbacks"""
         for action_id, callback in self.callbacks.items():
@@ -733,12 +984,12 @@ class IMGFactoryMenuBar:
     def get_action(self, action_id: str) -> Optional[QAction]:
         """Get action by ID"""
         return self.actions.get(action_id)
-    
+
     def set_panel_manager(self, panel_manager: PanelManager):
         """Set panel manager for panel menu integration"""
         self.panel_manager = panel_manager
         self.add_panel_menu()
-    
+
     def add_panel_menu(self):
         """Add panels menu for tear-off functionality"""
         if not self.panel_manager:
@@ -767,15 +1018,15 @@ class IMGFactoryMenuBar:
         reset_action = QAction("Reset Layout", self.main_window)
         reset_action.triggered.connect(self._reset_panel_layout)
         panels_menu.addAction(reset_action)
-    
+
     # ========================================================================
-    # CALLBACK IMPLEMENTATIONS
+    # ORIGINAL CALLBACK IMPLEMENTATIONS (PRESERVED)
     # ========================================================================
-    
+
     def _exit_application(self):
         """Exit the application"""
         self.main_window.close()
-    
+
     def _show_preferences(self):
         """Show preferences dialog with proper lifecycle management"""
         try:
@@ -790,64 +1041,64 @@ class IMGFactoryMenuBar:
                     # Clean up old dialog
                     self._preferences_dialog.deleteLater()
                     self._preferences_dialog = None
-            
+
             if hasattr(self.main_window, 'app_settings'):
                 from utils.app_settings_system import SettingsDialog
-                
+
                 # Create new dialog
                 self._preferences_dialog = SettingsDialog(self.main_window.app_settings, self.main_window)
-                
+
                 # Connect cleanup signal
                 self._preferences_dialog.finished.connect(self._on_preferences_closed)
-                
+
                 # Show dialog
                 result = self._preferences_dialog.exec()
-                
+
                 if result == QDialog.DialogCode.Accepted:
                     self._apply_gui_changes()
                     if hasattr(self.main_window, 'log_message'):
                         self.main_window.log_message("✅ Preferences updated")
-                
+
                 # Clean up
                 self._preferences_dialog = None
-                
+
             else:
                 QMessageBox.information(
-                    self.main_window, 
-                    "Preferences", 
+                    self.main_window,
+                    "Preferences",
                     "Preferences system not available"
                 )
         except Exception as e:
             QMessageBox.critical(
-                self.main_window, 
-                "Error", 
+                self.main_window,
+                "Error",
                 "Failed to open preferences: " + str(e)
             )
             # Clean up on error
             if hasattr(self, '_preferences_dialog'):
                 self._preferences_dialog = None
-    
+
     def _on_preferences_closed(self):
         """Handle preferences dialog closed"""
         if hasattr(self, '_preferences_dialog'):
             self._preferences_dialog = None
-    
+
     def _show_gui_settings(self):
         """Show GUI settings dialog"""
         QMessageBox.information(
-            self.main_window, 
-            "GUI Settings", 
+            self.main_window,
+            "GUI Settings",
             "GUI customization dialog coming soon!"
         )
-    
+
     def _show_theme_settings(self):
         """Show theme settings"""
         QMessageBox.information(
-            self.main_window, 
-            "Themes", 
+            self.main_window,
+            "Themes",
             "Theme selection coming soon!"
         )
-    
+
     def _export_settings(self):
         """Export settings to file"""
         try:
@@ -857,21 +1108,21 @@ class IMGFactoryMenuBar:
                 "img_factory_settings.json",
                 "JSON Files (*.json)"
             )
-            
+
             if file_path:
                 QMessageBox.information(
-                    self.main_window, 
-                    "Export Complete", 
+                    self.main_window,
+                    "Export Complete",
                     "Settings exported to " + file_path
                 )
-                    
+
         except Exception as e:
             QMessageBox.critical(
                 self.main_window,
-                "Export Failed", 
+                "Export Failed",
                 "Failed to export settings: " + str(e)
             )
-    
+
     def _import_settings(self):
         """Import settings from file"""
         try:
@@ -881,21 +1132,21 @@ class IMGFactoryMenuBar:
                 "",
                 "JSON Files (*.json)"
             )
-            
+
             if file_path:
                 QMessageBox.information(
-                    self.main_window, 
-                    "Import Complete", 
+                    self.main_window,
+                    "Import Complete",
                     "Settings imported from " + file_path
                 )
-                    
+
         except Exception as e:
             QMessageBox.critical(
                 self.main_window,
-                "Import Failed", 
+                "Import Failed",
                 "Failed to import settings: " + str(e)
             )
-    
+
     def _reset_layout(self):
         """Reset GUI layout"""
         reply = QMessageBox.question(
@@ -904,21 +1155,21 @@ class IMGFactoryMenuBar:
             "This will reset the GUI layout to defaults. Continue?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
-        
+
         if reply == QMessageBox.StandardButton.Yes:
             QMessageBox.information(
-                self.main_window, 
-                "Reset Complete", 
+                self.main_window,
+                "Reset Complete",
                 "Layout has been reset to defaults."
             )
-    
+
     def _toggle_toolbar(self):
         """Toggle toolbar visibility"""
         if hasattr(self.main_window, 'toolbar'):
             visible = self.main_window.toolbar.isVisible()
             self.main_window.toolbar.setVisible(not visible)
             self.check_action("toolbar", not visible)
-    
+
     def _toggle_statusbar(self):
         """Toggle status bar visibility"""
         if hasattr(self.main_window, 'statusBar'):
@@ -926,27 +1177,27 @@ class IMGFactoryMenuBar:
             visible = statusbar.isVisible()
             statusbar.setVisible(not visible)
             self.check_action("statusbar", not visible)
-    
+
     def _toggle_log_panel(self):
         """Toggle log panel visibility"""
         if hasattr(self.main_window, 'log_panel'):
             visible = self.main_window.log_panel.isVisible()
             self.main_window.log_panel.setVisible(not visible)
             self.check_action("log_panel", not visible)
-    
+
     def _toggle_fullscreen(self):
         """Toggle fullscreen mode"""
         if self.main_window.isFullScreen():
             self.main_window.showNormal()
         else:
             self.main_window.showFullScreen()
-    
+
     def _show_about(self): #vers 6
         """Show about dialog"""
         about_text = """
         <h2>IMG Factory 1.5</h2>
         <p><b>Version:</b> 1.5.0</p>
-        <p><b>Build Date:</b> July 12, 2025</p>
+        <p><b>Build Date:</b> August 14, 2025</p>
         <p><b>Author:</b> X-Seti</p>
         <p><b>Original Credits:</b> MexUK 2007 IMG Factory 1.2</p>
         <br>
@@ -958,20 +1209,22 @@ class IMGFactoryMenuBar:
         <li>IMG archive creation and editing</li>
         <li>File import/export with progress tracking</li>
         <li>COL collision file editor</li>
+        <li>IDE item definition editor</li>
         <li>TXD texture management</li>
         <li>DFF model viewer</li>
         <li>Advanced search and filtering</li>
         <li>Customizable interface and themes</li>
         <li>Batch processing tools</li>
+        <li>Sort by IDE functionality</li>
         </ul>
         """
-        
+
         QMessageBox.about(self.main_window, "About IMG Factory", about_text)
-    
+
     def _show_about_qt(self):
         """Show about Qt dialog"""
         QMessageBox.aboutQt(self.main_window, "About Qt")
-    
+
     def _show_help(self):
         """Show help contents"""
         help_text = """
@@ -982,7 +1235,12 @@ class IMGFactoryMenuBar:
         <p>3. Use right-click context menus for entry operations</p>
         <p>4. Import files using Entry → Import Files</p>
         <p>5. Export files using Entry → Export Selected</p>
-        
+
+        <h3>New Features:</h3>
+        <p><b>IDE Editor:</b> Edit item definitions with built-in help guide</p>
+        <p><b>COL Editor:</b> Advanced collision editing with 3D visualization</p>
+        <p><b>Sort by IDE:</b> Reorder IMG/COL entries by IDE sequence</p>
+
         <h3>Keyboard Shortcuts:</h3>
         <p><b>Ctrl+O:</b> Open IMG file</p>
         <p><b>Ctrl+N:</b> Create new IMG file</p>
@@ -995,7 +1253,8 @@ class IMGFactoryMenuBar:
         <p><b>F7:</b> View model</p>
         <p><b>F8:</b> View texture</p>
         <p><b>F9:</b> View collision</p>
-        
+        <p><b>Ctrl+Shift+C:</b> Open COL Editor</p>
+
         <h3>File Types:</h3>
         <p><b>IMG:</b> Archive files containing game assets</p>
         <p><b>COL:</b> Collision data files</p>
@@ -1005,7 +1264,7 @@ class IMGFactoryMenuBar:
         <p><b>IDE:</b> Item definition files</p>
         <p><b>IPL:</b> Item placement files</p>
         """
-        
+
         msg = QMessageBox(self.main_window)
         msg.setWindowTitle("Help Contents")
         msg.setText(help_text)
@@ -1038,6 +1297,8 @@ class IMGFactoryMenuBar:
         <tr><td>COL Editor</td><td>Ctrl+Shift+C</td></tr>
         <tr><td>TXD Editor</td><td>Ctrl+Shift+T</td></tr>
         <tr><td>DFF Editor</td><td>Ctrl+Shift+D</td></tr>
+        <tr><td>IFP Editor</td><td>Ctrl+Shift+I</td></tr>
+        <tr><td>IDE Editor</td><td>Tools → IDE Editor</td></tr>
         <tr><td>Log Panel</td><td>F12</td></tr>
         <tr><td>Fullscreen</td><td>F11</td></tr>
         <tr><td>Preferences</td><td>Ctrl+,</td></tr>
@@ -1055,111 +1316,63 @@ class IMGFactoryMenuBar:
         """Show supported formats"""
         formats_text = """
         <h2>Supported File Formats</h2>
-        
+
         <h3>Archive Formats:</h3>
         <p><b>IMG:</b> GTA image archives (versions 1, 2, 3)</p>
         <p><b>DAT:</b> GTA data files</p>
-        
+
         <h3>3D Model Formats:</h3>
         <p><b>DFF:</b> RenderWare DFF models</p>
         <p><b>COL:</b> Collision data (versions 1, 2, 3, 4)</p>
         <p><b>WDR:</b> World drawable files</p>
-        
+
         <h3>Texture Formats:</h3>
         <p><b>TXD:</b> RenderWare texture dictionaries</p>
         <p><b>WTD:</b> World texture dictionaries</p>
-        
+
         <h3>Animation Formats:</h3>
         <p><b>IFP:</b> Animation packages</p>
         <p><b>YCD:</b> Clip dictionaries</p>
-        
+
         <h3>Data Formats:</h3>
         <p><b>IDE:</b> Item definition files</p>
         <p><b>IPL:</b> Item placement files</p>
         <p><b>DAT:</b> Various data files</p>
-        
+
         <h3>Import/Export Formats:</h3>
         <p><b>Images:</b> PNG, JPG, BMP, TGA, DDS</p>
         <p><b>Models:</b> OBJ, PLY (export only)</p>
         <p><b>Text:</b> TXT, CSV (for data files)</p>
         """
-        
+
         msg = QMessageBox(self.main_window)
         msg.setWindowTitle("Supported Formats")
         msg.setText(formats_text)
         msg.setTextFormat(Qt.TextFormat.RichText)
         msg.exec()
-    
+
     def _show_debug_console(self):
         """Show debug console"""
         QMessageBox.information(
-            self.main_window, 
-            "Debug Console", 
+            self.main_window,
+            "Debug Console",
             "Debug console coming soon!"
         )
-    
+
     def _clear_debug_log(self):
         """Clear debug log"""
         if hasattr(self.main_window, 'log_message'):
             self.main_window.log_message("Debug log cleared")
         QMessageBox.information(
-            self.main_window, 
-            "Debug Log", 
+            self.main_window,
+            "Debug Log",
             "Debug log has been cleared."
         )
-    
-    def _reset_panel_layout(self):
-        """Reset panel layout to default"""
-        if self.panel_manager:
-            for panel_id in self.panel_manager.panels:
-                self.panel_manager.dock_panel(panel_id)
-                self.panel_manager.show_panel(panel_id)
-
-            QMessageBox.information(
-                self.main_window,
-                "Layout Reset",
-                "Panel layout has been reset to default."
-            )
-    
-    def _apply_gui_changes(self):
-        """Apply GUI changes to the main window"""
-        try:
-            # Apply theme changes
-            if hasattr(self.main_window, 'app_settings'):
-                from utils.app_settings_system import apply_theme_to_app
-                from PyQt6.QtWidgets import QApplication
-                
-                apply_theme_to_app(QApplication.instance(), self.main_window.app_settings)
-            
-            # Log the change
-            if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("GUI settings applied successfully")
-            
-        except Exception as e:
-            if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("Error applying GUI changes: " + str(e))
-
-
-    def cleanup_dialogs(self):
-        """Clean up any open dialogs"""
-        try:
-            if hasattr(self, '_preferences_dialog') and self._preferences_dialog is not None:
-                self._preferences_dialog.close()
-                self._preferences_dialog.deleteLater()
-                self._preferences_dialog = None
-            
-            if hasattr(self, '_gui_settings_dialog') and self._gui_settings_dialog is not None:
-                self._gui_settings_dialog.close()
-                self._gui_settings_dialog.deleteLater()
-                self._gui_settings_dialog = None
-                
-        except Exception as e:
-            print(f"Error cleaning up dialogs: {e}")
-
 
 # Export main classes
 __all__ = [
     'IMGFactoryMenuBar',
     'MenuAction',
-    'MenuDefinition'
+    'MenuDefinition',
+    'COLMenuBuilder'
 ]

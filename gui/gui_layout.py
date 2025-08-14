@@ -16,6 +16,7 @@ from core.gui_search import ASearchDialog, SearchManager
 from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
 from components.img_creator import NewIMGDialog, IMGCreationThread
+from components.ide_editor import open_ide_editor
 #from core.importer import import_files_function, import_via_function #broken
 #from core.exporter import export_selected_function, export_via_function, quick_export_function, export_all_function, dump_all_function
 #from core.remove import remove_selected_function, remove_via_entries_function
@@ -29,7 +30,8 @@ from core.create_img import create_new_img, detect_and_open_file, open_file_dial
 from core.close import close_img_file, close_all_img
 from core.close import install_close_functions, setup_close_manager
 from methods.colour_ui_for_loaded_img import integrate_color_ui_system
-
+#from gui_backend import open_col_editor
+from gui.gui_context import open_col_editor_dialog
 
 class IMGFactoryGUILayout:
     """Handles the complete GUI layout for IMG Factory 1.5 with theme system"""
@@ -103,11 +105,11 @@ class IMGFactoryGUILayout:
             'replace_selected': lambda: self._log_missing_method('replace_selected'),
 
             # Editor methods
-            'edit_col_file': lambda: self._log_missing_method('edit_col_file'),
+            'edit_col_file': lambda: open_col_editor_dialog(self.main_window),
             'edit_txd_file': lambda: self._log_missing_method('edit_txd_file'),
             'edit_dff_file': lambda: self._log_missing_method('edit_dff_file'),
             'edit_ipf_file': lambda: self._log_missing_method('edit_ipf_file'),
-            'edit_ide_file': lambda: self._log_missing_method('edit_ide_file'),
+            'edit_ide_file': lambda: open_ide_editor(self.main_window),
             'edit_ipl_file': lambda: self._log_missing_method('edit_ipl_file'),
             'edit_dat_file': lambda: self._log_missing_method('edit_dat_file'),
             'edit_zones_cull': lambda: self._log_missing_method('edit_zones_cull'),
@@ -141,10 +143,10 @@ class IMGFactoryGUILayout:
         if self._is_dark_theme():
             return {
                 # Dark Theme Button Colors
-                'create_action': '#2D4A4A',     # Dark teal for create/new actions
-                'open_action': '#2D3A4F',       # Dark blue for open/load actions  
-                'reload_action': '#3A4A2D',     # Dark green for refresh/reload
-                'close_action': '#4A3A2D',      # Dark orange for close actions
+                'create_action': '#3D5A5A',     # Dark teal for create/new actions
+                'open_action': '#3D4A5F',       # Dark blue for open/load actions
+                'reload_action': '#4A5A3D',     # Dark green for refresh/reload
+                'close_action': '#5A4A3D',      # Dark orange for close actions
                 'build_action': '#2D4A3A',      # Dark mint for build/rebuild
                 'save_action': '#4A2D4A',       # Dark purple for save actions
                 'merge_action': '#3A2D4A',      # Dark violet for merge/split

@@ -18,10 +18,19 @@ Todo, Theme switching - Status bar and UI elements don't update when theme chang
 
 Todo, Export, Export Via, Quick Export need to be checked against the windows source.
 
-Todo, Restore, Collision system integration - Connect existing collision system to main IMG interface (COL Edit button, etc.)
 
 
 ------------ completed ---- >
+
+Fixed - Aug14
+IDE Editor - Updated and bugs fixed.
+
+Fixed - Aug14
+Menu Options fixed.
+
+Fixed - Aug12
+Col Editor - The core utility is ready to be built on.
+collision system restored and is working.
 
 Fixed - Aug10
 Tab system for img's are fixed, close first tab fixed.
