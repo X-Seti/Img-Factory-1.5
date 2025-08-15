@@ -128,11 +128,8 @@ def export_all_function(main_window): #vers 1
             main_window.log_message(f"❌ Export all error: {str(e)}")
         QMessageBox.critical(main_window, "Export All Error", f"Export all failed: {str(e)}")
 
-def _start_export_with_progress(main_window, entries, export_folder, export_options): #vers 3
-    """Start export with progress dialog - FIXED threading cleanup"""
-    export_thread = None
-    progress_dialog = None
-    
+def _start_export_with_progress(main_window, entries, export_folder, export_options): #vers 2
+    """Start export with progress dialog - FIXED threading issues"""
     try:
         # Create export thread
         export_thread = ExportThread(main_window, entries, export_folder, export_options)
@@ -144,14 +141,6 @@ def _start_export_with_progress(main_window, entries, export_folder, export_opti
         progress_dialog.setAutoClose(True)  # CRITICAL: Auto close to prevent hanging
         progress_dialog.setAutoReset(True)  # CRITICAL: Auto reset to prevent hanging
         
-        def cleanup_thread():
-            """Cleanup thread properly"""
-            try:
-                if export_thread and export_thread.isRunning():
-                    export_thread.stop_export()
-            except Exception:
-                pass
-        
         def update_progress(progress, message):
             try:
                 if progress_dialog and not progress_dialog.wasCanceled():
@@ -162,13 +151,15 @@ def _start_export_with_progress(main_window, entries, export_folder, export_opti
             
         def export_finished(success, message, stats):
             try:
-                # CRITICAL: Cleanup thread first
-                cleanup_thread()
-                
-                # CRITICAL: Close progress dialog
+                # CRITICAL: Close progress dialog first
                 if progress_dialog:
                     progress_dialog.close()
                     progress_dialog.deleteLater()
+                
+                # CRITICAL: Ensure thread is properly stopped
+                if export_thread and export_thread.isRunning():
+                    export_thread.quit()
+                    export_thread.wait(1000)  # Wait max 1 second
                 
                 # Show result dialog
                 if success:
@@ -186,9 +177,12 @@ def _start_export_with_progress(main_window, entries, export_folder, export_opti
         
         def handle_cancel():
             try:
-                cleanup_thread()
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message("🚫 Export cancelled by user")
+                if export_thread and export_thread.isRunning():
+                    export_thread.stop_export()  # Request stop
+                    export_thread.quit()
+                    export_thread.wait(2000)  # Wait max 2 seconds
+                    if hasattr(main_window, 'log_message'):
+                        main_window.log_message("🚫 Export cancelled by user")
             except Exception:
                 pass  # Don't crash on cancel
         
@@ -197,18 +191,8 @@ def _start_export_with_progress(main_window, entries, export_folder, export_opti
             export_thread.progress_updated.connect(update_progress)
             export_thread.export_completed.connect(export_finished)
             progress_dialog.canceled.connect(handle_cancel)
-            
-            # CRITICAL: Cleanup on main window close
-            if hasattr(main_window, 'closeEvent'):
-                original_close = main_window.closeEvent
-                def safe_close_event(event):
-                    cleanup_thread()
-                    original_close(event)
-                main_window.closeEvent = safe_close_event
-                
         except Exception as e:
             QMessageBox.critical(main_window, "Setup Error", f"Failed to setup export operation: {str(e)}")
-            cleanup_thread()
             return
         
         # Start export
@@ -216,19 +200,6 @@ def _start_export_with_progress(main_window, entries, export_folder, export_opti
         progress_dialog.show()
         
     except Exception as e:
-        # CRITICAL: Cleanup on any error
-        if export_thread:
-            try:
-                export_thread.stop_export()
-            except:
-                pass
-        if progress_dialog:
-            try:
-                progress_dialog.close()
-                progress_dialog.deleteLater()
-            except:
-                pass
-                
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"❌ Export thread error: {str(e)}")
         QMessageBox.critical(main_window, "Export Error", f"Failed to start export: {str(e)}")

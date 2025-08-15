@@ -1,5 +1,20 @@
 What's fixed and still todo.
 
+1. Multiple tabs open img/col, export_via.py, export.py and dump.py functions can't see the current selected tab.
+
+2. export.py functions export all the files combined!!
+12Mb file for each, should be single files.
+
+export.py - select 7 entries should give me only 7 files, unless I ask to conbine them into a single col file.
+
+export_via should follow the same logic, single files or one combined file.
+
+dump should also follow the same logic, but just dump them as a single or conbined col file.
+
+3. background box on col dialog is hardcoded, dark themes I can not see text.
+
+---
+
 Partly Fixed - Aug7
 Import function needs work, import_via ide gives an error, no .ide file found or no files in .ide.
 
