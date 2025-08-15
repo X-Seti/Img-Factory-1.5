@@ -183,9 +183,6 @@ def load_col_file_safely(main_window, file_path): #vers 6
         img_debugger.error(f"COL loading traceback: {traceback.format_exc()}")
         return False
 
-
-#def _populate_col_table_enhanced(main_window, col_file): #vers 1 #moved to methods/populate_col_table_enhanced.py
-
 def _update_col_info_bar_enhanced(main_window, col_file, file_path): #vers 1
     """Update info bar using enhanced display manager"""
     try:

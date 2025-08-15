@@ -80,6 +80,7 @@
 │   ├── rw_versions.py
 │   ├── shortcuts.py
 │   ├── split_img.py
+│   ├── tab_aware_functions.py
 │   ├── tables_structure.py
 │   ├── theme_integration.py
 │   └── utils.py
@@ -5373,4 +5374,4 @@
 │                       └── platform.obj
 └── ZIMG EditorB.exe
 
-993 directories, 4381 files
+993 directories, 4382 files

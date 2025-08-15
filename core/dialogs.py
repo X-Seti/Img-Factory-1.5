@@ -178,12 +178,12 @@ class ExportOptionsDialog(QDialog): #vers 1
         # Assists folder quick access
         assists_layout = QHBoxLayout()
         assists_btn = QPushButton("📁 Use Assists Folder")
-        assists_btn.setStyleSheet("QPushButton { padding: 6px; font-weight: bold; background-color: #e8f5e8; }")
+        assists_btn.setStyleSheet("QPushButton { padding: 6px; font-weight: bold; }")
         assists_btn.clicked.connect(self._use_assists_folder)
         assists_layout.addWidget(assists_btn)
         
         self.assists_info_label = QLabel("Assists folder: Not configured")
-        self.assists_info_label.setStyleSheet("color: #666; font-size: 9pt;")
+        self.assists_info_label.setStyleSheet("font-size: 9pt;")
         assists_layout.addWidget(self.assists_info_label)
         dest_layout.addLayout(assists_layout)
         
@@ -219,7 +219,7 @@ class ExportOptionsDialog(QDialog): #vers 1
         
         # Info
         info_label = QLabel(f"Ready to export {self.entry_count} entries")
-        info_label.setStyleSheet("color: #666666; font-style: italic;")
+        info_label.setStyleSheet("font-style: italic;")
         layout.addWidget(info_label)
         
         # Buttons
@@ -238,13 +238,13 @@ class ExportOptionsDialog(QDialog): #vers 1
                 if assists_folder and os.path.exists(assists_folder):
                     self.folder_input.setText(assists_folder)
                     self.assists_info_label.setText(f"📂 {assists_folder}")
-                    self.assists_info_label.setStyleSheet("color: #4caf50; font-size: 9pt;")
+                    self.assists_info_label.setStyleSheet("font-size: 9pt;")
                 else:
                     self.assists_info_label.setText("⚠️ Assists folder not configured")
-                    self.assists_info_label.setStyleSheet("color: #ff9800; font-size: 9pt;")
+                    self.assists_info_label.setStyleSheet("font-size: 9pt;")
         except Exception:
             self.assists_info_label.setText("❌ Error checking assists folder")
-            self.assists_info_label.setStyleSheet("color: #f44336; font-size: 9pt;")
+            self.assists_info_label.setStyleSheet("font-size: 9pt;")
     
     def _use_assists_folder(self): #vers 1
         """Set export destination to assists folder"""
@@ -339,7 +339,7 @@ class ImportOptionsDialog(QDialog): #vers 1
         }.get(self.operation_type, "import")
 
         info_label = QLabel(f"Ready to {operation_text} {self.file_count} files")
-        info_label.setStyleSheet("color: #666666; font-style: italic;")
+        info_label.setStyleSheet("font-style: italic;")
         layout.addWidget(info_label)
         
         # Buttons

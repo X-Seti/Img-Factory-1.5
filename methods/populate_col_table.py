@@ -1,7 +1,5 @@
 #this belongs in methods/populate_col_table.py - Version: 4
 # X-Seti - August14 2025 - IMG Factory 1.5 - COL Table Population Methods
-# Fixed populate_col_table_enhanced method
-
 """
 COL Table Population Methods - Fixed version
 Handles populating the main table widget with COL file data
@@ -20,7 +18,7 @@ from components.col_core_classes import COLFile, COLModel
 ##Methods list -
 # load_col_file_object
 # load_col_file_safely
-# populate_col_table_enhanced
+# populate_col_table
 # populate_table_with_col_data_debug
 # reset_table_styling
 # setup_col_tab
@@ -147,7 +145,7 @@ def setup_col_table_structure(main_window): #vers 1
         return False
 
 
-    def populate_col_table_enhanced(main_window, col_file): #vers 3
+    def populate_col_table(main_window, col_file): #vers 3
         """Populate table using direct model data - FIXED SIZE CALCULATION"""
         try:
             if not col_file or not hasattr(col_file, 'models') or not col_file.models:
@@ -396,7 +394,7 @@ def load_col_file_safely(main_window, file_path): #vers 1
 
         # Populate table with COL data (try enhanced first, fallback to debug version)
         try:
-            populate_col_table_enhanced(main_window, col_file)
+            populate_col_table(main_window, col_file)
         except Exception as e:
             img_debugger.warning(f"Enhanced table population failed: {str(e)}, using fallback")
             populate_table_with_col_data_debug(main_window, col_file)
