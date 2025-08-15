@@ -437,6 +437,10 @@ class IMGFactory(QMainWindow):
         # File operations
         install_close_functions(self)
 
+        #Refresh function
+        self.refresh_table = lambda: refresh_table(self)
+
+        #tabs
         setup_independent_tab_system(self)
         migrate_existing_tabs_to_independent(self)
 
@@ -452,8 +456,6 @@ class IMGFactory(QMainWindow):
         self.quick_export = lambda: quick_export_function(self)
         self.dump_all = lambda: dump_all_function(self)
 
-        #Refresh function
-        self.refresh_table = lambda: refresh_table(self)
         #integrate_refresh_table(self)
 
         # File extraction (single call only!)
