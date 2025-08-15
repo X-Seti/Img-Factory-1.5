@@ -14,13 +14,14 @@ Todo, fix the highlighting function, 28/28 files, when I know 10 of them already
 
 Todo, Fix the Save Entry function.
 
-Todo, Theme switching - Status bar and UI elements don't update when theme changes.
-
-Todo, Export, Export Via, Quick Export need to be checked against the windows source.
-
+Todo, Theme switching from first page.
 
 
 ------------ completed ---- >
+
+Fixed - Aug15
+Fixed Export, Dump functions
+Removed Quick Export.
 
 Fixed - Aug14
 IDE Editor - Updated and bugs fixed.

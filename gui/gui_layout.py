@@ -1,6 +1,7 @@
-#this belongs in gui/ gui_layout.py - Version: 22
+#this belongs in gui/ gui_layout.py - Version: 23
 # X-Seti - JULY29 2025 - Img Factory 1.5 - GUI Layout Module
 
+import os
 import re
 from PyQt6.QtWidgets import (
     QDialog, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSplitter,
@@ -18,9 +19,12 @@ from dataclasses import dataclass, field
 from components.img_creator import NewIMGDialog, IMGCreationThread
 from components.ide_editor import open_ide_editor
 #from core.importer import import_files_function, import_via_function #broken
-#from core.exporter import export_selected_function, export_via_function, quick_export_function, export_all_function, dump_all_function
 #from core.remove import remove_selected_function, remove_via_entries_function
 #from core.save_img_entry import save_img_entry_function #broken
+from core.export import export_selected_function
+from core.export_via import export_via_function
+from core.quick_export import quick_export_function
+from core.dump import dump_all_function
 from core.split_img import split_img
 from core.merge_img import merge_img_function
 from core.convert import convert_img, convert_img_format
@@ -30,8 +34,8 @@ from core.create_img import create_new_img, detect_and_open_file, open_file_dial
 from core.close import close_img_file, close_all_img
 from core.close import install_close_functions, setup_close_manager
 from methods.colour_ui_for_loaded_img import integrate_color_ui_system
-#from gui_backend import open_col_editor
 from gui.gui_context import open_col_editor_dialog
+
 
 class IMGFactoryGUILayout:
     """Handles the complete GUI layout for IMG Factory 1.5 with theme system"""
@@ -85,14 +89,14 @@ class IMGFactoryGUILayout:
             'refresh_table': lambda: self._log_missing_method('refresh_table'),
 
             # Export methods
-            'export_selected': lambda: export_selected_function(self.main_window),
-            'export_selected_via': lambda: export_via_function(self.main_window),
-            'quick_export_selected': lambda: quick_export_function(self.main_window),
+            'export_selected': lambda: self.main_window.export_selected(),
+            'export_selected_via': lambda: self.main_window.export_via(),
+            'quick_export_selected': lambda: self.main_window.quick_export(),
+            'dump_entries': lambda: self.main_window.dump_all(),
 
             # Remove methods
             'remove_selected': lambda: remove_selected_function(self.main_window),
             'remove_via_entries': lambda: remove_via_entries_function(self.main_window),
-            'dump_entries': lambda: dump_all_function(self.main_window),
 
             # Selection methods
             'select_all_entries': lambda: self._log_missing_method('select_all_entries'),
@@ -145,7 +149,7 @@ class IMGFactoryGUILayout:
                 # Dark Theme Button Colors
                 'create_action': '#3D5A5A',     # Dark teal for create/new actions
                 'open_action': '#3D4A5F',       # Dark blue for open/load actions
-                'reload_action': '#4A5A3D',     # Dark green for refresh/reload
+                'reload_action': '#2D4A3A',     # Dark green for refresh/reload
                 'close_action': '#5A4A3D',      # Dark orange for close actions
                 'build_action': '#2D4A3A',      # Dark mint for build/rebuild
                 'save_action': '#4A2D4A',       # Dark purple for save actions
@@ -170,7 +174,7 @@ class IMGFactoryGUILayout:
                 # Light Theme Button Colors  
                 'create_action': '#EEFAFA',     # Light teal for create/new actions
                 'open_action': '#E3F2FD',       # Light blue for open/load actions
-                'reload_action': '#F9FBE7',     # Light green for refresh/reload  
+                'reload_action': '#E8F5E8',     # Light green for refresh/reload
                 'close_action': '#FFF3E0',      # Light orange for close actions
                 'build_action': '#E8F5E8',      # Light mint for build/rebuild
                 'save_action': '#F8BBD9',       # Light pink for save actions
@@ -218,12 +222,12 @@ class IMGFactoryGUILayout:
             ("Refresh", "update", "view-refresh", colors['reload_action'], "refresh_table"),
             ("Export", "export", "document-export", colors['export_action'], "export_selected"),
             ("Export via", "export_via", "document-export", colors['export_action'], "export_selected_via"),
-            ("Quick Exp", "quick_export", "document-send", colors['export_action'], "quick_export_selected"),
+            ("Dump", "dump", "document-dump", colors['merge_action'], "dump_entries"),
+            #("Quick Exp", "quick_export", "document-send", colors['export_action'], "quick_export_selected"),
             ("Remove", "remove", "edit-delete", colors['remove_action'], "remove_selected"),
             ("Remove via", "remove_via", "document-remvia", colors['remove_action'], "remove_via_entries"),
-            ("Dump", "dump", "document-dump", colors['merge_action'], "dump_entries"),
-            ("Rename", "rename", "edit-rename", colors['edit_action'], "rename_selected"),
             ("Replace", "replace", "edit-copy", colors['edit_action'], "replace_selected"),
+            ("Rename", "rename", "edit-rename", colors['edit_action'], "rename_selected"),
             ("Select All", "select_all", "edit-select-all", colors['select_action'], "select_all_entries"),
             ("Inverse", "sel_inverse", "edit-select", colors['select_action'], "select_inverse"),
             ("Sort via", "sort", "view-sort", colors['select_action'], "sort_entries"),
@@ -1031,10 +1035,7 @@ class IMGFactoryGUILayout:
                 self.log.verticalScrollBar().maximum()
             )
 
-    # =============================================================================
     # SETTINGS & CONFIGURATION
-    # =============================================================================
-
     def apply_settings_changes(self, settings):
         """Apply settings changes to the GUI layout"""
         try:
@@ -1086,10 +1087,7 @@ class IMGFactoryGUILayout:
         except Exception:
             pass
 
-    # =============================================================================
     # RESPONSIVE DESIGN & ADAPTIVE LAYOUT
-    # =============================================================================
-
     def handle_resize_event(self, event):
         """Handle window resize to adapt button text"""
         if self.main_splitter:
@@ -1122,9 +1120,7 @@ class IMGFactoryGUILayout:
                     # Icon only mode
                     button.setText("")
 
-    # =============================================================================
     # PROGRESS & STATUS MANAGEMENT
-    # =============================================================================
 
     def show_progress(self, value, text="Working..."):
         """Show progress using unified progress system"""
@@ -1190,10 +1186,7 @@ class IMGFactoryGUILayout:
         except Exception as e:
             self.log_message(f"❌ Status bar creation error: {str(e)}")
 
-
-# =============================================================================
 # LEGACY COMPATIBILITY FUNCTIONS
-# =============================================================================
 
 def create_control_panel(main_window):
     """Create the main control panel - LEGACY FUNCTION"""

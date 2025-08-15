@@ -72,7 +72,6 @@ from components.unified_debug_functions import integrate_all_improvements, insta
 from core.img_formats import GameSpecificIMGDialog, IMGCreator
 from core.file_extraction import setup_complete_extraction_integration
 from core.tables_structure import reset_table_styling
-#from core.loadcol import load_col_file_safely
 from core.file_type_filter import integrate_file_filtering
 # Replace existing integrations with new ones
 #from core.remove import integrate_remove_functions
@@ -92,6 +91,10 @@ from core.img_corruption_analyzer import setup_corruption_analyzer
 from core.rebuild import integrate_rebuild_functions
 from core.rebuild_all import integrate_batch_rebuild_functions
 from core.clean import integrate_clean_utilities
+from core.export import export_selected_function, export_all_function
+from core.export_via import export_via_function
+from core.quick_export import quick_export_function
+from core.dump import dump_all_function, dump_selected_function
 from core.independent_tabs import setup_independent_tab_system, migrate_existing_tabs_to_independent
 
 
@@ -123,7 +126,7 @@ from methods.progressbar import integrate_progress_system
 from methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate_update_ui_for_loaded_img
 from methods.import_highlight_system import enable_import_highlighting
 from methods.img_operations_routing import install_operation_routing
-
+from methods.refresh_table import integrate_refresh_table
 
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
@@ -444,6 +447,14 @@ class IMGFactory(QMainWindow):
         integrate_update_ui_for_loaded_img(self)
 
         # === PHASE 5: CORE FUNCTIONALITY (Medium) ===
+        self.export_selected = lambda: export_selected_function(self)
+        self.export_via = lambda: export_via_function(self)
+        self.quick_export = lambda: quick_export_function(self)
+        self.dump_all = lambda: dump_all_function(self)
+
+        #Refresh function
+        self.refresh_table = lambda: refresh_table(self)
+        #integrate_refresh_table(self)
 
         # File extraction (single call only!)
         try:
