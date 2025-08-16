@@ -133,8 +133,8 @@ def get_selected_entries_from_active_tab(main_window) -> List[Any]: #vers 1
         return []
 
 
-def get_tab_file_data(main_window, tab_index: int) -> Tuple[Optional[Any], str]: #vers 1
-    """Get file object and type for specific tab index
+def get_tab_file_data(main_window, tab_index: int) -> Tuple[Optional[Any], str]: #vers 2
+    """Get file object and type for specific tab index - FIXED: Better detection
     
     Args:
         main_window: Main application window
@@ -154,26 +154,55 @@ def get_tab_file_data(main_window, tab_index: int) -> Tuple[Optional[Any], str]:
         if not tab_widget:
             return None, 'NONE'
         
-        # Check for IMG file in tab
+        # FIXED: Multiple detection methods for different tab types
+        
+        # Method 1: Check for direct file attributes in tab
         if hasattr(tab_widget, 'img_file') and tab_widget.img_file:
             return tab_widget.img_file, 'IMG'
         
-        # Check for COL file in tab
         if hasattr(tab_widget, 'col_file') and tab_widget.col_file:
             return tab_widget.col_file, 'COL'
         
-        # Check main window references (fallback)
+        # Method 2: Check for file data in tab properties
+        if hasattr(tab_widget, 'file_data'):
+            file_data = tab_widget.file_data
+            if file_data:
+                if hasattr(file_data, 'entries'):  # IMG file
+                    return file_data, 'IMG'
+                elif hasattr(file_data, 'models'):  # COL file
+                    return file_data, 'COL'
+        
+        # Method 3: Check tab text/title for hints
+        tab_text = main_window.main_tab_widget.tabText(tab_index).lower()
+        if '.img' in tab_text or 'img' in tab_text:
+            # Try to find IMG file in main window if this is current tab
+            if tab_index == main_window.main_tab_widget.currentIndex():
+                if hasattr(main_window, 'current_img') and main_window.current_img:
+                    return main_window.current_img, 'IMG'
+        elif '.col' in tab_text or 'col' in tab_text:
+            # Try to find COL file in main window if this is current tab
+            if tab_index == main_window.main_tab_widget.currentIndex():
+                if hasattr(main_window, 'current_col') and main_window.current_col:
+                    return main_window.current_col, 'COL'
+        
+        # Method 4: FIXED - Force tab switch and check main window (for current tab only)
         if tab_index == main_window.main_tab_widget.currentIndex():
-            if hasattr(main_window, 'current_img') and main_window.current_img:
-                return main_window.current_img, 'IMG'
-            if hasattr(main_window, 'current_col') and main_window.current_col:
-                return main_window.current_col, 'COL'
+            # Force update main window references
+            try:
+                if hasattr(main_window, '_on_tab_changed'):
+                    main_window._on_tab_changed(tab_index)
+                
+                # Check main window after forced update
+                if hasattr(main_window, 'current_img') and main_window.current_img:
+                    return main_window.current_img, 'IMG'
+                if hasattr(main_window, 'current_col') and main_window.current_col:
+                    return main_window.current_col, 'COL'
+            except:
+                pass
         
         return None, 'NONE'
         
     except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error getting tab file data: {str(e)}")
         return None, 'NONE'
 
 
@@ -255,24 +284,45 @@ def ensure_tab_references_valid(main_window) -> bool: #vers 1
         return False
 
 
-def refresh_current_tab_data(main_window) -> bool: #vers 1
-    """Force refresh of current tab data and main window references
+def refresh_current_tab_data(main_window) -> bool: #vers 2
+    """Force refresh of current tab data and main window references - FIXED: Force tab switch
     
     Returns:
         True if refresh successful
     """
     try:
+        current_index = main_window.main_tab_widget.currentIndex()
+        
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"🔄 Refreshing tab data for tab {current_index}")
+        
+        # FIXED: Force tab change event to update references
+        if hasattr(main_window, '_on_tab_changed'):
+            main_window._on_tab_changed(current_index)
+        elif hasattr(main_window, 'on_tab_changed'):
+            main_window.on_tab_changed(current_index)
+        elif hasattr(main_window, 'tab_changed'):
+            main_window.tab_changed(current_index)
+        
         # Update main window references to match active tab
         success = ensure_tab_references_valid(main_window)
         
-        # Trigger any UI updates if needed
-        if hasattr(main_window, '_update_ui_for_active_tab'):
-            main_window._update_ui_for_active_tab()
+        # FIXED: Additional forced update
+        if not success:
+            # Try to manually detect and set file references
+            file_object, file_type = get_tab_file_data(main_window, current_index)
+            if file_object and file_type != 'NONE':
+                if file_type == 'IMG':
+                    main_window.current_img = file_object
+                    main_window.current_col = None
+                    success = True
+                elif file_type == 'COL':
+                    main_window.current_col = file_object  
+                    main_window.current_img = None
+                    success = True
         
-        if success and hasattr(main_window, 'log_message'):
-            current_index = main_window.main_tab_widget.currentIndex()
-            file_type = get_current_file_type_from_tab(main_window)
-            main_window.log_message(f"🔄 Tab data refreshed - Tab {current_index}: {file_type}")
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"🔄 Tab refresh result: {'Success' if success else 'Failed'}")
         
         return success
         

@@ -423,16 +423,17 @@ class IMGFactory(QMainWindow):
 
         # Create main UI
         self._create_ui()
-
         add_project_menu_items(self)
 
+        #tabs
+        setup_independent_tab_system(self)
+        migrate_existing_tabs_to_independent(self)
+        #self.integrate_tab_aware_system() #removed
         integrate_tab_awareness_system(self)
-        integrate_col_export_shared(self)
-
-
         # === PHASE 4: ESSENTIAL INTEGRATIONS (Medium) ===
 
         # Core parsers (now safe to use log_message)
+        integrate_col_export_shared(self)
         integrate_ide_parser(self)
         integrate_ide_dialog(self)
         install_operation_routing(self)
@@ -446,10 +447,6 @@ class IMGFactory(QMainWindow):
         #Refresh function
         self.refresh_table = lambda: refresh_table(self)
 
-        #tabs
-        setup_independent_tab_system(self)
-        migrate_existing_tabs_to_independent(self)
-        self.integrate_tab_aware_system()
 
         # Table population (needed for IMG display)
         install_img_table_populator(self)
@@ -586,125 +583,6 @@ class IMGFactory(QMainWindow):
                 scrollbar.setValue(scrollbar.maximum())
         except Exception:
             pass
-
-    def integrate_tab_aware_system(self): #vers 1
-        """Integrate tab-aware system for export/import functions - ADD TO IMGFACTORY __init__"""
-        try:
-            # STEP 1: Add the new helper methods to main window
-            if not hasattr(self, '_find_table_in_tab'):
-                self._find_table_in_tab = lambda tab_widget: self._find_table_in_tab_impl(tab_widget)
-            if not hasattr(self, '_log_current_tab_state'):
-                self._log_current_tab_state = lambda tab_index: self._log_current_tab_state_impl(tab_index)
-            if not hasattr(self, 'ensure_current_tab_references_valid'):
-                self.ensure_current_tab_references_valid = lambda: self._ensure_current_tab_references_valid_impl()
-
-            # STEP 2: Replace the existing _on_tab_changed with the FIXED version
-            # (Copy the FIXED _on_tab_changed code from the first artifact into imgfactory.py)
-
-            # STEP 3: Integrate tab-aware wrapper functions
-            from core.tab_aware_functions import integrate_tab_aware_functions
-            if integrate_tab_aware_functions(self):
-                self.log_message("✅ Tab-aware export/import system integrated")
-            else:
-                self.log_message("❌ Failed to integrate tab-aware system")
-
-            return True
-
-        except ImportError:
-            self.log_message("⚠️ Tab-aware functions not available - using standard functions")
-            return False
-        except Exception as e:
-            self.log_message(f"❌ Error integrating tab-aware system: {str(e)}")
-            return False
-
-    # Helper method implementations that need to be added to imgfactory.py class:
-
-    def _find_table_in_tab_impl(self, tab_widget): #vers 1
-        """Implementation of _find_table_in_tab method"""
-        try:
-            if not tab_widget:
-                return None
-
-            # Method 1: Check for dedicated_table attribute (robust system)
-            if hasattr(tab_widget, 'dedicated_table'):
-                return tab_widget.dedicated_table
-
-            # Method 2: Search recursively through widget hierarchy
-            from PyQt6.QtWidgets import QTableWidget
-
-            def find_table_recursive(widget):
-                if isinstance(widget, QTableWidget):
-                    return widget
-                for child in widget.findChildren(QTableWidget):
-                    return child  # Return first table found
-                return None
-
-            table = find_table_recursive(tab_widget)
-            if table:
-                return table
-
-            # Method 3: Check standard locations
-            if hasattr(tab_widget, 'table'):
-                return tab_widget.table
-
-            return None
-
-        except Exception as e:
-            self.log_message(f"❌ Error finding table in tab: {str(e)}")
-            return None
-
-    def _log_current_tab_state_impl(self, tab_index): #vers 1
-        """Implementation of _log_current_tab_state method"""
-        try:
-            # Log file state
-            if self.current_img:
-                entry_count = len(self.current_img.entries) if self.current_img.entries else 0
-                self.log_message(f"🔍 State: IMG with {entry_count} entries")
-            elif self.current_col:
-                if hasattr(self.current_col, 'models'):
-                    model_count = len(self.current_col.models) if self.current_col.models else 0
-                    self.log_message(f"🔍 State: COL with {model_count} models")
-                else:
-                    self.log_message(f"🔍 State: COL file loaded")
-            else:
-                self.log_message(f"🔍 State: No file loaded")
-
-            # Log table state
-            if hasattr(self.gui_layout, 'table') and self.gui_layout.table:
-                table = self.gui_layout.table
-                row_count = table.rowCount() if table else 0
-                self.log_message(f"🔍 Table: {row_count} rows in gui_layout.table")
-            else:
-                self.log_message(f"🔍 Table: No table reference in gui_layout")
-
-        except Exception as e:
-            self.log_message(f"❌ Error logging tab state: {str(e)}")
-
-    def _ensure_current_tab_references_valid_impl(self): #vers 1
-        """Implementation of ensure_current_tab_references_valid method"""
-        try:
-            current_index = self.main_tab_widget.currentIndex()
-            if current_index == -1:
-                return False
-
-            # Force update tab references
-            self._on_tab_changed(current_index)
-
-            # Verify we have valid references
-            has_valid_file = self.current_img is not None or self.current_col is not None
-            has_valid_table = hasattr(self.gui_layout, 'table') and self.gui_layout.table is not None
-
-            if has_valid_file and has_valid_table:
-                self.log_message(f"✅ Tab references validated for export operations")
-                return True
-            else:
-                self.log_message(f"❌ Invalid tab references - File: {has_valid_file}, Table: {has_valid_table}")
-                return False
-
-        except Exception as e:
-            self.log_message(f"❌ Error validating tab references: {str(e)}")
-            return False
-
 
     def show_debug_settings(self): #vers 1
         """Show debug settings dialog"""

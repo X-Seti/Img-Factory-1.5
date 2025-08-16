@@ -1,14 +1,16 @@
-#this belongs in core/export_via.py - Version: 5
-# X-Seti - August16 2025 - IMG Factory 1.5 - Export Via Functions with COL IDE Support
+#this belongs in core/export_via.py - Version: 6
+# X-Seti - August16 2025 - IMG Factory 1.5 - Export Via Functions with Tab Awareness
 
 """
 Export Via Functions - Export via IDE/dialog with options
-Based on original implementation with COL file IDE support added
+UPDATED: Uses tab awareness system and shared COL export functions
+Fixes multi-tab confusion and COL single model extraction
 """
 import os
 from PyQt6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QPushButton
 from PyQt6.QtCore import Qt
-from core.export import get_current_file_type, get_selected_entries
+from methods.tab_awareness import validate_tab_before_operation, get_current_file_from_active_tab, get_current_file_type_from_tab
+from methods.export_col_shared import get_col_models_from_selection, save_col_models_with_options
 
 ##Methods list -
 # _export_col_via_ide
@@ -19,19 +21,77 @@ from core.export import get_current_file_type, get_selected_entries
 # _log_missing_files
 # _start_ide_export_with_progress
 
-def export_via_function(main_window): #vers 4
-    """Export files via IDE definitions with destination options - works with IMG or COL"""
+def export_via_function(main_window): #vers 7
+    """Export files via IDE definitions - FIXED: Direct tab access, no validation"""
     try:
-        file_type = get_current_file_type(main_window)
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message("🔍 Export Via: Direct tab access...")
         
-        if file_type == 'NONE':
-            QMessageBox.warning(main_window, "No File", "Please open an IMG or COL file first")
-            return
-
+        # FIXED: Direct access to current tab - no validation, no references
+        file_type = 'NONE'
+        current_index = -1
+        
+        try:
+            current_index = main_window.main_tab_widget.currentIndex()
+            current_tab = main_window.main_tab_widget.widget(current_index)
+            
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"🔍 Direct access: Tab {current_index}")
+            
+            if current_tab:
+                # Check for COL file
+                if (hasattr(current_tab, 'col_file') and current_tab.col_file) or \
+                   (hasattr(current_tab, 'file_data') and current_tab.file_data and hasattr(current_tab.file_data, 'models')):
+                    file_type = 'COL'
+                    if hasattr(main_window, 'log_message'):
+                        main_window.log_message(f"✅ Found COL file in tab {current_index}")
+                
+                # Check for IMG file
+                elif (hasattr(current_tab, 'img_file') and current_tab.img_file) or \
+                     (hasattr(current_tab, 'file_data') and current_tab.file_data and hasattr(current_tab.file_data, 'entries')):
+                    file_type = 'IMG'
+                    if hasattr(main_window, 'log_message'):
+                        main_window.log_message(f"✅ Found IMG file in tab {current_index}")
+                
+                # Scan all attributes for any file-like object
+                else:
+                    for attr_name in dir(current_tab):
+                        if not attr_name.startswith('_'):
+                            try:
+                                attr_value = getattr(current_tab, attr_name)
+                                if attr_value:
+                                    if hasattr(attr_value, 'models') and hasattr(attr_value, 'is_loaded'):
+                                        file_type = 'COL'
+                                        if hasattr(main_window, 'log_message'):
+                                            main_window.log_message(f"✅ Found COL file in tab.{attr_name}")
+                                        break
+                                    elif hasattr(attr_value, 'entries') and hasattr(attr_value, 'is_loaded'):
+                                        file_type = 'IMG'
+                                        if hasattr(main_window, 'log_message'):
+                                            main_window.log_message(f"✅ Found IMG file in tab.{attr_name}")
+                                        break
+                            except:
+                                continue
+                        
+        except Exception as e:
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"❌ Error accessing tab: {str(e)}")
+        
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"🔍 Final detection: Tab {current_index}, Type: {file_type}")
+        
         if file_type == 'IMG':
             _export_img_via_ide(main_window)
         elif file_type == 'COL':
             _export_col_via_ide(main_window)
+        else:
+            QMessageBox.warning(main_window, "No File", 
+                f"No IMG or COL file detected in current tab.\n\n"
+                f"Tab info:\n"
+                f"• Current tab: {current_index}\n"
+                f"• Total tabs: {main_window.main_tab_widget.count() if hasattr(main_window, 'main_tab_widget') else 'Unknown'}\n"
+                f"• Detected type: {file_type}\n\n"
+                f"Make sure the tab contains a loaded IMG or COL file.")
             
     except Exception as e:
         if hasattr(main_window, 'log_message'):
@@ -39,17 +99,20 @@ def export_via_function(main_window): #vers 4
         QMessageBox.critical(main_window, "Export Via Error", f"Export via failed: {str(e)}")
 
 
-def _export_img_via_ide(main_window): #vers 5
-    """Export files via IDE definitions with single dialog and destination options"""
+def _export_img_via_ide(main_window): #vers 6
+    """Export files via IDE definitions - FIXED: Uses tab awareness"""
     try:
-        if not hasattr(main_window, 'current_img') or not main_window.current_img:
-            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first")
+        # FIXED: Get current file from active tab instead of main_window.current_img
+        file_object, file_type = get_current_file_from_active_tab(main_window)
+        
+        if file_type != 'IMG' or not file_object:
+            QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
             return
 
         if hasattr(main_window, 'log_message'):
             main_window.log_message("📋 Starting Export Via IDE...")
 
-        # Show IDE dialog - KEEP THIS ONE
+        # Show IDE dialog
         try:
             from gui.ide_dialog import show_ide_dialog
             ide_parser = show_ide_dialog(main_window, "export")
@@ -87,11 +150,11 @@ def _export_img_via_ide(main_window): #vers 5
                                   "No valid file relationships found in IDE file.")
             return
 
-        # Find matching entries in current IMG
+        # FIXED: Find matching entries in current IMG from active tab
         matching_entries = []
         found_files = []
 
-        for entry in main_window.current_img.entries:
+        for entry in file_object.entries:
             entry_name = getattr(entry, 'name', '')
             if entry_name and entry_name.lower() in [f.lower() for f in files_to_find]:
                 matching_entries.append(entry)
@@ -404,18 +467,6 @@ def _export_col_via_ide(main_window): #vers 1
         QMessageBox.critical(main_window, "COL Export Via IDE Error", f"COL export via IDE failed: {str(e)}")
 
 
-def _export_col_via_options(main_window): #vers 2
-    """Export COL files via options dialog - UPDATED: Now calls IDE-based export"""
-    try:
-        # Use the new IDE-based COL export
-        _export_col_via_ide(main_window)
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ COL export via error: {str(e)}")
-        raise
-
-
 def _log_missing_col_models(main_window, model_names_to_find, found_model_names): #vers 1
     """Log missing COL models to assists/logs/missing_col_models.txt"""
     try:
@@ -466,160 +517,6 @@ def _log_missing_col_models(main_window, model_names_to_find, found_model_names)
     except Exception as e:
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"❌ Error logging missing COL models: {str(e)}")
-
-
-def _start_col_ide_export(main_window, col_models, export_folder, export_single, export_combined): #vers 1
-    """Start COL IDE export with progress dialog"""
-    try:
-        from PyQt6.QtWidgets import QProgressDialog
-        from PyQt6.QtCore import QThread, pyqtSignal
-        
-        # Create progress dialog
-        progress_dialog = QProgressDialog("Exporting COL models...", "Cancel", 0, 100, main_window)
-        progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-        progress_dialog.setMinimumDuration(0)
-        
-        exported_count = 0
-        failed_count = 0
-        total_steps = len(col_models) * (1 if export_single else 0) + (1 if export_combined else 0)
-        current_step = 0
-        
-        # Export single files
-        if export_single:
-            # Create collision subfolder
-            single_folder = os.path.join(export_folder, 'collision')
-            os.makedirs(single_folder, exist_ok=True)
-            
-            for col_entry in col_models:
-                if progress_dialog.wasCanceled():
-                    break
-                    
-                try:
-                    model_name = col_entry['name']
-                    output_path = os.path.join(single_folder, model_name)
-                    
-                    # Update progress
-                    current_step += 1
-                    progress = int((current_step / total_steps) * 100)
-                    progress_dialog.setValue(progress)
-                    progress_dialog.setLabelText(f"Exporting {model_name}...")
-                    
-                    # Export single model
-                    if _export_single_col_model(col_entry, output_path):
-                        exported_count += 1
-                    else:
-                        failed_count += 1
-                        
-                except Exception as e:
-                    failed_count += 1
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"❌ Error exporting {col_entry['name']}: {str(e)}")
-        
-        # Export combined file
-        if export_combined and not progress_dialog.wasCanceled():
-            try:
-                current_step += 1
-                progress = int((current_step / total_steps) * 100)
-                progress_dialog.setValue(progress)
-                progress_dialog.setLabelText("Creating combined COL file...")
-                
-                combined_path = os.path.join(export_folder, 'combined_models.col')
-                if _export_combined_col_file(col_models, combined_path):
-                    exported_count += 1
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"📦 Combined COL file created: {combined_path}")
-                else:
-                    failed_count += 1
-                    
-            except Exception as e:
-                failed_count += 1
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"❌ Error creating combined COL file: {str(e)}")
-        
-        progress_dialog.close()
-        
-        # Show results
-        if exported_count > 0:
-            success_msg = f"COL Export Complete!\n\n"
-            if export_single:
-                success_msg += f"Single files: {len(col_models)} models exported to {os.path.join(export_folder, 'collision')}\n"
-            if export_combined:
-                success_msg += f"Combined file: combined_models.col created in {export_folder}\n"
-            
-            if failed_count > 0:
-                success_msg += f"\nNote: {failed_count} operations failed"
-            
-            QMessageBox.information(main_window, "COL Export Complete", success_msg)
-            
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"✅ COL export complete: {exported_count} success, {failed_count} failed")
-        else:
-            QMessageBox.warning(main_window, "COL Export Failed", "No COL models were exported successfully")
-            
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ COL IDE export error: {str(e)}")
-        QMessageBox.critical(main_window, "COL Export Error", f"COL export failed: {str(e)}")
-
-
-def _export_single_col_model(col_entry, output_path): #vers 1
-    """Export a single COL model to file"""
-    try:
-        col_file = col_entry['col_file']
-        
-        # Method 1: Copy the entire original file (contains all models)
-        if hasattr(col_file, 'file_path') and os.path.exists(col_file.file_path):
-            import shutil
-            shutil.copy2(col_file.file_path, output_path)
-            return True
-        
-        # Method 2: Save entire COL file data
-        elif hasattr(col_file, '_build_col_data'):
-            col_data = col_file._build_col_data()
-            with open(output_path, 'wb') as f:
-                f.write(col_data)
-            return True
-        
-        # Method 3: Use save method
-        elif hasattr(col_file, 'save_to_file'):
-            return col_file.save_to_file(output_path)
-            
-        return False
-        
-    except Exception as e:
-        return False
-
-
-def _export_combined_col_file(col_models, output_path): #vers 1
-    """Export all COL models to a single combined file"""
-    try:
-        if not col_models:
-            return False
-        
-        # Use the first model's COL file as the base (contains all models anyway)
-        first_col_file = col_models[0]['col_file']
-        
-        # Method 1: Copy the original file (already contains all models)
-        if hasattr(first_col_file, 'file_path') and os.path.exists(first_col_file.file_path):
-            import shutil
-            shutil.copy2(first_col_file.file_path, output_path)
-            return True
-        
-        # Method 2: Save COL file data
-        elif hasattr(first_col_file, '_build_col_data'):
-            col_data = first_col_file._build_col_data()
-            with open(output_path, 'wb') as f:
-                f.write(col_data)
-            return True
-        
-        # Method 3: Use save method
-        elif hasattr(first_col_file, 'save_to_file'):
-            return first_col_file.save_to_file(output_path)
-            
-        return False
-        
-    except Exception as e:
-        return False
 
 
 def _log_missing_files(main_window, files_to_find, found_files): #vers 1
@@ -728,8 +625,8 @@ def _start_ide_export_with_progress(main_window, entries, export_folder, export_
         QMessageBox.critical(main_window, "IDE Export Error", f"Failed to start IDE export: {str(e)}")
 
 
-def integrate_export_via_functions(main_window): #vers 2
-    """Integrate export via functions into main window with all aliases"""
+def integrate_export_via_functions(main_window): #vers 3
+    """Integrate export via functions into main window - FIXED: Updated for tab awareness"""
     try:
         # Add main export via function
         main_window.export_via_function = lambda: export_via_function(main_window)
@@ -741,7 +638,7 @@ def integrate_export_via_functions(main_window): #vers 2
         main_window.export_via_dialog = main_window.export_via_function
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Export via functions integrated with COL IDE support")
+            main_window.log_message("✅ Export via functions integrated with tab awareness and COL support")
         
         return True
         
@@ -755,4 +652,3 @@ __all__ = [
     'export_via_function',
     'integrate_export_via_functions'
 ]
-        

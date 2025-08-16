@@ -1,10 +1,11 @@
-#this belongs in methods/export_col_shared.py - Version: 7
+#this belongs in methods/export_col_shared.py - Version: 8
 # X-Seti - August16 2025 - IMG Factory 1.5 - Shared COL Export Functions
 
 """
 Shared COL Export Functions - Clean COL model extraction and export
 Used by: export, export_via, dump functions
 Provides single/combined COL file creation with proper model extraction
+FIXED: Tab switching support and robust file detection
 """
 
 import os
@@ -247,7 +248,7 @@ def create_combined_col_file(col_entries: List[Dict[str, Any]], output_path: str
 
 def save_col_models_with_options(main_window, col_entries: List[Dict[str, Any]],
                                 export_folder: str, single_files: bool = True,
-                                combined_file: bool = False, combined_name: str = "combined_models.col") -> Tuple[int, int]: #vers 2
+                                combined_file: bool = False, combined_name: str = "combined_models.col") -> Tuple[int, int]: #vers 3
     """Save COL models with export options - FIXED: Optimized performance
 
     Args:
@@ -335,6 +336,10 @@ def save_col_models_with_options(main_window, col_entries: List[Dict[str, Any]],
                 if hasattr(main_window, 'log_message'):
                     main_window.log_message(f"❌ Error creating combined file: {str(e)}")
 
+        # FIXED: Final summary
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"🏁 COL export complete: {success_count} success, {failed_count} failed")
+
         return success_count, failed_count
 
     except Exception as e:
@@ -343,56 +348,148 @@ def save_col_models_with_options(main_window, col_entries: List[Dict[str, Any]],
         return 0, len(col_entries) if col_entries else 0
 
 
-def get_col_models_from_selection(main_window) -> List[Dict[str, Any]]: #vers 1
-    """Get COL models from current tab selection using tab awareness
-
+def get_col_models_from_selection(main_window) -> List[Dict[str, Any]]: #vers 4
+    """Get COL models from current tab selection - FIXED: Comprehensive debugging
+    
     Args:
         main_window: Main application window
-
+        
     Returns:
         List of col_entry dictionaries for selected models
     """
     try:
-        # Validate tab before operation
-        if not validate_tab_before_operation(main_window, "get COL models"):
-            return []
-
-        # Get current file from active tab
-        file_object, file_type = get_current_file_from_active_tab(main_window)
-
-        if file_type != 'COL':
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message("🔍 === COL MODELS DEBUG START ===")
+        
+        # DEBUG: Check tab widget exists
+        if not hasattr(main_window, 'main_tab_widget'):
             if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ Current tab does not contain a COL file")
+                main_window.log_message("❌ No main_tab_widget attribute found!")
             return []
-
-        # Get selected entries from tab awareness system
-        from methods.tab_awareness import get_selected_entries_from_active_tab
-        selected_entries = get_selected_entries_from_active_tab(main_window)
-
-        if selected_entries:
-            # Filter for COL model entries
-            col_entries = [entry for entry in selected_entries if entry.get('type') == 'COL_MODEL']
-            return col_entries
-
-        # If nothing selected, offer all models
-        if hasattr(file_object, 'models') and file_object.models:
-            all_col_entries = []
-            for i, model in enumerate(file_object.models):
-                col_entry = {
-                    'name': f"{getattr(model, 'name', f'model_{i}')}.col",
-                    'type': 'COL_MODEL',
-                    'model': model,
-                    'index': i,
-                    'col_file': file_object
-                }
-                all_col_entries.append(col_entry)
-            return all_col_entries
-
+        
+        # DEBUG: Tab info
+        current_index = main_window.main_tab_widget.currentIndex()
+        total_tabs = main_window.main_tab_widget.count()
+        
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"🔍 Tab info: Current={current_index}, Total={total_tabs}")
+        
+        if current_index == -1:
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("❌ No active tab!")
+            return []
+        
+        # DEBUG: Get current tab widget
+        current_tab = main_window.main_tab_widget.widget(current_index)
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"🔍 Current tab widget: {type(current_tab).__name__ if current_tab else 'None'}")
+        
+        if not current_tab:
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("❌ Current tab widget is None!")
+            return []
+        
+        # DEBUG: List ALL attributes of the tab
+        if hasattr(main_window, 'log_message'):
+            tab_attrs = [attr for attr in dir(current_tab) if not attr.startswith('_')]
+            main_window.log_message(f"🔍 Tab attributes: {tab_attrs[:10]}...")  # Show first 10
+        
+        # DEBUG: Check for file objects
+        file_object = None
+        file_source = "none"
+        
+        # Method 1: Direct attributes
+        if hasattr(current_tab, 'col_file') and current_tab.col_file:
+            file_object = current_tab.col_file
+            file_source = "tab.col_file"
+        elif hasattr(current_tab, 'img_file') and current_tab.img_file:
+            file_object = current_tab.img_file
+            file_source = "tab.img_file"
+        elif hasattr(current_tab, 'file_data') and current_tab.file_data:
+            file_object = current_tab.file_data
+            file_source = "tab.file_data"
+        elif hasattr(current_tab, 'current_file') and current_tab.current_file:
+            file_object = current_tab.current_file
+            file_source = "tab.current_file"
+        
+        # Method 2: Scan all attributes
+        if not file_object:
+            for attr_name in dir(current_tab):
+                if not attr_name.startswith('_'):
+                    try:
+                        attr_value = getattr(current_tab, attr_name)
+                        if attr_value and hasattr(attr_value, 'models'):
+                            file_object = attr_value
+                            file_source = f"tab.{attr_name}"
+                            break
+                        elif attr_value and hasattr(attr_value, 'entries'):
+                            file_object = attr_value
+                            file_source = f"tab.{attr_name}"
+                            break
+                    except:
+                        continue
+        
+        # DEBUG: File detection results
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"🔍 File detection: {file_source}")
+            main_window.log_message(f"🔍 File object: {type(file_object).__name__ if file_object else 'None'}")
+            
+            if file_object:
+                if hasattr(file_object, 'models'):
+                    model_count = len(file_object.models) if file_object.models else 0
+                    main_window.log_message(f"🔍 COL file with {model_count} models")
+                elif hasattr(file_object, 'entries'):
+                    entry_count = len(file_object.entries) if file_object.entries else 0
+                    main_window.log_message(f"🔍 IMG file with {entry_count} entries")
+                else:
+                    main_window.log_message(f"🔍 Unknown file type")
+        
+        # DEBUG: Check main window references too
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"🔍 main_window.current_col: {type(main_window.current_col).__name__ if main_window.current_col else 'None'}")
+            main_window.log_message(f"🔍 main_window.current_img: {type(main_window.current_img).__name__ if main_window.current_img else 'None'}")
+        
+        # If we found a COL file, process it
+        if file_object and hasattr(file_object, 'models'):
+            models = file_object.models
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"✅ Found COL file with {len(models) if models else 0} models")
+            
+            if models:
+                all_col_entries = []
+                for i, model in enumerate(models):
+                    try:
+                        model_name = getattr(model, 'name', f'model_{i}')
+                        if not model_name.endswith('.col'):
+                            model_name += '.col'
+                        
+                        col_entry = {
+                            'name': model_name,
+                            'type': 'COL_MODEL',
+                            'model': model,
+                            'index': i,
+                            'col_file': file_object
+                        }
+                        all_col_entries.append(col_entry)
+                    except Exception as e:
+                        if hasattr(main_window, 'log_message'):
+                            main_window.log_message(f"⚠️ Error processing model {i}: {str(e)}")
+                
+                if hasattr(main_window, 'log_message'):
+                    main_window.log_message(f"✅ Created {len(all_col_entries)} COL entries")
+                    main_window.log_message("🔍 === COL MODELS DEBUG END ===")
+                return all_col_entries
+        
+        # If we get here, no COL file found
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message("❌ No COL file found in current tab")
+            main_window.log_message("🔍 === COL MODELS DEBUG END ===")
         return []
 
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error getting COL models from selection: {str(e)}")
+            main_window.log_message(f"❌ Error in get_col_models_from_selection: {str(e)}")
+            main_window.log_message("🔍 === COL MODELS DEBUG END ===")
         return []
 
 
@@ -427,8 +524,6 @@ def integrate_col_export_shared(main_window) -> bool: #vers 1
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"❌ Error integrating COL export shared functions: {str(e)}")
         return False
-
-
 
 
 __all__ = [
