@@ -127,6 +127,9 @@ from methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate
 from methods.import_highlight_system import enable_import_highlighting
 from methods.img_operations_routing import install_operation_routing
 from methods.refresh_table import integrate_refresh_table
+from methods.tab_awareness import integrate_tab_awareness_system
+from methods.export_col_shared import integrate_col_export_shared
+
 
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
@@ -422,6 +425,9 @@ class IMGFactory(QMainWindow):
         self._create_ui()
 
         add_project_menu_items(self)
+
+        integrate_tab_awareness_system(self)
+        integrate_col_export_shared(self)
 
 
         # === PHASE 4: ESSENTIAL INTEGRATIONS (Medium) ===
