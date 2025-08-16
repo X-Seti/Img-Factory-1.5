@@ -152,6 +152,12 @@ def load_col_file_safely(main_window, file_path): #vers 6
         # Success - store the loaded COL file
         main_window.current_col = col_file
 
+        # Store COL file in tab tracking for tab switching
+        current_index = main_window.main_tab_widget.currentIndex()
+        if hasattr(main_window, 'open_files') and current_index in main_window.open_files:
+            main_window.open_files[current_index]['file_object'] = col_file
+            main_window.log_message(f"✅ COL file object stored in tab {current_index}")
+
         # Update UI
         if hasattr(main_window, '_update_ui_for_loaded_col'):
             try:

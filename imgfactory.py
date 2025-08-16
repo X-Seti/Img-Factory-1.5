@@ -1389,7 +1389,7 @@ class IMGFactory(QMainWindow):
         self.main_tab_widget.addTab(tab_widget, "📁 No File")
 
 
-    def _on_tab_changed(self, index): #vers 9
+    def _on_tab_changed(self, index): #vers 10
         """FIXED: Handle tab change - Ensures export/dump functions see current tab properly"""
         if index == -1:
             # No tabs - clear everything
@@ -1694,16 +1694,18 @@ class IMGFactory(QMainWindow):
             self._update_ui_for_no_img()
 
 
-    def _load_col_file_safely(self, file_path): #vers 2 #Restore
-        """Load COL file safely - REDIRECTS to col_tab_integration"""
+    def load_col_file_safely(self, file_path): #vers 4
+        """Load COL file safely - Use the actual COL loading function"""
         try:
-            if hasattr(self, 'load_col_file_safely'):
-                # Use the method provided by col_tab_integration
-                self.load_col_file_safely(file_path)
-            else:
-                self.log_message("❌ Error loading file: 'IMGFactory' object has no attribute 'load_col_file_safely'")
+            # Import and use the real COL loading function
+            from col_parsing_functions import load_col_file_safely as real_load_col
+            success = real_load_col(self, file_path)
+            if success:
+                self.log_message(f"✅ COL file loaded: {os.path.basename(file_path)}")
+            return success
         except Exception as e:
             self.log_message(f"❌ Error loading COL file: {str(e)}")
+            return False
 
 
     def _load_col_as_generic_file(self, file_path):
@@ -1773,6 +1775,11 @@ class IMGFactory(QMainWindow):
 
             # Set current IMG reference
             self.current_img = img_file
+            # CRITICAL: Store file object in tab tracking for tab switching
+            current_index = self.main_tab_widget.currentIndex()
+            if current_index in self.open_files:
+                self.open_files[current_index]['file_object'] = img_file
+                self.log_message(f"✅ IMG file object stored in tab {current_index}")
 
             # Use isolated file window update
             success = self.gui_layout.update_file_window_only(img_file)
@@ -2421,7 +2428,11 @@ class IMGFactory(QMainWindow):
         """Handle COL file loaded - UPDATED with styling"""
         try:
             self.current_col = col_file
+            # Store COL file in tab tracking
             current_index = self.main_tab_widget.currentIndex()
+            if hasattr(self, 'open_files') and current_index in self.open_files:
+                self.open_files[current_index]['file_object'] = col_file
+                self.log_message(f"✅ COL file object stored in tab {current_index}")
 
             # Update file info in open_files (same as IMG)
             if current_index in self.open_files:

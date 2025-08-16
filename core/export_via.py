@@ -21,77 +21,21 @@ from methods.export_col_shared import get_col_models_from_selection, save_col_mo
 # _log_missing_files
 # _start_ide_export_with_progress
 
-def export_via_function(main_window): #vers 7
-    """Export files via IDE definitions - FIXED: Direct tab access, no validation"""
+def export_via_function(main_window): #vers 5
+    """Export files via IDE definitions with destination options - FIXED: Uses tab awareness"""
     try:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message("🔍 Export Via: Direct tab access...")
+        # FIXED: Use tab awareness system instead of broken get_current_file_type
+        if not validate_tab_before_operation(main_window, "Export Via"):
+            return
         
-        # FIXED: Direct access to current tab - no validation, no references
-        file_type = 'NONE'
-        current_index = -1
-        
-        try:
-            current_index = main_window.main_tab_widget.currentIndex()
-            current_tab = main_window.main_tab_widget.widget(current_index)
-            
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"🔍 Direct access: Tab {current_index}")
-            
-            if current_tab:
-                # Check for COL file
-                if (hasattr(current_tab, 'col_file') and current_tab.col_file) or \
-                   (hasattr(current_tab, 'file_data') and current_tab.file_data and hasattr(current_tab.file_data, 'models')):
-                    file_type = 'COL'
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"✅ Found COL file in tab {current_index}")
-                
-                # Check for IMG file
-                elif (hasattr(current_tab, 'img_file') and current_tab.img_file) or \
-                     (hasattr(current_tab, 'file_data') and current_tab.file_data and hasattr(current_tab.file_data, 'entries')):
-                    file_type = 'IMG'
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"✅ Found IMG file in tab {current_index}")
-                
-                # Scan all attributes for any file-like object
-                else:
-                    for attr_name in dir(current_tab):
-                        if not attr_name.startswith('_'):
-                            try:
-                                attr_value = getattr(current_tab, attr_name)
-                                if attr_value:
-                                    if hasattr(attr_value, 'models') and hasattr(attr_value, 'is_loaded'):
-                                        file_type = 'COL'
-                                        if hasattr(main_window, 'log_message'):
-                                            main_window.log_message(f"✅ Found COL file in tab.{attr_name}")
-                                        break
-                                    elif hasattr(attr_value, 'entries') and hasattr(attr_value, 'is_loaded'):
-                                        file_type = 'IMG'
-                                        if hasattr(main_window, 'log_message'):
-                                            main_window.log_message(f"✅ Found IMG file in tab.{attr_name}")
-                                        break
-                            except:
-                                continue
-                        
-        except Exception as e:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"❌ Error accessing tab: {str(e)}")
-        
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🔍 Final detection: Tab {current_index}, Type: {file_type}")
+        file_type = get_current_file_type_from_tab(main_window)
         
         if file_type == 'IMG':
             _export_img_via_ide(main_window)
         elif file_type == 'COL':
             _export_col_via_ide(main_window)
         else:
-            QMessageBox.warning(main_window, "No File", 
-                f"No IMG or COL file detected in current tab.\n\n"
-                f"Tab info:\n"
-                f"• Current tab: {current_index}\n"
-                f"• Total tabs: {main_window.main_tab_widget.count() if hasattr(main_window, 'main_tab_widget') else 'Unknown'}\n"
-                f"• Detected type: {file_type}\n\n"
-                f"Make sure the tab contains a loaded IMG or COL file.")
+            QMessageBox.warning(main_window, "No File", "Please open an IMG or COL file first")
             
     except Exception as e:
         if hasattr(main_window, 'log_message'):
@@ -652,3 +596,4 @@ __all__ = [
     'export_via_function',
     'integrate_export_via_functions'
 ]
+        
