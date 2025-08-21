@@ -81,7 +81,6 @@ from core.right_click_actions import integrate_right_click_actions, setup_table_
 #from core.save_img_entry import integrate_img_save_functions, save_img_file_with_backup #broken
 from core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
 #from core.integration import integrate_complete_core_system
-from core.connections import connect_all_buttons_safely
 from core.convert import convert_img, convert_img_format
 from core.create_img import (create_new_img, detect_and_open_file, open_file_dialog, detect_file_type)
 from core.close import install_close_functions, setup_close_manager
@@ -91,12 +90,12 @@ from core.img_corruption_analyzer import setup_corruption_analyzer
 from core.rebuild import integrate_rebuild_functions
 from core.rebuild_all import integrate_batch_rebuild_functions
 from core.clean import integrate_clean_utilities
-from core.export import export_selected_function, export_all_function
 from core.export_via import export_via_function
-from core.quick_export import quick_export_function
-from core.dump import dump_all_function, dump_selected_function
-from core.independent_tabs import setup_independent_tab_system, migrate_existing_tabs_to_independent
+from core.export import export_selected_function, export_all_function, integrate_export_functions
+from core.dump import dump_all_function, dump_selected_function, integrate_dump_functions
 
+
+from core.independent_tabs import setup_independent_tab_system, migrate_existing_tabs_to_independent
 
 from methods.ide_parser import integrate_ide_parser
 
@@ -129,6 +128,7 @@ from methods.img_operations_routing import install_operation_routing
 from methods.refresh_table import integrate_refresh_table
 from methods.tab_awareness import integrate_tab_awareness_system
 from methods.export_col_shared import integrate_col_export_shared
+from methods.mirror_tab_shared import show_mirror_tab_selection
 
 
 # FIXED COL INTEGRATION IMPORTS
@@ -437,9 +437,8 @@ class IMGFactory(QMainWindow):
         integrate_ide_parser(self)
         integrate_ide_dialog(self)
         install_operation_routing(self)
-
-        # Button connections (essential for functionality)
-        connect_all_buttons_safely(self)
+        integrate_export_functions(self)
+        integrate_dump_functions(self)
 
         # File operations
         install_close_functions(self)
@@ -456,9 +455,11 @@ class IMGFactory(QMainWindow):
 
         # === PHASE 5: CORE FUNCTIONALITY (Medium) ===
         self.export_selected = lambda: export_selected_function(self)
+        self.export_all = lambda: export_all_function(self)
         self.export_via = lambda: export_via_function(self)
         self.quick_export = lambda: quick_export_function(self)
         self.dump_all = lambda: dump_all_function(self)
+        self.dump_selected = lambda: dump_selected_function(self)
 
         integrate_refresh_table(self)
 
@@ -856,6 +857,39 @@ class IMGFactory(QMainWindow):
         from components.unified_signal_handler import signal_handler
         signal_handler.status_update_requested.connect(self._update_status_from_signal)
 
+
+    # In core/export.py
+    from methods.mirror_tab_shared import show_mirror_tab_selection
+
+    def export_selected_function(main_window):
+        selected_tab, options = show_mirror_tab_selection(main_window, 'export')
+        if selected_tab:
+            start_export_operation(main_window, selected_tab, options)
+
+    # In core/import.py
+    def import_function(main_window):
+        selected_tab, options = show_mirror_tab_selection(main_window, 'import')
+        if selected_tab and options.get('import_files'):
+            start_import_operation(main_window, selected_tab, options)
+
+    # In core/remove.py
+    def remove_selected_function(main_window):
+        selected_tab, options = show_mirror_tab_selection(main_window, 'remove')
+        if selected_tab:
+            start_remove_operation(main_window, selected_tab, options)
+
+    # In core/dump.py
+    def dump_function(main_window):
+        selected_tab, options = show_mirror_tab_selection(main_window, 'dump')
+        if selected_tab:
+            start_dump_operation(main_window, selected_tab, options)
+
+    def split_via_function(main_window):
+        selected_tab, options = show_mirror_tab_selection(main_window, 'split_via')
+        if selected_tab:
+            split_method = options.get('split_method', 'size')  # 'size' or 'count'
+            split_value = options.get('split_value', 50)
+            start_split_operation(main_window, selected_tab, split_method, split_value)
 
     def debug_img_entries(self): #vers 4
         """Debug function to check what entries are actually loaded"""
