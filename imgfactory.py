@@ -94,7 +94,6 @@ from core.export_via import export_via_function
 from core.export import export_selected_function, export_all_function, integrate_export_functions
 from core.dump import dump_all_function, dump_selected_function, integrate_dump_functions
 
-
 from core.independent_tabs import setup_independent_tab_system, migrate_existing_tabs_to_independent
 
 from methods.ide_parser import integrate_ide_parser
@@ -428,7 +427,8 @@ class IMGFactory(QMainWindow):
         #tabs
         setup_independent_tab_system(self)
         migrate_existing_tabs_to_independent(self)
-        #self.integrate_tab_aware_system() #removed
+
+        #self.integrate_tab_aware_system() #old removed
         integrate_tab_awareness_system(self)
         # === PHASE 4: ESSENTIAL INTEGRATIONS (Medium) ===
 

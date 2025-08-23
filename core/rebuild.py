@@ -1,386 +1,340 @@
-#this belongs in core/rebuild.py - Version: 1
-# X-Seti - August09 2025 - IMG Factory 1.5 - Unified Single IMG Rebuild System
+#this belongs in core/rebuild.py - Version: 4
+# X-Seti - August23 2025 - IMG Factory 1.5 - Clean Rebuild Functions with Tab Awareness and New Core
 
 """
-Unified IMG Rebuild System - Single File Operations
-Corruption-free rebuilding with comprehensive validation
-FIXED: Directory structure bugs, backup system for Version 1
+Clean Rebuild Functions - Uses tab awareness like export_via.py + integrates new core system
+UPDATED: Uses new IMG_Operations.rebuild_archive (creates new IMG from memory, deletes old)
+Supports rebuilding current IMG in active tab with proper multi-tab detection
 """
 
 import os
-import struct
 import shutil
-from typing import Optional, Dict, Any, List, Tuple
-from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QDialog, QVBoxLayout, QHBoxLayout, QGroupBox, QRadioButton, QCheckBox, QLabel, QPushButton, QButtonGroup
-from PyQt6.QtCore import QThread, pyqtSignal, Qt
+from PyQt6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QRadioButton, QButtonGroup
 
-def rebuild_current_img(main_window) -> bool:
-    """Rebuild current IMG with mode selection dialog"""
+# Use same tab awareness imports as export_via.py (this works!)
+from methods.tab_awareness import validate_tab_before_operation, get_current_file_from_active_tab, get_current_file_type_from_tab
+
+##Methods list -
+# rebuild_current_img
+# fast_rebuild_current
+# safe_rebuild_current
+# show_rebuild_mode_dialog
+# _unified_rebuild_process
+# _try_new_core_rebuild
+# _convert_to_new_core_format
+# _legacy_rebuild_process
+# _sanitize_filename
+# integrate_rebuild_functions
+
+def rebuild_current_img(main_window): #vers 4
+    """Rebuild current IMG in active tab - CLEAN: Uses tab awareness like export_via.py"""
     try:
-        if not hasattr(main_window, 'current_img') or not main_window.current_img:
-            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first")
+        # Copy exact pattern from working export_via.py
+        if not validate_tab_before_operation(main_window, "Rebuild Current IMG"):
             return False
+        
+        file_object, file_type = get_current_file_from_active_tab(main_window)
+        
+        if file_type != 'IMG' or not file_object:
+            QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file to rebuild")
+            return False
+        
+        if hasattr(main_window, 'log_message'):
+            file_name = os.path.basename(getattr(file_object, 'file_path', 'Unknown'))
+            main_window.log_message(f"🔧 Rebuilding IMG in current tab: {file_name}")
+        
+        # Use unified rebuild with new core integration
+        success = _unified_rebuild_process(file_object, "fast", main_window)
+        
+        if success:
+            # Refresh current tab to show changes
+            if hasattr(main_window, 'refresh_current_tab_data'):
+                main_window.refresh_current_tab_data()
             
-        if not main_window.current_img.entries:
-            QMessageBox.warning(main_window, "Empty IMG", "IMG file has no entries to rebuild")
-            return False
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("✅ Current IMG rebuilt successfully")
+            
+            QMessageBox.information(main_window, "Rebuild Complete", 
+                "IMG file rebuilt successfully!")
         
-        # Show mode selection dialog
-        options = show_rebuild_mode_dialog(main_window, "single")
-        if not options:
-            return False  # User cancelled
-        
-        return rebuild_current_with_mode(main_window, options)
+        return success
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Rebuild current error: {str(e)}")
+            main_window.log_message(f"❌ Rebuild current IMG error: {str(e)}")
         QMessageBox.critical(main_window, "Rebuild Error", f"Rebuild failed: {str(e)}")
         return False
 
 
-def rebuild_current_with_mode(main_window, options: dict) -> bool:
-    """Rebuild current IMG with specified options"""
+def fast_rebuild_current(main_window): #vers 2
+    """Fast rebuild current tab IMG - CLEAN: Uses tab awareness"""
     try:
-        img_file = main_window.current_img
-        filename = os.path.basename(img_file.file_path)
-        entry_count = len(img_file.entries)
-        mode = options.get('mode', 'fast')
+        if not validate_tab_before_operation(main_window, "Fast Rebuild"):
+            return False
+        
+        file_object, file_type = get_current_file_from_active_tab(main_window)
+        
+        if file_type != 'IMG' or not file_object:
+            return False
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🔧 {mode.upper()} rebuild: {filename} ({entry_count} entries)")
+            main_window.log_message("🚀 Fast rebuild mode - current tab")
         
-        # Create backup first
-        if options.get('create_backup', True):
-            if not _create_unified_backup(img_file, main_window):
-                QMessageBox.warning(main_window, "Backup Failed", "Failed to create backup. Continue anyway?")
-                reply = QMessageBox.question(main_window, "Continue?", "Continue without backup?")
-                if reply != QMessageBox.StandardButton.Yes:
-                    return False
+        return _unified_rebuild_process(file_object, "fast", main_window)
         
-        # Execute rebuild
-        success = _unified_rebuild_process(img_file, mode, main_window)
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Fast rebuild error: {str(e)}")
+        return False
+
+
+def safe_rebuild_current(main_window): #vers 2
+    """Safe rebuild current tab IMG - CLEAN: Uses tab awareness"""
+    try:
+        if not validate_tab_before_operation(main_window, "Safe Rebuild"):
+            return False
         
-        if success:
-            # Validate if requested
-            if options.get('verify_integrity', False):
-                validation_success = _validate_rebuilt_img(img_file, main_window)
-                if not validation_success:
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message("⚠️ Rebuild validation failed")
+        file_object, file_type = get_current_file_from_active_tab(main_window)
+        
+        if file_type != 'IMG' or not file_object:
+            return False
+        
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message("🔒 Safe rebuild mode - current tab")
+        
+        return _unified_rebuild_process(file_object, "safe", main_window)
+        
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Safe rebuild error: {str(e)}")
+        return False
+
+
+def show_rebuild_mode_dialog(main_window): #vers 1
+    """Show dialog to choose rebuild mode for current tab"""
+    try:
+        if not validate_tab_before_operation(main_window, "Rebuild Mode Selection"):
+            return False
+        
+        file_object, file_type = get_current_file_from_active_tab(main_window)
+        
+        if file_type != 'IMG' or not file_object:
+            QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
+            return False
+        
+        dialog = QDialog(main_window)
+        dialog.setWindowTitle("Rebuild Mode - Current Tab")
+        dialog.setModal(True)
+        layout = QVBoxLayout(dialog)
+        
+        # Info about current file
+        file_name = os.path.basename(getattr(file_object, 'file_path', 'Unknown'))
+        entry_count = len(file_object.entries) if hasattr(file_object, 'entries') else 0
+        
+        info_label = QLabel(f"Rebuild IMG in current tab:\n{file_name} ({entry_count} entries)")
+        info_label.setStyleSheet("font-weight: bold; padding: 10px;")
+        layout.addWidget(info_label)
+        
+        # Mode selection
+        mode_group = QButtonGroup()
+        fast_radio = QRadioButton("🚀 Fast Mode - Quick rebuild (recommended)")
+        safe_radio = QRadioButton("🔒 Safe Mode - Skip problematic entries")
+        
+        fast_radio.setChecked(True)  # Default to fast
+        mode_group.addButton(fast_radio)
+        mode_group.addButton(safe_radio)
+        
+        layout.addWidget(fast_radio)
+        layout.addWidget(safe_radio)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        ok_btn = QPushButton("Rebuild")
+        cancel_btn = QPushButton("Cancel")
+        
+        ok_btn.clicked.connect(dialog.accept)
+        cancel_btn.clicked.connect(dialog.reject)
+        
+        button_layout.addWidget(ok_btn)
+        button_layout.addWidget(cancel_btn)
+        layout.addLayout(button_layout)
+        
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            mode = "fast" if fast_radio.isChecked() else "safe"
+            success = _unified_rebuild_process(file_object, mode, main_window)
+            
+            if success:
+                QMessageBox.information(main_window, "Rebuild Complete",
+                    f"IMG file rebuilt successfully using {mode} mode!")
+            
+            return success
+        
+        return False
+        
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Rebuild mode dialog error: {str(e)}")
+        return False
+
+
+def _unified_rebuild_process(img_file, mode: str, main_window) -> bool: #vers 4
+    """UPDATED: Unified rebuild using new IMG_Operations.rebuild_archive (creates new from memory, deletes old)"""
+    try:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"🔧 Starting {mode} rebuild using memory-based system")
+        
+        # Try new core system first (creates new IMG from memory, deletes old)
+        if _try_new_core_rebuild(img_file, mode, main_window):
+            return True
+        
+        # Fallback to legacy rebuild system
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message("⚠️ New core not available, using legacy rebuild")
+        
+        return _legacy_rebuild_process(img_file, mode, main_window)
+        
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Unified rebuild error: {str(e)}")
+        return False
+
+
+def _try_new_core_rebuild(img_file, mode: str, main_window) -> bool: #vers 1
+    """Try to use new IMG_Operations.rebuild_archive system (creates new from memory, deletes old)"""
+    try:
+        # Import new core system
+        from .IMG_Operations import IMG_Operations
+        from .Core import IMGArchive
+        
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message("🆕 Using NEW core rebuild system (creates new IMG from memory)")
+        
+        # Convert existing IMG to new core format if needed
+        if not isinstance(img_file, IMGArchive):
+            core_img = _convert_to_new_core_format(img_file, main_window)
+            if not core_img:
+                return False
+        else:
+            core_img = img_file
+        
+        # Progress callback
+        def progress_callback(percent, message):
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"🔧 {message} ({percent}%)")
+        
+        # Use new core rebuild_archive (creates new IMG from memory, deletes old)
+        rebuilt_archive = IMG_Operations.rebuild_archive(
+            img_archive=core_img,
+            output_path=None,  # Overwrites original
+            version=None,      # Keep same version
+            progress_callback=progress_callback
+        )
+        
+        if rebuilt_archive:
+            # Update main window references to new archive
+            if hasattr(main_window, 'current_img') and main_window.current_img == img_file:
+                main_window.current_img = rebuilt_archive
             
             if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"✅ Rebuild complete: {filename}")
-            
-            # Show completion dialog
-            new_size = os.path.getsize(img_file.file_path)
-            result_msg = f"Successfully rebuilt {filename}\n\n" \
-                        f"Entries: {entry_count:,}\n" \
-                        f"Size: {new_size // 1024:,} KB\n" \
-                        f"Mode: {mode.upper()}"
-            
-            if options.get('verify_integrity', False):
-                result_msg += "\n✅ File validated - No corruption detected"
-            
-            QMessageBox.information(main_window, "Rebuild Complete", result_msg)
-            
-            # Refresh table
-            if hasattr(main_window, 'refresh_table'):
-                main_window.refresh_table()
-            
+                main_window.log_message("✅ NEW core rebuild completed successfully")
             return True
         else:
             if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ Rebuild failed")
-            
-            # Offer backup restoration on failure
-            if options.get('create_backup', True):
-                reply = QMessageBox.question(
-                    main_window, "Rebuild Failed", 
-                    "Rebuild failed. Would you like to restore from backup?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-                )
-                
-                if reply == QMessageBox.StandardButton.Yes:
-                    if _restore_from_backup(img_file, main_window):
-                        QMessageBox.information(main_window, "Restoration Complete", 
-                                              "File restored from backup successfully.")
-                        if hasattr(main_window, 'refresh_table'):
-                            main_window.refresh_table()
-                    else:
-                        QMessageBox.critical(main_window, "Restoration Failed", 
-                                           "Failed to restore from backup.")
-            else:
-                QMessageBox.critical(main_window, "Rebuild Failed", "Rebuild process failed.")
-            
+                main_window.log_message("❌ NEW core rebuild failed")
             return False
-            
+        
+    except ImportError:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message("⚠️ New core system not available")
+        return False
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Rebuild with mode error: {str(e)}")
+            main_window.log_message(f"❌ New core rebuild error: {str(e)}")
         return False
 
 
-def show_rebuild_mode_dialog(main_window, operation_type="single") -> Optional[dict]:
-    """Show rebuild mode selection dialog"""
+def _convert_to_new_core_format(old_img_file, main_window): #vers 1
+    """Convert existing IMG to new core format while preserving memory pool data"""
     try:
-        # Simple mode selection using standard dialog
-        reply = QMessageBox.question(
-            main_window, "Rebuild Mode",
-            "Choose rebuild mode:\n\n"
-            "Fast Mode: Quick optimization, basic validation\n"
-            "Safe Mode: Thorough checking, full validation\n\n"
-            "Use Fast Mode?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
-        )
+        from .Core import IMGArchive, IMGEntry
         
-        if reply == QMessageBox.StandardButton.Cancel:
-            return None
-        elif reply == QMessageBox.StandardButton.Yes:
-            # Fast mode
-            return {
-                'mode': 'fast',
-                'create_backup': True,
-                'verify_integrity': False
-            }
-        else:
-            # Safe mode  
-            return {
-                'mode': 'safe',
-                'create_backup': True,
-                'verify_integrity': True
-            }
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message("🔄 Converting IMG to new core format...")
         
+        # Create new core archive
+        core_archive = IMGArchive()
+        core_archive.file_path = getattr(old_img_file, 'file_path', '')
+        core_archive.version = 'V1' if getattr(old_img_file, 'version', 2) == 1 else 'V2'
+        
+        # Convert entries and PRESERVE MEMORY POOL DATA
+        if hasattr(old_img_file, 'entries'):
+            for old_entry in old_img_file.entries:
+                core_entry = IMGEntry()
+                core_entry.name = old_entry.name
+                core_entry.actual_offset = getattr(old_entry, 'offset', 0)
+                core_entry.actual_size = getattr(old_entry, 'size', 0)
+                
+                # CRITICAL: Preserve cached data from memory pool
+                if hasattr(old_entry, '_cached_data') and old_entry._cached_data:
+                    core_entry.data = old_entry._cached_data
+                    core_entry.is_new_entry = True
+                    if hasattr(main_window, 'log_message'):
+                        main_window.log_message(f"🧠 Preserved memory data for: {old_entry.name}")
+                elif hasattr(old_entry, 'get_data'):
+                    # Try to get data using existing method
+                    try:
+                        core_entry.data = old_entry.get_data()
+                    except:
+                        pass  # Data will be read from file if needed
+                
+                core_archive.entries.append(core_entry)
+        
+        if hasattr(main_window, 'log_message'):
+            entry_count = len(core_archive.entries) if core_archive.entries else 0
+            main_window.log_message(f"✅ Converted {entry_count} entries to new core format")
+        
+        return core_archive
+        
+    except ImportError:
+        return None  # New core not available
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Mode dialog error: {str(e)}")
+            main_window.log_message(f"❌ Core format conversion error: {str(e)}")
         return None
 
 
-def fast_rebuild_current(main_window) -> bool:
-    """Fast rebuild current IMG (direct call)"""
-    options = {'mode': 'fast', 'create_backup': True, 'verify_integrity': False}
-    return rebuild_current_with_mode(main_window, options)
-
-
-def safe_rebuild_current(main_window) -> bool:
-    """Safe rebuild current IMG (direct call)"""
-    options = {'mode': 'safe', 'create_backup': True, 'verify_integrity': True}
-    return rebuild_current_with_mode(main_window, options)
-
-
-def quick_rebuild_current(main_window) -> bool:
-    """Quick rebuild current IMG (no backup, fast mode)"""
-    options = {'mode': 'fast', 'create_backup': False, 'verify_integrity': False}
-    return rebuild_current_with_mode(main_window, options)
-
-
-def _create_unified_backup(img_file, main_window) -> bool:
-    """Create unified backup with validation - FIXED for Version 1 DIR/IMG pairs"""
+def _legacy_rebuild_process(img_file, mode: str, main_window) -> bool: #vers 1
+    """Fallback to existing working rebuild system"""
     try:
-        file_path = img_file.file_path
-        img_version = getattr(img_file, 'version', 2)
-        
-        if img_version == 1:
-            # FIXED: Version 1 needs BOTH .dir and .img backed up
-            dir_path = file_path  # This is the .dir file
-            img_path = file_path.replace('.dir', '.img')
-            
-            dir_backup_path = f"{dir_path}.backup"
-            img_backup_path = f"{img_path}.backup"
-            
-            # Check if backups already exist
-            if os.path.exists(dir_backup_path) and os.path.exists(img_backup_path):
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"ℹ️ DIR/IMG backups already exist")
-                return True
-            
-            # FIXED: Create backup for .dir file
-            if os.path.exists(dir_path):
-                shutil.copy2(dir_path, dir_backup_path)
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"✅ DIR backup created: {os.path.basename(dir_backup_path)}")
-            else:
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"❌ DIR file not found: {dir_path}")
-                return False
-            
-            # FIXED: Create backup for .img file
-            if os.path.exists(img_path):
-                shutil.copy2(img_path, img_backup_path)
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"✅ IMG backup created: {os.path.basename(img_backup_path)}")
-            else:
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"❌ IMG file not found: {img_path}")
-                return False
-            
-            # Verify both backups were created successfully
-            if os.path.exists(dir_backup_path) and os.path.exists(img_backup_path):
-                dir_size = os.path.getsize(dir_backup_path)
-                img_size = os.path.getsize(img_backup_path)
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"✅ Version 1 backup complete: DIR ({dir_size} bytes) + IMG ({img_size} bytes)")
-                return True
-            else:
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message("❌ Version 1 backup verification failed")
-                return False
-                
-        else:
-            # Version 2: Single .img file backup (existing logic)
-            backup_path = f"{file_path}.backup"
-            
-            if os.path.exists(backup_path):
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"ℹ️ Backup already exists: {os.path.basename(backup_path)}")
-                return True
-            
-            shutil.copy2(file_path, backup_path)
-            
-            # Verify backup
-            if os.path.exists(backup_path) and os.path.getsize(backup_path) > 0:
-                backup_size = os.path.getsize(backup_path)
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"✅ Version 2 backup created: {os.path.basename(backup_path)} ({backup_size} bytes)")
-                return True
-            else:
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message("❌ Version 2 backup creation failed")
-                return False
-            
-    except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Backup error: {str(e)}")
-        return False
-
-
-def _restore_from_backup(img_file, main_window) -> bool:
-    """Restore IMG file from backup - FIXED for Version 1 DIR/IMG pairs"""
-    try:
-        file_path = img_file.file_path
-        img_version = getattr(img_file, 'version', 2)
+            main_window.log_message(f"🔧 Using legacy rebuild system in {mode} mode")
         
-        if img_version == 1:
-            # FIXED: Version 1 restore BOTH .dir and .img files
-            dir_path = file_path  # This is the .dir file
-            img_path = file_path.replace('.dir', '.img')
-            
-            dir_backup_path = f"{dir_path}.backup"
-            img_backup_path = f"{img_path}.backup"
-            
-            # Check if both backup files exist
-            if not os.path.exists(dir_backup_path) or not os.path.exists(img_backup_path):
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message("❌ Version 1 backup files not found for restoration")
-                return False
-            
-            # Restore .dir file
-            shutil.copy2(dir_backup_path, dir_path)
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"✅ DIR file restored from backup")
-            
-            # Restore .img file
-            shutil.copy2(img_backup_path, img_path)
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"✅ IMG file restored from backup")
-            
-            # Verify restoration
-            if os.path.exists(dir_path) and os.path.exists(img_path):
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message("✅ Version 1 restoration complete")
-                return True
-            else:
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message("❌ Version 1 restoration verification failed")
-                return False
-                
-        else:
-            # Version 2: Single .img file restore
-            backup_path = f"{file_path}.backup"
-            
-            if not os.path.exists(backup_path):
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message("❌ Version 2 backup file not found for restoration")
-                return False
-            
-            shutil.copy2(backup_path, file_path)
-            
-            # Verify restoration
-            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message("✅ Version 2 restoration complete")
-                return True
-            else:
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message("❌ Version 2 restoration verification failed")
-                return False
-            
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Restoration error: {str(e)}")
-        return False
-
-
-def _sanitize_filename_unified(filename: str) -> str:
-    """Unified filename sanitization to prevent corruption - FIXED"""
-    try:
-        if not filename:
-            return "unnamed.dat"
-        
-        # Remove null bytes and control characters
-        clean_name = filename.replace('\x00', '').replace('\xcd', '').replace('\xff', '')
-        
-        # Remove other control characters (keep printable ASCII only)
-        clean_name = ''.join(c for c in clean_name if 32 <= ord(c) <= 126)
-        
-        # Remove problematic characters for IMG format
-        clean_name = clean_name.replace('\\', '_').replace('/', '_').replace('|', '_')
-        
-        # FIXED: Limit to IMG field size and strip whitespace
-        clean_name = clean_name.strip()[:23]  # Leave room for null terminator
-        
-        # Fallback if empty
-        if not clean_name:
-            clean_name = "file.dat"
-        
-        return clean_name
-        
-    except Exception:
-        return "file.dat"
-
-
-def _unified_rebuild_process(img_file, mode: str, main_window) -> bool:
-    """Unified rebuild process for both modes"""
-    try:
         # Determine IMG version
-        img_version = getattr(img_file, 'version', 2)  # Default to Version 2
+        img_version = getattr(img_file, 'version', 2)
         
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🔧 Rebuilding IMG Version {img_version} in {mode} mode")
+        if not hasattr(img_file, 'entries') or not img_file.entries:
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("❌ IMG file has no entries to rebuild")
+            return False
         
-        # Collect and validate entry data
+        # Collect and sanitize entry data
         entry_data_list = []
-        total_entries = len(img_file.entries)
-        
-        for i, entry in enumerate(img_file.entries):
+        for entry in img_file.entries:
             try:
-                # Sanitize filename
-                clean_name = _sanitize_filename_unified(entry.name)
+                # Sanitize filename to prevent corruption
+                clean_name = _sanitize_filename(entry.name)
                 if clean_name != entry.name and hasattr(main_window, 'log_message'):
                     main_window.log_message(f"🧹 Cleaned filename: '{entry.name}' → '{clean_name}'")
                     entry.name = clean_name
                 
-                # Get entry data
+                # Get entry data (preserve memory pool data)
                 if hasattr(entry, '_cached_data') and entry._cached_data:
                     data = entry._cached_data
                 elif hasattr(entry, 'get_data'):
                     data = entry.get_data()
                 else:
-                    # Fallback: read from file
-                    with open(img_file.file_path, 'rb') as f:
-                        f.seek(entry.offset)
-                        data = f.read(entry.size)
+                    # Read from file
+                    data = img_file.read_entry_data(entry)
                 
                 if data and len(data) > 0:
                     entry_data_list.append({
@@ -400,99 +354,73 @@ def _unified_rebuild_process(img_file, mode: str, main_window) -> bool:
                 else:
                     return False  # Fail fast in fast mode
         
-        # Write rebuilt IMG based on version
+        if not entry_data_list:
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("❌ No valid entries found for rebuild")
+            return False
+        
+        # Rebuild based on version
         if img_version == 1:
-            success = _write_img_version1(img_file, entry_data_list, mode, main_window)
+            success = _legacy_write_version1(img_file, entry_data_list, main_window)
         else:
-            success = _write_img_version2(img_file, entry_data_list, mode, main_window)
+            success = _legacy_write_version2(img_file, entry_data_list, main_window)
         
         return success
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Unified rebuild process error: {str(e)}")
+            main_window.log_message(f"❌ Legacy rebuild error: {str(e)}")
         return False
 
 
-def _write_img_version2(img_file, entry_data_list, mode: str, main_window) -> bool:
-    """Write Version 2 IMG file (SA format) - FIXED STRUCTURE BUGS"""
+def _legacy_write_version2(img_file, entry_data_list, main_window) -> bool: #vers 1
+    """Legacy Version 2 IMG rebuild"""
     try:
+        import struct
+        
+        file_path = img_file.file_path
         entry_count = len(entry_data_list)
         
-        # FIXED: Calculate correct directory size and data start
-        directory_size = entry_count * 32  # 32 bytes per entry
-        data_start = ((directory_size + 2047) // 2048) * 2048  # FIXED: Sector-aligned start
+        # Calculate structure
+        directory_size = entry_count * 32
+        data_start = ((directory_size + 2047) // 2048) * 2048
         
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🔧 FIXED structure: {entry_count} entries, dir_size={directory_size}, data_start={data_start}")
+        # Create temporary file
+        temp_path = f"{file_path}.tmp"
         
-        # Calculate FIXED offsets
+        # Calculate offsets
         current_offset = data_start
         offset_info = []
         
         for entry_data in entry_data_list:
             data = entry_data['data']
-            
             offset_info.append({
                 'offset': current_offset,
                 'size': len(data)
             })
-            
-            # FIXED: Align to sector boundary (2048 bytes)
             aligned_size = ((len(data) + 2047) // 2048) * 2048
             current_offset += aligned_size
         
-        # Write to temporary file first (atomic operation)
-        temp_path = f"{img_file.file_path}.tmp"
-        
+        # Write temporary file
         with open(temp_path, 'wb') as f:
-            # FIXED: Write directory with CORRECT format: name(24) + offset(4) + size(4)
+            # Write directory
             for i, entry_data in enumerate(entry_data_list):
-                clean_name = entry_data['clean_name']
-                
-                # FIXED: Encode filename safely (24 bytes)
-                name_bytes = clean_name.encode('ascii', errors='replace')[:24]
-                name_bytes = name_bytes.ljust(24, b'\x00')
-                
-                # FIXED: Convert to sectors for IMG format
                 offset_sectors = offset_info[i]['offset'] // 2048
                 size_sectors = ((offset_info[i]['size'] + 2047) // 2048)
+                name_bytes = entry_data['clean_name'].encode('ascii', errors='replace')[:24].ljust(24, b'\x00')
                 
-                # FIXED: Correct directory entry format: name(24) + offset(4) + size(4)
-                f.write(name_bytes)  # Write name FIRST (24 bytes)
-                f.write(struct.pack('<I', offset_sectors))  # Then offset (4 bytes)
-                f.write(struct.pack('<I', size_sectors))    # Then size (4 bytes)
+                f.write(struct.pack('<II', offset_sectors, size_sectors))
+                f.write(name_bytes)
             
-            # FIXED: Pad directory to sector boundary
-            current_pos = f.tell()
-            if current_pos < data_start:
-                padding = data_start - current_pos
-                f.write(b'\x00' * padding)
-            
-            # FIXED: Write file data at correct offsets
+            # Write data
             for i, entry_data in enumerate(entry_data_list):
-                data = entry_data['data']
-                expected_offset = offset_info[i]['offset']
-                
-                # Verify we're at the correct position
-                actual_pos = f.tell()
-                if actual_pos != expected_offset:
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"⚠️ FIXED position: expected {expected_offset}, got {actual_pos}")
-                    f.seek(expected_offset)
-                
-                f.write(data)
-                
-                # FIXED: Pad to sector boundary
-                current_pos = f.tell()
-                sector_end = ((current_pos + 2047) // 2048) * 2048
-                if current_pos < sector_end:
-                    f.write(b'\x00' * (sector_end - current_pos))
+                f.seek(offset_info[i]['offset'])
+                f.write(entry_data['data'])
         
-        # FIXED: Atomic replace original file
-        shutil.move(temp_path, img_file.file_path)
+        # Atomic replace
+        shutil.move(temp_path, file_path)
         
-        # FIXED: Update entries with correct new offsets and sizes
+        # Update entries
         for i, entry_data in enumerate(entry_data_list):
             entry = entry_data['entry']
             entry.offset = offset_info[i]['offset']
@@ -500,7 +428,7 @@ def _write_img_version2(img_file, entry_data_list, mode: str, main_window) -> bo
             entry.name = entry_data['clean_name']
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"✅ FIXED Version 2 IMG rebuilt: {entry_count} entries")
+            main_window.log_message(f"✅ Legacy Version 2 rebuilt: {entry_count} entries")
         
         return True
         
@@ -509,80 +437,61 @@ def _write_img_version2(img_file, entry_data_list, mode: str, main_window) -> bo
         temp_path = f"{img_file.file_path}.tmp"
         if os.path.exists(temp_path):
             os.remove(temp_path)
-            
+        
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ FIXED Version 2 write error: {str(e)}")
+            main_window.log_message(f"❌ Legacy Version 2 write error: {str(e)}")
         return False
 
 
-def _write_img_version1(img_file, entry_data_list, mode: str, main_window) -> bool:
-    """Write Version 1 IMG file (DIR/IMG pair) - FIXED STRUCTURE BUGS"""
+def _legacy_write_version1(img_file, entry_data_list, main_window) -> bool: #vers 1
+    """Legacy Version 1 IMG rebuild (DIR/IMG pair)"""
     try:
+        import struct
+        
         # Get paths
         dir_path = img_file.file_path
-        img_path = img_file.file_path.replace('.dir', '.img')
-        
+        img_path = dir_path.replace('.dir', '.img')
         entry_count = len(entry_data_list)
         
-        # FIXED: Calculate offsets (Version 1 starts from 0 in IMG file)
+        # Calculate offsets
         current_offset = 0
         offset_info = []
         
         for entry_data in entry_data_list:
             data = entry_data['data']
-            
             offset_info.append({
                 'offset': current_offset,
                 'size': len(data)
             })
-            
-            # FIXED: Align to sector boundary
             aligned_size = ((len(data) + 2047) // 2048) * 2048
             current_offset += aligned_size
         
-        # Write to temporary files first
+        # Write to temporary files
         temp_dir_path = f"{dir_path}.tmp"
         temp_img_path = f"{img_path}.tmp"
         
-        # FIXED: Write DIR file with correct format
+        # Write DIR file
         with open(temp_dir_path, 'wb') as f:
             for i, entry_data in enumerate(entry_data_list):
-                clean_name = entry_data['clean_name']
-                
-                # FIXED: Encode filename safely (24 bytes)
-                name_bytes = clean_name.encode('ascii', errors='replace')[:24]
-                name_bytes = name_bytes.ljust(24, b'\x00')
-                
-                # FIXED: Convert to sectors
+                name_bytes = entry_data['clean_name'].encode('ascii', errors='replace')[:24].ljust(24, b'\x00')
                 offset_sectors = offset_info[i]['offset'] // 2048
                 size_sectors = ((offset_info[i]['size'] + 2047) // 2048)
                 
-                # FIXED: Correct DIR entry format: name(24) + offset(4) + size(4)
-                f.write(name_bytes)  # Write name FIRST (24 bytes)
-                f.write(struct.pack('<I', offset_sectors))  # Then offset (4 bytes)
-                f.write(struct.pack('<I', size_sectors))    # Then size (4 bytes)
+                f.write(name_bytes)  # Name first
+                f.write(struct.pack('<I', offset_sectors))  # Then offset
+                f.write(struct.pack('<I', size_sectors))    # Then size
         
-        # FIXED: Write IMG file
+        # Write IMG file
         with open(temp_img_path, 'wb') as f:
             for i, entry_data in enumerate(entry_data_list):
-                data = entry_data['data']
-                expected_offset = offset_info[i]['offset']
-                
-                # Seek to correct position
-                f.seek(expected_offset)
-                f.write(data)
-                
-                # FIXED: Pad to sector boundary
-                current_pos = f.tell()
-                sector_end = ((current_pos + 2047) // 2048) * 2048
-                if current_pos < sector_end:
-                    f.write(b'\x00' * (sector_end - current_pos))
+                f.seek(offset_info[i]['offset'])
+                f.write(entry_data['data'])
         
-        # FIXED: Atomic replace original files
+        # Atomic replace
         shutil.move(temp_dir_path, dir_path)
         shutil.move(temp_img_path, img_path)
         
-        # FIXED: Update entries with correct new offsets and sizes
+        # Update entries
         for i, entry_data in enumerate(entry_data_list):
             entry = entry_data['entry']
             entry.offset = offset_info[i]['offset']
@@ -590,7 +499,7 @@ def _write_img_version1(img_file, entry_data_list, mode: str, main_window) -> bo
             entry.name = entry_data['clean_name']
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"✅ FIXED Version 1 DIR/IMG rebuilt: {entry_count} entries")
+            main_window.log_message(f"✅ Legacy Version 1 rebuilt: {entry_count} entries")
         
         return True
         
@@ -599,109 +508,54 @@ def _write_img_version1(img_file, entry_data_list, mode: str, main_window) -> bo
         for temp_file in [f"{dir_path}.tmp", f"{img_path}.tmp"]:
             if os.path.exists(temp_file):
                 os.remove(temp_file)
-                
+        
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ FIXED Version 1 write error: {str(e)}")
+            main_window.log_message(f"❌ Legacy Version 1 write error: {str(e)}")
         return False
 
 
-def _validate_rebuilt_img(img_file, main_window) -> bool:
-    """Validate rebuilt IMG file to detect corruption - FIXED VALIDATION"""
+def _sanitize_filename(filename: str) -> str: #vers 1
+    """Sanitize filename to prevent corruption"""
     try:
-        file_path = img_file.file_path
+        if not filename:
+            return "unnamed.dat"
         
-        # Check file exists and has reasonable size
-        if not os.path.exists(file_path):
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ Validation: Rebuilt file not found")
-            return False
+        # Remove null bytes and control characters
+        clean_name = filename.replace('\x00', '').replace('\xcd', '').replace('\xff', '')
+        clean_name = ''.join(c for c in clean_name if 32 <= ord(c) <= 126)
+        clean_name = clean_name.replace('\\', '_').replace('/', '_').replace('|', '_')
+        clean_name = clean_name.strip()[:23]  # Leave room for null terminator
         
-        file_size = os.path.getsize(file_path)
-        if file_size < 32:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ Validation: Rebuilt file too small")
-            return False
+        return clean_name if clean_name else "file.dat"
         
-        # FIXED: Validate directory structure format
-        expected_entries = len(img_file.entries)
-        expected_dir_size = expected_entries * 32
-        
-        try:
-            with open(file_path, 'rb') as f:
-                # Read and validate first few directory entries
-                for i in range(min(3, expected_entries)):
-                    f.seek(i * 32)
-                    entry_data = f.read(32)
-                    
-                    if len(entry_data) != 32:
-                        if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"❌ FIXED validation: Invalid entry size at {i}")
-                        return False
-                    
-                    # FIXED: Validate structure - name(24) + offset(4) + size(4)
-                    name_bytes = entry_data[:24]
-                    offset_size_bytes = entry_data[24:32]
-                    
-                    # Check name has null terminator somewhere
-                    if b'\x00' not in name_bytes:
-                        if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"⚠️ FIXED validation: No null terminator in entry {i}")
-                    
-                    # FIXED: Validate offset and size are in correct positions
-                    try:
-                        offset_sectors, size_sectors = struct.unpack('<II', offset_size_bytes)
-                        if offset_sectors < 0 or size_sectors < 0:
-                            if hasattr(main_window, 'log_message'):
-                                main_window.log_message(f"❌ FIXED validation: Invalid offset/size at entry {i}")
-                            return False
-                            
-                        # Sanity check: offset should be reasonable
-                        offset_bytes = offset_sectors * 2048
-                        if offset_bytes > file_size:
-                            if hasattr(main_window, 'log_message'):
-                                main_window.log_message(f"❌ FIXED validation: Offset beyond file size at entry {i}")
-                            return False
-                            
-                    except struct.error:
-                        if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"❌ FIXED validation: Invalid structure at entry {i}")
-                        return False
-        
-        except Exception as e:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"❌ FIXED validation: Read error - {str(e)}")
-            return False
-        
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ FIXED validation: IMG structure appears correct")
-        return True
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ FIXED validation error: {str(e)}")
-        return False
+    except Exception:
+        return "file.dat"
 
 
-# Integration function for main window
-def integrate_rebuild_functions(main_window) -> bool:
-    """Integrate unified rebuild functions into main window"""
+def integrate_rebuild_functions(main_window) -> bool: #vers 4
+    """Integrate clean rebuild functions with tab awareness - SIMPLIFIED"""
     try:
-        # Main rebuild functions
+        # Main rebuild functions - TAB AWARE
         main_window.rebuild_current_img = lambda: rebuild_current_img(main_window)
         main_window.rebuild_img = main_window.rebuild_current_img  # Alias
         
-        # Direct mode functions
+        # Mode-specific functions for current tab
         main_window.fast_rebuild_current = lambda: fast_rebuild_current(main_window)
         main_window.safe_rebuild_current = lambda: safe_rebuild_current(main_window)
-        main_window.quick_rebuild = lambda: quick_rebuild_current(main_window)
+        main_window.show_rebuild_dialog = lambda: show_rebuild_mode_dialog(main_window)
         
         # Legacy aliases for compatibility
         main_window.fast_rebuild = main_window.fast_rebuild_current
         main_window.safe_rebuild = main_window.safe_rebuild_current
         main_window.optimize_img = main_window.rebuild_current_img
+        main_window.quick_rebuild = main_window.fast_rebuild_current
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("🔧 Unified rebuild system integrated")
+            main_window.log_message("🔧 Clean rebuild system integrated with TAB AWARENESS + NEW CORE")
+            main_window.log_message("   • Uses new IMG_Operations.rebuild_archive (creates new from memory)")
+            main_window.log_message("   • Falls back to legacy system if new core unavailable")
+            main_window.log_message("   • Rebuilds current active tab only")
+        
         return True
         
     except Exception as e:
@@ -710,14 +564,11 @@ def integrate_rebuild_functions(main_window) -> bool:
         return False
 
 
-# Export functions
+# Export only the essential functions
 __all__ = [
     'rebuild_current_img',
-    'rebuild_current_with_mode',
     'fast_rebuild_current',
     'safe_rebuild_current', 
-    'quick_rebuild_current',
     'show_rebuild_mode_dialog',
     'integrate_rebuild_functions'
 ]
-                
