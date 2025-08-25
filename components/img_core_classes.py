@@ -440,7 +440,9 @@ class IMGFile: #vers 5
                 # Set IMG file reference for all entries
                 for entry in self.entries:
                     entry.set_img_file(self)
-                    entry.detect_file_type_and_version()
+                    # DISABLED: Don't auto-detect during file opening to prevent freezing
+                    # Detection will be done on-demand when needed for display
+                    # entry.detect_file_type_and_version()
                 
                 img_debugger.success(f"Opened IMG file with {len(self.entries)} entries")
                 return True
