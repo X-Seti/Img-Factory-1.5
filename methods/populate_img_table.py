@@ -1,5 +1,5 @@
 #this belongs in methods/populate_img_table.py - Version: 6
-# X-Seti - August25 2025 - IMG Factory 1.5 - MINIMAL IMG Table Population - NO HEAVY PROCESSING
+# X-Seti - August25 2025 - IMG Factory 1.5
 
 """
 IMG Table Population - MINIMAL VERSION
@@ -57,10 +57,10 @@ class IMGTablePopulator:
             # Set proper column widths - same as original
             table.setColumnWidth(0, 190)  # Name
             table.setColumnWidth(1, 60)   # Type
-            table.setColumnWidth(2, 90)  # Size
+            table.setColumnWidth(2, 90)   # Size
             table.setColumnWidth(3, 100)  # Offset
             table.setColumnWidth(5, 100)  # RW Version
-            table.setColumnWidth(4, 100)  # RW Address - NEW COLUMN
+            table.setColumnWidth(4, 100)  # RW Address
             table.setColumnWidth(6, 110)  # Info
             table.setColumnWidth(7, 110)  # Status
 

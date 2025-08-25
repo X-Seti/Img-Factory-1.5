@@ -583,6 +583,26 @@ class IMGFactory(QMainWindow):
         except Exception:
             pass
 
+    def debug_img_before_loading(self, file_path): #vers 1
+        """Quick debug before loading IMG"""
+        try:
+            file_size = os.path.getsize(file_path)
+            self.log_message(f"🐛 Debug: File size = {file_size:,} bytes")
+
+            with open(file_path, 'rb') as f:
+                first_8_bytes = f.read(8)
+                self.log_message(f"🐛 Debug: First 8 bytes = {first_8_bytes.hex()}")
+
+                if first_8_bytes.startswith(b'VER2'):
+                    entry_count = struct.unpack('<I', first_8_bytes[4:8])[0]
+                    self.log_message(f"🐛 Debug: V2 entry count = {entry_count:,}")
+                else:
+                    potential_v1_entries = file_size // 32
+                    self.log_message(f"🐛 Debug: Potential V1 entries = {potential_v1_entries:,}")
+
+        except Exception as e:
+            self.log_message(f"🐛 Debug failed: {e}")
+
     def show_debug_settings(self): #vers 1
         """Show debug settings dialog"""
         try:
@@ -1842,10 +1862,8 @@ class IMGFactory(QMainWindow):
             file_name = os.path.basename(file_path)
 
             if file_ext == 'img':
-                # IMG file loading - tab hang issues
-                self.log_message(f"📁 Loading IMG file: {file_name}")
-                self._load_img_file_in_new_tab(file_path)
-                #return True
+                self._load_img_file_in_new_tab(file_path)  # ← Starts threading
+                return True  # ← Return immediately, let threading finish
                 try:
                     # Import IMG loading components directly
                     from components.img_core_classes import IMGFile

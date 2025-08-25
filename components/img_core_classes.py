@@ -1,58 +1,34 @@
-#this belongs in components/img_core_classes.py - Version: 9
-# X-Seti - August25 2025 - IMG Factory 1.5 - IMG Core Classes Complete Combined
+#this belongs in components/img_core_classes.py - Version: 8
+# X-Seti - July20 2025 - IMG Factory 1.5 - IMG Core Classes with Fixed RW Version Detection
 
 """
-IMG Core Classes - Complete combined version with all functionality
-Merged from img_core_classes.py and img_core_classes_old.py (55KB version)
+IMG Core Classes
 """
 
 import os
 import struct
 import json
 import shutil
-import tempfile
-import math
 from enum import Enum
-from typing import List, Dict, Optional, Any, Union, BinaryIO, Tuple
+from typing import List, Dict, Optional, Any, Union, BinaryIO
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
-    QPushButton, QComboBox, QLineEdit, QGroupBox, QLabel, QHeaderView,
-    QAbstractItemView, QListWidget, QListWidgetItem, QSplitter)
-from PyQt6.QtCore import pyqtSignal, Qt, QTimer
-from PyQt6.QtGui import QFont, QColor
+    QPushButton, QComboBox, QLineEdit, QGroupBox, QLabel)
+from PyQt6.QtCore import pyqtSignal, Qt
 
-# Import existing RW version functions
+# Import existing RW version functions - KEPT ALL ORIGINAL IMPORTS
 from core.rw_versions import get_rw_version_name, parse_rw_version, get_model_format_version
+# CIRCULAR IMPORT REMOVED: from core.img_platform_detection import detect_img_platform, get_platform_specific_specs, IMGPlatform
 from components.img_debug_functions import img_debugger
 
-# Constants
-V1_SIGNATURE = b"VER1"
-V2_SIGNATURE = b"VER2"
-SECTOR_SIZE = 2048
-MAX_FILENAME_LENGTH = 24
-
 ##Methods list -
-# add_entry
-# add_multiple_entries
-# calculate_next_offset
 # create_entries_table_panel
 # create_img_file
-# detect_img_platform
 # detect_img_version
 # format_file_size
-# get_entry
-# get_img_platform_info
-# get_platform_specific_specs
-# has_entry
-# import_directory
-# import_file
 # integrate_filtering
-# integrate_fixed_add_entry_methods
 # populate_table_with_sample_data
-# rebuild
-# remove_entry
-# sanitize_filename
 
 ##Classes -
 # CompressionType
@@ -69,50 +45,111 @@ MAX_FILENAME_LENGTH = 24
 # TabFilterWidget
 # ValidationResult
 
-class IMGVersion(Enum): #vers 1
+class IMGVersion(Enum):
     """IMG Archive Version Types"""
     VERSION_1 = 1    # DIR/IMG pair (GTA3, VC)
     VERSION_2 = 2    # Single IMG file (SA)
     UNKNOWN = 0
 
-class IMGPlatform(Enum): #vers 1
-    """Platform types for IMG files"""
+class IMGPlatform(Enum):
+    """Platform types for IMG files - MOVED HERE TO ELIMINATE CIRCULAR IMPORT"""
     PC = "pc"
     PS2 = "ps2" 
     XBOX = "xbox"
+    PSP = "psp"
     ANDROID = "android"
     IOS = "ios"
-    PSP = "psp"
     UNKNOWN = "unknown"
 
-class Platform(Enum): #vers 1
-    """Platform enumeration (legacy compatibility)"""
-    PC = "PC"
-    CONSOLE = "CONSOLE"
-    MOBILE = "MOBILE"
-
-class FileType(Enum): #vers 1
-    """File types within IMG archives"""
-    DFF = "dff"      # Model files
-    TXD = "txd"      # Texture dictionary
-    COL = "col"      # Collision data
-    IPL = "ipl"      # Item placement
-    IDE = "ide"      # Item definition
-    IFP = "ifp"      # Animation
-    SCM = "scm"      # Script
-    WAV = "wav"      # Audio
+class FileType(Enum):
+    """File types found in IMG archives"""
+    DFF = "dff"         # 3D Models
+    TXD = "txd"         # Texture Dictionary
+    COL = "col"         # Collision Data
+    IFP = "ifp"         # Animation Data
+    IPL = "ipl"         # Item Placement
+    DAT = "dat"         # Data files
+    WAV = "wav"         # Audio files
     UNKNOWN = "unknown"
+        # Aliases for backwards compatibility
+    dff = DFF           # Lowercase alias
+    txd = TXD           # Lowercase alias
+    col = COL           # Lowercase alias
+    ifp = IFP           # Lowercase alias
+    ipl = IPL           # Lowercase alias
+    dat = DAT           # Lowercase alias
+    wav = WAV           # Lowercase alias
+    unknown = UNKNOWN   # Lowercase alias
 
-class CompressionType(Enum): #vers 1
+    # Legacy alias
+    MODEL = DFF         # Old name alias
+
+class Platform(Enum):
+    """Platform types for IMG files"""
+    PC = 0
+    XBOX = 1
+    PS2 = 2
+    MOBILE = 3
+
+class CompressionType(Enum):
     """Compression types"""
-    NONE = 0
-    ZLIB = 1
-    LZ4 = 2
-    UNKNOWN = -1
+    NONE = "none"
+    ZLIB = "zlib"
+    LZO = "lzo"
+    UNKNOWN = "unknown"
 
-class ValidationResult: #vers 1
-    """Validation result container"""
-    def __init__(self):
+class RecentFilesManager:
+    """Manage recently opened files"""
+    def __init__(self, max_files: int = 10): #vers 1
+        self.max_files = max_files
+        self.recent_files: List[str] = []
+        self.settings_file = "recent_files.json"
+        self._load_recent_files()
+    
+    def _load_recent_files(self): #vers 1
+        """Load recent files from settings"""
+        try:
+            if os.path.exists(self.settings_file):
+                with open(self.settings_file, 'r') as f:
+                    data = json.load(f)
+                    self.recent_files = data.get('recent_files', [])
+        except Exception:
+            self.recent_files = []
+    
+    def _save_recent_files(self): #vers 1
+        """Save recent files to settings"""
+        try:
+            data = {'recent_files': self.recent_files}
+            with open(self.settings_file, 'w') as f:
+                json.dump(data, f, indent=2)
+        except Exception:
+            pass
+    
+    def add_file(self, file_path): #vers 2
+        """Add file to recent files list"""
+        if file_path in self.recent_files:
+            self.recent_files.remove(file_path)
+        
+        self.recent_files.insert(0, file_path)
+        
+        # Keep only max_files entries
+        if len(self.recent_files) > self.max_files:
+            self.recent_files = self.recent_files[:self.max_files]
+        
+        self._save_recent_files()
+    
+    def get_recent_files(self): #vers 1
+        """Get list of recent files"""
+        # Filter out files that no longer exist
+        existing_files = [f for f in self.recent_files if os.path.exists(f)]
+        if len(existing_files) != len(self.recent_files):
+            self.recent_files = existing_files
+            self._save_recent_files()
+        return self.recent_files
+
+class ValidationResult:
+    """Results from entry validation"""
+    def __init__(self): #vers 1
         self.is_valid: bool = True
         self.errors: List[str] = []
         self.warnings: List[str] = []
@@ -124,93 +161,19 @@ class ValidationResult: #vers 1
     def add_warning(self, message: str): #vers 1
         self.warnings.append(message)
 
-# Platform detection functions
-def detect_img_platform(file_path: str) -> tuple: #vers 1
-    """Detect IMG platform from file path and properties"""
-    try:
-        # Basic filename analysis
-        filename = os.path.basename(file_path).lower()
-        
-        # Platform hints from filename
-        if 'android' in filename or 'mobile' in filename:
-            return (IMGPlatform.ANDROID, {'method': 'filename'})
-        elif 'ps2' in filename or 'playstation' in filename:
-            return (IMGPlatform.PS2, {'method': 'filename'})
-        elif 'xbox' in filename:
-            return (IMGPlatform.XBOX, {'method': 'filename'})
-        elif 'psp' in filename:
-            return (IMGPlatform.PSP, {'method': 'filename'})
-        
-        # Default to PC
-        return (IMGPlatform.PC, {'method': 'default'})
-        
-    except Exception:
-        return (IMGPlatform.UNKNOWN, {'method': 'error'})
-
-def get_platform_specific_specs(platform: IMGPlatform) -> Dict[str, Any]: #vers 1
-    """Get platform-specific specifications"""
-    specs = {
-        IMGPlatform.PC: {
-            'max_file_size': 4 * 1024 * 1024 * 1024,  # 4GB
-            'compression_supported': True,
-            'encryption_supported': False,
-            'sector_size': 2048
-        },
-        IMGPlatform.PS2: {
-            'max_file_size': 2 * 1024 * 1024 * 1024,  # 2GB
-            'compression_supported': False,
-            'encryption_supported': False,
-            'sector_size': 2048
-        },
-        IMGPlatform.XBOX: {
-            'max_file_size': 4 * 1024 * 1024 * 1024,  # 4GB
-            'compression_supported': False,
-            'encryption_supported': False,
-            'sector_size': 2048
-        },
-        IMGPlatform.ANDROID: {
-            'max_file_size': 1 * 1024 * 1024 * 1024,  # 1GB
-            'compression_supported': True,
-            'encryption_supported': False,
-            'sector_size': 2048
-        },
-        IMGPlatform.PSP: {
-            'max_file_size': 512 * 1024 * 1024,  # 512MB
-            'compression_supported': False,
-            'encryption_supported': False,
-            'sector_size': 2048
-        }
-    }
-    return specs.get(platform, specs[IMGPlatform.PC])
-
-def get_img_platform_info(file_path: str) -> Dict[str, Any]: #vers 1
-    """Get platform information for IMG file"""
-    platform, detection_info = detect_img_platform(file_path)
-    return {
-        'platform': platform.value,
-        'detected_from': 'filename_analysis',
-        'supported_features': {
-            'compression': platform in [IMGPlatform.PC, IMGPlatform.ANDROID],
-            'encryption': False,
-            'large_files': platform != IMGPlatform.PSP
-        }
-    }
-
-class IMGEntry: #vers 4
-    """Represents a single file entry within an IMG archive"""
+class IMGEntry:
+    """Represents a single file entry within an IMG archive - FIXED WITH RW VERSION DETECTION"""
     
-    def __init__(self):
+    def __init__(self): #vers 4
         self.name: str = ""
         self.extension: str = ""
         self.offset: int = 0          # Offset in bytes
         self.size: int = 0            # Size in bytes
-        self.actual_offset: int = 0   # For new format compatibility
-        self.actual_size: int = 0     # For new format compatibility
         self.uncompressed_size: int = 0
         self.file_type: FileType = FileType.UNKNOWN
         self.compression_type: CompressionType = CompressionType.NONE
         self.rw_version: int = 0      # RenderWare version
-        self.rw_version_name: str = "" # Human readable version name
+        self.rw_version_name: str = "" # ADDED: Human readable version name
         self.is_encrypted: bool = False
         self.is_new_entry: bool = False
         self.is_replaced: bool = False
@@ -220,54 +183,95 @@ class IMGEntry: #vers 4
         # Internal data cache
         self._cached_data: Optional[bytes] = None
         self._img_file: Optional['IMGFile'] = None
-        self._version_detected: bool = False
+        self._version_detected: bool = False # ADDED: Track if version was detected
     
     def set_img_file(self, img_file: 'IMGFile'): #vers 1
         """Set reference to parent IMG file"""
         self._img_file = img_file
 
     def detect_file_type_and_version(self): #vers 2
-        """Detect file type and RW version from file data"""
+        """ADDED: Detect file type and RW version from file data"""
         try:
             # Extract extension from name
             if '.' in self.name:
                 self.extension = self.name.split('.')[-1].lower()
+                self.file_type = self._get_file_type_from_extension()
+
+            # For RenderWare files, detect version from data
+            if self.is_renderware_file() and self._img_file and not self._version_detected: #nroken
+                try:
+                    data = self.get_data()
+                    if len(data) >= 12:  # Minimum RW header size
+                        # Use existing RW version detection function
+                        version_info = parse_rw_version(data)
+                        if version_info and 'version' in version_info:
+                            self.rw_version = version_info['version']
+                            self.rw_version_name = get_rw_version_name(self.rw_version)
+                            self._version_detected = True
+
+                            if hasattr(img_debugger, 'debug'):
+                                img_debugger.debug(f"✅ RW Version detected for {self.name}: {self.rw_version_name}")
+
+                except Exception as e:
+                    if hasattr(img_debugger, 'warning'):
+                        img_debugger.warning(f"Could not detect RW version for {self.name}: {e}")
+
+        except Exception as e:
+            if hasattr(img_debugger, 'error'):
+                img_debugger.error(f"Error detecting file type/version for {self.name}: {e}")
+
+
+    def detect_file_type_and_version(self): #vers 1
+        """ADDED: Detect file type and RW version from file data"""
+        try:
+            # Extract extension from name
+            if '.' in self.name:
+                self.extension = self.name.split('.')[-1].upper()
+                self.extension = ''.join(c for c in self.extension if c.isalpha())
+            else:
+                self.extension = "NO_EXT"
+            
+            # Set file type based on extension
+            ext_lower = self.extension.lower()
+            if ext_lower == 'dff':
+                self.file_type = FileType.DFF
+            elif ext_lower == 'txd':
+                self.file_type = FileType.TXD
+            elif ext_lower == 'col':
+                self.file_type = FileType.COL
+            elif ext_lower == 'ifp':
+                self.file_type = FileType.IFP
+            elif ext_lower == 'ipl':
+                self.file_type = FileType.IPL
+            elif ext_lower == 'dat':
+                self.file_type = FileType.DAT
+            elif ext_lower == 'wav':
+                self.file_type = FileType.WAV
+            else:
+                self.file_type = FileType.UNKNOWN
+
+            # Detect RW version for RenderWare files
+            if self.extension in ['DFF', 'TXD'] and not self._version_detected:
+                self._detect_rw_version()
                 
-                # Set file type based on extension
-                if self.extension == 'dff':
-                    self.file_type = FileType.DFF
-                elif self.extension == 'txd':
-                    self.file_type = FileType.TXD
-                elif self.extension == 'col':
-                    self.file_type = FileType.COL
-                elif self.extension == 'ipl':
-                    self.file_type = FileType.IPL
-                elif self.extension == 'ide':
-                    self.file_type = FileType.IDE
-                elif self.extension == 'ifp':
-                    self.file_type = FileType.IFP
-                elif self.extension == 'scm':
-                    self.file_type = FileType.SCM
-                elif self.extension == 'wav':
-                    self.file_type = FileType.WAV
-
-            # Detect RW version for applicable files
-            if self.file_type in [FileType.DFF, FileType.TXD] and not self._version_detected:
-                self._detect_rw_version_from_data()
-
         except Exception as e:
             img_debugger.error(f"Error detecting file type for {self.name}: {e}")
 
-    def _detect_rw_version_from_data(self): #vers 1
-        """Detect RW version from file header data"""
+    def _detect_rw_version(self): #vers 1
+        """ADDED: Detect RenderWare version from file header"""
         try:
-            file_data = self._read_header_data(16)  # Read first 16 bytes
-            if not file_data or len(file_data) < 8:
+            if not self._img_file or not self._img_file.file_path:
                 return
 
-            # Try to parse RW version from header
-            version_value, version_name = parse_rw_version(file_data)
-            if version_value and version_name:
+            # Read file header (first 12 bytes contain RW version info)
+            file_data = self._read_header_data(12)
+            if not file_data or len(file_data) < 12:
+                return
+
+            # Use existing parse_rw_version function
+            version_value, version_name = parse_rw_version(file_data[8:12])
+            
+            if version_value > 0:
                 self.rw_version = version_value
                 self.rw_version_name = version_name
                 self._version_detected = True
@@ -289,7 +293,7 @@ class IMGEntry: #vers 4
             img_debugger.error(f"Error detecting RW version for {self.name}: {e}")
 
     def _read_header_data(self, bytes_to_read: int) -> Optional[bytes]: #vers 1
-        """Read file header data from IMG file"""
+        """ADDED: Read file header data from IMG file"""
         try:
             if not self._img_file or not self._img_file.file_path:
                 return None
@@ -307,23 +311,221 @@ class IMGEntry: #vers 4
 
             with open(file_path, 'rb') as f:
                 f.seek(self.offset)
-                return f.read(bytes_to_read)
+                return f.read(min(self.size, bytes_to_read))
 
-        except Exception:
+        except Exception as e:
+            img_debugger.error(f"Error reading header data for {self.name}: {e}")
             return None
 
-    def get_version_text(self): #vers 1
-        """Get version text for display"""
-        return self.rw_version_name if self.rw_version_name else "Unknown"
+    def _get_file_type_from_extension(self) -> FileType: #vers 1
+        """Get file type from extension"""
+        ext_lower = self.extension.lower()
+        try:
+            return FileType(ext_lower)
+        except ValueError:
+            return FileType.UNKNOWN
 
-class IMGFile: #vers 5
-    """Main IMG archive file handler - COMPLETE with all methods"""
+    def get_version_text(self) -> str: #vers 2
+        """FIXED: Get human-readable version text"""
+        try:
+            if self.extension in ['DFF', 'TXD']:
+                if self.rw_version > 0 and self.rw_version_name:
+                    return f"RW {self.rw_version_name}"
+                elif self.rw_version > 0:
+                    return f"RW 0x{self.rw_version:X}"
+                else:
+                    return "RW Unknown"
+            elif self.extension == 'COL':
+                return "COL"
+            elif self.extension == 'IFP':
+                return "IFP"
+            elif self.extension == 'IPL':
+                return "IPL"
+            elif self.extension in ['WAV', 'MP3']:
+                return "Audio"
+            else:
+                return "Unknown"
+        except:
+            return "Unknown"
     
-    def __init__(self, file_path: str = ""):
+    def get_offset_in_sectors(self) -> int: #vers 1
+        """Get offset in 2048-byte sectors"""
+        return self.offset // 2048
+    
+    def get_size_in_sectors(self) -> int: #vers 1
+        """Get size in 2048-byte sectors (rounded up)"""
+        return (self.size + 2047) // 2048
+    
+    def get_file_type(self) -> FileType: #vers 1
+        """Get file type based on extension"""
+        if not self.extension:
+            return FileType.UNKNOWN
+        
+        ext_lower = self.extension.lower().lstrip('.')
+        try:
+            return FileType(ext_lower)
+        except ValueError:
+            return FileType.UNKNOWN
+    
+    def is_renderware_file(self) -> bool: #vers 1
+        """Check if file is a RenderWare format"""
+        return self.extension.upper() in ['DFF', 'TXD']
+    
+    def validate(self) -> ValidationResult: #vers 1
+        """Validate entry data"""
+        result = ValidationResult()
+        
+        try:
+            # Check basic attributes
+            if not self.name:
+                result.add_error("Entry has no name")
+            
+            if self.size < 0:
+                result.add_error("Entry has negative size")
+            
+            if self.offset < 0:
+                result.add_error("Entry has negative offset")
+            
+            # Check name validity
+            if len(self.name) > 24:
+                result.add_warning("Entry name longer than 24 characters")
+            
+            invalid_chars = set('\x00\xff\xcd')
+            if any(char in self.name for char in invalid_chars):
+                result.add_error("Entry name contains invalid characters")
+            
+            # Validate data if available
+            if self._img_file:
+                try:
+                    data = self.get_data()
+                    if len(data) != self.size:
+                        result.add_warning(f"Entry {self.name} actual size differs from header")
+                except Exception as e:
+                    result.add_error(f"Cannot read data for {self.name}: {str(e)}")
+
+        except Exception as e:
+            result.add_error(f"Validation error for {self.name}: {str(e)}")
+
+        return result
+    
+    def get_data(self) -> bytes: #vers 1
+        """Read entry data from IMG file"""
+        if not self._img_file:
+            raise ValueError("No IMG file reference set")
+        
+        return self._img_file.read_entry_data(self)
+    
+    def set_data(self, data: bytes): #vers 1
+        """Write entry data to IMG file"""
+        if not self._img_file:
+            raise ValueError("No IMG file reference set")
+        
+        self._img_file.write_entry_data(self, data)
+
+# INLINE PLATFORM DETECTION FUNCTIONS - to replace the circular import
+def detect_img_platform(file_path: str): #vers 1
+    """INLINE: Simple platform detection to avoid circular import"""
+    try:
+        filename = os.path.basename(file_path).lower()
+        
+        # Simple platform detection based on filename/path
+        if any(keyword in filename for keyword in ['ps2', 'playstation']):
+            return IMGPlatform.PS2, {'confidence': 70, 'indicators': ['ps2_filename']}
+        elif any(keyword in filename for keyword in ['xbox']):
+            return IMGPlatform.XBOX, {'confidence': 70, 'indicators': ['xbox_filename']}
+        elif any(keyword in filename for keyword in ['android', 'mobile']):
+            return IMGPlatform.ANDROID, {'confidence': 70, 'indicators': ['android_filename']}
+        elif any(keyword in filename for keyword in ['psp', 'stories']):
+            return IMGPlatform.PSP, {'confidence': 70, 'indicators': ['psp_filename']}
+        else:
+            return IMGPlatform.PC, {'confidence': 50, 'indicators': ['default_pc']}
+            
+    except Exception:
+        return IMGPlatform.UNKNOWN, {'confidence': 0, 'indicators': ['error']}
+
+def detect_img_platform_inline(file_path: str) -> IMGPlatform: #vers 1
+    """MOVED: Simple platform detection to avoid circular import"""
+    try:
+        filename = os.path.basename(file_path).lower()
+
+        # Simple platform detection based on filename/path
+        if any(keyword in filename for keyword in ['ps2', 'playstation']):
+            return IMGPlatform.PS2
+        elif any(keyword in filename for keyword in ['xbox']):
+            return IMGPlatform.XBOX
+        elif any(keyword in filename for keyword in ['android', 'mobile']):
+            return IMGPlatform.ANDROID
+        elif any(keyword in filename for keyword in ['psp', 'stories']):
+            return IMGPlatform.PSP
+        else:
+            return IMGPlatform.PC
+
+    except Exception:
+        return IMGPlatform.UNKNOWN
+
+
+def get_platform_specific_specs(platform: IMGPlatform) -> Dict[str, Any]: #vers 1
+    """INLINE: Get platform-specific specifications"""
+    specs = {
+        IMGPlatform.PC: {
+            'sector_size': 2048,
+            'entry_size': 32,
+            'name_length': 24,
+            'endianness': 'little',
+            'supports_compression': True,
+            'max_entries': 65535
+        },
+        IMGPlatform.PS2: {
+            'sector_size': 2048,
+            'entry_size': 32,
+            'name_length': 24,
+            'endianness': 'little',
+            'supports_compression': False,
+            'max_entries': 16000,
+            'special_alignment': True
+        },
+        IMGPlatform.ANDROID: {
+            'sector_size': 2048,
+            'entry_size': 32,
+            'name_length': 24,
+            'endianness': 'little',
+            'supports_compression': True,
+            'max_entries': 32000,
+            'mobile_optimized': True
+        },
+        IMGPlatform.PSP: {
+            'sector_size': 2048,
+            'entry_size': 32,
+            'name_length': 24,
+            'endianness': 'little',
+            'supports_compression': False,
+            'max_entries': 8000,
+            'stories_format': True
+        }
+    }
+    return specs.get(platform, specs[IMGPlatform.PC])
+
+def get_img_platform_info(file_path: str) -> Dict[str, Any]: #vers 1
+    """Get platform information for IMG file"""
+    platform, detection_info = detect_img_platform(file_path)
+    return {
+        'platform': platform.value,
+        'detected_from': 'filename_analysis',
+        'supported_features': {
+            'compression': platform in [IMGPlatform.PC, IMGPlatform.ANDROID],
+            'encryption': False,
+            'large_files': platform != IMGPlatform.PSP
+        }
+    }
+
+class IMGFile:
+    """Main IMG archive file handler - FIXED WITH PLATFORM SUPPORT"""
+    
+    def __init__(self, file_path: str = ""): #vers 5
         self.file_path: str = file_path
         self.version: IMGVersion = IMGVersion.UNKNOWN
-        self.platform: IMGPlatform = IMGPlatform.UNKNOWN
-        self.platform_specs: Dict[str, Any] = {}
+        self.platform: IMGPlatform = IMGPlatform.UNKNOWN  # ADDED: Platform detection
+        self.platform_specs: Dict[str, Any] = {}  # ADDED: Platform-specific specs
         self.entries: List[IMGEntry] = []
         self.is_open: bool = False
         self.total_size: int = 0
@@ -334,14 +536,6 @@ class IMGFile: #vers 5
         self._img_handle: Optional[BinaryIO] = None
         self._dir_handle: Optional[BinaryIO] = None
     
-    def _sanitize_filename(self, filename: str) -> str: #vers 1
-        """Sanitize filename to prevent corruption"""
-        # Remove any null bytes and truncate to max length
-        clean_name = filename.replace('\x00', '').strip()
-        if len(clean_name) > MAX_FILENAME_LENGTH - 1:  # Leave space for null terminator
-            clean_name = clean_name[:MAX_FILENAME_LENGTH - 1]
-        return clean_name
-
     def create_new(self, output_path: str, version: IMGVersion, **options) -> bool: #vers 2
         """Create new IMG file with specified parameters"""
         try:
@@ -371,402 +565,158 @@ class IMGFile: #vers 5
                 success = creator.create_version_2(output_path, initial_size_mb, compression_enabled)
                 if success:
                     self.entries = creator.entries
-                    self.is_open = True
+                    self.file_path = creator.file_path
                 return success
                 
-            return False
-
-        except Exception as e:
-            img_debugger.error(f"Error creating IMG file: {e}")
-            return False
-
-    def detect_version(self) -> IMGVersion: #vers 4
-        """Detect IMG version and platform from file"""
-        try:
-            if not os.path.exists(self.file_path):
-                return IMGVersion.UNKNOWN
-
-            # Platform detection first
-            detected_platform, detection_info = detect_img_platform(self.file_path)
-            self.platform = detected_platform
-            self.platform_specs = get_platform_specific_specs(detected_platform)
-
-            # Check if it's a .dir file (Version 1)
-            if self.file_path.lower().endswith('.dir'):
-                img_path = self.file_path[:-4] + '.img'
-                if os.path.exists(img_path):
-                    self.version = IMGVersion.VERSION_1
-                    return IMGVersion.VERSION_1
-
-            # Check if it's a single .img file (Version 2)
-            if self.file_path.lower().endswith('.img'):
-                try:
-                    with open(self.file_path, 'rb') as f:
-                        header = f.read(4)
-                        if header == b'VER2':
-                            self.version = IMGVersion.VERSION_2
-                            return IMGVersion.VERSION_2
-                        # Could be Version 1 IMG file without DIR
-                        self.version = IMGVersion.VERSION_1
-                        return IMGVersion.VERSION_1
-                except:
-                    pass
-
-        except Exception as e:
-            img_debugger.error(f"Error detecting IMG version: {e}")
-
-        self.version = IMGVersion.UNKNOWN
-        return IMGVersion.UNKNOWN
-
-    def open(self) -> bool: #vers 5
-        """Open and parse IMG file"""
-        try:
-            if not os.path.exists(self.file_path):
-                return False
-
-            # Detect version first
-            self.detect_version()
-
-            # Load based on version
-            if self.version == IMGVersion.VERSION_1:
-                success = self._load_version1()
-            elif self.version == IMGVersion.VERSION_2:
-                success = self._load_version2()
             else:
+                print(f"❌ Unsupported IMG version: {version}")
                 return False
 
-            if success:
-                self.is_open = True
-                # Set IMG file reference for all entries
-                for entry in self.entries:
-                    entry.set_img_file(self)
-                    # DISABLED: Don't auto-detect during file opening to prevent freezing
-                    # Detection will be done on-demand when needed for display
-                    # entry.detect_file_type_and_version()
-                
-                img_debugger.success(f"Opened IMG file with {len(self.entries)} entries")
-                return True
-
         except Exception as e:
-            img_debugger.error(f"Error opening IMG file: {e}")
+            print(f"❌ Error creating IMG file: {e}")
             return False
 
-        return False
-
-    def _load_version1(self) -> bool: #vers 1
-        """Load Version 1 IMG (DIR/IMG pair)"""
+    def save_img_file(self) -> bool: #vers 1
+        """Save IMG file with current entries"""
         try:
-            dir_path = self.file_path
-            img_path = self.file_path[:-4] + '.img'
-            
-            if not os.path.exists(dir_path) or not os.path.exists(img_path):
+            if not self.file_path or not self.entries:
                 return False
 
-            with open(dir_path, 'rb') as f:
-                dir_data = f.read()
+            # Create backup first
+            import shutil
+            backup_path = self.file_path + '.backup'
+            shutil.copy2(self.file_path, backup_path)
 
-            # Parse DIR entries (32 bytes each)
-            entry_count = len(dir_data) // 32
-            self.entries = []
-            
-            for i in range(entry_count):
-                offset = i * 32
-                entry_data = dir_data[offset:offset+32]
-
-                if len(entry_data) < 32:
-                    break
-
-                # Parse entry: offset(4), size(4), name(24)
-                entry_offset, entry_size = struct.unpack('<II', entry_data[:8])
-                entry_name = entry_data[8:32].rstrip(b'\x00').decode('ascii', errors='ignore')
-
-                if entry_name:
-                    entry = IMGEntry()
-                    entry.name = entry_name
-                    entry.offset = entry_offset * SECTOR_SIZE  # Convert sectors to bytes
-                    entry.size = entry_size * SECTOR_SIZE
-                    entry.actual_offset = entry.offset
-                    entry.actual_size = entry.size
-                    entry.set_img_file(self)
-                    self.entries.append(entry)
-
-            return True
+            # Rebuild the IMG file
+            return self.rebuild_img_file()
 
         except Exception as e:
-            img_debugger.error(f"Error opening Version 1 IMG: {e}")
+            print(f"[ERROR] Failed to save IMG file: {e}")
             return False
 
-    def _load_version2(self) -> bool: #vers 1
-        """Load Version 2 IMG (single file)"""
+    def _sanitize_filename(self, filename: str) -> str: #vers 1
+        """CRITICAL: Clean corrupted filenames before encoding"""
         try:
-            with open(self.file_path, 'rb') as f:
-                # Read header
-                header = f.read(4)
-                if header != V2_SIGNATURE:
-                    return False
+            # Remove corrupted bytes that show as garbage in table
+            clean_name = filename.replace('\x00', '').replace('\xcd', '').replace('\xff', '')
 
-                entry_count = struct.unpack('<I', f.read(4))[0]
+            # Remove control characters (except null terminator)
+            clean_name = ''.join(c for c in clean_name if 32 <= ord(c) <= 126)
 
-                # Read entries
-                self.entries = []
-                for i in range(entry_count):
-                    # Read entry: offset(4), size(4), name(24)
-                    entry_data = f.read(32)
-                    if len(entry_data) < 32:
-                        break
+            # Limit to IMG field size
+            clean_name = clean_name.strip()[:24]
 
-                    offset_sectors, size_sectors = struct.unpack('<II', entry_data[:8])
-                    name_bytes = entry_data[8:32]
+            # Fallback if empty
+            if not clean_name:
+                clean_name = f"file_{len(self.entries):04d}.dat"
 
-                    # Convert values
-                    actual_offset = offset_sectors * SECTOR_SIZE
-                    actual_size = size_sectors * SECTOR_SIZE
-
-                    # Extract name
-                    name_end = name_bytes.find(b'\x00')
-                    if name_end != -1:
-                        name = name_bytes[:name_end].decode('ascii', errors='ignore')
-                    else:
-                        name = name_bytes.decode('ascii', errors='ignore').rstrip('\x00')
-
-                    # Create entry
-                    entry = IMGEntry()
-                    entry.name = name
-                    entry.offset = actual_offset
-                    entry.size = actual_size
-                    entry.actual_offset = actual_offset
-                    entry.actual_size = actual_size
-
-                    self.entries.append(entry)
-
-            return True
+            return clean_name
 
         except Exception:
-            return False
+            return f"file_{len(self.entries):04d}.dat"
 
-    def read_entry_data(self, entry: IMGEntry) -> bytes: #vers 1
-        """Read data for a specific entry"""
-        try:
-            if self.version == IMGVersion.VERSION_1:
-                # Read from .img file
-                img_path = self.file_path.replace('.dir', '.img')
-                with open(img_path, 'rb') as f:
-                    f.seek(entry.offset)
-                    return f.read(entry.size)
-            else:
-                # Read from single .img file
-                with open(self.file_path, 'rb') as f:
-                    f.seek(entry.offset)
-                    return f.read(entry.size)
-        except Exception as e:
-            raise RuntimeError(f"Failed to read entry data: {e}")
 
-    def write_entry_data(self, entry: IMGEntry, data: bytes): #vers 1
-        """Write data for a specific entry"""
+    def _rebuild_version2(self) -> bool: #vers 1
+        """Rebuild Version 2 IMG file (SA format)"""
         try:
-            if self.version == IMGVersion.VERSION_1:
-                # Write to .img file
-                img_path = self.file_path.replace('.dir', '.img')
-                with open(img_path, 'r+b') as f:
-                    f.seek(entry.offset)
+            import struct
+            import os
+
+            # Calculate sizes
+            entry_count = len(self.entries)
+            directory_size = entry_count * 32  # 32 bytes per entry
+            data_start = directory_size
+
+            # Collect entry data
+            entry_data_list = []
+            current_offset = data_start
+
+            for entry in self.entries:
+                # Get entry data
+                if hasattr(entry, '_cached_data') and entry._cached_data:
+                    data = entry._cached_data
+                else:
+                    data = self.read_entry_data(entry)
+
+                entry_data_list.append(data)
+
+                # Update entry with new offset/size
+                entry.offset = current_offset
+                entry.size = len(data)
+
+                # Align to sector boundary (2048 bytes)
+                aligned_size = ((len(data) + 2047) // 2048) * 2048
+                current_offset += aligned_size
+
+            # Write new IMG file
+            with open(self.file_path, 'wb') as f:
+                # Write directory
+                for i, entry in enumerate(self.entries):
+                    # Convert to sectors
+                    offset_sectors = entry.offset // 2048
+                    size_sectors = ((entry.size + 2047) // 2048)
+
+                    # Pack entry: offset(4), size(4), name(24)
+                    entry_data = struct.pack('<II', offset_sectors, size_sectors)
+
+                    #name_bytes = entry.name.encode('ascii')[:24].ljust(24, b'\x00')
+                    # CORRUPTION FIX: Sanitize before encoding
+                    clean_name = self._sanitize_filename(entry.name)
+                    if clean_name != entry.name:
+                        print(f"[CORRUPTION FIX] '{entry.name}' → '{clean_name}'")
+                        entry.name = clean_name
+
+                    name_bytes = clean_name.encode('ascii', errors='replace')[:24]
+                    name_bytes = name_bytes.ljust(24, b'\x00')
+
+                    entry_data += name_bytes
+
+                    f.write(entry_data)
+
+                # Write file data
+                for i, data in enumerate(entry_data_list):
+                    f.seek(self.entries[i].offset)
                     f.write(data)
-            else:
-                # Write to single .img file
-                with open(self.file_path, 'r+b') as f:
-                    f.seek(entry.offset)
-                    f.write(data)
-        except Exception as e:
-            raise RuntimeError(f"Failed to write entry data: {e}")
 
-    def close(self): #vers 1
-        """Close IMG file and cleanup resources"""
-        if self._img_handle:
-            self._img_handle.close()
-            self._img_handle = None
-        if self._dir_handle:
-            self._dir_handle.close()
-            self._dir_handle = None
-        
-        self.is_open = False
-        self.entries.clear()
+                    # Pad to sector boundary
+                    current_pos = f.tell()
+                    sector_end = ((current_pos + 2047) // 2048) * 2048
+                    if current_pos < sector_end:
+                        f.write(b'\x00' * (sector_end - current_pos))
 
-    def add_entry(self, filename: str, data: bytes, auto_save: bool = True) -> bool: #vers 3
-        """Add new entry to IMG file - ENHANCED with corruption prevention"""
-        try:
-            # CRITICAL: Sanitize filename to prevent corruption
-            clean_filename = self._sanitize_filename(filename)
-            if clean_filename != filename:
-                img_debugger.debug(f"Filename sanitized: '{filename}' → '{clean_filename}'")
-                filename = clean_filename
-
-            img_debugger.debug(f"add_entry called: {filename} ({len(data)} bytes)")
-            img_debugger.debug(f"Current IMG entries before: {len(self.entries)}")
-
-            # Check if entry already exists
-            if self.has_entry(filename):
-                img_debugger.warning(f"Entry '{filename}' already exists")
-                return False
-
-            # Create new entry
-            entry = IMGEntry()
-            entry.name = filename
-            entry.size = len(data)
-            entry.actual_size = len(data)
-            entry.offset = self.calculate_next_offset()
-            entry.actual_offset = entry.offset
-            entry._cached_data = data
-            entry.is_new_entry = True
-            entry.set_img_file(self)
-
-            # Add to entries list
-            self.entries.append(entry)
-            
-            img_debugger.success(f"Added entry: {filename} at offset {entry.offset}")
+            print(f"✅ Rebuilt IMG file: {entry_count} entries")
             return True
 
         except Exception as e:
-            img_debugger.error(f"Failed to add entry {filename}: {e}")
-            return False
-
-    def remove_entry(self, name: str) -> bool: #vers 1
-        """Remove entry from IMG file"""
-        try:
-            for i, entry in enumerate(self.entries):
-                if entry.name.lower() == name.lower():
-                    del self.entries[i]
-                    img_debugger.success(f"Removed entry: {name}")
-                    return True
-            img_debugger.warning(f"Entry '{name}' not found for removal")
-            return False
-        except Exception as e:
-            img_debugger.error(f"Error removing entry {name}: {e}")
-            return False
-
-    def has_entry(self, name: str) -> bool: #vers 1
-        """Check if entry exists"""
-        return any(entry.name.lower() == name.lower() for entry in self.entries)
-
-    def get_entry(self, name: str) -> Optional[IMGEntry]: #vers 1
-        """Get entry by name"""
-        for entry in self.entries:
-            if entry.name.lower() == name.lower():
-                return entry
-        return None
-
-    def calculate_next_offset(self) -> int: #vers 1
-        """Calculate next available offset"""
-        if not self.entries:
-            return 2048 if self.version == IMGVersion.VERSION_2 else 0
-        
-        max_offset = 0
-        for entry in self.entries:
-            end_offset = entry.offset + entry.size
-            if end_offset > max_offset:
-                max_offset = end_offset
-        
-        # Align to sector boundary
-        return ((max_offset + SECTOR_SIZE - 1) // SECTOR_SIZE) * SECTOR_SIZE
-
-    def add_multiple_entries(self, entries: List[IMGEntry]) -> int: #vers 1
-        """Add multiple entries"""
-        try:
-            added_count = 0
-            for entry in entries:
-                if self.has_entry(entry.name):
-                    continue
-                entry.set_img_file(self)
-                self.entries.append(entry)
-                added_count += 1
-            img_debugger.success(f"Added {added_count} entries")
-            return added_count
-        except Exception as e:
-            img_debugger.error(f"Batch add failed: {e}")
-            return 0
-
-    def import_file(self, file_path: str) -> bool: #vers 1
-        """Import file into IMG"""
-        try:
-            filename = os.path.basename(file_path)
-
-            # Read file data
-            with open(file_path, 'rb') as f:
-                data = f.read()
-
-            # Use add_entry method
-            return self.add_entry(filename, data)
-
-        except Exception as e:
-            img_debugger.error(f"Failed to import file {file_path}: {e}")
-            return False
-
-    def import_directory(self, directory_path: str) -> Tuple[int, int]: #vers 2
-        """Import all files from directory"""
-        success_count = 0
-        error_count = 0
-        
-        try:
-            if not os.path.exists(directory_path):
-                img_debugger.error(f"Directory not found: {directory_path}")
-                return (0, 1)
-
-            for root, dirs, files in os.walk(directory_path):
-                for file in files:
-                    file_path = os.path.join(root, file)
-                    try:
-                        if self.import_file(file_path):
-                            success_count += 1
-                        else:
-                            error_count += 1
-                    except Exception as e:
-                        img_debugger.error(f"Error importing {file_path}: {e}")
-                        error_count += 1
-
-            img_debugger.success(f"Imported {success_count} files, {error_count} errors")
-            return (success_count, error_count)
-
-        except Exception as e:
-            img_debugger.error(f"Error importing directory: {e}")
-            return (0, 1)
-
-    def rebuild(self) -> bool: #vers 3
-        """Rebuild IMG file with current entries"""
-        try:
-            if self.version == IMGVersion.VERSION_1:
-                return self._rebuild_version1()
-            elif self.version == IMGVersion.VERSION_2:
-                return self._rebuild_version2()
-            else:
-                img_debugger.error("Unknown IMG version for rebuild")
-                return False
-
-        except Exception as e:
-            img_debugger.error(f"Error rebuilding IMG file: {e}")
+            print(f"[ERROR] Failed to rebuild Version 2 IMG: {e}")
             return False
 
     def _rebuild_version1(self) -> bool: #vers 1
-        """Rebuild Version 1 IMG (DIR/IMG pair)"""
+        """Rebuild Version 1 IMG file (DIR/IMG pair)"""
         try:
+            import struct
+            import os
+
+            # Get DIR and IMG paths
             dir_path = self.file_path
-            img_path = self.file_path[:-4] + '.img'
+            img_path = self.file_path.replace('.dir', '.img')
 
-            # Create backup
-            if os.path.exists(dir_path):
-                shutil.copy2(dir_path, dir_path + '.bak')
-            if os.path.exists(img_path):
-                shutil.copy2(img_path, img_path + '.bak')
+            entry_count = len(self.entries)
 
-            # Prepare data for all entries
+            # Collect entry data and calculate offsets
             entry_data_list = []
             current_offset = 0
-            
+
             for entry in self.entries:
-                if entry._cached_data:
+                # Get entry data
+                if hasattr(entry, '_cached_data') and entry._cached_data:
                     data = entry._cached_data
                 else:
-                    # Read existing data
                     data = self.read_entry_data(entry)
-                
+
                 entry_data_list.append(data)
+
+                # Update entry with new offset/size
                 entry.offset = current_offset
                 entry.size = len(data)
 
@@ -800,262 +750,551 @@ class IMGFile: #vers 5
                     if current_pos < sector_end:
                         f.write(b'\x00' * (sector_end - current_pos))
 
-            img_debugger.success(f"Rebuilt DIR/IMG pair: {len(self.entries)} entries")
+            print(f"✅ Rebuilt DIR/IMG pair: {entry_count} entries")
             return True
 
         except Exception as e:
-            img_debugger.error(f"Failed to rebuild Version 1 IMG: {e}")
+            print(f"[ERROR] Failed to rebuild Version 1 IMG: {e}")
             return False
 
-    def _rebuild_version2(self) -> bool: #vers 1
-        """Rebuild Version 2 IMG (single file)"""
+    def import_file(self, file_path: str) -> bool: #vers 1
+        """Import file into IMG"""
         try:
-            # Create backup
-            if os.path.exists(self.file_path):
-                shutil.copy2(self.file_path, self.file_path + '.bak')
+            import os
+            filename = os.path.basename(file_path)
 
-            # Calculate header size
-            entry_count = len(self.entries)
-            header_size = 8 + (entry_count * 32)  # 8 bytes header + 32 bytes per entry
-            header_sectors = ((header_size + SECTOR_SIZE - 1) // SECTOR_SIZE)
-            data_start_offset = header_sectors * SECTOR_SIZE
+            # Read file data
+            with open(file_path, 'rb') as f:
+                data = f.read()
 
-            # Prepare data for all entries
-            entry_data_list = []
-            current_offset = data_start_offset
-            
-            for entry in self.entries:
-                if entry._cached_data:
-                    data = entry._cached_data
+            # Use add_entry method
+            return self.add_entry(filename, data)
+
+        except Exception as e:
+            print(f"[ERROR] Failed to import file {file_path}: {e}")
+            return False
+
+
+    def add_entry(self, filename: str, data: bytes, auto_save: bool = True) -> bool: #vers 3
+        """Add new entry to IMG file - FIXED VERSION with enhanced debugging"""
+        try:
+            print(f"[DEBUG] === ADD_ENTRY START ===")
+            # CRITICAL: Sanitize filename to prevent corruption
+            clean_filename = self._sanitize_filename(filename)
+            if clean_filename != filename:
+                print(f"[DEBUG] Filename sanitized: '{filename}' → '{clean_filename}'")
+                filename = clean_filename
+
+            print(f"[DEBUG] add_entry called: {filename} ({len(data)} bytes)")
+            print(f"[DEBUG] Current IMG entries before: {len(self.entries)}")
+            print(f"[DEBUG] IMG file path: {self.file_path}")
+            print(f"[DEBUG] IMG version: {self.version}")
+            print(f"[DEBUG] Auto-save enabled: {auto_save}")
+
+            # Check for duplicate entries (replace if exists)
+            existing_entry = None
+            for i, entry in enumerate(self.entries):
+                if entry.name == filename:
+                    existing_entry = entry
+                    print(f"[DEBUG] Replacing existing entry at index {i}: {filename}")
+                    break
+
+            # Calculate proper offset for new entry
+            if self.entries and not existing_entry:
+                # Find the end of the last entry
+                last_entry = max(self.entries, key=lambda e: e.offset + e.size)
+                # Align to sector boundary (2048 bytes for IMG files)
+                last_end = last_entry.offset + last_entry.size
+                new_offset = ((last_end + 2047) // 2048) * 2048
+                print(f"[DEBUG] Calculated new offset: 0x{new_offset:08X} (after last entry)")
+            else:
+                # First entry or replacing existing
+                if self.version == IMGVersion.VERSION_1:
+                    new_offset = 0  # Version 1 starts at beginning of .img file
+                    print(f"[DEBUG] Version 1 offset: 0x{new_offset:08X}")
                 else:
-                    # Read existing data
-                    data = self.read_entry_data(entry)
-                
-                entry_data_list.append(data)
-                entry.offset = current_offset
-                entry.size = len(data)
+                    # Version 2: Calculate directory size first
+                    directory_size = len(self.entries) * 32  # 32 bytes per entry
+                    new_offset = directory_size
+                    print(f"[DEBUG] Version 2 offset: 0x{new_offset:08X} (directory size: {directory_size})")
 
-                # Align to sector boundary
-                aligned_size = ((len(data) + SECTOR_SIZE - 1) // SECTOR_SIZE) * SECTOR_SIZE
-                current_offset += aligned_size
+            # Create new IMGEntry with proper setup
+            if existing_entry:
+                # Replace existing entry data
+                print(f"[DEBUG] Updating existing entry data...")
+                new_entry = existing_entry
+                new_entry._cached_data = data
+                new_entry.size = len(data)
+                print(f"[DEBUG] Existing entry updated: size={new_entry.size}, offset=0x{new_entry.offset:08X}")
+                # Keep existing offset for replacement
+            else:
+                # Create brand new entry
+                print(f"[DEBUG] Creating new IMGEntry...")
+                new_entry = IMGEntry()
+                new_entry.name = filename
+                new_entry.size = len(data)
+                new_entry.offset = new_offset
+                print(f"[DEBUG] Setting IMG file reference...")
+                new_entry.set_img_file(self)
+                new_entry._cached_data = data
 
-            # Write IMG file
-            with open(self.file_path, 'wb') as f:
-                # Write header
-                f.write(V2_SIGNATURE)
-                f.write(struct.pack('<I', entry_count))
+                # Detect file type and RW version from data
+                print(f"[DEBUG] Detecting file type and version...")
+                new_entry.detect_file_type_and_version()
 
-                # Write directory entries
-                for entry in self.entries:
-                    offset_sectors = entry.offset // SECTOR_SIZE
-                    size_sectors = ((entry.size + SECTOR_SIZE - 1) // SECTOR_SIZE)
-                    
-                    entry_data = struct.pack('<II', offset_sectors, size_sectors)
-                    name_bytes = entry.name.encode('ascii')[:24].ljust(24, b'\x00')
-                    entry_data += name_bytes
-                    
-                    f.write(entry_data)
+                # Add to entries list
+                print(f"[DEBUG] Adding entry to entries list...")
+                self.entries.append(new_entry)
+                print(f"[DEBUG] Entry appended successfully")
 
-                # Pad header to sector boundary
-                current_pos = f.tell()
-                if current_pos < data_start_offset:
-                    f.write(b'\x00' * (data_start_offset - current_pos))
+            print(f"[DEBUG] Entry processed: {filename} at offset 0x{new_entry.offset:08X}, size {new_entry.size} bytes")
+            print(f"[DEBUG] Total entries now: {len(self.entries)}")
+            new_entry.is_new_entry = True
 
-                # Write file data
-                for i, data in enumerate(entry_data_list):
-                    f.seek(self.entries[i].offset)
-                    f.write(data)
+            # Only save if requested (for batch operations, set auto_save=False)
+            if auto_save:
+                print(f"[DEBUG] Auto-saving IMG file...")
+                print(f"[DEBUG] Checking if save_img_file method exists: {hasattr(self, 'save_img_file')}")
 
-                    # Pad to sector boundary
-                    current_pos = f.tell()
-                    sector_end = ((current_pos + SECTOR_SIZE - 1) // SECTOR_SIZE) * SECTOR_SIZE
-                    if current_pos < sector_end:
-                        f.write(b'\x00' * (sector_end - current_pos))
+                if hasattr(self, 'save_img_file'):
+                    success = self.save_img_file()
+                    print(f"[DEBUG] save_img_file() returned: {success}")
+                else:
+                    print(f"[DEBUG] save_img_file method not found, trying backup save...")
+                    from core.save_img_entry import save_img_file_with_backup
+                    success = save_img_file_with_backup(self)
+                    print(f"[DEBUG] save_img_file_with_backup() returned: {success}")
 
-            img_debugger.success(f"Rebuilt Version 2 IMG: {len(self.entries)} entries")
+                if success:
+                    print(f"[SUCCESS] IMG file saved successfully")
+                else:
+                    print(f"[ERROR] Failed to save IMG file after adding {filename}")
+                print(f"[DEBUG] === ADD_ENTRY END (with save) ===")
+                return success
+
+            # Entry added successfully but not saved
+            print(f"[SUCCESS] Entry added to memory (auto_save disabled)")
+            print(f"[DEBUG] === ADD_ENTRY END (no save) ===")
             return True
 
         except Exception as e:
-            img_debugger.error(f"Failed to rebuild Version 2 IMG: {e}")
+            print(f"[ERROR] Failed to add entry {filename}: {e}")
+            import traceback
+            traceback.print_exc()
+            print(f"[DEBUG] === ADD_ENTRY END (error) ===")
             return False
+
+
+    def calculate_next_offset(self) -> int: #vers 1
+        """Calculate the next available offset for a new entry - HELPER METHOD"""
+        try:
+            if not self.entries:
+                # First entry
+                if self.version == IMGVersion.VERSION_1:
+                    return 0  # Version 1 starts at beginning
+                else:
+                    return 0  # Version 2 will be recalculated during save
+
+            # Find the entry that ends the latest
+            max_end = 0
+            for entry in self.entries:
+                entry_end = entry.offset + entry.size
+                if entry_end > max_end:
+                    max_end = entry_end
+
+            # Align to sector boundary (2048 bytes)
+            aligned_offset = ((max_end + 2047) // 2048) * 2048
+            return aligned_offset
+
+        except Exception as e:
+            print(f"[ERROR] Failed to calculate next offset: {e}")
+            return 0
+
+    def remove_entry(self, filename: str) -> bool: #vers 1
+        """Remove entry by filename - HELPER METHOD"""
+        try:
+            for i, entry in enumerate(self.entries):
+                if entry.name == filename:
+                    removed_entry = self.entries.pop(i)
+                    print(f"[DEBUG] Removed entry: {filename}")
+                    return True
+
+            print(f"[WARNING] Entry not found for removal: {filename}")
+            return False
+
+        except Exception as e:
+            print(f"[ERROR] Failed to remove entry {filename}: {e}")
+            return False
+
+    def has_entry(self, filename: str) -> bool: #vers 1
+        """Check if entry exists by filename - HELPER METHOD"""
+        try:
+            return any(entry.name == filename for entry in self.entries)
+        except Exception:
+            return False
+
+    def get_entry(self, filename: str) -> Optional['IMGEntry']: #vers 1
+        """Get entry by filename - HELPER METHOD"""
+        try:
+            for entry in self.entries:
+                if entry.name == filename:
+                    return entry
+            return None
+        except Exception:
+            return None
+
+    def add_multiple_entries(self, file_data_pairs: List[tuple], auto_save: bool = True) -> int: #vers 1
+        """Add multiple entries efficiently - BATCH METHOD"""
+        try:
+            added_count = 0
+
+            print(f"[DEBUG] Adding {len(file_data_pairs)} entries in batch mode...")
+
+            for filename, data in file_data_pairs:
+                # Add without auto-save for efficiency
+                if self.add_entry(filename, data, auto_save=False):
+                    added_count += 1
+                else:
+                    print(f"[WARNING] Failed to add {filename} in batch")
+
+            # Save once at the end if requested
+            if auto_save and added_count > 0:
+                print(f"[DEBUG] Batch save: {added_count} entries added")
+                if self.save_img_file():
+                    print(f"[DEBUG] Batch save successful")
+                else:
+                    print(f"[ERROR] Batch save failed")
+                    return 0
+
+            print(f"[SUCCESS] Batch add complete: {added_count}/{len(file_data_pairs)} entries added")
+            return added_count
+
+        except Exception as e:
+            print(f"[ERROR] Batch add failed: {e}")
+            return 0
+
+    def integrate_fixed_add_entry_methods(img_file_class): #vers 1
+        """Integrate all fixed methods into IMGFile class"""
+        try:
+            # Add the fixed methods to the class
+            img_file_class.add_entry = add_entry
+            img_file_class.calculate_next_offset = calculate_next_offset
+            img_file_class.remove_entry = remove_entry
+            img_file_class.has_entry = has_entry
+            img_file_class.get_entry = get_entry
+            img_file_class.add_multiple_entries = add_multiple_entries
+
+            print("✅ Fixed add_entry methods integrated into IMGFile class")
+            return True
+
+        except Exception as e:
+            print(f"❌ Failed to integrate fixed add_entry methods: {e}")
+            return False
+
+
+    def detect_version(self) -> IMGVersion: #vers 4
+        """Detect IMG version and platform from file"""
+        try:
+            if not os.path.exists(self.file_path):
+                return IMGVersion.UNKNOWN
+
+            # ADDED: Platform detection first
+            detected_platform, detection_info = detect_img_platform(self.file_path)
+            self.platform = detected_platform
+            self.platform_specs = get_platform_specific_specs(detected_platform)
+            
+            print(f"[DEBUG] Detected platform: {detected_platform.value}")
+            print(f"[DEBUG] Platform specs: {self.platform_specs}")
+
+            # Check if it's a .dir file (Version 1)
+            if self.file_path.lower().endswith('.dir'):
+                img_path = self.file_path[:-4] + '.img'
+                if os.path.exists(img_path):
+                    self.version = IMGVersion.VERSION_1
+                    return IMGVersion.VERSION_1
+
+            # Check if it's a single .img file (Version 2)
+            if self.file_path.lower().endswith('.img'):
+                try:
+                    with open(self.file_path, 'rb') as f:
+                        header = f.read(4)
+                        if header == b'VER2':
+                            self.version = IMGVersion.VERSION_2
+                            return IMGVersion.VERSION_2
+                        # Could be Version 1 IMG file without DIR
+                        self.version = IMGVersion.VERSION_1
+                        return IMGVersion.VERSION_1
+                except:
+                    pass
+
+        except Exception as e:
+            print(f"[ERROR] Error detecting IMG version: {e}")
+
+        self.version = IMGVersion.UNKNOWN
+        return IMGVersion.UNKNOWN
+
+    def open(self) -> bool: #vers 5
+        """Open and parse IMG file - FIXED WITH PROPER ENTRY PARSING"""
+        try:
+            if self.is_open:
+                return True
+
+            # Detect version first
+            if self.version == IMGVersion.UNKNOWN:
+                self.detect_version()
+
+            # Clear existing entries
+            self.entries.clear()
+
+            # Open based on version
+            success = False
+            if self.version == IMGVersion.VERSION_1:
+                success = self._open_version_1()
+            elif self.version == IMGVersion.VERSION_2:
+                success = self._open_version_2()
+
+            if success:
+                self.is_open = True
+                # FIXED: Parse file types and versions for all entries
+                self._parse_all_entries()
+                print(f"[SUCCESS] Successfully opened IMG file: {len(self.entries)} entries")
+            
+            return success
+
+        except Exception as e:
+            print(f"[ERROR] Error opening IMG file: {e}")
+            return False
+
+    def _parse_all_entries(self): #vers 2
+        """ADDED: Parse file types and versions for all entries + UNKNOWN RW DETECTION"""
+        try:
+            print(f"[DEBUG] Parsing {len(self.entries)} entries for file types and versions")
+            
+            for i, entry in enumerate(self.entries):
+                try:
+                    # Detect file type and RW version
+                    entry.detect_file_type_and_version()
+                    
+                    # Log progress for large files
+                    if i > 0 and i % 100 == 0:
+                        print(f"[DEBUG] Parsed {i}/{len(self.entries)} entries")
+                        
+                except Exception as e:
+                    print(f"[WARNING] Error parsing entry {entry.name}: {e}")
+                    
+            print(f"[SUCCESS] Completed parsing all entries")
+            
+            # ADDED: Trigger unknown RW file detection after parsing
+            self._trigger_unknown_rw_detection()
+            
+        except Exception as e:
+            print(f"[ERROR] Error in _parse_all_entries: {e}")
+
+    def _trigger_unknown_rw_detection(self): #vers 1
+        """ADDED: Trigger unknown RW file detection and snapshotting"""
+        try:
+            # Try to find main window reference for unknown RW detection
+            # This will be set by the integration function
+            if hasattr(self, '_main_window_ref') and self._main_window_ref:
+                main_window = self._main_window_ref
+                if hasattr(main_window, 'rw_snapshot_manager'):
+                    unknown_files = main_window.rw_snapshot_manager.capture_unknown_rw_files(self)
+                    if unknown_files:
+                        print(f"[INFO] Captured {len(unknown_files)} unknown RW files for analysis")
+                else:
+                    print(f"[DEBUG] RW snapshot manager not available - skipping unknown detection")
+            else:
+                print(f"[DEBUG] Main window reference not available - skipping unknown detection")
+                
+        except Exception as e:
+            print(f"[WARNING] Error in unknown RW detection: {e}")
+
+    def set_main_window_reference(self, main_window): #vers 1
+        """ADDED: Set main window reference for unknown RW detection"""
+        self._main_window_ref = main_window
+
+    def _open_version_2(self) -> bool: #vers 5
+        """Open IMG version 2 (single file) - ENHANCED WITH PLATFORM SUPPORT"""
+        try:
+            # Use platform-specific specifications
+            sector_size = self.platform_specs.get('sector_size', 2048)
+            
+            with open(self.file_path, 'rb') as f:
+                # Skip VER2 header (4 bytes)
+                f.seek(4)
+                # Read entry count
+                entry_count = struct.unpack('<I', f.read(4))[0]
+                
+                # Platform-specific entry count validation
+                max_entries = self.platform_specs.get('max_entries', 65535)
+                if entry_count > max_entries:
+                    print(f"[WARNING] Entry count {entry_count} exceeds platform limit {max_entries}")
+
+                for i in range(entry_count):
+                    # Read entry: offset(4), size(4), name(24)
+                    entry_data = f.read(32)
+                    if len(entry_data) < 32:
+                        break
+
+                    entry_offset, entry_size = struct.unpack('<II', entry_data[:8])
+                    entry_name = entry_data[8:32].rstrip(b'\x00').decode('ascii', errors='ignore')
+
+                    if entry_name:
+                        entry = IMGEntry()
+                        entry.name = entry_name
+                        entry.offset = entry_offset * 2048  # Convert sectors to bytes
+                        entry.size = entry_size * 2048
+                        entry.set_img_file(self)
+                        self.entries.append(entry)
+
+            return True
+        except Exception as e:
+            print(f"[ERROR] Error opening Version 2 IMG: {e}")
+            return False
+
+    def _open_version_1(self) -> bool: #vers 4
+        """Open IMG version 1 (DIR/IMG pair)"""
+        dir_path = self.file_path[:-4] + '.dir'
+        if not os.path.exists(dir_path):
+            return False
+
+        try:
+            with open(dir_path, 'rb') as dir_file:
+                dir_data = dir_file.read()
+
+            # Parse directory entries (32 bytes each)
+            entry_count = len(dir_data) // 32
+            for i in range(entry_count):
+                offset = i * 32
+                entry_data = dir_data[offset:offset+32]
+
+                if len(entry_data) < 32:
+                    break
+
+                # Parse entry: offset(4), size(4), name(24)
+                entry_offset, entry_size = struct.unpack('<II', entry_data[:8])
+                entry_name = entry_data[8:32].rstrip(b'\x00').decode('ascii', errors='ignore')
+
+                if entry_name:
+                    entry = IMGEntry()
+                    entry.name = entry_name
+                    entry.offset = entry_offset * 2048  # Convert sectors to bytes
+                    entry.size = entry_size * 2048
+                    entry.set_img_file(self)
+                    self.entries.append(entry)
+
+            return True
+        except Exception as e:
+            print(f"[ERROR] Error opening Version 1 IMG: {e}")
+            return False
+
+    def read_entry_data(self, entry: IMGEntry) -> bytes: #vers 1
+        """Read data for a specific entry"""
+        try:
+            if self.version == IMGVersion.VERSION_1:
+                # Read from .img file
+                img_path = self.file_path.replace('.dir', '.img')
+                with open(img_path, 'rb') as f:
+                    f.seek(entry.offset)
+                    return f.read(entry.size)
+            else:
+                # Read from single .img file
+                with open(self.file_path, 'rb') as f:
+                    f.seek(entry.offset)
+                    return f.read(entry.size)
+        except Exception as e:
+            raise RuntimeError(f"Failed to write entry data: {e}")
+
+    def write_entry_data(self, entry: IMGEntry, data: bytes): #vers 1
+        """Write data for a specific entry"""
+        try:
+            if self.version == IMGVersion.VERSION_1:
+                # Write to .img file
+                img_path = self.file_path.replace('.dir', '.img')
+                with open(img_path, 'r+b') as f:
+                    f.seek(entry.offset)
+                    f.write(data)
+            else:
+                # Write to single .img file
+                with open(self.file_path, 'r+b') as f:
+                    f.seek(entry.offset)
+                    f.write(data)
+        except Exception as e:
+            raise RuntimeError(f"Failed to write entry data: {e}")
+
+    def close(self): #vers 1
+        """Close IMG file"""
+        self.is_open = False
+        self.entries.clear()
 
     def get_creation_info(self) -> Dict[str, Any]: #vers 1
         """Get information about the IMG file"""
         if not self.file_path or not os.path.exists(self.file_path):
             return {}
         
-        stat = os.stat(self.file_path)
-        return {
-            'size': stat.st_size,
-            'created': stat.st_ctime,
-            'modified': stat.st_mtime,
-            'entries': len(self.entries),
-            'version': self.version.name if self.version != IMGVersion.UNKNOWN else 'Unknown'
-        }
+        try:
+            file_size = os.path.getsize(self.file_path)
+            return {
+                'path': self.file_path,
+                'size_bytes': file_size,
+                'size_mb': file_size / (1024 * 1024),
+                'entries_count': len(self.entries),
+                'version': self.version.name,
+                'format': f'IMG Version {self.version.value}'
+            }
+        except Exception:
+            return {}
 
-# Fixed methods for integration
-def add_entry(self, filename: str, data: bytes, auto_save: bool = True) -> bool: #vers 1
-    """Fixed add_entry method for integration"""
-    return self.add_entry(filename, data, auto_save)
+def format_file_size(size_bytes: int) -> str: #vers 1
+    """Format file size in human-readable format"""
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    elif size_bytes < 1024 * 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+    else:
+        return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
 
-def calculate_next_offset(self) -> int: #vers 1
-    """Fixed calculate_next_offset method for integration"""
-    return self.calculate_next_offset()
-
-def remove_entry(self, name: str) -> bool: #vers 1
-    """Fixed remove_entry method for integration"""
-    return self.remove_entry(name)
-
-def has_entry(self, name: str) -> bool: #vers 1
-    """Fixed has_entry method for integration"""
-    return self.has_entry(name)
-
-def get_entry(self, name: str) -> Optional[IMGEntry]: #vers 1
-    """Fixed get_entry method for integration"""
-    return self.get_entry(name)
-
-def add_multiple_entries(self, entries: List[IMGEntry]) -> int: #vers 1
-    """Fixed add_multiple_entries method for integration"""
-    return self.add_multiple_entries(entries)
-
-def integrate_fixed_add_entry_methods(img_file_class): #vers 1
-    """Integrate all fixed methods into IMGFile class"""
-    try:
-        # Add the fixed methods to the class
-        img_file_class.add_entry = add_entry
-        img_file_class.calculate_next_offset = calculate_next_offset
-        img_file_class.remove_entry = remove_entry
-        img_file_class.has_entry = has_entry
-        img_file_class.get_entry = get_entry
-        img_file_class.add_multiple_entries = add_multiple_entries
-
-        img_debugger.success("Fixed add_entry methods integrated into IMGFile class")
-        return True
-
-    except Exception as e:
-        img_debugger.error(f"Failed to integrate fixed add_entry methods: {e}")
-        return False
-
-# GUI Components
-class IMGEntriesTable(QTableWidget): #vers 3
+# ALL ORIGINAL GUI CLASSES PRESERVED EXACTLY AS IN ORIGINAL
+class IMGEntriesTable(QTableWidget):
     """Enhanced table widget for IMG entries"""
-    entry_selected = pyqtSignal(IMGEntry)
-    entry_double_clicked = pyqtSignal(IMGEntry)
+    entry_double_clicked = pyqtSignal(object)
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None): #vers 1
         super().__init__(parent)
-        self.setup_table()
-        self.entries = []
-        self._filter_text = ""
-    
-    def setup_table(self): #vers 1
-        """Setup table structure"""
-        headers = ["Name", "Extension", "Size", "Offset", "Type", "RW Version", "Compression", "Status"]
-        self.setColumnCount(len(headers))
-        self.setHorizontalHeaderLabels(headers)
+        self.setColumnCount(7)
+        self.setHorizontalHeaderLabels(['Name', 'Type', 'Size', 'Offset', 'Version', 'Compression', 'Status'])
         
-        # Configure table
-        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        # Setup table properties
         self.setAlternatingRowColors(True)
-        self.setSortingEnabled(True)
+        self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
         
-        # Configure column widths
+        # Auto-resize columns
         header = self.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Name
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Extension
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Size
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Offset
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Type
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # RW Version
-        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Compression
-        header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Status
-        
-        # Connect signals
-        self.itemSelectionChanged.connect(self._on_selection_changed)
-        self.itemDoubleClicked.connect(self._on_double_clicked)
+        header.setStretchLastSection(True)
+        for i in range(6):
+            header.setSectionResizeMode(i, header.ResizeMode.ResizeToContents)
 
-    def populate_entries(self, entries: List[IMGEntry]): #vers 2
-        """Populate table with IMG entries"""
-        self.entries = entries
-        self.setRowCount(len(entries))
-        
-        for row, entry in enumerate(entries):
-            # Name
-            name_item = QTableWidgetItem(entry.name)
-            if entry.is_new_entry:
-                name_item.setBackground(QColor(200, 255, 200))  # Light green
-            elif entry.is_replaced:
-                name_item.setBackground(QColor(255, 255, 200))  # Light yellow
-            self.setItem(row, 0, name_item)
-            
-            # Extension
-            self.setItem(row, 1, QTableWidgetItem(entry.extension.upper()))
-            
-            # Size
-            self.setItem(row, 2, QTableWidgetItem(format_file_size(entry.size)))
-            
-            # Offset
-            self.setItem(row, 3, QTableWidgetItem(f"0x{entry.offset:08X}"))
-            
-            # Type
-            self.setItem(row, 4, QTableWidgetItem(entry.file_type.value.upper()))
-            
-            # RW Version
-            self.setItem(row, 5, QTableWidgetItem(entry.get_version_text()))
-            
-            # Compression
-            compression_text = entry.compression_type.name if entry.compression_type != CompressionType.NONE else "None"
-            self.setItem(row, 6, QTableWidgetItem(compression_text))
-            
-            # Status
-            status = "New" if entry.is_new_entry else ("Modified" if entry.is_replaced else "OK")
-            self.setItem(row, 7, QTableWidgetItem(status))
-
-    def apply_filter(self, filter_text: str): #vers 1
-        """Apply filter to table entries"""
-        self._filter_text = filter_text.lower()
-        
-        for row in range(self.rowCount()):
-            should_show = True
-            if self._filter_text:
-                name_item = self.item(row, 0)
-                if name_item:
-                    should_show = self._filter_text in name_item.text().lower()
-            
-            self.setRowHidden(row, not should_show)
-
-    def _on_selection_changed(self): #vers 1
-        """Handle selection change"""
-        current_row = self.currentRow()
-        if 0 <= current_row < len(self.entries):
-            self.entry_selected.emit(self.entries[current_row])
-
-    def _on_double_clicked(self, item): #vers 1
-        """Handle double click"""
-        if item:
-            row = item.row()
-            if 0 <= row < len(self.entries):
-                self.entry_double_clicked.emit(self.entries[row])
-
-class FilterPanel(QWidget): #vers 2
-    """Filter panel for entries"""
+class FilterPanel(QWidget):
+    """Filter panel for IMG entries"""
     filter_changed = pyqtSignal(str)
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None): #vers 1
         super().__init__(parent)
-        self.setup_ui()
+        self._setup_ui()
     
-    def setup_ui(self): #vers 1
-        """Setup filter UI"""
+    def _setup_ui(self): #vers 1
         layout = QVBoxLayout(self)
         
         # File type filter
-        type_group = QGroupBox("File Type")
+        type_group = QGroupBox("File Type Filter")
         type_layout = QHBoxLayout(type_group)
         
         self.type_combo = QComboBox()
-        self.type_combo.addItems(['All Files', 'Models (DFF)', 'Textures (TXD)', 'Collision (COL)', 'Animations (IFP)', 'Scripts (SCM)', 'Audio (WAV)'])
-        self.type_combo.currentTextChanged.connect(self._on_filter_changed)
+        self.type_combo.addItems(['All', 'DFF', 'TXD', 'COL', 'IFP', 'IPL', 'DAT', 'WAV'])
+        self.type_combo.currentTextChanged.connect(self.filter_changed.emit)
         type_layout.addWidget(self.type_combo)
         
         # Search filter
@@ -1064,21 +1303,16 @@ class FilterPanel(QWidget): #vers 2
         
         self.search_edit = QLineEdit()
         self.search_edit.setPlaceholderText("Search entries...")
-        self.search_edit.textChanged.connect(self._on_filter_changed)
+        self.search_edit.textChanged.connect(self.filter_changed.emit)
         search_layout.addWidget(self.search_edit)
         
         layout.addWidget(type_group)
         layout.addWidget(search_group)
 
-    def _on_filter_changed(self): #vers 1
-        """Handle filter change"""
-        filter_text = self.search_edit.text()
-        self.filter_changed.emit(filter_text)
-
-class IMGFileInfoPanel(QWidget): #vers 1
+class IMGFileInfoPanel(QWidget):
     """Information panel for IMG file details"""
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None): #vers 1
         super().__init__(parent)
         self._setup_ui()
     
@@ -1086,32 +1320,12 @@ class IMGFileInfoPanel(QWidget): #vers 1
         layout = QVBoxLayout(self)
         
         self.info_label = QLabel("No IMG file loaded")
-        self.info_label.setWordWrap(True)
         layout.addWidget(self.info_label)
 
-    def update_info(self, img_file: IMGFile): #vers 1
-        """Update information display"""
-        if not img_file or not img_file.is_open:
-            self.info_label.setText("No IMG file loaded")
-            return
-        
-        info = img_file.get_creation_info()
-        filename = os.path.basename(img_file.file_path)
-        
-        info_text = f"""
-        <b>File:</b> {filename}<br>
-        <b>Version:</b> {info.get('version', 'Unknown')}<br>
-        <b>Entries:</b> {info.get('entries', 0)}<br>
-        <b>Size:</b> {format_file_size(info.get('size', 0))}<br>
-        <b>Platform:</b> {img_file.platform.value.upper()}
-        """
-        
-        self.info_label.setText(info_text.strip())
-
-class TabFilterWidget(QWidget): #vers 1
+class TabFilterWidget(QWidget):
     """Tab-specific filter widget"""
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None): #vers 1
         super().__init__(parent)
         self._setup_ui()
     
@@ -1122,69 +1336,20 @@ class TabFilterWidget(QWidget): #vers 1
         self.filter_combo.addItems(['All Files', 'Models (DFF)', 'Textures (TXD)', 'Collision (COL)', 'Animations (IFP)'])
         layout.addWidget(self.filter_combo)
 
-class RecentFilesManager: #vers 1
-    """Recent files manager"""
-    
-    def __init__(self, max_files=10):
-        self.max_files = max_files
-        self.recent_files = []
-        self.settings_file = os.path.join(os.path.expanduser("~"), ".imgfactory_recent.json")
-        self.load_recent_files()
+def integrate_filtering(main_window): #vers 2
+    """Integrate filtering functionality into main window"""
+    try:
+        # Create filter widget
+        filter_widget = FilterPanel(main_window)
 
-    def load_recent_files(self): #vers 1
-        """Load recent files from settings"""
-        try:
-            if os.path.exists(self.settings_file):
-                with open(self.settings_file, 'r') as f:
-                    self.recent_files = json.load(f)
-        except Exception:
-            self.recent_files = []
+        # Connect filter widget to table
+        if hasattr(filter_widget, 'filter_changed'):
+            filter_widget.filter_changed.connect(table_widget.apply_filter)
 
-    def save_recent_files(self): #vers 1
-        """Save recent files to settings"""
-        try:
-            with open(self.settings_file, 'w') as f:
-                json.dump(self.recent_files, f, indent=2)
-        except Exception:
-            pass
-
-    def add_recent_file(self, file_path: str): #vers 1
-        """Add file to recent files list"""
-        if file_path in self.recent_files:
-            self.recent_files.remove(file_path)
-        
-        self.recent_files.insert(0, file_path)
-        
-        # Keep only max_files
-        if len(self.recent_files) > self.max_files:
-            self.recent_files = self.recent_files[:self.max_files]
-        
-        self.save_recent_files()
-
-# Utility functions
-def format_file_size(size_bytes: int) -> str: #vers 2
-    """Format file size for display"""
-    if size_bytes == 0:
-        return "0 B"
-
-    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-        if size_bytes < 1024:
-            if unit == 'B':
-                return f"{size_bytes:,} {unit}"
-            else:
-                return f"{size_bytes:.1f} {unit}"
-        size_bytes /= 1024
-    return f"{size_bytes:.1f} PB"
-
-def detect_img_version(file_path: str) -> IMGVersion: #vers 1
-    """Detect IMG version from file"""
-    img_file = IMGFile(file_path)
-    return img_file.detect_version()
-
-def create_img_file(output_path: str, version: IMGVersion, **options) -> bool: #vers 2
-    """Create IMG file using appropriate version creator"""
-    img = IMGFile()
-    return img.create_new(output_path, version, **options)
+        return filter_widget
+    except Exception as e:
+        img_debugger.error(f"Error integrating filtering: {e}")
+        return None
 
 def create_entries_table_panel(main_window): #vers 4
     """Create the complete entries table panel"""
@@ -1222,8 +1387,11 @@ def create_entries_table_panel(main_window): #vers 4
     # Connect filter to table
     main_window.filter_panel.filter_changed.connect(main_window.entries_table.apply_filter)
 
-    # Connect table signals to main window if methods exist
+    # SIMPLIFIED CONNECTION - Let main app handle its own signals
+    # Don't auto-connect anything from here to prevent conflicts
+
     if hasattr(main_window, 'on_entry_double_clicked'):
+        # Only connect double-click since that doesn't cause logging conflicts
         try:
             main_window.entries_table.entry_double_clicked.disconnect()
         except:
@@ -1232,22 +1400,15 @@ def create_entries_table_panel(main_window): #vers 4
 
     return panel
 
-def integrate_filtering(main_window): #vers 2
-    """Integrate filtering functionality into main window"""
-    try:
-        # Create filter widget if not exists
-        if not hasattr(main_window, 'filter_panel'):
-            main_window.filter_panel = FilterPanel(main_window)
+def create_img_file(output_path: str, version: IMGVersion, **options) -> bool: #vers 2
+    """Create IMG file using appropriate version creator"""
+    img = IMGFile()
+    return img.create_new(output_path, version, **options)
 
-        # Connect filter widget to table if both exist
-        if hasattr(main_window, 'entries_table') and hasattr(main_window.filter_panel, 'filter_changed'):
-            main_window.filter_panel.filter_changed.connect(main_window.entries_table.apply_filter)
-
-        img_debugger.success("Filtering system integrated")
-        return True
-    except Exception as e:
-        img_debugger.error(f"Error integrating filtering: {e}")
-        return False
+def detect_img_version(file_path: str) -> IMGVersion: #vers 2
+    """Detect IMG version without fully opening the file"""
+    img = IMGFile(file_path)
+    return img.detect_version()
 
 def populate_table_with_sample_data(table): #vers 3
     """Populate table with sample data for testing"""
@@ -1269,41 +1430,33 @@ def populate_table_with_sample_data(table): #vers 3
             self.is_new_entry = False
             self.is_replaced = False
             self.compression_type = CompressionType.NONE
-            self.file_type = FileType.UNKNOWN
 
         def get_version_text(self): #vers 1
             return self._version
 
     mock_entries = [MockEntry(data) for data in sample_entries]
-    
-    # Use the populate_entries method if it exists
-    if hasattr(table, 'populate_entries'):
-        table.populate_entries(mock_entries)
+    table.populate_entries(mock_entries)
 
-# Export classes and functions
+# Export classes and functions - EXACTLY AS ORIGINAL
 __all__ = [
-    # Enums
-    'IMGVersion', 'FileType', 'CompressionType', 'Platform', 'IMGPlatform',
-    
-    # Core classes
-    'IMGEntry', 'IMGFile', 'ValidationResult',
-    
-    # GUI components
-    'IMGEntriesTable', 'FilterPanel', 'IMGFileInfoPanel', 'TabFilterWidget',
-    
-    # Utility classes
+    'IMGVersion',
+    'FileType', 
+    'CompressionType',
+    'Platform',
+    'IMGEntry',
+    'IMGFile',
+    'ValidationResult',
     'RecentFilesManager',
-    
-    # Functions
-    'create_img_file', 'format_file_size', 'detect_img_version',
-    'create_entries_table_panel', 'integrate_filtering', 
-    'populate_table_with_sample_data', 'get_img_platform_info',
-    
-    # Platform functions
-    'detect_img_platform', 'get_platform_specific_specs',
-    
-    # Integration functions
-    'integrate_fixed_add_entry_methods',
-    'add_entry', 'calculate_next_offset', 'remove_entry', 
-    'has_entry', 'get_entry', 'add_multiple_entries'
+    'create_img_file',
+    'format_file_size',
+    'IMGEntriesTable',
+    'FilterPanel', 
+    'IMGFileInfoPanel',
+    'TabFilterWidget',
+    'integrate_filtering',
+    'create_entries_table_panel',
+    'detect_img_version',
+    'populate_table_with_sample_data',
+    'get_img_platform_info',  # ADDED: Platform info function
+    'IMGPlatform'  # ADDED: Now exported since moved here
 ]
