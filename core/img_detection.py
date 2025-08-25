@@ -16,7 +16,7 @@ from pathlib import Path
 
 # Import existing functions - NO NEW FUNCTIONALITY
 from core.rw_versions import get_rw_version_name, get_mdl_version_info
-from components.img_core_classes import IMGVersion, IMGEntry, IMGFile
+from components.img_core_classes_old import IMGVersion, IMGEntry, IMGFile
 
 ##Methods list -
 # detect_img_platform

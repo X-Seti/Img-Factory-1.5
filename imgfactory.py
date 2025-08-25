@@ -48,18 +48,19 @@ from utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsD
 from components.img_creator import NewIMGDialog, IMGCreationThread
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_validator import IMGValidator
-from components.img_core_classes import (
+from components.img_core_classes_old import (
     IMGFile, IMGEntry, IMGVersion, Platform,
-    IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel)
+    IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel, format_file_size)
 from components.col_core_classes import (
     COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup,
     COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox,
     diagnose_col_file, set_col_debug_enabled, is_col_debug_enabled
 )
 
-from components.img_core_classes import format_file_size
+#from components.img_core_classes import IMGArchive, IMGEntry, IMGVersion
 from components.col_parsing_functions import load_col_file_safely
 from components.rw_unknown_snapshot import integrate_unknown_rw_detection
+from components.img_integration_main import integrate_img_functions, img_core_functions
 from components.col_integration_main import integrate_complete_col_system
 from components.col_functions import setup_complete_col_integration
 from components.col_debug_functions import set_col_debug_enabled
@@ -73,26 +74,26 @@ from core.img_formats import GameSpecificIMGDialog, IMGCreator
 from core.file_extraction import setup_complete_extraction_integration
 from core.tables_structure import reset_table_styling
 from core.file_type_filter import integrate_file_filtering
-# Replace existing integrations with new ones
-#from core.remove import integrate_remove_functions
-# This will automatically integrate the shared IDE system too
 from core.rw_versions import get_rw_version_name
 from core.right_click_actions import integrate_right_click_actions, setup_table_context_menu
-#from core.save_img_entry import integrate_img_save_functions, save_img_file_with_backup #broken
 from core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
-#from core.integration import integrate_complete_core_system
 from core.convert import convert_img, convert_img_format
 from core.create_img import (create_new_img, detect_and_open_file, open_file_dialog, detect_file_type)
 from core.close import install_close_functions, setup_close_manager
 from core.split_img import integrate_split_functions
 from core.theme_integration import integrate_theme_system
 from core.img_corruption_analyzer import setup_corruption_analyzer
-from core.rebuild import integrate_rebuild_functions
 from core.rebuild_all import integrate_batch_rebuild_functions
 from core.clean import integrate_clean_utilities
-from core.export_via import export_via_function
+from core.rebuild import integrate_rebuild_functions
+from core.export import integrate_export_functions
+from core.impotr import integrate_import_functions #import impotr
+from core.remove import integrate_remove_functions
 from core.export import export_selected_function, export_all_function, integrate_export_functions
 from core.dump import dump_all_function, dump_selected_function, integrate_dump_functions
+from core.import_via import integrate_import_via_functions
+from core.remove_via import integrate_remove_via_functions
+from core.export_via import export_via_function
 
 from core.independent_tabs import setup_independent_tab_system, migrate_existing_tabs_to_independent
 
@@ -114,10 +115,6 @@ from gui.gui_context import (add_col_context_menu_to_entries_table, open_col_fil
 from gui.file_menu_integration import add_project_menu_items
 from gui.directory_tree_system import integrate_directory_tree_system
 
-# Debug helper
-#from debug_patch_file import integrate_debug_patch, remove_debug_patch
-#from visibility_fix import apply_visibility_fix
-
 #methods
 from methods.populate_img_table import install_img_table_populator # enable_import_highlighting
 from methods.progressbar import integrate_progress_system
@@ -129,12 +126,8 @@ from methods.tab_awareness import integrate_tab_awareness_system
 from methods.export_col_shared import integrate_col_export_shared
 from methods.mirror_tab_shared import show_mirror_tab_selection
 
-
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
-#COL_INTEGRATION_AVAILABLE = False
-#COL_SETUP_FUNCTION = None
-
 
 def setup_rebuild_system(self): #vers 1
     """Setup hybrid rebuild system with mode selection"""
@@ -437,8 +430,15 @@ class IMGFactory(QMainWindow):
         integrate_ide_parser(self)
         integrate_ide_dialog(self)
         install_operation_routing(self)
-        integrate_export_functions(self)
         integrate_dump_functions(self)
+        integrate_img_functions(self)
+        integrate_export_functions(self)
+        integrate_import_functions(self)
+        integrate_remove_functions(self)
+
+        self.export_via = lambda: export_via_function(self)
+        integrate_import_via_functions(self)  # NEW
+        integrate_remove_via_functions(self)  # NEW
 
         # File operations
         install_close_functions(self)
@@ -456,11 +456,9 @@ class IMGFactory(QMainWindow):
         # === PHASE 5: CORE FUNCTIONALITY (Medium) ===
         self.export_selected = lambda: export_selected_function(self)
         self.export_all = lambda: export_all_function(self)
-        self.export_via = lambda: export_via_function(self)
-        self.quick_export = lambda: quick_export_function(self)
+       #self.quick_export = lambda: quick_export_function(self)
         self.dump_all = lambda: dump_all_function(self)
         self.dump_selected = lambda: dump_selected_function(self)
-
         integrate_refresh_table(self)
 
         # File extraction (single call only!)

@@ -1,441 +1,334 @@
-#this belongs in core/dump.py - Version: 7
-# X-Seti - August23 2025 - IMG Factory 1.5 - Dump Functions with Tab Awareness and Newer IMG Operations
+#this belongs in core/ dump.py - Version: 8
+# X-Seti - August24 2025 - IMG Factory 1.5 - Dump Functions
+
 
 import os
 import platform
 import subprocess
+from pathlib import Path
 from typing import List, Optional, Dict, Any
-from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QFileDialog
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QFileDialog, QApplication
+from PyQt6.QtCore import Qt
 
-# Import newer IMG operations
-try:
-    from Import_Export import Import_Export
-    from IMG_Operations import IMG_Operations
-    from File_Operations import File_Operations
-    NEWER_IMG_AVAILABLE = True
-except ImportError:
-    NEWER_IMG_AVAILABLE = False
-
-# Import tab awareness system (same as export.py uses)
-from methods.tab_awareness import (
-    validate_tab_before_operation, 
-    get_current_file_from_active_tab, 
-    get_current_file_type_from_tab,
-    get_selected_entries_from_active_tab
-)
+# Tab awareness system (this works!)
+from methods.tab_awareness import validate_tab_before_operation, get_current_file_from_active_tab
 
 ##Methods list -
 # dump_all_function
 # dump_selected_function
+# _dump_using_img_editor_core
+# _get_selected_entries_safe
+# _create_dump_progress_dialog
 # _create_dump_directory
-# _dump_img_entries
-# _dump_col_entries
 # _get_assists_folder
-# _open_dump_folder_after_completion
+# _open_folder_in_explorer
 # integrate_dump_functions
 
-class SafeDumpThread(QThread): #vers 1
-    """Safe dump thread using newer IMG operations"""
-    progress_updated = pyqtSignal(int, str)
-    dump_completed = pyqtSignal(bool, str, dict)
-    
-    def __init__(self, entries, dump_folder, file_object, file_type, dump_options):
-        super().__init__()
-        self.entries = entries
-        self.dump_folder = dump_folder
-        self.file_object = file_object
-        self.file_type = file_type
-        self.dump_options = dump_options
-        
-        """Run dump operation using appropriate method"""
-        try:
-            if self.file_type == 'IMG':
-                success, message, stats = self._dump_img_entries()
-            elif self.file_type == 'COL':
-                success, message, stats = self._dump_col_entries()
-            else:
-                success, message, stats = False, f"Unsupported file type: {self.file_type}", {}
-
-            self.dump_completed.emit(success, message, stats)
-            
-        except Exception as e:
-            self.dump_completed.emit(False, f"Dump operation failed: {str(e)}", {})
-
-    def _dump_img_entries(self): #vers 5
-        """Start IMG dump with crash prevention and safe progress handling - FROM ORIGINAL"""
-        try:
-            # CRITICAL: Additional validation before starting thread - FROM ORIGINAL
-            if not entries:
-                QMessageBox.warning(main_window, "No Entries", "No entries to dump")
-                return
-
-            # CRITICAL: Validate each entry has required attributes - FROM ORIGINAL
-            valid_entries = []
-            for entry in entries:
-                if hasattr(entry, 'name') and getattr(entry, 'name', ''):
-                    valid_entries.append(entry)
-
-            if not valid_entries:
-                QMessageBox.warning(main_window, "Invalid Entries", "No valid entries found to dump")
-                return
-
-            if len(valid_entries) < len(entries):
-                skipped = len(entries) - len(valid_entries)
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"⚠️ Skipping {skipped} invalid entries")
-
-            # Create export thread with validated entries - FROM ORIGINAL
-            export_thread = ExportThread(main_window, valid_entries, dump_folder, dump_options)
-
-            # CRITICAL: Create progress dialog with proper error handling - FROM ORIGINAL
-            progress_dialog = QProgressDialog(f"Dump in progress...", "Cancel", 0, 100, main_window)
-            progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-            progress_dialog.setMinimumDuration(0)
-
-            # CRITICAL: Safe progress update that won't crash on bad data - FROM ORIGINAL
-            def safe_update_progress(progress, message):
-                try:
-                    if progress_dialog and not progress_dialog.wasCanceled():
-                        progress_dialog.setValue(min(100, max(0, progress)))
-                        # Sanitize message to prevent display issues
-                        safe_message = str(message)[:100] if message else "Processing..."
-                        progress_dialog.setLabelText(safe_message)
-                except Exception:
-                    pass  # Don't let progress updates crash the dump
-
-            def safe_dump_finished(success, message, stats):
-                try:
-                    if progress_dialog:
-                        progress_dialog.close()
-                    if success:
-                        # FROM ORIGINAL - show completion message
-                        success_msg = f"Dump Complete!\n\nDumped to: {dump_folder}\n{message}"
-                        QMessageBox.information(main_window, f"{file_type} Dump Complete", success_msg)
-                        if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"✅ {file_type} dump: {message}")
-
-                        # Open dump folder - FROM ORIGINAL
-                        if dump_options.get('open_folder_after', True):
-                            try:
-                                if platform.system() == "Linux":
-                                    subprocess.run(["xdg-open", dump_folder])
-                                elif platform.system() == "Windows":
-                                    subprocess.run(["explorer", dump_folder])
-                                elif platform.system() == "Darwin":  # macOS
-                                    subprocess.run(["open", dump_folder])
-                            except Exception:
-                                pass  # Don't fail if can't open folder
-                    else:
-                        QMessageBox.critical(main_window, f"{file_type} Dump Failed", message)
-                        if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"❌ {file_type} dump: {message}")
-                except Exception as e:
-                    # Last resort error handling - FROM ORIGINAL
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"❌ Dump completion error: {str(e)}")
-
-            def safe_handle_cancel():
-                try:
-                    if export_thread and export_thread.isRunning():
-                        export_thread.terminate()
-                        export_thread.wait(3000)  # Wait max 3 seconds
-                        if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"🚫 {file_type} dump cancelled by user")
-                except Exception:
-                    pass  # Don't crash on cancel
-
-            # CRITICAL: Connect signals with error handling - FROM ORIGINAL
-            try:
-                export_thread.progress_updated.connect(safe_update_progress)
-                export_thread.export_completed.connect(safe_dump_finished)
-                progress_dialog.canceled.connect(safe_handle_cancel)
-            except Exception as e:
-                QMessageBox.critical(main_window, "Setup Error", f"Failed to setup dump operation: {str(e)}")
-                return
-
-            # Start dump
-            dump_all_function()
-            #export_thread.start()
-            progress_dialog.show()
-
-        except Exception as e:
-            # CRITICAL: Final error handler to prevent app crash - FROM ORIGINAL
-            error_msg = f"Failed to start {file_type} dump operation: {str(e)}"
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"❌ {error_msg}")
-            QMessageBox.critical(main_window, "Dump Error", error_msg)
-
-    
-    def _dump_col_entries(self):
-        """Dump COL entries safely"""
-        try:
-            exported_count = 0
-            failed_count = 0
-            total_entries = len(self.entries)
-            
-            for i, entry in enumerate(self.entries):
-                try:
-                    progress = int((i / total_entries) * 100)
-                    self.progress_updated.emit(progress, f"Exporting COL model {i+1}...")
-                    
-                    # Export COL model (simplified - needs COL export implementation)
-                    output_path = os.path.join(self.dump_folder, f"model_{i+1}.col")
-                    
-                    # Placeholder for COL export
-                    exported_count += 1
-                    
-                except Exception:
-                    failed_count += 1
-            
-            stats = {
-                'exported': exported_count,
-                'failed': failed_count,
-                'total': total_entries
-            }
-            
-            return exported_count > 0, f"COL dump: {exported_count} exported, {failed_count} failed", stats
-            
-        except Exception as e:
-            return False, f"COL dump error: {str(e)}", {}
-
-
-def dump_all_function(main_window): #vers 4
-    """Dump all entries using tab awareness and newer IMG operations"""
+def dump_all_function(main_window): #vers 8
+    """Dump all entries using IMG_Editor core - TAB AWARE"""
     try:
-        # FIXED: Use tab awareness system same as export.py
+        # Use same tab validation as other core functions
         if not validate_tab_before_operation(main_window, "Dump All"):
-            return
+            return False
         
-        file_type = get_current_file_type_from_tab(main_window)
-        file_object, detected_type = get_current_file_from_active_tab(main_window)
+        file_object, file_type = get_current_file_from_active_tab(main_window)
         
-        if not file_object or file_type == 'NONE':
-            QMessageBox.warning(main_window, "No File", "Please open an IMG or COL file first")
-            return
+        if file_type != 'IMG' or not file_object:
+            QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
+            return False
         
-        # Get all entries from current tab
-        try:
-            if file_type == 'IMG':
-                all_entries = file_object.entries if hasattr(file_object, 'entries') else []
-            elif file_type == 'COL':
-                # Convert COL models to entries for dumping
-                all_entries = []
-                if hasattr(file_object, 'models'):
-                    for i, model in enumerate(file_object.models):
-                        all_entries.append({'name': f'model_{i+1}.col', 'model': model})
-            else:
-                all_entries = []
-                
-            if not all_entries:
-                QMessageBox.information(main_window, "No Entries", "No entries to dump")
-                return
-                
-        except Exception as e:
-            QMessageBox.critical(main_window, "Access Error", f"Cannot access entries: {str(e)}")
-            return
+        # Get all entries
+        all_entries = getattr(file_object, 'entries', [])
+        if not all_entries:
+            QMessageBox.information(main_window, "No Entries", "IMG file contains no entries to dump")
+            return False
         
-        # Create dump folder
-        dump_folder = _create_dump_directory(main_window, file_type)
+        # Create dump directory
+        dump_folder = _create_dump_directory(main_window, "IMG_DUMP_ALL")
         if not dump_folder:
-            return
+            return False
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📂 Dumping {len(all_entries)} {file_type} entries using tab awareness")
+            main_window.log_message(f"📦 Dumping ALL {len(all_entries)} entries to: {dump_folder}")
         
-        # Start dump with progress
-        _start_dump_with_progress(main_window, all_entries, dump_folder, file_object, file_type, 'all')
+        # Use IMG_Editor core for dump
+        success = _dump_using_img_editor_core(file_object, all_entries, dump_folder, main_window)
+        
+        if success:
+            QMessageBox.information(main_window, "Dump Complete", 
+                f"Successfully dumped {len(all_entries)} files to:\n{dump_folder}")
+            
+            # Open dump folder
+            _open_folder_in_explorer(dump_folder)
+        else:
+            QMessageBox.critical(main_window, "Dump Failed", 
+                "Failed to dump files. Check debug log for details.")
+        
+        return success
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"❌ Dump all error: {str(e)}")
-        QMessageBox.critical(main_window, "Dump Error", f"Dump all failed: {str(e)}")
+        QMessageBox.critical(main_window, "Dump Error", f"Dump error: {str(e)}")
+        return False
 
 
-def dump_selected_function(main_window): #vers 4
-    """Dump selected entries using tab awareness and newer IMG operations"""
+def dump_selected_function(main_window): #vers 8
+    """Dump selected entries using IMG_Editor core - TAB AWARE"""
     try:
-        # FIXED: Use tab awareness system same as export.py
+        # Use same tab validation as other core functions
         if not validate_tab_before_operation(main_window, "Dump Selected"):
-            return
+            return False
         
-        file_type = get_current_file_type_from_tab(main_window)
-        file_object, detected_type = get_current_file_from_active_tab(main_window)
+        file_object, file_type = get_current_file_from_active_tab(main_window)
         
-        if not file_object or file_type == 'NONE':
-            QMessageBox.warning(main_window, "No File", "Please open an IMG or COL file first")
-            return
+        if file_type != 'IMG' or not file_object:
+            QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
+            return False
         
-        # Get selected entries using tab awareness
-        selected_entries = get_selected_entries_from_active_tab(main_window)
-        
+        # Get selected entries
+        selected_entries = _get_selected_entries_safe(main_window, file_object)
         if not selected_entries:
-            QMessageBox.warning(main_window, "No Selection", "Please select entries to dump")
-            return
+            QMessageBox.information(main_window, "No Selection", "No entries selected for dump")
+            return False
         
-        # Get dump folder
-        dump_folder = QFileDialog.getExistingDirectory(
-            main_window, 
-            f"Select Dump Folder for Selected {file_type} Entries",
-            _get_assists_folder()
-        )
-        
+        # Create dump directory
+        dump_folder = _create_dump_directory(main_window, "IMG_DUMP_SELECTED")
         if not dump_folder:
-            return
+            return False
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📂 Dumping {len(selected_entries)} selected {file_type} entries using tab awareness")
+            main_window.log_message(f"📦 Dumping {len(selected_entries)} selected entries to: {dump_folder}")
         
-        # Start dump with progress
-        _start_dump_with_progress(main_window, selected_entries, dump_folder, file_object, file_type, 'selected')
+        # Use IMG_Editor core for dump
+        success = _dump_using_img_editor_core(file_object, selected_entries, dump_folder, main_window)
+        
+        if success:
+            QMessageBox.information(main_window, "Dump Complete", 
+                f"Successfully dumped {len(selected_entries)} files to:\n{dump_folder}")
+            
+            # Open dump folder
+            _open_folder_in_explorer(dump_folder)
+        else:
+            QMessageBox.critical(main_window, "Dump Failed", 
+                "Failed to dump selected files. Check debug log for details.")
+        
+        return success
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"❌ Dump selected error: {str(e)}")
-        QMessageBox.critical(main_window, "Dump Error", f"Dump selected failed: {str(e)}")
+        QMessageBox.critical(main_window, "Dump Error", f"Dump error: {str(e)}")
+        return False
 
 
-def _create_dump_directory(main_window, file_type: str) -> Optional[str]:
-    """Create dump directory in Assists folder"""
+def _dump_using_img_editor_core(file_object, entries_to_dump, dump_folder, main_window) -> bool: #vers 8
+    """CORE FUNCTION: Dump using working IMG_Editor Import_Export class"""
     try:
-        assists_folder = _get_assists_folder()
+        # Import the working IMG_Editor core classes
+        try:
+            from IMG_Editor.core.Core import IMGArchive, IMGEntry
+            from IMG_Editor.core.Import_Export import Import_Export
+        except ImportError:
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("❌ IMG_Editor core not available - cannot dump")
+            return False
         
-        # Ask user for dump location
-        use_default = QMessageBox.question(
-            main_window,
-            "Dump Location",
-            f"Dump {file_type} files to default location?\n\n"
-            f"Default: {assists_folder}/Dump\n\n"
-            f"Click 'No' to choose custom location",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        
-        if use_default == QMessageBox.StandardButton.Yes:
-            dump_folder = os.path.join(assists_folder, "Dump")
-            try:
-                os.makedirs(dump_folder, exist_ok=True)
-                return dump_folder
-            except Exception as e:
-                QMessageBox.critical(main_window, "Folder Creation Error", 
-                                   f"Cannot create dump folder:\n{dump_folder}\n\nError: {str(e)}")
-                return None
-        else:
-            return QFileDialog.getExistingDirectory(
-                main_window, 
-                f"Select Dump Folder for {file_type}",
-                assists_folder
-            )
+        # Convert to IMG_Editor archive format if needed
+        if not isinstance(file_object, IMGArchive):
+            # Load the IMG file using IMG_Editor
+            file_path = getattr(file_object, 'file_path', None)
+            if not file_path or not os.path.exists(file_path):
+                if hasattr(main_window, 'log_message'):
+                    main_window.log_message("❌ No valid file path for dump")
+                return False
             
+            # Load IMG using IMG_Editor
+            img_archive = IMGArchive()
+            if not img_archive.load_from_file(file_path):
+                if hasattr(main_window, 'log_message'):
+                    main_window.log_message("❌ Failed to load IMG file with IMG_Editor")
+                return False
+        else:
+            img_archive = file_object
+        
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message("🔧 Using IMG_Editor Import_Export.export_entry for dump")
+        
+        # Create progress dialog - NO THREADING to avoid crashes
+        progress_dialog = _create_dump_progress_dialog(main_window, len(entries_to_dump))
+        
+        dumped_count = 0
+        failed_count = 0
+        
+        try:
+            for i, entry in enumerate(entries_to_dump):
+                # Update progress - process events to keep UI responsive
+                progress_dialog.setValue(i)
+                progress_dialog.setLabelText(f"Dumping: {getattr(entry, 'name', 'Unknown')}")
+                QApplication.processEvents()
+                
+                if progress_dialog.wasCanceled():
+                    if hasattr(main_window, 'log_message'):
+                        main_window.log_message("Dump cancelled by user")
+                    break
+                
+                # Get entry name
+                entry_name = getattr(entry, 'name', f'entry_{i}')
+                
+                # Find entry in IMG_Editor archive
+                img_editor_entry = None
+                for archive_entry in img_archive.entries:
+                    if archive_entry.name == entry_name:
+                        img_editor_entry = archive_entry
+                        break
+                
+                if not img_editor_entry:
+                    if hasattr(main_window, 'log_message'):
+                        main_window.log_message(f"⚠️ Entry not found in archive: {entry_name}")
+                    failed_count += 1
+                    continue
+                
+                # Create output path
+                output_path = os.path.join(dump_folder, entry_name)
+                
+                # Use IMG_Editor Import_Export.export_entry - NO THREADING
+                try:
+                    success = Import_Export.export_entry(img_archive, img_editor_entry, output_path)
+                    
+                    if success:
+                        dumped_count += 1
+                        if hasattr(main_window, 'log_message'):
+                            main_window.log_message(f"✅ Dumped: {entry_name}")
+                    else:
+                        failed_count += 1
+                        if hasattr(main_window, 'log_message'):
+                            main_window.log_message(f"❌ Failed to dump: {entry_name}")
+                        
+                except Exception as e:
+                    failed_count += 1
+                    if hasattr(main_window, 'log_message'):
+                        main_window.log_message(f"❌ Dump error for {entry_name}: {str(e)}")
+            
+        finally:
+            progress_dialog.close()
+        
+        # Report results
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"📊 Dump complete: {dumped_count} success, {failed_count} failed")
+        
+        return dumped_count > 0
+        
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error creating dump directory: {str(e)}")
+            main_window.log_message(f"❌ Core dump error: {str(e)}")
+        return False
+
+
+def _get_selected_entries_safe(main_window, file_object) -> list: #vers 8
+    """Safely get selected entries from main window"""
+    try:
+        # Try different methods to get selected entries
+        selected_entries = []
+        
+        # Method 1: Use main window's get_selected_entries
+        if hasattr(main_window, 'get_selected_entries'):
+            try:
+                selected_entries = main_window.get_selected_entries()
+                if selected_entries:
+                    return selected_entries
+            except Exception:
+                pass
+        
+        # Method 2: Check if there's a table widget
+        if hasattr(main_window, 'entries_table'):
+            try:
+                table = main_window.entries_table
+                selected_rows = set()
+                
+                for item in table.selectedItems():
+                    selected_rows.add(item.row())
+                
+                if selected_rows and hasattr(file_object, 'entries'):
+                    for row in selected_rows:
+                        if row < len(file_object.entries):
+                            selected_entries.append(file_object.entries[row])
+                
+                if selected_entries:
+                    return selected_entries
+                    
+            except Exception:
+                pass
+        
+        # Method 3: If no selection, return empty list
+        return []
+        
+    except Exception:
+        return []
+
+
+def _create_dump_progress_dialog(main_window, total_entries) -> QProgressDialog: #vers 8
+    """Create progress dialog for dump operation"""
+    try:
+        progress_dialog = QProgressDialog(
+            "Preparing dump...",
+            "Cancel",
+            0,
+            total_entries,
+            main_window
+        )
+        
+        progress_dialog.setWindowTitle("Dumping Files")
+        progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        progress_dialog.setMinimumDuration(0)
+        progress_dialog.setValue(0)
+        
+        return progress_dialog
+        
+    except Exception:
+        # Fallback: create minimal progress dialog
+        progress_dialog = QProgressDialog(main_window)
+        progress_dialog.setRange(0, total_entries)
+        return progress_dialog
+
+
+def _create_dump_directory(main_window, dump_type: str) -> Optional[str]: #vers 8
+    """Create organized dump directory"""
+    try:
+        # Get base assists folder
+        assists_folder = _get_assists_folder()
+        
+        # Create timestamp-based folder name
+        import datetime
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Get current file name for folder naming
+        try:
+            file_object, _ = get_current_file_from_active_tab(main_window)
+            file_path = getattr(file_object, 'file_path', '')
+            file_name = Path(file_path).stem if file_path else 'unknown'
+        except Exception:
+            file_name = 'unknown'
+        
+        # Create organized folder structure
+        dump_folder_name = f"{dump_type}_{file_name}_{timestamp}"
+        dump_folder = os.path.join(assists_folder, dump_folder_name)
+        
+        # Create directory
+        os.makedirs(dump_folder, exist_ok=True)
+        
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"📁 Created dump directory: {dump_folder}")
+        
+        return dump_folder
+        
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Failed to create dump directory: {str(e)}")
         return None
 
 
-def _start_dump_with_progress(main_window, entries, dump_folder, file_object, file_type, operation_type):
-    """Start dump operation with progress dialog"""
-    try:
-        # Validate dump folder is writable
-        try:
-            test_file = os.path.join(dump_folder, '.imgfactory_test')
-            with open(test_file, 'w') as f:
-                f.write('test')
-            os.remove(test_file)
-        except Exception as e:
-            QMessageBox.critical(main_window, "Folder Error", 
-                               f"Cannot write to dump folder:\n{str(e)}")
-            return
-        
-        # Setup progress dialog
-        progress_dialog = QProgressDialog(
-            f"Dumping {len(entries)} {file_type} entries...",
-            "Cancel",
-            0, 100,
-            main_window
-        )
-        progress_dialog.setWindowTitle(f"Dump {operation_type.title()} - {file_type}")
-        progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-        progress_dialog.setMinimumDuration(0)
-        
-        # Dump options
-        dump_options = {
-            'organize_by_type': False,
-            'overwrite': True,
-            'create_log': True,
-            'open_folder_after': True
-        }
-        
-        # Create and start dump thread
-        dump_thread = SafeDumpThread(entries, dump_folder, file_object, file_type, dump_options)
-        
-        def safe_update_progress(progress, message):
-            try:
-                progress_dialog.setValue(progress)
-                progress_dialog.setLabelText(message)
-            except Exception:
-                pass
-        
-        def safe_dump_finished(success, message, stats):
-            try:
-                progress_dialog.close()
-                
-                if success:
-                    # Show completion message
-                    exported = stats.get('exported', 0)
-                    failed = stats.get('failed', 0)
-                    
-                    QMessageBox.information(
-                        main_window,
-                        f"{file_type} Dump Complete",
-                        f"Dump completed successfully!\n\n"
-                        f"• Files exported: {exported}\n"
-                        f"• Files failed: {failed}\n"
-                        f"• Location: {dump_folder}"
-                    )
-                    
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"✅ {file_type} dump complete: {exported} success, {failed} failed")
-                    
-                    # Open dump folder
-                    if dump_options.get('open_folder_after', True):
-                        _open_dump_folder_after_completion(dump_folder)
-                else:
-                    QMessageBox.critical(main_window, f"{file_type} Dump Failed", message)
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"❌ {file_type} dump failed: {message}")
-                        
-            except Exception as e:
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"❌ Dump completion error: {str(e)}")
-        
-        def safe_handle_cancel():
-            try:
-                if dump_thread and dump_thread.isRunning():
-                    dump_thread.terminate()
-                    dump_thread.wait(3000)
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"🚫 {file_type} dump cancelled by user")
-            except Exception:
-                pass
-        
-        # Connect signals
-        dump_thread.progress_updated.connect(safe_update_progress)
-        dump_thread.dump_completed.connect(safe_dump_finished)
-        progress_dialog.canceled.connect(safe_handle_cancel)
-        
-        # Start dump
-        dump_all_function()
-        #dump_thread.start()
-        progress_dialog.show()
-        
-    except Exception as e:
-        error_msg = f"Failed to start {file_type} dump operation: {str(e)}"
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ {error_msg}")
-        QMessageBox.critical(main_window, "Dump Error", error_msg)
-
-
-def _get_assists_folder() -> str:
+def _get_assists_folder() -> str: #vers 8
     """Get Assists folder path"""
     try:
         current_dir = os.getcwd()
@@ -449,47 +342,48 @@ def _get_assists_folder() -> str:
         return os.getcwd()
 
 
-def _open_dump_folder_after_completion(dump_folder: str):
-    """Open dump folder in file manager"""
+def _open_folder_in_explorer(folder_path: str): #vers 8
+    """Open folder in system file explorer"""
     try:
         if platform.system() == "Linux":
-            subprocess.run(["xdg-open", dump_folder])
+            subprocess.run(["xdg-open", folder_path])
         elif platform.system() == "Windows":
-            subprocess.run(["explorer", dump_folder])
+            subprocess.run(["explorer", folder_path])
         elif platform.system() == "Darwin":  # macOS
-            subprocess.run(["open", dump_folder])
+            subprocess.run(["open", folder_path])
     except Exception:
         pass  # Don't fail if can't open folder
 
 
-def integrate_dump_functions(main_window): #vers 4
-    """Integrate fixed dump functions into main window with all aliases"""
+def integrate_dump_functions(main_window) -> bool: #vers 8
+    """Integrate IMG_Editor core dump functions - FIXED"""
     try:
-        # Add main dump functions
+        # Main dump functions with IMG_Editor core - NO THREADING
         main_window.dump_all_function = lambda: dump_all_function(main_window)
         main_window.dump_selected_function = lambda: dump_selected_function(main_window)
         
-        # Add aliases for different naming conventions that GUI might use
+        # Add all the aliases that GUI might use
         main_window.dump_all = main_window.dump_all_function
         main_window.dump_selected = main_window.dump_selected_function
         main_window.dump_all_entries = main_window.dump_all_function
         main_window.dump_selected_entries = main_window.dump_selected_function
-        main_window.dump_entries = main_window.dump_selected_function  # Legacy alias
+        main_window.dump_entries = main_window.dump_selected_function  # Legacy
         
         if hasattr(main_window, 'log_message'):
-            msg = "✅ Fixed dump functions integrated with tab awareness"
-            if NEWER_IMG_AVAILABLE:
-                msg += " and newer IMG operations"
-            main_window.log_message(msg)
+            main_window.log_message("✅ IMG_Editor core dump functions integrated - CRASH-FREE")
+            main_window.log_message("   • Uses Import_Export.export_entry for reliable extraction")
+            main_window.log_message("   • NO THREADING - eliminates app crashes")
+            main_window.log_message("   • Creates organized timestamped dump folders")
         
         return True
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Failed to integrate dump functions: {str(e)}")
+            main_window.log_message(f"❌ Dump integration failed: {str(e)}")
         return False
 
 
+# Export only the essential functions
 __all__ = [
     'dump_all_function',
     'dump_selected_function',
