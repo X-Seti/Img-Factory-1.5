@@ -11,7 +11,6 @@ import struct
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
-
 class IMGVersion1Creator:
     """Creates IMG Version 1 files (separate .dir and .img files)"""
     
@@ -85,7 +84,7 @@ class IMGVersion1Creator:
     
     def _add_dummy_entry(self, size: int):
         """Add dummy entry to entries list"""
-        from components.img_core_classes_old import IMGEntry, FileType
+        from components.img_core_classes import IMGEntry, FileType
         
         dummy_entry = IMGEntry()
         dummy_entry.name = "replaceme.dff"

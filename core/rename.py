@@ -1,5 +1,5 @@
 #this belongs in core/ rename.py - Version: 2
-# X-Seti - August24 2025 - IMG Factory 1.5 - Comprehensive Rename Functions for IMG and COL
+# X-Seti - August24 2025 - IMG Factory 1.5 - Rename Functions for IMG and COL
 
 """
 Comprehensive Rename Functions - UPDATED from placeholder

@@ -48,7 +48,7 @@ from utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsD
 from components.img_creator import NewIMGDialog, IMGCreationThread
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_validator import IMGValidator
-from components.img_core_classes_old import (
+from components.img_core_classes import (
     IMGFile, IMGEntry, IMGVersion, Platform,
     IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel, format_file_size)
 from components.col_core_classes import (
