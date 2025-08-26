@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QFont
 
-# Import updated core classes and version creators
+# Import updated core classes and version creators - img_core_classes neeeds fixing.
 from components.img_core_classes import IMGFile, IMGVersion
 from core.img_version1 import create_version_1_img
 from core.img_version2 import create_version_2_img

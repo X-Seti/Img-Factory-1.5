@@ -1,4 +1,4 @@
-#this belongs in components/rw_unknown_snapshot.py - Version: 1
+#this belongs in components/rw_unknown_snapshot.py - Version: 3
 # X-Seti - July20 2025 - IMG Factory 1.5 - Unknown RW File Snapshotter
 # Captures unknown RW files for analysis and database expansion
 

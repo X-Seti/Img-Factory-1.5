@@ -13,7 +13,6 @@ import subprocess
 from PyQt6.QtWidgets import QMessageBox, QProgressDialog
 from PyQt6.QtCore import Qt, QSettings
 from methods.export_shared import ExportThread, get_selected_entries, get_export_folder, validate_export_entries
-from core.export import get_current_file_type
 
 ##Methods list -
 # quick_export_function

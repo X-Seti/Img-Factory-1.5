@@ -11,7 +11,6 @@ import struct
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
-
 class IMGVersion1Creator:
     """Creates IMG Version 1 files (separate .dir and .img files)"""
     

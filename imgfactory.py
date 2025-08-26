@@ -50,16 +50,17 @@ from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_validator import IMGValidator
 from components.img_core_classes import (
     IMGFile, IMGEntry, IMGVersion, Platform,
-    IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel)
+    IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel, format_file_size)
 from components.col_core_classes import (
     COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup,
     COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox,
     diagnose_col_file, set_col_debug_enabled, is_col_debug_enabled
 )
 
-from components.img_core_classes import format_file_size
+#from components.img_core_classes import IMGArchive, IMGEntry, IMGVersion
 from components.col_parsing_functions import load_col_file_safely
 from components.rw_unknown_snapshot import integrate_unknown_rw_detection
+from components.img_integration_main import integrate_img_functions, img_core_functions
 from components.col_integration_main import integrate_complete_col_system
 from components.col_functions import setup_complete_col_integration
 from components.col_debug_functions import set_col_debug_enabled
@@ -73,30 +74,27 @@ from core.img_formats import GameSpecificIMGDialog, IMGCreator
 from core.file_extraction import setup_complete_extraction_integration
 from core.tables_structure import reset_table_styling
 from core.file_type_filter import integrate_file_filtering
-# Replace existing integrations with new ones
-#from core.remove import integrate_remove_functions
-# This will automatically integrate the shared IDE system too
 from core.rw_versions import get_rw_version_name
 from core.right_click_actions import integrate_right_click_actions, setup_table_context_menu
-#from core.save_img_entry import integrate_img_save_functions, save_img_file_with_backup #broken
 from core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
-#from core.integration import integrate_complete_core_system
-from core.connections import connect_all_buttons_safely
 from core.convert import convert_img, convert_img_format
 from core.create_img import (create_new_img, detect_and_open_file, open_file_dialog, detect_file_type)
 from core.close import install_close_functions, setup_close_manager
 from core.split_img import integrate_split_functions
 from core.theme_integration import integrate_theme_system
 from core.img_corruption_analyzer import setup_corruption_analyzer
+from core.clean import integrate_clean_utilities
+from core.export import integrate_export_functions
+from core.impotr import integrate_import_functions #import impotr
+from core.remove import integrate_remove_functions
+from core.export import export_selected_function, export_all_function, integrate_export_functions
+from core.dump import dump_all_function, dump_selected_function, integrate_dump_functions
+from core.import_via import integrate_import_via_functions
+from core.remove_via import integrate_remove_via_functions
+from core.export_via import export_via_function
 from core.rebuild import integrate_rebuild_functions
 from core.rebuild_all import integrate_batch_rebuild_functions
-from core.clean import integrate_clean_utilities
-from core.export import export_selected_function, export_all_function
-from core.export_via import export_via_function
-from core.quick_export import quick_export_function
-from core.dump import dump_all_function, dump_selected_function
 from core.independent_tabs import setup_independent_tab_system, migrate_existing_tabs_to_independent
-
 
 from methods.ide_parser import integrate_ide_parser
 
@@ -116,10 +114,6 @@ from gui.gui_context import (add_col_context_menu_to_entries_table, open_col_fil
 from gui.file_menu_integration import add_project_menu_items
 from gui.directory_tree_system import integrate_directory_tree_system
 
-# Debug helper
-#from debug_patch_file import integrate_debug_patch, remove_debug_patch
-#from visibility_fix import apply_visibility_fix
-
 #methods
 from methods.populate_img_table import install_img_table_populator # enable_import_highlighting
 from methods.progressbar import integrate_progress_system
@@ -129,13 +123,10 @@ from methods.img_operations_routing import install_operation_routing
 from methods.refresh_table import integrate_refresh_table
 from methods.tab_awareness import integrate_tab_awareness_system
 from methods.export_col_shared import integrate_col_export_shared
-
+from methods.mirror_tab_shared import show_mirror_tab_selection
 
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
-#COL_INTEGRATION_AVAILABLE = False
-#COL_SETUP_FUNCTION = None
-
 
 def setup_rebuild_system(self): #vers 1
     """Setup hybrid rebuild system with mode selection"""
@@ -428,7 +419,8 @@ class IMGFactory(QMainWindow):
         #tabs
         setup_independent_tab_system(self)
         migrate_existing_tabs_to_independent(self)
-        #self.integrate_tab_aware_system() #removed
+
+        #self.integrate_tab_aware_system() #old removed
         integrate_tab_awareness_system(self)
         # === PHASE 4: ESSENTIAL INTEGRATIONS (Medium) ===
 
@@ -437,9 +429,17 @@ class IMGFactory(QMainWindow):
         integrate_ide_parser(self)
         integrate_ide_dialog(self)
         install_operation_routing(self)
+        integrate_dump_functions(self)
+        integrate_img_functions(self)
+        integrate_export_functions(self)
+        integrate_import_functions(self)
+        integrate_remove_functions(self)
+        integrate_batch_rebuild_functions(self)
+        integrate_rebuild_functions(self)
 
-        # Button connections (essential for functionality)
-        connect_all_buttons_safely(self)
+        self.export_via = lambda: export_via_function(self)
+        integrate_import_via_functions(self)  # NEW
+        integrate_remove_via_functions(self)  # NEW
 
         # File operations
         install_close_functions(self)
@@ -456,10 +456,10 @@ class IMGFactory(QMainWindow):
 
         # === PHASE 5: CORE FUNCTIONALITY (Medium) ===
         self.export_selected = lambda: export_selected_function(self)
-        self.export_via = lambda: export_via_function(self)
-        self.quick_export = lambda: quick_export_function(self)
+        self.export_all = lambda: export_all_function(self)
+       #self.quick_export = lambda: quick_export_function(self)
         self.dump_all = lambda: dump_all_function(self)
-
+        self.dump_selected = lambda: dump_selected_function(self)
         integrate_refresh_table(self)
 
         # File extraction (single call only!)
@@ -583,6 +583,26 @@ class IMGFactory(QMainWindow):
                 scrollbar.setValue(scrollbar.maximum())
         except Exception:
             pass
+
+    def debug_img_before_loading(self, file_path): #vers 1
+        """Quick debug before loading IMG"""
+        try:
+            file_size = os.path.getsize(file_path)
+            self.log_message(f"🐛 Debug: File size = {file_size:,} bytes")
+
+            with open(file_path, 'rb') as f:
+                first_8_bytes = f.read(8)
+                self.log_message(f"🐛 Debug: First 8 bytes = {first_8_bytes.hex()}")
+
+                if first_8_bytes.startswith(b'VER2'):
+                    entry_count = struct.unpack('<I', first_8_bytes[4:8])[0]
+                    self.log_message(f"🐛 Debug: V2 entry count = {entry_count:,}")
+                else:
+                    potential_v1_entries = file_size // 32
+                    self.log_message(f"🐛 Debug: Potential V1 entries = {potential_v1_entries:,}")
+
+        except Exception as e:
+            self.log_message(f"🐛 Debug failed: {e}")
 
     def show_debug_settings(self): #vers 1
         """Show debug settings dialog"""
@@ -856,6 +876,39 @@ class IMGFactory(QMainWindow):
         from components.unified_signal_handler import signal_handler
         signal_handler.status_update_requested.connect(self._update_status_from_signal)
 
+
+    # In core/export.py
+    from methods.mirror_tab_shared import show_mirror_tab_selection
+
+    def export_selected_function(main_window):
+        selected_tab, options = show_mirror_tab_selection(main_window, 'export')
+        if selected_tab:
+            start_export_operation(main_window, selected_tab, options)
+
+    # In core/import.py
+    def import_function(main_window):
+        selected_tab, options = show_mirror_tab_selection(main_window, 'import')
+        if selected_tab and options.get('import_files'):
+            start_import_operation(main_window, selected_tab, options)
+
+    # In core/remove.py
+    def remove_selected_function(main_window):
+        selected_tab, options = show_mirror_tab_selection(main_window, 'remove')
+        if selected_tab:
+            start_remove_operation(main_window, selected_tab, options)
+
+    # In core/dump.py
+    def dump_function(main_window):
+        selected_tab, options = show_mirror_tab_selection(main_window, 'dump')
+        if selected_tab:
+            start_dump_operation(main_window, selected_tab, options)
+
+    def split_via_function(main_window):
+        selected_tab, options = show_mirror_tab_selection(main_window, 'split_via')
+        if selected_tab:
+            split_method = options.get('split_method', 'size')  # 'size' or 'count'
+            split_value = options.get('split_value', 50)
+            start_split_operation(main_window, selected_tab, split_method, split_value)
 
     def debug_img_entries(self): #vers 4
         """Debug function to check what entries are actually loaded"""
@@ -1810,10 +1863,8 @@ class IMGFactory(QMainWindow):
             file_name = os.path.basename(file_path)
 
             if file_ext == 'img':
-                # IMG file loading - tab hang issues
-                self.log_message(f"📁 Loading IMG file: {file_name}")
-                self._load_img_file_in_new_tab(file_path)
-                #return True
+                self._load_img_file_in_new_tab(file_path)  # ← Starts threading
+                return True  # ← Return immediately, let threading finish
                 try:
                     # Import IMG loading components directly
                     from components.img_core_classes import IMGFile

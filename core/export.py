@@ -1,488 +1,421 @@
 #this belongs in core/export.py - Version: 3
-# X-Seti - Aug15 2025 - IMG Factory 1.5 - Main Export Functions with COL Support
+# X-Seti - August23 2025 - IMG Factory 1.5 - Clean Export Functions with Tab Awareness
 
 """
-Main Export Functions - Standard export with full options dialog
-Based on original implementation with COL file support added
-Provides comprehensive export functionality with user configuration
+Clean Export Functions - Simplified and uses tab awareness like export_via.py
+Supports both IMG and COL file export with proper multi-tab detection
 """
 
 import os
-from PyQt6.QtWidgets import QMessageBox, QProgressDialog
-from PyQt6.QtCore import Qt
-from methods.export_shared import (
-    ExportThread, get_selected_entries, get_export_folder, validate_export_entries
-)
+from PyQt6.QtWidgets import QMessageBox, QFileDialog, QProgressDialog
+from PyQt6.QtCore import QThread, pyqtSignal
+
+# Use same tab awareness imports as export_via.py (this works!)
+from methods.tab_awareness import validate_tab_before_operation, get_current_file_from_active_tab, get_current_file_type_from_tab
 
 ##Methods list -
-# export_all_function
 # export_selected_function
-# get_current_file_type
-# get_selected_col_models
+# export_all_function
+# _export_img_selected
+# _export_img_all
+# _export_col_selected
+# _export_col_all
+# _get_selected_entries_from_tab
 # integrate_export_functions
 
-def get_current_file_type(main_window) -> str: #vers 1
-    """Detect what type of file is currently loaded"""
-    if hasattr(main_window, 'current_img') and main_window.current_img:
-        return 'IMG'
-    elif hasattr(main_window, 'current_col') and main_window.current_col:
-        return 'COL'
-    else:
-        return 'NONE'
-
-def get_selected_col_models(main_window) -> list: #vers 1
-    """Get selected COL models from table"""
-    selected_models = []
-    
-    try:
-        # Try different table access methods
-        table = None
-        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
-            table = main_window.gui_layout.table
-        elif hasattr(main_window, 'entries_table'):
-            table = main_window.entries_table
-        
-        if not table:
-            return selected_models
-        
-        # Get selected rows
-        selected_rows = set()
-        for item in table.selectedItems():
-            selected_rows.add(item.row())
-        
-        # Get COL models for selected rows
-        if hasattr(main_window, 'current_col') and main_window.current_col:
-            if hasattr(main_window.current_col, 'models'):
-                for row in selected_rows:
-                    if row < len(main_window.current_col.models):
-                        model = main_window.current_col.models[row]
-                        # Create export entry for COL model
-                        col_entry = {
-                            'name': f"{model.name}.col" if hasattr(model, 'name') and model.name else f"model_{row}.col",
-                            'type': 'COL_MODEL',
-                            'model': model,
-                            'index': row,
-                            'col_file': main_window.current_col
-                        }
-                        selected_models.append(col_entry)
-                    
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error getting COL models: {str(e)}")
-    
-    return selected_models
-
 def export_selected_function(main_window): #vers 3
-    """Export selected entries with full options dialog - FROM ORIGINAL with COL support"""
+    """Export selected entries - CLEAN: Uses tab awareness like export_via.py"""
     try:
-        file_type = get_current_file_type(main_window)
-        
-        if file_type == 'IMG':
-            # Original IMG export logic
-            if not hasattr(main_window, 'current_img') or not main_window.current_img:
-                QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first")
-                return
-            
-            # Get selected entries - FROM ORIGINAL
-            selected_entries = get_selected_entries(main_window)
-            if not validate_export_entries(selected_entries, main_window):
-                return
-            
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"📤 Preparing to export {len(selected_entries)} selected entries")
-            
-        elif file_type == 'COL':
-            # COL export logic
-            if not hasattr(main_window, 'current_col') or not main_window.current_col:
-                QMessageBox.warning(main_window, "No COL File", "Please open a COL file first")
-                return
-            
-            # Get selected COL models
-            selected_entries = get_selected_col_models(main_window)
-            if not selected_entries:
-                QMessageBox.warning(main_window, "Nothing Selected", 
-                    "Please select COL models to export")
-                return
-            
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"📤 Preparing to export {len(selected_entries)} selected COL models")
-                
-        else:
-            QMessageBox.warning(main_window, "No File", "Please open an IMG or COL file first")
+        # Copy exact pattern from working export_via.py
+        if not validate_tab_before_operation(main_window, "Export Selected"):
             return
         
-        # Show export options dialog with Assists folder integration - FROM ORIGINAL
-        try:
-            from core.dialogs import ExportOptionsDialog
-            options_dialog = ExportOptionsDialog(main_window, len(selected_entries))  # Fixed: only 2 parameters
-            
-            if options_dialog.exec() != options_dialog.DialogCode.Accepted:
-                return
-            
-            export_options = options_dialog.get_options()
-            export_folder = export_options.get('export_folder')
-            
-            if not export_folder:
-                QMessageBox.warning(main_window, "No Folder", "Please select an export folder")
-                return
-                
-        except ImportError:
-            # Fallback - get folder directly - FROM ORIGINAL
-            export_folder = get_export_folder(main_window, f"Select Export Destination for {file_type}")
-            if not export_folder:
-                return
-            export_options = {
-                'organize_by_type': True,
-                'overwrite': True,
-                'create_log': False
-            }
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("ℹ️ Using default export options")
+        file_type = get_current_file_type_from_tab(main_window)
         
-        # Start export based on file type
         if file_type == 'IMG':
-            _start_export_with_progress(main_window, selected_entries, export_folder, export_options)
+            _export_img_selected(main_window)
         elif file_type == 'COL':
-            _start_col_export(main_window, selected_entries, export_folder, export_options)
-        
+            _export_col_selected(main_window)
+        else:
+            QMessageBox.warning(main_window, "No File", "Please open an IMG or COL file first")
+            
     except Exception as e:
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"❌ Export selected error: {str(e)}")
         QMessageBox.critical(main_window, "Export Error", f"Export failed: {str(e)}")
 
+
 def export_all_function(main_window): #vers 3
-    """Export all entries with options dialog - FROM ORIGINAL with COL support"""
+    """Export all entries - CLEAN: Uses tab awareness like export_via.py"""
     try:
-        file_type = get_current_file_type(main_window)
+        if not validate_tab_before_operation(main_window, "Export All"):
+            return
+        
+        file_type = get_current_file_type_from_tab(main_window)
         
         if file_type == 'IMG':
-            # Original IMG export all logic
-            if not hasattr(main_window, 'current_img') or not main_window.current_img:
-                QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first")
-                return
-            
-            all_entries = main_window.current_img.entries
-            if not validate_export_entries(all_entries, main_window):
-                return
-            
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"📤 Preparing to export all {len(all_entries)} entries")
-            
+            _export_img_all(main_window)
         elif file_type == 'COL':
-            # COL export all logic
-            if not hasattr(main_window, 'current_col') or not main_window.current_col:
-                QMessageBox.warning(main_window, "No COL File", "Please open a COL file first")
-                return
-            
-            # Convert all COL models to export entries
-            all_entries = []
-            if hasattr(main_window.current_col, 'models'):
-                for i, model in enumerate(main_window.current_col.models):
-                    col_entry = {
-                        'name': f"{model.name}.col" if hasattr(model, 'name') and model.name else f"model_{i}.col",
-                        'type': 'COL_MODEL',
-                        'model': model,
-                        'index': i,
-                        'col_file': main_window.current_col
-                    }
-                    all_entries.append(col_entry)
-            
-            if not all_entries:
-                QMessageBox.information(main_window, "No Models", "No COL models to export")
-                return
-            
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"📤 Preparing to export all {len(all_entries)} COL models")
-                
+            _export_col_all(main_window)
         else:
             QMessageBox.warning(main_window, "No File", "Please open an IMG or COL file first")
-            return
-        
-        # Confirm export all - FROM ORIGINAL
-        reply = QMessageBox.question(
-            main_window, 
-            f"Export All {file_type} Entries",
-            f"Export all {len(all_entries)} entries from this {file_type} file?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-        
-        # Show export options dialog - FROM ORIGINAL
-        try:
-            from core.dialogs import ExportOptionsDialog
-            options_dialog = ExportOptionsDialog(main_window, len(all_entries))  # Fixed: only 2 parameters
             
-            if options_dialog.exec() != options_dialog.DialogCode.Accepted:
-                return
-            
-            export_options = options_dialog.get_options()
-            export_folder = export_options.get('export_folder')
-            
-            if not export_folder:
-                QMessageBox.warning(main_window, "No Folder", "Please select an export folder")
-                return
-                
-        except ImportError:
-            # Fallback to basic folder selection - FROM ORIGINAL
-            export_folder = get_export_folder(main_window, f"Select Export Destination for All {file_type} Entries")
-            if not export_folder:
-                return
-            export_options = {
-                'organize_by_type': True,
-                'overwrite': False,  # More conservative for large exports
-                'create_log': True
-            }
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("ℹ️ Using default export options")
-        
-        # Start export based on file type
-        if file_type == 'IMG':
-            _start_export_with_progress(main_window, all_entries, export_folder, export_options)
-        elif file_type == 'COL':
-            _start_col_export(main_window, all_entries, export_folder, export_options)
-        
     except Exception as e:
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"❌ Export all error: {str(e)}")
-        QMessageBox.critical(main_window, "Export All Error", f"Export all failed: {str(e)}")
 
-def _start_export_with_progress(main_window, entries, export_folder, export_options): #vers 3
-    """Start IMG export with progress dialog - FROM ORIGINAL with threading fixes"""
+
+def _export_img_selected(main_window): #vers 1
+    """Export selected IMG entries"""
     try:
-        # Create export thread
-        export_thread = ExportThread(main_window, entries, export_folder, export_options)
+        file_object, file_type = get_current_file_from_active_tab(main_window)
         
-        # Create progress dialog - FROM ORIGINAL
-        progress_dialog = QProgressDialog("Export in progress...", "Cancel", 0, 100, main_window)
-        progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-        progress_dialog.setMinimumDuration(0)
-        progress_dialog.setAutoClose(True)  # CRITICAL: Auto close to prevent hanging
-        progress_dialog.setAutoReset(True)  # CRITICAL: Auto reset to prevent hanging
-        
-        def update_progress(progress, message):
-            try:
-                if progress_dialog and not progress_dialog.wasCanceled():
-                    progress_dialog.setValue(progress)
-                    progress_dialog.setLabelText(message)
-            except Exception:
-                pass  # Don't let progress updates crash export
-            
-        def export_finished(success, message, stats):
-            try:
-                # CRITICAL: Close progress dialog first - FROM ORIGINAL
-                if progress_dialog:
-                    progress_dialog.close()
-                    progress_dialog.deleteLater()
-                
-                # CRITICAL: Ensure thread is properly stopped - FROM ORIGINAL
-                if export_thread and export_thread.isRunning():
-                    export_thread.quit()
-                    export_thread.wait(1000)  # Wait max 1 second
-                
-                # Show result dialog - FROM ORIGINAL
-                if success:
-                    QMessageBox.information(main_window, "Export Complete", message)
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"✅ {message}")
-                else:
-                    QMessageBox.critical(main_window, "Export Failed", message)
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"❌ {message}")
-                        
-            except Exception as e:
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"❌ Error in export completion: {e}")
-        
-        def handle_cancel():
-            try:
-                if export_thread and export_thread.isRunning():
-                    export_thread.stop_export()  # Request stop
-                    export_thread.quit()
-                    export_thread.wait(2000)  # Wait max 2 seconds
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message("🚫 Export cancelled by user")
-            except Exception:
-                pass  # Don't crash on cancel
-        
-        # CRITICAL: Connect signals with proper error handling - FROM ORIGINAL
-        try:
-            export_thread.progress_updated.connect(update_progress)
-            export_thread.export_completed.connect(export_finished)
-            progress_dialog.canceled.connect(handle_cancel)
-        except Exception as e:
-            QMessageBox.critical(main_window, "Setup Error", f"Failed to setup export operation: {str(e)}")
+        if not file_object or file_type != 'IMG':
+            QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
             return
         
-        # Start export
-        export_thread.start()
-        progress_dialog.show()
+        # Get selected entries from current tab
+        selected_entries = _get_selected_entries_from_tab(main_window)
         
+        if not selected_entries:
+            QMessageBox.information(main_window, "No Selection", "Please select entries to export")
+            return
+        
+        # Choose export directory
+        export_dir = QFileDialog.getExistingDirectory(
+            main_window, f"Export {len(selected_entries)} Selected Entries")
+        
+        if not export_dir:
+            return
+        
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"📤 Exporting {len(selected_entries)} IMG entries to: {export_dir}")
+        
+        # Export each selected entry as separate file
+        success_count = 0
+        for entry in selected_entries:
+            try:
+                # Get entry data
+                if hasattr(entry, 'get_data'):
+                    data = entry.get_data()
+                elif hasattr(entry, '_cached_data') and entry._cached_data:
+                    data = entry._cached_data
+                else:
+                    # Read from IMG file
+                    data = file_object.read_entry_data(entry)
+                
+                if data:
+                    output_path = os.path.join(export_dir, entry.name)
+                    with open(output_path, 'wb') as f:
+                        f.write(data)
+                    success_count += 1
+                    
+            except Exception as entry_error:
+                if hasattr(main_window, 'log_message'):
+                    main_window.log_message(f"❌ Failed to export {entry.name}: {entry_error}")
+        
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"✅ Successfully exported {success_count}/{len(selected_entries)} entries")
+        
+        QMessageBox.information(main_window, "Export Complete", 
+            f"Successfully exported {success_count} of {len(selected_entries)} entries")
+            
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Export thread error: {str(e)}")
-        QMessageBox.critical(main_window, "Export Error", f"Failed to start export: {str(e)}")
+            main_window.log_message(f"❌ IMG export error: {str(e)}")
 
-def _start_col_export(main_window, col_entries, export_folder, export_options): #vers 2
-    """Start COL export with progress - OPTIMIZED for speed"""
+
+def _export_img_all(main_window): #vers 1
+    """Export all IMG entries"""
     try:
+        file_object, file_type = get_current_file_from_active_tab(main_window)
+        
+        if not file_object or file_type != 'IMG':
+            QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
+            return
+        
+        if not hasattr(file_object, 'entries') or not file_object.entries:
+            QMessageBox.information(main_window, "No Entries", "IMG file has no entries to export")
+            return
+        
+        all_entries = file_object.entries
+        
+        # Choose export directory
+        export_dir = QFileDialog.getExistingDirectory(
+            main_window, f"Export All {len(all_entries)} Entries")
+        
+        if not export_dir:
+            return
+        
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🛡️ Starting COL export: {len(col_entries)} models")
+            main_window.log_message(f"📤 Exporting ALL {len(all_entries)} IMG entries to: {export_dir}")
         
-        # Create progress dialog
-        progress_dialog = QProgressDialog("Exporting COL models...", "Cancel", 0, 100, main_window)
-        progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-        progress_dialog.show()
+        # Show progress dialog for all entries
+        progress = QProgressDialog(f"Exporting {len(all_entries)} entries...", "Cancel", 0, len(all_entries), main_window)
+        progress.setModal(True)
         
-        # Apply organization options for COL
-        if export_options.get('organize_by_type', False):
-            col_folder = os.path.join(export_folder, 'collision')
-            os.makedirs(col_folder, exist_ok=True)
-            export_folder = col_folder
-        
-        exported_count = 0
-        failed_count = 0
-        total_entries = len(col_entries)
-        
-        # OPTIMIZED: Batch process instead of individual file creation
-        for i, col_entry in enumerate(col_entries):
-            if progress_dialog.wasCanceled():
+        success_count = 0
+        for i, entry in enumerate(all_entries):
+            if progress.wasCanceled():
                 break
                 
+            progress.setValue(i)
+            progress.setLabelText(f"Exporting {entry.name}...")
+            
             try:
-                model_name = col_entry['name']
-                output_path = os.path.join(export_folder, model_name)
-                
-                # Update progress every 10 items or for small batches
-                if i % 10 == 0 or total_entries < 50:
-                    progress = int((i / total_entries) * 100)
-                    progress_dialog.setValue(progress)
-                    progress_dialog.setLabelText(f"Exporting {model_name}...")
-                
-                # OPTIMIZED: Use faster COL file creation
-                if _create_single_model_col_file_optimized(col_entry, output_path):
-                    exported_count += 1
-                    if hasattr(main_window, 'log_message') and i % 50 == 0:  # Log every 50 items
-                        main_window.log_message(f"🛡️ Progress: {exported_count}/{total_entries}")
+                # Get entry data
+                if hasattr(entry, 'get_data'):
+                    data = entry.get_data()
+                elif hasattr(entry, '_cached_data') and entry._cached_data:
+                    data = entry._cached_data
                 else:
-                    failed_count += 1
+                    data = file_object.read_entry_data(entry)
+                
+                if data:
+                    output_path = os.path.join(export_dir, entry.name)
+                    with open(output_path, 'wb') as f:
+                        f.write(data)
+                    success_count += 1
                     
-            except Exception as e:
-                failed_count += 1
+            except Exception as entry_error:
                 if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"❌ Error exporting {col_entry['name']}: {str(e)}")
+                    main_window.log_message(f"❌ Failed to export {entry.name}: {entry_error}")
         
-        progress_dialog.close()
+        progress.close()
         
-        # Show results
-        if exported_count > 0:
-            message = f"Exported {exported_count} COL models to {export_folder}"
-            if failed_count > 0:
-                message += f"\n{failed_count} models failed to export"
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"✅ Successfully exported {success_count}/{len(all_entries)} entries")
+        
+        QMessageBox.information(main_window, "Export Complete", 
+            f"Successfully exported {success_count} of {len(all_entries)} entries")
             
-            QMessageBox.information(main_window, "COL Export Complete", message)
-            
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"✅ COL export complete: {exported_count} success, {failed_count} failed")
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ IMG export all error: {str(e)}")
+
+
+def _export_col_selected(main_window): #vers 1
+    """Export selected COL models"""
+    try:
+        file_object, file_type = get_current_file_from_active_tab(main_window)
+        
+        if not file_object or file_type != 'COL':
+            QMessageBox.warning(main_window, "No COL File", "Current tab does not contain a COL file")
+            return
+        
+        # Get selected COL models from current tab
+        selected_models = _get_selected_col_models_from_tab(main_window, file_object)
+        
+        if not selected_models:
+            QMessageBox.information(main_window, "No Selection", "Please select collision models to export")
+            return
+        
+        # Ask: separate files or combined COL file?
+        reply = QMessageBox.question(main_window, "COL Export Options",
+            f"Export {len(selected_models)} collision models as:\n\n"
+            "• Separate COL files (one per model)\n"
+            "• Single combined COL file\n\n"
+            "Choose 'Yes' for separate files, 'No' for combined file",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel)
+        
+        if reply == QMessageBox.StandardButton.Cancel:
+            return
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            # Export as separate files
+            export_dir = QFileDialog.getExistingDirectory(main_window, "Export COL Models")
+            if export_dir:
+                _export_col_models_separate(main_window, selected_models, export_dir)
         else:
-            QMessageBox.warning(main_window, "COL Export Failed", "No COL models were exported successfully")
-            
+            # Export as combined file
+            output_path, _ = QFileDialog.getSaveFileName(
+                main_window, "Save Combined COL File", "combined_models.col", "COL Files (*.col);;All Files (*)")
+            if output_path:
+                _export_col_models_combined(main_window, selected_models, output_path)
+                
     except Exception as e:
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"❌ COL export error: {str(e)}")
-        QMessageBox.critical(main_window, "COL Export Error", f"COL export failed: {str(e)}")
 
-def _create_single_model_col_file_optimized(col_entry, output_path): #vers 1
-    """Create a COL file containing a single model - OPTIMIZED VERSION"""
+
+def _export_col_all(main_window): #vers 1
+    """Export all COL models"""
     try:
-        col_file = col_entry['col_file']
+        file_object, file_type = get_current_file_from_active_tab(main_window)
         
-        # FASTEST: Copy the entire original file (all models) - user can extract what they need
-        if hasattr(col_file, 'file_path') and os.path.exists(col_file.file_path):
-            import shutil
-            shutil.copy2(col_file.file_path, output_path)
-            return True
+        if not file_object or file_type != 'COL':
+            QMessageBox.warning(main_window, "No COL File", "Current tab does not contain a COL file")
+            return
         
-        # FAST: Save entire COL file data
-        elif hasattr(col_file, '_build_col_data'):
-            col_data = col_file._build_col_data()
-            with open(output_path, 'wb') as f:
-                f.write(col_data)
-            return True
+        if not hasattr(file_object, 'models') or not file_object.models:
+            QMessageBox.information(main_window, "No Models", "COL file has no models to export")
+            return
         
-        # FALLBACK: Use save method
-        elif hasattr(col_file, 'save_to_file'):
-            return col_file.save_to_file(output_path)
+        all_models = file_object.models
+        
+        # Ask: separate files or combined COL file?
+        reply = QMessageBox.question(main_window, "COL Export All Options",
+            f"Export ALL {len(all_models)} collision models as:\n\n"
+            "• Separate COL files (one per model)\n"
+            "• Single combined COL file\n\n"
+            "Choose 'Yes' for separate files, 'No' for combined file",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel)
+        
+        if reply == QMessageBox.StandardButton.Cancel:
+            return
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            # Export as separate files
+            export_dir = QFileDialog.getExistingDirectory(main_window, "Export All COL Models")
+            if export_dir:
+                _export_col_models_separate(main_window, all_models, export_dir)
+        else:
+            # Export as combined file
+            output_path, _ = QFileDialog.getSaveFileName(
+                main_window, "Save Combined COL File", "all_models.col", "COL Files (*.col);;All Files (*)")
+            if output_path:
+                _export_col_models_combined(main_window, all_models, output_path)
+                
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ COL export all error: {str(e)}")
+
+
+def _get_selected_entries_from_tab(main_window): #vers 1
+    """Get selected entries from current active tab"""
+    try:
+        # Use existing tab awareness function if available
+        if hasattr(main_window, 'get_selected_entries_from_active_tab'):
+            return main_window.get_selected_entries_from_active_tab()
+        
+        # Fallback: try to get from current table
+        if hasattr(main_window, 'table'):
+            table = main_window.table
+            selected_rows = table.selectionModel().selectedRows()
             
-        return False
+            if not selected_rows:
+                return []
+            
+            # Get file object
+            file_object, _ = get_current_file_from_active_tab(main_window)
+            if not file_object or not hasattr(file_object, 'entries'):
+                return []
+            
+            selected_entries = []
+            for index in selected_rows:
+                row = index.row()
+                if 0 <= row < len(file_object.entries):
+                    selected_entries.append(file_object.entries[row])
+            
+            return selected_entries
+        
+        return []
         
     except Exception as e:
-        return False
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Error getting selected entries: {str(e)}")
+        return []
 
-def _create_single_model_col_file(col_entry, output_path): #vers 1
-    """Create a COL file containing a single model"""
+
+def _get_selected_col_models_from_tab(main_window, col_file): #vers 1
+    """Get selected COL models from current active tab"""
     try:
-        model = col_entry['model']
-        col_file = col_entry['col_file']
+        selected_entries = _get_selected_entries_from_tab(main_window)
         
-        # Try different methods to save the COL model
+        if not selected_entries:
+            return []
         
-        # Method 1: Use save_single_model if available
-        if hasattr(col_file, 'save_single_model'):
-            return col_file.save_single_model(model, output_path)
+        # Convert entry indices to COL models
+        selected_models = []
+        for entry in selected_entries:
+            if hasattr(entry, 'model'):
+                selected_models.append(entry.model)
+            elif isinstance(entry, int) and 0 <= entry < len(col_file.models):
+                selected_models.append(col_file.models[entry])
         
-        # Method 2: Use save_to_file (saves entire COL file with all models)
-        elif hasattr(col_file, 'save_to_file'):
-            return col_file.save_to_file(output_path)
-        
-        # Method 3: Build COL data and write
-        elif hasattr(col_file, '_build_col_data'):
-            col_data = col_file._build_col_data()
-            with open(output_path, 'wb') as f:
-                f.write(col_data)
-            return True
-        
-        # Method 4: Copy from original file if available
-        elif hasattr(col_file, 'file_path') and os.path.exists(col_file.file_path):
-            import shutil
-            shutil.copy2(col_file.file_path, output_path)
-            return True
-            
-        return False
+        return selected_models
         
     except Exception as e:
-        return False
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Error getting selected COL models: {str(e)}")
+        return []
 
-def integrate_export_functions(main_window): #vers 2
-    """Integrate export functions into main window with all aliases - FROM ORIGINAL"""
+
+def _export_col_models_separate(main_window, models, export_dir): #vers 1
+    """Export COL models as separate files"""
     try:
-        # Add main export functions
+        from methods.export_col_shared import create_single_col_file
+        
+        success_count = 0
+        for i, model in enumerate(models):
+            try:
+                model_name = getattr(model, 'name', f'model_{i}')
+                output_path = os.path.join(export_dir, f"{model_name}.col")
+                
+                if create_single_col_file(model, output_path):
+                    success_count += 1
+                    
+            except Exception as model_error:
+                if hasattr(main_window, 'log_message'):
+                    main_window.log_message(f"❌ Failed to export model {i}: {model_error}")
+        
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"✅ Exported {success_count}/{len(models)} COL models as separate files")
+        
+        QMessageBox.information(main_window, "COL Export Complete",
+            f"Successfully exported {success_count} of {len(models)} models as separate files")
+            
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ COL separate export error: {str(e)}")
+
+
+def _export_col_models_combined(main_window, models, output_path): #vers 1
+    """Export COL models as single combined file"""
+    try:
+        from methods.export_col_shared import create_combined_col_file
+        
+        if create_combined_col_file(models, output_path):
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"✅ Exported {len(models)} COL models to combined file: {output_path}")
+            
+            QMessageBox.information(main_window, "COL Export Complete",
+                f"Successfully exported {len(models)} models to combined file")
+        else:
+            QMessageBox.warning(main_window, "Export Failed",
+                "Failed to create combined COL file")
+                
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ COL combined export error: {str(e)}")
+
+
+def integrate_export_functions(main_window): #vers 3
+    """Integrate clean export functions - SIMPLIFIED"""
+    try:
+        # Main export functions
         main_window.export_selected_function = lambda: export_selected_function(main_window)
         main_window.export_all_function = lambda: export_all_function(main_window)
-        main_window.get_selected_entries = lambda: get_selected_entries(main_window)
-        main_window.get_selected_col_models = lambda: get_selected_col_models(main_window)
-        main_window.get_current_file_type = lambda: get_current_file_type(main_window)
         
-        # Add aliases for different naming conventions that GUI might use - FROM ORIGINAL
+        # Add all the aliases that GUI might use
         main_window.export_selected = main_window.export_selected_function
         main_window.export_selected_entries = main_window.export_selected_function
         main_window.export_all_entries = main_window.export_all_function
         main_window.export_all = main_window.export_all_function
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Export functions integrated with COL support")
+            main_window.log_message("✅ Clean export functions integrated with tab awareness")
         
         return True
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Failed to integrate export functions: {str(e)}")
+            main_window.log_message(f"❌ Export integration failed: {str(e)}")
         return False
 
+
+# Export only the essential functions
 __all__ = [
-    'get_current_file_type',
-    'get_selected_col_models',
     'export_selected_function',
     'export_all_function',
     'integrate_export_functions'

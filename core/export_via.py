@@ -48,10 +48,14 @@ def _export_img_via_ide(main_window): #vers 6
     try:
         # FIXED: Get current file from active tab instead of main_window.current_img
         file_object, file_type = get_current_file_from_active_tab(main_window)
-        
+
         if file_type != 'IMG' or not file_object:
             QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
             return
+
+        #if file_type != 'COL' or not file_object:
+            #QMessageBox.warning(main_window, "No COL File", "Current tab does not contain an COL file")
+            #return
 
         if hasattr(main_window, 'log_message'):
             main_window.log_message("📋 Starting Export Via IDE...")
@@ -591,6 +595,127 @@ def integrate_export_via_functions(main_window): #vers 3
             main_window.log_message(f"❌ Failed to integrate export via functions: {str(e)}")
         return False
 
+
+def _start_col_ide_export(main_window, col_entries, export_folder, export_single, export_combined): #vers 1
+    """Start COL IDE export with single/combined options"""
+    try:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"🛡️ Starting COL IDE export: {len(col_entries)} models")
+
+        # Create progress dialog
+        from PyQt6.QtWidgets import QProgressDialog
+        progress_dialog = QProgressDialog("Exporting COL models...", "Cancel", 0, 100, main_window)
+        progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        progress_dialog.show()
+
+        exported_count = 0
+        failed_count = 0
+        total_operations = 0
+
+        # Calculate total operations
+        if export_single:
+            total_operations += len(col_entries)
+        if export_combined:
+            total_operations += 1
+
+        current_operation = 0
+
+        # Export individual files if requested
+        if export_single:
+            for i, col_entry in enumerate(col_entries):
+                if progress_dialog.wasCanceled():
+                    break
+
+                try:
+                    model_name = col_entry['name']
+                    output_path = os.path.join(export_folder, model_name)
+
+                    # Update progress
+                    progress = int((current_operation / total_operations) * 100)
+                    progress_dialog.setValue(progress)
+                    progress_dialog.setLabelText(f"Exporting {model_name}...")
+
+                    # Create single model COL file (this needs to extract just one model)
+                    if _create_single_model_col_file(col_entry, output_path):
+                        exported_count += 1
+                    else:
+                        failed_count += 1
+
+                    current_operation += 1
+
+                except Exception as e:
+                    failed_count += 1
+                    if hasattr(main_window, 'log_message'):
+                        main_window.log_message(f"❌ Error exporting {col_entry['name']}: {str(e)}")
+
+        # Export combined file if requested
+        if export_combined:
+            try:
+                current_operation += 1
+                combined_name = "combined_ide_models.col"
+                combined_path = os.path.join(export_folder, combined_name)
+
+                progress = int((current_operation / total_operations) * 100)
+                progress_dialog.setValue(progress)
+                progress_dialog.setLabelText(f"Creating combined file...")
+
+                # Use the shared COL export function
+                from methods.export_col_shared import save_col_models_with_options
+                success_count, fail_count = save_col_models_with_options(
+                    main_window, col_entries, export_folder, {'create_combined': True, 'combined_name': combined_name}
+                )
+
+                if success_count > 0:
+                    exported_count += success_count
+                else:
+                    failed_count += 1
+
+            except Exception as e:
+                failed_count += 1
+                if hasattr(main_window, 'log_message'):
+                    main_window.log_message(f"❌ Error creating combined file: {str(e)}")
+
+        progress_dialog.close()
+
+        # Show results
+        if exported_count > 0:
+            message = f"Exported {exported_count} COL files to {export_folder}"
+            if failed_count > 0:
+                message += f"\n{failed_count} operations failed"
+
+            QMessageBox.information(main_window, "COL IDE Export Complete", message)
+
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"✅ COL IDE export complete: {exported_count} success, {failed_count} failed")
+        else:
+            QMessageBox.warning(main_window, "COL IDE Export Failed", "No COL models were exported successfully")
+
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ COL IDE export error: {str(e)}")
+        QMessageBox.critical(main_window, "COL IDE Export Error", f"COL IDE export failed: {str(e)}")
+
+def _create_single_model_col_file(col_entry, output_path): #vers 1
+    """Create a COL file containing only one specific model"""
+    try:
+        model = col_entry['model']
+        col_file = col_entry['col_file']
+
+        # This should create a new COL file with just this one model
+        # For now, we'll copy the entire file (user can extract what they need)
+        # TODO: Implement proper single-model COL file creation
+
+        if hasattr(col_file, 'file_path') and os.path.exists(col_file.file_path):
+            import shutil
+            shutil.copy2(col_file.file_path, output_path)
+            return True
+        elif hasattr(col_file, 'save_to_file'):
+            return col_file.save_to_file(output_path)
+        else:
+            return False
+
+    except Exception:
+        return False
 
 __all__ = [
     'export_via_function',
