@@ -117,13 +117,13 @@ class IMGTablePopulator:
             version_item = self.create_img_table_item(version_text)
             table.setItem(row, 5, version_item)
 
-            # Column 6: Info - LIGHT processing
-            info_text = self.get_info_light(entry)
+            # Column 6: compression_type
+            info_text = self.get_compression_info(entry)
             info_item = self.create_img_table_item(info_text)
             table.setItem(row, 6, info_item)
 
-            # Column 7: Status - simple status
-            status_text = self.get_status_simple(entry)
+            # Column 7: Status - get_info
+            status_text = self.get_info_light(entry)
             status_item = self.create_img_table_item(status_text)
             table.setItem(row, 7, status_item)
 
@@ -200,6 +200,28 @@ class IMGTablePopulator:
                 return "Unknown"
         except Exception:
             return "Unknown"
+
+    def get_compression_info(self, entry: Any) -> str: #vers 1
+        """Get compression info only"""
+        try:
+            if hasattr(entry, 'compression_type') and entry.compression_type:
+                if str(entry.compression_type).upper() != 'NONE':
+                    return str(entry.compression_type)
+            return "None"
+        except Exception:
+            return "None"
+
+    def get_status_info(self, entry: Any) -> str: #vers 1
+        """Get status info only"""
+        try:
+            if hasattr(entry, 'is_new_entry') and entry.is_new_entry:
+                return "Imported"
+            elif hasattr(entry, 'is_replaced') and entry.is_replaced:
+                return "Replaced"
+            else:
+                return "Original"
+        except Exception:
+            return "Original"
 
     def get_info_light(self, entry: Any) -> str: #vers 1
         """Get entry info - LIGHT processing, no heavy detection"""

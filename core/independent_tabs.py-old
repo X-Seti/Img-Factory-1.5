@@ -1,0 +1,590 @@
+#this belongs in core/independent_tabs.py - Version: 4
+# X-Seti - August26 2025 - IMG Factory 1.5 - Independent Tab System - Start Tab 0
+
+"""
+Independent Tab System - Start Tab 0 Approach
+Tab 0 is a permanent start tab with instructions. All real tabs start from index 1.
+This completely eliminates tab 0 reference issues and data bleeding.
+"""
+
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTableWidget, QLabel
+from PyQt6.QtCore import Qt
+
+##Methods list -
+# create_start_tab_0
+# create_independent_tab
+# get_tab_table_direct
+# make_tab_completely_independent  
+# update_current_tab_reference_only
+# close_tab_without_reindexing
+# setup_independent_tab_system
+# setup_tab_bar_context_menu
+# close_other_tabs
+# migrate_existing_tabs_to_independent
+# clear_tab_data_completely
+# ensure_tab_data_isolation
+# is_start_tab
+
+def create_start_tab_0(main_window): #vers 1
+    """Create permanent start tab 0 with helpful instructions"""
+    try:
+        # Create start tab widget
+        start_tab = QWidget()
+        start_layout = QVBoxLayout(start_tab)
+        start_layout.setContentsMargins(40, 40, 40, 40)
+        
+        # Welcome title
+        title_label = QLabel("🏭 IMG Factory 1.5")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setStyleSheet("color: #2E7D32; font-size: 24px; font-weight: bold; margin-bottom: 20px;")
+        start_layout.addWidget(title_label)
+        
+        # Instructions
+        instructions_label = QLabel("""
+📁 <b>Getting Started</b>
+
+Use the <b>Open</b> button on the top right to open files:
+• IMG files - GTA archive files
+• COL files - Collision data files  
+• TXD files - Texture dictionary files
+
+Or use the menu:
+• File → Open IMG File
+• File → Open Multiple Files
+
+Each file will open in its own tab starting from Tab 1.
+This tab (Tab 0) is reserved and will always remain here.
+        """)
+        instructions_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        instructions_label.setStyleSheet("color: #424242; font-size: 14px; line-height: 1.6; margin: 20px;")
+        instructions_label.setWordWrap(True)
+        start_layout.addWidget(instructions_label)
+        
+        # Add stretch to center content
+        start_layout.addStretch()
+        
+        # Mark as start tab
+        start_tab.is_start_tab = True
+        start_tab.is_independent = False
+        start_tab.tab_name = "🏭 Start"
+        
+        # Add to tab widget at index 0
+        main_window.main_tab_widget.insertTab(0, start_tab, "🏭 Start")
+        
+        main_window.log_message("✅ Created permanent start tab with instructions")
+        return True
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Error creating start tab: {str(e)}")
+        return False
+
+
+def is_start_tab(main_window, tab_index): #vers 1
+    """Check if tab is the start tab 0"""
+    if tab_index == 0:
+        return True
+    
+    tab_widget = main_window.main_tab_widget.widget(tab_index)
+    if tab_widget and hasattr(tab_widget, 'is_start_tab'):
+        return tab_widget.is_start_tab
+    
+    return False
+
+
+def create_independent_tab(main_window, file_path=None, file_object=None, file_type=None): #vers 1
+    """Create completely independent tab - ALWAYS starts from index 1+"""
+    try:
+        # Ensure start tab 0 exists
+        if main_window.main_tab_widget.count() == 0 or not is_start_tab(main_window, 0):
+            create_start_tab_0(main_window)
+        
+        # Create unique tab widget
+        tab_widget = QWidget()
+        tab_layout = QVBoxLayout(tab_widget)
+        tab_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Create dedicated GUI components for THIS tab only
+        main_window.gui_layout.create_main_ui_with_splitters(tab_layout)
+
+        # Get this tab's table widget and make it completely independent
+        tab_table = get_tab_table_direct(tab_widget)
+        if tab_table:
+            # Store everything directly on the tab widget
+            tab_widget.dedicated_table = tab_table
+            tab_widget.file_path = file_path
+            tab_widget.file_object = file_object 
+            tab_widget.file_type = file_type
+            tab_widget.is_independent = True
+            tab_widget.is_start_tab = False  # Real tab
+            tab_widget.data_isolated = True
+            
+            # Set tab name
+            if file_path:
+                file_name = file_path.split('/')[-1].split('\\')[-1]
+                if file_name.lower().endswith(('.img', '.col')):
+                    file_name = file_name[:-4]
+                icon = "📁" if file_type == "IMG" else "🛡️" if file_type == "COL" else "📄"
+                tab_name = f"{icon} {file_name}"
+            else:
+                tab_name = "📁 No File"
+                
+            tab_widget.tab_name = tab_name
+            ensure_tab_data_isolation(tab_widget)
+            
+        else:
+            main_window.log_message("⚠️ Could not create table widget for independent tab")
+            return None
+
+        # Add tab (will be at index 1+ since 0 is start tab)
+        tab_index = main_window.main_tab_widget.addTab(tab_widget, tab_name)
+        main_window.main_tab_widget.setCurrentIndex(tab_index)
+        
+        main_window.log_message(f"✅ Independent tab created at index {tab_index}: {tab_name}")
+        return tab_index
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error creating independent tab: {str(e)}")
+        return None
+
+
+def get_tab_table_direct(tab_widget): #vers 1
+    """Get table widget directly from tab - no external lookups"""
+    try:
+        # Check for stored reference first
+        if hasattr(tab_widget, 'dedicated_table'):
+            return tab_widget.dedicated_table
+        
+        # Find table in this tab widget
+        tables = tab_widget.findChildren(QTableWidget)
+        if tables:
+            tab_widget.dedicated_table = tables[0]
+            return tables[0]
+        
+        return None
+        
+    except Exception as e:
+        return None
+
+
+def make_tab_completely_independent(main_window, tab_index): #vers 1
+    """Make existing tab completely independent with data isolation"""
+    try:
+        tab_widget = main_window.main_tab_widget.widget(tab_index)
+        if not tab_widget:
+            return False
+            
+        # Get file info from old system if it exists
+        file_info = main_window.open_files.get(tab_index, {})
+        
+        # Store everything directly on tab widget
+        tab_widget.file_path = file_info.get('file_path')
+        tab_widget.file_object = file_info.get('file_object')
+        tab_widget.file_type = file_info.get('type', 'Unknown')
+        tab_widget.tab_name = file_info.get('tab_name', 'Unknown')
+        
+        # Get table widget and ensure complete isolation
+        table = get_tab_table_direct(tab_widget)
+        if table:
+            tab_widget.dedicated_table = table
+            tab_widget.is_independent = True
+            tab_widget.is_start_tab = False
+            tab_widget.data_isolated = True
+            
+            ensure_tab_data_isolation(tab_widget)
+            
+            main_window.log_message(f"✅ Tab {tab_index} made independent with isolation")
+            return True
+        else:
+            main_window.log_message(f"⚠️ Could not make tab {tab_index} independent - no table")
+            return False
+            
+    except Exception as e:
+        main_window.log_message(f"❌ Error making tab independent: {str(e)}")
+        return False
+
+
+def update_current_tab_reference_only(main_window, tab_index): #vers 1
+    """Update ONLY current tab reference - IGNORE start tab 0"""
+    try:
+        # CRITICAL: Skip start tab 0
+        if is_start_tab(main_window, tab_index):
+            main_window.log_message("🏭 Ignoring start tab 0 - switching to next available tab")
+            # Find first real tab
+            for i in range(1, main_window.main_tab_widget.count()):
+                if not is_start_tab(main_window, i):
+                    main_window.main_tab_widget.setCurrentIndex(i)
+                    return update_current_tab_reference_only(main_window, i)
+            
+            # No real tabs - clear everything
+            main_window.current_img = None
+            main_window.current_col = None
+            if hasattr(main_window.gui_layout, 'table'):
+                main_window.gui_layout.table = None
+            return True
+        
+        if tab_index == -1:
+            # No tabs
+            main_window.current_img = None
+            main_window.current_col = None
+            if hasattr(main_window.gui_layout, 'table'):
+                main_window.gui_layout.table = None
+            return True
+            
+        tab_widget = main_window.main_tab_widget.widget(tab_index)
+        if not tab_widget:
+            return False
+        
+        # Ensure this tab has isolated data first
+        ensure_tab_data_isolation(tab_widget)
+            
+        # Update gui_layout.table to point to THIS tab's table only
+        if hasattr(tab_widget, 'dedicated_table'):
+            main_window.gui_layout.table = tab_widget.dedicated_table
+            main_window.log_message(f"🎯 Table reference updated to tab {tab_index}")
+        else:
+            # Create isolated table reference for this tab
+            table = get_tab_table_direct(tab_widget)
+            if table:
+                tab_widget.dedicated_table = table
+                main_window.gui_layout.table = table
+                main_window.log_message(f"🎯 Created dedicated table for tab {tab_index}")
+            
+        # Update current file references from THIS tab's data only
+        if hasattr(tab_widget, 'file_object') and tab_widget.file_object:
+            if hasattr(tab_widget, 'file_type'):
+                if tab_widget.file_type == 'IMG':
+                    main_window.current_img = tab_widget.file_object
+                    main_window.current_col = None
+                elif tab_widget.file_type == 'COL':
+                    main_window.current_col = tab_widget.file_object  
+                    main_window.current_img = None
+        else:
+            # Empty tab
+            main_window.current_img = None
+            main_window.current_col = None
+            
+        main_window.log_message(f"🎯 Current tab reference updated to: {tab_index}")
+        return True
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Error updating current tab reference: {str(e)}")
+        return False
+
+
+def close_tab_without_reindexing(main_window, tab_index): #vers 1
+    """Close tab without affecting any other tabs - IGNORE start tab 0"""
+    try:
+        # CRITICAL: Never close start tab 0
+        if is_start_tab(main_window, tab_index):
+            main_window.log_message("🏭 Cannot close start tab 0 - ignoring close request")
+            return False
+        
+        tab_count = main_window.main_tab_widget.count()
+        real_tab_count = tab_count - 1  # Subtract start tab
+        
+        # Validate tab index (must be 1+)
+        if tab_index < 1 or tab_index >= tab_count:
+            main_window.log_message(f"❌ Invalid tab index for closing: {tab_index}")
+            return False
+        
+        # If only start tab + 1 real tab, don't close the last real tab
+        if real_tab_count <= 1:
+            # Just clear the tab instead
+            tab_widget = main_window.main_tab_widget.widget(tab_index)
+            if tab_widget:
+                clear_tab_data_completely(tab_widget)
+                main_window.main_tab_widget.setTabText(tab_index, "📁 No File")
+                main_window.current_img = None
+                main_window.current_col = None
+                
+            main_window.log_message("✅ Last real tab cleared (kept open)")
+            return True
+            
+        # Get closing tab info and clear its data FIRST
+        closing_tab_widget = main_window.main_tab_widget.widget(tab_index)
+        tab_name = "Unknown"
+        if closing_tab_widget:
+            if hasattr(closing_tab_widget, 'tab_name'):
+                tab_name = closing_tab_widget.tab_name
+            
+            clear_tab_data_completely(closing_tab_widget)
+            main_window.log_message(f"🧹 Cleared data for closing tab: {tab_name}")
+        
+        # Determine which tab will become current after closing (skip start tab)
+        current_tab_after_close = tab_index - 1
+        if current_tab_after_close == 0:  # Would be start tab
+            current_tab_after_close = tab_index + 1 if tab_index + 1 < tab_count else 1
+            
+        # Pre-isolate the tab that will become current
+        if current_tab_after_close >= 1 and current_tab_after_close < tab_count:
+            future_current_tab = main_window.main_tab_widget.widget(current_tab_after_close)
+            if future_current_tab and not is_start_tab(main_window, current_tab_after_close):
+                ensure_tab_data_isolation(future_current_tab)
+                main_window.log_message(f"🔒 Pre-isolated future current tab: {current_tab_after_close}")
+        
+        # Use blockSignals to prevent cascade closing
+        main_window.main_tab_widget.blockSignals(True)
+        try:
+            main_window.main_tab_widget.removeTab(tab_index)
+        finally:
+            main_window.main_tab_widget.blockSignals(False)
+        
+        # Update current tab reference (will skip start tab automatically)
+        final_current_index = main_window.main_tab_widget.currentIndex()
+        update_current_tab_reference_only(main_window, final_current_index)
+        
+        main_window.log_message(f"✅ Independent tab closed: {tab_name}")
+        main_window.log_message(f"📊 Remaining real tabs: {main_window.main_tab_widget.count() - 1}")
+        
+        return True
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Error closing independent tab: {str(e)}")
+        return False
+
+
+def clear_tab_data_completely(tab_widget): #vers 1
+    """Completely clear all data from a tab widget - prevents data bleeding"""
+    try:
+        # Clear file references
+        tab_widget.file_path = None
+        tab_widget.file_object = None
+        tab_widget.file_type = None
+        tab_widget.tab_name = "📁 No File"
+        
+        # Clear table data completely
+        if hasattr(tab_widget, 'dedicated_table'):
+            table = tab_widget.dedicated_table
+            table.clear()
+            table.setRowCount(0)
+            table.setColumnCount(0)
+            table.setHorizontalHeaderLabels([])
+            table.setVerticalHeaderLabels([])
+        
+        # Clear any other table references
+        all_tables = tab_widget.findChildren(QTableWidget)
+        for table in all_tables:
+            table.clear()
+            table.setRowCount(0)
+            table.setColumnCount(0)
+            
+        return True
+        
+    except Exception as e:
+        return False
+
+
+def ensure_tab_data_isolation(tab_widget): #vers 1
+    """Ensure tab has its own isolated table data"""
+    try:
+        if not hasattr(tab_widget, 'dedicated_table'):
+            # Find and assign dedicated table
+            table = get_tab_table_direct(tab_widget)
+            if table:
+                tab_widget.dedicated_table = table
+                
+        # Ensure the tab is marked as independent
+        tab_widget.is_independent = True
+        
+        return True
+        
+    except Exception as e:
+        return False
+
+
+def setup_independent_tab_system(main_window): #vers 2
+    """Setup completely independent tab system with start tab 0 - REPLACES existing tab 0"""
+    try:
+        # STEP 1: Replace any existing tab 0 with our start tab
+        if main_window.main_tab_widget.count() > 0:
+            # Remove existing tab 0 if it exists
+            existing_tab_0 = main_window.main_tab_widget.widget(0)
+            if existing_tab_0 and not is_start_tab(main_window, 0):
+                main_window.log_message("🔄 Replacing existing tab 0 with start tab")
+                main_window.main_tab_widget.removeTab(0)
+        
+        # Create permanent start tab 0
+        create_start_tab_0(main_window)
+        
+        # Install methods on main window
+        main_window.create_independent_tab = lambda file_path=None, file_object=None, file_type=None: create_independent_tab(main_window, file_path, file_object, file_type)
+        main_window.make_tab_completely_independent = lambda tab_index: make_tab_completely_independent(main_window, tab_index)
+        main_window.update_current_tab_reference_only = lambda tab_index: update_current_tab_reference_only(main_window, tab_index)
+        main_window.close_tab_without_reindexing = lambda tab_index: close_tab_without_reindexing(main_window, tab_index)
+        
+        # Replace handlers with independent versions
+        try:
+            existing_close_receivers = main_window.main_tab_widget.receivers(main_window.main_tab_widget.tabCloseRequested)
+            existing_change_receivers = main_window.main_tab_widget.receivers(main_window.main_tab_widget.currentChanged)
+            
+            if existing_close_receivers > 0:
+                try:
+                    main_window.main_tab_widget.tabCloseRequested.disconnect()
+                except:
+                    pass
+            
+            if existing_change_receivers > 0:
+                try:
+                    main_window.main_tab_widget.currentChanged.disconnect()
+                except:
+                    pass
+                    
+        except Exception as disconnect_error:
+            main_window.log_message(f"⚠️ Handler disconnect issue: {str(disconnect_error)}")
+        
+        # Connect new handlers that ignore start tab 0
+        main_window.main_tab_widget.currentChanged.connect(lambda index: update_current_tab_reference_only(main_window, index))
+        main_window.main_tab_widget.tabCloseRequested.connect(lambda index: close_tab_without_reindexing(main_window, index))
+        
+        # Setup right-click context menu on tab bar
+        setup_tab_bar_context_menu(main_window)
+        
+        main_window.log_message("✅ Independent tab system active with start tab (replaced existing)")
+        main_window.log_message("🚀 Tab 0 shows instructions - real tabs start from 1")
+        main_window.log_message("🖱️ Right-click context menu preserved")
+        
+        return True
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Error setting up independent tab system: {str(e)}")
+        return False
+
+
+def setup_tab_bar_context_menu(main_window): #vers 1
+    """Setup right-click context menu on tab bar - IGNORE start tab 0"""
+    try:
+        tab_bar = main_window.main_tab_widget.tabBar()
+        if not tab_bar:
+            return False
+            
+        tab_bar.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        
+        def show_tab_context_menu(position):
+            """Show context menu for tab operations"""
+            try:
+                from PyQt6.QtWidgets import QMenu
+                from PyQt6.QtGui import QAction
+                
+                tab_index = tab_bar.tabAt(position)
+                if tab_index == -1:
+                    return
+                
+                # Ignore start tab 0
+                if is_start_tab(main_window, tab_index):
+                    main_window.log_message("🏭 Right-click on start tab ignored")
+                    return
+                
+                # Create context menu
+                menu = QMenu(tab_bar)
+                
+                # Close this tab action
+                close_action = QAction("Close Tab", menu)
+                close_action.triggered.connect(lambda: close_tab_without_reindexing(main_window, tab_index))
+                menu.addAction(close_action)
+                
+                # Close other tabs action (excluding start tab)
+                real_tab_count = main_window.main_tab_widget.count() - 1
+                if real_tab_count > 1:
+                    close_others_action = QAction("Close Other Tabs", menu)
+                    close_others_action.triggered.connect(lambda: close_other_tabs(main_window, tab_index))
+                    menu.addAction(close_others_action)
+                
+                menu.exec(tab_bar.mapToGlobal(position))
+                
+            except Exception as e:
+                main_window.log_message(f"❌ Tab context menu error: {str(e)}")
+        
+        tab_bar.customContextMenuRequested.connect(show_tab_context_menu)
+        
+        main_window.log_message("✅ Tab bar right-click context menu enabled (ignores start tab)")
+        return True
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Error setting up tab bar context menu: {str(e)}")
+        return False
+
+
+def close_other_tabs(main_window, keep_index): #vers 1
+    """Close all tabs except the specified one - IGNORE start tab 0"""
+    try:
+        tab_count = main_window.main_tab_widget.count()
+        
+        # Never close start tab 0
+        if is_start_tab(main_window, keep_index):
+            main_window.log_message("🏭 Cannot keep start tab 0 - operation cancelled")
+            return
+        
+        # Close tabs in reverse order (skip start tab 0)
+        for i in range(tab_count - 1, 0, -1):  # Start from last, stop at 1 (skip 0)
+            if i != keep_index and not is_start_tab(main_window, i):
+                close_tab_without_reindexing(main_window, i)
+                
+        main_window.log_message(f"✅ Closed all real tabs except tab {keep_index}")
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Error closing other tabs: {str(e)}")
+
+
+def migrate_existing_tabs_to_independent(main_window): #vers 2
+    """Migrate existing tabs from old system to independent system - HANDLES existing tabs properly"""
+    try:
+        tab_count = main_window.main_tab_widget.count()
+        migrated_count = 0
+        
+        # Ensure start tab 0 exists and is at index 0
+        if tab_count == 0 or not is_start_tab(main_window, 0):
+            main_window.log_message("⚠️ Start tab missing during migration - this shouldn't happen")
+            create_start_tab_0(main_window)
+            tab_count = main_window.main_tab_widget.count()
+        
+        main_window.log_message(f"🔄 Migrating {tab_count - 1} existing tabs (skipping start tab)")
+        
+        # Start from index 1 (skip start tab 0)  
+        for i in range(1, tab_count):
+            tab_widget = main_window.main_tab_widget.widget(i)
+            if tab_widget and not is_start_tab(main_window, i):
+                # Check if this tab has old system data to migrate
+                if hasattr(main_window, 'open_files') and i in main_window.open_files:
+                    # This is an old system tab - migrate it
+                    if make_tab_completely_independent(main_window, i):
+                        migrated_count += 1
+                        main_window.log_message(f"✅ Migrated existing tab {i} to independent system")
+                else:
+                    # This is already an independent tab or empty tab - just mark it as independent
+                    if not hasattr(tab_widget, 'is_independent'):
+                        # Make it independent anyway
+                        tab_widget.is_independent = True
+                        tab_widget.is_start_tab = False
+                        ensure_tab_data_isolation(tab_widget)
+                        migrated_count += 1
+                        main_window.log_message(f"✅ Marked existing tab {i} as independent")
+                
+        # Clear old open_files tracking
+        if hasattr(main_window, 'open_files'):
+            main_window.open_files = {}
+        
+        main_window.log_message(f"✅ Migration complete: {migrated_count}/{tab_count - 1} real tabs processed")
+        main_window.log_message("🗑️ Old file tracking system disabled")
+        
+        return migrated_count >= 0  # Always return True if we processed something
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Error migrating tabs: {str(e)}")
+        return False
+
+
+__all__ = [
+    'create_start_tab_0',
+    'is_start_tab',
+    'create_independent_tab',
+    'get_tab_table_direct',
+    'make_tab_completely_independent',
+    'update_current_tab_reference_only', 
+    'close_tab_without_reindexing',
+    'setup_independent_tab_system',
+    'setup_tab_bar_context_menu',
+    'close_other_tabs',
+    'migrate_existing_tabs_to_independent',
+    'clear_tab_data_completely',
+    'ensure_tab_data_isolation'
+]

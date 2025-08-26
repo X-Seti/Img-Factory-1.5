@@ -1,8 +1,7 @@
 #this belongs in core/independent_tab_system.py - Version: 1
-# X-Seti - August10 2025 - IMG Factory 1.5 - TRUE INDEPENDENT TAB SYSTEM
+# X-Seti - August10 2025 - IMG Factory 1.5 - Self-contained tabs
 
 """
-TRUE INDEPENDENT TAB SYSTEM
 Each tab is completely self-contained. Removing tabs doesn't affect others.
 Scales to unlimited tabs with zero memory overhead.
 """

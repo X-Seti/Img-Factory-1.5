@@ -413,15 +413,12 @@ class IMGFactory(QMainWindow):
         self.menu_bar_system.set_callbacks(callbacks)
 
         # Create main UI
+        setup_independent_tab_system(self)
         self._create_ui()
         add_project_menu_items(self)
-
-        #tabs
-        setup_independent_tab_system(self)
         migrate_existing_tabs_to_independent(self)
-
-        #self.integrate_tab_aware_system() #old removed
         integrate_tab_awareness_system(self)
+
         # === PHASE 4: ESSENTIAL INTEGRATIONS (Medium) ===
 
         # Core parsers (now safe to use log_message)

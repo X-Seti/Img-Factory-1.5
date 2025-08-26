@@ -100,13 +100,19 @@ def get_rw_version_name(version_value: int) -> str: #vers 2
         0x37002: "3.7.0.2",
         
         # Extended format versions (with additional bits)
-        0x0800FFFF: "3.0.0.0",
-        0x1003FFFF: "3.1.0.1", 
-        0x1005FFFF: "3.2.0.0",
-        0x1401FFFF: "3.4.0.1",  # FIXME: Need correct hex value for 3.4.0.1 extended format
-        0x1400FFFF: "3.4.0.3",
-        0x1803FFFF: "3.6.0.3",
-        0x1C020037: "3.7.0.2",
+        0x0800FFFF: "3.0.0.0 GTA3 (PS2)",
+         0xC02FFFF: "3.0.0.1 GTA VC (PS2)", #Needs researching.
+        0x00000310: "3.1.0.0 GTA3 (And)", # Found on generics (Android)
+        0x1003FFFF: "3.1.0.0 GTA VC (PC)", # Charactor Models in GTAIII PC
+        0x1004FFFF: "3.1.0.1 GTA3 (PC)",
+        0x1005FFFF: "3.2.0.0 GTA VC (PC)",
+        0x0C02FFFF: "3.3.0.2 GTA3/ VC (PS2)",
+        0x1401FFFF: "3.4.0.1 Manhunt/ SOL",
+        0x1400FFFF: "3.4.0.3 GTAVC (PC)", #PC version
+        0x35000FFF: "3.5.0.0 LC Stories (PS2)",
+        0x35002FFF: "3.5.0.2 VC Stories (PS2)",
+        0x1803FFFF: "3.6.0.3 GTA SA (PC)", #Standard
+        0x1C020037: "3.7.0.2 San Andreas-P", #
         
         # Game-specific variants
         0x310100: "3.1.0.1 (GTA3)",
@@ -116,7 +122,6 @@ def get_rw_version_name(version_value: int) -> str: #vers 2
         0x360003: "3.6.0.3 (San Andreas)",
         
         # Additional SA variants
-        0x1803FFFF: "3.6.0.3 (SA)",
         0x34003: "3.4.0.3 (SA)",
         
         # GTA Stories (PSP) variants
