@@ -83,9 +83,7 @@ from core.close import install_close_functions, setup_close_manager
 from core.split_img import integrate_split_functions
 from core.theme_integration import integrate_theme_system
 from core.img_corruption_analyzer import setup_corruption_analyzer
-from core.rebuild_all import integrate_batch_rebuild_functions
 from core.clean import integrate_clean_utilities
-from core.rebuild import integrate_rebuild_functions
 from core.export import integrate_export_functions
 from core.impotr import integrate_import_functions #import impotr
 from core.remove import integrate_remove_functions
@@ -94,7 +92,8 @@ from core.dump import dump_all_function, dump_selected_function, integrate_dump_
 from core.import_via import integrate_import_via_functions
 from core.remove_via import integrate_remove_via_functions
 from core.export_via import export_via_function
-
+from core.rebuild import integrate_rebuild_functions
+from core.rebuild_all import integrate_batch_rebuild_functions
 from core.independent_tabs import setup_independent_tab_system, migrate_existing_tabs_to_independent
 
 from methods.ide_parser import integrate_ide_parser
@@ -435,6 +434,8 @@ class IMGFactory(QMainWindow):
         integrate_export_functions(self)
         integrate_import_functions(self)
         integrate_remove_functions(self)
+        integrate_batch_rebuild_functions(self)
+        integrate_rebuild_functions(self)
 
         self.export_via = lambda: export_via_function(self)
         integrate_import_via_functions(self)  # NEW

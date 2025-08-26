@@ -18,21 +18,29 @@ from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
 from components.img_creator import NewIMGDialog, IMGCreationThread
 from components.ide_editor import open_ide_editor
-#from core.importer import import_files_function, import_via_function #broken
-#from core.remove import remove_selected_function, remove_via_entries_function
-#from core.save_img_entry import save_img_entry_function #broken
+
+#core
+from core.impotr import import_files_function
+from core.import_via import import_via_function
+#from core.import_via import integrate_import_via_functions
+from core.remove import remove_selected_function
+from core.remove_via import integrate_remove_via_functions
 from core.export import export_selected_function
+# export_all_function, integrate_export_functions
 from core.export_via import export_via_function
 from core.quick_export import quick_export_function
-from core.dump import dump_all_function
-from core.split_img import split_img
+from core.clean import integrate_clean_utilities
+from core.rebuild import rebuild_current_img_native
+from core.rebuild_all import rebuild_all_open_tabs
+#from core.rebuild import rebuild_current_img #old function.
+from core.dump import dump_all_function # dump_selected_function, integrate_dump_functions
+from core.split_img import split_img, integrate_split_functions
 from core.merge_img import merge_img_function
 from core.convert import convert_img, convert_img_format
 from core.rename import rename_entry
 from core.reload import reload_current_file
 from core.create_img import create_new_img, detect_and_open_file, open_file_dialog, detect_file_type
-from core.close import close_img_file, close_all_img
-from core.close import install_close_functions, setup_close_manager
+from core.close import close_img_file, close_all_img, install_close_functions, setup_close_manager
 from methods.colour_ui_for_loaded_img import integrate_color_ui_system
 from gui.gui_context import open_col_editor_dialog
 
@@ -76,8 +84,9 @@ class IMGFactoryGUILayout:
             'useless_button': lambda: self._safe_log("🎯 useless_button!"),
             'close_img_file': lambda: close_img_file(self.main_window),
             'close_all_img': lambda: close_all_img(self.main_window),
-            'rebuild_img': lambda: getattr(self.main_window, 'rebuild_img', lambda: self._log_missing_method('rebuild_img'))(),
-            'rebuild_all_img': lambda: getattr(self.main_window, 'rebuild_all_img', lambda: self._log_missing_method('rebuild_all_img'))(),
+            'rebuild_img': lambda: rebuild_current_img_native(self.main_window),
+            #'rebuild_all_img': lambda: integrate_batch_rebuild_functions(self.main_window),
+            'rebuild_all_img': lambda: rebuild_all_open_tabs(self.main_window),
             'save_img_entry': lambda: save_img_entry_function(self.main_window),
             'merge_img': lambda: merge_img_function(self.main_window),
             'split_img': lambda: split_img(self.main_window),

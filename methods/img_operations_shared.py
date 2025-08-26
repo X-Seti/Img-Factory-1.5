@@ -1,342 +1,397 @@
-#this belongs in methods/img_operations_shared.py - Version: 1
-# X-Seti - August10 2025 - IMG Factory 1.5 - Shared IMG Operations Placeholder System
-
-"""
-SHARED IMG OPERATIONS PLACEHOLDER SYSTEM
-Centralized placeholders for all IMG file operations that need fixing.
-All save/rebuild/edit functions route through here until bugs are resolved.
-"""
+#this belongs in methods/ img_operations_shared.py - Version: 1
+# X-Seti - August26 2025 - IMG Factory 1.5 - Shared IMG Operations
 
 import os
-from typing import List, Tuple, Optional, Any
+import struct
+import tempfile
+import shutil
+from pathlib import Path
+from typing import Optional, Callable, List, Tuple, Dict, Any
+from PyQt6.QtWidgets import QApplication
+
+from methods.tab_awareness import validate_tab_before_operation, get_current_file_from_active_tab
 
 ##Methods list -
-# placeholder_save_img_file
-# placeholder_rebuild_img_file
-# placeholder_remove_entry
-# placeholder_remove_entries_via_list
-# placeholder_import_file
-# placeholder_import_files_via_list
-# placeholder_split_img_file
-# placeholder_replace_entry
-# placeholder_edit_entry_data
-# placeholder_validate_img_integrity
-# install_shared_img_operations
+# create_progress_callback
+# sanitize_filename
+# get_img_version_info
+# calculate_sector_aligned_size
+# create_temp_file_path
+# atomic_file_replace
+# validate_img_structure
+# get_entry_data_safely
+# write_img_header
+# write_img_directory
+# consolidate_img_data
+# cleanup_temp_files
+# log_operation_progress
 
-def placeholder_save_img_file(img_file, backup=True): #vers 1
-    """PLACEHOLDER: Save IMG file - NEEDS IMPLEMENTATION"""
+def create_progress_callback(main_window, operation_name: str) -> Callable:
+    """Create unified progress callback for IMG operations"""
+    def progress_callback(percent: int, message: str = ""):
+        try:
+            full_message = f"{operation_name}: {message}" if message else operation_name
+            
+            if hasattr(main_window, 'log_message') and message:
+                main_window.log_message(f"🔧 {full_message} ({percent}%)")
+            
+            # Update progress bar if available
+            try:
+                from methods.progressbar import update_progress
+                update_progress(main_window, percent, full_message)
+            except ImportError:
+                # Fallback to basic status update
+                if hasattr(main_window, 'statusBar'):
+                    main_window.statusBar().showMessage(f"{full_message} - {percent}%")
+            
+            # Keep UI responsive
+            QApplication.processEvents()
+            
+        except Exception:
+            pass  # Ignore progress callback errors
+    
+    return progress_callback
+
+
+def sanitize_filename(filename: str) -> str:
+    """Clean filename for IMG entry (24 byte max, null terminated)"""
     try:
-        file_path = getattr(img_file, 'file_path', 'Unknown')
-        entry_count = len(img_file.entries) if hasattr(img_file, 'entries') and img_file.entries else 0
+        if not filename:
+            return "file.dat"
         
-        print(f"🚧 PLACEHOLDER: Save IMG file")
-        print(f"   File: {os.path.basename(file_path)}")
-        print(f"   Entries: {entry_count}")
-        print(f"   Backup: {backup}")
-        print(f"   Status: ❌ NOT IMPLEMENTED - Needs corruption-free save system")
+        # Remove problematic characters
+        clean_name = filename.replace('\x00', '').replace('\xcd', '').replace('\xff', '')
+        clean_name = ''.join(c for c in clean_name if 32 <= ord(c) <= 126)
+        clean_name = clean_name.replace('\\', '_').replace('/', '_').replace('|', '_')
+        clean_name = clean_name.strip()[:23]  # Leave room for null terminator
         
-        # TODO: Implement corruption-free IMG save
-        # - Handle DIR/IMG pair correctly
-        # - Maintain sector alignment
-        # - Preserve entry offsets
-        # - Create reliable backup system
+        return clean_name if clean_name else "file.dat"
         
-        return False
-        
-    except Exception as e:
-        print(f"❌ PLACEHOLDER save error: {str(e)}")
-        return False
+    except Exception:
+        return "file.dat"
 
 
-def placeholder_rebuild_img_file(img_file, options=None): #vers 1
-    """PLACEHOLDER: Rebuild IMG file - NEEDS IMPLEMENTATION"""
+def get_img_version_info(img_file) -> Dict[str, Any]:
+    """Extract IMG version information for native operations"""
     try:
-        file_path = getattr(img_file, 'file_path', 'Unknown')
-        entry_count = len(img_file.entries) if hasattr(img_file, 'entries') and img_file.entries else 0
+        version_info = {
+            'version': 2,  # Default to V2 (GTA SA)
+            'header_size': 8,
+            'entry_size': 32,
+            'magic_bytes': b'VER2'
+        }
         
-        rebuild_options = options or {}
-        create_backup = rebuild_options.get('create_backup', True)
-        optimize_structure = rebuild_options.get('optimize_structure', False)
+        # Detect version from IMG file
+        if hasattr(img_file, 'version'):
+            if img_file.version == 1:
+                version_info.update({
+                    'version': 1,
+                    'header_size': 0,  # V1 has no header
+                    'magic_bytes': b''
+                })
+            elif img_file.version == 3:
+                version_info.update({
+                    'version': 3,
+                    'header_size': 12,  # V3 extended header
+                    'magic_bytes': b'VER3'
+                })
         
-        print(f"🚧 PLACEHOLDER: Rebuild IMG file")
-        print(f"   File: {os.path.basename(file_path)}")
-        print(f"   Entries: {entry_count}")
-        print(f"   Create backup: {create_backup}")
-        print(f"   Optimize: {optimize_structure}")
-        print(f"   Status: ❌ NOT IMPLEMENTED - Needs corruption-free rebuild system")
+        return version_info
         
-        # TODO: Implement corruption-free IMG rebuild
-        # - Recalculate all entry offsets
-        # - Rebuild DIR file with correct headers
-        # - Rebuild IMG file with proper sector alignment
-        # - Handle version 1 and version 2 formats
-        # - Verify integrity after rebuild
-        
-        return False
-        
-    except Exception as e:
-        print(f"❌ PLACEHOLDER rebuild error: {str(e)}")
-        return False
+    except Exception:
+        # Return safe V2 defaults
+        return {
+            'version': 2,
+            'header_size': 8, 
+            'entry_size': 32,
+            'magic_bytes': b'VER2'
+        }
 
 
-def placeholder_remove_entry(img_file, entry_name): #vers 1
-    """PLACEHOLDER: Remove single entry - NEEDS IMPLEMENTATION"""
+def calculate_sector_aligned_size(size_bytes: int) -> int:
+    """Calculate size aligned to 2048-byte sectors"""
+    SECTOR_SIZE = 2048
+    return (size_bytes + SECTOR_SIZE - 1) // SECTOR_SIZE
+
+
+def create_temp_file_path(original_path: str, operation: str = "temp") -> str:
+    """Create safe temporary file path for atomic operations"""
     try:
-        print(f"🚧 PLACEHOLDER: Remove entry")
-        print(f"   Entry: {entry_name}")
-        print(f"   Status: ❌ NOT IMPLEMENTED - Needs safe removal system")
+        base_path = Path(original_path)
+        parent_dir = base_path.parent
+        filename = base_path.stem
+        extension = base_path.suffix
         
-        # TODO: Implement safe entry removal
-        # - Find entry by name
-        # - Remove from entries list
-        # - Update offsets for remaining entries
-        # - Save IMG file without corruption
+        # Create unique temp name
+        temp_name = f"{filename}_{operation}.tmp{extension}"
+        temp_path = parent_dir / temp_name
         
-        return False
+        return str(temp_path)
         
-    except Exception as e:
-        print(f"❌ PLACEHOLDER remove entry error: {str(e)}")
-        return False
+    except Exception:
+        # Fallback to simple approach
+        return f"{original_path}.{operation}.tmp"
 
 
-def placeholder_remove_entries_via_list(img_file, entry_names: List[str]): #vers 1
-    """PLACEHOLDER: Remove multiple entries via list - NEEDS IMPLEMENTATION"""
+def atomic_file_replace(temp_path: str, target_path: str, main_window=None) -> bool:
+    """Perform atomic file replacement (prevents corruption)"""
     try:
-        entry_count = len(entry_names)
+        if not os.path.exists(temp_path):
+            if main_window and hasattr(main_window, 'log_message'):
+                main_window.log_message("❌ Temporary file not found for atomic replace")
+            return False
         
-        print(f"🚧 PLACEHOLDER: Remove multiple entries")
-        print(f"   Entries to remove: {entry_count}")
-        print(f"   Entries: {', '.join(entry_names[:5])}{'...' if entry_count > 5 else ''}")
-        print(f"   Status: ❌ NOT IMPLEMENTED - Needs batch removal system")
+        # Create backup if target exists
+        backup_path = None
+        if os.path.exists(target_path):
+            backup_path = f"{target_path}.backup"
+            shutil.copy2(target_path, backup_path)
+            if main_window and hasattr(main_window, 'log_message'):
+                main_window.log_message(f"📋 Created backup: {os.path.basename(backup_path)}")
         
-        # TODO: Implement batch entry removal
-        # - Validate all entries exist
-        # - Remove all entries in one operation
-        # - Recalculate offsets once
-        # - Save IMG file without corruption
+        # Atomic replace
+        if os.name == 'nt':  # Windows
+            # Remove target first on Windows
+            if os.path.exists(target_path):
+                os.remove(target_path)
+            os.rename(temp_path, target_path)
+        else:  # Unix-like systems
+            os.rename(temp_path, target_path)
         
-        return False
+        # Clean up backup after successful replace
+        if backup_path and os.path.exists(backup_path):
+            os.remove(backup_path)
         
-    except Exception as e:
-        print(f"❌ PLACEHOLDER remove entries error: {str(e)}")
-        return False
-
-
-def placeholder_import_file(img_file, file_path: str, target_name: str = None): #vers 1
-    """PLACEHOLDER: Import single file - NEEDS IMPLEMENTATION"""
-    try:
-        file_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
-        target_name = target_name or os.path.basename(file_path)
-        
-        print(f"🚧 PLACEHOLDER: Import file")
-        print(f"   Source: {os.path.basename(file_path)}")
-        print(f"   Target name: {target_name}")
-        print(f"   Size: {file_size:,} bytes")
-        print(f"   Status: ❌ NOT IMPLEMENTED - Needs safe import system")
-        
-        # TODO: Implement safe file import
-        # - Read file data
-        # - Calculate proper offset and size
-        # - Add to entries list
-        # - Update IMG file structure
-        # - Save without corruption
-        
-        return False
-        
-    except Exception as e:
-        print(f"❌ PLACEHOLDER import error: {str(e)}")
-        return False
-
-
-def placeholder_import_files_via_list(img_file, file_paths: List[str]): #vers 1
-    """PLACEHOLDER: Import multiple files via list - NEEDS IMPLEMENTATION"""
-    try:
-        file_count = len(file_paths)
-        total_size = sum(os.path.getsize(f) for f in file_paths if os.path.exists(f))
-        
-        print(f"🚧 PLACEHOLDER: Import multiple files")
-        print(f"   Files to import: {file_count}")
-        print(f"   Total size: {total_size:,} bytes")
-        print(f"   Files: {', '.join(os.path.basename(f) for f in file_paths[:3])}{'...' if file_count > 3 else ''}")
-        print(f"   Status: ❌ NOT IMPLEMENTED - Needs batch import system")
-        
-        # TODO: Implement batch file import
-        # - Validate all files exist
-        # - Calculate offsets for all files
-        # - Add all entries in one operation
-        # - Update IMG file structure
-        # - Save without corruption
-        
-        return False
-        
-    except Exception as e:
-        print(f"❌ PLACEHOLDER import files error: {str(e)}")
-        return False
-
-
-def placeholder_split_img_file(img_file, split_criteria): #vers 1
-    """PLACEHOLDER: Split IMG file - NEEDS IMPLEMENTATION"""
-    try:
-        entry_count = len(img_file.entries) if hasattr(img_file, 'entries') and img_file.entries else 0
-        
-        print(f"🚧 PLACEHOLDER: Split IMG file")
-        print(f"   Entries: {entry_count}")
-        print(f"   Split criteria: {split_criteria}")
-        print(f"   Status: ❌ NOT IMPLEMENTED - Needs splitting system")
-        
-        # TODO: Implement IMG file splitting
-        # - Analyze split criteria (by size, by type, by count, etc.)
-        # - Create multiple IMG files
-        # - Distribute entries across new files
-        # - Maintain proper structure in each file
-        # - Save all files without corruption
-        
-        return False
-        
-    except Exception as e:
-        print(f"❌ PLACEHOLDER split error: {str(e)}")
-        return False
-
-
-def placeholder_replace_entry(img_file, entry_name: str, new_file_path: str): #vers 1
-    """PLACEHOLDER: Replace existing entry with new file - NEEDS IMPLEMENTATION"""
-    try:
-        new_size = os.path.getsize(new_file_path) if os.path.exists(new_file_path) else 0
-        
-        print(f"🚧 PLACEHOLDER: Replace entry")
-        print(f"   Entry name: {entry_name}")
-        print(f"   New file: {os.path.basename(new_file_path)}")
-        print(f"   New size: {new_size:,} bytes")
-        print(f"   Status: ❌ NOT IMPLEMENTED - Needs replacement system")
-        
-        # TODO: Implement entry replacement
-        # - Find existing entry
-        # - Read new file data
-        # - Replace entry data
-        # - Update size and offsets
-        # - Save IMG file without corruption
-        
-        return False
-        
-    except Exception as e:
-        print(f"❌ PLACEHOLDER replace error: {str(e)}")
-        return False
-
-
-def placeholder_edit_entry_data(img_file, entry_name: str, new_data: bytes): #vers 1
-    """PLACEHOLDER: Edit entry data directly - NEEDS IMPLEMENTATION"""
-    try:
-        data_size = len(new_data) if new_data else 0
-        
-        print(f"🚧 PLACEHOLDER: Edit entry data")
-        print(f"   Entry name: {entry_name}")
-        print(f"   New data size: {data_size:,} bytes")
-        print(f"   Status: ❌ NOT IMPLEMENTED - Needs data editing system")
-        
-        # TODO: Implement direct data editing
-        # - Find existing entry
-        # - Update entry data
-        # - Recalculate size and offsets
-        # - Save IMG file without corruption
-        
-        return False
-        
-    except Exception as e:
-        print(f"❌ PLACEHOLDER edit data error: {str(e)}")
-        return False
-
-
-def placeholder_validate_img_integrity(img_file): #vers 1
-    """PLACEHOLDER: Validate IMG file integrity - NEEDS IMPLEMENTATION"""
-    try:
-        file_path = getattr(img_file, 'file_path', 'Unknown')
-        entry_count = len(img_file.entries) if hasattr(img_file, 'entries') and img_file.entries else 0
-        
-        print(f"🚧 PLACEHOLDER: Validate IMG integrity")
-        print(f"   File: {os.path.basename(file_path)}")
-        print(f"   Entries: {entry_count}")
-        print(f"   Status: ❌ NOT IMPLEMENTED - Needs validation system")
-        
-        # TODO: Implement integrity validation
-        # - Check DIR/IMG file pair consistency
-        # - Verify entry offsets and sizes
-        # - Check sector alignment
-        # - Validate file headers
-        # - Report any corruption issues
-        
-        return False, ["Validation not implemented"]
-        
-    except Exception as e:
-        print(f"❌ PLACEHOLDER validation error: {str(e)}")
-        return False, [f"Validation error: {str(e)}"]
-
-
-def install_shared_img_operations(main_window): #vers 1
-    """Install shared IMG operation placeholders on main window and IMG objects"""
-    try:
-        # Install on main window for global access
-        main_window.shared_save_img = placeholder_save_img_file
-        main_window.shared_rebuild_img = placeholder_rebuild_img_file
-        main_window.shared_remove_entry = placeholder_remove_entry
-        main_window.shared_remove_entries_via = placeholder_remove_entries_via_list
-        main_window.shared_import_file = placeholder_import_file
-        main_window.shared_import_files_via = placeholder_import_files_via_list
-        main_window.shared_split_img = placeholder_split_img_file
-        main_window.shared_replace_entry = placeholder_replace_entry
-        main_window.shared_edit_entry_data = placeholder_edit_entry_data
-        main_window.shared_validate_img = placeholder_validate_img_integrity
-        
-        # Create convenience methods that use current_img
-        main_window.save_current_img = lambda backup=True: placeholder_save_img_file(main_window.current_img, backup) if main_window.current_img else False
-        main_window.rebuild_current_img = lambda options=None: placeholder_rebuild_img_file(main_window.current_img, options) if main_window.current_img else False
-        main_window.remove_entry_from_current = lambda name: placeholder_remove_entry(main_window.current_img, name) if main_window.current_img else False
-        main_window.import_to_current_img = lambda path, name=None: placeholder_import_file(main_window.current_img, path, name) if main_window.current_img else False
-        main_window.validate_current_img = lambda: placeholder_validate_img_integrity(main_window.current_img) if main_window.current_img else (False, ["No IMG loaded"])
-        
-        # Create unified operation status function
-        main_window.show_img_operation_status = lambda: show_img_operation_status(main_window)
-        
-        main_window.log_message("✅ Shared IMG operations installed (placeholders)")
-        main_window.log_message("🚧 All IMG edit operations route through placeholder system")
+        if main_window and hasattr(main_window, 'log_message'):
+            main_window.log_message("✅ Atomic file replacement completed")
         
         return True
         
     except Exception as e:
-        main_window.log_message(f"❌ Error installing shared IMG operations: {str(e)}")
+        if main_window and hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Atomic replace failed: {str(e)}")
+        
+        # Restore backup if replace failed
+        if backup_path and os.path.exists(backup_path):
+            try:
+                if os.path.exists(target_path):
+                    os.remove(target_path)
+                os.rename(backup_path, target_path)
+            except:
+                pass
+        
         return False
 
 
-def show_img_operation_status(main_window): #vers 1
-    """Show status of all IMG operations"""
+def validate_img_structure(img_file, main_window=None) -> Tuple[bool, str]:
+    """Validate IMG file structure before operations"""
     try:
-        main_window.log_message("🚧 IMG OPERATIONS STATUS:")
-        main_window.log_message("   ❌ Save IMG file - NOT IMPLEMENTED")
-        main_window.log_message("   ❌ Rebuild IMG file - NOT IMPLEMENTED") 
-        main_window.log_message("   ❌ Remove entry - NOT IMPLEMENTED")
-        main_window.log_message("   ❌ Remove via list - NOT IMPLEMENTED")
-        main_window.log_message("   ❌ Import file - NOT IMPLEMENTED")
-        main_window.log_message("   ❌ Import via list - NOT IMPLEMENTED")
-        main_window.log_message("   ❌ Split IMG file - NOT IMPLEMENTED")
-        main_window.log_message("   ❌ Replace entry - NOT IMPLEMENTED")
-        main_window.log_message("   ❌ Edit entry data - NOT IMPLEMENTED")
-        main_window.log_message("   ❌ Validate integrity - NOT IMPLEMENTED")
-        main_window.log_message("📋 All operations need corruption-free implementation")
+        if not hasattr(img_file, 'entries') or not img_file.entries:
+            return False, "No entries found in IMG file"
+        
+        if not hasattr(img_file, 'file_path') or not img_file.file_path:
+            return False, "No file path available"
+        
+        if not os.path.exists(img_file.file_path):
+            return False, f"IMG file not found: {img_file.file_path}"
+        
+        # Check entry validity
+        invalid_entries = 0
+        for entry in img_file.entries:
+            if not hasattr(entry, 'name') or not entry.name:
+                invalid_entries += 1
+        
+        if invalid_entries > 0:
+            warning = f"Found {invalid_entries} entries with invalid names"
+            if main_window and hasattr(main_window, 'log_message'):
+                main_window.log_message(f"⚠️ {warning}")
+        
+        return True, f"IMG structure valid ({len(img_file.entries)} entries)"
         
     except Exception as e:
-        main_window.log_message(f"❌ Error showing status: {str(e)}")
+        return False, f"Structure validation failed: {str(e)}"
 
 
+def get_entry_data_safely(entry, img_file, main_window=None) -> Optional[bytes]:
+    """Safely extract entry data using multiple methods"""
+    try:
+        # Method 1: Check for cached/new data
+        if hasattr(entry, 'data') and entry.data is not None:
+            return entry.data
+        
+        # Method 2: Use get_data method if available
+        if hasattr(entry, 'get_data'):
+            try:
+                return entry.get_data()
+            except Exception:
+                pass
+        
+        # Method 3: Read from IMG file directly
+        if (hasattr(entry, 'offset') and hasattr(entry, 'size') and 
+            hasattr(img_file, 'file_path')):
+            try:
+                with open(img_file.file_path, 'rb') as f:
+                    f.seek(entry.offset)
+                    return f.read(entry.size)
+            except Exception:
+                pass
+        
+        # Method 4: Try extract_data method
+        if hasattr(entry, 'extract_data'):
+            try:
+                return entry.extract_data()
+            except Exception:
+                pass
+        
+        return None
+        
+    except Exception as e:
+        if main_window and hasattr(main_window, 'log_message'):
+            entry_name = getattr(entry, 'name', 'Unknown')
+            main_window.log_message(f"⚠️ Failed to get data for {entry_name}: {str(e)}")
+        return None
+
+
+def write_img_header(file_handle, version_info: Dict, entry_count: int):
+    """Write IMG header based on version"""
+    try:
+        if version_info['version'] == 1:
+            # V1 has no header
+            pass
+        elif version_info['version'] == 2:
+            # V2 header: "VER2" + entry count
+            file_handle.write(version_info['magic_bytes'])
+            file_handle.write(struct.pack('<I', entry_count))
+        elif version_info['version'] == 3:
+            # V3 header: "VER3" + entry count + additional data
+            file_handle.write(version_info['magic_bytes'])
+            file_handle.write(struct.pack('<I', entry_count))
+            file_handle.write(struct.pack('<I', 0))  # Additional V3 field
+            
+    except Exception as e:
+        raise Exception(f"Header write failed: {str(e)}")
+
+
+def write_img_directory(file_handle, entries, version_info: Dict, data_start_offset: int):
+    """Write IMG directory section"""
+    try:
+        current_offset = data_start_offset
+        
+        for entry in entries:
+            # Sanitize filename
+            clean_name = sanitize_filename(getattr(entry, 'name', ''))
+            
+            # Calculate size in sectors
+            entry_size = getattr(entry, 'size', 0)
+            if entry_size == 0 and hasattr(entry, 'data') and entry.data:
+                entry_size = len(entry.data)
+            
+            size_sectors = calculate_sector_aligned_size(entry_size)
+            
+            # Write directory entry
+            name_bytes = clean_name.encode('ascii', errors='replace')[:24]
+            name_bytes = name_bytes.ljust(24, b'\x00')  # Pad to 24 bytes
+            
+            file_handle.write(struct.pack('<I', current_offset // 2048))  # Offset in sectors
+            file_handle.write(struct.pack('<I', size_sectors))  # Size in sectors
+            file_handle.write(name_bytes)  # Filename (24 bytes)
+            
+            current_offset += size_sectors * 2048
+            
+    except Exception as e:
+        raise Exception(f"Directory write failed: {str(e)}")
+
+
+def consolidate_img_data(file_handle, entries, img_file, data_start_offset: int, progress_callback: Optional[Callable]):
+    """Write consolidated entry data to IMG file"""
+    try:
+        file_handle.seek(data_start_offset)
+        total_entries = len(entries)
+        
+        for i, entry in enumerate(entries):
+            # Get entry data
+            entry_data = get_entry_data_safely(entry, img_file)
+            if entry_data is None:
+                entry_name = getattr(entry, 'name', f'Entry_{i}')
+                raise Exception(f"Could not get data for entry: {entry_name}")
+            
+            # Write data
+            file_handle.write(entry_data)
+            
+            # Pad to sector boundary
+            data_size = len(entry_data)
+            sector_size = 2048
+            padding_needed = (sector_size - (data_size % sector_size)) % sector_size
+            
+            if padding_needed > 0:
+                file_handle.write(b'\x00' * padding_needed)
+            
+            # Update progress
+            if progress_callback:
+                progress_callback(
+                    int((i + 1) * 100 / total_entries),
+                    f"Writing entry {i + 1}/{total_entries}"
+                )
+        
+    except Exception as e:
+        raise Exception(f"Data consolidation failed: {str(e)}")
+
+
+def cleanup_temp_files(base_path: str, main_window=None):
+    """Clean up temporary files from operations"""
+    try:
+        base_path_obj = Path(base_path)
+        parent_dir = base_path_obj.parent
+        base_name = base_path_obj.stem
+        
+        # Find and remove temp files
+        temp_patterns = [
+            f"{base_name}_rebuild.tmp*",
+            f"{base_name}_temp.tmp*", 
+            f"{base_name}.backup*"
+        ]
+        
+        removed_count = 0
+        for pattern in temp_patterns:
+            for temp_file in parent_dir.glob(pattern):
+                try:
+                    temp_file.unlink()
+                    removed_count += 1
+                except:
+                    pass
+        
+        if removed_count > 0 and main_window and hasattr(main_window, 'log_message'):
+            main_window.log_message(f"🧹 Cleaned up {removed_count} temporary files")
+            
+    except Exception:
+        pass  # Ignore cleanup errors
+
+
+def log_operation_progress(main_window, operation: str, step: str, details: str = ""):
+    """Unified logging for IMG operations"""
+    try:
+        if hasattr(main_window, 'log_message'):
+            message = f"{operation}: {step}"
+            if details:
+                message += f" - {details}"
+            main_window.log_message(message)
+    except Exception:
+        pass
+
+
+# Export essential functions
 __all__ = [
-    'placeholder_save_img_file',
-    'placeholder_rebuild_img_file', 
-    'placeholder_remove_entry',
-    'placeholder_remove_entries_via_list',
-    'placeholder_import_file',
-    'placeholder_import_files_via_list',
-    'placeholder_split_img_file',
-    'placeholder_replace_entry',
-    'placeholder_edit_entry_data',
-    'placeholder_validate_img_integrity',
-    'install_shared_img_operations',
-    'show_img_operation_status'
+    'create_progress_callback',
+    'sanitize_filename', 
+    'get_img_version_info',
+    'calculate_sector_aligned_size',
+    'create_temp_file_path',
+    'atomic_file_replace',
+    'validate_img_structure',
+    'get_entry_data_safely',
+    'write_img_header',
+    'write_img_directory', 
+    'consolidate_img_data',
+    'cleanup_temp_files',
+    'log_operation_progress'
 ]

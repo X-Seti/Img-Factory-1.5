@@ -1,32 +1,32 @@
-#this belongs in core/ rebuild.py - Version: 5
-# X-Seti - August24 2025 - IMG Factory 1.5 - Rebuild Functions
+#this belongs in core/ rebuild.py - Version: 6
+# X-Seti - August26 2025 - IMG Factory 1.5 - Native Rebuild Functions
 
 import os
-import tempfile
-import shutil
-from pathlib import Path
-from typing import Optional, Callable
-from PyQt6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QRadioButton, QButtonGroup, QProgressDialog, QApplication
-from PyQt6.QtCore import Qt
+import struct
+from typing import Optional, Callable, Dict, Any
+from PyQt6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QRadioButton, QButtonGroup
 
-# Use same tab awareness imports as export_via.py (this works!)
-from methods.tab_awareness import validate_tab_before_operation, get_current_file_from_active_tab, get_current_file_type_from_tab
+from methods.tab_awareness import validate_tab_before_operation, get_current_file_from_active_tab
+from methods.img_operations_shared import (
+    create_progress_callback, get_img_version_info, validate_img_structure,
+    create_temp_file_path, atomic_file_replace, write_img_header,
+    write_img_directory, consolidate_img_data, cleanup_temp_files,
+    log_operation_progress
+)
 
 ##Methods list -
-# rebuild_current_img
+# rebuild_current_img_native
 # fast_rebuild_current
 # safe_rebuild_current
 # show_rebuild_mode_dialog
-# _rebuild_using_img_editor_core
-# _create_progress_callback
-# _convert_img_to_archive
-# _sanitize_filename
+# _perform_native_rebuild
+# _calculate_data_start_offset
 # integrate_rebuild_functions
 
-def rebuild_current_img(main_window): #vers 5
-    """Rebuild current IMG in active tab - UPDATED: Uses working IMG_Editor core"""
+def rebuild_current_img_native(main_window, mode: str = "auto") -> bool:
+    """Native IMG rebuild using imgfactory objects directly - NO conversion needed"""
     try:
-        # Copy exact pattern from working export_via.py
+        # Tab awareness validation
         if not validate_tab_before_operation(main_window, "Rebuild Current IMG"):
             return False
         
@@ -36,12 +36,17 @@ def rebuild_current_img(main_window): #vers 5
             QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file to rebuild")
             return False
         
-        if hasattr(main_window, 'log_message'):
-            file_name = os.path.basename(getattr(file_object, 'file_path', 'Unknown'))
-            main_window.log_message(f"🔧 Rebuilding IMG using IMG_Editor core: {file_name}")
+        # Structure validation
+        is_valid, validation_msg = validate_img_structure(file_object, main_window)
+        if not is_valid:
+            QMessageBox.critical(main_window, "Invalid IMG Structure", f"Cannot rebuild IMG:\n{validation_msg}")
+            return False
         
-        # Use IMG_Editor core rebuild system
-        success = _rebuild_using_img_editor_core(file_object, "fast", main_window)
+        log_operation_progress(main_window, "REBUILD", "Starting native rebuild", 
+                             f"Mode: {mode}, File: {os.path.basename(file_object.file_path)}")
+        
+        # Perform the rebuild
+        success = _perform_native_rebuild(file_object, mode, main_window)
         
         if success:
             # Refresh current tab to show changes
@@ -50,74 +55,33 @@ def rebuild_current_img(main_window): #vers 5
             elif hasattr(main_window, 'refresh_table'):
                 main_window.refresh_table()
             
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("✅ IMG rebuilt successfully using IMG_Editor core")
-            
+            log_operation_progress(main_window, "REBUILD", "Completed successfully")
             QMessageBox.information(main_window, "Rebuild Complete", 
-                "IMG file rebuilt successfully!")
+                "IMG file rebuilt successfully using native algorithm!")
             return True
         else:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ IMG rebuild failed")
-            
+            log_operation_progress(main_window, "REBUILD", "Failed")
             QMessageBox.critical(main_window, "Rebuild Failed", 
-                "Failed to rebuild IMG file. Check debug log for details.")
+                "Failed to rebuild IMG file. Check activity log for details.")
             return False
         
     except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Rebuild error: {str(e)}")
-        
-        QMessageBox.critical(main_window, "Rebuild Error", 
-            f"Error during rebuild: {str(e)}")
+        log_operation_progress(main_window, "REBUILD", "Exception", str(e))
+        QMessageBox.critical(main_window, "Rebuild Error", f"Error during rebuild: {str(e)}")
         return False
 
 
-def fast_rebuild_current(main_window): #vers 5
-    """Fast rebuild of current IMG - optimized for speed"""
-    try:
-        if not validate_tab_before_operation(main_window, "Fast Rebuild"):
-            return False
-            
-        file_object, file_type = get_current_file_from_active_tab(main_window)
-        
-        if file_type != 'IMG' or not file_object:
-            return False
-            
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message("🚀 Fast rebuild mode - optimized for speed")
-        
-        return _rebuild_using_img_editor_core(file_object, "fast", main_window)
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Fast rebuild error: {str(e)}")
-        return False
+def fast_rebuild_current(main_window) -> bool:
+    """Fast rebuild mode - optimized for speed"""
+    return rebuild_current_img_native(main_window, mode="fast")
 
 
-def safe_rebuild_current(main_window): #vers 5
-    """Safe rebuild of current IMG - includes validation"""
-    try:
-        if not validate_tab_before_operation(main_window, "Safe Rebuild"):
-            return False
-            
-        file_object, file_type = get_current_file_from_active_tab(main_window)
-        
-        if file_type != 'IMG' or not file_object:
-            return False
-            
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message("🛡️ Safe rebuild mode - includes validation")
-        
-        return _rebuild_using_img_editor_core(file_object, "safe", main_window)
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Safe rebuild error: {str(e)}")
-        return False
+def safe_rebuild_current(main_window) -> bool:
+    """Safe rebuild mode - includes extra validation"""
+    return rebuild_current_img_native(main_window, mode="safe")
 
 
-def show_rebuild_mode_dialog(main_window): #vers 5
+def show_rebuild_mode_dialog(main_window) -> bool:
     """Show rebuild mode selection dialog"""
     try:
         dialog = QDialog(main_window)
@@ -127,26 +91,29 @@ def show_rebuild_mode_dialog(main_window): #vers 5
         
         layout = QVBoxLayout(dialog)
         
-        # Header
-        header = QLabel("Select Rebuild Mode:")
-        header.setStyleSheet("font-weight: bold; font-size: 12px; margin-bottom: 10px;")
-        layout.addWidget(header)
+        # Title
+        title = QLabel("Select Rebuild Mode:")
+        title.setStyleSheet("font-weight: bold; font-size: 12px; margin-bottom: 10px;")
+        layout.addWidget(title)
         
-        # Radio buttons
-        button_group = QButtonGroup(dialog)
+        # Mode selection
+        mode_group = QButtonGroup(dialog)
         
-        fast_radio = QRadioButton("🚀 Fast Rebuild")
-        fast_radio.setToolTip("Quick rebuild - optimized for speed")
-        fast_radio.setChecked(True)
-        button_group.addButton(fast_radio, 0)
+        fast_radio = QRadioButton("Fast Rebuild")
+        fast_radio.setToolTip("Quick rebuild optimized for speed")
+        fast_radio.setChecked(True)  # Default selection
+        mode_group.addButton(fast_radio, 0)
         layout.addWidget(fast_radio)
         
-        safe_radio = QRadioButton("🛡️ Safe Rebuild")
-        safe_radio.setToolTip("Thorough rebuild with validation")
-        button_group.addButton(safe_radio, 1)
+        safe_radio = QRadioButton("Safe Rebuild")  
+        safe_radio.setToolTip("Rebuild with extra validation and error checking")
+        mode_group.addButton(safe_radio, 1)
         layout.addWidget(safe_radio)
         
-        layout.addWidget(QLabel())  # Spacer
+        auto_radio = QRadioButton("Auto Mode")
+        auto_radio.setToolTip("Automatically choose best rebuild method")
+        mode_group.addButton(auto_radio, 2)
+        layout.addWidget(auto_radio)
         
         # Buttons
         button_layout = QHBoxLayout()
@@ -163,227 +130,152 @@ def show_rebuild_mode_dialog(main_window): #vers 5
         rebuild_btn.clicked.connect(dialog.accept)
         cancel_btn.clicked.connect(dialog.reject)
         
-        # Execute dialog
+        # Show dialog and get result
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            selected_id = button_group.checkedId()
+            selected_id = mode_group.checkedId()
             
-            if selected_id == 0:  # Fast rebuild
+            if selected_id == 0:
                 return fast_rebuild_current(main_window)
-            elif selected_id == 1:  # Safe rebuild
-                return safe_rebuild_current(main_window)
+            elif selected_id == 1:
+                return safe_rebuild_current(main_window) 
+            else:
+                return rebuild_current_img_native(main_window, mode="auto")
         
         return False
         
     except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Rebuild mode dialog error: {str(e)}")
-        return False
+        log_operation_progress(main_window, "REBUILD", "Dialog error", str(e))
+        # Fallback to direct rebuild
+        return rebuild_current_img_native(main_window)
 
 
-def _rebuild_using_img_editor_core(img_file_object, mode: str, main_window) -> bool: #vers 5
-    """CORE FUNCTION: Rebuild using working IMG_Editor core system"""
+def _perform_native_rebuild(img_file, mode: str, main_window) -> bool:
+    """Core native rebuild implementation"""
     try:
-        # Import the working IMG_Editor core classes
-        try:
-            from IMG_Editor.core.Core import IMGArchive, IMGEntry
-            from IMG_Editor.core.IMG_Operations import IMG_Operations
-        except ImportError:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ IMG_Editor core not available - cannot rebuild")
+        # Get IMG version and structure info
+        version_info = get_img_version_info(img_file)
+        entries = list(img_file.entries) if hasattr(img_file, 'entries') else []
+        
+        if not entries:
+            log_operation_progress(main_window, "REBUILD", "No entries found")
             return False
         
-        # Get file path from img_file_object
-        file_path = getattr(img_file_object, 'file_path', None)
-        if not file_path or not os.path.exists(file_path):
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ No valid file path found")
-            return False
-        
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🔧 Loading IMG file: {os.path.basename(file_path)}")
-        
-        # Convert current IMG object to IMG_Editor IMGArchive
-        img_archive = _convert_img_to_archive(img_file_object, main_window)
-        if not img_archive:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ Failed to convert IMG to archive format")
-            return False
+        log_operation_progress(main_window, "REBUILD", "Preparation", 
+                             f"Version: {version_info['version']}, Entries: {len(entries)}")
         
         # Create progress callback
-        progress_callback = _create_progress_callback(main_window)
+        progress_callback = create_progress_callback(main_window, "Rebuilding IMG")
+        progress_callback(5, "Initializing rebuild process")
         
-        # Use IMG_Operations.rebuild_archive (creates new IMG from memory, deletes old)
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message("🆕 Using IMG_Operations.rebuild_archive (creates new from memory)")
+        # Create temporary file for atomic operation
+        temp_path = create_temp_file_path(img_file.file_path, "rebuild")
+        log_operation_progress(main_window, "REBUILD", "Created temp file", os.path.basename(temp_path))
         
-        # Rebuild the archive
-        rebuilt_archive = IMG_Operations.rebuild_archive(
-            img_archive=img_archive,
-            output_path=None,  # Overwrites original
-            version=None,      # Keep same version
-            progress_callback=progress_callback
-        )
+        try:
+            with open(temp_path, 'wb') as temp_file:
+                progress_callback(10, "Writing header")
+                
+                # Phase 1: Write IMG header
+                write_img_header(temp_file, version_info, len(entries))
+                
+                progress_callback(20, "Calculating data layout")
+                
+                # Phase 2: Calculate data start position
+                data_start_offset = _calculate_data_start_offset(version_info, len(entries))
+                
+                progress_callback(30, "Writing directory")
+                
+                # Phase 3: Write directory entries
+                write_img_directory(temp_file, entries, version_info, data_start_offset)
+                
+                progress_callback(50, "Consolidating file data")
+                
+                # Phase 4: Write consolidated file data
+                consolidate_img_data(temp_file, entries, img_file, data_start_offset, 
+                                   lambda pct, msg: progress_callback(50 + pct//2, msg))
+                
+                progress_callback(95, "Finalizing")
         
-        if rebuilt_archive:
-            if hasattr(main_window, 'log_message'):
-                entry_count = len(rebuilt_archive.entries) if rebuilt_archive.entries else 0
-                main_window.log_message(f"✅ Successfully rebuilt IMG with {entry_count} entries")
-            return True
-        else:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ IMG_Operations.rebuild_archive returned None")
+            # Phase 5: Atomic replacement
+            progress_callback(98, "Performing atomic replacement")
+            success = atomic_file_replace(temp_path, img_file.file_path, main_window)
+            
+            if success:
+                progress_callback(100, "Rebuild complete")
+                log_operation_progress(main_window, "REBUILD", "Atomic replacement successful")
+                return True
+            else:
+                log_operation_progress(main_window, "REBUILD", "Atomic replacement failed")
+                return False
+                
+        except Exception as e:
+            log_operation_progress(main_window, "REBUILD", "Write operation failed", str(e))
+            # Clean up temp file on error
+            try:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except:
+                pass
             return False
         
+        finally:
+            # Always clean up temp files
+            cleanup_temp_files(img_file.file_path, main_window)
+        
     except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Core rebuild error: {str(e)}")
+        log_operation_progress(main_window, "REBUILD", "Core rebuild failed", str(e))
         return False
 
 
-def _create_progress_callback(main_window) -> Callable: #vers 5
-    """Create progress callback for rebuild operation"""
-    def progress_callback(percent: int, message: str = ""):
-        try:
-            if hasattr(main_window, 'log_message') and message:
-                main_window.log_message(f"🔧 {message} ({percent}%)")
-            
-            # Update progress bar if available
-            if hasattr(main_window, 'update_progress'):
-                main_window.update_progress(percent)
-            
-            # Process events to keep UI responsive
-            QApplication.processEvents()
-            
-        except Exception:
-            pass  # Ignore progress callback errors
-    
-    return progress_callback
-
-
-def _convert_img_to_archive(img_file_object, main_window) -> Optional[object]: #vers 5
-    """Convert IMG file object to IMG_Editor IMGArchive format"""
+def _calculate_data_start_offset(version_info: Dict, entry_count: int) -> int:
+    """Calculate where file data starts in the IMG"""
     try:
-        from IMG_Editor.core.Core import IMGArchive, IMGEntry
+        # Header size
+        offset = version_info['header_size']
         
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message("🔄 Converting IMG to IMG_Editor archive format")
+        # Directory size (32 bytes per entry)
+        offset += entry_count * version_info['entry_size']
         
-        # Create new IMG_Editor archive
-        archive = IMGArchive()
-        
-        # Set basic properties
-        archive.file_path = getattr(img_file_object, 'file_path', '')
-        
-        # Determine version
-        img_version = getattr(img_file_object, 'version', 2)
-        if img_version == 1:
-            archive.version = 'V1'
-        else:
-            archive.version = 'V2'
-        
-        # Convert entries
-        if hasattr(img_file_object, 'entries') and img_file_object.entries:
-            for old_entry in img_file_object.entries:
-                try:
-                    # Create new IMG_Editor entry
-                    new_entry = IMGEntry()
-                    
-                    # Copy basic properties
-                    new_entry.name = _sanitize_filename(getattr(old_entry, 'name', ''))
-                    new_entry.actual_offset = getattr(old_entry, 'offset', 0)
-                    new_entry.actual_size = getattr(old_entry, 'size', 0)
-                    
-                    # Try to preserve cached data if available
-                    if hasattr(old_entry, '_cached_data') and old_entry._cached_data:
-                        new_entry.data = old_entry._cached_data
-                        new_entry.is_new_entry = True
-                        if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"📝 Preserved cached data for: {new_entry.name}")
-                    elif hasattr(old_entry, 'get_data'):
-                        # Try to get data using existing method
-                        try:
-                            new_entry.data = old_entry.get_data()
-                        except Exception:
-                            # Data will be read from file when needed
-                            pass
-                    
-                    archive.entries.append(new_entry)
-                    
-                except Exception as e:
-                    if hasattr(main_window, 'log_message'):
-                        entry_name = getattr(old_entry, 'name', 'Unknown')
-                        main_window.log_message(f"⚠️ Warning converting entry {entry_name}: {str(e)}")
-                    continue
-        
-        if hasattr(main_window, 'log_message'):
-            entry_count = len(archive.entries) if archive.entries else 0
-            main_window.log_message(f"✅ Converted {entry_count} entries to IMG_Editor format")
-        
-        return archive
-        
-    except ImportError:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message("❌ IMG_Editor core not available")
-        return None
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Conversion error: {str(e)}")
-        return None
-
-
-def _sanitize_filename(filename: str) -> str: #vers 5
-    """Clean filename to prevent corruption"""
-    try:
-        if not filename:
-            return "file.dat"
-        
-        # Remove null bytes and control characters
-        clean_name = filename.replace('\x00', '').replace('\xcd', '').replace('\xff', '')
-        clean_name = ''.join(c for c in clean_name if 32 <= ord(c) <= 126)
-        clean_name = clean_name.replace('\\', '_').replace('/', '_').replace('|', '_')
-        clean_name = clean_name.strip()[:23]  # Leave room for null terminator
-        
-        return clean_name if clean_name else "file.dat"
+        # Align to sector boundary (2048 bytes)
+        SECTOR_SIZE = 2048
+        return ((offset + SECTOR_SIZE - 1) // SECTOR_SIZE) * SECTOR_SIZE
         
     except Exception:
-        return "file.dat"
+        # Safe fallback
+        return 8 + (entry_count * 32)
 
 
-def integrate_rebuild_functions(main_window) -> bool: #vers 5
-    """Integrate IMG_Editor core rebuild functions - UPDATED"""
+def integrate_rebuild_functions(main_window) -> bool:
+    """Integrate native rebuild functions into main window"""
     try:
-        # Main rebuild functions - TAB AWARE with IMG_Editor core
-        main_window.rebuild_current_img = lambda: rebuild_current_img(main_window)
-        main_window.rebuild_img = main_window.rebuild_current_img  # Alias
+        # Main rebuild functions
+        main_window.rebuild_current_img = lambda: rebuild_current_img_native(main_window)
+        main_window.rebuild_img = main_window.rebuild_current_img  # Alias for GUI
         
-        # Mode-specific functions for current tab
+        # Mode-specific functions
         main_window.fast_rebuild_current = lambda: fast_rebuild_current(main_window)
         main_window.safe_rebuild_current = lambda: safe_rebuild_current(main_window)
         main_window.show_rebuild_dialog = lambda: show_rebuild_mode_dialog(main_window)
         
-        # Legacy aliases for compatibility
+        # Additional aliases for compatibility
         main_window.fast_rebuild = main_window.fast_rebuild_current
         main_window.safe_rebuild = main_window.safe_rebuild_current
         main_window.optimize_img = main_window.rebuild_current_img
         main_window.quick_rebuild = main_window.fast_rebuild_current
         
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message("🔧 IMG_Editor core rebuild system integrated with TAB AWARENESS")
-            main_window.log_message("   • Uses IMG_Operations.rebuild_archive (creates new from memory)")
-            main_window.log_message("   • Rebuilds current active tab only")
-            main_window.log_message("   • Preserves cached data and memory pool")
+        log_operation_progress(main_window, "INTEGRATION", "Native rebuild system ready",
+                             "Tab-aware, atomic operations, multi-version support")
         
         return True
         
     except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Rebuild integration failed: {str(e)}")
+        log_operation_progress(main_window, "INTEGRATION", "Failed", str(e))
         return False
 
 
-# Export only the essential functions
+# Export functions
 __all__ = [
-    'rebuild_current_img',
+    'rebuild_current_img_native',
     'fast_rebuild_current',
     'safe_rebuild_current', 
     'show_rebuild_mode_dialog',
