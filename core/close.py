@@ -217,7 +217,7 @@ class IMGCloseManager:
         """FIXED: Use robust reindexing with data preservation"""
         try:
             # Import and use robust reindexing
-            from core.robust_tab_system import _reindex_open_files_robust
+            from core.tab_system import _reindex_open_files_robust
             return _reindex_open_files_robust(self, removed_index)
         except ImportError:
             # Fallback to original logic if robust system not available

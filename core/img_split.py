@@ -1,4 +1,4 @@
-#this belongs in core/split_img.py - Version: 2
+#this belongs in core/img_split.py - Version: 3
 # X-Seti - July31 2025 - IMG Factory 1.5 - Complete Split Functions
 
 """

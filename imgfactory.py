@@ -57,7 +57,8 @@ from components.col_core_classes import (
     diagnose_col_file, set_col_debug_enabled, is_col_debug_enabled
 )
 
-#from components.img_core_classes import IMGArchive, IMGEntry, IMGVersion
+#Editoring Functions
+from components.txd_editor import TXDEditor
 from components.col_parsing_functions import load_col_file_safely
 from components.img_integration_main import integrate_img_functions, img_core_functions
 from components.col_integration_main import integrate_complete_col_system
@@ -66,9 +67,8 @@ from components.col_debug_functions import set_col_debug_enabled
 from components.col_parsing_functions import load_col_file_safely
 from components.col_structure_manager import COLStructureManager
 from components.unified_debug_functions import integrate_all_improvements, install_debug_control_system
-#from components.enh_debug_system import integrate_enhanced_debug_error
 
-#core
+#Core functions.
 from core.img_formats import GameSpecificIMGDialog, IMGCreator
 from core.file_extraction import setup_complete_extraction_integration
 from core.tables_structure import reset_table_styling
@@ -77,12 +77,11 @@ from core.rw_versions import get_rw_version_name
 from core.right_click_actions import integrate_right_click_actions, setup_table_context_menu
 from core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
 from core.convert import convert_img, convert_img_format
-from core.close import install_close_functions, setup_close_manager
-from core.split_img import integrate_split_functions
+from core.img_split import integrate_split_functions
 from core.theme_integration import integrate_theme_system
-from core.img_corruption_analyzer import setup_corruption_analyzer
 from core.img_creator import create_new_img, detect_and_open_file, open_file_dialog, detect_file_type
 from core.clean import integrate_clean_utilities
+from core.close import install_close_functions, setup_close_manager
 from core.export import integrate_export_functions
 from core.impotr import integrate_import_functions #import impotr
 from core.remove import integrate_remove_functions
@@ -93,29 +92,24 @@ from core.remove_via import integrate_remove_via_functions
 from core.export_via import export_via_function
 from core.rebuild import integrate_rebuild_functions
 from core.rebuild_all import integrate_batch_rebuild_functions
-from core.independent_tabs import setup_independent_tab_system, migrate_existing_tabs_to_independent
+from core.tab_independent import setup_independent_tab_system, migrate_existing_tabs_to_independent
 from core.rw_unk_snapshot import integrate_unknown_rw_detection
 
-from methods.ide_parser import integrate_ide_parser
-
 #gui-layout
-
 from gui.ide_dialog import integrate_ide_dialog
 from gui.gui_backend import ButtonDisplayMode, GUIBackend
 from gui.main_window import IMGFactoryMainWindow
 from gui.col_display import update_col_info_bar_enhanced
 from gui.gui_layout import IMGFactoryGUILayout
-#from gui.pastel_button_theme import apply_pastel_theme_to_buttons # old
 from gui.unified_button_theme import apply_unified_button_theme
 from gui.gui_menu import IMGFactoryMenuBar
 from gui.autosave_menu import integrate_autosave_menu
-from gui.gui_context import (add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
-
 from gui.file_menu_integration import add_project_menu_items
 from gui.directory_tree_system import integrate_directory_tree_system
+from gui.gui_context import (add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
 
-#methods
-from methods.populate_img_table import install_img_table_populator # enable_import_highlighting
+#Shared Methods - Shared Functions.
+from methods.populate_img_table import install_img_table_populator
 from methods.progressbar import integrate_progress_system
 from methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate_update_ui_for_loaded_img
 from methods.import_highlight_system import enable_import_highlighting
@@ -124,8 +118,9 @@ from methods.refresh_table import integrate_refresh_table
 from methods.tab_awareness import integrate_tab_awareness_system
 from methods.export_col_shared import integrate_col_export_shared
 from methods.mirror_tab_shared import show_mirror_tab_selection
-from methods.finddups import find_duplicates_by_hash, show_duplicates_dialog
 from methods.img_analyze import analyze_img_corruption, show_analysis_dialog
+from methods.ide_parser import integrate_ide_parser
+from methods.find_duplicates import find_duplicates_by_hash, show_duplicates_dialog
 
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
@@ -460,6 +455,13 @@ class IMGFactory(QMainWindow):
         self.dump_all = lambda: dump_all_function(self)
         self.dump_selected = lambda: dump_selected_function(self)
         integrate_refresh_table(self)
+
+        # TXD Editor Integration
+        try:
+            self.txd_editor = None
+            self.log_message("✅ TXD Editor available")
+        except Exception as e:
+            self.log_message(f"❌ TXD Editor failed: {str(e)}")
 
         # File extraction (single call only!)
         try:

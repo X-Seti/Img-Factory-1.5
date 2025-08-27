@@ -1,4 +1,4 @@
-#this belongs in gui/ gui_layout.py - Version: 24
+#this belongs in gui/ gui_layout.py - Version: 26
 # X-Seti - JULY29 2025 - Img Factory 1.5 - GUI Layout Module
 
 import os
@@ -34,7 +34,7 @@ from core.rebuild import rebuild_current_img_native
 from core.rebuild_all import rebuild_all_open_tabs
 #from core.rebuild import rebuild_current_img #old function.
 from core.dump import dump_all_function # dump_selected_function, integrate_dump_functions
-from core.split_img import split_img, integrate_split_functions
+from core.img_split import split_img, integrate_split_functions
 from core.img_merger import merge_img_function
 from core.convert import convert_img, convert_img_format
 from core.rename import rename_entry
@@ -44,11 +44,36 @@ from core.close import close_img_file, close_all_img, install_close_functions, s
 from methods.colour_ui_for_loaded_img import integrate_color_ui_system
 from gui.gui_context import open_col_editor_dialog
 
+def edit_txd_file(main_window): #vers 1
+    """Edit selected TXD file with TXD Editor"""
+    try:
+        entries_table = main_window.gui_layout.table
+        selected_items = entries_table.selectedItems()
+        if not selected_items:
+            main_window.log_message("No TXD file selected")
+            return
+
+        row = selected_items[0].row()
+        filename_item = entries_table.item(row, 0)
+        filename = filename_item.text()
+
+        if not filename.lower().endswith('.txd'):
+            main_window.log_message("Selected file is not a TXD file")
+            return
+
+        from components.txd_editor import TXDEditor
+        txd_editor = TXDEditor()
+        txd_editor.show()
+        main_window.log_message(f"TXD Editor opened for: {filename}")
+
+    except Exception as e:
+        main_window.log_message(f"Error opening TXD Editor: {e}")
+
 
 class IMGFactoryGUILayout:
     """Handles the complete GUI layout for IMG Factory 1.5 with theme system"""
     
-    def __init__(self, main_window):
+    def __init__(self, main_window): #vers 2
         """Initialize GUI layout with theme-controlled components"""
         self.main_window = main_window
         self.table = None
@@ -74,7 +99,8 @@ class IMGFactoryGUILayout:
         # Initialize method_mappings FIRST before buttons
         self.method_mappings = self._create_method_mappings()
 
-    def _create_method_mappings(self):
+
+    def _create_method_mappings(self): #vers 5
         """Create centralized method mappings for all buttons"""
         method_mappings = {
             # IMG/COL Operations
@@ -119,7 +145,7 @@ class IMGFactoryGUILayout:
 
             # Editor methods
             'edit_col_file': lambda: open_col_editor_dialog(self.main_window),
-            'edit_txd_file': lambda: self._log_missing_method('edit_txd_file'),
+            'edit_txd_file': lambda: edit_txd_file(self.main_window),
             'edit_dff_file': lambda: self._log_missing_method('edit_dff_file'),
             'edit_ipf_file': lambda: self._log_missing_method('edit_ipf_file'),
             'edit_ide_file': lambda: open_ide_editor(self.main_window),
@@ -143,7 +169,8 @@ class IMGFactoryGUILayout:
         print(f"✅ Method mappings created: {len(method_mappings)} methods")
         return method_mappings
 
-    def _log_missing_method(self, method_name):
+
+    def _log_missing_method(self, method_name): #vers 1
         """Log missing method - unified placeholder"""
         if hasattr(self.main_window, 'log_message') and hasattr(self.main_window, 'gui_layout'):
             self.main_window.log_message(f"⚠️ Method '{method_name}' not yet implemented")
@@ -151,7 +178,7 @@ class IMGFactoryGUILayout:
             print(f"⚠️ Method '{method_name}' not yet implemented")
 
 
-    def _get_button_theme_template(self, theme_name="default"):
+    def _get_button_theme_template(self, theme_name="default"): #vers 1
         """Get button color templates based on theme"""
         if self._is_dark_theme():
             return {
@@ -204,7 +231,7 @@ class IMGFactoryGUILayout:
                 'placeholder': '#FEFEFE',       # Light gray for spacers
             }
 
-    def _get_img_buttons_data(self):
+    def _get_img_buttons_data(self): #vers 3
         """Get IMG buttons data with theme colors"""
         colors = self._get_button_theme_template()
         return [
@@ -222,7 +249,7 @@ class IMGFactoryGUILayout:
             ("Convert", "convert", "transform", colors['convert_action'], "convert_img_format"),
         ]
 
-    def _get_entry_buttons_data(self):
+    def _get_entry_buttons_data(self): #vers 3
         """Get Entry buttons data with theme colors"""
         colors = self._get_button_theme_template()
         return [
@@ -243,7 +270,7 @@ class IMGFactoryGUILayout:
             ("Pin selected", "pin_selected", "pin", colors['select_action'], "pin_selected_entries"),
         ]
 
-    def _get_options_buttons_data(self):
+    def _get_options_buttons_data(self): #vers 3
         """Get Options buttons data with theme colors"""
         colors = self._get_button_theme_template()
         return [
@@ -270,7 +297,7 @@ class IMGFactoryGUILayout:
         ]
 
 
-    def _is_dark_theme(self):
+    def _is_dark_theme(self): #vers 2
         """Detect if the application is using a dark theme"""
         try:
             # Method 1: Check if main window has theme property or setting
@@ -301,7 +328,7 @@ class IMGFactoryGUILayout:
             return False
 
 
-    def set_theme_mode(self, theme_name):
+    def set_theme_mode(self, theme_name): #vers 2
         """Set the current theme mode and refresh all styling"""
         self.theme_mode = 'dark' if 'dark' in theme_name.lower() else 'light'
         print(f"Theme mode set to: {self.theme_mode}")
@@ -313,7 +340,7 @@ class IMGFactoryGUILayout:
         self.apply_all_window_themes()
 
 
-    def _refresh_all_buttons(self):
+    def _refresh_all_buttons(self): #vers 4
         """Refresh all buttons with current theme colors"""
         try:
             # Get new theme colors
@@ -347,8 +374,26 @@ class IMGFactoryGUILayout:
         except Exception as e:
             print(f"❌ Error refreshing buttons: {e}")
 
+    def add_txd_editor_button(self): #vers 3
+        """Add TXD Editor button to toolbar"""
+        if hasattr(self.main_window, 'button_panel'):
+            txd_button = QPushButton("TXD Editor")
+            txd_button.clicked.connect(self.launch_txd_editor)
+            txd_button.setToolTip("Open TXD Texture Editor")
+            self.main_window.button_panel.addWidget(txd_button)
 
-    def _update_button_theme(self, btn, bg_color):
+    def launch_txd_editor(self): #vers 1
+        """Launch TXD Editor"""
+        try:
+            if not self.main_window.txd_editor:
+                from components.txd_editor import TXDEditor
+                self.main_window.txd_editor = TXDEditor()
+            self.main_window.txd_editor.show()
+            self.main_window.txd_editor.raise_()
+        except Exception as e:
+            self.main_window.log_message(f"Failed to launch TXD Editor: {e}")
+
+    def _update_button_theme(self, btn, bg_color): #vers 2
         """Update a single button's theme styling"""
         try:
             is_dark_theme = self._is_dark_theme()
@@ -394,7 +439,7 @@ class IMGFactoryGUILayout:
             print(f"❌ Error updating button theme: {e}")
 
 
-    def create_pastel_button(self, label, action_type, icon, bg_color, method_name):
+    def create_pastel_button(self, label, action_type, icon, bg_color, method_name): #vers 3
         """Create a button with pastel coloring that adapts to light/dark themes"""
         btn = QPushButton(label)
         btn.setMaximumHeight(22)
@@ -461,7 +506,7 @@ class IMGFactoryGUILayout:
         return btn
 
 
-    def _lighten_color(self, color, factor):
+    def _lighten_color(self, color, factor): #vers 2
         """Lighten a hex color by factor (>1.0 lightens, <1.0 darkens)"""
         try:
             if not color.startswith('#'):
@@ -480,7 +525,7 @@ class IMGFactoryGUILayout:
             return color
 
 
-    def _darken_color(self, color, factor):
+    def _darken_color(self, color, factor): #vers 2
         """Darken a hex color by factor (0.0-1.0, where 0.8 = 20% darker)"""
         try:
             if not color.startswith('#'):
@@ -499,7 +544,7 @@ class IMGFactoryGUILayout:
             return color
 
 
-    def _get_short_text(self, label):
+    def _get_short_text(self, label): #vers 1
         """Get short text for button"""
         short_map = {
             "Create": "New", "Open": "Open", "Reload": "Reload", "     ": " ",
@@ -522,7 +567,7 @@ class IMGFactoryGUILayout:
         return short_map.get(label, label)
 
 
-    def create_main_ui_with_splitters(self, main_layout):
+    def create_main_ui_with_splitters(self, main_layout): #vers 3
         """Create the main UI with correct 3-section layout"""
         # Create main horizontal splitter
         self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -555,7 +600,7 @@ class IMGFactoryGUILayout:
         main_layout.addWidget(self.main_splitter)
 
 
-    def _create_left_three_section_panel(self):
+    def _create_left_three_section_panel(self): #vers 3
         """Create left panel with 3 sections: File Window, Status Window"""
         left_container = QWidget()
         left_layout = QVBoxLayout(left_container)
@@ -587,7 +632,7 @@ class IMGFactoryGUILayout:
         return left_container
 
 
-    def _create_file_window(self):
+    def _create_file_window(self): #vers 3
         """Create file window with tabs for different views"""
         file_window = QWidget()
         file_layout = QVBoxLayout(file_window)
@@ -674,7 +719,7 @@ class IMGFactoryGUILayout:
         return file_window
 
 
-    def create_right_panel_with_pastel_buttons(self):
+    def create_right_panel_with_pastel_buttons(self): #vers 2
         """Create right panel with theme-controlled pastel buttons"""
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
@@ -763,7 +808,7 @@ class IMGFactoryGUILayout:
         return right_panel
 
 
-    def create_status_window(self):
+    def create_status_window(self): #vers 4
         """Create status window with log"""
         self.status_window = QWidget()
         status_layout = QVBoxLayout(self.status_window)
@@ -972,7 +1017,7 @@ class IMGFactoryGUILayout:
             """)
 
 
-    def _get_theme_colors(self, theme_name):
+    def _get_theme_colors(self, theme_name): #vers 3
         """Get theme colors - properly connected to app_settings_system"""
         try:
             # Method 1: Use app_settings get_theme_colors() method
@@ -1011,7 +1056,7 @@ class IMGFactoryGUILayout:
             }
 
 
-    def apply_all_window_themes(self):
+    def apply_all_window_themes(self): #vers 1
         """Apply theme styling to all windows"""
         self._apply_table_theme_styling()
         self._apply_log_theme_styling()
@@ -1020,20 +1065,20 @@ class IMGFactoryGUILayout:
         self._apply_status_window_theme_styling()
         self._apply_file_list_window_theme_styling()
 
-    def apply_table_theme(self):
+    def apply_table_theme(self): #vers 1
         """Legacy method - Apply theme styling to table and related components"""
         # This method is called by main application for compatibility
         self.apply_all_window_themes()
 
 
-    def _safe_log(self, message):
+    def _safe_log(self, message): #vers 1
         """Safe logging that won't cause circular dependency"""
         if hasattr(self.main_window, 'log_message') and hasattr(self.main_window, 'gui_layout'):
             self.main_window.log_message(message)
         else:
             print(f"GUI Layout: {message}")
 
-    def log_message(self, message):
+    def log_message(self, message): #vers 1
         """Add message to activity log"""
         if self.log:
             from PyQt6.QtCore import QDateTime
@@ -1045,7 +1090,7 @@ class IMGFactoryGUILayout:
             )
 
     # SETTINGS & CONFIGURATION
-    def apply_settings_changes(self, settings):
+    def apply_settings_changes(self, settings): #vers 1
         """Apply settings changes to the GUI layout"""
         try:
             # Apply tab settings if they exist
@@ -1079,7 +1124,7 @@ class IMGFactoryGUILayout:
             if hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"Error applying settings changes: {str(e)}")
 
-    def _update_table_row_height(self, height):
+    def _update_table_row_height(self, height): #vers 1
         """Update table row height"""
         try:
             if hasattr(self, 'table') and self.table:
@@ -1087,7 +1132,7 @@ class IMGFactoryGUILayout:
         except Exception:
             pass
 
-    def _update_widget_spacing(self, spacing):
+    def _update_widget_spacing(self, spacing): #vers 1
         """Update widget spacing"""
         try:
             if hasattr(self, 'main_splitter') and self.main_splitter:
@@ -1097,7 +1142,7 @@ class IMGFactoryGUILayout:
             pass
 
     # RESPONSIVE DESIGN & ADAPTIVE LAYOUT
-    def handle_resize_event(self, event):
+    def handle_resize_event(self, event): #vers 1
         """Handle window resize to adapt button text"""
         if self.main_splitter:
             sizes = self.main_splitter.sizes()
@@ -1105,7 +1150,7 @@ class IMGFactoryGUILayout:
                 right_panel_width = sizes[1]
                 self.adapt_buttons_to_width(right_panel_width)
 
-    def adapt_buttons_to_width(self, width):
+    def adapt_buttons_to_width(self, width): #vers 1
         """Adapt button text based on available width"""
         all_buttons = []
         if hasattr(self, 'img_buttons'):
@@ -1131,7 +1176,7 @@ class IMGFactoryGUILayout:
 
     # PROGRESS & STATUS MANAGEMENT
 
-    def show_progress(self, value, text="Working..."):
+    def show_progress(self, value, text="Working..."): #vers 1
         """Show progress using unified progress system"""
         try:
             from methods.progressbar import show_progress as unified_show_progress
@@ -1149,7 +1194,7 @@ class IMGFactoryGUILayout:
                 if hasattr(self.main_window, 'statusBar'):
                     self.main_window.statusBar().showMessage(f"{text} ({value}%)")
 
-    def hide_progress(self):
+    def hide_progress(self): #vers 1
         """Hide progress using unified progress system"""
         try:
             from methods.progressbar import hide_progress as unified_hide_progress
@@ -1161,7 +1206,7 @@ class IMGFactoryGUILayout:
             elif hasattr(self.main_window, 'statusBar'):
                 self.main_window.statusBar().showMessage("Ready")
 
-    def update_file_info(self, info_text):
+    def update_file_info(self, info_text): #vers 1
         """Update file info using unified progress for completion"""
         if hasattr(self.main_window, 'update_img_status'):
             # Extract info from text if possible
@@ -1172,7 +1217,7 @@ class IMGFactoryGUILayout:
                 except:
                     pass
 
-    def create_status_bar(self):
+    def create_status_bar(self): #vers 1
         """Create status bar with unified progress integration"""
         try:
             from gui.status_bar import create_status_bar
@@ -1195,9 +1240,10 @@ class IMGFactoryGUILayout:
         except Exception as e:
             self.log_message(f"❌ Status bar creation error: {str(e)}")
 
+
 # LEGACY COMPATIBILITY FUNCTIONS
 
-def create_control_panel(main_window):
+def create_control_panel(main_window): #vers 1
     """Create the main control panel - LEGACY FUNCTION"""
     # Redirect to new method for compatibility
     if hasattr(main_window, 'gui_layout'):

@@ -1,4 +1,4 @@
-#this belongs in core/merge_img.py - Version: 6
+#this belongs in core/img_merger.py - Version: 7
 # X-Seti - August27 2025 - IMG Factory 1.5 - IMG Merge Functions
 # Credit MexUK 2007 IMG Factory 1.2
 
