@@ -1,4 +1,4 @@
-#this belongs in /components/img_compression.py - version 11
+#this belongs in /components/img_compression.py - version 13
 #!/usr/bin/env python3
 """
 X-Seti - June26 2025 - IMG Compression - Complete Compression System
@@ -37,7 +37,7 @@ except ImportError:
     print("Brotli not available - install Brotli for Brotli support")
 
 
-class CompressionAlgorithm(Enum):
+class CompressionAlgorithm(Enum): #vers 1
     """Supported compression algorithms"""
     NONE = "none"
     ZLIB = "zlib"
@@ -51,7 +51,7 @@ class CompressionAlgorithm(Enum):
     FASTMAN92_LZ4 = "fastman92_lz4"
 
 
-class CompressionLevel(Enum):
+class CompressionLevel(Enum): #vers 1
     """Compression level presets"""
     FASTEST = 1
     FAST = 3
@@ -61,7 +61,7 @@ class CompressionLevel(Enum):
 
 
 @dataclass
-class CompressionResult:
+class CompressionResult: #vers 2
     """Result of compression operation"""
     success: bool
     original_size: int
@@ -84,7 +84,7 @@ class CompressionResult:
 
 
 @dataclass
-class CompressionSettings:
+class CompressionSettings: #vers 2
     """Compression configuration settings"""
     algorithm: CompressionAlgorithm = CompressionAlgorithm.ZLIB
     level: int = 6
@@ -103,6 +103,48 @@ class CompressionSettings:
     fastman92_header: bool = True
     fastman92_version: int = 1
 
+class IMGAnalyzer:
+    """Advanced IMG file analysis tools"""
+
+    @staticmethod
+    def analyze_corruption(img_file: IMGFile) -> Dict:  #vers 2
+        """Analyze IMG file for corruption"""
+        analysis = {
+            'corrupt_entries': [],
+            'suspicious_entries': [],
+            'missing_data': [],
+            'size_mismatches': [],
+            'offset_errors': []
+        }
+
+        for entry in img_file.entries:
+            try:
+                # Check if data can be read
+                data = entry.get_data()
+
+                # Check size consistency
+                if len(data) != entry.size:
+                    analysis['size_mismatches'].append({
+                        'name': entry.name,
+                        'expected': entry.size,
+                        'actual': len(data)
+                    })
+
+                # Check for suspicious patterns
+                if len(set(data[:min(1024, len(data))])) == 1:  # All same byte
+                    analysis['suspicious_entries'].append({
+                        'name': entry.name,
+                        'reason': 'Uniform data pattern'
+                    })
+
+            except Exception as e:
+                analysis['corrupt_entries'].append({
+                    'name': entry.name,
+                    'error': str(e)
+                })
+
+        return analysis
+
 
 class IMGCompressor:
     """Main compression handler for IMG files"""
@@ -117,7 +159,7 @@ class IMGCompressor:
             'compression_time': 0.0
         }
     
-    def compress_data(self, data: bytes, algorithm: CompressionAlgorithm = None, level: int = None) -> CompressionResult:
+    def compress_data(self, data: bytes, algorithm: CompressionAlgorithm = None, level: int = None) -> CompressionResult:  #vers 2
         """Compress data using specified algorithm"""
         import time
         start_time = time.time()
@@ -196,7 +238,7 @@ class IMGCompressor:
                 error_message=str(e)
             )
     
-    def decompress_data(self, data: bytes, algorithm: CompressionAlgorithm, original_size: int = 0) -> bytes:
+    def decompress_data(self, data: bytes, algorithm: CompressionAlgorithm, original_size: int = 0) -> bytes: #vers 2
         """Decompress data using specified algorithm"""
         try:
             if algorithm == CompressionAlgorithm.NONE:
@@ -234,7 +276,7 @@ class IMGCompressor:
             return data  # Return original data on error
     
     # Compression algorithm implementations
-    def _compress_zlib(self, data: bytes, level: int) -> bytes:
+    def _compress_zlib(self, data: bytes, level: int) -> bytes: #vers 1
         """Compress using zlib"""
         compressor = zlib.compressobj(
             level=level,
@@ -246,7 +288,7 @@ class IMGCompressor:
         compressed += compressor.flush()
         return compressed
     
-    def _decompress_zlib(self, data: bytes) -> bytes:
+    def _decompress_zlib(self, data: bytes) -> bytes: #vers 1
         """Decompress using zlib"""
         return zlib.decompress(data)
     
@@ -255,12 +297,12 @@ class IMGCompressor:
         import gzip
         return gzip.compress(data, compresslevel=level)
     
-    def _decompress_gzip(self, data: bytes) -> bytes:
+    def _decompress_gzip(self, data: bytes) -> bytes: #vers 1
         """Decompress using gzip"""
         import gzip
         return gzip.decompress(data)
     
-    def _compress_lz4(self, data: bytes, level: int) -> bytes:
+    def _compress_lz4(self, data: bytes, level: int) -> bytes: #vers 1
         """Compress using LZ4"""
         if not HAS_LZ4:
             raise RuntimeError("LZ4 compression not available")
@@ -268,28 +310,28 @@ class IMGCompressor:
         # LZ4 frame format with compression level
         return lz4.compress(data, compression_level=level)
     
-    def _decompress_lz4(self, data: bytes) -> bytes:
+    def _decompress_lz4(self, data: bytes) -> bytes: #vers 1
         """Decompress using LZ4"""
         if not HAS_LZ4:
             raise RuntimeError("LZ4 decompression not available")
         
         return lz4.decompress(data)
     
-    def _compress_lzo(self, data: bytes, algorithm) -> bytes:
+    def _compress_lzo(self, data: bytes, algorithm) -> bytes: #vers 1
         """Compress using LZO"""
         if not HAS_LZO:
             raise RuntimeError("LZO compression not available")
         
         return lzo.compress(data, algorithm)
     
-    def _decompress_lzo(self, data: bytes, original_size: int) -> bytes:
+    def _decompress_lzo(self, data: bytes, original_size: int) -> bytes: #vers 1
         """Decompress using LZO"""
         if not HAS_LZO:
             raise RuntimeError("LZO decompression not available")
         
         return lzo.decompress(data, False, original_size)
     
-    def _compress_brotli(self, data: bytes, level: int) -> bytes:
+    def _compress_brotli(self, data: bytes, level: int) -> bytes: #vers 1
         """Compress using Brotli"""
         if not HAS_BROTLI:
             raise RuntimeError("Brotli compression not available")
@@ -300,14 +342,14 @@ class IMGCompressor:
             lgwin=self.settings.brotli_window
         )
     
-    def _decompress_brotli(self, data: bytes) -> bytes:
+    def _decompress_brotli(self, data: bytes) -> bytes: #vers 1
         """Decompress using Brotli"""
         if not HAS_BROTLI:
             raise RuntimeError("Brotli decompression not available")
         
         return brotli.decompress(data)
     
-    def _compress_deflate(self, data: bytes, level: int) -> bytes:
+    def _compress_deflate(self, data: bytes, level: int) -> bytes: #vers 1
         """Compress using raw deflate"""
         compressor = zlib.compressobj(
             level=level,
@@ -319,11 +361,11 @@ class IMGCompressor:
         compressed += compressor.flush()
         return compressed
     
-    def _decompress_deflate(self, data: bytes) -> bytes:
+    def _decompress_deflate(self, data: bytes) -> bytes: #vers 1
         """Decompress using raw deflate"""
         return zlib.decompress(data, -15)  # Raw deflate
     
-    def _compress_fastman92_zlib(self, data: bytes, level: int) -> bytes:
+    def _compress_fastman92_zlib(self, data: bytes, level: int) -> bytes: #vers 1
         """Compress using Fastman92 zlib format"""
         compressed = self._compress_zlib(data, level)
         
@@ -337,7 +379,7 @@ class IMGCompressor:
         
         return compressed
     
-    def _decompress_fastman92_zlib(self, data: bytes) -> bytes:
+    def _decompress_fastman92_zlib(self, data: bytes) -> bytes: #vers 2
         """Decompress Fastman92 zlib format"""
         if self.settings.fastman92_header and len(data) >= 12:
             # Skip Fastman92 header
@@ -348,7 +390,7 @@ class IMGCompressor:
         
         return self._decompress_zlib(compressed_data)
     
-    def _compress_fastman92_lz4(self, data: bytes, level: int) -> bytes:
+    def _compress_fastman92_lz4(self, data: bytes, level: int) -> bytes: #vers 1
         """Compress using Fastman92 LZ4 format"""
         compressed = self._compress_lz4(data, level)
         
@@ -362,7 +404,7 @@ class IMGCompressor:
         
         return compressed
     
-    def _decompress_fastman92_lz4(self, data: bytes) -> bytes:
+    def _decompress_fastman92_lz4(self, data: bytes) -> bytes: #vers 1
         """Decompress Fastman92 LZ4 format"""
         if self.settings.fastman92_header and len(data) >= 12:
             # Skip Fastman92 header
@@ -373,7 +415,7 @@ class IMGCompressor:
         
         return self._decompress_lz4(compressed_data)
     
-    def get_compression_statistics(self) -> Dict[str, Any]:
+    def get_compression_statistics(self) -> Dict[str, Any]: #vers 1
         """Get compression statistics"""
         total_saved = self.stats['total_original_size'] - self.stats['total_compressed_size']
         compression_ratio = (self.stats['total_compressed_size'] / self.stats['total_original_size'] 
@@ -389,7 +431,7 @@ class IMGCompressor:
             'total_processing_time': self.stats['compression_time']
         }
     
-    def reset_statistics(self):
+    def reset_statistics(self): #vers 1
         """Reset compression statistics"""
         self.stats = {
             'total_compressed': 0,
@@ -404,7 +446,7 @@ class CompressionAnalyzer:
     """Analyze data for compression suitability"""
     
     @staticmethod
-    def analyze_data(data: bytes) -> Dict[str, Any]:
+    def analyze_data(data: bytes) -> Dict[str, Any]: #vers 1
         """Analyze data compression potential"""
         analysis = {
             'size': len(data),
@@ -443,7 +485,7 @@ class CompressionAnalyzer:
         return analysis
     
     @staticmethod
-    def _calculate_entropy(data: bytes) -> float:
+    def _calculate_entropy(data: bytes) -> float: #vers 1
         """Calculate Shannon entropy of data"""
         if not data:
             return 0.0
@@ -465,7 +507,7 @@ class CompressionAnalyzer:
         return entropy
     
     @staticmethod
-    def _calculate_repetition_score(data: bytes) -> float:
+    def _calculate_repetition_score(data: bytes) -> float: #vers 1
         """Calculate how repetitive the data is"""
         if len(data) < 256:
             return 0.0
@@ -489,12 +531,12 @@ class CompressionAnalyzer:
         return repeated_patterns / total_patterns if total_patterns > 0 else 0.0
     
     @staticmethod
-    def benchmark_algorithms(data: bytes, algorithms: List[CompressionAlgorithm] = None) -> Dict[str, CompressionResult]:
+    def benchmark_algorithms(data: bytes, algorithms: List[CompressionAlgorithm] = None) -> Dict[str, CompressionResult]: #vers 1
         """Benchmark different compression algorithms on data"""
         if algorithms is None:
             algorithms = [
                 CompressionAlgorithm.ZLIB,
-                CompressionAlgorithm.LZ4,
+                CompressionAlgorithm.LZ4, #need to port this to arm64
                 CompressionAlgorithm.BROTLI
             ]
         
@@ -511,7 +553,7 @@ class CompressionAnalyzer:
         return results
 
 
-class CompressionPresets:
+class CompressionPresets: #vers 1
     """Predefined compression presets for different use cases"""
     
     PRESETS = {
@@ -551,12 +593,12 @@ class CompressionPresets:
     }
     
     @classmethod
-    def get_preset(cls, name: str) -> CompressionSettings:
+    def get_preset(cls, name: str) -> CompressionSettings: #vers 1
         """Get compression preset by name"""
         return cls.PRESETS.get(name, cls.PRESETS['balanced'])
     
     @classmethod
-    def get_preset_names(cls) -> List[str]:
+    def get_preset_names(cls) -> List[str]: #vers 1
         """Get list of available preset names"""
         return list(cls.PRESETS.keys())
 
@@ -564,17 +606,17 @@ class CompressionPresets:
 class BatchCompressor:
     """Batch compression utilities"""
     
-    def __init__(self, compressor: IMGCompressor = None):
+    def __init__(self, compressor: IMGCompressor = None): #vers 1
         self.compressor = compressor or IMGCompressor()
         self.progress_callback = None
     
-    def set_progress_callback(self, callback):
+    def set_progress_callback(self, callback): #vers 1
         """Set progress callback function"""
         self.progress_callback = callback
     
     def compress_files(self, file_paths: List[str], output_dir: str, 
                       algorithm: CompressionAlgorithm = CompressionAlgorithm.ZLIB,
-                      level: int = 6) -> Dict[str, CompressionResult]:
+                      level: int = 6) -> Dict[str, CompressionResult]: #vers 1
         """Compress multiple files"""
         os.makedirs(output_dir, exist_ok=True)
         results = {}
@@ -624,7 +666,7 @@ class BatchCompressor:
         
         return results
     
-    def decompress_files(self, file_paths: List[str], output_dir: str) -> Dict[str, bool]:
+    def decompress_files(self, file_paths: List[str], output_dir: str) -> Dict[str, bool]: #vers 1
         """Decompress multiple files"""
         os.makedirs(output_dir, exist_ok=True)
         results = {}
@@ -660,7 +702,7 @@ class BatchCompressor:
         
         return results
     
-    def _detect_compression_algorithm(self, data: bytes) -> CompressionAlgorithm:
+    def _detect_compression_algorithm(self, data: bytes) -> CompressionAlgorithm: #vers 1
         """Simple compression algorithm detection"""
         if len(data) < 4:
             return CompressionAlgorithm.NONE
@@ -676,9 +718,46 @@ class BatchCompressor:
             # Default to ZLIB for unknown formats
             return CompressionAlgorithm.ZLIB
 
+    @staticmethod
+    def get_compression_ratio_analysis(img_file: IMGFile) -> Dict: #vers 1
+        """Analyze compression ratios for entries"""
+        analysis = {
+            'compressible_entries': [],
+            'already_compressed': [],
+            'potential_savings': 0
+        }
+
+        for entry in img_file.entries:
+            try:
+                if entry.is_compressed:
+                    ratio = (entry.uncompressed_size - entry.size) / entry.uncompressed_size * 100
+                    analysis['already_compressed'].append({
+                        'name': entry.name,
+                        'ratio': ratio,
+                        'savings': entry.uncompressed_size - entry.size
+                    })
+                else:
+                    # Test compression
+                    data = entry.get_data()
+                    compressed = zlib.compress(data, 6)
+                    if len(compressed) < len(data):
+                        savings = len(data) - len(compressed)
+                        ratio = savings / len(data) * 100
+                        analysis['compressible_entries'].append({
+                            'name': entry.name,
+                            'ratio': ratio,
+                            'savings': savings
+                        })
+                        analysis['potential_savings'] += savings
+
+            except Exception:
+                continue
+
+        return analysis
+
 
 # Utility functions
-def get_available_algorithms() -> List[CompressionAlgorithm]:
+def get_available_algorithms() -> List[CompressionAlgorithm]: #vers 1
     """Get list of available compression algorithms"""
     available = [
         CompressionAlgorithm.NONE,
@@ -707,7 +786,8 @@ def get_available_algorithms() -> List[CompressionAlgorithm]:
     return available
 
 
-def format_compression_ratio(ratio: float) -> str:
+
+def format_compression_ratio(ratio: float) -> str: #vers 1
     """Format compression ratio as percentage"""
     percentage = (1.0 - ratio) * 100.0
     return f"{percentage:.1f}%"

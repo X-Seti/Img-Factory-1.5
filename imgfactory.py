@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 X-Seti - July22 2025 - IMG Factory 1.5 - AtariST version :D
-#this belongs in root /imgfactory.py - version 69
+#this belongs in root /imgfactory.py - version 71
 """
 import sys
 import os
@@ -59,7 +59,6 @@ from components.col_core_classes import (
 
 #from components.img_core_classes import IMGArchive, IMGEntry, IMGVersion
 from components.col_parsing_functions import load_col_file_safely
-from components.rw_unknown_snapshot import integrate_unknown_rw_detection
 from components.img_integration_main import integrate_img_functions, img_core_functions
 from components.col_integration_main import integrate_complete_col_system
 from components.col_functions import setup_complete_col_integration
@@ -82,6 +81,7 @@ from core.close import install_close_functions, setup_close_manager
 from core.split_img import integrate_split_functions
 from core.theme_integration import integrate_theme_system
 from core.img_corruption_analyzer import setup_corruption_analyzer
+from core.img_creator import create_new_img, detect_and_open_file, open_file_dialog, detect_file_type
 from core.clean import integrate_clean_utilities
 from core.export import integrate_export_functions
 from core.impotr import integrate_import_functions #import impotr
@@ -94,7 +94,7 @@ from core.export_via import export_via_function
 from core.rebuild import integrate_rebuild_functions
 from core.rebuild_all import integrate_batch_rebuild_functions
 from core.independent_tabs import setup_independent_tab_system, migrate_existing_tabs_to_independent
-from core.create_img import (create_new_img, detect_and_open_file, open_file_dialog, detect_file_type)
+from core.rw_unk_snapshot import integrate_unknown_rw_detection
 
 from methods.ide_parser import integrate_ide_parser
 
@@ -124,6 +124,9 @@ from methods.refresh_table import integrate_refresh_table
 from methods.tab_awareness import integrate_tab_awareness_system
 from methods.export_col_shared import integrate_col_export_shared
 from methods.mirror_tab_shared import show_mirror_tab_selection
+from methods.finddups import find_duplicates_by_hash, show_duplicates_dialog
+from methods.img_analyze import analyze_img_corruption, show_analysis_dialog
+
 
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
