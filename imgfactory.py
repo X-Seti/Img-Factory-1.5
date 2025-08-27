@@ -127,7 +127,6 @@ from methods.mirror_tab_shared import show_mirror_tab_selection
 from methods.finddups import find_duplicates_by_hash, show_duplicates_dialog
 from methods.img_analyze import analyze_img_corruption, show_analysis_dialog
 
-
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
 

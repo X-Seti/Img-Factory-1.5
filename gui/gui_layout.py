@@ -1,4 +1,4 @@
-#this belongs in gui/ gui_layout.py - Version: 23
+#this belongs in gui/ gui_layout.py - Version: 24
 # X-Seti - JULY29 2025 - Img Factory 1.5 - GUI Layout Module
 
 import os
@@ -35,11 +35,11 @@ from core.rebuild_all import rebuild_all_open_tabs
 #from core.rebuild import rebuild_current_img #old function.
 from core.dump import dump_all_function # dump_selected_function, integrate_dump_functions
 from core.split_img import split_img, integrate_split_functions
-from core.merge_img import merge_img_function
+from core.img_merger import merge_img_function
 from core.convert import convert_img, convert_img_format
 from core.rename import rename_entry
 from core.reload import reload_current_file
-from core.create_img import create_new_img, detect_and_open_file, open_file_dialog, detect_file_type
+from core.img_creator import create_new_img, detect_and_open_file, open_file_dialog, detect_file_type
 from core.close import close_img_file, close_all_img, install_close_functions, setup_close_manager
 from methods.colour_ui_for_loaded_img import integrate_color_ui_system
 from gui.gui_context import open_col_editor_dialog

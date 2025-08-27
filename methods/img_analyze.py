@@ -1,4 +1,4 @@
-#this belongs in methods/img_analyze.py - Version: 1
+#this belongs in methods/img_analyze.py - Version: 3
 # X-Seti - August27 2025 - IMG Factory 1.5 - IMG Analysis Functions
 # Consolidated from img_corruption_analyzer.py and img_manager.py
 
@@ -264,7 +264,7 @@ Recommendations:
             self.apply_fixes = True
 
 
-def analyze_img_corruption(img_file, main_window=None) -> Dict[str, Any]: #vers 1
+def analyze_img_corruption(img_file, main_window=None) -> Dict[str, Any]: #vers 2
     """Comprehensive IMG corruption analysis - MOVED FROM img_corruption_analyzer.py"""
     try:
         report = {
@@ -528,12 +528,12 @@ def show_analysis_dialog(main_window) -> Optional[Dict]: #vers 1
 
 
 # Helper functions
-def _has_filename_corruption(filename: str) -> bool: #vers 1
+def _has_filename_corruption(filename: str) -> bool: #vers 2
     """Check if filename shows signs of corruption"""
     # Common corruption patterns
     corruption_patterns = [
-        r'\.dff[a-z]{2,10},  # .dff followed by random chars
-        r'\.txd[a-z]{2,10},  # .txd followed by random chars
+        r'\.dff[a-z]{2,10}',   # .dff followed by random chars
+        r'\.txd[a-z]{2,10}',   # .txd followed by random chars
         r'[a-zA-Z0-9]+\x00+',  # Null bytes in filename
         r'^[^a-zA-Z0-9]',      # Starting with special chars
         r'[^\x20-\x7E]',       # Non-printable characters

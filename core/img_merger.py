@@ -1,4 +1,4 @@
-#this belongs in core/merge_img.py - Version: 5
+#this belongs in core/merge_img.py - Version: 6
 # X-Seti - August27 2025 - IMG Factory 1.5 - IMG Merge Functions
 # Credit MexUK 2007 IMG Factory 1.2
 
@@ -19,9 +19,9 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 # Import core IMG functions
-from core.create_img import create_basic_img
+from core.img_creator import create_new_img
 from components.img_core_classes import IMGFile, IMGVersion
-from methods.tab_awareness import get_open_img_tabs, get_current_file_from_active_tab
+from methods.tab_awareness import get_current_file_from_active_tab
 
 ##Methods list -
 # merge_img_function
