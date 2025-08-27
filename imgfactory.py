@@ -78,7 +78,6 @@ from core.rw_versions import get_rw_version_name
 from core.right_click_actions import integrate_right_click_actions, setup_table_context_menu
 from core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
 from core.convert import convert_img, convert_img_format
-from core.create_img import (create_new_img, detect_and_open_file, open_file_dialog, detect_file_type)
 from core.close import install_close_functions, setup_close_manager
 from core.split_img import integrate_split_functions
 from core.theme_integration import integrate_theme_system
@@ -95,6 +94,7 @@ from core.export_via import export_via_function
 from core.rebuild import integrate_rebuild_functions
 from core.rebuild_all import integrate_batch_rebuild_functions
 from core.independent_tabs import setup_independent_tab_system, migrate_existing_tabs_to_independent
+from core.create_img import (create_new_img, detect_and_open_file, open_file_dialog, detect_file_type)
 
 from methods.ide_parser import integrate_ide_parser
 

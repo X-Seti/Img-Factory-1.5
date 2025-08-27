@@ -17,50 +17,6 @@ from components.img_core_classes import (
     format_file_size, detect_img_version
 )
 
-
-def create_img_from_directory(directory_path: str, output_path: str, version: IMGVersion = IMGVersion.VERSION_2, **kwargs) -> bool:
-    """Create IMG file from directory contents"""
-    try:
-        img = IMGFile()
-        if not img.create_new(output_path, version, **kwargs):
-            return False
-
-        success_count, error_count = img.import_directory(directory_path)
-
-        if success_count > 0:
-            return img.rebuild()
-
-        return error_count == 0
-
-    except Exception as e:
-        print(f"Error creating IMG from directory: {e}")
-        return False
-
-
-def merge_img_files(img_paths: List[str], output_path: str, version: IMGVersion = IMGVersion.VERSION_2) -> bool:
-    """Merge multiple IMG files into one"""
-    try:
-        merged_img = IMGFile()
-        if not merged_img.create_new(output_path, version):
-            return False
-
-        for img_path in img_paths:
-            source_img = IMGFile(img_path)
-            if source_img.open():
-                for entry in source_img.entries:
-                    # Check for duplicates
-                    if not merged_img.find_entry(entry.name):
-                        data = entry.get_data()
-                        merged_img.add_entry(entry.name, data)
-                source_img.close()
-
-        return merged_img.rebuild()
-
-    except Exception as e:
-        print(f"Error merging IMG files: {e}")
-        return False
-
-
 class IMGAnalyzer:
     """Advanced IMG file analysis tools"""
     
