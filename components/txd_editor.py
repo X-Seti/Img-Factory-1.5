@@ -18,6 +18,10 @@ import os
 import io
 import json
 import math
+from PyQt6.QtWidgets import QPushButton, QHBoxLayout, QFrame, QWidget
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon, QTextCursor
+from gui.imgcol_tearoff import create_img_tearoff_window, create_col_tearoff_window, create_editor_tearoff_window
 from typing import List, Dict, Optional, Tuple, Any
 from dataclasses import dataclass
 from enum import IntEnum

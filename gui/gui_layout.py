@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QFormLayout, QScrollArea, QFrame
 )
 from PyQt6.QtCore import Qt, QTimer, QSize, pyqtSignal, QPoint
-from PyQt6.QtGui import QFont, QAction, QIcon, QShortcut, QKeySequence, QPalette
+from PyQt6.QtGui import QFont, QAction, QIcon, QShortcut, QKeySequence, QPalette, QTextCursor
 from core.gui_search import ASearchDialog, SearchManager
 from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
@@ -44,7 +44,7 @@ from core.close import close_img_file, close_all_img, install_close_functions, s
 from methods.colour_ui_for_loaded_img import integrate_color_ui_system
 from gui.gui_context import open_col_editor_dialog
 
-def edit_txd_file(main_window): #vers 1
+def edit_txd_file(main_window): #vers 2
     """Edit selected TXD file with TXD Editor"""
     try:
         entries_table = main_window.gui_layout.table
@@ -95,6 +95,7 @@ class IMGFactoryGUILayout:
         self.left_vertical_splitter = None
         self.status_window = None
         self.info_bar = None
+        self.tearoff_button = None
 
         # Initialize method_mappings FIRST before buttons
         self.method_mappings = self._create_method_mappings()
@@ -159,7 +160,7 @@ class IMGFactoryGUILayout:
             'edit_paths_map': lambda: self._log_missing_method('edit_paths_map'),
             'edit_waterpro': lambda: self._log_missing_method('edit_waterpro'),
             'edit_weather': lambda: self._log_missing_method('edit_weather'),
-            'edit_handling': lambda: self._log_missing_method('edit_handling'),
+            'edit_2dfx': lambda: self._log_missing_method('edit_2dfx'),
             'edit_objects': lambda: self._log_missing_method('edit_objects'),
             'editscm': lambda: self._log_missing_method('editscm'),
             'editgxt': lambda: self._log_missing_method('editgxt'),
@@ -178,7 +179,8 @@ class IMGFactoryGUILayout:
             print(f"⚠️ Method '{method_name}' not yet implemented")
 
 
-    def _get_button_theme_template(self, theme_name="default"): #vers 1
+
+    def _get_button_theme_template(self, theme_name="default"): #vers 2
         """Get button color templates based on theme"""
         if self._is_dark_theme():
             return {
@@ -207,7 +209,7 @@ class IMGFactoryGUILayout:
             }
         else:
             return {
-                # Light Theme Button Colors  
+                # Light Theme Button Colors
                 'create_action': '#EEFAFA',     # Light teal for create/new actions
                 'open_action': '#E3F2FD',       # Light blue for open/load actions
                 'reload_action': '#E8F5E8',     # Light green for refresh/reload
@@ -230,6 +232,7 @@ class IMGFactoryGUILayout:
                 'editor_script': '#FFD0BD',     # Light peach for script editors
                 'placeholder': '#FEFEFE',       # Light gray for spacers
             }
+
 
     def _get_img_buttons_data(self): #vers 3
         """Get IMG buttons data with theme colors"""
@@ -338,6 +341,262 @@ class IMGFactoryGUILayout:
         
         # Apply all window themes
         self.apply_all_window_themes()
+
+
+    def _setup_tearoff_button_for_tabs(self): #vers 1
+        """Setup tearoff button in tab widget corner"""
+        try:
+            # Create tearoff button with square arrow icon
+            self.tearoff_button = QPushButton("⧉")  # Square with arrow symbol
+            self.tearoff_button.setFixedSize(24, 24)
+            self.tearoff_button.setToolTip("Tear off tab widget to separate window")
+
+            # Apply theme-aware styling
+            self._apply_tearoff_button_theme()
+
+            # Connect to tearoff handler
+            self.tearoff_button.clicked.connect(self._handle_tab_widget_tearoff)
+
+            # Set as corner widget on the right side of tabs
+            self.tab_widget.setCornerWidget(self.tearoff_button, Qt.Corner.TopRightCorner)
+
+            self.main_window.log_message("✅ Tearoff button added to tab widget corner")
+
+        except Exception as e:
+            self.main_window.log_message(f"❌ Error setting up tearoff button: {str(e)}")
+
+
+    def _apply_tearoff_button_theme(self): #vers 1
+        """Apply theme-aware styling to tearoff button"""
+        if not self.tearoff_button:
+            return
+
+        is_dark = self._is_dark_theme()
+
+        if is_dark:
+            # Dark theme tearoff button
+            button_style = """
+                QPushButton {
+                    border: 1px solid {border_color};
+                    border-radius: 1px;
+                    background-color: {button_bg};
+                    color: {text_color};
+                    font-size: 12px;
+                    font-weight: bold;
+                    padding: 0px;
+                    margin: 2px;
+                }
+                QPushButton:hover {
+                    background-color: {hover_bg};
+                    border: 1px solid {border_color};
+                    color: {text_secondary};
+                }
+                QPushButton:pressed {
+                    background-color: {pressed_bg};
+                    border: 1px solid {border_color};
+                    color: {text_primary};
+                }
+            """
+        else:
+            # Light theme tearoff button
+            button_style = """
+                QPushButton {
+                    border: 1px solid {border_color};
+                    border-radius: 1px;
+                    background-color: {button_bg};
+                    color: {text_color};
+                    font-size: 12px;
+                    font-weight: bold;
+                    padding: 0px;
+                    margin: 2px;
+                }
+                QPushButton:hover {
+                    background-color: {hover_bg};
+                    border: 1px solid {border_color};
+                    color: {text_secondary};
+                }
+                QPushButton:pressed {
+                    background-color: {pressed_bg};
+                    border: 1px solid {border_color};
+                    color: {text_primary};
+                }
+
+            """
+
+        self.tearoff_button.setStyleSheet(button_style)
+
+
+    # FIXED TEAROFF METHODS
+
+    def _handle_tab_widget_tearoff(self): #vers 2
+        """Handle tearoff button click for tab widget - FIXED"""
+        try:
+            if not self.tab_widget:
+                return
+
+            # Check if already torn off
+            if hasattr(self.tab_widget, 'is_torn_off') and self.tab_widget.is_torn_off:
+                # Dock it back
+                self._dock_tab_widget_back()
+                return
+
+            # Store original parent info BEFORE removing from layout
+            original_parent = self.tab_widget.parent()
+            original_layout = original_parent.layout() if original_parent else None
+
+            if not original_parent or not original_layout:
+                self.main_window.log_message("❌ Cannot tear off: no parent layout found")
+                return
+
+            # Store references on tab widget BEFORE manipulation
+            self.tab_widget.original_parent = original_parent
+            self.tab_widget.original_layout = original_layout
+
+            # Import tearoff system
+            try:
+                from gui.tear_off import TearOffPanel
+            except ImportError:
+                self.main_window.log_message("❌ TearOffPanel not available")
+                return
+
+            # Create tearoff panel WITHOUT a layout initially
+            panel_id = "file_tabs_panel"
+            title = "File Tabs"
+            tearoff_panel = TearOffPanel(panel_id, title, self.main_window)
+
+            # Create layout for tearoff panel if it doesn't have one
+            if not tearoff_panel.layout():
+                tearoff_panel_layout = QVBoxLayout(tearoff_panel)
+                tearoff_panel_layout.setContentsMargins(2, 2, 2, 2)
+            else:
+                tearoff_panel_layout = tearoff_panel.layout()
+
+            # Remove tab widget from current parent layout
+            original_layout.removeWidget(self.tab_widget)
+
+            # Add tab widget to tearoff panel
+            tearoff_panel_layout.addWidget(self.tab_widget)
+
+            # Store tearoff panel reference
+            self.tab_widget.tearoff_panel = tearoff_panel
+            self.tab_widget.is_torn_off = True
+
+            # Update button appearance
+            self._update_tearoff_button_state(True)
+
+            # Show tearoff panel
+            tearoff_panel.show()
+            tearoff_panel.raise_()
+
+            # Position near cursor
+            from PyQt6.QtGui import QCursor
+            cursor_pos = QCursor.pos()
+            tearoff_panel.move(cursor_pos.x() - 100, cursor_pos.y() - 50)
+
+            self.main_window.log_message("🔗 Tab widget torn off to separate window")
+
+        except Exception as e:
+            self.main_window.log_message(f"❌ Error handling tab widget tearoff: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+    def _dock_tab_widget_back(self): #vers 2
+        """Dock torn off tab widget back to main window - FIXED"""
+        try:
+            # Check if actually torn off
+            if not hasattr(self.tab_widget, 'is_torn_off') or not self.tab_widget.is_torn_off:
+                self.main_window.log_message("⚠️ Tab widget is not torn off")
+                return
+
+            # Get stored references with safety checks
+            original_parent = getattr(self.tab_widget, 'original_parent', None)
+            original_layout = getattr(self.tab_widget, 'original_layout', None)
+            tearoff_panel = getattr(self.tab_widget, 'tearoff_panel', None)
+
+            # Validate we have the required references
+            if not original_parent:
+                self.main_window.log_message("❌ Cannot dock back: no original parent stored")
+                return
+
+            if not original_layout:
+                self.main_window.log_message("❌ Cannot dock back: no original layout stored")
+                return
+
+            # Verify original parent still exists and has layout
+            try:
+                if original_parent.layout() != original_layout:
+                    self.main_window.log_message("⚠️ Original layout changed, using current layout")
+                    original_layout = original_parent.layout()
+                    if not original_layout:
+                        self.main_window.log_message("❌ Original parent no longer has a layout")
+                        return
+            except:
+                self.main_window.log_message("❌ Original parent is no longer valid")
+                return
+
+            # Remove from tearoff panel first
+            if tearoff_panel:
+                try:
+                    tearoff_panel_layout = tearoff_panel.layout()
+                    if tearoff_panel_layout:
+                        tearoff_panel_layout.removeWidget(self.tab_widget)
+                    tearoff_panel.hide()
+                    tearoff_panel.deleteLater()
+                except Exception as e:
+                    self.main_window.log_message(f"⚠️ Error cleaning up tearoff panel: {str(e)}")
+
+            # Add back to original parent layout
+            try:
+                original_layout.addWidget(self.tab_widget)
+            except Exception as e:
+                self.main_window.log_message(f"❌ Error adding back to original layout: {str(e)}")
+                return
+
+            # Clean up references
+            try:
+                delattr(self.tab_widget, 'original_parent')
+                delattr(self.tab_widget, 'original_layout')
+                delattr(self.tab_widget, 'tearoff_panel')
+                delattr(self.tab_widget, 'is_torn_off')
+            except:
+                pass  # Attributes might not exist
+
+            # Update button appearance
+            self._update_tearoff_button_state(False)
+
+            # Force widget to show and update
+            self.tab_widget.show()
+            self.tab_widget.update()
+
+            self.main_window.log_message("🔗 Tab widget docked back to main window")
+
+        except Exception as e:
+            self.main_window.log_message(f"❌ Error docking tab widget back: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+    def _update_tearoff_button_state(self, is_torn_off): #vers 2
+        """Update tearoff button appearance based on state - SAFER VERSION"""
+        try:
+            if not hasattr(self, 'tearoff_button') or not self.tearoff_button:
+                return
+
+            if is_torn_off:
+                self.tearoff_button.setText("⧈")  # Different icon when torn off
+                self.tearoff_button.setToolTip("Dock tab widget back to main window")
+            else:
+                self.tearoff_button.setText("⧉")  # Original icon when docked
+                self.tearoff_button.setToolTip("Tear off tab widget to separate window")
+
+            # Reapply theme styling to ensure consistency
+            if hasattr(self, '_apply_tearoff_button_theme'):
+                self._apply_tearoff_button_theme()
+
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"⚠️ Error updating tearoff button state: {str(e)}")
+            else:
+                print(f"⚠️ Error updating tearoff button state: {str(e)}")
 
 
     def _refresh_all_buttons(self): #vers 4
@@ -622,8 +881,8 @@ class IMGFactoryGUILayout:
         self.left_vertical_splitter.setSizes([760, 200])
 
         # Prevent sections from collapsing completely
-        self.left_vertical_splitter.setCollapsible(0, False)  # File window
-        self.left_vertical_splitter.setCollapsible(1, False)  # Status window
+        self.left_vertical_splitter.setCollapsible(0, True)  # File window
+        self.left_vertical_splitter.setCollapsible(1, True)  # Status window
 
         # Apply theme styling to vertical splitter
         self._apply_vertical_splitter_theme()
@@ -663,14 +922,14 @@ class IMGFactoryGUILayout:
         # Column sizing
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Num
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Name
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Name
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Extension
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Size
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Hash
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Hex Value
-        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Version
-        header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Compression
-        header.setSectionResizeMode(8, QHeaderView.ResizeMode.ResizeToContents)  # Status
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)  # Hash
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)  # Hex Value
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)  # Version
+        header.setSectionResizeMode(7, QHeaderView.ResizeMode.Stretch)  # Compression
+        header.setSectionResizeMode(8, QHeaderView.ResizeMode.Stretch)  # Status
         
         # Apply theme styling to table
         self._apply_table_theme_styling()
@@ -714,6 +973,8 @@ class IMGFactoryGUILayout:
 
         # Apply theme styling to file window tabs
         self._apply_file_list_window_theme_styling()
+
+        self._setup_tearoff_button_for_tabs()
 
         file_layout.addWidget(self.tab_widget)
         return file_window
@@ -1058,12 +1319,16 @@ class IMGFactoryGUILayout:
 
     def apply_all_window_themes(self): #vers 1
         """Apply theme styling to all windows"""
+        if hasattr(self, 'tearoff_button') and self.tearoff_button:
+            self._apply_tearoff_button_theme()
+
         self._apply_table_theme_styling()
         self._apply_log_theme_styling()
         self._apply_vertical_splitter_theme()
         self._apply_main_splitter_theme()
         self._apply_status_window_theme_styling()
         self._apply_file_list_window_theme_styling()
+
 
     def apply_table_theme(self): #vers 1
         """Legacy method - Apply theme styling to table and related components"""

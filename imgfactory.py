@@ -39,7 +39,7 @@ from PyQt6.QtWidgets import (
 )
 print("PyQt6.QtCore imported successfully")
 from PyQt6.QtCore import pyqtSignal, QMimeData, Qt, QThread, QTimer, QSettings
-from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent, QFont, QIcon, QPixmap, QShortcut
+from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent, QFont, QIcon, QPixmap, QShortcut, QTextCursor
 
 # OR use the full path:
 from utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
@@ -106,6 +106,9 @@ from gui.gui_menu import IMGFactoryMenuBar
 from gui.autosave_menu import integrate_autosave_menu
 from gui.file_menu_integration import add_project_menu_items
 from gui.directory_tree_system import integrate_directory_tree_system
+from gui.tearoff_integration import integrate_tearoff_system
+
+# After GUI setup:
 from gui.gui_context import (add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
 
 #Shared Methods - Shared Functions.
@@ -415,6 +418,7 @@ class IMGFactory(QMainWindow):
         add_project_menu_items(self)
         migrate_existing_tabs_to_independent(self)
         integrate_tab_awareness_system(self)
+        integrate_tearoff_system(self)
 
         # === PHASE 4: ESSENTIAL INTEGRATIONS (Medium) ===
 

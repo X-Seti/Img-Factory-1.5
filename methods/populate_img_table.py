@@ -51,7 +51,7 @@ class IMGTablePopulator:
             # Keep original 8-column structure - same as before
             table.setColumnCount(8)
             table.setHorizontalHeaderLabels([
-                "Name", "Type", "Size", "Offset", "RW Address", "RW Version", "Info", "Status"
+                "Name", "Type", "Size", "Offset", "RW Address", "RW Version", "Compression", "Status"
             ])
 
             # Set proper column widths - same as original
@@ -61,7 +61,7 @@ class IMGTablePopulator:
             table.setColumnWidth(3, 100)  # Offset
             table.setColumnWidth(5, 100)  # RW Version
             table.setColumnWidth(4, 100)  # RW Address
-            table.setColumnWidth(6, 110)  # Info
+            table.setColumnWidth(6, 110)  # Compression
             table.setColumnWidth(7, 110)  # Status
 
             entries = img_file.entries
