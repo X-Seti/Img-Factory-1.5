@@ -92,6 +92,10 @@ from core.remove_via import integrate_remove_via_functions
 from core.export_via import export_via_function
 from core.rebuild import integrate_rebuild_functions
 from core.rebuild_all import integrate_batch_rebuild_functions
+from core.imgcol_rename import integrate_imgcol_rename_functions
+from core.imgcol_replace import integrate_imgcol_replace_functions
+from core.imgcol_convert import integrate_imgcol_convert_functions
+
 from core.tab_independent import setup_independent_tab_system, migrate_existing_tabs_to_independent
 from core.rw_unk_snapshot import integrate_unknown_rw_detection
 
@@ -434,6 +438,10 @@ class IMGFactory(QMainWindow):
         integrate_remove_functions(self)
         integrate_batch_rebuild_functions(self)
         integrate_rebuild_functions(self)
+
+        integrate_imgcol_rename_functions(self)
+        integrate_imgcol_replace_functions(self)
+        integrate_imgcol_convert_functions(self)
 
         self.export_via = lambda: export_via_function(self)
         integrate_import_via_functions(self)  # NEW
