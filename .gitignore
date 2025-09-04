@@ -10,3 +10,5 @@
 /methods/__pycache__
 gui/gui_layout_old.py
 gitimgtree.git
+/Assists/Dump
+*.py-old

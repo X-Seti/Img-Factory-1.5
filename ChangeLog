@@ -34,6 +34,9 @@ Todo, Theme switching from first page.
 
 ------------ completed ---- >
 
+Fixed - Sep04
+Dump command has been fixed.
+
 Fixed - Aug26
 
 Rebuild system is fixed, rebuild all now works with a menu, rebuild open tabs or those imgs in a folder.
