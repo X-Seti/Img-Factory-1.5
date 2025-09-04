@@ -95,6 +95,7 @@ from core.rebuild_all import integrate_batch_rebuild_functions
 from core.imgcol_rename import integrate_imgcol_rename_functions
 from core.imgcol_replace import integrate_imgcol_replace_functions
 from core.imgcol_convert import integrate_imgcol_convert_functions
+from core.save_entry import integrate_save_entry_function
 
 from core.tab_independent import setup_independent_tab_system, migrate_existing_tabs_to_independent
 from core.rw_unk_snapshot import integrate_unknown_rw_detection
@@ -128,6 +129,7 @@ from methods.mirror_tab_shared import show_mirror_tab_selection
 from methods.img_analyze import analyze_img_corruption, show_analysis_dialog
 from methods.ide_parser import integrate_ide_parser
 from methods.find_duplicates import find_duplicates_by_hash, show_duplicates_dialog
+from methods.dragdrop import integrate_drag_drop_system
 
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
@@ -361,7 +363,7 @@ class IMGLoadThread(QThread):
 class IMGFactory(QMainWindow):
     """Main IMG Factory application window"""
 
-    def __init__(self, settings): #vers 61
+    def __init__(self, settings): #vers 65
         """Initialize IMG Factory with optimized loading order"""
         super().__init__()
 
@@ -415,6 +417,7 @@ class IMGFactory(QMainWindow):
             "customize_interface": self.show_gui_settings,
         }
         self.menu_bar_system.set_callbacks(callbacks)
+        integrate_drag_drop_system(self)
 
         # Create main UI
         setup_independent_tab_system(self)
@@ -439,13 +442,14 @@ class IMGFactory(QMainWindow):
         integrate_batch_rebuild_functions(self)
         integrate_rebuild_functions(self)
 
+        integrate_save_entry_function(self)
         integrate_imgcol_rename_functions(self)
         integrate_imgcol_replace_functions(self)
         integrate_imgcol_convert_functions(self)
 
         self.export_via = lambda: export_via_function(self)
-        integrate_import_via_functions(self)  # NEW
-        integrate_remove_via_functions(self)  # NEW
+        integrate_import_via_functions(self)
+        integrate_remove_via_functions(self)
 
         # File operations
         install_close_functions(self)
