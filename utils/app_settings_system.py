@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
     QSlider, QGroupBox, QTabWidget, QDialog, QMessageBox,
     QFileDialog, QColorDialog, QFontDialog, QTextEdit,
     QTableWidget, QTableWidgetItem, QHeaderView,
-    QScrollArea, QFrame, QLineEdit
+    QScrollArea, QFrame, QLineEdit, QListWidget
 )
 
 from PyQt6.QtCore import Qt, pyqtSignal, QDateTime, QTimer, QThread, pyqtSlot
@@ -336,7 +336,6 @@ class ThemeSaveDialog(QDialog):
         return self.result_theme_data
 
 
-
 class ColorPickerWidget(QWidget):
     """SAFE, simple color picker widget - NO THREADING"""
     colorPicked = pyqtSignal(str)  # Emits hex color
@@ -536,6 +535,283 @@ class ScreenCaptureThread(QThread):
     def stop(self):
         """Stop the capture thread"""
         self.running = False
+
+class XPColorPicker(QWidget): #vers 1
+    """XP Display Properties style color picker"""
+
+    colorChanged = pyqtSignal(str, str)  # element_name, hex_color
+
+    def __init__(self, theme_colors, parent=None):
+        super().__init__(parent)
+        self.theme_colors = theme_colors
+        self.current_hue = 240
+        self.current_sat = 100
+        self.current_bri = 25
+
+        # UI element colors mapping
+        self.element_colors = {
+            'bg_primary': {'name': 'Window Background', 'h': 0, 's': 0, 'b': 100},
+            'bg_secondary': {'name': 'Panel Background', 'h': 210, 's': 15, 'b': 98},
+            'bg_tertiary': {'name': 'Alternate Background', 'h': 210, 's': 15, 'b': 92},
+            'panel_bg': {'name': 'GroupBox Background', 'h': 210, 's': 8, 'b': 95},
+            'accent_primary': {'name': 'Primary Accent', 'h': 210, 's': 85, 'b': 53},
+            'accent_secondary': {'name': 'Secondary Accent', 'h': 210, 's': 85, 'b': 47},
+            'text_primary': {'name': 'Primary Text', 'h': 0, 's': 0, 'b': 13},
+            'text_secondary': {'name': 'Secondary Text', 'h': 210, 's': 15, 'b': 35},
+            'text_accent': {'name': 'Accent Text', 'h': 210, 's': 85, 'b': 53},
+            'button_normal': {'name': 'Button Face', 'h': 210, 's': 40, 'b': 95},
+            'button_hover': {'name': 'Button Hover', 'h': 210, 's': 50, 'b': 85},
+            'button_pressed': {'name': 'Button Pressed', 'h': 210, 's': 60, 'b': 75},
+            'border': {'name': 'Border Color', 'h': 210, 's': 15, 'b': 85},
+            'success': {'name': 'Success Color', 'h': 120, 's': 60, 'b': 50},
+            'warning': {'name': 'Warning Color', 'h': 35, 's': 100, 'b': 60},
+            'error': {'name': 'Error Color', 'h': 4, 's': 90, 'b': 58}
+        }
+
+        self._init_ui()
+        self._load_theme_colors()
+
+    def _init_ui(self): #vers 1
+        """Initialize the XP style UI"""
+        main_layout = QHBoxLayout(self)
+        main_layout.setContentsMargins(5, 5, 5, 5)
+
+        # Left side - Element list
+        left_widget = QWidget()
+        left_layout = QVBoxLayout()
+
+        # Element selection
+        element_label = QLabel("")
+        left_layout.addWidget(element_label)
+
+        self.element_list = QListWidget()
+        self.element_list.setMaximumWidth(160)
+        self.element_list.setMaximumHeight(120)
+        self.element_list.setStyleSheet("""
+            QListWidget {
+                background: white;
+                border: 2px inset #f0f0f0;
+                font-family: 'MS Sans Serif';
+                font-size: 8pt;
+            }
+            QListWidget::item {
+                padding: 2px 4px;
+            }
+            QListWidget::item:selected {
+                background: #0a246a;
+                color: white;
+            }
+        """)
+
+        for key, data in self.element_colors.items():
+            self.element_list.addItem(data['name'])
+
+        self.element_list.setCurrentRow(0)
+        self.element_list.currentRowChanged.connect(self._on_element_selected)
+        #left_layout.addWidget(self.element_list)
+
+        main_layout.addWidget(left_widget)
+
+        # Right side - Color controls
+        right_widget = QWidget()
+        right_layout = QVBoxLayout(right_widget)
+
+        # Color preview
+        color_label = QLabel("Color:")
+        color_label.setFont(QFont("MS Sans Serif", 8, QFont.Weight.Bold))
+        right_layout.addWidget(color_label)
+
+        self.color_preview = QWidget()
+        self.color_preview.setFixedSize(60, 30)
+        self.color_preview.setStyleSheet("""
+            QWidget {
+                background: #0a246a;
+                border: 2px inset #f0f0f0;
+            }
+        """)
+        right_layout.addWidget(self.color_preview)
+
+        # HSL Sliders
+        sliders_frame = QFrame()
+        sliders_frame.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Sunken)
+        sliders_layout = QVBoxLayout(sliders_frame)
+        sliders_layout.setSpacing(3)
+
+        # Hue slider
+        hue_layout = QHBoxLayout()
+        hue_layout.addWidget(QLabel("Hue:", font=QFont("MS Sans Serif", 7)))
+        self.hue_slider = QSlider(Qt.Orientation.Horizontal)
+        self.hue_slider.setMinimum(0)
+        self.hue_slider.setMaximum(360)
+        self.hue_slider.setValue(240)
+        self.hue_slider.setFixedWidth(80)
+        self.hue_slider.setStyleSheet("""
+            QSlider {
+                height: 16px;
+            }
+            QSlider::groove:horizontal {
+                background: #e0e0e0;
+                border: 1px inset #f0f0f0;
+                height: 14px;
+            }
+            QSlider::handle:horizontal {
+                background: #c0c0c0;
+                border: 1px outset #c0c0c0;
+                width: 6px;
+                height: 12px;
+            }
+        """)
+        self.hue_slider.valueChanged.connect(self._on_hue_changed)
+        hue_layout.addWidget(self.hue_slider)
+
+        self.hue_value = QLabel("240")
+        self.hue_value.setFixedWidth(30)
+        self.hue_value.setFont(QFont("MS Sans Serif", 7))
+        self.hue_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        hue_layout.addWidget(self.hue_value)
+        sliders_layout.addLayout(hue_layout)
+
+        # Saturation slider
+        sat_layout = QHBoxLayout()
+        sat_layout.addWidget(QLabel("Sat:", font=QFont("MS Sans Serif", 7)))
+        self.sat_slider = QSlider(Qt.Orientation.Horizontal)
+        self.sat_slider.setMinimum(0)
+        self.sat_slider.setMaximum(100)
+        self.sat_slider.setValue(100)
+        self.sat_slider.setFixedWidth(80)
+        self.sat_slider.setStyleSheet(self.hue_slider.styleSheet())
+        self.sat_slider.valueChanged.connect(self._on_sat_changed)
+        sat_layout.addWidget(self.sat_slider)
+
+        self.sat_value = QLabel("100")
+        self.sat_value.setFixedWidth(30)
+        self.sat_value.setFont(QFont("MS Sans Serif", 7))
+        self.sat_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        sat_layout.addWidget(self.sat_value)
+        sliders_layout.addLayout(sat_layout)
+
+        # Brightness slider
+        bri_layout = QHBoxLayout()
+        bri_layout.addWidget(QLabel("Bri:", font=QFont("MS Sans Serif", 7)))
+        self.bri_slider = QSlider(Qt.Orientation.Horizontal)
+        self.bri_slider.setMinimum(0)
+        self.bri_slider.setMaximum(100)
+        self.bri_slider.setValue(25)
+        self.bri_slider.setFixedWidth(80)
+        self.bri_slider.setStyleSheet(self.hue_slider.styleSheet())
+        self.bri_slider.valueChanged.connect(self._on_bri_changed)
+        bri_layout.addWidget(self.bri_slider)
+
+        self.bri_value = QLabel("25")
+        self.bri_value.setFixedWidth(30)
+        self.bri_value.setFont(QFont("MS Sans Serif", 7))
+        self.bri_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        bri_layout.addWidget(self.bri_value)
+        sliders_layout.addLayout(bri_layout)
+
+        right_layout.addWidget(sliders_frame)
+        right_layout.addStretch()
+
+        main_layout.addWidget(right_widget)
+
+    def _load_theme_colors(self): #vers 1
+        """Load colors from current theme"""
+        for element_key in self.element_colors.keys():
+            if element_key in self.theme_colors:
+                hex_color = self.theme_colors[element_key]
+                h, s, l = rgb_to_hsl(hex_color)
+                self.element_colors[element_key].update({'h': h, 's': s, 'b': l})
+
+    def _on_element_selected(self, row): #vers 1
+        """Handle element selection"""
+        if row >= 0:
+            element_keys = list(self.element_colors.keys())
+            if row < len(element_keys):
+                element_key = element_keys[row]
+                color_data = self.element_colors[element_key]
+
+                self.current_hue = color_data['h']
+                self.current_sat = color_data['s']
+                self.current_bri = color_data['b']
+
+                self._update_sliders()
+                self._update_color_preview()
+
+    def _update_sliders(self): #vers 1
+        """Update slider positions and values"""
+        self.hue_slider.blockSignals(True)
+        self.sat_slider.blockSignals(True)
+        self.bri_slider.blockSignals(True)
+
+        self.hue_slider.setValue(self.current_hue)
+        self.sat_slider.setValue(self.current_sat)
+        self.bri_slider.setValue(self.current_bri)
+
+        self.hue_value.setText(str(self.current_hue))
+        self.sat_value.setText(str(self.current_sat))
+        self.bri_value.setText(str(self.current_bri))
+
+        self.hue_slider.blockSignals(False)
+        self.sat_slider.blockSignals(False)
+        self.bri_slider.blockSignals(False)
+
+    def _update_color_preview(self): #vers 1
+        """Update the color preview widget"""
+        hex_color = hsl_to_rgb(self.current_hue, self.current_sat, self.current_bri)
+        self.color_preview.setStyleSheet(f"""
+            QWidget {{
+                background: {hex_color};
+                border: 2px inset #f0f0f0;
+            }}
+        """)
+
+        # Emit color change signal
+        element_keys = list(self.element_colors.keys())
+        current_row = self.element_list.currentRow()
+        if current_row >= 0 and current_row < len(element_keys):
+            element_key = element_keys[current_row]
+            self.colorChanged.emit(element_key, hex_color)
+
+    def _on_hue_changed(self, value): #vers 1
+        """Handle hue slider change"""
+        self.current_hue = value
+        self.hue_value.setText(str(value))
+        self._save_current_color()
+        self._update_color_preview()
+
+    def _on_sat_changed(self, value): #vers 1
+        """Handle saturation slider change"""
+        self.current_sat = value
+        self.sat_value.setText(str(value))
+        self._save_current_color()
+        self._update_color_preview()
+
+    def _on_bri_changed(self, value): #vers 1
+        """Handle brightness slider change"""
+        self.current_bri = value
+        self.bri_value.setText(str(value))
+        self._save_current_color()
+        self._update_color_preview()
+
+    def _save_current_color(self): #vers 1
+        """Save current color to selected element"""
+        element_keys = list(self.element_colors.keys())
+        current_row = self.element_list.currentRow()
+        if current_row >= 0 and current_row < len(element_keys):
+            element_key = element_keys[current_row]
+            self.element_colors[element_key].update({
+                'h': self.current_hue,
+                's': self.current_sat,
+                'b': self.current_bri
+            })
+
+    def get_all_colors(self): #vers 1
+        """Get all colors as hex values"""
+        colors = {}
+        for element_key, data in self.element_colors.items():
+            colors[element_key] = hsl_to_rgb(data['h'], data['s'], data['b'])
+        return colors
+
 
 class ThemeColorEditor(QWidget):
     """Widget for editing individual theme colors"""
@@ -1442,6 +1718,49 @@ class SettingsDialog(QDialog):
         """Collect all settings from dialog controls"""
         settings = {}
 
+    def _on_theme_changed(self, theme_name): #vers 1
+        """Handle theme selection change - ADD TO SettingsDialog"""
+        # Find the actual theme key
+        theme_key = None
+        for key, data in self.app_settings.themes.items():
+            if data.get("name", key) == theme_name:
+                theme_key = key
+                break
+
+        if theme_key:
+            # Update color picker with new theme colors
+            new_colors = self.app_settings.get_theme_colors(theme_key)
+            self.color_picker.theme_colors = new_colors
+            self.color_picker._load_theme_colors()
+
+            # Refresh the current element display
+            current_row = self.color_picker.element_list.currentRow()
+            self.color_picker._on_element_selected(current_row)
+
+    def _on_color_changed(self, element_key, hex_color): #vers 1
+        """Handle color change from color picker - ADD TO SettingsDialog"""
+        # Update the theme colors in memory
+        if not hasattr(self, '_modified_colors'):
+            self._modified_colors = self.app_settings.get_theme_colors().copy()
+
+        self._modified_colors[element_key] = hex_color
+
+    def _refresh_themes(self): #vers 1
+        """Refresh themes from disk - ADD TO SettingsDialog"""
+        current_theme = self.theme_combo.currentData()
+
+        self.app_settings.refresh_themes()
+
+        self.theme_combo.clear()
+        for theme_name, theme_data in self.app_settings.themes.items():
+            display_name = theme_data.get("name", theme_name)
+            self.theme_combo.addItem(display_name, theme_name)
+
+        # Try to restore selection
+        index = self.theme_combo.findData(current_theme)
+        if index >= 0:
+            self.theme_combo.setCurrentIndex(index)
+
     def refresh_themes_in_dialog(self):
         """Refresh themes in settings dialog"""
         if hasattr(self, 'demo_theme_combo'):
@@ -1515,6 +1834,8 @@ class SettingsDialog(QDialog):
 
         # Add any other simple settings here
         return settings
+
+
 
 
     # REPLACE: Improved Demo tab with better layout and complete functionality
@@ -2227,6 +2548,8 @@ class SettingsDialog(QDialog):
         self.color_picker_tab = self._create_color_picker_tab()
         self.tabs.addTab(self.color_picker_tab, "🎨 Color Picker")
 
+        self.tabs.addTab(self.color_picker_tab, "🎨 Color Picker")
+
         # NEW: Add demo tab
         self.demo_tab = self._create_demo_tab()
         self.tabs.addTab(self.demo_tab, "🎭 Demo")
@@ -2396,8 +2719,6 @@ class SettingsDialog(QDialog):
             QMessageBox.information(self, "Clear Log", "Activity log cleared (if available).")
 
     # keep
-
-
     def _create_color_picker_tab(self):
         """Create color picker and theme editor tab"""
         tab = QWidget()
@@ -2437,10 +2758,8 @@ class SettingsDialog(QDialog):
 
         # Common colors
         palette_colors = [
-            "#000000", "#333333", "#666666", "#999999", "#CCCCCC", "#FFFFFF",
-            "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF",
-            "#FF8000", "#8000FF", "#0080FF", "#80FF00", "#FF0080", "#00FF80",
-            "#800000", "#008000", "#000080", "#808000", "#800080", "#008080"
+            "#000000", "#333333", "#666666", "#999999", "#CCCCCC", "#FFFFFF", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF",
+            "#FF8000", "#8000FF", "#0080FF", "#80FF00", "#FF0080", "#00FF80", "#800000", "#008000", "#000080", "#808000", "#800080", "#008080"
         ]
 
         for i, color in enumerate(palette_colors):
@@ -2455,8 +2774,20 @@ class SettingsDialog(QDialog):
             palette_layout.addWidget(color_btn, row, col)
 
         left_layout.addWidget(palette_group)
-        left_layout.addStretch()
 
+        # Windows XP style color picker
+        color_group = QGroupBox("Global Theme Sliders")
+        color_layout = QVBoxLayout(color_group)
+
+        # Get current theme colors
+        current_colors = self.app_settings.get_theme_colors()
+        self.color_picker = XPColorPicker(current_colors, self)
+        self.color_picker.colorChanged.connect(self._on_color_changed)
+        color_layout.addWidget(self.color_picker)
+
+        left_layout.addWidget(color_group)
+
+        left_layout.addStretch()
         main_layout.addWidget(left_panel)
 
         # Right Panel - Theme Color Editor
@@ -2696,6 +3027,7 @@ class SettingsDialog(QDialog):
     def _apply_settings(self):
         """Apply settings permanently including demo theme"""
         new_settings = self._get_dialog_settings()
+        self.app_settings.current_settings.update(settings)
 
         # If demo theme is different, use it
         if hasattr(self, 'demo_theme_combo'):
@@ -2704,10 +3036,32 @@ class SettingsDialog(QDialog):
             self.app_settings.current_settings["theme"] = theme_name
             print(f"🎨\n\nActive theme: {theme_name}")
 
+        if hasattr(self, 'theme_combo'):
+            theme_data = self.theme_combo.currentData()
+            if theme_data:
+                settings["theme"] = theme_data
+
+        if hasattr(self, 'font_combo'):
+            settings["font_family"] = self.font_combo.currentText()
+        if hasattr(self, 'font_size_spin'):
+            settings["font_size"] = self.font_size_spin.value()
+
+        # Interface settings
+        if hasattr(self, 'tooltips_check'):
+            settings["show_tooltips"] = self.tooltips_check.isChecked()
+        if hasattr(self, 'auto_save_check'):
+            settings["auto_save"] = self.auto_save_check.isChecked()
+
         old_theme = self.app_settings.current_settings["theme"]
 
         self.app_settings.current_settings.update(new_settings)
         self.app_settings.save_settings()
+
+
+        if hasattr(self, '_modified_colors'):
+            current_theme = self.app_settings.current_settings["theme"]
+            if current_theme in self.app_settings.themes:
+                self.app_settings.themes[current_theme]["colors"].update(self._modified_colors)
 
         if new_settings["theme"] != old_theme:
             self.themeChanged.emit(new_settings["theme"])
@@ -2752,7 +3106,11 @@ class SettingsDialog(QDialog):
 
         # Save settings
         self.app_settings.save_settings()
-        
+        self.settingsChanged.emit()
+
+        # Emit theme change
+        self.themeChanged.emit(self.app_settings.current_settings["theme"])
+
         # Emit signals
         if hasattr(self, 'themeChanged'):
             self.themeChanged.emit(self.app_settings.current_settings["theme"])
@@ -2909,6 +3267,78 @@ def apply_theme_to_app(app, app_settings):
     """Apply theme to entire application"""
     stylesheet = app_settings.get_stylesheet()
     app.setStyleSheet(stylesheet)
+
+
+def hsl_to_rgb(h, s, l): #vers 1
+    """Convert HSL to RGB and return hex color"""
+    h = h / 360.0
+    s = s / 100.0
+    l = l / 100.0
+
+    if s == 0:
+        r = g = b = l
+    else:
+        def hue_to_rgb(p, q, t):
+            if t < 0:
+                t += 1
+            if t > 1:
+                t -= 1
+            if t < 1/6:
+                return p + (q - p) * 6 * t
+            if t < 1/2:
+                return q
+            if t < 2/3:
+                return p + (q - p) * (2/3 - t) * 6
+            return p
+
+        q = l * (1 + s) if l < 0.5 else l + s - l * s
+        p = 2 * l - q
+
+        r = hue_to_rgb(p, q, h + 1/3)
+        g = hue_to_rgb(p, q, h)
+        b = hue_to_rgb(p, q, h - 1/3)
+
+    r = int(round(r * 255))
+    g = int(round(g * 255))
+    b = int(round(b * 255))
+
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+def rgb_to_hsl(hex_color): #vers 1
+    """Convert hex color to HSL values"""
+    if hex_color.startswith('#'):
+        hex_color = hex_color[1:]
+
+    try:
+        r = int(hex_color[0:2], 16) / 255.0
+        g = int(hex_color[2:4], 16) / 255.0
+        b = int(hex_color[4:6], 16) / 255.0
+    except (ValueError, IndexError):
+        return 0, 0, 50  # Default values
+
+    max_val = max(r, g, b)
+    min_val = min(r, g, b)
+    diff = max_val - min_val
+
+    # Lightness
+    l = (max_val + min_val) / 2.0
+
+    if diff == 0:
+        h = s = 0  # achromatic
+    else:
+        # Saturation
+        s = diff / (2 - max_val - min_val) if l > 0.5 else diff / (max_val + min_val)
+
+        # Hue
+        if max_val == r:
+            h = (g - b) / diff + (6 if g < b else 0)
+        elif max_val == g:
+            h = (b - r) / diff + 2
+        elif max_val == b:
+            h = (r - g) / diff + 4
+        h /= 6
+
+    return int(h * 360), int(s * 100), int(l * 100)
 
 
 # Clean main function for testing only
