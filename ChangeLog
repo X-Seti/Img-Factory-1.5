@@ -1,5 +1,15 @@
 What's fixed and still todo.
 
+Some files in components are shared functions, like img_core_classes, col_core_classes. before we split this into;
+Example;
+
+* methods/img_entry_operations.py - Entry management (add, remove, get)
+* methods/img_file_operations.py - File I/O operations
+* methods/img_detection.py - RW version detection
+* methods/img_validation.py - File validation
+
+Before we recreate these files we need to check if there are any existing functions in methods/ we can add code to, so we don't end up with duplicate functions.
+
 1. Multiple tabs open img/col, export_via.py, export.py and dump.py functions can't see the current selected tab.
 
 2. export.py functions export all the files combined!!
@@ -7,7 +17,6 @@ What's fixed and still todo.
 
 export.py - select 7 entries should give me only 7 files, unless I ask to conbine them into a single col file.
 
-export_via should follow the same logic, single files or one combined file.
 
 dump should also follow the same logic, but just dump them as a single or conbined col file.
 
@@ -35,7 +44,7 @@ Todo, Theme switching from first page.
 ------------ completed ---- >
 
 Fixed - Sep04
-Dump command has been fixed.
+Dump command has been fixed
 
 Fixed - Aug26
 
