@@ -13,11 +13,61 @@ from components.img_debug_functions import img_debugger
 from components.img_core_classes import format_file_size
 
 ##Methods list -
+# diagnose_col_file_structure(col_file
 # extract_col_from_img_entry
 # get_col_basic_info
 # get_col_detailed_analysis
 # save_col_to_img_entry
 # validate_col_data
+# set_col_debug_enabled
+# is_col_debug_enabled
+
+def diagnose_col_file_structure(col_file) -> Dict[str, Any]: #vers 1
+    """Diagnose COL file structure - from col_core_classes"""
+    try:
+        diagnosis = {
+            'file_path': getattr(col_file, 'file_path', 'Unknown'),
+            'model_count': 0,
+            'total_elements': 0,
+            'models': [],
+            'errors': [],
+            'warnings': []
+        }
+
+        if not hasattr(col_file, 'models'):
+            diagnosis['errors'].append("No models attribute found")
+            return diagnosis
+
+        models = getattr(col_file, 'models', [])
+        diagnosis['model_count'] = len(models)
+
+        for i, model in enumerate(models):
+            model_info = {
+                'index': i,
+                'name': getattr(model, 'name', f'Model_{i}'),
+                'elements': 0
+            }
+
+            # Count elements
+            if hasattr(model, 'spheres'):
+                model_info['elements'] += len(getattr(model, 'spheres', []))
+            if hasattr(model, 'boxes'):
+                model_info['elements'] += len(getattr(model, 'boxes', []))
+            if hasattr(model, 'vertices'):
+                model_info['elements'] += len(getattr(model, 'vertices', []))
+            if hasattr(model, 'faces'):
+                model_info['elements'] += len(getattr(model, 'faces', []))
+
+            diagnosis['models'].append(model_info)
+            diagnosis['total_elements'] += model_info['elements']
+
+        return diagnosis
+
+    except Exception as e:
+        return {
+            'error': f"Failed to diagnose COL file: {e}",
+            'file_path': getattr(col_file, 'file_path', 'Unknown')
+        }
 
 def extract_col_from_img_entry(main_window, row: int) -> Optional[Tuple[bytes, str]]: #vers 1
     """Extract COL data from IMG entry and return data + entry name"""
@@ -230,8 +280,24 @@ def cleanup_temporary_file(file_path: str) -> bool: #vers 1
         img_debugger.warning(f"Failed to cleanup temporary file {file_path}: {str(e)}")
         return False
 
+# Global debug control functions for COL
+_global_col_debug_enabled = False
+
+def set_col_debug_enabled(enabled: bool): #vers 1
+    """Enable/disable COL debug - from col_core_classes"""
+    global _global_col_debug_enabled
+    _global_col_debug_enabled = enabled
+
+
+def is_col_debug_enabled() -> bool: #vers 1
+    """Check if COL debug enabled - from col_core_classes"""
+    return _global_col_debug_enabled
+
 # Export functions
 __all__ = [
+    'diagnose_col_file_structure',
+    'set_col_debug_enabled',
+    'is_col_debug_enabled',
     'extract_col_from_img_entry',
     'get_col_basic_info', 
     'get_col_detailed_analysis',

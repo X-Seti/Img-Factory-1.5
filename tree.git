@@ -3,6 +3,7 @@
 ├── ChangeLog
 ├── components
 │   ├── col_core_classes.py
+│   ├── col_core_classes.py-old
 │   ├── col_creator.py
 │   ├── col_debug_functions.py
 │   ├── col_editor.py
@@ -20,6 +21,7 @@
 │   ├── gta_file_editors.py
 │   ├── ide_editor.py
 │   ├── img_core_classes.py
+│   ├── img_core_classes.py-old
 │   ├── img_creator.py
 │   ├── img_debug_functions.py
 │   ├── img_factory_debug.log
@@ -128,6 +130,7 @@
 ├── locale
 │   └── local_settings.json
 ├── methods
+│   ├── col_file_operations.py
 │   ├── col_operations.py
 │   ├── colour_file_table.py
 │   ├── colour_ui_for_loaded_img.py
@@ -141,8 +144,11 @@
 │   ├── img_analyze.py
 │   ├── img_detection.py
 │   ├── img_entry_operations.py
+│   ├── img_file_operations.py
 │   ├── img_operations_routing.py
 │   ├── img_operations_shared.py
+│   ├── img_utils.py
+│   ├── img_validation.py
 │   ├── import_highlight_system.py
 │   ├── mirror_tab_shared.py
 │   ├── populate_col_table.py
@@ -1616,4 +1622,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-990 directories, 627 files
+990 directories, 633 files

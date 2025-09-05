@@ -1,19 +1,21 @@
-#this belongs in methods/ img_entry_operations.py - Version: 1
-# X-Seti - September04 2025 - IMG Factory 1.5 - IMG Entry Operations
+#this belongs in methods/ img_entry_operations.py - Version: 4
+# X-Seti - September04 2025 - IMG Factory 1.5 - IMG Entry Operations UPDATED
 
 """
-IMG Entry Operations - Shared Methods
+IMG Entry Operations - Shared Methods UPDATED
 Entry management operations for IMG files (add, remove, get, validate)
-Used by all IMG classes to maintain consistency
+Merged functions from img_core_classes.py to eliminate duplicates
 """
 
 import os
-from typing import List, Optional, Any
-from methods.img_detection import detect_entry_rw_version
+import struct
+from typing import List, Optional, Any, Tuple
+from pathlib import Path
 
 ##Methods list -
+# add_multiple_entries_batch(img_file
 # add_entry_safe
-# remove_entry_safe
+# remove_entry_safe  
 # get_entry_safe
 # has_entry_safe
 # get_entry_by_index_safe
@@ -21,21 +23,80 @@ from methods.img_detection import detect_entry_rw_version
 # validate_entry_data
 # sanitize_filename
 # create_img_entry
+# add_multiple_entries
+# import_file_to_img
+# import_directory_to_img
 # integrate_entry_operations
 
-def add_entry_safe(img_file, filename: str, data: bytes, auto_save: bool = False) -> bool: #vers 1
-    """Safely add entry to IMG file with RW detection"""
+# Constants from img_core_classes
+MAX_FILENAME_LENGTH = 24
+SECTOR_SIZE = 2048
+
+def add_multiple_entries_batch(img_file, file_data_pairs: List[tuple], auto_save: bool = True) -> int: #vers 1
+    """Add multiple entries efficiently - BATCH METHOD from img_core_classes"""
     try:
+        # Import debug system
+        try:
+            from components.img_debug_functions import img_debugger
+        except ImportError:
+            img_debugger = None
+
+        added_count = 0
+
+        if img_debugger:
+            img_debugger.debug(f"Adding {len(file_data_pairs)} entries in batch mode...")
+
+        for filename, data in file_data_pairs:
+            # Add without auto-save for efficiency
+            if add_entry_safe(img_file, filename, data, auto_save=False):
+                added_count += 1
+            else:
+                if img_debugger:
+                    img_debugger.warning(f"Failed to add {filename} in batch")
+
+        # Save once at the end if requested
+        if auto_save and added_count > 0:
+            if img_debugger:
+                img_debugger.debug(f"Batch save: {added_count} entries added")
+            # Note: save functionality would need to be implemented separately
+
+        if img_debugger:
+            img_debugger.success(f"Batch add complete: {added_count}/{len(file_data_pairs)} entries added")
+
+        return added_count
+
+    except Exception as e:
+        if img_debugger:
+            img_debugger.error(f"Batch add failed: {e}")
+        return 0
+
+
+def add_entry_safe(img_file, filename: str, data: bytes, auto_save: bool = False) -> bool: #vers 2
+    """Safely add entry to IMG file with enhanced validation"""
+    try:
+        # Import debug system
+        try:
+            from components.img_debug_functions import img_debugger
+        except ImportError:
+            img_debugger = None
+        
+        if img_debugger:
+            img_debugger.debug(f"add_entry called: {filename} ({len(data)} bytes)")
+            img_debugger.debug(f"Current IMG entries before: {len(getattr(img_file, 'entries', []))}")
+        
         # Validate inputs
         if not filename or not data:
             return False
         
         # Sanitize filename
         clean_filename = sanitize_filename(filename)
+        if clean_filename != filename and img_debugger:
+            img_debugger.debug(f"Filename sanitized: '{filename}' → '{clean_filename}'")
         
         # Check for duplicates
         if has_entry_safe(img_file, clean_filename):
-            # Handle duplicate - could expand this with dialog later
+            if img_debugger:
+                img_debugger.warning(f"Entry '{clean_filename}' already exists")
             return False
         
         # Create new entry
@@ -45,7 +106,11 @@ def add_entry_safe(img_file, filename: str, data: bytes, auto_save: bool = False
         
         # Detect RW version for DFF/TXD files
         if clean_filename.lower().endswith(('.dff', '.txd')):
-            detect_entry_rw_version(entry, data)
+            try:
+                from methods.detect_file_type_version import detect_rw_version_from_entry_data
+                detect_rw_version_from_entry_data(entry, data[:16] if len(data) >= 16 else data)
+            except ImportError:
+                pass
         
         # Add to entries list
         if not hasattr(img_file, 'entries'):
@@ -57,16 +122,28 @@ def add_entry_safe(img_file, filename: str, data: bytes, auto_save: bool = False
         if hasattr(img_file, 'modified'):
             img_file.modified = True
         
+        if img_debugger:
+            img_debugger.success(f"Added entry: {clean_filename} at offset {entry.offset}")
+        
         return True
         
     except Exception as e:
-        print(f"[ERROR] add_entry_safe failed: {e}")
+        if img_debugger:
+            img_debugger.error(f"Failed to add entry {filename}: {e}")
+        else:
+            print(f"[ERROR] add_entry_safe failed: {e}")
         return False
 
 
-def remove_entry_safe(img_file, filename: str) -> bool: #vers 1
+def remove_entry_safe(img_file, filename: str) -> bool: #vers 2
     """Safely remove entry from IMG file"""
     try:
+        # Import debug system
+        try:
+            from components.img_debug_functions import img_debugger
+        except ImportError:
+            img_debugger = None
+        
         if not hasattr(img_file, 'entries') or not img_file.entries:
             return False
         
@@ -74,27 +151,30 @@ def remove_entry_safe(img_file, filename: str) -> bool: #vers 1
         for i, entry in enumerate(img_file.entries):
             entry_name = getattr(entry, 'name', '')
             if entry_name.lower() == filename.lower():
-                removed_entry = img_file.entries.pop(i)
+                del img_file.entries[i]
                 
                 # Mark as modified
                 if hasattr(img_file, 'modified'):
                     img_file.modified = True
                 
-                # Add to deleted entries list
-                if hasattr(img_file, 'deleted_entries'):
-                    img_file.deleted_entries.append(removed_entry)
-                
+                if img_debugger:
+                    img_debugger.success(f"Removed entry: {filename}")
                 return True
         
+        if img_debugger:
+            img_debugger.warning(f"Entry '{filename}' not found for removal")
         return False
         
     except Exception as e:
-        print(f"[ERROR] remove_entry_safe failed: {e}")
+        if img_debugger:
+            img_debugger.error(f"Error removing entry {filename}: {e}")
+        else:
+            print(f"[ERROR] remove_entry_safe failed: {e}")
         return False
 
 
-def get_entry_safe(img_file, filename: str) -> Optional[Any]: #vers 1
-    """Safely get entry by filename"""
+def get_entry_safe(img_file, filename: str) -> Optional[Any]: #vers 2
+    """Safely get entry by name"""
     try:
         if not hasattr(img_file, 'entries') or not img_file.entries:
             return None
@@ -110,15 +190,24 @@ def get_entry_safe(img_file, filename: str) -> Optional[Any]: #vers 1
         return None
 
 
-def has_entry_safe(img_file, filename: str) -> bool: #vers 1
+def has_entry_safe(img_file, filename: str) -> bool: #vers 2
     """Safely check if entry exists"""
     try:
-        return get_entry_safe(img_file, filename) is not None
+        if not hasattr(img_file, 'entries') or not img_file.entries:
+            return False
+        
+        for entry in img_file.entries:
+            entry_name = getattr(entry, 'name', '')
+            if entry_name.lower() == filename.lower():
+                return True
+        
+        return False
+        
     except Exception:
         return False
 
 
-def get_entry_by_index_safe(img_file, index: int) -> Optional[Any]: #vers 1
+def get_entry_by_index_safe(img_file, index: int) -> Optional[Any]: #vers 2
     """Safely get entry by index"""
     try:
         if not hasattr(img_file, 'entries') or not img_file.entries:
@@ -133,57 +222,54 @@ def get_entry_by_index_safe(img_file, index: int) -> Optional[Any]: #vers 1
         return None
 
 
-def calculate_next_offset(img_file) -> int: #vers 1
+def calculate_next_offset(img_file) -> int: #vers 2
     """Calculate next available offset for new entry"""
     try:
         if not hasattr(img_file, 'entries') or not img_file.entries:
-            # First entry
+            # Check IMG version to determine starting offset
             if hasattr(img_file, 'version'):
-                if hasattr(img_file.version, 'name') and img_file.version.name == 'VERSION_1':
-                    return 0
-                else:
-                    return 2048  # V2 reserve space for directory
-            return 0
+                version_name = getattr(img_file.version, 'name', None) or str(img_file.version)
+                if 'VERSION_2' in version_name or '2' in str(version_name):
+                    return SECTOR_SIZE  # 2048 for V2
+            return 0  # 0 for V1
         
-        # Find max offset + size
-        max_end = 0
+        # Find the highest end offset
+        max_offset = 0
         for entry in img_file.entries:
             entry_offset = getattr(entry, 'offset', 0)
             entry_size = getattr(entry, 'size', 0)
-            entry_end = entry_offset + entry_size
-            
-            if entry_end > max_end:
-                max_end = entry_end
+            end_offset = entry_offset + entry_size
+            if end_offset > max_offset:
+                max_offset = end_offset
         
-        # Align to sector boundary (2048 bytes)
-        return ((max_end + 2047) // 2048) * 2048
+        # Align to sector boundary
+        return ((max_offset + SECTOR_SIZE - 1) // SECTOR_SIZE) * SECTOR_SIZE
         
-    except Exception as e:
-        print(f"[ERROR] calculate_next_offset failed: {e}")
-        return 0
+    except Exception:
+        return SECTOR_SIZE  # Safe fallback
 
 
-def validate_entry_data(filename: str, data: bytes) -> tuple[bool, str]: #vers 1
-    """Validate entry data before adding"""
+def validate_entry_data(filename: str, data: bytes) -> Tuple[bool, str]: #vers 2
+    """Validate entry filename and data"""
     try:
         # Check filename
         if not filename or len(filename.strip()) == 0:
-            return False, "Empty filename"
+            return False, "Filename cannot be empty"
         
-        if len(filename) > 24:
-            return False, "Filename too long (max 24 characters)"
+        if len(filename) > MAX_FILENAME_LENGTH:
+            return False, f"Filename too long (max {MAX_FILENAME_LENGTH} chars)"
         
-        # Check data
-        if not data or len(data) == 0:
-            return False, "Empty file data"
-        
-        if len(data) > 100 * 1024 * 1024:  # 100MB limit
-            return False, "File too large (max 100MB)"
-        
-        # Check filename characters
-        invalid_chars = '<>:"|?*'
+        # Check for invalid characters
+        invalid_chars = '<>:"|?*\\/\r\n\t'
         if any(char in filename for char in invalid_chars):
             return False, f"Invalid characters in filename: {invalid_chars}"
+        
+        # Check data
+        if not data:
+            return False, "Data cannot be empty"
+        
+        if len(data) == 0:
+            return False, "Data size is zero"
         
         return True, "Valid"
         
@@ -191,7 +277,7 @@ def validate_entry_data(filename: str, data: bytes) -> tuple[bool, str]: #vers 1
         return False, f"Validation error: {e}"
 
 
-def sanitize_filename(filename: str) -> str: #vers 1
+def sanitize_filename(filename: str) -> str: #vers 2
     """Sanitize filename for IMG entry"""
     try:
         if not filename:
@@ -202,13 +288,13 @@ def sanitize_filename(filename: str) -> str: #vers 1
         clean_name = ''.join(c for c in filename if c not in invalid_chars)
         
         # Trim to max length
-        if len(clean_name) > 24:
+        if len(clean_name) > MAX_FILENAME_LENGTH:
             name_part, ext_part = os.path.splitext(clean_name)
             if len(ext_part) > 0:
-                max_name_len = 24 - len(ext_part)
+                max_name_len = MAX_FILENAME_LENGTH - len(ext_part)
                 clean_name = name_part[:max_name_len] + ext_part
             else:
-                clean_name = clean_name[:24]
+                clean_name = clean_name[:MAX_FILENAME_LENGTH]
         
         # Ensure not empty
         if not clean_name or clean_name.isspace():
@@ -220,10 +306,9 @@ def sanitize_filename(filename: str) -> str: #vers 1
         return "unknown"
 
 
-def create_img_entry(filename: str, data: bytes, img_file) -> Optional[Any]: #vers 1
-    """Create new IMG entry object"""
+def create_img_entry(filename: str, data: bytes, img_file) -> Optional[Any]: #vers 2
+    """Create new IMG entry object with multiple fallbacks"""
     try:
-        # Import IMG entry class - try multiple locations
         entry = None
         
         # Try components/img_core_classes.py
@@ -248,22 +333,33 @@ def create_img_entry(filename: str, data: bytes, img_file) -> Optional[Any]: #ve
                     self.name = ""
                     self.size = 0
                     self.offset = 0
+                    self.actual_size = 0
+                    self.actual_offset = 0
                     self.data = None
                     self.is_new_entry = True
+                    self._cached_data = None
+                
+                def set_img_file(self, img_file):
+                    self.img_file = img_file
             
             entry = SimpleIMGEntry()
         
         # Set entry properties
         entry.name = filename
         entry.size = len(data)
+        entry.actual_size = len(data)
         entry.offset = calculate_next_offset(img_file)
+        entry.actual_offset = entry.offset
         entry.is_new_entry = True
         
         # Store data
-        if hasattr(entry, 'data'):
-            entry.data = data
-        elif hasattr(entry, '_cached_data'):
+        if hasattr(entry, '_cached_data'):
             entry._cached_data = data
+        elif hasattr(entry, 'data'):
+            entry.data = data
+        else:
+            # Add data attribute manually
+            entry.data = data
         
         # Set IMG file reference if method exists
         if hasattr(entry, 'set_img_file'):
@@ -276,7 +372,107 @@ def create_img_entry(filename: str, data: bytes, img_file) -> Optional[Any]: #ve
         return None
 
 
-def integrate_entry_operations(main_window) -> bool: #vers 1
+def add_multiple_entries(img_file, entries: List[Any]) -> int: #vers 2
+    """Add multiple entries to IMG file"""
+    try:
+        # Import debug system
+        try:
+            from components.img_debug_functions import img_debugger
+        except ImportError:
+            img_debugger = None
+        
+        added_count = 0
+        
+        if not hasattr(img_file, 'entries'):
+            img_file.entries = []
+        
+        for entry in entries:
+            entry_name = getattr(entry, 'name', '')
+            if not entry_name:
+                continue
+            
+            # Skip duplicates
+            if has_entry_safe(img_file, entry_name):
+                continue
+            
+            # Set IMG file reference
+            if hasattr(entry, 'set_img_file'):
+                entry.set_img_file(img_file)
+            
+            img_file.entries.append(entry)
+            added_count += 1
+        
+        # Mark as modified
+        if hasattr(img_file, 'modified'):
+            img_file.modified = True
+        
+        if img_debugger:
+            img_debugger.success(f"Added {added_count} entries")
+        
+        return added_count
+        
+    except Exception as e:
+        if img_debugger:
+            img_debugger.error(f"Batch add failed: {e}")
+        else:
+            print(f"[ERROR] add_multiple_entries failed: {e}")
+        return 0
+
+
+def import_file_to_img(img_file, file_path: str) -> bool: #vers 2
+    """Import single file into IMG"""
+    try:
+        if not os.path.exists(file_path):
+            return False
+        
+        filename = os.path.basename(file_path)
+        
+        # Read file data
+        with open(file_path, 'rb') as f:
+            data = f.read()
+        
+        # Use add_entry_safe method
+        return add_entry_safe(img_file, filename, data)
+        
+    except Exception as e:
+        print(f"[ERROR] import_file_to_img failed: {e}")
+        return False
+
+
+def import_directory_to_img(img_file, directory_path: str, recursive: bool = False) -> int: #vers 2
+    """Import directory contents into IMG"""
+    try:
+        if not os.path.exists(directory_path) or not os.path.isdir(directory_path):
+            return 0
+        
+        imported_count = 0
+        
+        # Get file list
+        if recursive:
+            file_list = []
+            for root, dirs, files in os.walk(directory_path):
+                for file in files:
+                    file_list.append(os.path.join(root, file))
+        else:
+            file_list = [
+                os.path.join(directory_path, f)
+                for f in os.listdir(directory_path)
+                if os.path.isfile(os.path.join(directory_path, f))
+            ]
+        
+        # Import each file
+        for file_path in file_list:
+            if import_file_to_img(img_file, file_path):
+                imported_count += 1
+        
+        return imported_count
+        
+    except Exception as e:
+        print(f"[ERROR] import_directory_to_img failed: {e}")
+        return 0
+
+
+def integrate_entry_operations(main_window) -> bool: #vers 2
     """Integrate entry operations into main window"""
     try:
         # Add entry operation methods
@@ -287,9 +483,12 @@ def integrate_entry_operations(main_window) -> bool: #vers 1
         main_window.calculate_next_offset = lambda img_file: calculate_next_offset(img_file)
         main_window.sanitize_filename = sanitize_filename
         main_window.validate_entry_data = validate_entry_data
+        main_window.add_multiple_entries = lambda img_file, entries: add_multiple_entries(img_file, entries)
+        main_window.import_file_to_img = lambda img_file, file_path: import_file_to_img(img_file, file_path)
+        main_window.import_directory_to_img = lambda img_file, directory_path, recursive=False: import_directory_to_img(img_file, directory_path, recursive)
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ IMG entry operations integrated")
+            main_window.log_message("✅ IMG entry operations integrated (updated)")
         
         return True
         
@@ -301,6 +500,7 @@ def integrate_entry_operations(main_window) -> bool: #vers 1
 
 # Export functions
 __all__ = [
+    'add_multiple_entries_batch',
     'add_entry_safe',
     'remove_entry_safe', 
     'get_entry_safe',
@@ -310,5 +510,8 @@ __all__ = [
     'validate_entry_data',
     'sanitize_filename',
     'create_img_entry',
+    'add_multiple_entries',
+    'import_file_to_img',
+    'import_directory_to_img',
     'integrate_entry_operations'
 ]

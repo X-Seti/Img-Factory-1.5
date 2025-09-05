@@ -1,237 +1,357 @@
-#this belongs in methods/ img_detection.py - Version: 1
-# X-Seti - September04 2025 - IMG Factory 1.5 - IMG Detection Functions
+#this belongs in methods/ img_detection.py - Version: 3
+# X-Seti - September04 2025 - IMG Factory 1.5 - IMG Detection UPDATED
 
 """
-IMG Detection Functions - RW Version Detection
-Centralized RW version detection for all IMG entry types
-Uses existing core/rw_versions.py functions
+IMG Detection - RW Version and Platform Detection UPDATED
+Merged with detect_file_type_version.py functions + added new detection from img_core_classes.py
 """
 
+import os
 import struct
-from typing import Optional, Tuple
+from typing import Optional, Any, Tuple, Dict
+from pathlib import Path
 
 ##Methods list -
+# detect_entry_file_type_and_version
+# detect_rw_version_from_entry_data
+# get_file_type_from_extension
+# read_entry_data_header
+# detect_img_version
+# detect_img_platform
+# get_img_platform_info
 # detect_entry_rw_version
-# detect_rw_version_from_data
-# parse_rw_header
-# get_rw_version_name
-# is_renderware_file
-# detect_file_type_from_extension
 # integrate_detection_functions
 
-def detect_entry_rw_version(entry, data: bytes) -> bool: #vers 1
-    """Detect RW version for an entry from file data"""
+def detect_entry_file_type_and_version(entry, img_file=None) -> bool: #vers 3
+    """Clean file type and RW version detection - ENHANCED
+    
+    Args:
+        entry: Entry object with .name attribute
+        img_file: Parent IMG file for data access (optional)
+    
+    Returns:
+        bool: True if detection succeeded, False if failed
+    """
     try:
-        # Initialize RW properties
-        if hasattr(entry, '_rw_version'):
-            entry._rw_version = None
-        if hasattr(entry, '_rw_version_name'):
-            entry._rw_version_name = "Unknown"
-        if hasattr(entry, 'rw_version'):
-            entry.rw_version = 0
-        if hasattr(entry, 'rw_version_name'):
-            entry.rw_version_name = "Unknown"
+        # Import debug system
+        try:
+            from components.img_debug_functions import img_debugger
+        except ImportError:
+            img_debugger = None
         
-        # Check if it's a RenderWare file
-        file_ext = getattr(entry, 'name', '').lower()
-        if not file_ext.endswith(('.dff', '.txd')):
-            # Not a RenderWare file
-            if hasattr(entry, '_rw_version_name'):
-                entry._rw_version_name = "Not RenderWare"
-            if hasattr(entry, 'rw_version_name'):
-                entry.rw_version_name = "Not RenderWare"
-            return True
+        # Must have a name
+        if not hasattr(entry, 'name') or not entry.name:
+            if img_debugger:
+                img_debugger.error("Entry has no name - detection failed")
+            return False
         
-        # Try to detect RW version from data
-        version_value, version_name = detect_rw_version_from_data(data)
-        
-        if version_value > 0:
-            # Set RW version properties
-            if hasattr(entry, '_rw_version'):
-                entry._rw_version = version_value
-            if hasattr(entry, '_rw_version_name'):
-                entry._rw_version_name = version_name
-            if hasattr(entry, 'rw_version'):
-                entry.rw_version = version_value
-            if hasattr(entry, 'rw_version_name'):
-                entry.rw_version_name = version_name
-            
-            return True
+        # Extract extension from name
+        if '.' in entry.name:
+            entry.extension = entry.name.split('.')[-1].lower()
         else:
-            # Failed to detect
-            if hasattr(entry, '_rw_version_name'):
-                entry._rw_version_name = "RW File"
-            if hasattr(entry, 'rw_version_name'):
-                entry.rw_version_name = "RW File"
-            return False
+            entry.extension = 'unknown'
+        
+        # Get file type from extension
+        entry.file_type = get_file_type_from_extension(entry.extension)
+        
+        # For RW files, detect version from data
+        if entry.extension in ['dff', 'txd', 'anp', 'ifp']:
+            if img_file:
+                header_data = read_entry_data_header(entry, img_file, 16)
+                if header_data:
+                    detect_rw_version_from_entry_data(entry, header_data)
+        
+        # Enhanced detection for other formats
+        if entry.extension == 'col':
+            entry.file_type = 'Collision'
+        elif entry.extension in ['wav', 'mp3', 'ogg']:
+            entry.file_type = 'Audio'
+        elif entry.extension in ['bmp', 'png', 'jpg', 'jpeg']:
+            entry.file_type = 'Image'
+        
+        if img_debugger:
+            img_debugger.debug(f"Detected: {entry.name} -> {entry.file_type} ({entry.extension})")
+        
+        return True
         
     except Exception as e:
-        # Error during detection
-        if hasattr(entry, '_rw_version_name'):
-            entry._rw_version_name = f"Error: {str(e)}"
-        if hasattr(entry, 'rw_version_name'):
-            entry.rw_version_name = f"Error: {str(e)}"
+        if img_debugger:
+            img_debugger.error(f"Detection failed for {getattr(entry, 'name', 'unknown')}: {e}")
         return False
 
 
-def detect_rw_version_from_data(data: bytes) -> Tuple[int, str]: #vers 1
-    """Detect RW version from raw file data"""
+def detect_rw_version_from_entry_data(entry, header_data: bytes) -> bool: #vers 3
+    """Detect RW version from entry header data"""
     try:
-        if len(data) < 12:
-            return 0, "Too small"
-        
-        # Try to import existing RW detection functions
+        # Import RW version functions
         try:
-            from core.rw_versions import parse_rw_version, get_rw_version_name, is_valid_rw_version
-            
-            # RW version is usually at offset 8-12
-            version_bytes = data[8:12]
-            version_value, version_name = parse_rw_version(version_bytes)
-            
-            if version_value > 0 and is_valid_rw_version(version_value):
-                return version_value, version_name
-            
+            from core.rw_versions import parse_rw_version, get_rw_version_name
         except ImportError:
-            pass
-        
-        # Fallback manual detection
-        version_value, version_name = parse_rw_header(data)
-        if version_value > 0:
-            return version_value, version_name
-        
-        return 0, "Unknown"
-        
-    except Exception as e:
-        return 0, f"Error: {str(e)}"
-
-
-def parse_rw_header(data: bytes) -> Tuple[int, str]: #vers 1
-    """Manual RW header parsing fallback"""
-    try:
-        if len(data) < 12:
-            return 0, "Too small"
-        
-        # RenderWare files start with section header
-        # Bytes 0-4: Section type
-        # Bytes 4-8: Section size
-        # Bytes 8-12: RW version
-        
-        section_type = struct.unpack('<I', data[0:4])[0]
-        section_size = struct.unpack('<I', data[4:8])[0]
-        rw_version = struct.unpack('<I', data[8:12])[0]
-        
-        # Validate section type (common RW sections)
-        valid_sections = [0x0001, 0x000E, 0x0010, 0x0014, 0x0015, 0x0016, 0x001A]
-        
-        if section_type in valid_sections and section_size > 0:
-            # Convert version to readable format
-            version_name = get_rw_version_name(rw_version)
-            return rw_version, version_name
-        
-        return 0, "Invalid RW header"
-        
-    except Exception as e:
-        return 0, f"Parse error: {str(e)}"
-
-
-def get_rw_version_name(version_value: int) -> str: #vers 1
-    """Convert RW version value to human readable name"""
-    try:
-        # Try to use existing function
-        try:
-            from core.rw_versions import get_rw_version_name as core_get_version
-            return core_get_version(version_value)
-        except ImportError:
-            pass
-        
-        # Fallback version mapping
-        version_map = {
-            0x30000: "3.0.0.0",
-            0x31001: "3.1.0.1 GTA III",
-            0x32000: "3.2.0.0", 
-            0x33002: "3.3.0.2 GTA VC (PC)",
-            0x34001: "3.4.0.1",
-            0x34003: "3.4.0.3",
-            0x35000: "3.5.0.0",
-            0x35002: "3.5.0.2",
-            0x36003: "3.6.0.3 GTA SA (PC)",
-            0x37002: "3.7.0.2"
-        }
-        
-        if version_value in version_map:
-            return version_map[version_value]
-        
-        # Try to format as version number
-        if version_value > 0:
-            major = (version_value >> 16) & 0xFF
-            minor = (version_value >> 8) & 0xFF
-            patch1 = (version_value >> 4) & 0xF
-            patch2 = version_value & 0xF
-            return f"{major}.{minor}.{patch1}.{patch2}"
-        
-        return "Unknown"
-        
-    except Exception:
-        return "Unknown"
-
-
-def is_renderware_file(filename: str) -> bool: #vers 1
-    """Check if file is a RenderWare file by extension"""
-    try:
-        if not filename:
             return False
         
-        filename_lower = filename.lower()
-        rw_extensions = ['.dff', '.txd']
+        if len(header_data) < 12:
+            return False
         
-        return any(filename_lower.endswith(ext) for ext in rw_extensions)
+        # Read RW header structure
+        try:
+            section_type = struct.unpack('<I', header_data[0:4])[0]
+            section_size = struct.unpack('<I', header_data[4:8])[0]
+            rw_version = struct.unpack('<I', header_data[8:12])[0]
+            
+            # Parse RW version
+            version_info = parse_rw_version(rw_version)
+            if version_info:
+                entry.rw_version = rw_version
+                entry.rw_version_string = get_rw_version_name(rw_version)
+                entry.rw_section_type = section_type
+                entry.rw_section_size = section_size
+                return True
+                
+        except struct.error:
+            pass
+        
+        return False
         
     except Exception:
         return False
 
 
-def detect_file_type_from_extension(filename: str) -> str: #vers 1
-    """Detect file type from extension"""
+def get_file_type_from_extension(extension: str) -> str: #vers 3
+    """Get file type description from extension"""
     try:
-        if not filename or '.' not in filename:
-            return "UNKNOWN"
+        extension = extension.lower().strip('.')
         
-        ext = filename.split('.')[-1].upper()
-        
-        # Clean extension (letters only)
-        ext = ''.join(c for c in ext if c.isalpha())
-        
-        # Common IMG file types
         type_map = {
-            'DFF': 'MODEL',
-            'TXD': 'TEXTURE',
-            'COL': 'COLLISION', 
-            'IFP': 'ANIMATION',
-            'IPL': 'PLACEMENT',
-            'IDE': 'DEFINITION',
-            'DAT': 'DATA',
-            'WAV': 'AUDIO',
-            'SCM': 'SCRIPT'
+            'dff': 'Model',
+            'txd': 'Texture Dictionary',
+            'col': 'Collision',
+            'ide': 'Item Definition',
+            'ipl': 'Item Placement',
+            'dat': 'Data',
+            'cfg': 'Configuration',
+            'anp': 'Animation Package',
+            'ifp': 'Animation',
+            'wav': 'Audio Wave',
+            'mp3': 'Audio MP3',
+            'ogg': 'Audio OGG',
+            'bmp': 'Bitmap Image',
+            'png': 'PNG Image',
+            'jpg': 'JPEG Image',
+            'jpeg': 'JPEG Image',
+            'tga': 'TGA Image',
+            'gif': 'GIF Image',
+            'txt': 'Text File',
+            'log': 'Log File',
+            'xml': 'XML File',
+            'json': 'JSON File'
         }
         
-        return type_map.get(ext, ext)
+        return type_map.get(extension, 'Unknown')
         
     except Exception:
-        return "UNKNOWN"
+        return 'Unknown'
 
 
-def integrate_detection_functions(main_window) -> bool: #vers 1
+def read_entry_data_header(entry, img_file=None, num_bytes: int = 16) -> Optional[bytes]: #vers 3
+    """Read header bytes from entry data"""
+    try:
+        # Method 1: Check for cached data
+        if hasattr(entry, 'data') and entry.data:
+            return entry.data[:num_bytes]
+        
+        if hasattr(entry, '_cached_data') and entry._cached_data:
+            return entry._cached_data[:num_bytes]
+        
+        # Method 2: Use get_data method if available
+        if hasattr(entry, 'get_data'):
+            try:
+                full_data = entry.get_data()
+                if full_data and len(full_data) >= num_bytes:
+                    return full_data[:num_bytes]
+            except Exception:
+                pass
+        
+        # Method 3: Read directly from IMG file
+        if img_file and hasattr(entry, 'offset') and hasattr(entry, 'size'):
+            try:
+                file_path = getattr(img_file, 'file_path', None)
+                if file_path and os.path.exists(file_path):
+                    # Handle Version 1 IMG files
+                    if hasattr(img_file, 'version'):
+                        version_name = getattr(img_file.version, 'name', None) or str(img_file.version)
+                        if 'VERSION_1' in version_name and file_path.endswith('.dir'):
+                            file_path = file_path[:-4] + '.img'
+                    
+                    with open(file_path, 'rb') as f:
+                        f.seek(entry.offset)
+                        return f.read(num_bytes)
+            except Exception:
+                pass
+        
+        return None
+        
+    except Exception:
+        return None
+
+
+def detect_img_version(file_path: str) -> Tuple[int, str]: #vers 3
+    """Detect IMG file version from file structure"""
+    try:
+        if not os.path.exists(file_path):
+            return 0, "File not found"
+        
+        # Check for .dir/.img pair (Version 1)
+        if file_path.endswith('.dir'):
+            img_path = file_path[:-4] + '.img'
+            if os.path.exists(img_path):
+                return 1, "Version 1 (DIR/IMG pair)"
+        
+        # Check single .img file (Version 2)
+        if file_path.endswith('.img'):
+            try:
+                with open(file_path, 'rb') as f:
+                    # Read first 8 bytes
+                    header = f.read(8)
+                    if len(header) >= 4:
+                        # Check for VER2 signature
+                        if header[:4] == b'VER2':
+                            return 2, "Version 2 (Single IMG file)"
+                        
+                        # If no VER2 signature but it's an .img file, might be Version 1 .img file
+                        dir_path = file_path[:-4] + '.dir'
+                        if os.path.exists(dir_path):
+                            return 1, "Version 1 (DIR/IMG pair)"
+                        
+                        # Single IMG without DIR might be Version 2 without signature
+                        return 2, "Version 2 (Assumed)"
+            except Exception:
+                pass
+        
+        return 0, "Unknown format"
+        
+    except Exception as e:
+        return 0, f"Detection error: {e}"
+
+
+def detect_img_platform(file_path: str) -> str: #vers 3
+    """Detect IMG file platform from characteristics"""
+    try:
+        # Simple heuristics based on file path and name
+        file_path_lower = file_path.lower()
+        
+        # Path-based detection
+        if 'ps2' in file_path_lower:
+            return 'ps2'
+        elif 'xbox' in file_path_lower:
+            return 'xbox'
+        elif 'pc' in file_path_lower:
+            return 'pc'
+        
+        # Filename-based detection
+        filename = os.path.basename(file_path_lower)
+        if 'ps2' in filename:
+            return 'ps2'
+        elif 'xbox' in filename:
+            return 'xbox'
+        
+        # Default to PC if no specific indicators
+        return 'pc'
+        
+    except Exception:
+        return 'pc'
+
+
+def get_img_platform_info(platform: str) -> Dict[str, Any]: #vers 3
+    """Get detailed platform information"""
+    try:
+        platform_info = {
+            'pc': {
+                'name': 'PC',
+                'endianness': 'little',
+                'sector_size': 2048,
+                'max_filename_length': 24,
+                'compression_support': True,
+                'alignment': 4
+            },
+            'ps2': {
+                'name': 'PlayStation 2',
+                'endianness': 'little',
+                'sector_size': 2048,
+                'max_filename_length': 24,
+                'compression_support': False,
+                'alignment': 16
+            },
+            'xbox': {
+                'name': 'Xbox',
+                'endianness': 'little',
+                'sector_size': 2048,
+                'max_filename_length': 24,
+                'compression_support': True,
+                'alignment': 4
+            }
+        }
+        
+        return platform_info.get(platform.lower(), platform_info['pc'])
+        
+    except Exception:
+        return platform_info['pc']
+
+
+def get_platform_specific_specs(platform: str) -> Dict[str, Any]: #vers 1
+    """Get platform specs - from img_core_classes"""
+    return get_img_platform_info(platform)
+
+
+def detect_entry_rw_version(entry, data: bytes = None) -> bool: #vers 3
+    """Enhanced RW version detection for entry"""
+    try:
+        # Import debug system
+        try:
+            from components.img_debug_functions import img_debugger
+        except ImportError:
+            img_debugger = None
+        
+        # Use provided data or try to get from entry
+        header_data = data
+        if not header_data:
+            if hasattr(entry, 'data') and entry.data:
+                header_data = entry.data[:16]
+            elif hasattr(entry, '_cached_data') and entry._cached_data:
+                header_data = entry._cached_data[:16]
+        
+        if not header_data or len(header_data) < 12:
+            return False
+        
+        # Detect RW version
+        success = detect_rw_version_from_entry_data(entry, header_data)
+        
+        if success and img_debugger:
+            rw_version_string = getattr(entry, 'rw_version_string', 'Unknown')
+            img_debugger.debug(f"RW version detected for {entry.name}: {rw_version_string}")
+        
+        return success
+        
+    except Exception as e:
+        if img_debugger:
+            img_debugger.error(f"RW version detection failed: {e}")
+        return False
+
+
+def integrate_detection_functions(main_window) -> bool: #vers 3
     """Integrate detection functions into main window"""
     try:
-        # Add detection methods
+        # Add detection functions
+        main_window.detect_entry_file_type_and_version = detect_entry_file_type_and_version
+        main_window.detect_rw_version_from_entry_data = detect_rw_version_from_entry_data
+        main_window.get_file_type_from_extension = get_file_type_from_extension
+        main_window.read_entry_data_header = read_entry_data_header
+        main_window.detect_img_version = detect_img_version
+        main_window.detect_img_platform = detect_img_platform
+        main_window.get_img_platform_info = get_img_platform_info
         main_window.detect_entry_rw_version = detect_entry_rw_version
-        main_window.detect_rw_version_from_data = detect_rw_version_from_data
-        main_window.is_renderware_file = is_renderware_file
-        main_window.detect_file_type_from_extension = detect_file_type_from_extension
-        main_window.get_rw_version_name = get_rw_version_name
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ RW detection functions integrated")
+            main_window.log_message("✅ IMG detection functions integrated (updated)")
         
         return True
         
@@ -243,11 +363,13 @@ def integrate_detection_functions(main_window) -> bool: #vers 1
 
 # Export functions
 __all__ = [
+    'detect_entry_file_type_and_version',
+    'detect_rw_version_from_entry_data', 
+    'get_file_type_from_extension',
+    'read_entry_data_header',
+    'detect_img_version',
+    'detect_img_platform',
+    'get_img_platform_info',
     'detect_entry_rw_version',
-    'detect_rw_version_from_data',
-    'parse_rw_header',
-    'get_rw_version_name',
-    'is_renderware_file',
-    'detect_file_type_from_extension',
     'integrate_detection_functions'
 ]
