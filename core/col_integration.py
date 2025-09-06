@@ -6,7 +6,7 @@ Complete COL Integration - Integrates all COL functionality into IMG Factory
 Connects all COL components, methods, and GUI elements
 """
 
-from components.img_debug_functions import img_debugger
+from debug.img_debug_functions import img_debugger
 
 ##Methods list -
 # integrate_complete_col_system
@@ -22,10 +22,10 @@ def verify_col_components() -> bool: #vers 1
     missing_components = []
     
     try:
-        from components.col_core_classes import COLFile, COLModel
+        from methods.col_core_classes import COLFile, COLModel
         img_debugger.debug("✅ COL core classes available")
     except ImportError:
-        missing_components.append("components.col_core_classes")
+        missing_components.append("methods.col_core_classes")
     
     try:
         from components.col_editor import COLEditorDialog
@@ -40,10 +40,10 @@ def verify_col_components() -> bool: #vers 1
         missing_components.append("components.col_utilities")
     
     try:
-        from components.col_validator import COLValidator
+        from methods.col_validation import COLValidator
         img_debugger.debug("✅ COL validator available")
     except ImportError:
-        missing_components.append("components.col_validator")
+        missing_components.append("methods.col_validation")
     
     try:
         from methods.col_operations import extract_col_from_img_entry

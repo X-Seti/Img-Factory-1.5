@@ -48,10 +48,10 @@ from utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsD
 from components.img_creator import NewIMGDialog, IMGCreationThread
 from components.img_templates import IMGTemplateManager, TemplateManagerDialog
 from components.img_validator import IMGValidator
-from components.img_core_classes import (
+from methods.img_core_classes import (
     IMGFile, IMGEntry, IMGVersion, Platform,
     IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel, format_file_size)
-from components.col_core_classes import (
+from methods.col_core_classes import (
     COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup,
     COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox,
     diagnose_col_file, set_col_debug_enabled, is_col_debug_enabled
@@ -59,14 +59,14 @@ from components.col_core_classes import (
 
 #Editoring Functions
 from components.txd_editor import TXDEditor
-from components.col_parsing_functions import load_col_file_safely
+from methods.col_parsing_functions import load_col_file_safely
 from components.img_integration_main import integrate_img_functions, img_core_functions
 from components.col_integration_main import integrate_complete_col_system
 from components.col_functions import setup_complete_col_integration
-from components.col_debug_functions import set_col_debug_enabled
-from components.col_parsing_functions import load_col_file_safely
+from debug.col_debug_functions import set_col_debug_enabled
+from methods.col_parsing_functions import load_col_file_safely
 from components.col_structure_manager import COLStructureManager
-from components.unified_debug_functions import integrate_all_improvements, install_debug_control_system
+from debug.unified_debug_functions import integrate_all_improvements, install_debug_control_system
 
 #Core functions.
 from core.img_formats import GameSpecificIMGDialog, IMGCreator
@@ -989,7 +989,7 @@ class IMGFactory(QMainWindow):
                 # Show file info if IMG is loaded
                 if self.current_img and row < len(self.current_img.entries):
                     entry = self.current_img.entries[row]
-                    from components.img_core_classes import format_file_size
+                    from methods.img_core_classes import format_file_size
                     self.log_message(f"File info: {entry.name} ({format_file_size(entry.size)})")
             else:
                 self.log_message(f"Double-clicked row {row} (no filename found)")
@@ -1343,7 +1343,7 @@ class IMGFactory(QMainWindow):
             self.current_col._debug_enabled = True
 
         # Set global flag for future COL files
-        import components.col_core_classes as col_module
+        import methods.col_core_classes as col_module
         col_module._global_debug_enabled = True
 
         self.log_message("🔊 COL debug output enabled")
@@ -1356,7 +1356,7 @@ class IMGFactory(QMainWindow):
             self.current_col._debug_enabled = False
 
         # Set global flag for future COL files
-        import components.col_core_classes as col_module
+        import methods.col_core_classes as col_module
         col_module._global_debug_enabled = False
 
         self.log_message("🔇 COL debug output disabled")
@@ -1364,7 +1364,7 @@ class IMGFactory(QMainWindow):
     def toggle_col_debug(self): #vers 2 #restore
         """Toggle COL debug output"""
         try:
-            import components.col_core_classes as col_module
+            import methods.col_core_classes as col_module
             debug_enabled = getattr(col_module, '_global_debug_enabled', False)
 
             if debug_enabled:
@@ -1882,7 +1882,7 @@ class IMGFactory(QMainWindow):
                 return True  # ← Return immediately, let threading finish
                 try:
                     # Import IMG loading components directly
-                    from components.img_core_classes import IMGFile
+                    from methods.img_core_classes import IMGFile
                     from methods.populate_img_table import populate_img_table
 
                     # Create IMG file object
@@ -2375,7 +2375,7 @@ class IMGFactory(QMainWindow):
         try:
             # Use the same formatting as IMG entries
             try:
-                from components.img_core_classes import format_file_size
+                from methods.img_core_classes import format_file_size
                 return format_file_size(size_bytes)
             except:
                 pass
@@ -3224,7 +3224,7 @@ class IMGFactory(QMainWindow):
                 def toggle_col_debug():
                     """Simple COL debug toggle"""
                     try:
-                        import components.col_core_classes as col_module
+                        import methods.col_core_classes as col_module
                         current = getattr(col_module, '_global_debug_enabled', False)
                         col_module._global_debug_enabled = not current
 
@@ -3240,7 +3240,7 @@ class IMGFactory(QMainWindow):
                 self.toggle_col_debug = toggle_col_debug
 
                 # Start with debug disabled for performance
-                import components.col_core_classes as col_module
+                import methods.col_core_classes as col_module
                 col_module._global_debug_enabled = False
 
                 self.log_message("✅ COL performance mode enabled")

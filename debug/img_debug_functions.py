@@ -1,4 +1,4 @@
-# this belongs in components/img_debug_functions.py - version 2
+# this belongs in debug.img_debug_functions.py - version 2
 #!/usr/bin/env python3
 """
 X-Seti - June26 2025 - IMG Debug - Debugging utilities for IMG Factory
@@ -13,8 +13,8 @@ import time
 from typing import Any, Dict, List, Optional
 from pathlib import Path
 
-#from components.unified_debug_functions import debug_trace
-from unified_debug_functions import debug_trace
+#from debug.unified_debug_functions import debug_trace
+from debug.unified_debug_functions import debug_trace
 
 
 class IMGDebugger:

@@ -59,7 +59,7 @@ def main():
         "/home/x2/Documents/GitHub/Img Factory 1.5/components/col_integration.py",
         "/home/x2/Documents/GitHub/Img Factory 1.5/components/col_utilities.py",
         "/home/x2/Documents/GitHub/Img Factory 1.5/components/img_combined_open_dialog.py",
-        "/home/x2/Documents/GitHub/Img Factory 1.5/components/img_core_classes.py",
+        "/home/x2/Documents/GitHub/Img Factory 1.5/methods.img_core_classes.py",
         "/home/x2/Documents/GitHub/Img Factory 1.5/components/img_creator.py",
         "/home/x2/Documents/GitHub/Img Factory 1.5/components/img_formats.py",
         "/home/x2/Documents/GitHub/Img Factory 1.5/components/img_templates.py",

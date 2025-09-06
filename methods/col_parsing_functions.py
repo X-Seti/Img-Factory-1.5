@@ -1,4 +1,4 @@
-#this belongs in components/col_parsing_functions.py - Version: 1
+#this belongs in methods.col_parsing_functions.py - Version: 1
 # X-Seti - July23 2025 - IMG Factory 1.5 - COL Parsing Functions
 # Complete COL parsing functions with safe parsing and IMG debug system - EXACT OLD VERSION PORT
 
@@ -10,8 +10,8 @@ Handles all COL format versions (COL1/COL2/COL3/COL4) with detailed logging
 import struct
 import os
 from typing import Dict, List, Tuple, Optional
-from components.img_debug_functions import img_debugger
-from components.col_core_classes import is_col_debug_enabled
+from debug.img_debug_functions import img_debugger
+from methods.col_core_classes import is_col_debug_enabled
 
 ##Methods list -
 # load_col_file_safely
@@ -110,7 +110,7 @@ def load_col_file_safely(main_window, file_path): #vers 6
 
         # Import our complete COL classes
         try:
-            from components.col_core_classes import COLFile
+            from methods.col_core_classes import COLFile
             img_debugger.debug("COL classes imported successfully")
         except ImportError as e:
             error_msg = f"Failed to import COL classes: {str(e)}"
@@ -264,7 +264,7 @@ def _setup_col_tab(main_window, file_path): #vers 1
 def _load_col_file(main_window, file_path): #vers 1
     """Load COL file object"""
     try:
-        from components.col_core_classes import COLFile
+        from methods.col_core_classes import COLFile
 
         img_debugger.debug(f"Loading COL file: {os.path.basename(file_path)}")
 

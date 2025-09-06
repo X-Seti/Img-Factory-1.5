@@ -12,8 +12,8 @@ from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
 from PyQt6.QtCore import Qt
 
 # Import IMG debug system and COL classes
-from components.img_debug_functions import img_debugger
-from components.col_core_classes import COLFile, COLModel
+from debug.img_debug_functions import img_debugger
+from methods.col_core_classes import COLFile, COLModel
 
 ##Methods list -
 # load_col_file_object
@@ -89,7 +89,7 @@ def setup_col_tab(main_window, file_path): #vers 1
 def load_col_file_object(main_window, file_path): #vers 1
     """Load COL file object"""
     try:
-        from components.col_core_classes import COLFile
+        from methods.col_core_classes import COLFile
         
         img_debugger.debug(f"Loading COL file: {os.path.basename(file_path)}")
         

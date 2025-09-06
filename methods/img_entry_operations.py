@@ -37,7 +37,7 @@ def add_multiple_entries_batch(img_file, file_data_pairs: List[tuple], auto_save
     try:
         # Import debug system
         try:
-            from components.img_debug_functions import img_debugger
+            from debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
 
@@ -76,7 +76,7 @@ def add_entry_safe(img_file, filename: str, data: bytes, auto_save: bool = False
     try:
         # Import debug system
         try:
-            from components.img_debug_functions import img_debugger
+            from debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -140,7 +140,7 @@ def remove_entry_safe(img_file, filename: str) -> bool: #vers 2
     try:
         # Import debug system
         try:
-            from components.img_debug_functions import img_debugger
+            from debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -311,9 +311,9 @@ def create_img_entry(filename: str, data: bytes, img_file) -> Optional[Any]: #ve
     try:
         entry = None
         
-        # Try components/img_core_classes.py
+        # Try methods.img_core_classes.py
         try:
-            from components.img_core_classes import IMGEntry
+            from methods.img_core_classes import IMGEntry
             entry = IMGEntry()
         except ImportError:
             pass
@@ -377,7 +377,7 @@ def add_multiple_entries(img_file, entries: List[Any]) -> int: #vers 2
     try:
         # Import debug system
         try:
-            from components.img_debug_functions import img_debugger
+            from debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         

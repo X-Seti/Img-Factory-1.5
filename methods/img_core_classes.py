@@ -1,4 +1,4 @@
-#this belongs in components/img_core_classes.py - Version: 8
+#this belongs in methods.img_core_classes.py - Version: 8
 # X-Seti - July20 2025 - IMG Factory 1.5 - IMG Core Classes with Fixed RW Version Detection
 
 """
@@ -20,7 +20,7 @@ from PyQt6.QtCore import pyqtSignal, Qt
 # Import existing RW version functions - KEPT ALL ORIGINAL IMPORTS
 from core.rw_versions import get_rw_version_name, parse_rw_version, get_model_format_version
 # CIRCULAR IMPORT REMOVED: from core.img_platform_detection import detect_img_platform, get_platform_specific_specs, IMGPlatform
-from components.img_debug_functions import img_debugger
+from debug.img_debug_functions import img_debugger
 
 ##Methods list -
 # create_entries_table_panel

@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 # Import IMG debug system - NO fallback code
-from components.img_debug_functions import img_debugger
+from debug.img_debug_functions import img_debugger
 
 ##Functions list -
 # apply_file_filter

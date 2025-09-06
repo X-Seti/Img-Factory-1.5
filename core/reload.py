@@ -61,7 +61,7 @@ class ReloadThread(QThread):
     def _reload_img_file(self) -> bool:
         """Reload IMG file"""
         try:
-            from components.img_core_classes import IMGFile
+            from methods.img_core_classes import IMGFile
             
             self.progress_updated.emit(50, "Loading IMG data...")
             
@@ -84,7 +84,7 @@ class ReloadThread(QThread):
     def _reload_col_file(self) -> bool:
         """Reload COL file"""
         try:
-            from components.col_core_classes import COLFile
+            from methods.col_core_classes import COLFile
             
             self.progress_updated.emit(50, "Loading COL data...")
             
@@ -220,7 +220,7 @@ def reload_img_file(main_window, file_path: str) -> bool:
             main_window.current_img.close()
         
         # Load the file
-        from components.img_core_classes import IMGFile
+        from methods.img_core_classes import IMGFile
         new_img = IMGFile(file_path)
         
         if new_img.open():
@@ -258,7 +258,7 @@ def reload_col_file(main_window, file_path: str) -> bool:
             main_window.current_col.close()
         
         # Load the file
-        from components.col_core_classes import COLFile
+        from methods.col_core_classes import COLFile
         new_col = COLFile(file_path)
         
         if new_col.load():

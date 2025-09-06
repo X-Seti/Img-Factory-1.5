@@ -1,4 +1,4 @@
-#this belongs in components/col_debug_functions.py - Version: 1
+#this belongs in debug.col_debug_functions.py - Version: 1
 # X-Seti - July17 2025 - IMG Factory 1.5 - COL Debug Functions
 # Uses IMG debug system for COL operations
 
@@ -16,8 +16,8 @@ from typing import Any, Dict, List, Optional
 from pathlib import Path
 
 # Import the proven IMG debug system
-from components.img_debug_functions import img_debugger
-from components.unified_debug_functions import debug_trace
+from debug.img_debug_functions import img_debugger
+from debug.unified_debug_functions import debug_trace
 
 ##Methods list -
 # col_debug_log
@@ -100,10 +100,10 @@ def debug_col_import_errors():
     img_debugger.debug("=== DEBUGGING COL IMPORT ERRORS ===")
     
     components_to_check = [
-        'components.col_core_classes',
+        'methods.col_core_classes',
         'components.col_creator', 
-        'components.col_validator',
-        'components.col_parsing_functions',
+        'methods.col_validation',
+        'methods.col_parsing_functions',
         'components.col_display'
     ]
     

@@ -14,8 +14,8 @@ from PyQt6.QtWidgets import QTableWidgetItem
 from PyQt6.QtCore import Qt
 
 # Import IMG debug system (ONLY debug change)
-from components.img_debug_functions import img_debugger
-from components.col_core_classes import COLFile
+from debug.img_debug_functions import img_debugger
+from methods.col_core_classes import COLFile
 
 ##Methods list -
 # create_table_item

@@ -75,7 +75,7 @@ check_project_structure() {
     echo -e "${BLUE}Checking project structure...${NC}"
     
     local required_files=("imgfactory.py")
-    local optional_files=("launch_imgfactory.py" "components/img_core_classes.py" "gui/gui_layout.py")
+    local optional_files=("launch_imgfactory.py" "methods.img_core_classes.py" "gui/gui_layout.py")
     local directories=("components" "gui")
     
     local missing_required=()

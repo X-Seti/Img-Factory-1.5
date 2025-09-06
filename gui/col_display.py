@@ -14,9 +14,9 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QColor
 
 # Import COL classes and IMG debug system
-from components.col_core_classes import COLFile, COLModel
-from components.img_debug_functions import img_debugger
-from components.col_core_classes import is_col_debug_enabled
+from methods.col_core_classes import COLFile, COLModel
+from debug.img_debug_functions import img_debugger
+from methods.col_core_classes import is_col_debug_enabled
 
 ##Methods list -
 # create_table_item
@@ -178,7 +178,7 @@ class COLDisplayManager: #vers 1
         try:
             # Try using the centralized COL parser first
             try:
-                from components.col_parsing_functions import get_model_collision_stats, format_model_collision_types
+                from methods.col_parsing_functions import get_model_collision_stats, format_model_collision_types
                 
                 # Get stats from centralized parser with debug
                 stats = get_model_collision_stats(col_file.file_path, model_index, debug=True)

@@ -8,7 +8,7 @@ Works or fails cleanly - no fallback code
 
 from typing import Optional, Any
 from core.rw_versions import parse_rw_version, get_rw_version_name
-from components.img_debug_functions import img_debugger
+from debug.img_debug_functions import img_debugger
 
 ##Methods list -
 # detect_entry_file_type_and_version

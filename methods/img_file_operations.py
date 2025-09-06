@@ -41,8 +41,8 @@ def create_img_file(file_path: str, version: int = 2) -> Optional[Any]: #vers 1
     try:
         # Import debug and classes
         try:
-            from components.img_debug_functions import img_debugger
-            from components.img_core_classes import IMGFile, IMGVersion
+            from debug.img_debug_functions import img_debugger
+            from methods.img_core_classes import IMGFile, IMGVersion
         except ImportError:
             return None
 
@@ -69,7 +69,7 @@ def rebuild_img(img_file) -> bool: #vers 1
     try:
         # Import debug system
         try:
-            from components.img_debug_functions import img_debugger
+            from debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
 
@@ -154,13 +154,13 @@ def create_img_file(file_path: str, version: int = 2, platform: str = "pc") -> O
     try:
         # Import debug system
         try:
-            from components.img_debug_functions import img_debugger
+            from debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
         # Import IMG classes
         try:
-            from components.img_core_classes import IMGFile, IMGVersion, IMGPlatform
+            from methods.img_core_classes import IMGFile, IMGVersion, IMGPlatform
         except ImportError:
             if img_debugger:
                 img_debugger.error("Cannot import IMG classes")
@@ -231,13 +231,13 @@ def load_img_file_safe(file_path: str) -> Optional[Any]: #vers 1
     try:
         # Import debug system
         try:
-            from components.img_debug_functions import img_debugger
+            from debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
         # Import IMG classes
         try:
-            from components.img_core_classes import IMGFile
+            from methods.img_core_classes import IMGFile
         except ImportError:
             if img_debugger:
                 img_debugger.error("Cannot import IMG classes")
@@ -284,7 +284,7 @@ def save_img_file_safe(img_file, file_path: str = None) -> bool: #vers 1
     try:
         # Import debug system
         try:
-            from components.img_debug_functions import img_debugger
+            from debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -338,7 +338,7 @@ def rebuild_img_file(img_file, output_path: str = None) -> bool: #vers 1
     try:
         # Import debug system
         try:
-            from components.img_debug_functions import img_debugger
+            from debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         

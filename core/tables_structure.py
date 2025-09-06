@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import QTableWidget, QHeaderView
 from PyQt6.QtCore import Qt
 
 # Import IMG debug system
-from components.img_debug_functions import img_debugger
+from debug.img_debug_functions import img_debugger
 
 ##Methods list -
 # reset_table_styling

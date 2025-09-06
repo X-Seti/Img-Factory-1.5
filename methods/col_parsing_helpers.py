@@ -3,12 +3,12 @@
 
 """
 COL Parsing Helper Methods - Shared functions for safe COL parsing
-Used by components/col_core_classes.py to safely parse COL data with bounds checking
+Used by methods.col_core_classes.py to safely parse COL data with bounds checking
 """
 
 import struct
 from typing import Tuple, Optional, Any
-from components.img_debug_functions import img_debugger
+from debug.img_debug_functions import img_debugger
 
 ##Methods list -
 # safe_parse_faces_col1
@@ -82,7 +82,7 @@ def safe_parse_faces_col1(model, data: bytes, offset: int, num_faces: int) -> in
             
             # Create face with safe data
             try:
-                from components.col_core_classes import COLMaterial, COLFace
+                from methods.col_core_classes import COLMaterial, COLFace
                 material = COLMaterial(material_id, flags=flags)
                 face = COLFace(vertex_indices, material, light)
                 model.faces.append(face)
@@ -139,7 +139,7 @@ def safe_parse_faces_col23(model, data: bytes, offset: int, num_faces: int) -> i
             
             # Create face with safe data
             try:
-                from components.col_core_classes import COLMaterial, COLFace
+                from methods.col_core_classes import COLMaterial, COLFace
                 material = COLMaterial(material_id)
                 face = COLFace(vertex_indices, material, light)
                 model.faces.append(face)
@@ -167,7 +167,7 @@ def safe_parse_spheres(model, data: bytes, offset: int, num_spheres: int, versio
                 img_debugger.warning(f"{version}: Stopping sphere parsing at sphere {i}")
                 break
             
-            from components.col_core_classes import Vector3
+            from methods.col_core_classes import Vector3
             center = Vector3(*center_data)
             offset = new_offset
             
@@ -199,7 +199,7 @@ def safe_parse_spheres(model, data: bytes, offset: int, num_spheres: int, versio
             
             # Create sphere
             try:
-                from components.col_core_classes import COLMaterial, COLSphere
+                from methods.col_core_classes import COLMaterial, COLSphere
                 material = COLMaterial(material_id, flags=flags)
                 sphere = COLSphere(center, radius, material)
                 model.spheres.append(sphere)
@@ -227,7 +227,7 @@ def safe_parse_boxes(model, data: bytes, offset: int, num_boxes: int, version: s
                 img_debugger.warning(f"{version}: Stopping box parsing at box {i}")
                 break
             
-            from components.col_core_classes import Vector3
+            from methods.col_core_classes import Vector3
             min_point = Vector3(*min_data)
             offset = new_offset
             
@@ -259,7 +259,7 @@ def safe_parse_boxes(model, data: bytes, offset: int, num_boxes: int, version: s
             
             # Create box
             try:
-                from components.col_core_classes import COLMaterial, COLBox
+                from methods.col_core_classes import COLMaterial, COLBox
                 material = COLMaterial(material_id, flags=flags)
                 box = COLBox(min_point, max_point, material)
                 model.boxes.append(box)
@@ -287,7 +287,7 @@ def safe_parse_vertices(model, data: bytes, offset: int, num_vertices: int) -> i
                 img_debugger.warning(f"COL: Stopping vertex parsing at vertex {i}")
                 break
             
-            from components.col_core_classes import Vector3, COLVertex
+            from methods.col_core_classes import Vector3, COLVertex
             position = Vector3(*pos_data)
             offset = new_offset
             

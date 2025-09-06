@@ -19,7 +19,7 @@ from PyQt6.QtGui import QFont
 from pathlib import Path
 
 # Import base creation functions from core
-from components.img_core_classes import IMGVersion
+from methods.img_core_classes import IMGVersion
 from core.img_formats import GameSpecificIMGDialog, IMGCreator
 
 ##Methods list -

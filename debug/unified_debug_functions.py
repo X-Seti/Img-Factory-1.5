@@ -1,4 +1,4 @@
-#this belongs in components/unified_debug_functions.py - Version: 6
+#this belongs in debug.unified_debug_functions.py - Version: 6
 # X-Seti - July17 2025 - IMG Factory 1.5
 # Unified Debug Integration - CLEAN VERSION using IMG debug system
 
@@ -81,7 +81,7 @@ def setup_img_debug_system_integration(main_window): #vers 1
     """Setup IMG debug system for COL operations - REPLACES old COL debug"""
     try:
         # Use the new col_debug_functions.py which uses IMG debug system
-        from components.col_debug_functions import integrate_col_debug_with_main_window
+        from debug.col_debug_functions import integrate_col_debug_with_main_window
         
         success = integrate_col_debug_with_main_window(main_window)
         
@@ -174,8 +174,8 @@ def setup_debug_convenience_methods(main_window): #vers 1
         def show_debug_info():
             """Show debug information"""
             try:
-                from components.img_debug_functions import img_debugger
-                from components.col_debug_functions import is_col_debug_enabled
+                from debug.img_debug_functions import img_debugger
+                from debug.col_debug_functions import is_col_debug_enabled
                 
                 info = f"IMG Debug: {'Enabled' if img_debugger.debug_enabled else 'Disabled'}\n"
                 info += f"COL Debug: {'Enabled' if is_col_debug_enabled() else 'Disabled'}\n"
@@ -194,7 +194,7 @@ def setup_debug_convenience_methods(main_window): #vers 1
         def view_debug_log():
             """View debug log file"""
             try:
-                from components.img_debug_functions import img_debugger
+                from debug.img_debug_functions import img_debugger
                 import os
                 
                 if os.path.exists(img_debugger.log_file):
@@ -235,10 +235,10 @@ def create_debug_menu(main_window): #vers 1
         img_debug_menu = debug_menu.addMenu("📁 IMG Debug")
         
         img_enable_action = img_debug_menu.addAction("Enable IMG Debug")
-        img_enable_action.triggered.connect(lambda: setattr(__import__('components.img_debug_functions').img_debug_functions.img_debugger, 'debug_enabled', True))
+        img_enable_action.triggered.connect(lambda: setattr(__import__('debug.img_debug_functions').img_debug_functions.img_debugger, 'debug_enabled', True))
         
         img_disable_action = img_debug_menu.addAction("Disable IMG Debug")
-        img_disable_action.triggered.connect(lambda: setattr(__import__('components.img_debug_functions').img_debug_functions.img_debugger, 'debug_enabled', False))
+        img_disable_action.triggered.connect(lambda: setattr(__import__('debug.img_debug_functions').img_debug_functions.img_debugger, 'debug_enabled', False))
         
         # COL Debug controls (using IMG debug system)
         col_debug_menu = debug_menu.addMenu("🛡️ COL Debug")
@@ -286,8 +286,8 @@ def add_status_indicators(main_window): #vers 1
         def update_debug_status():
             """Update debug status display"""
             try:
-                from components.img_debug_functions import img_debugger
-                from components.col_debug_functions import is_col_debug_enabled
+                from debug.img_debug_functions import img_debugger
+                from debug.col_debug_functions import is_col_debug_enabled
                 
                 img_debug = img_debugger.debug_enabled
                 col_debug = is_col_debug_enabled()

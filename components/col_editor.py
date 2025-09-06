@@ -31,8 +31,8 @@ sys.path.insert(0, project_root)
 # Now import everything without try/except
 try:
     # When running from main app
-    from components.img_debug_functions import img_debugger
-    from components.col_core_classes import COLFile, COLModel, COLVersion, Vector3
+    from debug.img_debug_functions import img_debugger
+    from methods.col_core_classes import COLFile, COLModel, COLVersion, Vector3
 except ImportError:
     # When running standalone
     from img_debug_functions import img_debugger

@@ -35,7 +35,7 @@ def detect_entry_file_type_and_version(entry, img_file=None) -> bool: #vers 3
     try:
         # Import debug system
         try:
-            from components.img_debug_functions import img_debugger
+            from debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -307,7 +307,7 @@ def detect_entry_rw_version(entry, data: bytes = None) -> bool: #vers 3
     try:
         # Import debug system
         try:
-            from components.img_debug_functions import img_debugger
+            from debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         

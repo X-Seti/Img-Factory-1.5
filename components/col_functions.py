@@ -14,9 +14,9 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer
 
 # Import IMG debug system and COL classes
-from components.img_debug_functions import img_debugger
-from components.col_core_classes import COLFile, COLModel
-from components.col_debug_functions import col_debug_log
+from debug.img_debug_functions import img_debugger
+from methods.col_core_classes import COLFile, COLModel
+from debug.col_debug_functions import col_debug_log
 
 ##Methods list -
 # add_col_context_menu_to_entries_table
@@ -220,7 +220,7 @@ def open_col_file_dialog(main_window): #vers 4
 
         if file_path:
             # Use the COL loading system
-            from components.col_parsing_functions import load_col_file_safely
+            from methods.col_parsing_functions import load_col_file_safely
             success = load_col_file_safely(main_window, file_path)
 
             if success:
@@ -483,7 +483,7 @@ def setup_complete_col_integration(main_window): #vers 1
         # Check settings for initial debug state
         try:
             if hasattr(main_window, 'app_settings') and hasattr(main_window.app_settings, 'debug_enabled'):
-                from components.col_debug_functions import set_col_debug_enabled
+                from debug.col_debug_functions import set_col_debug_enabled
                 set_col_debug_enabled(main_window.app_settings.debug_enabled)
         except:
             pass

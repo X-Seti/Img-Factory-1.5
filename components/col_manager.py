@@ -25,8 +25,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 
 # Import IMG debug system and COL classes
-from components.img_debug_functions import img_debugger
-from components.col_core_classes import COLFile, COLModel, COLVersion
+from debug.img_debug_functions import img_debugger
+from methods.col_core_classes import COLFile, COLModel, COLVersion
 
 ##Functions list -
 # analyze_col_file

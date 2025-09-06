@@ -18,9 +18,9 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QFont
 
 # Import IMG debug system and COL components
-from components.img_debug_functions import img_debugger
-from components.col_debug_functions import col_debug_log
-from components.col_core_classes import COLFile, COLModel, COLVersion
+from debug.img_debug_functions import img_debugger
+from debug.col_debug_functions import col_debug_log
+from methods.col_core_classes import COLFile, COLModel, COLVersion
 
 ##Methods list -
 # add_col_context_menu_items
@@ -370,7 +370,7 @@ def load_col_from_img_entry(img_factory_instance, entry): #vers 1
             temp_path = temp_file.name
 
         # Load using the COL loading system
-        from components.col_parsing_functions import load_col_file_safely
+        from methods.col_parsing_functions import load_col_file_safely
         success = load_col_file_safely(img_factory_instance, temp_path)
 
         # Clean up temp file
@@ -659,7 +659,7 @@ def create_col_file_dialog(main_window): #vers 1
             col_debug_log(main_window, f"Selected COL file: {file_path}", 'COL_DIALOG')
             
             # Load COL file using core loader
-            from components.col_parsing_functions import load_col_file_safely
+            from methods.col_parsing_functions import load_col_file_safely
             success = load_col_file_safely(main_window, file_path)
             
             if success:
@@ -679,7 +679,7 @@ def create_col_file_dialog(main_window): #vers 1
 def toggle_col_debug_setting(main_window): #vers 1
     """Toggle COL debug setting using IMG debug system"""
     try:
-        from components.col_debug_functions import is_col_debug_enabled, set_col_debug_enabled
+        from debug.col_debug_functions import is_col_debug_enabled, set_col_debug_enabled
         
         current_state = is_col_debug_enabled()
         new_state = not current_state
@@ -707,7 +707,7 @@ def export_col_to_img_format(main_window, col_file_path: str, output_img_path: s
             return False
         
         # Create new IMG file
-        from components.img_core_classes import IMGFile, IMGVersion
+        from methods.img_core_classes import IMGFile, IMGVersion
         img_file = IMGFile()
         
         if not img_file.create_new(output_img_path, IMGVersion.VERSION_2):
@@ -801,7 +801,7 @@ def integrate_complete_col_system(main_window): #vers 1
         # Check settings for initial debug state
         try:
             if hasattr(main_window, 'app_settings') and hasattr(main_window.app_settings, 'debug_enabled'):
-                from components.col_debug_functions import set_col_debug_enabled
+                from debug.col_debug_functions import set_col_debug_enabled
                 set_col_debug_enabled(main_window.app_settings.debug_enabled)
         except:
             pass
@@ -816,7 +816,7 @@ def integrate_complete_col_system(main_window): #vers 1
 def setup_col_debug_for_main_window(main_window): #vers 1
     """Setup COL debug functionality for main window using IMG debug system"""
     try:
-        from components.col_debug_functions import set_col_debug_enabled
+        from debug.col_debug_functions import set_col_debug_enabled
         
         # Enable COL debug based on main debug state
         if hasattr(main_window, 'debug_enabled') and main_window.debug_enabled:

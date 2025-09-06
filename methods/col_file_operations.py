@@ -46,13 +46,13 @@ def create_col_model(model_name: str = "NewModel") -> Optional[Any]: #vers 1
     try:
         # Import debug system
         try:
-            from components.img_debug_functions import img_debugger
+            from debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
         # Import COL classes
         try:
-            from components.col_core_classes import COLModel, Vector3, BoundingBox
+            from methods.col_core_classes import COLModel, Vector3, BoundingBox
         except ImportError:
             if img_debugger:
                 img_debugger.error("Cannot import COL classes")
@@ -96,7 +96,7 @@ def remove_col_model(col_file, model_index: int) -> bool: #vers 1
     try:
         # Import debug system
         try:
-            from components.img_debug_functions import img_debugger
+            from debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -144,13 +144,13 @@ def add_collision_element(model, element_type: str, element_data: Dict) -> bool:
     try:
         # Import debug system
         try:
-            from components.img_debug_functions import img_debugger
+            from debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
         # Import COL classes
         try:
-            from components.col_core_classes import COLSphere, COLBox, COLVertex, COLFace, Vector3
+            from methods.col_core_classes import COLSphere, COLBox, COLVertex, COLFace, Vector3
         except ImportError:
             if img_debugger:
                 img_debugger.error("Cannot import COL classes")
@@ -235,7 +235,7 @@ def remove_collision_element(model, element_type: str, element_index: int) -> bo
     try:
         # Import debug system
         try:
-            from components.img_debug_functions import img_debugger
+            from debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -301,7 +301,7 @@ def calculate_bounding_box(model) -> bool: #vers 1
     try:
         # Import COL classes
         try:
-            from components.col_core_classes import Vector3, BoundingBox
+            from methods.col_core_classes import Vector3, BoundingBox
         except ImportError:
             return False
         
@@ -352,7 +352,7 @@ def save_col_file_safe(col_file, file_path: str = None) -> bool: #vers 1
     try:
         # Import debug system
         try:
-            from components.img_debug_functions import img_debugger
+            from debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -392,13 +392,13 @@ def load_col_file_safe(file_path: str) -> Optional[Any]: #vers 1
     try:
         # Import debug system
         try:
-            from components.img_debug_functions import img_debugger
+            from debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
         # Import COL classes
         try:
-            from components.col_core_classes import COLFile
+            from methods.col_core_classes import COLFile
         except ImportError:
             if img_debugger:
                 img_debugger.error("Cannot import COL classes")

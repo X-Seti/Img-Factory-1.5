@@ -9,8 +9,8 @@ Used by GUI context menus, COL editor, and other COL functionality
 import os
 import tempfile
 from typing import Optional, Dict, Any, Tuple
-from components.img_debug_functions import img_debugger
-from components.img_core_classes import format_file_size
+from debug.img_debug_functions import img_debugger
+from methods.img_core_classes import format_file_size
 
 ##Methods list -
 # diagnose_col_file_structure(col_file
@@ -152,7 +152,7 @@ def get_col_basic_info(col_data: bytes) -> Dict[str, Any]: #vers 1
 def get_col_detailed_analysis(col_file_path: str) -> Dict[str, Any]: #vers 1
     """Get detailed analysis of COL file using existing components"""
     try:
-        from components.col_core_classes import COLFile
+        from methods.col_core_classes import COLFile
         
         # Load COL file
         col_file = COLFile(col_file_path)
@@ -200,7 +200,7 @@ def validate_col_data(col_data: bytes) -> Dict[str, Any]: #vers 1
             temp_path = temp_file.name
         
         try:
-            from components.col_validator import COLValidator
+            from methods.col_validation import COLValidator
             
             # Validate the data
             result = COLValidator.validate_col_file(temp_path)

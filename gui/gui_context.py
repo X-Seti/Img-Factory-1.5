@@ -15,7 +15,7 @@ from pathlib import Path
 from PyQt6.QtWidgets import QMenu, QMessageBox, QFileDialog
 from PyQt6.QtCore import pyqtSignal, QMimeData, Qt, QThread, QTimer, QSettings
 from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent, QFont, QIcon, QPixmap, QShortcut
-from components.img_core_classes import format_file_size
+from methods.img_core_classes import format_file_size
 
 ##Methods list -
 # add_col_context_menu_to_entries_table

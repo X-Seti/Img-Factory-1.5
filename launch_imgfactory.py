@@ -76,7 +76,7 @@ def check_project_structure() -> Tuple[bool, List[str]]:
     current_dir = Path(__file__).parent
     required_files = [
         "imgfactory.py",
-        "components/img_core_classes.py", 
+        "methods.img_core_classes.py", 
         "gui/gui_layout.py"
     ]
     

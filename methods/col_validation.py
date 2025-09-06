@@ -1,4 +1,4 @@
-#this belongs in components/ col_validator.py - Version: 2
+#this belongs in methods/col_validation.py - Version: 2
 # X-Seti - July17 2025 - IMG Factory 1.5 - COL Validation with IMG Debug System
 
 """
@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 from pathlib import Path
 
 # Import IMG debug system (proven to work)
-from components.img_debug_functions import img_debugger, debug_trace
+from debug.img_debug_functions import img_debugger, debug_trace
 
 ## Methods list -
 # validate_col_file

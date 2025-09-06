@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 # Import IMG debug system - NO fallback code
 try:
-    from components.img_debug_functions import img_debugger
+    from debug.img_debug_functions import img_debugger
 except ImportError:
     # Fallback debug function if import fails
     class DebugFallback:

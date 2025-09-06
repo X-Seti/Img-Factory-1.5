@@ -27,7 +27,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QThread, QTimer
 from PyQt6.QtGui import QFont, QIcon, QPixmap
 
 # Import from consolidated img_core_classes
-from components.img_core_classes import IMGFile, IMGEntry, IMGVersion, CompressionType
+from methods.img_core_classes import IMGFile, IMGEntry, IMGVersion, CompressionType
 
 
 class GameType(Enum):

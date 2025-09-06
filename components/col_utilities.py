@@ -19,8 +19,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QThread, pyqtSignal, Qt
 
 # Import IMG debug system (ONLY debug change)
-from components.img_debug_functions import img_debugger
-from components.col_core_classes import COLFile, COLModel
+from debug.img_debug_functions import img_debugger
+from methods.col_core_classes import COLFile, COLModel
 
 ##Methods list -
 # add_files
