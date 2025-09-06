@@ -308,7 +308,7 @@ def quick_reload(main_window) -> bool:
 def _update_reload_progress(main_window, progress: int, message: str):
     """Update reload progress using unified system"""
     try:
-        from methods.progressbar import update_progress
+        from methods.progressbar_functions import update_progress
         update_progress(main_window, progress, message)
         main_window.log_message(f"🔄 {message}")
     except ImportError:
@@ -322,7 +322,7 @@ def _handle_tab_reload_completion(main_window, success: bool, message: str, file
     """Handle reload completion with tab system updates"""
     try:
         # Hide progress using unified system
-        from methods.progressbar import hide_progress
+        from methods.progressbar_functions import hide_progress
         if success:
             hide_progress(main_window, "Reload complete")
         else:

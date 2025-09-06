@@ -21,7 +21,7 @@ from PyQt6.QtCore import Qt, QThread, pyqtSignal
 # Import core IMG functions
 from core.img_creator import create_new_img
 from components.img_core_classes import IMGFile, IMGVersion
-from methods.tab_awareness import get_current_file_from_active_tab
+from methods.tab_aware_functions import get_current_file_from_active_tab
 
 ##Methods list -
 # merge_img_function

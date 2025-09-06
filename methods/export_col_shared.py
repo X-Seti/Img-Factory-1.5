@@ -11,7 +11,7 @@ FIXED: Tab switching support and robust file detection
 import os
 import struct
 from typing import List, Dict, Any, Optional, Tuple
-from methods.tab_awareness import validate_tab_before_operation, get_current_file_from_active_tab
+from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 
 ##Methods list -
 # extract_single_col_model

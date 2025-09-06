@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import QMessageBox, QFileDialog, QProgressDialog
 from PyQt6.QtCore import QThread, pyqtSignal
 
 # Use same tab awareness imports as export_via.py (this works!)
-from methods.tab_awareness import validate_tab_before_operation, get_current_file_from_active_tab, get_current_file_type_from_tab
+from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab, get_current_file_type_from_tab
 
 ##Methods list -
 # export_selected_function

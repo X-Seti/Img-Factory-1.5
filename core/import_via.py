@@ -1,4 +1,4 @@
-#this belongs in core/ import_via.py - Version: 1
+#this belongs in core/ import_via.py - Version: 6
 # X-Seti - August24 2025 - IMG Factory 1.5 - Import Via Functions
 
 import os
@@ -12,8 +12,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 
 # Use EXACT same methods and dialogs as export_via.py
-from methods.tab_awareness import validate_tab_before_operation, get_current_file_from_active_tab
-from methods.ide_parser import IDEParser
+from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
+from methods.ide_parser_functions import IDEParser
 from gui.ide_dialog import show_ide_dialog
 
 # IMG_Editor core integration support

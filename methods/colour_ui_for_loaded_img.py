@@ -445,7 +445,7 @@ def update_ui_for_loaded_img(main_window): #vers 7
 
         # SAFE progress hiding using unified system
         try:
-            from methods.progressbar import hide_progress
+            from methods.progressbar_functions import hide_progress
             hide_progress(main_window, "IMG loaded")
         except ImportError:
             # Fallback: safe direct access

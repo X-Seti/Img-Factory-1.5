@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
 
 from core.rebuild import rebuild_current_img_native, _perform_native_rebuild
-from methods.img_operations_shared import (
+from methods.img_shared_operations import (
     create_progress_callback, validate_img_structure, cleanup_temp_files,
     log_operation_progress
 )

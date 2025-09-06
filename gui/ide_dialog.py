@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont
 
-from methods.ide_parser import IDEParser
+from methods.ide_parser_functions import IDEParser
 
 ##Methods list -
 # create_ide_dialog

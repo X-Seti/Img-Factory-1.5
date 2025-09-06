@@ -6,8 +6,8 @@ import struct
 from typing import Optional, Callable, Dict, Any
 from PyQt6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QRadioButton, QButtonGroup
 
-from methods.tab_awareness import validate_tab_before_operation, get_current_file_from_active_tab
-from methods.img_operations_shared import (
+from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
+from methods.img_shared_operations import (
     create_progress_callback, get_img_version_info, validate_img_structure,
     create_temp_file_path, atomic_file_replace, write_img_header,
     write_img_directory, consolidate_img_data, cleanup_temp_files,

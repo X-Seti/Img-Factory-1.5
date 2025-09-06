@@ -117,18 +117,18 @@ from gui.gui_context import (add_col_context_menu_to_entries_table, open_col_fil
 
 #Shared Methods - Shared Functions.
 from methods.populate_img_table import install_img_table_populator
-from methods.progressbar import integrate_progress_system
+from methods.progressbar_functions import integrate_progress_system
 from methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate_update_ui_for_loaded_img
 from methods.import_highlight_system import enable_import_highlighting
-from methods.img_operations_routing import install_operation_routing
-from methods.refresh_table import integrate_refresh_table
-from methods.tab_awareness import integrate_tab_awareness_system
+from methods.img_routing_operations import install_operation_routing
+from methods.refresh_table_functions import integrate_refresh_table
+from methods.tab_aware_functions import integrate_tab_awareness_system
 from methods.export_col_shared import integrate_col_export_shared
 from methods.mirror_tab_shared import show_mirror_tab_selection
 from methods.img_analyze import analyze_img_corruption, show_analysis_dialog
-from methods.ide_parser import integrate_ide_parser
-from methods.find_duplicates import find_duplicates_by_hash, show_duplicates_dialog
-from methods.dragdrop import integrate_drag_drop_system
+from methods.ide_parser_functions import integrate_ide_parser
+from methods.find_dups_functions import find_duplicates_by_hash, show_duplicates_dialog
+from methods.dragdrop_functions import integrate_drag_drop_system
 
 # FIXED COL INTEGRATION IMPORTS
 print("Attempting COL integration...")
@@ -2067,7 +2067,7 @@ class IMGFactory(QMainWindow):
     def _on_img_load_progress(self, progress: int, status: str): #vers 5
         """Handle IMG loading progress updates - UPDATED: Uses unified progress system"""
         try:
-            from methods.progressbar import update_progress
+            from methods.progressbar_functions import update_progress
             update_progress(self, progress, status)
         except ImportError:
             # Fallback for systems without unified progress
@@ -2089,7 +2089,7 @@ class IMGFactory(QMainWindow):
 
         # Reset progress using unified system
         try:
-            from methods.progressbar import hide_progress
+            from methods.progressbar_functions import hide_progress
             hide_progress(self, "Ready")
         except ImportError:
             # Fallback for old systems
@@ -2128,7 +2128,7 @@ class IMGFactory(QMainWindow):
 
         # Hide progress using unified system
         try:
-            from methods.progressbar import hide_progress
+            from methods.progressbar_functions import hide_progress
             hide_progress(self, "Load failed")
         except ImportError:
             # Fallback for old systems
@@ -2141,7 +2141,7 @@ class IMGFactory(QMainWindow):
     def integrate_unified_progress_system(self): #vers 1
         """Integrate unified progress system - call in __init__"""
         try:
-            from methods.progressbar import integrate_progress_system
+            from methods.progressbar_functions import integrate_progress_system
             integrate_progress_system(self)
             self.log_message("✅ Unified progress system integrated")
         except ImportError:

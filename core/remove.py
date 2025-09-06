@@ -1,29 +1,38 @@
-#this belongs in core/ remove.py - Version: 1
-# X-Seti - August24 2025 - IMG Factory 1.5 - Remove Functions
+#this belongs in core/ remove.py - Version: 4
+# X-Seti - September06 2025 - IMG Factory 1.5 - Remove Functions
 
+"""
+Remove Functions - Uses same pattern as fixed import functions
+"""
 
 import os
-from typing import List, Optional
-from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QApplication
+from typing import List, Optional, Dict, Any, Tuple
+from PyQt6.QtWidgets import (
+    QMessageBox, QProgressDialog, QApplication
+)
 from PyQt6.QtCore import Qt
+from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 
-# Tab awareness system (this works!)
-from methods.tab_awareness import validate_tab_before_operation, get_current_file_from_active_tab
+try:
+    from components.img_integration import IMGArchive, IMGEntry, Import_Export
+    IMG_INTEGRATION_AVAILABLE = True
+except ImportError:
+    IMG_INTEGRATION_AVAILABLE = False
 
 ##Methods list -
 # remove_selected_function
 # remove_entries_by_name
 # remove_multiple_entries
-# _remove_using_img_editor_core
+# _remove_entries
 # _get_selected_entries_safe
 # _create_remove_progress_dialog
-# _convert_img_to_archive
+# _convert_to_imgfactory_object
 # integrate_remove_functions
 
-def remove_selected_function(main_window): #vers 1
-    """Remove selected entries using IMG_Editor core - TAB AWARE"""
+def remove_selected_function(main_window): #vers 2
+    """Remove selected entries"""
     try:
-        # Use same tab validation as rebuild.py
+        # Use same tab validation as import functions
         if not validate_tab_before_operation(main_window, "Remove Selected"):
             return False
         
@@ -61,8 +70,7 @@ def remove_selected_function(main_window): #vers 1
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"🗑️ Removing {len(selected_entries)} selected entries")
         
-        # Use IMG_Editor core for removal
-        success = _remove_using_img_editor_core(file_object, selected_entries, main_window)
+        success = _remove_entries(file_object, selected_entries, main_window)
         
         if success:
             # Refresh current tab to show changes
@@ -76,31 +84,30 @@ def remove_selected_function(main_window): #vers 1
         else:
             QMessageBox.critical(main_window, "Remove Failed", 
                 "Failed to remove selected entries. Check debug log for details.")
-        
+                
         return success
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"❌ Remove selected error: {str(e)}")
-        QMessageBox.critical(main_window, "Remove Error", f"Remove error: {str(e)}")
+        QMessageBox.critical(main_window, "Remove Error", f"Remove failed: {str(e)}")
         return False
 
 
-def remove_entries_by_name(main_window, entry_names: List[str]) -> bool: #vers 1
-    """Remove entries by name programmatically"""
+def remove_entries_by_name(main_window, entry_names: List[str]) -> bool: #vers 2
+    """Remove entries by name list"""
     try:
-        if not validate_tab_before_operation(main_window, "Remove Entries by Name"):
+        if not validate_tab_before_operation(main_window, "Remove Entries"):
             return False
-        
+            
         file_object, file_type = get_current_file_from_active_tab(main_window)
         
         if file_type != 'IMG' or not file_object:
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("❌ Current tab does not contain an IMG file")
             return False
         
-        if not entry_names:
-            return False
-        
-        # Find entries by name
+        # Find entries to remove
         entries_to_remove = []
         if hasattr(file_object, 'entries'):
             for entry in file_object.entries:
@@ -110,13 +117,13 @@ def remove_entries_by_name(main_window, entry_names: List[str]) -> bool: #vers 1
         
         if not entries_to_remove:
             if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ No matching entries found for removal")
+                main_window.log_message(f"❌ No matching entries found for removal")
             return False
         
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"🗑️ Removing {len(entries_to_remove)} entries by name")
         
-        return _remove_using_img_editor_core(file_object, entries_to_remove, main_window)
+        return _remove_entries(file_object, entries_to_remove, main_window)
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
@@ -124,24 +131,21 @@ def remove_entries_by_name(main_window, entry_names: List[str]) -> bool: #vers 1
         return False
 
 
-def remove_multiple_entries(main_window, entries_to_remove: List) -> bool: #vers 1
-    """Remove multiple entries programmatically"""
+def remove_multiple_entries(main_window, entries: List) -> bool: #vers 2  
+    """Remove multiple entries"""
     try:
-        if not validate_tab_before_operation(main_window, "Remove Multiple Entries"):
+        if not validate_tab_before_operation(main_window, "Remove Multiple"):
             return False
-        
+            
         file_object, file_type = get_current_file_from_active_tab(main_window)
         
         if file_type != 'IMG' or not file_object:
             return False
-        
-        if not entries_to_remove:
-            return False
-        
+            
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🗑️ Removing {len(entries_to_remove)} entries programmatically")
-        
-        return _remove_using_img_editor_core(file_object, entries_to_remove, main_window)
+            main_window.log_message(f"🗑️ Removing {len(entries)} multiple entries")
+            
+        return _remove_entries(file_object, entries, main_window)
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
@@ -149,54 +153,47 @@ def remove_multiple_entries(main_window, entries_to_remove: List) -> bool: #vers
         return False
 
 
-def _remove_using_img_editor_core(file_object, entries_to_remove, main_window) -> bool: #vers 1
-    """CORE FUNCTION: Remove entries using working IMG_Editor archive manipulation"""
+def _remove_entries(file_object, entries_to_remove: List, main_window) -> bool: #vers 2
+    """Remove entries"""
     try:
-        # Import the working IMG_Editor core classes
-        try:
-            from IMG_Editor.core.Core import IMGArchive, IMGEntry
-        except ImportError:
+        if not IMG_INTEGRATION_AVAILABLE:
             if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ IMG_Editor core not available - cannot remove")
+                main_window.log_message("❌ IMG core not available for removal")
             return False
         
-        # Convert to IMG_Editor archive format if needed
+        # Convert to IMG archive format (same as import)
         img_archive = _convert_img_to_archive(file_object, main_window)
         if not img_archive:
             if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ Failed to convert IMG to archive format")
+                main_window.log_message("❌ Could not convert to IMG archive format")
             return False
         
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message("🔧 Using IMG_Editor archive entry removal")
-        
-        # Create progress dialog
+        # Create progress dialog (same as import)
         progress_dialog = _create_remove_progress_dialog(main_window, len(entries_to_remove))
+        progress_dialog.show()
+        QApplication.processEvents()
         
         removed_count = 0
         failed_count = 0
         
         try:
             for i, entry in enumerate(entries_to_remove):
-                # Update progress
-                progress_dialog.setValue(i)
-                entry_name = getattr(entry, 'name', f'entry_{i}')
-                progress_dialog.setLabelText(f"Removing: {entry_name}")
-                QApplication.processEvents()
-                
                 if progress_dialog.wasCanceled():
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message("Remove operation cancelled by user")
                     break
                 
-                # Find entry in IMG_Editor archive
-                img_editor_entry = None
-                for j, archive_entry in enumerate(img_archive.entries):
-                    if archive_entry.name == entry_name:
-                        img_editor_entry = archive_entry
+                entry_name = getattr(entry, 'name', f'Entry_{i}')
+                progress_dialog.setLabelText(f"Removing: {entry_name}")
+                progress_dialog.setValue(i)
+                QApplication.processEvents()
+                
+                # Find entry in IMG archive
+                img_archedit_entry = None
+                for archive_entry in img_archive.entries:
+                    if getattr(archive_entry, 'name', '') == entry_name:
+                        img_archedit_entry = archive_entry
                         break
                 
-                if not img_editor_entry:
+                if not img_archedit_entry:
                     if hasattr(main_window, 'log_message'):
                         main_window.log_message(f"⚠️ Entry not found in archive: {entry_name}")
                     failed_count += 1
@@ -204,9 +201,8 @@ def _remove_using_img_editor_core(file_object, entries_to_remove, main_window) -
                 
                 # Remove entry from archive
                 try:
-                    img_archive.entries.remove(img_editor_entry)
+                    img_archive.entries.remove(img_archedit_entry)
                     removed_count += 1
-                    
                     if hasattr(main_window, 'log_message'):
                         main_window.log_message(f"✅ Removed: {entry_name}")
                         
@@ -220,25 +216,21 @@ def _remove_using_img_editor_core(file_object, entries_to_remove, main_window) -
         
         # Report results
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📊 Remove complete: {removed_count} success, {failed_count} failed")
-        
-        # If successful removals, need to save/rebuild IMG
-        if removed_count > 0:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("💾 Remove successful - remember to rebuild IMG to save changes")
+            main_window.log_message(f"📊 Removal complete: {removed_count} success, {failed_count} failed")
+            if removed_count > 0:
+                main_window.log_message("💾 Remember to rebuild IMG to save changes")
         
         return removed_count > 0
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Core remove error: {str(e)}")
+            main_window.log_message(f"❌ IMG archive removal error: {str(e)}")
         return False
 
 
-def _get_selected_entries_safe(main_window, file_object) -> list: #vers 1
+def _get_selected_entries_safe(main_window, file_object) -> list: #vers 2
     """Safely get selected entries from main window"""
     try:
-        # Try different methods to get selected entries
         selected_entries = []
         
         # Method 1: Use main window's get_selected_entries
@@ -270,14 +262,13 @@ def _get_selected_entries_safe(main_window, file_object) -> list: #vers 1
             except Exception:
                 pass
         
-        # Method 3: If no selection, return empty list
         return []
         
     except Exception:
         return []
 
 
-def _create_remove_progress_dialog(main_window, total_entries) -> QProgressDialog: #vers 1
+def _create_remove_progress_dialog(main_window, total_entries) -> QProgressDialog: #vers 2
     """Create progress dialog for remove operation"""
     try:
         progress_dialog = QProgressDialog(
@@ -287,68 +278,52 @@ def _create_remove_progress_dialog(main_window, total_entries) -> QProgressDialo
             total_entries,
             main_window
         )
-        
         progress_dialog.setWindowTitle("Removing Entries")
         progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-        progress_dialog.setMinimumDuration(0)
+        progress_dialog.setMinimumDuration(500)
         progress_dialog.setValue(0)
         
         return progress_dialog
         
     except Exception:
-        # Fallback: create minimal progress dialog
-        progress_dialog = QProgressDialog(main_window)
-        progress_dialog.setRange(0, total_entries)
-        return progress_dialog
+        # Fallback to basic dialog
+        from PyQt6.QtWidgets import QProgressDialog
+        return QProgressDialog("Removing entries...", "Cancel", 0, total_entries, main_window)
 
 
-def _convert_img_to_archive(file_object, main_window) -> Optional[object]: #vers 1
-    """Convert IMG file object to IMG_Editor IMGArchive format"""
+def _convert_img_to_archive(file_object, main_window): #vers 2
+    """Convert file object to IMG archive format"""
     try:
-        from IMG_Editor.core.Core import IMGArchive, IMGEntry
+        if not IMG_INTEGRATION_AVAILABLE:
+            return None
         
-        # If already IMG_Editor format, return as-is
+        # If already IMG format, return as-is
         if isinstance(file_object, IMGArchive):
             return file_object
         
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message("🔄 Converting IMG to IMG_Editor archive format for removal")
-        
-        # Load IMG file using IMG_Editor
+        # Load IMG file
         file_path = getattr(file_object, 'file_path', None)
         if not file_path or not os.path.exists(file_path):
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ No valid file path found")
             return None
         
-        # Create and load IMG_Editor archive
+        # Create and load IMG archive
         archive = IMGArchive()
-        if not archive.load_from_file(file_path):
+        if archive.load_from_file(file_path):
             if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ Failed to load IMG file with IMG_Editor")
-            return None
+                entry_count = len(archive.entries) if archive.entries else 0
+                main_window.log_message(f"✅ Converted to IMG archive format: {entry_count} entries")
+            return archive
         
-        if hasattr(main_window, 'log_message'):
-            entry_count = len(archive.entries) if archive.entries else 0
-            main_window.log_message(f"✅ Loaded IMG with {entry_count} entries for removal")
-        
-        return archive
-        
-    except ImportError:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message("❌ IMG_Editor core not available")
         return None
-
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Archive conversion error: {str(e)}")
+        
+    except Exception:
         return None
 
 
-def integrate_remove_functions(main_window) -> bool: #vers 1
-    """Integrate IMG_Editor core remove functions - NEW"""
+def integrate_remove_functions(main_window) -> bool: #vers 2
+    """Integrate remove functions into main window"""
     try:
-        # Main remove functions with IMG_Editor core
+        # Main remove functions with IMG
         main_window.remove_selected_function = lambda: remove_selected_function(main_window)
         main_window.remove_entries_by_name = lambda entry_names: remove_entries_by_name(main_window, entry_names)
         main_window.remove_multiple_entries = lambda entries: remove_multiple_entries(main_window, entries)
@@ -360,10 +335,8 @@ def integrate_remove_functions(main_window) -> bool: #vers 1
         main_window.remove_entries = main_window.remove_multiple_entries
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ IMG_Editor core remove functions integrated with TAB AWARENESS")
-            main_window.log_message("   • Uses IMG archive entry manipulation for reliable removal")
-            main_window.log_message("   • Supports selected entries, by name, and multiple entry removal")
-            main_window.log_message("   • Remember to rebuild IMG after removal to save changes")
+            integration_msg = "✅ Remove functions integrated with tab awareness + imgfactory methods"
+            main_window.log_message(integration_msg)
         
         return True
         
@@ -376,8 +349,7 @@ def integrate_remove_functions(main_window) -> bool: #vers 1
 # Export only the essential functions
 __all__ = [
     'remove_selected_function',
-    'remove_entries_by_name',
+    'remove_entries_by_name', 
     'remove_multiple_entries',
     'integrate_remove_functions'
 ]
-        

@@ -1445,7 +1445,7 @@ class IMGFactoryGUILayout:
     def show_progress(self, value, text="Working..."): #vers 1
         """Show progress using unified progress system"""
         try:
-            from methods.progressbar import show_progress as unified_show_progress
+            from methods.progressbar_functions import show_progress as unified_show_progress
             unified_show_progress(self.main_window, value, text)
         except ImportError:
             # Fallback to old system if unified not available
@@ -1463,7 +1463,7 @@ class IMGFactoryGUILayout:
     def hide_progress(self): #vers 1
         """Hide progress using unified progress system"""
         try:
-            from methods.progressbar import hide_progress as unified_hide_progress
+            from methods.progressbar_functions import hide_progress as unified_hide_progress
             unified_hide_progress(self.main_window, "Ready")
         except ImportError:
             # Fallback to old system
@@ -1491,7 +1491,7 @@ class IMGFactoryGUILayout:
 
             # Integrate unified progress system
             try:
-                from methods.progressbar import integrate_progress_system
+                from methods.progressbar_functions import integrate_progress_system
                 integrate_progress_system(self.main_window)
                 self.log_message("✅ Status bar with unified progress created")
             except ImportError:

@@ -7,7 +7,7 @@ Routes all existing IMG operation functions through the shared placeholder syste
 Prevents broken functions from corrupting files.
 """
 
-from methods.img_operations_shared import *
+from methods.img_shared_operations import *
 
 ##Methods list -
 # route_remove_entry

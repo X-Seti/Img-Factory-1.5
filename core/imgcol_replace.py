@@ -19,7 +19,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 
 # Use same tab awareness as other core functions
-from methods.tab_awareness import validate_tab_before_operation, get_current_file_from_active_tab, get_current_file_type_from_tab
+from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab, get_current_file_type_from_tab
 
 # IMG_Editor core integration support
 try:

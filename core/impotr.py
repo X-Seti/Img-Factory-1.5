@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QFileDialog, QApplicat
 from PyQt6.QtCore import Qt
 
 # Tab awareness system
-from methods.tab_awareness import validate_tab_before_operation, get_current_file_from_active_tab
+from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 
 ##Methods list -
 # import_files_function

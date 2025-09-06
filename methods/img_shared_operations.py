@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional, Callable, List, Tuple, Dict, Any
 from PyQt6.QtWidgets import QApplication
 
-from methods.tab_awareness import validate_tab_before_operation, get_current_file_from_active_tab
+from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 
 ##Methods list -
 # create_progress_callback
@@ -37,7 +37,7 @@ def create_progress_callback(main_window, operation_name: str) -> Callable:
             
             # Update progress bar if available
             try:
-                from methods.progressbar import update_progress
+                from methods.progressbar_functions import update_progress
                 update_progress(main_window, percent, full_message)
             except ImportError:
                 # Fallback to basic status update
