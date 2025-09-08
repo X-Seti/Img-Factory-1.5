@@ -1,9 +1,9 @@
-#this belongs in core/ remove_via.py - Version: 2
-# X-Seti - September06 2025 - IMG Factory 1.5 - Remove Via Functions
+#this belongs in core/remove_via.py - Version: 2
+# X-Seti - September07 2025 - IMG Factory 1.5 - Remove Via Functions FIXED
 
 """
-Remove Via Functions - Uses EXACT same pattern as fixed import_via.py
-FIXED: Tab awareness, IDE dialog integration, progress handling
+Remove Via Functions - FIXED VERSION
+Remove entries via IDE files using working remove system
 """
 
 import os
@@ -14,17 +14,11 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 
-# Use EXACT same methods and dialogs as fixed import_via.py
+# Import working methods
 from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 from methods.ide_parser_functions import IDEParser
 from gui.ide_dialog import show_ide_dialog
-
-# IMG core integration support
-try:
-    from components.img_integration import IMGArchive, IMGEntry, Import_Export
-    IMG_INTEGRATION_AVAILABLE = True
-except ImportError:
-    IMG_INTEGRATION_AVAILABLE = False
+from core.remove import remove_entries_by_name
 
 ##Methods list -
 # remove_via_function
@@ -32,25 +26,23 @@ except ImportError:
 # _remove_img_via_ide
 # _find_entries_for_removal
 # _show_remove_confirmation_dialog
-# _remove_with_img_core
-# _convert_to_imgfactory_object
 # integrate_remove_via_functions
 
 def remove_via_function(main_window): #vers 2
-    """Main remove via function using EXACT same dialogs as import_via.py"""
+    """Main remove via function - FIXED VERSION"""
     try:
-        # EXACT same tab awareness validation as import_via.py
+        # Tab awareness validation
         if not validate_tab_before_operation(main_window, "Remove Via"):
             return
         
-        # Get current file type (same as import_via.py)
+        # Get current file type
         file_object, file_type = get_current_file_from_active_tab(main_window)
         
         if file_type != 'IMG':
             QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first for remove operations")
             return
         
-        # Direct to IDE removal (primary method)
+        # Direct to IDE removal
         _remove_img_via_ide(main_window)
         
     except Exception as e:
@@ -65,9 +57,9 @@ def remove_via_entries_function(main_window): #vers 2
 
 
 def _remove_img_via_ide(main_window): #vers 2
-    """Remove IMG entries via IDE definitions - same pattern as import_via.py"""
+    """Remove IMG entries via IDE definitions - FIXED"""
     try:
-        # EXACT same tab awareness validation as import_via.py
+        # Tab validation
         if not validate_tab_before_operation(main_window, "Remove IMG via IDE"):
             return
         
@@ -77,11 +69,10 @@ def _remove_img_via_ide(main_window): #vers 2
             QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
             return
         
-        # EXACT same IDE dialog as import_via.py
+        # Show IDE dialog
         if hasattr(main_window, 'log_message'):
             main_window.log_message("🗑️ Starting IMG Remove Via IDE...")
         
-        # Use EXACT same dialog and parser as import_via.py
         try:
             ide_parser = show_ide_dialog(main_window, "remove")
         except ImportError:
@@ -91,282 +82,194 @@ def _remove_img_via_ide(main_window): #vers 2
         
         if not ide_parser:
             if hasattr(main_window, 'log_message'):
-                main_window.log_message("Remove via IDE cancelled by user")
+                main_window.log_message("IDE remove cancelled by user")
             return
         
-        # Find entries to remove based on IDE
-        entries_to_remove = _find_entries_for_removal(file_object, ide_parser, main_window)
+        # Extract IDE models
+        ide_models = getattr(ide_parser, 'models', {})
+        if not ide_models:
+            QMessageBox.information(main_window, "No IDE Entries", "No model entries found in IDE file")
+            return
+        
+        # Find entries to remove based on IDE definitions
+        entries_to_remove, files_found, files_missing = _find_entries_for_removal(file_object, ide_models, main_window)
         
         if not entries_to_remove:
-            QMessageBox.information(main_window, "No Matches", 
-                "No entries found in IMG file that match the IDE definitions")
+            QMessageBox.information(main_window, "No Matches Found", 
+                f"No entries found in IMG that match IDE definitions.\n\n"
+                f"Looked for files based on IDE models but none were found in the current IMG file.")
             return
         
         # Show confirmation dialog
-        if not _show_remove_confirmation_dialog(main_window, entries_to_remove, ide_parser):
+        if not _show_remove_confirmation_dialog(main_window, entries_to_remove, files_missing):
             return
         
-        success = _remove_entries(file_object, entries_to_remove, main_window)
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"🗑️ Removing {len(entries_to_remove)} entries based on IDE definitions")
+        
+        # Remove entries using fixed remove system
+        success = remove_entries_by_name(main_window, entries_to_remove)
         
         if success:
             # Refresh current tab to show changes
-            if hasattr(main_window, 'refresh_current_tab_data'):
-                main_window.refresh_current_tab_data()
-            elif hasattr(main_window, 'refresh_table'):
+            if hasattr(main_window, 'refresh_table') and callable(main_window.refresh_table):
                 main_window.refresh_table()
+            elif hasattr(main_window, 'refresh_current_tab_data'):
+                main_window.refresh_current_tab_data()
+            elif hasattr(main_window, 'populate_entries_table'):
+                main_window.populate_entries_table()
             
-            QMessageBox.information(main_window, "Remove Via Complete", 
-                f"Successfully removed {len(entries_to_remove)} entries via IDE")
+            # Inform user about saving changes
+            QMessageBox.information(
+                main_window, 
+                "Remove Via Complete", 
+                f"Successfully removed {len(entries_to_remove)} entries via IDE definitions from memory.\n\n"
+                f"💾 Use the 'Save Entry' button to save changes to disk.\n"
+                f"⚠️ Changes will be lost if you reload without saving."
+            )
+            
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"✅ Removed {len(entries_to_remove)} entries via IDE - use 'Save Entry' to save changes")
         else:
-            QMessageBox.critical(main_window, "Remove Via Failed", 
-                "Failed to remove entries via IDE. Check debug log for details.")
+            QMessageBox.critical(main_window, "Remove Failed", 
+                "Failed to remove entries. Check debug log for details.")
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Remove IMG via IDE error: {str(e)}")
-        QMessageBox.critical(main_window, "Remove Via IDE Error", f"Remove via IDE failed: {str(e)}")
+            main_window.log_message(f"❌ Remove via IDE error: {str(e)}")
+        QMessageBox.critical(main_window, "Remove Via IDE Error", f"Error: {str(e)}")
 
 
-def _find_entries_for_removal(file_object, ide_parser: IDEParser, main_window) -> List: #vers 2
-    """Find entries in IMG that match IDE definitions - same logic as import_via.py"""
+def _find_entries_for_removal(file_object, ide_models: dict, main_window) -> Tuple[List[str], List[str], List[str]]: #vers 2
+    """Find entries in IMG that match IDE model definitions"""
     try:
         entries_to_remove = []
+        files_found = []
+        files_missing = []
         
-        if not hasattr(file_object, 'entries'):
-            return entries_to_remove
-        
-        # Get model names from IDE parser (same as import_via.py)
-        ide_models = set()
-        for model in ide_parser.models:
-            model_name = model.get('model_name', '').lower()
-            if model_name:
-                ide_models.add(model_name)
-                # Also add with .dff extension
-                ide_models.add(f"{model_name}.dff")
+        # Get current IMG entries
+        img_entries = []
+        if hasattr(file_object, 'entries') and file_object.entries:
+            img_entries = [getattr(entry, 'name', '').lower() for entry in file_object.entries]
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🔍 Looking for {len(ide_models)} models from IDE in IMG entries")
+            main_window.log_message(f"📋 Checking {len(ide_models)} IDE models against {len(img_entries)} IMG entries")
         
-        # Find matching entries in IMG
-        for entry in file_object.entries:
-            entry_name = getattr(entry, 'name', '').lower()
+        # Check each IDE model for matching files
+        for model_id, model_data in ide_models.items():
+            model_name = model_data.get('name', model_id)
             
-            if entry_name in ide_models:
-                entries_to_remove.append(entry)
+            # Look for DFF and TXD files for this model
+            dff_file = f"{model_name}.dff"
+            txd_file = f"{model_name}.txd"
+            
+            # Check if files exist in IMG
+            if dff_file.lower() in img_entries:
+                entries_to_remove.append(dff_file)
+                files_found.append(dff_file)
                 if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"✅ Found for removal: {entry_name}")
+                    main_window.log_message(f"✅ Found for removal: {dff_file}")
             else:
-                # Check without extension
-                base_name = entry_name.replace('.dff', '').replace('.txd', '')
-                if base_name in ide_models:
-                    entries_to_remove.append(entry)
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"✅ Found for removal: {entry_name}")
+                files_missing.append(dff_file)
+            
+            if txd_file.lower() in img_entries:
+                entries_to_remove.append(txd_file)
+                files_found.append(txd_file)
+                if hasattr(main_window, 'log_message'):
+                    main_window.log_message(f"✅ Found for removal: {txd_file}")
+            else:
+                files_missing.append(txd_file)
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📊 Found {len(entries_to_remove)} entries to remove")
+            main_window.log_message(f"📊 Found {len(files_found)} files to remove, {len(files_missing)} missing")
         
-        return entries_to_remove
+        return entries_to_remove, files_found, files_missing
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"❌ Error finding entries for removal: {str(e)}")
-        return []
+        return [], [], []
 
 
-def _show_remove_confirmation_dialog(main_window, entries_to_remove: List, ide_parser: IDEParser) -> bool: #vers 2
-    """Show confirmation dialog for removal - similar to import_via.py confirmation"""
+def _show_remove_confirmation_dialog(main_window, entries_to_remove: List[str], files_missing: List[str]) -> bool: #vers 2
+    """Show confirmation dialog for remove via operation"""
     try:
-        # Create confirmation dialog
         dialog = QDialog(main_window)
         dialog.setWindowTitle("Confirm Remove Via IDE")
-        dialog.setModal(True)
-        dialog.resize(500, 400)
+        dialog.setFixedSize(500, 400)
         
         layout = QVBoxLayout(dialog)
         
-        # Info label
-        info_label = QLabel(f"Remove {len(entries_to_remove)} entries found in IDE file?")
-        info_label.setWordWrap(True)
-        layout.addWidget(info_label)
+        # Summary
+        summary_group = QGroupBox("Remove Summary")
+        summary_layout = QVBoxLayout(summary_group)
         
-        # IDE info
-        ide_info = QGroupBox("IDE File Information")
-        ide_layout = QVBoxLayout(ide_info)
+        summary_layout.addWidget(QLabel(f"Files to remove: {len(entries_to_remove)}"))
+        if files_missing:
+            summary_layout.addWidget(QLabel(f"Files not found in IMG: {len(files_missing)}"))
         
-        ide_path_label = QLabel(f"File: {ide_parser.file_path}")
-        ide_path_label.setWordWrap(True)
-        ide_layout.addWidget(ide_path_label)
+        layout.addWidget(summary_group)
         
-        ide_stats_label = QLabel(ide_parser.get_status_text())
-        ide_layout.addWidget(ide_stats_label)
+        # Files to remove
+        if entries_to_remove:
+            remove_group = QGroupBox("Files to Remove")
+            remove_layout = QVBoxLayout(remove_group)
+            
+            remove_text = QTextEdit()
+            remove_text.setMaximumHeight(120)
+            remove_text.setPlainText('\n'.join(entries_to_remove))
+            remove_text.setReadOnly(True)
+            remove_layout.addWidget(remove_text)
+            
+            layout.addWidget(remove_group)
         
-        layout.addWidget(ide_info)
-        
-        # Entries list
-        entries_group = QGroupBox("Entries to Remove")
-        entries_layout = QVBoxLayout(entries_group)
-        
-        entries_text = QTextEdit()
-        entries_text.setReadOnly(True)
-        entries_text.setMaximumHeight(150)
-        
-        entry_names = [getattr(entry, 'name', 'Unknown') for entry in entries_to_remove]
-        entries_text.setPlainText('\n'.join(entry_names))
-        
-        entries_layout.addWidget(entries_text)
-        layout.addWidget(entries_group)
-        
-        # Warning label
-        warning_label = QLabel("⚠️ Warning: This will permanently remove entries from the IMG file!")
-        warning_label.setStyleSheet("color: red; font-weight: bold;")
-        layout.addWidget(warning_label)
+        # Missing files (if any)
+        if files_missing:
+            missing_group = QGroupBox("Files Not Found in IMG")
+            missing_layout = QVBoxLayout(missing_group)
+            
+            missing_text = QTextEdit()
+            missing_text.setMaximumHeight(100)
+            missing_text.setPlainText('\n'.join(files_missing[:20]))  # Show first 20
+            if len(files_missing) > 20:
+                missing_text.append(f"\n... and {len(files_missing) - 20} more")
+            missing_text.setReadOnly(True)
+            missing_layout.addWidget(missing_text)
+            
+            layout.addWidget(missing_group)
         
         # Buttons
         button_layout = QHBoxLayout()
         
-        remove_button = QPushButton("Remove Entries")
+        remove_button = QPushButton("Remove Files")
         remove_button.clicked.connect(dialog.accept)
-        remove_button.setStyleSheet("background-color: #d32f2f; color: white;")
         
         cancel_button = QPushButton("Cancel")
         cancel_button.clicked.connect(dialog.reject)
         
         button_layout.addWidget(cancel_button)
         button_layout.addWidget(remove_button)
+        
         layout.addLayout(button_layout)
         
-        # Show dialog
-        result = dialog.exec()
-        return result == QDialog.DialogCode.Accepted
+        return dialog.exec() == QDialog.DialogCode.Accepted
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"❌ Error showing confirmation dialog: {str(e)}")
-        
-        # Fallback to simple confirmation
+        # Fallback to simple message box
         reply = QMessageBox.question(
             main_window,
             "Confirm Remove Via IDE",
-            f"Remove {len(entries_to_remove)} entries from IDE file?",
+            f"Remove {len(entries_to_remove)} entries based on IDE definitions?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
         return reply == QMessageBox.StandardButton.Yes
 
 
-def _remove_entries(file_object, entries_to_remove: List, main_window) -> bool: #vers 2
-    """Remove entries"""
-    try:
-        if not IMG_INTEGRATION_AVAILABLE:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ IMG core not available for removal")
-            return False
-        
-        # Convert to IMG archive format (same as import_via.py)
-        img_archive = _convert_to_img_archive(file_object, main_window)
-        if not img_archive:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ Could not convert to IMG archive format")
-            return False
-        
-        # Create progress dialog (same pattern as import_via.py)
-        progress_dialog = QProgressDialog(
-            "Preparing removal...",
-            "Cancel",
-            0,
-            len(entries_to_remove),
-            main_window
-        )
-        progress_dialog.setWindowTitle("Removing Entries via IDE")
-        progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-        progress_dialog.setMinimumDuration(500)
-        progress_dialog.show()
-        QApplication.processEvents()
-        
-        removed_count = 0
-        failed_count = 0
-        
-        try:
-            for i, entry in enumerate(entries_to_remove):
-                if progress_dialog.wasCanceled():
-                    break
-                
-                entry_name = getattr(entry, 'name', f'Entry_{i}')
-                progress_dialog.setLabelText(f"Removing: {entry_name}")
-                progress_dialog.setValue(i)
-                QApplication.processEvents()
-                
-                # Find entry in IMG archive
-                img_archedit_entry = None
-                for archive_entry in img_archive.entries:
-                    if getattr(archive_entry, 'name', '') == entry_name:
-                        img_archedit_entry = archive_entry
-                        break
-                
-                if not img_archedit_entry:
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"⚠️ Entry not found in archive: {entry_name}")
-                    failed_count += 1
-                    continue
-                
-                # Remove entry from archive
-                try:
-                    img_archive.entries.remove(img_archedit_entry)
-                    removed_count += 1
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"✅ Removed: {entry_name}")
-                        
-                except Exception as e:
-                    failed_count += 1
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"❌ Remove error for {entry_name}: {str(e)}")
-            
-        finally:
-            progress_dialog.close()
-        
-        # Report results
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📊 Remove via IDE complete: {removed_count} success, {failed_count} failed")
-            if removed_count > 0:
-                main_window.log_message("💾 Remember to rebuild IMG to save changes")
-        
-        return removed_count > 0
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ IMG archive removal error: {str(e)}")
-        return False
-
-
-def _convert_to_img_archive(file_object, main_window): #vers 2
-    """Convert file object - same as import_via.py"""
-    try:
-        if not IMG_INTEGRATION_AVAILABLE:
-            return None
-        
-        if isinstance(file_object, IMGArchive):
-            return file_object
-        
-        file_path = getattr(file_object, 'file_path', None)
-        if not file_path or not os.path.exists(file_path):
-            return None
-        
-        archive = IMGArchive()
-        if archive.load_from_file(file_path):
-            if hasattr(main_window, 'log_message'):
-                entry_count = len(archive.entries) if archive.entries else 0
-                main_window.log_message(f"✅ Converted to IMG archive format: {entry_count} entries")
-            return archive
-        
-        return None
-        
-    except Exception:
-        return None
-
-
 def integrate_remove_via_functions(main_window) -> bool: #vers 2
-    """Integrate remove via functions into main window - same pattern as import_via.py"""
+    """Integrate fixed remove via functions into main window"""
     try:
         # Add main remove via functions
         main_window.remove_via_function = lambda: remove_via_function(main_window)
@@ -379,8 +282,9 @@ def integrate_remove_via_functions(main_window) -> bool: #vers 2
         main_window.remove_entries_via = main_window.remove_via_entries_function
         
         if hasattr(main_window, 'log_message'):
-            integration_msg = "✅ Remove via functions integrated with tab awareness + imgfactory methods"
-            main_window.log_message(integration_msg)
+            main_window.log_message("✅ Fixed remove via functions integrated with tab awareness")
+            main_window.log_message("   • Uses working remove_entries_by_name method")
+            main_window.log_message("   • Supports IDE-based entry removal")
         
         return True
         

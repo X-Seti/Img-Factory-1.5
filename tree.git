@@ -33,6 +33,7 @@
 │   ├── col_integration.py
 │   ├── compression.py
 │   ├── convert.py
+│   ├── core.py
 │   ├── dialogs.py
 │   ├── dump.py
 │   ├── export.py
@@ -330,4 +331,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-59 directories, 272 files
+59 directories, 273 files

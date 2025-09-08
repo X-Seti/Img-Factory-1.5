@@ -43,6 +43,7 @@ from core.img_creator import create_new_img, detect_and_open_file, open_file_dia
 from core.close import close_img_file, close_all_img, install_close_functions, setup_close_manager
 from methods.colour_ui_for_loaded_img import integrate_color_ui_system
 from gui.gui_context import open_col_editor_dialog
+from methods.refresh_table_functions import refresh_table
 
 def edit_txd_file(main_window): #vers 2
     """Edit selected TXD file with TXD Editor"""
@@ -123,7 +124,7 @@ class IMGFactoryGUILayout:
             # Import methods
             'import_files': lambda: import_files_function(self.main_window),
             'import_files_via': lambda: import_via_function(self.main_window),
-            'refresh_table': lambda: self._log_missing_method('refresh_table'),
+            'refresh_table': lambda: refresh_table(self.main_window),
 
             # Export methods
             'export_selected': lambda: self.main_window.export_selected(),

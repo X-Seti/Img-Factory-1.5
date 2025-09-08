@@ -452,10 +452,6 @@ class IMGFactory(QMainWindow):
         # File operations
         install_close_functions(self)
 
-        #Refresh function
-        self.refresh_table = lambda: refresh_table(self)
-
-
         # Table population (needed for IMG display)
         install_img_table_populator(self)
 
@@ -1282,18 +1278,6 @@ class IMGFactory(QMainWindow):
 
     def create_new_img(self): #vers 5
         """Show new IMG creation dialog - FIXED: No signal connections"""
-
-
-    def refresh_table(self): #vers 4 -
-        #./core/utils.py - def refresh_table(main_window):
-        #./components/img_integration_main.py: - def refresh_table_func():
-
-        """Handle refresh/update button"""
-        self.log_message("🔄 Refresh table requested")
-        if self.current_img:
-            self._update_ui_for_loaded_img()
-        elif self.current_col:
-            self._update_ui_for_loaded_col()
 
     def select_all_entries(self): #vers 3
         """Select all entries in current table"""

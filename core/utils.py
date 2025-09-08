@@ -18,7 +18,6 @@ from typing import List, Optional, Dict, Any
 # entry_exists_in_img
 # get_project_folder
 # get_export_folder
-# refresh_table
 # validate_img_file
 # get_img_info
 # log_operation
@@ -226,20 +225,6 @@ def get_export_folder(main_window) -> Optional[str]: #vers 2
     return None
 
 
-def refresh_table(main_window): #vers 1
-    """Refresh the entries table"""
-    try:
-        if hasattr(main_window, 'populate_entries_table'):
-            main_window.populate_entries_table()
-        elif hasattr(main_window, '_update_ui_for_loaded_img'):
-            main_window._update_ui_for_loaded_img()
-        elif hasattr(main_window, 'refresh_table'):
-            main_window.refresh_table()
-        else:
-            main_window.log_message("⚠️ No table refresh method found")
-    except Exception as e:
-        main_window.log_message(f"❌ Table refresh failed: {str(e)}")
-
 
 def validate_img_file(main_window) -> bool: #vers 4
     """Validate current IMG file"""
@@ -314,7 +299,6 @@ def integrate_core_functions(main_window): #vers 4
         main_window.entry_exists_in_img = lambda filename: entry_exists_in_img(main_window, filename)
         main_window.get_project_folder = lambda: get_project_folder(main_window)
         main_window.get_export_folder = lambda: get_export_folder(main_window)
-        main_window.refresh_table = lambda: refresh_table(main_window)
         main_window.validate_img = lambda: validate_img_file(main_window)
         main_window.get_img_info = lambda: get_img_info(main_window)
         main_window.format_file_size = format_file_size
@@ -340,7 +324,6 @@ __all__ = [
     'entry_exists_in_img',
     'get_project_folder',
     'get_export_folder',
-    'refresh_table',
     'validate_img_file',
     'get_img_info',
     'log_operation',

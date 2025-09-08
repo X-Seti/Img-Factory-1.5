@@ -1,11 +1,4 @@
-        if success:
-            # Refresh using the integrated refresh system
-            if hasattr(main_window, 'refresh_table') and callable(main_window.refresh_table):
-                main_window.refresh_table()
-            elif hasattr(main_window, 'refresh_current_tab_data'):
-                main_window.refresh_current_tab_data()
-            elif hasattr(main_window, 'populate_entries_table'):
-                main_window.populate#this belongs in core/remove.py - Version: 2
+#this belongs in core/remove.py - Version: 2
 # X-Seti - September07 2025 - IMG Factory 1.5 - Remove Functions FIXED
 
 """
@@ -79,25 +72,24 @@ def remove_selected_function(main_window): #vers 2
         success = _remove_entries_direct(file_object, selected_entries, main_window)
         
         if success:
-            # Refresh using the integrated refresh system
-            if hasattr(main_window, 'refresh_table') and callable(main_window.refresh_table):
-                main_window.refresh_table()
-            elif hasattr(main_window, 'refresh_current_tab_data'):
+            # Refresh current tab to show changes
+            if hasattr(main_window, 'refresh_current_tab_data'):
                 main_window.refresh_current_tab_data()
+            elif hasattr(main_window, 'refresh_table'):
+                main_window.refresh_table()
             elif hasattr(main_window, 'populate_entries_table'):
                 main_window.populate_entries_table()
             
-            # Inform user about saving changes
-            QMessageBox.information(
-                main_window, 
-                "Remove Complete", 
-                f"Successfully removed {len(selected_entries)} entries from memory.\n\n"
-                f"💾 Use the 'Save Entry' button to save changes to disk.\n"
-                f"⚠️ Changes will be lost if you reload without saving."
-            )
+            # Refresh file list window to show updated entry count
+            if hasattr(main_window, 'refresh_file_list'):
+                main_window.refresh_file_list()
+            elif hasattr(main_window, 'update_file_list'):
+                main_window.update_file_list()
+            elif hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'refresh_file_list'):
+                main_window.gui_layout.refresh_file_list()
             
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"✅ Removed {len(selected_entries)} entries - use 'Save Entry' to save changes")
+            QMessageBox.information(main_window, "Remove Complete", 
+                f"Successfully removed {len(selected_entries)} entries")
         else:
             QMessageBox.critical(main_window, "Remove Failed", 
                 "Failed to remove selected entries. Check debug log for details.")
