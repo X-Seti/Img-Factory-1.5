@@ -1,43 +1,31 @@
-        if success:
-            # Refresh using the integrated refresh system
-            if hasattr(main_window, 'refresh_table') and callable(main_window.refresh_table):
-                main_window.refresh_table()
-            elif hasattr(main_window, 'refresh_current_tab_data'):
-                main_window.refresh_current_tab_data()
-            elif hasattr(main_window, 'populate_entries_table'):
-                main_window.populate#this belongs in core/remove.py - Version: 2
-# X-Seti - September07 2025 - IMG Factory 1.5 - Remove Functions FIXED
+#this belongs in core/ remove.py - Version: 3
+# X-Seti - September08 2025 - IMG Factory 1.5 - Remove Functions with Proper Refresh
 
 """
-IMG Remove Functions - FIXED VERSION
-Core remove functionality for IMG files using working entry operations
+Remove Functions - Remove entries with comprehensive UI refresh
 """
 
 import os
-from typing import List, Optional, Any
-from PyQt6.QtWidgets import (
-    QMessageBox, QProgressDialog, QApplication
-)
-from PyQt6.QtCore import Qt
+from typing import List, Optional
+from PyQt6.QtWidgets import QMessageBox
 
-# Import working methods
+# Tab awareness system
 from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
-from methods.img_entry_operations import remove_entry_safe
 
 ##Methods list -
 # remove_selected_function
 # remove_entries_by_name
 # remove_multiple_entries
+# _remove_entries_direct
 # _get_selected_entries_simple
 # _get_selected_rows_from_table
-# _remove_entries_direct
-# _create_simple_progress_dialog
+# _refresh_after_removal
 # integrate_remove_functions
 
-def remove_selected_function(main_window): #vers 2
-    """Remove selected entries - FIXED VERSION"""
+def remove_selected_function(main_window): #vers 3
+    """Remove selected entries with proper refresh sequence"""
     try:
-        # Use tab validation
+        # Validate tab
         if not validate_tab_before_operation(main_window, "Remove Selected"):
             return False
         
@@ -47,22 +35,19 @@ def remove_selected_function(main_window): #vers 2
             QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
             return False
         
-        # Get selected entries using simple method
+        # Get selected entries
         selected_entries = _get_selected_entries_simple(main_window, file_object)
+        
         if not selected_entries:
             QMessageBox.information(main_window, "No Selection", "No entries selected for removal")
             return False
         
-        # Show confirmation dialog
-        entry_names = [getattr(entry, 'name', 'Unknown') for entry in selected_entries]
-        entry_list = '\n'.join(entry_names[:10])  # Show first 10
-        if len(entry_names) > 10:
-            entry_list += f"\n... and {len(entry_names) - 10} more"
-        
+        # Confirm removal
         reply = QMessageBox.question(
             main_window,
             "Confirm Removal",
-            f"Remove {len(selected_entries)} selected entries?\n\n{entry_list}",
+            f"Remove {len(selected_entries)} selected entries from memory?\n\n"
+            f"⚠️ Use 'Save Entry' afterwards to save changes to disk.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
@@ -79,13 +64,8 @@ def remove_selected_function(main_window): #vers 2
         success = _remove_entries_direct(file_object, selected_entries, main_window)
         
         if success:
-            # Refresh using the integrated refresh system
-            if hasattr(main_window, 'refresh_table') and callable(main_window.refresh_table):
-                main_window.refresh_table()
-            elif hasattr(main_window, 'refresh_current_tab_data'):
-                main_window.refresh_current_tab_data()
-            elif hasattr(main_window, 'populate_entries_table'):
-                main_window.populate_entries_table()
+            # Comprehensive refresh after removal
+            _refresh_after_removal(main_window)
             
             # Inform user about saving changes
             QMessageBox.information(
@@ -111,8 +91,8 @@ def remove_selected_function(main_window): #vers 2
         return False
 
 
-def remove_entries_by_name(main_window, entry_names: List[str]) -> bool: #vers 2
-    """Remove entries by name programmatically - FIXED"""
+def remove_entries_by_name(main_window, entry_names: List[str]) -> bool: #vers 3
+    """Remove entries by name programmatically with proper refresh"""
     try:
         if not validate_tab_before_operation(main_window, "Remove Entries by Name"):
             return False
@@ -128,37 +108,29 @@ def remove_entries_by_name(main_window, entry_names: List[str]) -> bool: #vers 2
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"🗑️ Removing {len(entry_names)} entries by name")
         
-        # Use IMG Factory's native remove method if available
-        removed_count = 0
-        failed_count = 0
+        # Find entries to remove
+        entries_to_remove = []
+        if hasattr(file_object, 'entries'):
+            for entry in file_object.entries:
+                if entry.name in entry_names:
+                    entries_to_remove.append(entry)
         
-        for entry_name in entry_names:
-            if hasattr(file_object, 'remove_entry') and callable(file_object.remove_entry):
-                if file_object.remove_entry(entry_name):
-                    removed_count += 1
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"✅ Removed: {entry_name}")
-                else:
-                    failed_count += 1
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"❌ Failed to remove: {entry_name}")
-            else:
-                # Fallback to remove_entry_safe function
-                if remove_entry_safe(file_object, entry_name):
-                    removed_count += 1
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"✅ Removed: {entry_name}")
-                else:
-                    failed_count += 1
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"❌ Failed to remove: {entry_name}")
+        if not entries_to_remove:
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("⚠️ No matching entries found for removal")
+            return False
         
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📊 Removal complete: {removed_count} success, {failed_count} failed")
-            if removed_count > 0:
-                main_window.log_message("💾 Remember to rebuild IMG to save changes")
+        # Remove entries
+        success = _remove_entries_direct(file_object, entries_to_remove, main_window)
         
-        return removed_count > 0
+        if success:
+            # Comprehensive refresh after removal
+            _refresh_after_removal(main_window)
+            
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"✅ Removed {len(entries_to_remove)} entries by name")
+        
+        return success
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
@@ -166,8 +138,8 @@ def remove_entries_by_name(main_window, entry_names: List[str]) -> bool: #vers 2
         return False
 
 
-def remove_multiple_entries(main_window, entries_to_remove: List) -> bool: #vers 2
-    """Remove multiple entries programmatically - FIXED"""
+def remove_multiple_entries(main_window, entries_to_remove: List) -> bool: #vers 3
+    """Remove multiple entries programmatically with proper refresh"""
     try:
         if not validate_tab_before_operation(main_window, "Remove Multiple Entries"):
             return False
@@ -183,7 +155,17 @@ def remove_multiple_entries(main_window, entries_to_remove: List) -> bool: #vers
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"🗑️ Removing {len(entries_to_remove)} entries programmatically")
         
-        return _remove_entries_direct(file_object, entries_to_remove, main_window)
+        # Remove entries
+        success = _remove_entries_direct(file_object, entries_to_remove, main_window)
+        
+        if success:
+            # Comprehensive refresh after removal
+            _refresh_after_removal(main_window)
+            
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"✅ Removed {len(entries_to_remove)} entries programmatically")
+        
+        return success
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
@@ -191,7 +173,60 @@ def remove_multiple_entries(main_window, entries_to_remove: List) -> bool: #vers
         return False
 
 
-def _get_selected_entries_simple(main_window, file_object) -> list: #vers 2
+def _remove_entries_direct(file_object, entries_to_remove: List, main_window) -> bool: #vers 3
+    """Remove entries directly from IMG file object"""
+    try:
+        if not hasattr(file_object, 'entries'):
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("❌ IMG file has no entries attribute")
+            return False
+        
+        removed_count = 0
+        
+        # Method 1: Use IMG file's native remove method if available
+        for entry in entries_to_remove:
+            entry_name = getattr(entry, 'name', str(entry))
+            
+            if hasattr(file_object, 'remove_entry') and callable(file_object.remove_entry):
+                if file_object.remove_entry(entry_name):
+                    removed_count += 1
+                    if hasattr(main_window, 'log_message'):
+                        main_window.log_message(f"🗑️ Removed: {entry_name}")
+                else:
+                    if hasattr(main_window, 'log_message'):
+                        main_window.log_message(f"❌ Failed to remove: {entry_name}")
+            else:
+                # Method 2: Direct removal from entries list
+                try:
+                    if entry in file_object.entries:
+                        file_object.entries.remove(entry)
+                        removed_count += 1
+                        if hasattr(main_window, 'log_message'):
+                            main_window.log_message(f"🗑️ Removed: {entry_name}")
+                    else:
+                        if hasattr(main_window, 'log_message'):
+                            main_window.log_message(f"❌ Entry not found: {entry_name}")
+                except Exception as e:
+                    if hasattr(main_window, 'log_message'):
+                        main_window.log_message(f"❌ Remove error for {entry_name}: {str(e)}")
+        
+        # Mark file as modified
+        if removed_count > 0:
+            if hasattr(file_object, 'modified'):
+                file_object.modified = True
+            
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"📊 Successfully removed {removed_count}/{len(entries_to_remove)} entries")
+        
+        return removed_count > 0
+        
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Direct removal error: {str(e)}")
+        return False
+
+
+def _get_selected_entries_simple(main_window, file_object) -> list: #vers 3
     """Get selected entries using simple working method"""
     try:
         selected_entries = []
@@ -218,7 +253,7 @@ def _get_selected_entries_simple(main_window, file_object) -> list: #vers 2
         return []
 
 
-def _get_selected_rows_from_table(main_window) -> list: #vers 2
+def _get_selected_rows_from_table(main_window) -> list: #vers 3
     """Get selected row numbers from entries table"""
     try:
         selected_rows = []
@@ -237,116 +272,83 @@ def _get_selected_rows_from_table(main_window) -> list: #vers 2
                     table = getattr(main_window, attr)
                 
                 if table and hasattr(table, 'selectedItems'):
-                    selected_rows = set()
-                    for item in table.selectedItems():
-                        selected_rows.add(item.row())
-                    return list(selected_rows)
-                
-            except (AttributeError, TypeError):
+                    selected_items = table.selectedItems()
+                    if selected_items:
+                        # Get unique row numbers
+                        rows = set()
+                        for item in selected_items:
+                            rows.add(item.row())
+                        selected_rows = sorted(list(rows))
+                        break
+                        
+            except AttributeError:
                 continue
         
-        return []
+        return selected_rows
         
     except Exception:
         return []
 
 
-def _remove_entries_direct(file_object, entries_to_remove, main_window) -> bool: #vers 2
-    """Remove entries directly using working remove_entry_safe function"""
+def _refresh_after_removal(main_window): #vers 2
+    """Comprehensive refresh after removal - FIXED: No blocking RW detection"""
     try:
-        removed_count = 0
-        failed_count = 0
-        total_entries = len(entries_to_remove)
+        # 1. Skip RW re-parsing to avoid UI freeze - table refresh will show existing RW data
+        # Note: RW versions are preserved from when entries were first loaded
         
-        # Create simple progress dialog
-        progress_dialog = _create_simple_progress_dialog(main_window, total_entries)
+        # 2. Refresh table with highlights if available
+        if hasattr(main_window, 'refresh_table_with_highlights'):
+            main_window.refresh_table_with_highlights()
+        elif hasattr(main_window, 'refresh_table'):
+            main_window.refresh_table()
         
-        try:
-            for i, entry in enumerate(entries_to_remove):
-                # Update progress
-                progress_dialog.setValue(i)
-                entry_name = getattr(entry, 'name', f'Entry_{i}')
-                progress_dialog.setLabelText(f"Removing: {entry_name}")
-                
-                # Use working remove_entry_safe function
-                if remove_entry_safe(file_object, entry_name):
-                    removed_count += 1
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"✅ Removed: {entry_name}")
-                else:
-                    failed_count += 1
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"❌ Failed to remove: {entry_name}")
-                
-                # Keep UI responsive
-                QApplication.processEvents()
-                
-                # Check if cancelled
-                if progress_dialog.wasCanceled():
-                    break
-            
-        finally:
-            progress_dialog.close()
+        # 3. Refresh file list window
+        if hasattr(main_window, 'refresh_file_list'):
+            main_window.refresh_file_list()
         
-        # Report results
+        # 4. Update filewindow display via GUI layout
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'refresh_file_list'):
+            main_window.gui_layout.refresh_file_list()
+        
+        # 5. Update UI for current IMG
+        if hasattr(main_window, '_update_ui_for_loaded_img'):
+            main_window._update_ui_for_loaded_img()
+        
+        # 6. Update current tab data
+        if hasattr(main_window, 'refresh_current_tab_data'):
+            main_window.refresh_current_tab_data()
+        
+        # 7. Force table repaint
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            main_window.gui_layout.table.viewport().update()
+        
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📊 Removal complete: {removed_count} success, {failed_count} failed")
-            if removed_count > 0:
-                main_window.log_message("💾 Remove successful - remember to rebuild IMG to save changes")
-        
-        return removed_count > 0
+            main_window.log_message("🔄 UI refreshed after removal (RW data preserved)")
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Direct remove error: {str(e)}")
-        return False
+            main_window.log_message(f"⚠️ Error in removal refresh: {str(e)}")
 
 
-def _create_simple_progress_dialog(main_window, total_entries) -> QProgressDialog: #vers 2
-    """Create simple progress dialog for remove operation"""
+def integrate_remove_functions(main_window) -> bool: #vers 3
+    """Integrate remove functions into main window"""
     try:
-        progress_dialog = QProgressDialog(
-            "Preparing removal...",
-            "Cancel",
-            0,
-            total_entries,
-            main_window
-        )
-        
-        progress_dialog.setWindowTitle("Removing Entries")
-        progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-        progress_dialog.setMinimumDuration(0)
-        progress_dialog.setValue(0)
-        
-        return progress_dialog
-        
-    except Exception:
-        # Fallback: create minimal progress dialog
-        from PyQt6.QtWidgets import QProgressDialog
-        progress_dialog = QProgressDialog(main_window)
-        progress_dialog.setRange(0, total_entries)
-        return progress_dialog
-
-
-def integrate_remove_functions(main_window) -> bool: #vers 2
-    """Integrate fixed remove functions into main window"""
-    try:
-        # Main remove functions
+        # Add remove methods to main window
         main_window.remove_selected_function = lambda: remove_selected_function(main_window)
-        main_window.remove_entries_by_name = lambda entry_names: remove_entries_by_name(main_window, entry_names)
+        main_window.remove_entries_by_name = lambda names: remove_entries_by_name(main_window, names)
         main_window.remove_multiple_entries = lambda entries: remove_multiple_entries(main_window, entries)
         
         # Add aliases that GUI might use
         main_window.remove_selected = main_window.remove_selected_function
-        main_window.remove_selected_entries = main_window.remove_selected_function
-        main_window.delete_selected = main_window.remove_selected_function
-        main_window.remove_entries = main_window.remove_multiple_entries
+        main_window.remove_entries = main_window.remove_entries_by_name
+        main_window.remove_multiple = main_window.remove_multiple_entries
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Fixed remove functions integrated with tab awareness")
-            main_window.log_message("   • Uses working remove_entry_safe method from img_entry_operations")
-            main_window.log_message("   • Supports selected entries, by name, and multiple entry removal")
-            main_window.log_message("   • Remember to rebuild IMG after removal to save changes")
+            main_window.log_message("✅ Remove functions integrated")
+            main_window.log_message("   • Simple UI refresh after removal")
+            main_window.log_message("   • No unnecessary RW detection")
+            main_window.log_message("   • Proper filewindow updates")
+            main_window.log_message("   • Multiple removal methods available")
         
         return True
         
@@ -356,7 +358,7 @@ def integrate_remove_functions(main_window) -> bool: #vers 2
         return False
 
 
-# Export essential functions
+# Export functions
 __all__ = [
     'remove_selected_function',
     'remove_entries_by_name',

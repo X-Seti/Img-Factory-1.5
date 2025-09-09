@@ -25,6 +25,7 @@ from core.import_via import import_via_function
 #from core.import_via import integrate_import_via_functions
 from core.remove import remove_selected_function
 from core.remove_via import integrate_remove_via_functions
+from core.remove_via import remove_via_function as remove_via_entries_function
 from core.export import export_selected_function
 # export_all_function, integrate_export_functions
 from core.export_via import export_via_function

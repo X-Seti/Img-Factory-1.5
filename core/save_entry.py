@@ -1,22 +1,27 @@
-#this belongs in core/ save_entry.py - Version: 1
-# X-Seti - September04 2025 - IMG Factory 1.5 - Save Entry Function
+#this belongs in core/ save_entry.py - Version: 3
+# X-Seti - September08 2025 - IMG Factory 1.5 - Save Entry Function Final
+
+"""
+Save Entry Function - Handles saving memory data to IMG file with comprehensive refresh
+Uses existing rebuild_current_img_native function with proper UI updates
+"""
 
 import os
 from typing import Optional
-from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QApplication
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QMessageBox
 
 # Tab awareness system
-from methods.tab_awareness import validate_tab_before_operation, get_current_file_from_active_tab
+from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 
 ##Methods list -
 # save_img_entry
 # _check_for_changes
-# _rebuild_img_file
+# _clear_modification_flags
+# _refresh_everything_after_save
 # integrate_save_entry_function
 
-def save_img_entry(main_window): #vers 1
-    """Save IMG entry changes by rebuilding the IMG file"""
+def save_img_entry(main_window): #vers 3
+    """Save IMG entry changes by rebuilding the IMG file with comprehensive refresh"""
     try:
         # Validate tab
         if not validate_tab_before_operation(main_window, "Save Entry"):
@@ -48,15 +53,26 @@ def save_img_entry(main_window): #vers 1
         if reply != QMessageBox.StandardButton.Yes:
             return False
         
-        # Rebuild IMG file to save changes
-        success = _rebuild_img_file(file_object, main_window)
+        # Use existing rebuild function
+        from core.rebuild import rebuild_current_img_native
+        
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"💾 Saving changes to: {os.path.basename(file_object.file_path)}")
+        
+        success = rebuild_current_img_native(main_window)
         
         if success:
-            QMessageBox.information(main_window, "Save Complete", "IMG file saved successfully!")
+            # Clear modification flags after successful save
+            _clear_modification_flags(file_object, main_window)
             
-            # Refresh table to show updated state
-            if hasattr(main_window, 'refresh_table'):
-                main_window.refresh_table()
+            # Comprehensive refresh after save
+            _refresh_everything_after_save(main_window)
+            
+            QMessageBox.information(main_window, "Save Complete", 
+                "IMG file saved successfully!\n\nAll changes have been written to disk.")
+            
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("✅ IMG file saved - memory data written to disk")
         else:
             QMessageBox.critical(main_window, "Save Failed", "Failed to save IMG file changes")
         
@@ -69,7 +85,7 @@ def save_img_entry(main_window): #vers 1
         return False
 
 
-def _check_for_changes(file_object, main_window) -> bool: #vers 1
+def _check_for_changes(file_object, main_window) -> bool: #vers 3
     """Check if IMG file has unsaved changes"""
     try:
         # Method 1: Check modified flag
@@ -79,25 +95,21 @@ def _check_for_changes(file_object, main_window) -> bool: #vers 1
             return True
         
         # Method 2: Check for new entries
-        if hasattr(file_object, 'has_new_or_modified_entries'):
-            if file_object.has_new_or_modified_entries():
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message("💾 Changes detected: New/modified entries found")
-                return True
-        
-        # Method 3: Check for new entries manually
         if hasattr(file_object, 'entries'):
             new_count = 0
+            modified_count = 0
             for entry in file_object.entries:
                 if hasattr(entry, 'is_new_entry') and entry.is_new_entry:
                     new_count += 1
+                if hasattr(entry, 'modified') and entry.modified:
+                    modified_count += 1
             
-            if new_count > 0:
+            if new_count > 0 or modified_count > 0:
                 if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"💾 Changes detected: {new_count} new entries")
+                    main_window.log_message(f"💾 Changes detected: {new_count} new, {modified_count} modified entries")
                 return True
         
-        # Method 4: Check deleted entries
+        # Method 3: Check deleted entries
         if hasattr(file_object, 'deleted_entries') and file_object.deleted_entries:
             deleted_count = len(file_object.deleted_entries)
             if hasattr(main_window, 'log_message'):
@@ -112,133 +124,115 @@ def _check_for_changes(file_object, main_window) -> bool: #vers 1
         return False
 
 
-def _rebuild_img_file(file_object, main_window) -> bool: #vers 1
-    """Rebuild IMG file to save changes to disk"""
+def _clear_modification_flags(file_object, main_window): #vers 3
+    """Clear modification flags after successful save"""
     try:
-        # Get file path
-        file_path = getattr(file_object, 'file_path', None)
-        if not file_path:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ No file path available for rebuild")
-            return False
+        # Clear file modified flag
+        if hasattr(file_object, 'modified'):
+            file_object.modified = False
+        
+        # Clear entry modification flags
+        if hasattr(file_object, 'entries'):
+            for entry in file_object.entries:
+                if hasattr(entry, 'is_new_entry'):
+                    entry.is_new_entry = False
+                if hasattr(entry, 'modified'):
+                    entry.modified = False
+        
+        # Clear deleted entries list
+        if hasattr(file_object, 'deleted_entries'):
+            file_object.deleted_entries.clear()
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"💾 Rebuilding IMG file: {file_path}")
-        
-        # Create progress dialog
-        progress_dialog = QProgressDialog("Saving IMG file...", "Cancel", 0, 100, main_window)
-        progress_dialog.setWindowTitle("Saving Changes")
-        progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-        progress_dialog.setValue(0)
-        progress_dialog.show()
-        
-        try:
-            # Method 1: Use existing rebuild method
-            if hasattr(file_object, 'rebuild_img_file'):
-                progress_dialog.setLabelText("Rebuilding IMG file...")
-                progress_dialog.setValue(25)
-                QApplication.processEvents()
-                
-                success = file_object.rebuild_img_file()
-                
-                progress_dialog.setValue(100)
-                QApplication.processEvents()
-                
-                if success:
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message("✅ IMG file rebuilt successfully")
-                    return True
-            
-            # Method 2: Use save method
-            elif hasattr(file_object, 'save'):
-                progress_dialog.setLabelText("Saving IMG file...")
-                progress_dialog.setValue(25)
-                QApplication.processEvents()
-                
-                success = file_object.save()
-                
-                progress_dialog.setValue(100)
-                QApplication.processEvents()
-                
-                if success:
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message("✅ IMG file saved successfully")
-                    return True
-            
-            # Method 3: Use main window rebuild function
-            elif hasattr(main_window, 'rebuild_img_function'):
-                progress_dialog.setLabelText("Using rebuild function...")
-                progress_dialog.setValue(25)
-                QApplication.processEvents()
-                
-                success = main_window.rebuild_img_function()
-                
-                progress_dialog.setValue(100)
-                QApplication.processEvents()
-                
-                return success
-            
-            # Method 4: Try external rebuild from core/rebuild.py
-            else:
-                try:
-                    from core.rebuild import rebuild_img_file
-                    
-                    progress_dialog.setLabelText("Using core rebuild...")
-                    progress_dialog.setValue(25)
-                    QApplication.processEvents()
-                    
-                    success = rebuild_img_file(main_window)
-                    
-                    progress_dialog.setValue(100)
-                    QApplication.processEvents()
-                    
-                    return success
-                    
-                except ImportError:
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message("❌ No rebuild method available")
-                    return False
-        
-        finally:
-            progress_dialog.close()
-        
-        return False
+            main_window.log_message("🧹 Cleared modification flags")
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Rebuild IMG error: {str(e)}")
-        return False
+            main_window.log_message(f"⚠️ Error clearing flags: {str(e)}")
 
 
-def integrate_save_entry_function(main_window) -> bool: #vers 1
-    """Integrate save entry function into main window"""
+def _refresh_everything_after_save(main_window): #vers 2
+    """Comprehensive refresh after successful save - FIXED: No blocking RW detection"""
     try:
-        # Add save entry method to main window
-        main_window.save_img_entry = lambda: save_img_entry(main_window)
+        # 1. Skip RW re-parsing to avoid UI freeze - rebuild already has fresh data
+        # Note: rebuild_current_img_native already handles RW detection properly
         
-        # Add aliases that GUI might use
-        main_window.save_entry = main_window.save_img_entry
-        main_window.save_img_entry_function = main_window.save_img_entry
-        main_window.save_changes = main_window.save_img_entry
+        # 2. Refresh main table with updated data
+        if hasattr(main_window, 'refresh_table'):
+            main_window.refresh_table()
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("🔄 Table refreshed")
+        
+        # 3. Refresh file list window  
+        if hasattr(main_window, 'refresh_file_list'):
+            main_window.refresh_file_list()
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("🔄 File list refreshed")
+        
+        # 4. Update filewindow display via GUI layout
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'refresh_file_list'):
+            main_window.gui_layout.refresh_file_list()
+        
+        # 5. Update UI state for loaded IMG
+        if hasattr(main_window, '_update_ui_for_loaded_img'):
+            main_window._update_ui_for_loaded_img()
+        
+        # 6. Update current tab data
+        if hasattr(main_window, 'refresh_current_tab_data'):
+            main_window.refresh_current_tab_data()
+        
+        # 7. Clear import highlights (file saved, no longer "imported")
+        if hasattr(main_window, '_import_highlight_manager'):
+            main_window._import_highlight_manager.clear_highlights()
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("🧹 Cleared import highlights")
+        
+        # 8. Force table repaint to show all updates
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            main_window.gui_layout.table.viewport().update()
+        
+        # 9. Update file info display if available
+        if hasattr(main_window, 'update_file_info'):
+            main_window.update_file_info()
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Save entry function integrated")
-            main_window.log_message("   • Rebuilds IMG file to save changes")
-            main_window.log_message("   • Detects unsaved changes automatically")
-            main_window.log_message("   • Works with existing IMG classes")
+            main_window.log_message("🔄 All UI components refreshed after save")
+        
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"⚠️ Error in comprehensive refresh: {str(e)}")
+
+
+def integrate_save_entry_function(main_window) -> bool: #vers 4
+    """Integrate save entry function into main window - WORKING VERSION"""
+    try:
+        # Add save_img_entry method to main window with multiple aliases
+        main_window.save_img_entry = lambda: save_img_entry(main_window)
+        main_window.save_entry = lambda: save_img_entry(main_window)
+        main_window.save_img_changes = lambda: save_img_entry(main_window)
+        main_window.save_memory_to_disk = lambda: save_img_entry(main_window)
+        
+        # Add more aliases that GUI might use
+        main_window.save_img_entry_function = lambda: save_img_entry(main_window)
+        main_window.save_changes = lambda: save_img_entry(main_window)
+        
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message("✅ Save Entry function integrated")
+            main_window.log_message("   • Uses rebuild_current_img_native")
+            main_window.log_message("   • Always allows saving current memory state")
+            main_window.log_message("   • Multiple function aliases available")
+            main_window.log_message("   • Simple UI refresh after save")
         
         return True
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Save entry integration failed: {str(e)}")
+            main_window.log_message(f"❌ Save Entry integration failed: {str(e)}")
         return False
 
 
 # Export functions
 __all__ = [
     'save_img_entry',
-    'show_save_options_dialog',
-    'integrate_save_entry_function',
-    'SaveOptions'
+    'integrate_save_entry_function'
 ]
