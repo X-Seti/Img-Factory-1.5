@@ -12,36 +12,40 @@ Before we recreate these files we need to check if there are any existing functi
 
 1. Multiple tabs open img/col, export_via.py, export.py and dump.py functions can't see the current selected tab.
 
-2. export.py functions export all the files combined!!
+2. export.py collision functions export all the files combined!!
 12Mb file for each, should be single files.
 
-export.py - select 7 entries should give me only 7 files, unless I ask to conbine them into a single col file.
+3. import and remove single collision objects.
 
-
-dump should also follow the same logic, but just dump them as a single or conbined col file.
-
-3. background box on col dialog is hardcoded, dark themes I can not see text.
-
----
-
-Partly Fixed - Aug7
-Import function needs work, import_via ide gives an error, no .ide file found or no files in .ide.
-
-Todo, Add options for folder contents import.
-
-Todo, Add import via textfile.txt list, could be either modelname.dff, textuename.txd in a single list, in no order.
-- function needs to be smart to understand and read the file contents.
 
 Todo, Drag and Drop files/ folders onto the imgfactory app, to be imported.
 
 Todo, fix the highlighting function, 28/28 files, when I know 10 of them already existed.
 
-Todo, Fix the Save Entry function.
 
-Todo, Theme switching from first page.
 
+------------ semi completed ---- >
+
+Fixed - Sep09
+
+Export_via.py - Needs another button on the export dialog to save to your "choosen folder" left of the "Export Via IDE" button, not just the defined assist folder.
+
+Import_via.py needs to ask where to get the files to import, another import box to choose the files location under the IDE file select.
+
+Fixed - Sep09
+Import.py added files but renderware information is being lost.
 
 ------------ completed ---- >
+
+fixed - Sep09
+Export.py works as intented.
+
+Fixed - Sep09
+Remove functions, both remove.py and remove_via,py work without error.
+Only issue is removing every entry from the img file, leaving 0 files?
+
+Fixed - Sep07
+Theme Switching - Updated the App_Settings_System.
 
 Fixed - Sep04
 Dump command has been fixed
