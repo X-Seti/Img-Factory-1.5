@@ -35,14 +35,15 @@ Import_via.py needs to ask where to get the files to import, another import box 
 Fixed - Sep09
 Import.py added files but renderware information is being lost.
 
+Fixed - Sep09
+Remove functions, both remove.py and remove_via,py work without error.
+Only issue is removing every entry from the img file, leaving 0 files?
+This needs a work around.
+
 ------------ completed ---- >
 
 fixed - Sep09
 Export.py works as intented.
-
-Fixed - Sep09
-Remove functions, both remove.py and remove_via,py work without error.
-Only issue is removing every entry from the img file, leaving 0 files?
 
 Fixed - Sep07
 Theme Switching - Updated the App_Settings_System.
