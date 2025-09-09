@@ -1,466 +1,370 @@
-#this belongs in core/ remove_via.py - Version: 3
-# X-Seti - September08 2025 - IMG Factory 1.5 - Remove Via Functions with Proper Refresh
+#this belongs in core/remove_via.py - Version: 5
+# X-Seti - September09 2025 - IMG Factory 1.5 - Remove Via Functions with Proper Modification Tracking
 
 """
-Remove Via Functions - Remove entries via IDE/text files with comprehensive refresh
+Remove Via Functions - Remove entries via IDE/text files with proper modification tracking
 """
 
 import os
-from pathlib import Path
-from typing import List, Optional, Set
-from PyQt6.QtWidgets import QMessageBox, QFileDialog
+from typing import List
+from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 # Tab awareness system
 from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 
 ##Methods list -
+# _parse_ide_file_for_removal
+# _parse_text_file_list
+# _refresh_after_removal_via
+# _remove_entries_via_with_tracking
+# integrate_remove_via_functions
 # remove_via_function
 # remove_via_ide_function
 # remove_via_text_function
-# _remove_entries_via_ide
-# _remove_entries_via_text
-# _parse_text_file_list
-# _find_entries_for_removal_ide
-# _find_entries_for_removal_text
-# _refresh_after_removal_via
-# integrate_remove_via_functions
 
-def remove_via_function(main_window): #vers 3
-    """Remove via dialog - choose IDE or text file"""
-    try:
-        # Validate tab
-        if not validate_tab_before_operation(main_window, "Remove Via"):
-            return False
+def remove_via_function(main_window): #vers 1
+    """Remove entries via file selection dialog"""
+    if not validate_tab_before_operation(main_window, "Remove Via"):
+        return False
+    
+    file_dialog = QFileDialog()
+    file_path, _ = file_dialog.getOpenFileName(
+        main_window,
+        "Select file for removal list",
+        "",
+        "IDE Files (*.ide);;Text Files (*.txt);;All Files (*)"
+    )
+    
+    if not file_path:
+        return False
+    
+    if file_path.lower().endswith('.ide'):
+        return remove_via_ide_function_with_path(main_window, file_path)
+    else:
+        return remove_via_text_function_with_path(main_window, file_path)
+
+def remove_via_ide_function(main_window): #vers 1
+    """Remove entries using IDE file selection"""
+    if not validate_tab_before_operation(main_window, "Remove Via IDE"):
+        return False
+    
+    file_dialog = QFileDialog()
+    ide_path, _ = file_dialog.getOpenFileName(
+        main_window,
+        "Select IDE file for removal",
+        "",
+        "IDE Files (*.ide);;All Files (*)"
+    )
+    
+    if not ide_path:
+        return False
+    
+    return remove_via_ide_function_with_path(main_window, ide_path)
+
+def remove_via_ide_function_with_path(main_window, ide_path: str): #vers 1
+    """Remove entries using specific IDE file path with proper modification tracking"""
+    if not validate_tab_before_operation(main_window, "Remove Via IDE"):
+        return False
+    
+    file_object, file_type = get_current_file_from_active_tab(main_window)
+    
+    if file_type != 'IMG' or not file_object:
+        QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
+        return False
+    
+    if not os.path.exists(ide_path):
+        QMessageBox.warning(main_window, "File Not Found", f"IDE file not found: {ide_path}")
+        return False
+    
+    if hasattr(main_window, 'log_message'):
+        main_window.log_message(f"Removing entries via IDE: {os.path.basename(ide_path)}")
+    
+    # Parse IDE file for entry names
+    entry_names_to_remove = _parse_ide_file_for_removal(ide_path)
+    
+    if not entry_names_to_remove:
+        QMessageBox.information(main_window, "No Entries", "No valid entries found in IDE file for removal")
+        return False
+    
+    # Find matching entries
+    entries_to_remove = []
+    for entry_name in entry_names_to_remove:
+        for entry in file_object.entries:
+            if hasattr(entry, 'name') and entry.name.lower() == entry_name.lower():
+                entries_to_remove.append(entry)
+                break
+    
+    if not entries_to_remove:
+        QMessageBox.information(main_window, "No Matches", "No matching entries found in IMG file")
+        return False
+    
+    # Confirm removal
+    reply = QMessageBox.question(
+        main_window,
+        "Confirm IDE Removal",
+        f"Remove {len(entries_to_remove)} entries found in IDE file?\n\n"
+        f"Use 'Save Entry' afterwards to save changes to disk.",
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No
+    )
+    
+    if reply != QMessageBox.StandardButton.Yes:
+        return False
+    
+    # Remove entries with proper tracking
+    success = _remove_entries_via_with_tracking(file_object, entries_to_remove, main_window)
+    
+    if success:
+        _refresh_after_removal_via(main_window)
         
-        file_object, file_type = get_current_file_from_active_tab(main_window)
-        
-        if file_type != 'IMG' or not file_object:
-            QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
-            return False
-        
-        # Ask user what type of removal
-        reply = QMessageBox.question(
+        QMessageBox.information(
             main_window,
-            "Remove Via",
-            "Choose removal method:\n\n"
-            "• Yes = Remove via IDE file\n"
-            "• No = Remove via text file list\n"
-            "• Cancel = Cancel removal",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Yes
+            "Remove Via IDE Complete",
+            f"Successfully removed {len(entries_to_remove)} entries via IDE file.\n\n"
+            f"Use 'Save Entry' to save changes to disk."
         )
         
-        if reply == QMessageBox.StandardButton.Yes:
-            return remove_via_ide_function(main_window)
-        elif reply == QMessageBox.StandardButton.No:
-            return remove_via_text_function(main_window)
-        else:
-            return False
-        
-    except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Remove via error: {str(e)}")
-        QMessageBox.critical(main_window, "Remove Via Error", f"Remove via error: {str(e)}")
+            main_window.log_message(f"Removed {len(entries_to_remove)} entries via IDE - use Save Entry to save changes")
+    
+    return success
+
+def remove_via_text_function(main_window): #vers 1
+    """Remove entries using text file selection"""
+    if not validate_tab_before_operation(main_window, "Remove Via Text"):
         return False
+    
+    file_dialog = QFileDialog()
+    text_path, _ = file_dialog.getOpenFileName(
+        main_window,
+        "Select text file for removal",
+        "",
+        "Text Files (*.txt);;All Files (*)"
+    )
+    
+    if not text_path:
+        return False
+    
+    return remove_via_text_function_with_path(main_window, text_path)
 
-
-def remove_via_ide_function(main_window) -> bool: #vers 3
-    """Remove entries based on IDE definitions with proper refresh"""
-    try:
-        # File dialog for IDE file
-        ide_path, _ = QFileDialog.getOpenFileName(
+def remove_via_text_function_with_path(main_window, text_path: str): #vers 1
+    """Remove entries using specific text file path with proper modification tracking"""
+    if not validate_tab_before_operation(main_window, "Remove Via Text"):
+        return False
+    
+    file_object, file_type = get_current_file_from_active_tab(main_window)
+    
+    if file_type != 'IMG' or not file_object:
+        QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
+        return False
+    
+    if not os.path.exists(text_path):
+        QMessageBox.warning(main_window, "File Not Found", f"Text file not found: {text_path}")
+        return False
+    
+    if hasattr(main_window, 'log_message'):
+        main_window.log_message(f"Removing entries via text: {os.path.basename(text_path)}")
+    
+    # Parse text file for entry names
+    entry_names_to_remove = _parse_text_file_list(text_path)
+    
+    if not entry_names_to_remove:
+        QMessageBox.information(main_window, "No Entries", "No valid entries found in text file for removal")
+        return False
+    
+    # Find matching entries
+    entries_to_remove = []
+    for entry_name in entry_names_to_remove:
+        for entry in file_object.entries:
+            if hasattr(entry, 'name') and entry.name.lower() == entry_name.lower():
+                entries_to_remove.append(entry)
+                break
+    
+    if not entries_to_remove:
+        QMessageBox.information(main_window, "No Matches", "No matching entries found in IMG file")
+        return False
+    
+    # Confirm removal
+    reply = QMessageBox.question(
+        main_window,
+        "Confirm Text Removal",
+        f"Remove {len(entries_to_remove)} entries found in text file?\n\n"
+        f"Use 'Save Entry' afterwards to save changes to disk.",
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No
+    )
+    
+    if reply != QMessageBox.StandardButton.Yes:
+        return False
+    
+    # Remove entries with proper tracking
+    success = _remove_entries_via_with_tracking(file_object, entries_to_remove, main_window)
+    
+    if success:
+        _refresh_after_removal_via(main_window)
+        
+        QMessageBox.information(
             main_window,
-            "Select IDE File",
-            "",
-            "IDE Files (*.ide);;All Files (*.*)"
+            "Remove Via Text Complete",
+            f"Successfully removed {len(entries_to_remove)} entries via text file.\n\n"
+            f"Use 'Save Entry' to save changes to disk."
         )
         
-        if not ide_path:
-            return False
-        
-        # Remove entries via IDE
-        success = _remove_entries_via_ide(main_window, ide_path)
-        
-        if success:
-            QMessageBox.information(main_window, "Remove Via Complete",
-                "Entries removed via IDE successfully!\n\n"
-                "💾 Use the 'Save Entry' button to save changes to disk.")
-        
-        return success
-        
-    except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Remove via IDE error: {str(e)}")
+            main_window.log_message(f"Removed {len(entries_to_remove)} entries via text - use Save Entry to save changes")
+    
+    return success
+
+def _remove_entries_via_with_tracking(file_object, entries_to_remove: List, main_window) -> bool: #vers 1
+    """Remove entries via with proper modification tracking - FIXES SAVE ENTRY DETECTION"""
+    if not hasattr(file_object, 'entries'):
         return False
-
-
-def remove_via_text_function(main_window) -> bool: #vers 3
-    """Remove entries from text file list with proper refresh"""
-    try:
-        # File dialog for text file
-        text_path, _ = QFileDialog.getOpenFileName(
-            main_window,
-            "Select Text File List",
-            "",
-            "Text Files (*.txt);;All Files (*.*)"
-        )
-        
-        if not text_path:
-            return False
-        
-        # Remove entries via text list
-        success = _remove_entries_via_text(main_window, text_path)
-        
-        if success:
-            QMessageBox.information(main_window, "Remove Via Complete",
-                "Entries removed via text list successfully!\n\n"
-                "💾 Use the 'Save Entry' button to save changes to disk.")
-        
-        return success
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Remove via text error: {str(e)}")
-        return False
-
-
-def _remove_entries_via_ide(main_window, ide_path: str) -> bool: #vers 3
-    """Remove entries based on IDE definitions with proper refresh"""
-    try:
-        file_object, file_type = get_current_file_from_active_tab(main_window)
-        
-        if file_type != 'IMG' or not file_object:
-            return False
-        
-        # Parse IDE file
-        try:
-            from methods.ide_parser_functions import parse_ide_file
-            ide_parser = parse_ide_file(ide_path)
-            if ide_parser:
-                ide_models = ide_parser.models
-            else:
-                ide_models = None
-        except ImportError:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ IDE parser not available")
-            return False
-        
-        if not ide_models:
-            QMessageBox.information(main_window, "No Models", "No model definitions found in IDE file")
-            return False
-        
-        # Find entries to remove based on IDE models
-        entries_to_remove = _find_entries_for_removal_ide(file_object, ide_models)
-        
-        if not entries_to_remove:
-            QMessageBox.information(main_window, "No Matches Found", 
-                "No entries found in IMG that match IDE definitions")
-            return False
-        
-        # Confirm removal
-        reply = QMessageBox.question(
-            main_window,
-            "Confirm Removal",
-            f"Remove {len(entries_to_remove)} entries matching IDE definitions?\n\n"
-            f"⚠️ Use 'Save Entry' afterwards to save changes to disk.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
-        )
-        
-        if reply != QMessageBox.StandardButton.Yes:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("Remove via IDE cancelled by user")
-            return False
-        
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🗑️ Removing {len(entries_to_remove)} entries via IDE definitions")
-        
-        # Remove entries
-        removed_count = 0
-        for entry in entries_to_remove:
-            try:
-                if hasattr(file_object, 'remove_entry') and callable(file_object.remove_entry):
-                    if file_object.remove_entry(entry.name):
-                        removed_count += 1
-                        if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"🗑️ Removed via IDE: {entry.name}")
-                else:
-                    # Direct removal from entries list
-                    if entry in file_object.entries:
-                        file_object.entries.remove(entry)
-                        removed_count += 1
-                        if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"🗑️ Removed via IDE: {entry.name}")
-            except Exception as e:
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"❌ Failed to remove {entry.name}: {str(e)}")
-        
-        if removed_count > 0:
-            # Mark file as modified
-            if hasattr(file_object, 'modified'):
-                file_object.modified = True
+    
+    # Initialize deleted_entries tracking if not exists
+    if not hasattr(file_object, 'deleted_entries'):
+        file_object.deleted_entries = []
+    
+    removed_count = 0
+    
+    for entry in entries_to_remove:
+        if entry in file_object.entries:
+            # Remove from current entries list
+            file_object.entries.remove(entry)
             
-            # Comprehensive refresh after removal
-            _refresh_after_removal_via(main_window)
+            # CRITICAL: Track the deletion for Save Entry detection
+            file_object.deleted_entries.append(entry)
             
+            removed_count += 1
             if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"✅ Removed {removed_count} entries via IDE - use 'Save Entry' to save changes")
-            
-            return True
-        else:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ No entries were removed via IDE")
-            return False
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Remove via IDE error: {str(e)}")
-        return False
+                main_window.log_message(f"Removed via: {entry.name}")
+    
+    # Mark file as modified
+    if removed_count > 0:
+        file_object.modified = True
+    
+    return removed_count > 0
 
-
-def _remove_entries_via_text(main_window, text_path: str) -> bool: #vers 3
-    """Remove entries from text file list with proper refresh"""
-    try:
-        file_object, file_type = get_current_file_from_active_tab(main_window)
+def _parse_ide_file_for_removal(ide_path: str) -> List[str]: #vers 1
+    """Parse IDE file to extract model and texture names for removal"""
+    entry_names = []
+    
+    with open(ide_path, 'r', encoding='utf-8', errors='ignore') as f:
+        current_section = None
         
-        if file_type != 'IMG' or not file_object:
-            return False
-        
-        # Parse text file for file list
-        file_list = _parse_text_file_list(text_path)
-        
-        if not file_list:
-            QMessageBox.information(main_window, "No Files", "No valid file names found in text file")
-            return False
-        
-        # Find entries to remove based on text list
-        entries_to_remove = _find_entries_for_removal_text(file_object, file_list)
-        
-        if not entries_to_remove:
-            QMessageBox.information(main_window, "No Matches Found", 
-                f"No entries found in IMG matching text file list.\n\n"
-                f"Looked for {len(file_list)} filenames but none were found in the current IMG file.")
-            return False
-        
-        # Confirm removal
-        reply = QMessageBox.question(
-            main_window,
-            "Confirm Removal",
-            f"Remove {len(entries_to_remove)} entries matching text file list?\n\n"
-            f"⚠️ Use 'Save Entry' afterwards to save changes to disk.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
-        )
-        
-        if reply != QMessageBox.StandardButton.Yes:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("Remove via text cancelled by user")
-            return False
-        
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🗑️ Removing {len(entries_to_remove)} entries via text list")
-        
-        # Remove entries
-        removed_count = 0
-        for entry in entries_to_remove:
-            try:
-                if hasattr(file_object, 'remove_entry') and callable(file_object.remove_entry):
-                    if file_object.remove_entry(entry.name):
-                        removed_count += 1
-                        if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"🗑️ Removed via text: {entry.name}")
-                else:
-                    # Direct removal from entries list
-                    if entry in file_object.entries:
-                        file_object.entries.remove(entry)
-                        removed_count += 1
-                        if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"🗑️ Removed via text: {entry.name}")
-            except Exception as e:
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"❌ Failed to remove {entry.name}: {str(e)}")
-        
-        if removed_count > 0:
-            # Mark file as modified
-            if hasattr(file_object, 'modified'):
-                file_object.modified = True
+        for line_num, line in enumerate(f, 1):
+            line = line.strip()
             
-            # Comprehensive refresh after removal
-            _refresh_after_removal_via(main_window)
+            # Skip empty lines and comments
+            if not line or line.startswith('#') or line.startswith(';'):
+                continue
             
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"✅ Removed {removed_count} entries via text - use 'Save Entry' to save changes")
+            # Check for section headers
+            if line.lower() == 'objs':
+                current_section = 'objs'
+                continue
+            elif line.lower() == 'tobj':
+                current_section = 'tobj'
+                continue
+            elif line.lower() == 'end':
+                current_section = None
+                continue
             
-            return True
-        else:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ No entries were removed via text")
-            return False
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Remove via text error: {str(e)}")
-        return False
-
-
-def _parse_text_file_list(text_path: str) -> List[str]: #vers 3
-    """Parse text file for list of filenames"""
-    try:
-        file_list = []
-        
-        with open(text_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#'):  # Skip empty lines and comments
-                    # Smart parsing - extract filename if it's a path
-                    if '/' in line or '\\' in line:
-                        filename = os.path.basename(line)
-                    else:
-                        filename = line
+            # Parse entries in objs and tobj sections
+            if current_section in ['objs', 'tobj']:
+                parts = [part.strip() for part in line.split(',')]
+                if len(parts) >= 3:  # Need at least ID, ModelName, TextureName
+                    model_name = parts[1].strip()
+                    texture_name = parts[2].strip()
                     
-                    # Validate filename
-                    if filename and '.' in filename:
-                        file_list.append(filename)
-        
-        return file_list
-        
-    except Exception:
-        return []
+                    # Add model name (.dff)
+                    if model_name and not model_name.isdigit() and model_name != '-1':
+                        if not model_name.lower().endswith('.dff'):
+                            model_name += '.dff'
+                        entry_names.append(model_name)
+                    
+                    # Add texture name (.txd)
+                    if texture_name and not texture_name.isdigit() and texture_name != '-1':
+                        if not texture_name.lower().endswith('.txd'):
+                            texture_name += '.txd'
+                        entry_names.append(texture_name)
+    
+    return list(set(entry_names))  # Remove duplicates
 
+def _parse_text_file_list(text_path: str) -> List[str]: #vers 1
+    """Parse text file for list of filenames"""
+    file_list = []
+    
+    with open(text_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#'):  # Skip empty lines and comments
+                # Smart parsing - extract filename if it's a path
+                if '/' in line or '\\' in line:
+                    filename = os.path.basename(line)
+                else:
+                    filename = line
+                
+                # Validate filename
+                if filename and '.' in filename:
+                    file_list.append(filename)
+    
+    return file_list
 
-def _find_entries_for_removal_ide(file_object, ide_models: dict) -> List: #vers 3
-    """Find entries to remove based on IDE model definitions"""
-    try:
-        entries_to_remove = []
-        
-        if not hasattr(file_object, 'entries'):
-            return entries_to_remove
-        
-        # Build list of filenames to look for based on IDE models
-        filenames_to_remove = set()
-        
-        for model_id, model_data in ide_models.items():
-            model_name = model_data.get('name', model_id)
-            
-            # Common file patterns for GTA models
-            potential_files = [
-                f"{model_name}.dff",
-                f"{model_name}.txd",
-                f"{model_name}.col"
-            ]
-            
-            filenames_to_remove.update(potential_files)
-        
-        # Find matching entries in IMG
-        for entry in file_object.entries:
-            if entry.name in filenames_to_remove:
-                entries_to_remove.append(entry)
-        
-        return entries_to_remove
-        
-    except Exception:
-        return []
-
-
-def _find_entries_for_removal_text(file_object, file_list: List[str]) -> List: #vers 3
-    """Find entries to remove based on text file list"""
-    try:
-        entries_to_remove = []
-        
-        if not hasattr(file_object, 'entries'):
-            return entries_to_remove
-        
-        # Convert file list to set for faster lookup
-        filenames_to_remove = set(file_list)
-        
-        # Find matching entries in IMG
-        for entry in file_object.entries:
-            if entry.name in filenames_to_remove:
-                entries_to_remove.append(entry)
-        
-        return entries_to_remove
-        
-    except Exception:
-        return []
-
-
-def _refresh_after_removal_via(main_window): #vers 2
-    """Comprehensive refresh after removal via - FIXED: No blocking RW detection"""
-    try:
-        # 1. Skip RW re-parsing to avoid UI freeze - table refresh will show existing RW data
-        # Note: RW versions are preserved from when entries were first loaded
-        
-        # 2. Refresh table with highlights if available
+def _refresh_after_removal_via(main_window): #vers 1
+    """Refresh UI after removal via"""
+    # Refresh main table
+    if hasattr(main_window, 'refresh_table'):
+        main_window.refresh_table()
+    
+    # Refresh file list window
+    if hasattr(main_window, 'refresh_file_list'):
+        main_window.refresh_file_list()
+    
+    # Update GUI layout
+    if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'refresh_file_list'):
+        main_window.gui_layout.refresh_file_list()
+    
+    # Update UI for current IMG
+    if hasattr(main_window, '_update_ui_for_loaded_img'):
+        main_window._update_ui_for_loaded_img()
+    
+    # Update current tab data
+    if hasattr(main_window, 'refresh_current_tab_data'):
+        main_window.refresh_current_tab_data()
+    
+    # Clear any stale highlights (removed files should not be highlighted)
+    if hasattr(main_window, '_import_highlight_manager'):
         if hasattr(main_window, 'refresh_table_with_highlights'):
             main_window.refresh_table_with_highlights()
-        elif hasattr(main_window, 'refresh_table'):
-            main_window.refresh_table()
-        
-        # 3. Refresh file list window
-        if hasattr(main_window, 'refresh_file_list'):
-            main_window.refresh_file_list()
-        
-        # 4. Update filewindow display via GUI layout
-        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'refresh_file_list'):
-            main_window.gui_layout.refresh_file_list()
-        
-        # 5. Update UI for current IMG
-        if hasattr(main_window, '_update_ui_for_loaded_img'):
-            main_window._update_ui_for_loaded_img()
-        
-        # 6. Update current tab data
-        if hasattr(main_window, 'refresh_current_tab_data'):
-            main_window.refresh_current_tab_data()
-        
-        # 7. Clear any stale highlights (removed files should not be highlighted)
-        if hasattr(main_window, '_import_highlight_manager'):
-            # Refresh highlights to remove deleted entries
-            if hasattr(main_window, 'refresh_table_with_highlights'):
-                main_window.refresh_table_with_highlights()
-        
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message("🔄 UI refreshed after removal via (RW data preserved)")
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"⚠️ Error in removal via refresh: {str(e)}")
+    
+    if hasattr(main_window, 'log_message'):
+        main_window.log_message("UI refreshed after removal via")
 
-
-def integrate_remove_via_functions(main_window) -> bool: #vers 4
-    """Integrate remove via functions into main window - COMPLETE ALIASES"""
-    try:
-        # Add remove via methods to main window
-        main_window.remove_via_function = lambda: remove_via_function(main_window)
-        main_window.remove_via_ide_function = lambda: remove_via_ide_function(main_window)
-        main_window.remove_via_text_function = lambda: remove_via_text_function(main_window)
-        
-        # Add aliases that GUI might use
-        main_window.remove_via = main_window.remove_via_function
-        main_window.remove_via_ide = main_window.remove_via_ide_function
-        main_window.remove_via_text = main_window.remove_via_text_function
-        main_window.remove_via_entries = main_window.remove_via_function  # GUI uses this name!
-        main_window.remove_via_entries_function = main_window.remove_via_function  # Alternative GUI name
-        
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Remove Via functions integrated")
-            main_window.log_message("   • IDE file removal support")
-            main_window.log_message("   • Text file list removal support")
-            main_window.log_message("   • Simple UI refresh after removal")
-            main_window.log_message("   • No unnecessary RW detection")
-            main_window.log_message("   • All GUI aliases added")
-        
-        return True
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Remove Via integration failed: {str(e)}")
-        return False
-
+def integrate_remove_via_functions(main_window) -> bool: #vers 1
+    """Integrate remove via functions with proper modification tracking"""
+    # Add remove via methods to main window
+    main_window.remove_via_function = lambda: remove_via_function(main_window)
+    main_window.remove_via_ide_function = lambda: remove_via_ide_function(main_window)
+    main_window.remove_via_text_function = lambda: remove_via_text_function(main_window)
+    
+    # Add aliases that GUI might use
+    main_window.remove_via = main_window.remove_via_function
+    main_window.remove_via_ide = main_window.remove_via_ide_function
+    main_window.remove_via_text = main_window.remove_via_text_function
+    main_window.remove_via_entries = main_window.remove_via_function
+    
+    if hasattr(main_window, 'log_message'):
+        main_window.log_message("Remove via functions integrated with proper modification tracking")
+        main_window.log_message("   • Tracks deleted entries for Save Entry detection")
+        main_window.log_message("   • Supports IDE and text file removal lists")
+        main_window.log_message("   • Sets modified flag properly")
+    
+    return True
 
 # Export functions
 __all__ = [
     'remove_via_function',
-    'remove_via_ide_function', 
+    'remove_via_ide_function',
     'remove_via_text_function',
     'integrate_remove_via_functions'
 ]

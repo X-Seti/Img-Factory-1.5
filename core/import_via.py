@@ -1,577 +1,483 @@
-#this belongs in core/ import_via.py - Version: 14
-# X-Seti - September08 2025 - IMG Factory 1.5 - Import Via Functions with RW Detection
+#this belongs in core/import_via.py - Version: 8
+# X-Seti - September09 2025 - IMG Factory 1.5 - Import Via Functions with Proper Modification Tracking
 
 """
-Import Via Functions - Import via IDE/text files with RW version detection
+Import Via Functions - Import files via IDE/text with proper modification tracking for Save Entry detection
 """
 
 import os
+from typing import List, Tuple
 from pathlib import Path
-from typing import List, Optional, Set
-from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QFileDialog, QApplication
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 # Tab awareness system
 from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 
 ##Methods list -
+# _add_file_to_img_with_tracking_via
+# _ask_user_about_saving_via
+# _find_file_in_directory
+# _parse_ide_file_for_import
+# _parse_text_file_for_import
+# _refresh_after_import_via
 # import_via_function
 # import_via_ide_function
 # import_via_text_function
-# _import_files_via_ide
-# _import_files_via_text
-# _parse_text_file_list
-# _find_files_for_import
-# _parse_imported_files_for_rw
-# _track_imported_files_with_highlighting
-# _refresh_after_import_via
 # integrate_import_via_functions
 
-def import_via_function(main_window): #vers 14
-    """Import via dialog - choose IDE or text file"""
-    try:
-        # Validate tab
-        if not validate_tab_before_operation(main_window, "Import Via"):
-            return False
-        
-        file_object, file_type = get_current_file_from_active_tab(main_window)
-        
-        if file_type != 'IMG' or not file_object:
-            QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
-            return False
-        
-        # Ask user what type of import
-        reply = QMessageBox.question(
-            main_window,
-            "Import Via",
-            "Choose import method:\n\n"
-            "• Yes = Import via IDE file\n"
-            "• No = Import via text file list\n"
-            "• Cancel = Cancel import",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Yes
-        )
-        
-        if reply == QMessageBox.StandardButton.Yes:
-            return import_via_ide_function(main_window)
-        elif reply == QMessageBox.StandardButton.No:
-            return import_via_text_function(main_window)
-        else:
-            return False
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Import via error: {str(e)}")
-        QMessageBox.critical(main_window, "Import Via Error", f"Import via error: {str(e)}")
+def import_via_function(main_window): #vers 1
+    """Import files via file selection dialog"""
+    if not validate_tab_before_operation(main_window, "Import Via"):
         return False
+    
+    file_dialog = QFileDialog()
+    file_path, _ = file_dialog.getOpenFileName(
+        main_window,
+        "Select file for import list",
+        "",
+        "IDE Files (*.ide);;Text Files (*.txt);;All Files (*)"
+    )
+    
+    if not file_path:
+        return False
+    
+    if file_path.lower().endswith('.ide'):
+        return import_via_ide_function_with_path(main_window, file_path)
+    else:
+        return import_via_text_function_with_path(main_window, file_path)
 
+def import_via_ide_function(main_window): #vers 1
+    """Import files using IDE file with models directory selection"""
+    if not validate_tab_before_operation(main_window, "Import Via IDE"):
+        return False
+    
+    file_object, file_type = get_current_file_from_active_tab(main_window)
+    
+    if file_type != 'IMG' or not file_object:
+        QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
+        return False
+    
+    # Select IDE file
+    file_dialog = QFileDialog()
+    ide_path, _ = file_dialog.getOpenFileName(
+        main_window,
+        "Select IDE file for import",
+        "",
+        "IDE Files (*.ide);;All Files (*)"
+    )
+    
+    if not ide_path:
+        return False
+    
+    # Select models directory
+    models_dir = QFileDialog.getExistingDirectory(
+        main_window,
+        "Select directory containing DFF/TXD files"
+    )
+    
+    if not models_dir:
+        return False
+    
+    return import_via_ide_function_with_paths(main_window, ide_path, models_dir)
 
-def import_via_ide_function(main_window) -> bool: #vers 14
-    """Import files based on IDE definitions with RW detection"""
-    try:
-        # File dialog for IDE file
-        ide_path, _ = QFileDialog.getOpenFileName(
+def import_via_ide_function_with_path(main_window, ide_path: str): #vers 1
+    """Import files using IDE file path (auto-detect models directory)"""
+    models_dir = os.path.dirname(ide_path)  # Use IDE file's directory
+    return import_via_ide_function_with_paths(main_window, ide_path, models_dir)
+
+def import_via_ide_function_with_paths(main_window, ide_path: str, models_dir: str): #vers 1
+    """Import files using IDE file and models directory with proper modification tracking"""
+    if not validate_tab_before_operation(main_window, "Import Via IDE"):
+        return False
+    
+    file_object, file_type = get_current_file_from_active_tab(main_window)
+    
+    if file_type != 'IMG' or not file_object:
+        QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
+        return False
+    
+    if not os.path.exists(ide_path):
+        QMessageBox.warning(main_window, "File Not Found", f"IDE file not found: {ide_path}")
+        return False
+    
+    if not os.path.exists(models_dir):
+        QMessageBox.warning(main_window, "Directory Not Found", f"Models directory not found: {models_dir}")
+        return False
+    
+    if hasattr(main_window, 'log_message'):
+        main_window.log_message(f"Importing via IDE: {os.path.basename(ide_path)}")
+        main_window.log_message(f"Models directory: {models_dir}")
+    
+    # Parse IDE file
+    model_files, texture_files, missing_files = _parse_ide_file_for_import(ide_path, models_dir)
+    
+    total_found = len(model_files) + len(texture_files)
+    
+    if total_found == 0:
+        QMessageBox.information(main_window, "No Files Found", "No DFF/TXD files found for IDE entries")
+        return False
+    
+    # Show preview to user
+    preview_msg = f"Found {total_found} files to import:\n"
+    preview_msg += f"• {len(model_files)} DFF model files\n"
+    preview_msg += f"• {len(texture_files)} TXD texture files\n"
+    
+    if missing_files:
+        preview_msg += f"\nMissing {len(missing_files)} files:\n"
+        preview_msg += "\n".join(missing_files[:5])  # Show first 5 missing
+        if len(missing_files) > 5:
+            preview_msg += f"\n... and {len(missing_files) - 5} more"
+    
+    preview_msg += "\n\nProceed with import?"
+    
+    reply = QMessageBox.question(
+        main_window,
+        "Import Via IDE Preview",
+        preview_msg,
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.Yes
+    )
+    
+    if reply != QMessageBox.StandardButton.Yes:
+        return False
+    
+    # Import files with proper tracking
+    imported_count = 0
+    all_files = model_files + texture_files
+    
+    for file_path in all_files:
+        filename = os.path.basename(file_path)
+        if _add_file_to_img_with_tracking_via(file_object, file_path, filename, main_window):
+            imported_count += 1
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"Imported via IDE: {filename}")
+    
+    if imported_count > 0:
+        _refresh_after_import_via(main_window)
+        
+        QMessageBox.information(
             main_window,
-            "Select IDE File",
-            "",
-            "IDE Files (*.ide);;All Files (*.*)"
+            "Import Via IDE Complete",
+            f"Successfully imported {imported_count} files via IDE.\n\n"
+            f"Use 'Save Entry' to save changes to disk."
         )
         
-        if not ide_path:
-            return False
+        # Ask user about saving
+        _ask_user_about_saving_via(main_window)
         
-        # Ask for base directory where files are located
-        base_dir = QFileDialog.getExistingDirectory(
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"IDE import complete: {imported_count} files - use Save Entry to save changes")
+    
+    return imported_count > 0
+
+def import_via_text_function(main_window): #vers 1
+    """Import files using text file selection"""
+    if not validate_tab_before_operation(main_window, "Import Via Text"):
+        return False
+    
+    file_dialog = QFileDialog()
+    text_path, _ = file_dialog.getOpenFileName(
+        main_window,
+        "Select text file for import",
+        "",
+        "Text Files (*.txt);;All Files (*)"
+    )
+    
+    if not text_path:
+        return False
+    
+    return import_via_text_function_with_path(main_window, text_path)
+
+def import_via_text_function_with_path(main_window, text_path: str): #vers 1
+    """Import files using text file with proper modification tracking"""
+    if not validate_tab_before_operation(main_window, "Import Via Text"):
+        return False
+    
+    file_object, file_type = get_current_file_from_active_tab(main_window)
+    
+    if file_type != 'IMG' or not file_object:
+        QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
+        return False
+    
+    if not os.path.exists(text_path):
+        QMessageBox.warning(main_window, "File Not Found", f"Text file not found: {text_path}")
+        return False
+    
+    # Select directory containing the files
+    files_dir = QFileDialog.getExistingDirectory(
+        main_window,
+        "Select directory containing the files to import"
+    )
+    
+    if not files_dir:
+        return False
+    
+    if hasattr(main_window, 'log_message'):
+        main_window.log_message(f"Importing via text: {os.path.basename(text_path)}")
+        main_window.log_message(f"Files directory: {files_dir}")
+    
+    # Parse text file
+    file_paths, missing_files = _parse_text_file_for_import(text_path, files_dir)
+    
+    if not file_paths:
+        QMessageBox.information(main_window, "No Files Found", "No files found for text file entries")
+        return False
+    
+    # Show preview to user
+    preview_msg = f"Found {len(file_paths)} files to import from text file.\n"
+    
+    if missing_files:
+        preview_msg += f"\nMissing {len(missing_files)} files:\n"
+        preview_msg += "\n".join(missing_files[:5])
+        if len(missing_files) > 5:
+            preview_msg += f"\n... and {len(missing_files) - 5} more"
+    
+    preview_msg += "\n\nProceed with import?"
+    
+    reply = QMessageBox.question(
+        main_window,
+        "Import Via Text Preview",
+        preview_msg,
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.Yes
+    )
+    
+    if reply != QMessageBox.StandardButton.Yes:
+        return False
+    
+    # Import files with proper tracking
+    imported_count = 0
+    
+    for file_path in file_paths:
+        filename = os.path.basename(file_path)
+        if _add_file_to_img_with_tracking_via(file_object, file_path, filename, main_window):
+            imported_count += 1
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"Imported via text: {filename}")
+    
+    if imported_count > 0:
+        _refresh_after_import_via(main_window)
+        
+        QMessageBox.information(
             main_window,
-            "Select Base Directory (where model files are located)",
-            ""
+            "Import Via Text Complete",
+            f"Successfully imported {imported_count} files via text file.\n\n"
+            f"Use 'Save Entry' to save changes to disk."
         )
         
-        if not base_dir:
-            return False
+        # Ask user about saving
+        _ask_user_about_saving_via(main_window)
         
-        # Import files via IDE
-        success = _import_files_via_ide(main_window, ide_path, base_dir)
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Text import complete: {imported_count} files - use Save Entry to save changes")
+    
+    return imported_count > 0
+
+def _add_file_to_img_with_tracking_via(file_object, file_path: str, filename: str, main_window) -> bool: #vers 1
+    """Add file to IMG via with proper modification tracking - FIXES SAVE ENTRY DETECTION"""
+    # Read file data
+    with open(file_path, 'rb') as f:
+        file_data = f.read()
+    
+    # Use IMG file's add_entry method if available
+    if hasattr(file_object, 'add_entry') and callable(file_object.add_entry):
+        success = file_object.add_entry(filename, file_data)
         
         if success:
-            QMessageBox.information(main_window, "Import Via Complete",
-                "Files imported via IDE successfully!\n\n"
-                "💾 Use the 'Save Entry' button to save changes to disk.")
-        
-        return success
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Import via IDE error: {str(e)}")
-        return False
-
-
-def import_via_text_function(main_window) -> bool: #vers 14
-    """Import files from text file list with RW detection"""
+            # Find the added entry and mark it as new
+            if hasattr(file_object, 'entries'):
+                for entry in reversed(file_object.entries):  # Check recent entries first
+                    if hasattr(entry, 'name') and entry.name == filename:
+                        # CRITICAL: Mark as new entry for Save Entry detection
+                        entry.is_new_entry = True
+                        break
+            
+            # Mark file as modified
+            file_object.modified = True
+            
+            return True
+    
+    # Fallback: Use methods from img_entry_operations
     try:
-        # File dialog for text file
-        text_path, _ = QFileDialog.getOpenFileName(
-            main_window,
-            "Select Text File List",
-            "",
-            "Text Files (*.txt);;All Files (*.*)"
-        )
-        
-        if not text_path:
-            return False
-        
-        # Ask for base directory where files are located
-        base_dir = QFileDialog.getExistingDirectory(
-            main_window,
-            "Select Base Directory (where files are located)",
-            ""
-        )
-        
-        if not base_dir:
-            return False
-        
-        # Import files via text list
-        success = _import_files_via_text(main_window, text_path, base_dir)
+        from methods.img_entry_operations import add_entry_safe
+        success = add_entry_safe(file_object, filename, file_data, auto_save=False)
         
         if success:
-            QMessageBox.information(main_window, "Import Via Complete",
-                "Files imported via text list successfully!\n\n"
-                "💾 Use the 'Save Entry' button to save changes to disk.")
-        
-        return success
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Import via text error: {str(e)}")
-        return False
-
-
-def _import_files_via_ide(main_window, ide_path: str, base_dir: str) -> bool: #vers 14
-    """Import files based on IDE definitions with RW detection"""
-    try:
-        file_object, file_type = get_current_file_from_active_tab(main_window)
-        
-        if file_type != 'IMG' or not file_object:
-            return False
-        
-        # Parse IDE file
-        try:
-            from methods.ide_parser_functions import parse_ide_file
-            ide_parser = parse_ide_file(ide_path)
-            if ide_parser:
-                ide_models = ide_parser.models
-            else:
-                ide_models = None
-        except ImportError:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ IDE parser not available")
-            return False
-        
-        if not ide_models:
-            QMessageBox.information(main_window, "No Models", "No model definitions found in IDE file")
-            return False
-        
-        # Track existing files before import
-        existing_files = set()
-        if hasattr(file_object, 'entries'):
-            existing_files = {entry.name for entry in file_object.entries}
-        
-        # Find files to import based on IDE models
-        files_to_import = _find_files_for_import(ide_models, base_dir)
-        
-        if not files_to_import:
-            QMessageBox.information(main_window, "No Files Found", 
-                "No files found matching IDE definitions in the specified directory")
-            return False
-        
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📂 Found {len(files_to_import)} files from IDE definitions")
-        
-        # Import the files
-        imported_count = 0
-        imported_filenames = []
-        
-        # Create progress dialog
-        progress = QProgressDialog("Importing via IDE...", "Cancel", 0, len(files_to_import), main_window)
-        progress.setWindowModality(Qt.WindowModality.WindowModal)
-        progress.show()
-        
-        for i, file_path in enumerate(files_to_import):
-            if progress.wasCanceled():
-                break
+            # Find the added entry and mark it as new
+            if hasattr(file_object, 'entries'):
+                for entry in reversed(file_object.entries):
+                    if hasattr(entry, 'name') and entry.name == filename:
+                        # CRITICAL: Mark as new entry for Save Entry detection
+                        entry.is_new_entry = True
+                        break
             
-            progress.setValue(i)
-            progress.setLabelText(f"Importing {os.path.basename(file_path)}...")
-            QApplication.processEvents()
-            
-            try:
-                # Read file data
-                with open(file_path, 'rb') as f:
-                    file_data = f.read()
-                
-                filename = os.path.basename(file_path)
-                
-                # Use existing add_entry method
-                if hasattr(file_object, 'add_entry'):
-                    success = file_object.add_entry(filename, file_data, auto_save=False)
-                    if success:
-                        imported_count += 1
-                        imported_filenames.append(filename)
-                        if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"📁 Imported via IDE: {filename}")
-                
-            except Exception as e:
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"❌ Failed to import {os.path.basename(file_path)}: {str(e)}")
-        
-        progress.setValue(len(files_to_import))
-        progress.close()
-        
-        if imported_count > 0:
-            # Parse imported files for RW versions
-            _parse_imported_files_for_rw(main_window, file_object, imported_filenames)
-            
-            # Track files for highlighting
-            _track_imported_files_with_highlighting(main_window, file_object, imported_filenames, existing_files)
-            
-            # Refresh after import
-            _refresh_after_import_via(main_window)
-            
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"✅ Successfully imported {imported_count} files via IDE")
+            # Mark file as modified
+            file_object.modified = True
             
             return True
+        
+    except ImportError:
+        pass
+    
+    return False
+
+def _parse_ide_file_for_import(ide_path: str, models_dir: str) -> Tuple[List[str], List[str], List[str]]: #vers 1
+    """Parse IDE file and find corresponding DFF/TXD files"""
+    model_files = []
+    texture_files = []
+    missing_files = []
+    
+    model_names = set()
+    texture_names = set()
+    
+    # Parse IDE file
+    with open(ide_path, 'r', encoding='utf-8', errors='ignore') as f:
+        current_section = None
+        
+        for line in f:
+            line = line.strip()
+            
+            # Skip empty lines and comments
+            if not line or line.startswith('#') or line.startswith(';'):
+                continue
+            
+            # Check for section headers
+            if line.lower() == 'objs':
+                current_section = 'objs'
+                continue
+            elif line.lower() == 'tobj':
+                current_section = 'tobj'
+                continue
+            elif line.lower() == 'end':
+                current_section = None
+                continue
+            
+            # Parse entries in objs and tobj sections
+            if current_section in ['objs', 'tobj']:
+                parts = [part.strip() for part in line.split(',')]
+                if len(parts) >= 3:  # Need at least ID, ModelName, TextureName
+                    model_name = parts[1].strip()
+                    texture_name = parts[2].strip()
+                    
+                    # Add model name
+                    if model_name and not model_name.isdigit() and model_name != '-1':
+                        model_names.add(model_name)
+                    
+                    # Add texture name
+                    if texture_name and not texture_name.isdigit() and texture_name != '-1':
+                        texture_names.add(texture_name)
+    
+    # Find model files (.dff)
+    for model_name in model_names:
+        dff_path = _find_file_in_directory(models_dir, f"{model_name}.dff")
+        if dff_path:
+            model_files.append(dff_path)
         else:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ No files were imported via IDE")
-            return False
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Import via IDE error: {str(e)}")
-        return False
-
-
-def _import_files_via_text(main_window, text_path: str, base_dir: str) -> bool: #vers 14
-    """Import files from text file list with RW detection"""
-    try:
-        file_object, file_type = get_current_file_from_active_tab(main_window)
-        
-        if file_type != 'IMG' or not file_object:
-            return False
-        
-        # Parse text file for file list
-        file_list = _parse_text_file_list(text_path)
-        
-        if not file_list:
-            QMessageBox.information(main_window, "No Files", "No valid file names found in text file")
-            return False
-        
-        # Track existing files before import
-        existing_files = set()
-        if hasattr(file_object, 'entries'):
-            existing_files = {entry.name for entry in file_object.entries}
-        
-        # Find actual files in base directory
-        files_to_import = []
-        for filename in file_list:
-            file_path = os.path.join(base_dir, filename)
-            if os.path.exists(file_path):
-                files_to_import.append(file_path)
-            else:
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"⚠️ File not found: {filename}")
-        
-        if not files_to_import:
-            QMessageBox.information(main_window, "No Files Found", 
-                "No files from text list found in the specified directory")
-            return False
-        
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📂 Found {len(files_to_import)} files from text list")
-        
-        # Import the files
-        imported_count = 0
-        imported_filenames = []
-        
-        # Create progress dialog
-        progress = QProgressDialog("Importing via text list...", "Cancel", 0, len(files_to_import), main_window)
-        progress.setWindowModality(Qt.WindowModality.WindowModal)
-        progress.show()
-        
-        for i, file_path in enumerate(files_to_import):
-            if progress.wasCanceled():
-                break
-            
-            progress.setValue(i)
-            progress.setLabelText(f"Importing {os.path.basename(file_path)}...")
-            QApplication.processEvents()
-            
-            try:
-                # Read file data
-                with open(file_path, 'rb') as f:
-                    file_data = f.read()
-                
-                filename = os.path.basename(file_path)
-                
-                # Use existing add_entry method
-                if hasattr(file_object, 'add_entry'):
-                    success = file_object.add_entry(filename, file_data, auto_save=False)
-                    if success:
-                        imported_count += 1
-                        imported_filenames.append(filename)
-                        if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"📁 Imported via text: {filename}")
-                
-            except Exception as e:
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"❌ Failed to import {os.path.basename(file_path)}: {str(e)}")
-        
-        progress.setValue(len(files_to_import))
-        progress.close()
-        
-        if imported_count > 0:
-            # Parse imported files for RW versions
-            _parse_imported_files_for_rw(main_window, file_object, imported_filenames)
-            
-            # Track files for highlighting
-            _track_imported_files_with_highlighting(main_window, file_object, imported_filenames, existing_files)
-            
-            # Refresh after import
-            _refresh_after_import_via(main_window)
-            
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"✅ Successfully imported {imported_count} files via text list")
-            
-            return True
+            missing_files.append(f"{model_name}.dff")
+    
+    # Find texture files (.txd)
+    for texture_name in texture_names:
+        txd_path = _find_file_in_directory(models_dir, f"{texture_name}.txd")
+        if txd_path:
+            texture_files.append(txd_path)
         else:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ No files were imported via text list")
-            return False
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Import via text error: {str(e)}")
-        return False
+            missing_files.append(f"{texture_name}.txd")
+    
+    return model_files, texture_files, missing_files
 
-
-def _parse_text_file_list(text_path: str) -> List[str]: #vers 14
-    """Parse text file for list of filenames"""
-    try:
-        file_list = []
-        
-        with open(text_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#'):  # Skip empty lines and comments
-                    # Smart parsing - extract filename if it's a path
-                    if '/' in line or '\\' in line:
-                        filename = os.path.basename(line)
-                    else:
-                        filename = line
-                    
-                    # Validate filename
-                    if filename and '.' in filename:
-                        file_list.append(filename)
-        
-        return file_list
-        
-    except Exception:
-        return []
-
-
-def _find_files_for_import(ide_models: dict, base_dir: str) -> List[str]: #vers 14
-    """Find files to import based on IDE model definitions"""
-    try:
-        files_to_import = []
-        
-        for model_id, model_data in ide_models.items():
-            # Look for DFF and TXD files for each model
-            model_name = model_data.get('name', model_id)
-            
-            # Common file patterns for GTA models
-            potential_files = [
-                f"{model_name}.dff",
-                f"{model_name}.txd",
-                f"{model_name}.col"
-            ]
-            
-            for filename in potential_files:
-                file_path = os.path.join(base_dir, filename)
-                if os.path.exists(file_path):
-                    files_to_import.append(file_path)
-        
-        return files_to_import
-        
-    except Exception:
-        return []
-
-
-def _parse_imported_files_for_rw(main_window, img_file, imported_filenames: List[str]): #vers 1
-    """Parse imported files for RW versions - NEW FUNCTION"""
-    try:
-        if not hasattr(img_file, 'entries'):
-            return
-        
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🔍 Parsing {len(imported_filenames)} imported files for RW versions...")
-        
-        # Find imported entries and parse for RW
-        parsed_count = 0
-        for entry in img_file.entries:
-            if entry.name in imported_filenames:
-                try:
-                    # Use existing RW detection method
-                    if hasattr(entry, 'detect_file_type_and_version'):
-                        entry.detect_file_type_and_version()
-                        parsed_count += 1
-                except Exception as e:
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"⚠️ RW parse error for {entry.name}: {str(e)}")
-        
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🔍 Parsed RW versions for {parsed_count} imported files")
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ RW parsing error: {str(e)}")
-
-
-def _track_imported_files_with_highlighting(main_window, img_file, imported_filenames: List[str], existing_files: set): #vers 1
-    """Track imported files for highlighting with duplicate detection - NEW FUNCTION"""
-    try:
-        # Categorize files as new or replaced
-        new_files = []
-        replaced_files = []
-        
-        for filename in imported_filenames:
-            if filename in existing_files:
-                replaced_files.append(filename)  # File already existed
-            else:
-                new_files.append(filename)       # Truly new file
-        
-        # Track with highlighting system if available
-        try:
-            if not hasattr(main_window, '_import_highlight_manager'):
-                from methods.import_highlight_system import integrate_import_highlighting
-                integrate_import_highlighting(main_window)
-            
-            if hasattr(main_window, '_import_highlight_manager'):
-                highlight_manager = main_window._import_highlight_manager
-                highlight_manager.track_multiple_files(new_files, replaced_files)
+def _parse_text_file_for_import(text_path: str, files_dir: str) -> Tuple[List[str], List[str]]: #vers 1
+    """Parse text file and find corresponding files"""
+    found_files = []
+    missing_files = []
+    
+    with open(text_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#'):  # Skip empty lines and comments
+                # Smart parsing - extract filename if it's a path
+                if '/' in line or '\\' in line:
+                    filename = os.path.basename(line)
+                else:
+                    filename = line
                 
-                # Log the breakdown
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"📊 Import via breakdown: {len(new_files)} new, {len(replaced_files)} replaced")
-        except ImportError:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("⚠️ Highlighting system not available")
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Highlighting tracking error: {str(e)}")
+                # Find file
+                file_path = _find_file_in_directory(files_dir, filename)
+                if file_path:
+                    found_files.append(file_path)
+                else:
+                    missing_files.append(filename)
+    
+    return found_files, missing_files
 
+def _find_file_in_directory(directory: str, filename: str) -> str: #vers 1
+    """Find file in directory (case-insensitive)"""
+    filename_lower = filename.lower()
+    
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file.lower() == filename_lower:
+                return os.path.join(root, file)
+    
+    return ""
 
-def _refresh_after_import_via(main_window): #vers 2
-    """Update table after import via - Simple refresh without heavy RW detection"""
-    try:
-        # Update table to show current entries including newly imported ones
-        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
-            table = main_window.gui_layout.table
-            
-            # Get current IMG file
-            if hasattr(main_window, 'current_img') and main_window.current_img:
-                img_file = main_window.current_img
-                
-                if hasattr(img_file, 'entries'):
-                    # Clear table and repopulate with basic info
-                    table.setRowCount(len(img_file.entries))
-                    
-                    # Get highlight manager for new/replaced files
-                    highlight_manager = getattr(main_window, '_import_highlight_manager', None)
-                    
-                    # Simple population without heavy RW detection
-                    for row, entry in enumerate(img_file.entries):
-                        # Name column (with highlighting if available)
-                        name_item = QTableWidgetItem(entry.name)
-                        if highlight_manager:
-                            is_highlighted, is_replaced = highlight_manager.is_file_highlighted(entry.name)
-                            if is_highlighted:
-                                if is_replaced:
-                                    name_item.setBackground(QBrush(QColor(255, 255, 200)))  # Yellow for replaced
-                                else:
-                                    name_item.setBackground(QBrush(QColor(200, 255, 200)))  # Green for new
-                        table.setItem(row, 0, name_item)
-                        
-                        # Type column (from extension only)
-                        file_ext = entry.name.split('.')[-1].upper() if '.' in entry.name else 'Unknown'
-                        type_item = QTableWidgetItem(file_ext)
-                        table.setItem(row, 1, type_item)
-                        
-                        # Offset column
-                        offset_text = f"0x{getattr(entry, 'offset', 0):08X}"
-                        offset_item = QTableWidgetItem(offset_text)
-                        table.setItem(row, 2, offset_item)
-                        
-                        # Size column
-                        size = getattr(entry, 'size', 0)
-                        size_item = QTableWidgetItem(str(size))
-                        table.setItem(row, 3, size_item)
-                        
-                        # RW Version column (use detected data if available)
-                        if table.columnCount() > 5:
-                            rw_version = getattr(entry, 'rw_version_name', 'Unknown')
-                            rw_item = QTableWidgetItem(rw_version)
-                            table.setItem(row, 5, rw_item)
-                    
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"🔄 Table updated: {len(img_file.entries)} entries (with highlighting)")
-        
-        # Update file list window
-        if hasattr(main_window, 'refresh_file_list'):
-            main_window.refresh_file_list()
-        
-        # Update UI for loaded IMG
-        if hasattr(main_window, '_update_ui_for_loaded_img'):
-            main_window._update_ui_for_loaded_img()
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"⚠️ Error updating table after import via: {str(e)}")
+def _refresh_after_import_via(main_window): #vers 1
+    """Refresh UI after import via"""
+    # Refresh main table
+    if hasattr(main_window, 'refresh_table'):
+        main_window.refresh_table()
+    
+    # Update file list
+    if hasattr(main_window, 'refresh_file_list'):
+        main_window.refresh_file_list()
+    
+    # Update GUI layout
+    if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'refresh_file_list'):
+        main_window.gui_layout.refresh_file_list()
+    
+    # Update UI state
+    if hasattr(main_window, '_update_ui_for_loaded_img'):
+        main_window._update_ui_for_loaded_img()
+    
+    # Update current tab data
+    if hasattr(main_window, 'refresh_current_tab_data'):
+        main_window.refresh_current_tab_data()
+    
+    if hasattr(main_window, 'log_message'):
+        main_window.log_message("UI refreshed after import via")
 
+def _ask_user_about_saving_via(main_window): #vers 1
+    """Ask user about saving changes after import via"""
+    # Show info message
+    QMessageBox.information(main_window, "Import Via Complete",
+        "Files imported to memory successfully!\n\n"
+        "Use the 'Save Entry' button to save changes to disk.\n"
+        "Changes will be lost if you reload without saving.")
 
-def integrate_import_via_functions(main_window) -> bool: #vers 14
-    """Integrate import via functions into main window"""
-    try:
-        # Add import via methods to main window
-        main_window.import_via_function = lambda: import_via_function(main_window)
-        main_window.import_via_ide_function = lambda: import_via_ide_function(main_window)
-        main_window.import_via_text_function = lambda: import_via_text_function(main_window)
-        
-        # Add aliases that GUI might use
-        main_window.import_via = main_window.import_via_function
-        main_window.import_via_ide = main_window.import_via_ide_function
-        main_window.import_via_text = main_window.import_via_text_function
-        
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Import Via functions integrated")
-            main_window.log_message("   • IDE file import support")
-            main_window.log_message("   • Text file list import support")
-            main_window.log_message("   • RW version detection for imported files")
-            main_window.log_message("   • Smart highlighting (new vs replaced)")
-        
-        return True
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Import Via integration failed: {str(e)}")
-        return False
-
+def integrate_import_via_functions(main_window) -> bool: #vers 1
+    """Integrate import via functions with proper modification tracking"""
+    # Add import via methods to main window
+    main_window.import_via_function = lambda: import_via_function(main_window)
+    main_window.import_via_ide_function = lambda: import_via_ide_function(main_window)
+    main_window.import_via_text_function = lambda: import_via_text_function(main_window)
+    
+    # Add aliases that GUI might use
+    main_window.import_via = main_window.import_via_function
+    main_window.import_via_ide = main_window.import_via_ide_function
+    main_window.import_via_text = main_window.import_via_text_function
+    
+    if hasattr(main_window, 'log_message'):
+        main_window.log_message("Import via functions integrated with proper modification tracking")
+        main_window.log_message("   • Marks imported entries as new for Save Entry detection")
+        main_window.log_message("   • Sets modified flag properly")
+        main_window.log_message("   • Supports IDE and text file import lists")
+        main_window.log_message("   • Smart file finding with case-insensitive search")
+    
+    return True
 
 # Export functions
 __all__ = [
     'import_via_function',
-    'import_via_ide_function', 
+    'import_via_ide_function',
     'import_via_text_function',
     'integrate_import_via_functions'
 ]
