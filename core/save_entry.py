@@ -180,6 +180,7 @@ def save_img_entry(main_window): #vers 1
 
         # STEP 4: Refresh table with RW data
         _refresh_table_with_rw_data(main_window)
+        main_window.refresh_table()
 
         QMessageBox.information(main_window, "Save Complete",
             "IMG file saved successfully with RW version detection!\n\n"

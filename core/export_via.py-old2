@@ -1,0 +1,231 @@
+#this belongs in core/export_via.py - Version: 9  
+# X-Seti - September09 2025 - IMG Factory 1.5 - Export Via Functions (Debug Version)
+
+"""
+Export Via Functions - Export via IDE/dialog with additional folder destination button
+FIXES:
+- Button order: "Choose Export Folder" now left of "Export Via IDE"
+- More robust IDE entry parsing (accepts modelName/texName variants, normalized to lowercase)
+- Debug logging added to inspect IDE parser entries when no files are found
+"""
+
+import os
+from PyQt6.QtWidgets import (
+    QMessageBox, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox,
+    QPushButton, QFileDialog, QProgressDialog
+)
+from PyQt6.QtCore import Qt, QApplication
+
+from methods.tab_aware_functions import (
+    validate_tab_before_operation,
+    get_current_file_from_active_tab,
+    get_current_file_type_from_tab
+)
+from methods.export_col_shared import get_col_models_from_selection, save_col_models_with_options
+
+# ----------------------------------------------------------------------
+# Main export dispatcher
+# ----------------------------------------------------------------------
+
+def export_via_function(main_window):
+    try:
+        if not validate_tab_before_operation(main_window, "Export Via"):
+            return
+
+        file_type = get_current_file_type_from_tab(main_window)
+
+        if file_type == 'IMG':
+            _export_img_via_ide(main_window)
+        elif file_type == 'COL':
+            _export_col_via_ide(main_window)
+        else:
+            QMessageBox.warning(main_window, "No File", "Please open an IMG or COL file first")
+
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Export via error: {str(e)}")
+        QMessageBox.critical(main_window, "Export Via Error", f"Export via failed: {str(e)}")
+
+
+# ----------------------------------------------------------------------
+# IMG Export
+# ----------------------------------------------------------------------
+
+def _export_img_via_ide(main_window):
+    try:
+        file_object, file_type = get_current_file_from_active_tab(main_window)
+
+        if file_type != 'IMG' or not file_object:
+            QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
+            return
+
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message("📋 Starting Export Via IDE...")
+
+        try:
+            from gui.ide_dialog import show_ide_dialog
+            ide_parser = show_ide_dialog(main_window, "export")
+        except ImportError:
+            QMessageBox.critical(main_window, "IDE System Error",
+                               "IDE dialog system not available.\nPlease ensure all components are installed.")
+            return
+
+        if not ide_parser:
+            return
+
+        files_to_find = []
+        ide_entries = getattr(ide_parser, 'entries', [])
+
+        # DEBUG: log all IDE entries and their attributes
+        for entry in ide_entries:
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"IDE entry debug: {entry} → {dir(entry)}")
+
+            model = getattr(entry, 'model_name', None) or getattr(entry, 'modelName', None)
+            texture = getattr(entry, 'texture_name', None) or getattr(entry, 'texName', None)
+
+            if model:
+                model = model.lower()
+                files_to_find.extend([f"{model}.dff", f"{model}.col"])
+            if texture:
+                texture = texture.lower()
+                files_to_find.append(f"{texture}.txd")
+
+        if not files_to_find:
+            QMessageBox.information(main_window, "No Files", "No model files found in IDE definitions")
+            return
+
+        matching_entries = []
+        found_files = set()
+
+        for entry in file_object.entries:
+            entry_name = getattr(entry, 'name', '').lower()
+            if any(file_to_find.lower() == entry_name for file_to_find in files_to_find):
+                matching_entries.append(entry)
+                found_files.add(entry_name)
+
+        if not matching_entries:
+            QMessageBox.information(main_window, "No Matches", "No IDE-related files found in current IMG file")
+            return
+
+        found_msg = f"Found {len(matching_entries)} IDE-related files in IMG:\n"
+        for entry in matching_entries[:10]:
+            found_msg += f"• {getattr(entry, 'name', 'Unknown')}\n"
+        if len(matching_entries) > 10:
+            found_msg += f"... and {len(matching_entries) - 10} more files"
+
+        dialog_result = _create_export_via_dialog(main_window, found_msg, len(files_to_find) - len(found_files))
+        if not dialog_result:
+            return
+
+        choice, log_missing, export_folder = dialog_result
+
+        if log_missing and len(found_files) < len(files_to_find):
+            _log_missing_files(main_window, files_to_find, found_files)
+
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"📤 Exporting {len(matching_entries)} IDE-related files to {export_folder}")
+
+        export_options = {
+            'organize_by_type': True,
+            'use_assists_structure': (choice == 'assists'),
+            'overwrite': True,
+            'create_log': True
+        }
+
+        _start_ide_export_with_progress(main_window, matching_entries, export_folder, export_options)
+
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Export via IDE error: {str(e)}")
+        QMessageBox.critical(main_window, "Export Via IDE Error", f"Export via IDE failed: {str(e)}")
+
+
+# ----------------------------------------------------------------------
+# Dialog for IMG export
+# ----------------------------------------------------------------------
+
+def _create_export_via_dialog(main_window, found_msg, missing_count):
+    try:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message("DEBUG: Running _create_export_via_dialog V9")
+
+        dialog = QDialog(main_window)
+        dialog.setWindowTitle("Export IDE Files - Choose Destination")
+        dialog.setMinimumWidth(650)
+
+        layout = QVBoxLayout(dialog)
+
+        info_label = QLabel(found_msg)
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("font-family: monospace; padding: 10px; background-color: #f0f0f0; border-radius: 5px;")
+        layout.addWidget(info_label)
+
+        if missing_count > 0:
+            missing_label = QLabel(f"⚠️ {missing_count} files not found in IMG")
+            missing_label.setStyleSheet("color: orange; font-weight: bold; padding: 5px;")
+            layout.addWidget(missing_label)
+
+        log_missing_check = QCheckBox("📝 Log missing files to assists/logs/missing_files.txt")
+        log_missing_check.setChecked(missing_count > 0)
+        layout.addWidget(log_missing_check)
+
+        button_layout = QHBoxLayout()
+
+        export_to_new_folder_btn = QPushButton("📂 Choose Export Folder")
+        export_to_new_folder_btn.setStyleSheet("QPushButton { padding: 8px; font-weight: bold; background-color: #4CAF50; color: white; }")
+        button_layout.addWidget(export_to_new_folder_btn)
+
+        export_with_ide_btn = QPushButton("📋 Export with IDE")
+        export_with_ide_btn.setStyleSheet("QPushButton { padding: 8px; font-weight: bold; background-color: #2196F3; color: white; }")
+        button_layout.addWidget(export_with_ide_btn)
+
+        cancel_btn = QPushButton("❌ Cancel")
+        button_layout.addWidget(cancel_btn)
+
+        layout.addLayout(button_layout)
+
+        dialog.result_choice = None
+        dialog.export_folder = None
+
+        def export_with_ide():
+            dialog.result_choice = 'export_with_ide'
+            dialog.export_folder = None
+            dialog.accept()
+
+        def export_to_new_folder():
+            folder = QFileDialog.getExistingDirectory(dialog, "Select Export Folder", "", QFileDialog.Option.ShowDirsOnly)
+            if folder:
+                dialog.result_choice = 'new_folder'
+                dialog.export_folder = folder
+                dialog.accept()
+
+        export_with_ide_btn.clicked.connect(export_with_ide)
+        export_to_new_folder_btn.clicked.connect(export_to_new_folder)
+        cancel_btn.clicked.connect(dialog.reject)
+
+        if dialog.exec() != dialog.DialogCode.Accepted:
+            return None
+
+        return (dialog.result_choice, log_missing_check.isChecked(), dialog.export_folder)
+
+    except Exception as e:
+        QMessageBox.critical(main_window, "Dialog Error", f"Failed to create export dialog: {str(e)}")
+        return None
+
+
+# ----------------------------------------------------------------------
+# __all__
+# ----------------------------------------------------------------------
+__all__ = [
+    'export_via_function',
+    'integrate_export_via_functions',
+    '_create_export_via_dialog',
+    '_create_col_export_dialog_with_folder_button',
+    '_export_img_via_ide',
+    '_export_col_via_ide',
+    '_get_export_folder',
+    '_log_missing_files',
+    '_start_ide_export_with_progress',
+    '_start_col_export_with_folder_options'
+]

@@ -1,6 +1,7 @@
 .
 ├── Assists
-│   └── Dump
+│   ├── Dump
+│   └── IDE_Export
 ├── cc.py
 ├── ChangeLog
 ├── components
@@ -38,6 +39,8 @@
 │   ├── dump.py
 │   ├── export.py
 │   ├── export_via.py
+│   ├── export_via.py-old
+│   ├── export_via.py-old2
 │   ├── file_dirtree_backend.py
 │   ├── file_dirtree_browser.py
 │   ├── file_extraction.py
@@ -53,8 +56,11 @@
 │   ├── img_split.py
 │   ├── img_version1.py
 │   ├── img_version2.py
+│   ├── import.py
 │   ├── import_via.py
+│   ├── import_via.py-old
 │   ├── impotr.py
+│   ├── impotr.py-old
 │   ├── notepad.py
 │   ├── old
 │   │   ├── create_img.py
@@ -67,7 +73,9 @@
 │   ├── rebuild.py
 │   ├── reload.py
 │   ├── remove.py
+│   ├── remove.py-old
 │   ├── remove_via.py
+│   ├── remove_via.py-old
 │   ├── rename.py
 │   ├── right_click_actions.py
 │   ├── rw_unk_snapshot.py
@@ -130,6 +138,7 @@
 │   ├── detect_file_type_version.py
 │   ├── dragdrop_functions.py
 │   ├── export_col_shared.py
+│   ├── export_overwrite_check.py
 │   ├── export_shared.py
 │   ├── find_dups_functions.py
 │   ├── ide_parser_functions.py
@@ -149,6 +158,7 @@
 │   ├── populate_img_table.py
 │   ├── progressbar_functions.py
 │   ├── refresh_table_functions.py
+│   ├── rw_detection.py
 │   ├── tab_aware_functions.py
 │   └── update_ui_for_loaded_img.py
 ├── templates
@@ -331,4 +341,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-59 directories, 273 files
+60 directories, 282 files

@@ -26,10 +26,6 @@ Todo, fix the highlighting function, 28/28 files, when I know 10 of them already
 
 ------------ semi completed ---- >
 
-Fixed - Sep09
-
-Export_via.py - Needs another button on the export dialog to save to your "choosen folder" left of the "Export Via IDE" button, not just the defined assist folder.
-
 Import_via.py needs to ask where to get the files to import, another import box to choose the files location under the IDE file select.
 
 Fixed - Sep09
@@ -41,6 +37,12 @@ Only issue is removing every entry from the img file, leaving 0 files?
 This needs a work around.
 
 ------------ completed ---- >
+
+Fixed - Sep10
+refresh_table() now works correctly after removing objects.
+
+Fixed - Sep10
+Export_via.py - the export dialog option saves to your "choosen folder" and fixed the defined assist folder, added overwrite check for existing files.
 
 fixed - Sep09
 Export.py works as intented.

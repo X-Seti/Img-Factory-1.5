@@ -1,8 +1,8 @@
-#this belongs in gui/ide_dialog.py - Version: 1
-# X-Seti - July31 2025 - IMG Factory 1.5 - Universal IDE Selection Dialog
+#this belongs in gui/ide_dialog.py - Version: 2
+# X-Seti - September09 2025 - IMG Factory 1.5 - Universal IDE Selection Dialog
 
 """
-Universal IDE Selection Dialog
+Universal IDE Selection Dialog - FIXED: Added proper Choose Export Folder button connection
 Used by: import_via, export_via, remove_via, split_via
 Provides consistent IDE file selection and parsing across all "via" operations
 """
@@ -63,6 +63,10 @@ class IDEDialog(QDialog):
         self.operation = operation  # "import", "export", "remove", "split", etc.
         self.ide_parser = None
         self.parse_thread = None
+        
+        # FIXED: Add export folder tracking
+        self.export_folder = None
+        self.result_choice = None
         
         self.setWindowTitle(title)
         self.setMinimumSize(600, 500)
@@ -181,10 +185,19 @@ class IDEDialog(QDialog):
         
         parent.addWidget(relationships_group)
         
-    def setup_buttons(self, layout): #vers 1
-        """Setup dialog buttons"""
+    def setup_buttons(self, layout): #vers 2
+        """Setup dialog buttons - FIXED: Properly connect Choose Export Folder button"""
         button_layout = QHBoxLayout()
         
+        # FIXED: Only show Choose Export Folder for import/export operations
+        if self.operation in ('import', 'export'):
+            self.choose_folder_btn = QPushButton("📂 Choose Export Folder")
+            # FIXED: Remove hardcoded green color to match theme
+            self.choose_folder_btn.setStyleSheet("QPushButton { padding: 8px; font-weight: bold; }")
+            self.choose_folder_btn.setToolTip("Choose a custom folder for export destination")
+            self.choose_folder_btn.clicked.connect(self.choose_export_folder)  # FIXED: Connect the button
+            button_layout.addWidget(self.choose_folder_btn)
+
         # Operation-specific button
         operation_text = {
             'import': 'Import with IDE',
@@ -200,13 +213,41 @@ class IDEDialog(QDialog):
         
         self.cancel_btn = QPushButton("❌ Cancel")
         self.cancel_btn.clicked.connect(self.reject)
-        
+
         button_layout.addStretch()
         button_layout.addWidget(self.continue_btn)
         button_layout.addWidget(self.cancel_btn)
         
         layout.addLayout(button_layout)
-        
+
+    def choose_export_folder(self): #vers 2
+        """FIXED: Choose export folder dialog - properly implemented"""
+        try:
+            folder = QFileDialog.getExistingDirectory(
+                self,
+                "Select Export Folder",
+                "",
+                QFileDialog.Option.ShowDirsOnly
+            )
+            if folder:
+                self.result_choice = 'choose_folder'
+                self.export_folder = folder
+                
+                # Update the button text to show selected folder
+                folder_name = os.path.basename(folder) if folder else "Export Folder"
+                self.choose_folder_btn.setText(f"📂 {folder_name}")
+                self.choose_folder_btn.setToolTip(f"Export folder: {folder}")
+                
+                # Update status
+                self.status_label.setText(f"Export folder: {folder}")
+                
+                # Auto-accept the dialog when folder is chosen
+                if self.ide_parser:  # Only auto-accept if IDE is already parsed
+                    self.accept()
+                    
+        except Exception as e:
+            QMessageBox.critical(self, "Folder Selection Error", f"Failed to select folder: {str(e)}")
+
     def browse_ide_file(self): #vers 1
         """Browse for IDE file"""
         file_path, _ = QFileDialog.getOpenFileName(
@@ -222,7 +263,7 @@ class IDEDialog(QDialog):
         
         if file_path and os.path.exists(file_path):
             self.parse_btn.setEnabled(True)
-            self.status_label.setText(f"📁 {os.path.basename(file_path)}")
+            self.status_label.setText(f"📄 {os.path.basename(file_path)}")
             self.status_label.setStyleSheet("color: #333;")
             
             # Auto-parse if enabled
@@ -321,6 +362,22 @@ class IDEDialog(QDialog):
         """
         return self.ide_parser
     
+    def get_export_folder(self) -> Optional[str]: #vers 1
+        """Get the selected export folder
+        
+        Returns:
+            Export folder path if selected, None otherwise
+        """
+        return self.export_folder
+    
+    def get_result_choice(self) -> Optional[str]: #vers 1
+        """Get the user's choice result
+        
+        Returns:
+            Result choice string ('choose_folder', etc.) or None
+        """
+        return self.result_choice
+    
     def get_selected_relationships(self) -> Dict[str, Any]: #vers 1
         """Get selected relationships from the list
         
@@ -375,8 +432,8 @@ def create_ide_dialog(parent=None, operation: str = "process", title: str = None
     
     return IDEDialog(parent, title, operation)
 
-def show_ide_dialog(parent=None, operation: str = "process") -> Optional[IDEParser]: #vers 1
-    """Show IDE dialog and return parser if successful
+def show_ide_dialog(parent=None, operation: str = "process") -> Optional[IDEParser]: #vers 2
+    """Show IDE dialog and return parser if successful - FIXED: Return dialog result info
     
     Args:
         parent: Parent widget
@@ -388,7 +445,12 @@ def show_ide_dialog(parent=None, operation: str = "process") -> Optional[IDEPars
     dialog = create_ide_dialog(parent, operation)
     
     if dialog.exec() == QDialog.DialogCode.Accepted:
-        return dialog.get_ide_parser()
+        # FIXED: Attach export folder info to parser for access by export_via
+        parser = dialog.get_ide_parser()
+        if parser:
+            parser.selected_export_folder = dialog.get_export_folder()
+            parser.dialog_choice = dialog.get_result_choice()
+        return parser
     
     return None
 
