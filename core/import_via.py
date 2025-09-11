@@ -1,32 +1,29 @@
-#this belongs in core/import_via.py - Version: 8
-# X-Seti - September09 2025 - IMG Factory 1.5 - Import Via Functions - Complete Fix
+#this belongs in core/import_via.py - Version: 11
+# X-Seti - September11 2025 - IMG Factory 1.5 - Import Via Functions - Clean Production Version
 
 """
-Import Via Functions - Complete fix with file location chooser dialog
-- Enhanced IDE dialog integration
-- Choose Files Location button support
-- Proper file location selection under IDE file select
-- RenderWare detection and preservation
+Import Via Functions - Clean production version with reliable IDE/text import
 """
 
 import os
 from typing import List, Optional, Dict, Any, Tuple
-from PyQt6.QtWidgets import QMessageBox, QFileDialog
+from PyQt6.QtWidgets import QMessageBox, QFileDialog, QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QLabel, QRadioButton, QButtonGroup
 
 # Import required functions  
-from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab, get_current_file_type_from_tab
+from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 
 ##Methods list -
 # import_via_function
 # import_via_ide_function
 # import_via_text_function
-# _import_files_via_ide_enhanced
+# _import_files_via_ide
+# _import_files_via_text
 # _create_import_via_dialog
-# _find_files_for_import_enhanced
+# _find_files_in_directory
 # integrate_import_via_functions
 
-def import_via_function(main_window): #vers 6
-    """Main import via function with enhanced dialog"""
+def import_via_function(main_window): #vers 1
+    """Main import via function with dialog"""
     try:
         if not validate_tab_before_operation(main_window, "Import Via"):
             return False
@@ -37,129 +34,323 @@ def import_via_function(main_window): #vers 6
             QMessageBox.warning(main_window, "IMG Only", "Import Via only works with IMG files.\nPlease open an IMG file first.")
             return False
 
-        # Show enhanced import via dialog
+        # Create dialog
         dialog_result = _create_import_via_dialog(main_window)
+        
         if not dialog_result:
             return False
-
-        import_type, ide_path, files_location = dialog_result
-
+            
+        import_type, file_path, files_location = dialog_result
+        
         if import_type == 'ide':
-            return _import_files_via_ide_enhanced(main_window, ide_path, files_location)
+            return _import_files_via_ide(main_window, file_path, files_location)
         elif import_type == 'text':
-            return import_via_text_function(main_window)
-        else:
-            return False
+            return _import_files_via_text(main_window, file_path, files_location)
+        
+        return False
 
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Import via error: {str(e)}")
+            main_window.log_message(f"Import Via error: {str(e)}")
         return False
 
-def _create_import_via_dialog(main_window): #vers 1
-    """Create enhanced import via dialog with file location chooser - NEW FUNCTION"""
+def import_via_ide_function(main_window) -> bool: #vers 1
+    """Direct IDE import function"""
     try:
-        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QGroupBox, QRadioButton, QButtonGroup
-        
-        dialog = QDialog(main_window)
-        dialog.setWindowTitle("Import via IDE File - Choose Source and Location")
-        dialog.setMinimumWidth(600)
-        dialog.setMinimumHeight(400)
+        if not validate_tab_before_operation(main_window, "Import Via IDE"):
+            return False
 
-        layout = QVBoxLayout(dialog)
+        # Get IDE file
+        ide_path, _ = QFileDialog.getOpenFileName(
+            main_window,
+            "Select IDE File",
+            "",
+            "IDE Files (*.ide);;All Files (*)"
+        )
+        
+        if not ide_path:
+            return False
+            
+        # Get files location
+        files_location = QFileDialog.getExistingDirectory(
+            main_window,
+            "Select Folder Containing Files to Import",
+            "",
+            QFileDialog.Option.ShowDirsOnly
+        )
+        
+        if not files_location:
+            return False
+        
+        return _import_files_via_ide(main_window, ide_path, files_location)
+        
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Import Via IDE error: {str(e)}")
+        return False
+
+def import_via_text_function(main_window) -> bool: #vers 1
+    """Import files from text file list"""
+    try:
+        # File dialog for text file
+        text_path, _ = QFileDialog.getOpenFileName(
+            main_window,
+            "Select Text File List",
+            "",
+            "Text Files (*.txt);;All Files (*)"
+        )
+        
+        if not text_path:
+            return False
+        
+        # Get files location
+        files_location = QFileDialog.getExistingDirectory(
+            main_window,
+            "Select Folder Containing Files to Import",
+            "",
+            QFileDialog.Option.ShowDirsOnly
+        )
+        
+        if not files_location:
+            return False
+        
+        return _import_files_via_text(main_window, text_path, files_location)
+        
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Import via text error: {str(e)}")
+        return False
+
+def _import_files_via_ide(main_window, ide_path: str, files_location: str) -> bool: #vers 1
+    """Import files from IDE with file searching"""
+    try:
+        if not os.path.exists(ide_path):
+            QMessageBox.warning(main_window, "IDE Not Found", f"IDE file not found: {ide_path}")
+            return False
+        
+        if not os.path.exists(files_location):
+            QMessageBox.warning(main_window, "Folder Not Found", f"Files location not found: {files_location}")
+            return False
+        
+        file_object, file_type = get_current_file_from_active_tab(main_window)
+        
+        if file_type != 'IMG':
+            QMessageBox.warning(main_window, "IMG Only", "Import Via IDE only works with IMG files")
+            return False
+        
+        # Parse IDE file
+        models = set()
+        textures = set()
+        
+        try:
+            with open(ide_path, 'r', encoding='utf-8', errors='ignore') as f:
+                current_section = None
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    
+                    if line.lower() == 'objs':
+                        current_section = 'objs'
+                        continue
+                    elif line.lower() == 'tobj':
+                        current_section = 'tobj'
+                        continue
+                    elif line.lower() == 'end':
+                        current_section = None
+                        continue
+                    
+                    if current_section in ['objs', 'tobj']:
+                        try:
+                            parts = [part.strip() for part in line.split(',')]
+                            if len(parts) >= 3:
+                                model_name = parts[1].strip()
+                                texture_name = parts[2].strip()
+                                
+                                if model_name and not model_name.isdigit() and model_name != '-1':
+                                    models.add(model_name)
+                                
+                                if texture_name and not texture_name.isdigit() and texture_name != '-1':
+                                    textures.add(texture_name)
+                        except Exception:
+                            continue
+        
+        except Exception as e:
+            QMessageBox.critical(main_window, "IDE Parse Error", f"Failed to parse IDE file: {str(e)}")
+            return False
+        
+        if not models and not textures:
+            QMessageBox.information(main_window, "No Models", "No model definitions found in IDE file")
+            return False
+        
+        # Find files to import
+        files_to_import = []
+        
+        # Find DFF files
+        for model_name in models:
+            dff_path = _find_files_in_directory(files_location, f"{model_name}.dff")
+            if dff_path:
+                files_to_import.append(dff_path)
+                if hasattr(main_window, 'log_message'):
+                    main_window.log_message(f"Found: {model_name}.dff")
+        
+        # Find TXD files
+        for texture_name in textures:
+            txd_path = _find_files_in_directory(files_location, f"{texture_name}.txd")
+            if txd_path:
+                files_to_import.append(txd_path)
+                if hasattr(main_window, 'log_message'):
+                    main_window.log_message(f"Found: {texture_name}.txd")
+        
+        if not files_to_import:
+            QMessageBox.information(main_window, "No Files Found", 
+                f"No files found matching IDE definitions in:\n{files_location}")
+            return False
+        
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Found {len(files_to_import)} files from IDE definitions")
+        
+        # Use the import system
+        if hasattr(main_window, 'import_files_with_list'):
+            return main_window.import_files_with_list(files_to_import)
+        else:
+            return False
+        
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"IDE import error: {str(e)}")
+        return False
+
+def _import_files_via_text(main_window, text_path: str, base_dir: str) -> bool: #vers 1
+    """Import files from text list"""
+    try:
+        if not os.path.exists(text_path):
+            QMessageBox.warning(main_window, "Text File Not Found", f"Text file not found: {text_path}")
+            return False
+        
+        if not os.path.exists(base_dir):
+            QMessageBox.warning(main_window, "Folder Not Found", f"Files location not found: {base_dir}")
+            return False
+        
+        file_object, file_type = get_current_file_from_active_tab(main_window)
+        
+        if file_type != 'IMG':
+            QMessageBox.warning(main_window, "IMG Only", "Import Via Text only works with IMG files")
+            return False
+        
+        # Read text file
+        files_to_import = []
+        try:
+            with open(text_path, 'r', encoding='utf-8', errors='ignore') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        # Look for file in base directory
+                        file_path = os.path.join(base_dir, line)
+                        if os.path.exists(file_path):
+                            files_to_import.append(file_path)
+                            if hasattr(main_window, 'log_message'):
+                                main_window.log_message(f"Found: {line}")
+                        else:
+                            if hasattr(main_window, 'log_message'):
+                                main_window.log_message(f"Not found: {line}")
+        
+        except Exception as e:
+            QMessageBox.critical(main_window, "Text Parse Error", f"Failed to parse text file: {str(e)}")
+            return False
+        
+        if not files_to_import:
+            QMessageBox.information(main_window, "No Files Found", "No files found from text list")
+            return False
+        
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Found {len(files_to_import)} files from text list")
+        
+        # Use the import system
+        if hasattr(main_window, 'import_files_with_list'):
+            return main_window.import_files_with_list(files_to_import)
+        else:
+            return False
+        
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Text import error: {str(e)}")
+        return False
+
+def _find_files_in_directory(directory: str, filename: str) -> Optional[str]: #vers 1
+    """Find a file in a directory (case-insensitive search)"""
+    filename_lower = filename.lower()
+    
+    # Search recursively
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file.lower() == filename_lower:
+                return os.path.join(root, file)
+    
+    return None
+
+def _create_import_via_dialog(main_window): #vers 1
+    """Create import via dialog"""
+    try:
+        dialog = QDialog(main_window)
+        dialog.setWindowTitle("Import Via")
+        dialog.setModal(True)
+        dialog.resize(500, 300)
+
+        layout = QVBoxLayout()
+        dialog.setLayout(layout)
 
         # Import type selection
-        type_group = QGroupBox("Import Method")
-        type_layout = QVBoxLayout(type_group)
+        type_group = QButtonGroup(dialog)
         
-        dialog.import_type_group = QButtonGroup()
-        
-        dialog.ide_radio = QRadioButton("📋 Import via IDE File")
+        dialog.ide_radio = QRadioButton("Import from IDE File")
         dialog.ide_radio.setChecked(True)
-        dialog.ide_radio.setToolTip("Import files based on IDE definitions")
-        dialog.import_type_group.addButton(dialog.ide_radio)
-        type_layout.addWidget(dialog.ide_radio)
+        type_group.addButton(dialog.ide_radio)
+        layout.addWidget(dialog.ide_radio)
         
-        dialog.text_radio = QRadioButton("📄 Import via Text List")
-        dialog.text_radio.setToolTip("Import files from a text file list")
-        dialog.import_type_group.addButton(dialog.text_radio)
-        type_layout.addWidget(dialog.text_radio)
-        
-        layout.addWidget(type_group)
+        dialog.text_radio = QRadioButton("Import from Text File List")
+        type_group.addButton(dialog.text_radio)
+        layout.addWidget(dialog.text_radio)
 
-        # IDE file selection
-        ide_group = QGroupBox("IDE File Selection")
-        ide_layout = QVBoxLayout(ide_group)
-        
-        # IDE file path
-        ide_file_layout = QHBoxLayout()
-        ide_file_layout.addWidget(QLabel("IDE File:"))
-        
+        # File path
+        file_layout = QHBoxLayout()
+        file_layout.addWidget(QLabel("File:"))
         dialog.ide_path_input = QLineEdit()
-        dialog.ide_path_input.setPlaceholderText("Select an IDE file...")
-        ide_file_layout.addWidget(dialog.ide_path_input)
+        file_layout.addWidget(dialog.ide_path_input)
         
-        dialog.browse_ide_btn = QPushButton("Browse...")
-        dialog.browse_ide_btn.clicked.connect(lambda: _browse_ide_file(dialog))
-        ide_file_layout.addWidget(dialog.browse_ide_btn)
-        
-        ide_layout.addLayout(ide_file_layout)
-        
-        # FIXED: Add Files Location selection under IDE selection
-        files_location_layout = QHBoxLayout()
-        files_location_layout.addWidget(QLabel("Files Location:"))
-        
-        dialog.files_location_input = QLineEdit()
-        dialog.files_location_input.setPlaceholderText("Choose folder where model files are located...")
-        files_location_layout.addWidget(dialog.files_location_input)
-        
-        dialog.browse_location_btn = QPushButton("📂 Choose Files Location")
-        dialog.browse_location_btn.setStyleSheet("QPushButton { padding: 8px; font-weight: bold; }")
-        dialog.browse_location_btn.setToolTip("Choose the folder containing the files to import")
-        dialog.browse_location_btn.clicked.connect(lambda: _browse_files_location(dialog))
-        files_location_layout.addWidget(dialog.browse_location_btn)
-        
-        ide_layout.addLayout(files_location_layout)
-        
-        layout.addWidget(ide_group)
+        dialog.browse_file_btn = QPushButton("Browse")
+        dialog.browse_file_btn.clicked.connect(lambda: _browse_file(dialog))
+        file_layout.addWidget(dialog.browse_file_btn)
+        layout.addLayout(file_layout)
 
-        # Import options
-        options_group = QGroupBox("Import Options")
-        options_layout = QVBoxLayout(options_group)
+        # Files location
+        location_layout = QHBoxLayout()
+        location_layout.addWidget(QLabel("Files Location:"))
+        dialog.files_location_input = QLineEdit()
+        location_layout.addWidget(dialog.files_location_input)
         
-        dialog.replace_existing_check = QRadioButton("Replace existing entries")
-        dialog.replace_existing_check.setChecked(True)
-        options_layout.addWidget(dialog.replace_existing_check)
-        
-        dialog.skip_existing_check = QRadioButton("Skip existing entries")
-        options_layout.addWidget(dialog.skip_existing_check)
-        
-        dialog.preserve_rw_check = QRadioButton("Preserve RenderWare information")
-        dialog.preserve_rw_check.setChecked(True)
-        dialog.preserve_rw_check.setToolTip("Maintain original RenderWare version info")
-        options_layout.addWidget(dialog.preserve_rw_check)
-        
-        layout.addWidget(options_group)
+        dialog.browse_location_btn = QPushButton("Browse")
+        dialog.browse_location_btn.clicked.connect(lambda: _browse_location(dialog))
+        location_layout.addWidget(dialog.browse_location_btn)
+        layout.addLayout(location_layout)
 
         # Buttons
         button_layout = QHBoxLayout()
         
-        dialog.import_btn = QPushButton("📥 Start Import")
-        dialog.import_btn.setStyleSheet("QPushButton { padding: 8px; font-weight: bold; background-color: #2196F3; color: white; }")
-        dialog.import_btn.setEnabled(False)  # Enabled when both IDE and location are selected
+        dialog.import_btn = QPushButton("Import")
+        dialog.import_btn.setEnabled(False)
         dialog.import_btn.clicked.connect(dialog.accept)
         button_layout.addWidget(dialog.import_btn)
         
-        dialog.cancel_btn = QPushButton("❌ Cancel")
+        dialog.cancel_btn = QPushButton("Cancel")
         dialog.cancel_btn.clicked.connect(dialog.reject)
         button_layout.addWidget(dialog.cancel_btn)
         
-        button_layout.addStretch()
         layout.addLayout(button_layout)
 
-        # Connect signals to enable/disable import button
-        dialog.ide_path_input.textChanged.connect(lambda: _update_import_button_state(dialog))
-        dialog.files_location_input.textChanged.connect(lambda: _update_import_button_state(dialog))
+        # Connect signals
+        dialog.ide_path_input.textChanged.connect(lambda: _update_button_state(dialog))
+        dialog.files_location_input.textChanged.connect(lambda: _update_button_state(dialog))
 
         # Show dialog
         if dialog.exec() == QDialog.DialogCode.Accepted:
@@ -175,24 +366,24 @@ def _create_import_via_dialog(main_window): #vers 1
         QMessageBox.critical(main_window, "Dialog Error", f"Failed to create import dialog: {str(e)}")
         return None
 
-def _browse_ide_file(dialog): #vers 1
-    """Browse for IDE file - HELPER FUNCTION"""
+def _browse_file(dialog): #vers 1
+    """Browse for file"""
     try:
         file_path, _ = QFileDialog.getOpenFileName(
             dialog, 
-            "Select IDE File", 
+            "Select File", 
             "", 
-            "IDE Files (*.ide);;All Files (*)"
+            "IDE Files (*.ide);;Text Files (*.txt);;All Files (*)"
         )
         
         if file_path:
             dialog.ide_path_input.setText(file_path)
             
-    except Exception as e:
-        QMessageBox.warning(dialog, "File Selection Error", f"Failed to select IDE file: {str(e)}")
+    except Exception:
+        pass
 
-def _browse_files_location(dialog): #vers 1
-    """Browse for files location folder - HELPER FUNCTION"""
+def _browse_location(dialog): #vers 1
+    """Browse for files location folder"""
     try:
         folder = QFileDialog.getExistingDirectory(
             dialog,
@@ -204,225 +395,23 @@ def _browse_files_location(dialog): #vers 1
         if folder:
             dialog.files_location_input.setText(folder)
             
-    except Exception as e:
-        QMessageBox.warning(dialog, "Folder Selection Error", f"Failed to select files location: {str(e)}")
+    except Exception:
+        pass
 
-def _update_import_button_state(dialog): #vers 1
-    """Update import button enabled state - HELPER FUNCTION"""
+def _update_button_state(dialog): #vers 1
+    """Update import button enabled state"""
     try:
         ide_path = dialog.ide_path_input.text().strip()
         files_location = dialog.files_location_input.text().strip()
         
-        # Enable import button only if both IDE file and files location are selected
-        both_selected = bool(ide_path and os.path.exists(ide_path) and 
-                           files_location and os.path.exists(files_location))
+        # Enable import button only if both paths are provided
+        dialog.import_btn.setEnabled(bool(ide_path and files_location))
         
-        dialog.import_btn.setEnabled(both_selected)
-        
-        # Update button text to show status
-        if both_selected:
-            dialog.import_btn.setText("📥 Start Import")
-            dialog.import_btn.setStyleSheet("QPushButton { padding: 8px; font-weight: bold; background-color: #2196F3; color: white; }")
-        else:
-            dialog.import_btn.setText("📥 Start Import (Select IDE & Location)")
-            dialog.import_btn.setStyleSheet("QPushButton { padding: 8px; font-weight: bold; }")
-            
     except Exception:
         dialog.import_btn.setEnabled(False)
 
-def import_via_ide_function(main_window) -> bool: #vers 8
-    """Import files via IDE with enhanced file location selection"""
-    try:
-        # Use the enhanced dialog instead of simple file dialogs
-        return import_via_function(main_window)
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Import via IDE error: {str(e)}")
-        return False
-
-def _import_files_via_ide_enhanced(main_window, ide_path: str, files_location: str) -> bool: #vers 1
-    """Import files based on IDE definitions with enhanced location handling - NEW FUNCTION"""
-    try:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📋 Starting import via IDE: {os.path.basename(ide_path)}")
-            main_window.log_message(f"📂 Files location: {files_location}")
-
-        file_object, file_type = get_current_file_from_active_tab(main_window)
-        
-        if file_type != 'IMG' or not file_object:
-            return False
-        
-        # Parse IDE file
-        try:
-            from methods.ide_parser_functions import parse_ide_file
-            ide_parser = parse_ide_file(ide_path)
-            if ide_parser:
-                ide_models = ide_parser.models
-            else:
-                ide_models = None
-        except ImportError:
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ IDE parser not available")
-            return False
-        
-        if not ide_models:
-            QMessageBox.information(main_window, "No Models", "No model definitions found in IDE file")
-            return False
-        
-        # Track existing files before import
-        existing_files = set()
-        if hasattr(file_object, 'entries'):
-            existing_files = {entry.name for entry in file_object.entries}
-        
-        # Find files to import based on IDE models and location
-        files_to_import = _find_files_for_import_enhanced(ide_models, files_location, main_window)
-        
-        if not files_to_import:
-            QMessageBox.information(main_window, "No Files Found", 
-                f"No files found matching IDE definitions in:\n{files_location}")
-            return False
-        
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📂 Found {len(files_to_import)} files from IDE definitions")
-        
-        # Import files with RW preservation
-        from core.impotr import import_files_function
-        
-        # Use the existing import system but with our file list
-        success = import_files_function(main_window, files_to_import)
-        
-        if success:
-            # Highlight new entries
-            if hasattr(main_window, '_highlight_new_entries'):
-                new_files = {f for f in files_to_import if os.path.basename(f) not in existing_files}
-                main_window._highlight_new_entries([os.path.basename(f) for f in new_files])
-        
-        return success
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Enhanced IDE import error: {str(e)}")
-        return False
-
-def _find_files_for_import_enhanced(ide_models: Dict, base_dir: str, main_window) -> List[str]: #vers 1
-    """Find files for import based on IDE models with enhanced searching - NEW FUNCTION"""
-    try:
-        files_to_import = []
-        
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🔍 Searching for files in: {base_dir}")
-        
-        for model_id, model_data in ide_models.items():
-            model_name = model_data.get('name', '')
-            txd_name = model_data.get('txd', '')
-            
-            if model_name:
-                # Look for DFF file
-                dff_patterns = [
-                    os.path.join(base_dir, f"{model_name}.dff"),
-                    os.path.join(base_dir, "models", f"{model_name}.dff"),
-                    os.path.join(base_dir, "dff", f"{model_name}.dff"),
-                ]
-                
-                for pattern in dff_patterns:
-                    if os.path.exists(pattern):
-                        files_to_import.append(pattern)
-                        if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"  ✅ Found: {os.path.basename(pattern)}")
-                        break
-                
-                # Look for COL file
-                col_patterns = [
-                    os.path.join(base_dir, f"{model_name}.col"),
-                    os.path.join(base_dir, "collision", f"{model_name}.col"),
-                    os.path.join(base_dir, "col", f"{model_name}.col"),
-                ]
-                
-                for pattern in col_patterns:
-                    if os.path.exists(pattern):
-                        files_to_import.append(pattern)
-                        if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"  ✅ Found: {os.path.basename(pattern)}")
-                        break
-            
-            if txd_name:
-                # Look for TXD file
-                txd_patterns = [
-                    os.path.join(base_dir, f"{txd_name}.txd"),
-                    os.path.join(base_dir, "textures", f"{txd_name}.txd"),
-                    os.path.join(base_dir, "txd", f"{txd_name}.txd"),
-                ]
-                
-                for pattern in txd_patterns:
-                    if os.path.exists(pattern):
-                        files_to_import.append(pattern)
-                        if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"  ✅ Found: {os.path.basename(pattern)}")
-                        break
-        
-        return files_to_import
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error finding files for import: {str(e)}")
-        return []
-
-def import_via_text_function(main_window) -> bool: #vers 15
-    """Import files from text file list with enhanced file location selection"""
-    try:
-        # File dialog for text file
-        text_path, _ = QFileDialog.getOpenFileName(
-            main_window,
-            "Select Text File List",
-            "",
-            "Text Files (*.txt);;All Files (*.*)"
-        )
-        
-        if not text_path:
-            return False
-        
-        # Ask for base directory where files are located
-        base_dir = QFileDialog.getExistingDirectory(
-            main_window,
-            "Select Base Directory (where files are located)",
-            ""
-        )
-        
-        if not base_dir:
-            return False
-        
-        # Import files via text list (use existing implementation)
-        success = _import_files_via_text(main_window, text_path, base_dir)
-        
-        if success:
-            QMessageBox.information(main_window, "Import Via Complete",
-                "Files imported via text list successfully!\n\n"
-                "💾 Use the 'Save Entry' button to save changes to disk.")
-        
-        return success
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Import via text error: {str(e)}")
-        return False
-
-def _import_files_via_text(main_window, text_path: str, base_dir: str) -> bool: #vers 1
-    """Import files from text list - placeholder for existing implementation"""
-    try:
-        # This would use the existing text import implementation
-        # For now, return a basic success
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📄 Text import not fully implemented yet")
-        return True
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Text import error: {str(e)}")
-        return False
-
-def integrate_import_via_functions(main_window): #vers 4
-    """Integrate import via functions into main window - UPDATED: Enhanced dialog support"""
+def integrate_import_via_functions(main_window): #vers 1
+    """Integrate import via functions into main window"""
     try:
         # Add main import via functions
         main_window.import_via_function = lambda: import_via_function(main_window)
@@ -435,17 +424,16 @@ def integrate_import_via_functions(main_window): #vers 4
         main_window.import_via_text = main_window.import_via_text_function
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Import Via functions integrated - Enhanced with file location chooser")
-            main_window.log_message("   • Enhanced IDE dialog with file location selection")
-            main_window.log_message("   • Choose Files Location button support")
-            main_window.log_message("   • RW version detection for imported files")
-            main_window.log_message("   • Smart file searching in subfolders")
+            main_window.log_message("Import Via functions integrated")
+            main_window.log_message("   • IDE file import with model/texture detection")
+            main_window.log_message("   • Text file list import")
+            main_window.log_message("   • Recursive file searching")
         
         return True
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Import Via integration failed: {str(e)}")
+            main_window.log_message(f"Import Via integration failed: {str(e)}")
         return False
 
 # Export functions
@@ -453,8 +441,5 @@ __all__ = [
     'import_via_function',
     'import_via_ide_function', 
     'import_via_text_function',
-    'integrate_import_via_functions',
-    '_import_files_via_ide_enhanced',
-    '_create_import_via_dialog',
-    '_find_files_for_import_enhanced'
+    'integrate_import_via_functions'
 ]

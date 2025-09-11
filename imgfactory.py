@@ -80,6 +80,7 @@ from core.imgcol_replace import integrate_imgcol_replace_functions
 from core.imgcol_convert import integrate_imgcol_convert_functions
 from core.save_entry import integrate_save_entry_function
 from core.rw_unk_snapshot import integrate_unknown_rw_detection
+from core.analyze_rw import integrate_rw_analysis_trigger
 
 #gui-layout
 from gui.ide_dialog import integrate_ide_dialog
@@ -122,6 +123,8 @@ from methods.progressbar_functions import integrate_progress_system
 from methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate_update_ui_for_loaded_img
 from methods.import_highlight_system import enable_import_highlighting
 from methods.refresh_table_functions import integrate_refresh_table
+from methods.img_entry_operations import integrate_entry_operations
+from methods.img_import_export import integrate_import_export_functions
 from methods.export_col_shared import integrate_col_export_shared
 from methods.mirror_tab_shared import show_mirror_tab_selection
 from methods.ide_parser_functions import integrate_ide_parser
@@ -443,8 +446,11 @@ class IMGFactory(QMainWindow):
         integrate_imgcol_convert_functions(self)
 
         self.export_via = lambda: export_via_function(self)
-        integrate_import_via_functions(self)  # NEW
-        integrate_remove_via_functions(self)  # NEW
+        integrate_import_via_functions(self)  # NEW Sep11
+        integrate_remove_via_functions(self)  # NEW Sep09
+        integrate_entry_operations(self)
+        integrate_import_export_functions(self)
+        integrate_rw_analysis_trigger(self)
 
         # File operations
         install_close_functions(self)
