@@ -83,7 +83,7 @@ def check_project_structure() -> Tuple[bool, List[str]]:
     optional_files = [
         "utils/app_settings_system.py",
         "app_settings_system.py",  # Fallback location
-        "components/img_creator.py",
+        "components.Img_Creator.img_creator.py",
         "components/img_validator.py",
         "gui/menu.py"
     ]

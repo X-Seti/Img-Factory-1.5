@@ -1,4 +1,4 @@
-#this belongs in components/col_creator.py - Version: 2
+#this belongs in components.Col_Creator.col_creator.py - Version: 2
 # X-Seti - July17 2025 - IMG Factory 1.5 - COL Creator
 # IMG Creator Treatment: Same structure, COL functions, IMG debug system
 

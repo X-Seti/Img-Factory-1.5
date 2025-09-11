@@ -1,4 +1,4 @@
-#this belongs in components/gta_file_editors.py - version 1
+#this belongs in components.File_Editor.gta_file_editors.py - version 1
 # X-Seti - July10 2025 - Img Factory 1.5
 # GTA file editors for IDE, IPL, and DAT files with object ID management
 

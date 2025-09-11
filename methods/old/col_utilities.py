@@ -1,4 +1,4 @@
-#this belongs in components/col_utilities.py - Version: 9
+#this belongs in methods.col_utilities.py - Version: 9
 # X-Seti - July23 2025 - IMG Factory 1.5 - COL Utilities with IMG Debug System
 # Credit MexUK 2007 Img Factory 1.2
 

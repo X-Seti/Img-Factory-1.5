@@ -90,7 +90,7 @@ def edit_col_from_img_entry(main_window, row): #vers 2
         
         try:
             # Import and open COL editor
-            from components.col_editor import COLEditorDialog
+            from components.Col_Editor.col_editor import COLEditorDialog
             editor = COLEditorDialog(main_window)
             
             # Load the temporary COL file
@@ -109,7 +109,7 @@ def edit_col_from_img_entry(main_window, row): #vers 2
         
     except ImportError:
         QMessageBox.information(main_window, "COL Editor", 
-            "COL editor component not available. Please check components/col_editor.py")
+            "COL editor component not available. Please check components.Col_Editor.col_editor.py")
         return False
     except Exception as e:
         main_window.log_message(f"❌ Error editing COL file: {str(e)}")
@@ -232,7 +232,7 @@ def open_col_editor_dialog(main_window): #vers 3
     """Open COL editor - WORKING VERSION"""
     try:
         # Try to import and open COL editor
-        from components.col_editor import COLEditorDialog
+        from components.Col_Editor.col_editor import COLEditorDialog
         
         main_window.log_message("🔧 Opening COL editor...")
         editor = COLEditorDialog(main_window)
@@ -245,7 +245,7 @@ def open_col_editor_dialog(main_window): #vers 3
         
     except ImportError:
         QMessageBox.information(main_window, "COL Editor", 
-            "COL editor component not available.\n\nPlease ensure components/col_editor.py is properly installed.")
+            "COL editor component not available.\n\nPlease ensure components.Col_Editor.col_editor.py is properly installed.")
         main_window.log_message("❌ COL editor component not found")
         return False
     except Exception as e:
@@ -257,7 +257,7 @@ def open_col_batch_proc_dialog(main_window): #vers 3
     """Open COL batch processor - WORKING VERSION"""
     try:
         # Try to import and open batch processor
-        from components.col_utilities import COLBatchProcessor
+        from methods.col_utilities import COLBatchProcessor
         
         main_window.log_message("⚙️ Opening COL batch processor...")
         processor = COLBatchProcessor(main_window)
@@ -274,7 +274,7 @@ def open_col_batch_proc_dialog(main_window): #vers 3
         
     except ImportError:
         QMessageBox.information(main_window, "Batch Processor", 
-            "COL batch processor component not available.\n\nPlease ensure components/col_utilities.py is properly installed.")
+            "COL batch processor component not available.\n\nPlease ensure methods.col_utilities.py is properly installed.")
         main_window.log_message("❌ COL batch processor component not found")
         return False
     except Exception as e:
@@ -306,7 +306,7 @@ def open_col_file_dialog(main_window): #vers 3
                 except ImportError:
                     # Fallback: open in COL editor
                     try:
-                        from components.col_editor import open_col_editor
+                        from components.Col_Editor.col_editor import open_col_editor
                         editor = open_col_editor(main_window, file_path)
                         return editor is not None
                     except ImportError:

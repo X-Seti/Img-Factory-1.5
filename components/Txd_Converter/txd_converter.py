@@ -1,4 +1,4 @@
-#this belongs in /components/txd_converter.py - version 2
+#this belongs in /components.Txd_Converter.txd_converter.py - version 2
 #!/usr/bin/env python3
 """
 X-Seti - June26 2025 - TXD Converter - Complete Texture Conversion System

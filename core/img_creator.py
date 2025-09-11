@@ -1,4 +1,4 @@
-#this belongs in components/img_creator.py - Version: 15
+#this belongs in components.Img_Creator.img_creator.py - Version: 15
 # X-Seti - August27 2025 - IMG Factory 1.5 - IMG Creator Dialog UI Only
 # Credit MexUK 2007 IMG Factory 1.2
 

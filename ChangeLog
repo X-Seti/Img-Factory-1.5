@@ -6,7 +6,6 @@ Example;
 * methods/img_entry_operations.py - Entry management (add, remove, get)
 * methods/img_file_operations.py - File I/O operations
 * methods/img_detection.py - RW version detection
-* methods/img_validation.py - File validation
 
 Before we recreate these files we need to check if there are any existing functions in methods/ we can add code to, so we don't end up with duplicate functions.
 
@@ -37,6 +36,9 @@ Only issue is removing every entry from the img file, leaving 0 files?
 This needs a work around.
 
 ------------ completed ---- >
+
+Fixed - Sep11
+Massive cleanup, All shared functions are in methods/ editor tools are now in components/ only
 
 Fixed - Sep10
 refresh_table() now works correctly after removing objects.

@@ -36,7 +36,9 @@ from methods.col_core_classes import COLFile, COLModel, COLVersion
 # export_col_from_img
 # export_col_to_img_format
 # import_col_to_img
+# integrate_col_dialogs
 # integrate_col_functionality
+# integrate_col_context_menus
 # integrate_complete_col_system
 # load_col_from_img_entry
 # open_col_batch_processor
@@ -46,34 +48,11 @@ from methods.col_core_classes import COLFile, COLModel, COLVersion
 # setup_col_debug_for_main_window
 # setup_col_integration_full
 # setup_threaded_col_loading
+# setup_col_file_loading
+# verify_col_components
 
-def integrate_col_functionality(img_factory_instance): #vers 1
-    """Main function to integrate all COL functionality into IMG Factory using IMG debug system"""
-    try:
-        img_debugger.debug("Starting COL functionality integration")
-        
-        # Add COL menu to menu bar
-        if add_col_menu(img_factory_instance):
-            img_debugger.debug("COL menu added successfully")
-        
-        # Add COL tab to main interface
-        if add_col_tab(img_factory_instance):
-            img_debugger.debug("COL tab added successfully")
-        
-        # Add COL context menu items to IMG entries
-        if add_col_context_menu_items(img_factory_instance):
-            img_debugger.debug("COL context menu items added successfully")
-        
-        # Add COL file type detection
-        if add_col_file_detection(img_factory_instance):
-            img_debugger.debug("COL file detection added successfully")
-        
-        img_debugger.success("COL functionality integrated successfully!")
-        return True
-        
-    except Exception as e:
-        img_debugger.error(f"Error integrating COL functionality: {e}")
-        return False
+
+
 
 def add_col_menu(img_factory_instance): #vers 1
     """Add COL menu to the main menu bar using IMG debug system"""
@@ -104,7 +83,7 @@ def add_col_menu(img_factory_instance): #vers 1
         col_menu.addSeparator()
         
         # Batch operations
-        from components.col_utilities import analyze_col_file_dialog
+        from methods.col_utilities import analyze_col_file_dialog
         
         batch_process_action = QAction("⚙️ Batch Processor", img_factory_instance)
         batch_process_action.triggered.connect(lambda: open_col_batch_processor(img_factory_instance))
@@ -255,7 +234,7 @@ def open_col_editor(img_factory_instance, file_path=None): #vers 1
     try:
         # Try to open COL editor if available
         try:
-            from components.col_editor import COLEditorDialog
+            from components.Col_Editor.col_editor import COLEditorDialog
             editor = COLEditorDialog(img_factory_instance)
             if file_path:
                 editor.load_col_file(file_path)
@@ -390,8 +369,77 @@ def load_col_from_img_entry(img_factory_instance, entry): #vers 1
         img_debugger.error(f"Failed to load COL from IMG entry: {e}")
         return False
 
-#non-replace
 
+def integrate_col_editor(main_window) -> bool: #vers 1
+    """Integrate COL editor functionality"""
+    try:
+        from components.Col_Editor.col_editor import open_col_editor
+
+        # Add COL editor methods to main window
+        main_window.open_col_editor = lambda file_path=None: open_col_editor(main_window, file_path)
+
+        # Add method for editing COL from IMG entry
+        from gui.gui_context import edit_col_from_img_entry
+        main_window.edit_col_from_img_entry = lambda row: edit_col_from_img_entry(main_window, row)
+
+        img_debugger.debug("✅ COL editor integrated")
+        return True
+
+    except Exception as e:
+        img_debugger.error(f"Error integrating COL editor: {str(e)}")
+        return False
+
+
+def integrate_col_functionality(img_factory_instance): #vers 1
+    """Main function to integrate all COL functionality into IMG Factory using IMG debug system"""
+    try:
+        img_debugger.debug("Starting COL functionality integration")
+
+        # Add COL menu to menu bar
+        if add_col_menu(img_factory_instance):
+            img_debugger.debug("COL menu added successfully")
+
+        # Add COL tab to main interface
+        if add_col_tab(img_factory_instance):
+            img_debugger.debug("COL tab added successfully")
+
+        # Add COL context menu items to IMG entries
+        if add_col_context_menu_items(img_factory_instance):
+            img_debugger.debug("COL context menu items added successfully")
+
+        # Add COL file type detection
+        if add_col_file_detection(img_factory_instance):
+            img_debugger.debug("COL file detection added successfully")
+
+        img_debugger.success("COL functionality integrated successfully!")
+        return True
+
+    except Exception as e:
+        img_debugger.error(f"Error integrating COL functionality: {e}")
+        return False
+
+def integrate_col_dialogs(main_window) -> bool: #vers 1
+    """Integrate COL dialog functionality"""
+    try:
+        from gui.gui_context import (
+            open_col_editor_dialog,
+            open_col_batch_proc_dialog,
+            open_col_file_dialog,
+            analyze_col_file_dialog
+        )
+
+        # Add dialog methods to main window
+        main_window.open_col_editor_dialog = lambda: open_col_editor_dialog(main_window)
+        main_window.open_col_batch_proc_dialog = lambda: open_col_batch_proc_dialog(main_window)
+        main_window.open_col_file_dialog = lambda: open_col_file_dialog(main_window)
+        main_window.analyze_col_file_dialog = lambda: analyze_col_file_dialog(main_window)
+
+        img_debugger.debug("✅ COL dialogs integrated")
+        return True
+
+    except Exception as e:
+        img_debugger.error(f"Error integrating COL dialogs: {str(e)}")
+        return False
 
 
 def detect_col_version_from_data(data: bytes) -> Optional[dict]: #vers 1
@@ -445,7 +493,7 @@ def detect_col_version_from_data(data: bytes) -> Optional[dict]: #vers 1
 def create_col_editor_action(img_factory_instance): #vers 1
     """Create COL editor action using IMG debug system"""
     try:
-        from components.col_editor import open_col_editor
+        from components.Col_Editor.col_editor import open_col_editor
         return open_col_editor(img_factory_instance)
         
     except Exception as e:
@@ -455,7 +503,7 @@ def create_col_editor_action(img_factory_instance): #vers 1
 def open_col_batch_processor(img_factory_instance): #vers 1
     """Open COL batch processor using IMG debug system"""
     try:
-        from components.col_utilities import open_col_batch_processor
+        from methods.col_utilities import open_col_batch_processor
         open_col_batch_processor(img_factory_instance)
         return True
         
@@ -466,7 +514,7 @@ def open_col_batch_processor(img_factory_instance): #vers 1
 def open_col_editor_with_file(img_factory_instance, col_file: COLFile): #vers 1
     """Open COL editor with specific file using IMG debug system"""
     try:
-        from components.col_editor import COLEditorDialog
+        from components.Col_Editor.col_editor import COLEditorDialog
         editor = COLEditorDialog(img_factory_instance)
         if col_file.file_path:
             editor.load_col_file(col_file.file_path)
@@ -495,7 +543,7 @@ def edit_col_from_img(img_factory_instance, row: int): #vers 1
                 temp_path = temp_file.name
             
             # Open editor with temporary file
-            from components.col_editor import open_col_editor
+            from components.Col_Editor.col_editor import open_col_editor
             result = open_col_editor(img_factory_instance, temp_path)
             
             # Clean up temporary file
@@ -793,25 +841,111 @@ def setup_col_integration_full(main_window): #vers 3
         return False
 
 
-def integrate_complete_col_system(main_window): #vers 1
-    """Complete COL integration setup - main entry point using IMG debug system"""
+
+def integrate_col_methods(main_window) -> bool: #vers 1
+    """Integrate COL methods into main window"""
     try:
-        col_debug_log(main_window, "Starting complete COL system integration", 'COL_INTEGRATION')
-        
-        # Check settings for initial debug state
-        try:
-            if hasattr(main_window, 'app_settings') and hasattr(main_window.app_settings, 'debug_enabled'):
-                from debug.col_debug_functions import set_col_debug_enabled
-                set_col_debug_enabled(main_window.app_settings.debug_enabled)
-        except:
-            pass
-        
-        # Setup full integration
-        return setup_col_integration_full(main_window)
-        
+        # Add COL file loading capability
+        if not hasattr(main_window, 'load_col_file_safely'):
+            from methods.populate_col_table import load_col_file_safely
+            main_window.load_col_file_safely = lambda file_path: load_col_file_safely(main_window, file_path)
+            img_debugger.debug("✅ COL file loading method added")
+
+        # Add COL operations methods
+        from methods.col_operations import (
+            extract_col_from_img_entry,
+            get_col_basic_info,
+            get_col_detailed_analysis
+        )
+
+        main_window.extract_col_from_img_entry = lambda row: extract_col_from_img_entry(main_window, row)
+        main_window.get_col_basic_info = get_col_basic_info
+        main_window.get_col_detailed_analysis = get_col_detailed_analysis
+
+        img_debugger.debug("✅ COL operations methods integrated")
+        return True
+
     except Exception as e:
-        col_debug_log(main_window, f"Complete COL integration failed: {e}", 'COL_INTEGRATION', 'ERROR')
+        img_debugger.error(f"Error integrating COL methods: {str(e)}")
         return False
+
+def integrate_col_context_menus(main_window) -> bool: #vers 1
+    """Integrate COL context menus"""
+    try:
+        from gui.gui_context import add_col_context_menu_to_entries_table
+
+        # Add enhanced context menu with COL support
+        success = add_col_context_menu_to_entries_table(main_window)
+
+        if success:
+            img_debugger.success("✅ COL context menus integrated")
+        else:
+            img_debugger.warning("⚠️ COL context menu integration failed")
+
+        return success
+
+    except Exception as e:
+        img_debugger.error(f"Error integrating COL context menus: {str(e)}")
+        return False
+
+
+def integrate_complete_col_system(main_window) -> bool: #vers 1
+    """Integrate complete COL system into IMG Factory"""
+    try:
+        img_debugger.info("🔧 Starting complete COL system integration...")
+
+        # Step 1: Verify all components are available
+        if not verify_col_components():
+            img_debugger.error("❌ COL component verification failed")
+            return False
+
+        # Step 2: Integrate core methods
+        methods_success = integrate_col_methods(main_window)
+
+        # Step 3: Integrate context menus
+        context_success = integrate_col_context_menus(main_window)
+
+        # Step 4: Integrate editor functionality
+        editor_success = integrate_col_editor(main_window)
+
+        # Step 5: Integrate dialogs
+        dialogs_success = integrate_col_dialogs(main_window)
+
+        # Step 6: Setup file loading
+        loading_success = setup_col_file_loading(main_window)
+
+        # Check overall success
+        all_success = all([
+            methods_success,
+            context_success,
+            editor_success,
+            dialogs_success,
+            loading_success
+        ])
+
+        if all_success:
+            img_debugger.success("🎉 Complete COL system integration successful!")
+            main_window.log_message("🔧 COL collision system fully integrated")
+
+            # Add summary of available COL features
+            main_window.log_message("📋 Available COL features:")
+            main_window.log_message("  • Right-click COL files in IMG table for context menu")
+            main_window.log_message("  • COL Editor with 3D visualization")
+            main_window.log_message("  • COL Batch Processor for multiple files")
+            main_window.log_message("  • COL file analysis and validation")
+            main_window.log_message("  • Direct COL file loading and viewing")
+
+        else:
+            img_debugger.warning("⚠️ COL system integration completed with some failures")
+            main_window.log_message("⚠️ COL system integrated with limited functionality")
+
+        return all_success
+
+    except Exception as e:
+        img_debugger.error(f"Complete COL system integration failed: {str(e)}")
+        main_window.log_message(f"❌ COL system integration error: {str(e)}")
+        return False
+
 
 def setup_col_debug_for_main_window(main_window): #vers 1
     """Setup COL debug functionality for main window using IMG debug system"""
@@ -836,7 +970,7 @@ def setup_threaded_col_loading(main_window): #vers 1
     try:
         col_debug_log(main_window, "Setting up threaded COL loading", 'COL_THREADING')
         
-        from components.col_threaded_loader import COLBackgroundLoader
+        from components.col_loader import COLBackgroundLoader
         
         # Create background loader
         col_loader = COLBackgroundLoader()
@@ -857,3 +991,81 @@ def setup_threaded_col_loading(main_window): #vers 1
     except Exception as e:
         col_debug_log(main_window, f"Error setting up threaded COL loading: {e}", 'COL_THREADING', 'ERROR')
         return False
+
+def setup_col_file_loading(main_window) -> bool: #vers 1
+    """Setup COL file loading in IMG system"""
+    try:
+        # Integrate COL file detection in IMG loading
+        from components.col_integration_main import integrate_complete_col_system
+
+        success = integrate_complete_col_system(main_window)
+
+        if success:
+            img_debugger.debug("✅ COL file loading integrated")
+        else:
+            img_debugger.warning("⚠️ COL file loading integration failed")
+
+        return success
+
+    except Exception as e:
+        img_debugger.error(f"Error setting up COL file loading: {str(e)}")
+        return False
+
+
+def verify_col_components() -> bool: #vers 1
+    """Verify all COL components are available"""
+    missing_components = []
+
+    try:
+        from methods.col_core_classes import COLFile, COLModel
+        img_debugger.debug("✅ COL core classes available")
+    except ImportError:
+        missing_components.append("methods.col_core_classes")
+
+    try:
+        from components.Col_Editor.col_editor import COLEditorDialog
+        img_debugger.debug("✅ COL editor available")
+    except ImportError:
+        missing_components.append("components.Col_Editor.col_editor")
+
+    try:
+        from methods.col_utilities import COLBatchProcessor
+        img_debugger.debug("✅ COL utilities available")
+    except ImportError:
+        missing_components.append("methods.col_utilities")
+
+    try:
+        from methods.col_validation import COLValidator
+        img_debugger.debug("✅ COL validator available")
+    except ImportError:
+        missing_components.append("methods.col_validation")
+
+    try:
+        from methods.col_operations import extract_col_from_img_entry
+        img_debugger.debug("✅ COL operations methods available")
+    except ImportError:
+        missing_components.append("methods.col_operations")
+
+    try:
+        from gui.col_dialogs import show_col_analysis_dialog
+        img_debugger.debug("✅ COL GUI dialogs available")
+    except ImportError:
+        missing_components.append("gui.col_dialogs")
+
+    if missing_components:
+        img_debugger.error(f"Missing COL components: {', '.join(missing_components)}")
+        return False
+
+    img_debugger.success("All COL components verified")
+    return True
+
+# Export functions
+__all__ = [
+    'integrate_complete_col_system',
+    'integrate_col_context_menus',
+    'integrate_col_dialogs',
+    'integrate_col_editor',
+    'integrate_col_methods',
+    'setup_col_file_loading',
+    'verify_col_components'
+]

@@ -7,9 +7,11 @@ Shows basic entry info without heavy RW version detection to prevent freezing
 """
 
 import os
-from typing import Any, List
-from PyQt6.QtWidgets import QTableWidgetItem
+from typing import Any, List, Optional
+from PyQt6.QtWidgets import QTableWidgetItem, QTableWidget, QHeaderView
 from PyQt6.QtCore import Qt
+
+from debug.img_debug_functions import img_debugger
 
 try:
     from utils.img_debug_logger import img_debugger
@@ -20,6 +22,11 @@ except ImportError:
         def info(self, msg): print(f"INFO: {msg}")
     img_debugger = DummyDebugger()
 
+##Methods list - imported from tables_structure
+# reset_table_styling
+# setup_table_for_img_data
+# setup_table_structure
+
 ##Methods list -
 # create_img_table_item
 # format_img_entry_size
@@ -28,6 +35,90 @@ except ImportError:
 # populate_table_with_img_data_minimal
 # refresh_img_table
 # update_img_table_selection_info
+
+def reset_table_styling(main_window): #vers 1
+    """Completely reset table styling to default using IMG debug system"""
+    try:
+        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
+            img_debugger.warning("No table widget available for styling reset")
+            return False
+
+        table = main_window.gui_layout.table
+        header = table.horizontalHeader()
+
+        # Clear all styling
+        table.setStyleSheet("")
+        header.setStyleSheet("")
+        table.setObjectName("")
+
+        # Reset to basic alternating colors
+        table.setAlternatingRowColors(True)
+
+        # Reset selection behavior
+        table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
+
+        # Reset header properties
+        header.setStretchLastSection(True)
+        header.setSectionsClickable(True)
+        header.setSortIndicatorShown(True)
+
+        main_window.log_message("🔧 Table styling completely reset")
+        img_debugger.debug("Table styling reset to default")
+        return True
+
+    except Exception as e:
+        error_msg = f"Error resetting table styling: {str(e)}"
+        main_window.log_message(f"⚠️ {error_msg}")
+        img_debugger.error(error_msg)
+        return False
+
+def setup_table_structure(main_window, file_type: str = "IMG"): #vers 1
+    """Setup table structure based on file type using IMG debug system"""
+    try:
+        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
+            img_debugger.error("No table widget available for structure setup")
+            return False
+
+        table = main_window.gui_layout.table
+
+        if file_type.upper() == "COL":
+            return setup_table_for_col_data(table)
+        else:
+            return setup_table_for_img_data(table)
+
+    except Exception as e:
+        img_debugger.error(f"Error setting up table structure: {e}")
+        return False
+
+def setup_table_for_img_data(table: QTableWidget) -> bool: #vers 1
+    """Setup table structure for IMG file data"""
+    try:
+        # IMG file columns
+        img_headers = ["Name", "Type", "Size", "Offset", "RW Address", "RW Version", "Compression", "Status"]
+        table.setColumnCount(len(img_headers))
+        table.setColumnCount(8)
+        table.setHorizontalHeaderLabels(img_headers)
+
+        # Set proper column widths - same as original
+        table.setColumnWidth(0, 190)  # Name
+        table.setColumnWidth(1, 60)   # Type
+        table.setColumnWidth(2, 90)   # Size
+        table.setColumnWidth(3, 100)  # Offset
+        table.setColumnWidth(5, 100)  # RW Version
+        table.setColumnWidth(4, 100)  # RW Address
+        table.setColumnWidth(6, 110)  # Compression
+        table.setColumnWidth(7, 110)  # Status
+
+        # Enable sorting
+        table.setSortingEnabled(True)
+
+        img_debugger.debug("Table structure setup for IMG data")
+        return True
+
+    except Exception as e:
+        img_debugger.error(f"Error setting up IMG table structure: {e}")
+        return False
 
 class IMGTablePopulator:
     """Handles IMG table population with minimal processing to prevent freezing"""

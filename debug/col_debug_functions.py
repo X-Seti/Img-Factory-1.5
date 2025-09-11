@@ -101,7 +101,7 @@ def debug_col_import_errors():
     
     components_to_check = [
         'methods.col_core_classes',
-        'components.col_creator', 
+        'components.Col_Creator.col_creator', 
         'methods.col_validation',
         'methods.col_parsing_functions',
         'components.col_display'

@@ -16,8 +16,8 @@ from PyQt6.QtGui import QFont, QAction, QIcon, QShortcut, QKeySequence, QPalette
 from core.gui_search import ASearchDialog, SearchManager
 from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
-from components.img_creator import NewIMGDialog, IMGCreationThread
-from components.ide_editor import open_ide_editor
+from components.Img_Creator.img_creator import NewIMGDialog, IMGCreationThread
+from components.Ide_Editor.ide_editor import open_ide_editor
 
 #core
 from core.impotr import import_files_function
@@ -63,7 +63,7 @@ def edit_txd_file(main_window): #vers 2
             main_window.log_message("Selected file is not a TXD file")
             return
 
-        from components.txd_editor import TXDEditor
+        from components.Txd_Editor.txd_editor import TXDEditor
         txd_editor = TXDEditor()
         txd_editor.show()
         main_window.log_message(f"TXD Editor opened for: {filename}")
@@ -648,7 +648,7 @@ class IMGFactoryGUILayout:
         """Launch TXD Editor"""
         try:
             if not self.main_window.txd_editor:
-                from components.txd_editor import TXDEditor
+                from components.Txd_Editor.txd_editor import TXDEditor
                 self.main_window.txd_editor = TXDEditor()
             self.main_window.txd_editor.show()
             self.main_window.txd_editor.raise_()

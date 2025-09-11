@@ -45,33 +45,16 @@ from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent,
 from utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
 
 #components
-from components.img_creator import NewIMGDialog, IMGCreationThread
-from components.img_templates import IMGTemplateManager, TemplateManagerDialog
-from components.img_validator import IMGValidator
-from methods.img_core_classes import (
-    IMGFile, IMGEntry, IMGVersion, Platform,
-    IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel, format_file_size)
-from methods.col_core_classes import (
-    COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup,
-    COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox,
-    diagnose_col_file, set_col_debug_enabled, is_col_debug_enabled
-)
+from components.Img_Creator.img_creator import NewIMGDialog, IMGCreationThread
+from components.Txd_Editor.txd_editor import TXDEditor
 
-#Editoring Functions
-from components.txd_editor import TXDEditor
-from methods.col_parsing_functions import load_col_file_safely
-from components.img_integration_main import integrate_img_functions, img_core_functions
-from components.col_integration_main import integrate_complete_col_system
-from components.col_functions import setup_complete_col_integration
+#debug
 from debug.col_debug_functions import set_col_debug_enabled
-from methods.col_parsing_functions import load_col_file_safely
-from components.col_structure_manager import COLStructureManager
 from debug.unified_debug_functions import integrate_all_improvements, install_debug_control_system
 
 #Core functions.
 from core.img_formats import GameSpecificIMGDialog, IMGCreator
 from core.file_extraction import setup_complete_extraction_integration
-from core.tables_structure import reset_table_styling
 from core.file_type_filter import integrate_file_filtering
 from core.rw_versions import get_rw_version_name
 from core.right_click_actions import integrate_right_click_actions, setup_table_context_menu
@@ -96,8 +79,6 @@ from core.imgcol_rename import integrate_imgcol_rename_functions
 from core.imgcol_replace import integrate_imgcol_replace_functions
 from core.imgcol_convert import integrate_imgcol_convert_functions
 from core.save_entry import integrate_save_entry_function
-
-from core.tab_independent import setup_independent_tab_system, migrate_existing_tabs_to_independent
 from core.rw_unk_snapshot import integrate_unknown_rw_detection
 
 #gui-layout
@@ -117,22 +98,36 @@ from gui.tearoff_integration import integrate_tearoff_system
 from gui.gui_context import (add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
 
 #Shared Methods - Shared Functions.
-from methods.populate_img_table import install_img_table_populator
+from methods.img_core_classes import (
+    IMGFile, IMGEntry, IMGVersion, Platform,
+    IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel, format_file_size)
+from methods.col_core_classes import (
+    COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup,
+    COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox,
+    diagnose_col_file, set_col_debug_enabled, is_col_debug_enabled
+)
+
+from methods.col_integration import integrate_complete_col_system
+from methods.col_functions import setup_complete_col_integration
+from methods.col_parsing_functions import load_col_file_safely
+from methods.col_structure_manager import COLStructureManager
+from methods.img_analyze import analyze_img_corruption, show_analysis_dialog
+from methods.img_integration import integrate_img_functions, img_core_functions
+from methods.img_routing_operations import install_operation_routing
+from methods.img_validation import IMGValidator
+from methods.tab_aware_functions import integrate_tab_awareness_system
+from methods.tab_independent import setup_independent_tab_system, migrate_existing_tabs_to_independent
+from methods.populate_img_table import reset_table_styling, install_img_table_populator
 from methods.progressbar_functions import integrate_progress_system
 from methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate_update_ui_for_loaded_img
 from methods.import_highlight_system import enable_import_highlighting
-from methods.img_routing_operations import install_operation_routing
 from methods.refresh_table_functions import integrate_refresh_table
-from methods.tab_aware_functions import integrate_tab_awareness_system
 from methods.export_col_shared import integrate_col_export_shared
 from methods.mirror_tab_shared import show_mirror_tab_selection
-from methods.img_analyze import analyze_img_corruption, show_analysis_dialog
 from methods.ide_parser_functions import integrate_ide_parser
 from methods.find_dups_functions import find_duplicates_by_hash, show_duplicates_dialog
 from methods.dragdrop_functions import integrate_drag_drop_system
-
-# FIXED COL INTEGRATION IMPORTS
-print("Attempting COL integration...")
+from methods.img_templates import IMGTemplateManager, TemplateManagerDialog
 
 def setup_rebuild_system(self): #vers 1
     """Setup hybrid rebuild system with mode selection"""
@@ -386,7 +381,7 @@ class IMGFactory(QMainWindow):
 
         # Template manager (with better error handling)
         try:
-            from components.img_templates import IMGTemplateManager
+            from methods.img_templates import IMGTemplateManager
             self.template_manager = IMGTemplateManager()
             print("✅ Template manager initialized")
         except Exception as e:
@@ -1296,7 +1291,7 @@ class IMGFactory(QMainWindow):
             return
 
         try:
-            from components.img_validator import IMGValidator
+            from methods.img_validation import IMGValidator
             validation = IMGValidator.validate_img_file(self.current_img)
             if validation.is_valid:
                 self.log_message("✅ IMG validation passed")
@@ -3245,7 +3240,7 @@ class IMGFactory(QMainWindow):
     def open_col_editor(self): #vers 2
         """Open COL file editor - WORKING VERSION"""
         try:
-            from components.col_editor import COLEditorDialog
+            from components.Col_Editor.col_editor import COLEditorDialog
             self.log_message("🔧 Opening COL editor...")
             editor = COLEditorDialog(self)
             editor.show()

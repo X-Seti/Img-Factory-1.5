@@ -1,4 +1,4 @@
-#this belongs in components/file_type_filter.py - version 1
+#this belongs in core/file_type_filter.py - version 1
 # X-Seti - July10 2025 - Img Factory 1.5
 # File type filtering and extraction system
 

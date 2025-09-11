@@ -179,7 +179,7 @@ def add_col_tools_menu(main_window): #vers 1
         col_menu.addSeparator()
         
         # Batch operations
-        from components.col_utilities import open_col_batch_processor, analyze_col_file_dialog
+        from methods.col_utilities import open_col_batch_processor, analyze_col_file_dialog
         
         batch_process_action = QAction("⚙️ Batch Processor", main_window)
         batch_process_action.triggered.connect(lambda: open_col_batch_processor(main_window))
@@ -271,7 +271,7 @@ def open_col_editor(main_window): #vers 1
     try:
         col_debug_log(main_window, "Opening COL editor", 'COL_EDITOR')
         
-        from components.col_utilities import open_col_editor
+        from methods.col_utilities import open_col_editor
         open_col_editor(main_window)
         
     except Exception as e:
@@ -415,7 +415,7 @@ def setup_threaded_col_loading(main_window): #vers 1
     try:
         col_debug_log(main_window, "Setting up threaded COL loading", 'COL_THREADING')
         
-        from components.col_threaded_loader import COLBackgroundLoader
+        from components.col_loader import COLBackgroundLoader
         
         # Create background loader
         col_loader = COLBackgroundLoader()

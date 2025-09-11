@@ -262,7 +262,7 @@ def setup_complete_extraction_integration(main_window): #vers 25
     """Complete integration of extraction system"""
     try:
         # Integrate GTA file editors first
-        from components.gta_file_editors import integrate_gta_file_editors
+        from components.File_Editor.gta_file_editors import integrate_gta_file_editors
         integrate_gta_file_editors(main_window)
         
         # Integrate extraction system

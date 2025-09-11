@@ -13,9 +13,7 @@ import time
 from typing import Any, Dict, List, Optional
 from pathlib import Path
 
-#from debug.unified_debug_functions import debug_trace
 from debug.unified_debug_functions import debug_trace
-
 
 class IMGDebugger:
     """Advanced debugging system for IMG Factory operations"""
@@ -34,7 +32,6 @@ class IMGDebugger:
         self.call_count = 0
         self.error_count = 0
         self.warning_count = 0
-
 
     def _init_log_file(self):
         """Initialize debug log file"""
