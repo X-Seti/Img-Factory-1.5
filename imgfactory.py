@@ -80,7 +80,7 @@ from core.imgcol_replace import integrate_imgcol_replace_functions
 from core.imgcol_convert import integrate_imgcol_convert_functions
 from core.save_entry import integrate_save_entry_function
 from core.rw_unk_snapshot import integrate_unknown_rw_detection
-from core.analyze_rw import integrate_rw_analysis_trigger
+#from core.analyze_rw import integrate_rw_analysis_trigger
 
 #gui-layout
 from gui.ide_dialog import integrate_ide_dialog
@@ -450,7 +450,7 @@ class IMGFactory(QMainWindow):
         integrate_remove_via_functions(self)  # NEW Sep09
         integrate_entry_operations(self)
         integrate_import_export_functions(self)
-        integrate_rw_analysis_trigger(self)
+        #integrate_rw_analysis_trigger(self)
 
         # File operations
         install_close_functions(self)
