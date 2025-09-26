@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QRadioButton, QLineEdit, QTextEdit, QListWidget,
     QListWidgetItem, QSplitter, QScrollArea, QFormLayout
 )
+from pathlib import Path
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QColor, QPalette, QIcon
 import os

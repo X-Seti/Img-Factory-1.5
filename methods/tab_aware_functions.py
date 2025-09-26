@@ -133,75 +133,38 @@ def get_selected_entries_from_active_tab(main_window) -> List[Any]: #vers 1
         return []
 
 
-def get_tab_file_data(main_window, tab_index: int) -> Tuple[Optional[Any], str]: #vers 2
-    """Get file object and type for specific tab index - FIXED: Better detection
-    
-    Args:
-        main_window: Main application window
-        tab_index: Index of tab to check
-        
-    Returns:
-        Tuple of (file_object, file_type)
-    """
+def get_tab_file_data(main_window, tab_index: int) -> Tuple[Optional[Any], str]: #vers 3
+    """Get file object and type"""
     try:
-        if not hasattr(main_window, 'main_tab_widget'):
-            return None, 'NONE'
-        
         if tab_index < 0 or tab_index >= main_window.main_tab_widget.count():
             return None, 'NONE'
-        
+
         tab_widget = main_window.main_tab_widget.widget(tab_index)
         if not tab_widget:
             return None, 'NONE'
-        
-        # FIXED: Multiple detection methods for different tab types
-        
-        # Method 1: Check for direct file attributes in tab
+
+        # NEW: Get from tab storage first
+        if hasattr(tab_widget, 'tab_ready') and tab_widget.tab_ready:
+            file_object = getattr(tab_widget, 'file_object', None)
+            file_type = getattr(tab_widget, 'file_type', 'NONE')
+            return file_object, file_type
+
+        # OLD system fallback (keep for compatibility during migration)
         if hasattr(tab_widget, 'img_file') and tab_widget.img_file:
             return tab_widget.img_file, 'IMG'
-        
+
         if hasattr(tab_widget, 'col_file') and tab_widget.col_file:
             return tab_widget.col_file, 'COL'
-        
-        # Method 2: Check for file data in tab properties
-        if hasattr(tab_widget, 'file_data'):
-            file_data = tab_widget.file_data
-            if file_data:
-                if hasattr(file_data, 'entries'):  # IMG file
-                    return file_data, 'IMG'
-                elif hasattr(file_data, 'models'):  # COL file
-                    return file_data, 'COL'
-        
-        # Method 3: Check tab text/title for hints
-        tab_text = main_window.main_tab_widget.tabText(tab_index).lower()
-        if '.img' in tab_text or 'img' in tab_text:
-            # Try to find IMG file in main window if this is current tab
-            if tab_index == main_window.main_tab_widget.currentIndex():
-                if hasattr(main_window, 'current_img') and main_window.current_img:
-                    return main_window.current_img, 'IMG'
-        elif '.col' in tab_text or 'col' in tab_text:
-            # Try to find COL file in main window if this is current tab
-            if tab_index == main_window.main_tab_widget.currentIndex():
-                if hasattr(main_window, 'current_col') and main_window.current_col:
-                    return main_window.current_col, 'COL'
-        
-        # Method 4: FIXED - Force tab switch and check main window (for current tab only)
+
+        # Check main window as last resort
         if tab_index == main_window.main_tab_widget.currentIndex():
-            # Force update main window references
-            try:
-                if hasattr(main_window, '_on_tab_changed'):
-                    main_window._on_tab_changed(tab_index)
-                
-                # Check main window after forced update
-                if hasattr(main_window, 'current_img') and main_window.current_img:
-                    return main_window.current_img, 'IMG'
-                if hasattr(main_window, 'current_col') and main_window.current_col:
-                    return main_window.current_col, 'COL'
-            except:
-                pass
-        
+            if hasattr(main_window, 'current_img') and main_window.current_img:
+                return main_window.current_img, 'IMG'
+            if hasattr(main_window, 'current_col') and main_window.current_col:
+                return main_window.current_col, 'COL'
+
         return None, 'NONE'
-        
+
     except Exception as e:
         return None, 'NONE'
 
