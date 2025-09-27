@@ -239,6 +239,39 @@ class TXDWorkshop(QWidget): #vers 3
         layout.addWidget(info_group)
         return panel
 
+    def _rename_texture(self): #vers 1
+        """Rename selected texture"""
+        from PyQt6.QtWidgets import QInputDialog
+
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+            return
+
+        old_name = self.selected_texture.get('name', 'texture')
+
+        new_name, ok = QInputDialog.getText(
+            self,
+            "Rename Texture",
+            "Enter new name:",
+            text=old_name
+        )
+
+        if ok and new_name and new_name != old_name:
+            self.selected_texture['name'] = new_name
+
+            row = self.texture_table.currentRow()
+            if row >= 0:
+                details_item = self.texture_table.item(row, 1)
+                if details_item:
+                    text = details_item.text()
+                    updated_text = text.replace(f"Name: {old_name}", f"Name: {new_name}")
+                    details_item.setText(updated_text)
+
+            self.info_name.setText(f"Name: {new_name}")
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Texture renamed: {old_name} -> {new_name}")
+
     def open_img_archive(self): #vers 1
         """Open IMG archive and load TXD file list"""
         try:
