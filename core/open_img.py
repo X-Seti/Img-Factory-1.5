@@ -1,8 +1,8 @@
-#this belongs in core/ open_img.py - Version: 1
-# X-Seti - July16 2025 - IMG Factory 1.5 - Rebuild Functions
+#this belongs in core/ open_img.py - Version: 2
+# X-Seti - September27 2025 - IMG Factory 1.5 - Open Functions with TXD Support
 
 """
-IMG Factory Open Functions
+IMG Factory Open Functions - Now supports IMG, COL, and TXD files
 """
 
 def create_new_img(self): #vers 5
@@ -23,7 +23,7 @@ def create_new_img(self): #vers 5
     except Exception as e:
         self.log_message(f"❌ Error creating new IMG: {str(e)}")
 
-def _detect_and_open_file(self, file_path: str) -> bool: #vers 5
+def _detect_and_open_file(self, file_path: str) -> bool: #vers 6
     """Detect file type and open with appropriate handler"""
     try:
         # First check by extension
@@ -34,6 +34,9 @@ def _detect_and_open_file(self, file_path: str) -> bool: #vers 5
             return True
         elif file_ext == '.col':
             self._load_col_file_safely(file_path)
+            return True
+        elif file_ext == '.txd':
+            self._load_txd_file(file_path)
             return True
 
         # If extension is ambiguous, check file content
@@ -55,6 +58,12 @@ def _detect_and_open_file(self, file_path: str) -> bool: #vers 5
             self._load_col_file_safely(file_path)
             return True
 
+        # Check for TXD signature
+        elif header[:4] == b'\x16\x00\x00\x00':
+            self.log_message(f"🔍 Detected TXD file by signature")
+            self._load_txd_file(file_path)
+            return True
+
         # Try reading as IMG version 1 (no header signature)
         elif len(header) >= 8:
             # Could be IMG v1 or unknown format
@@ -69,17 +78,17 @@ def _detect_and_open_file(self, file_path: str) -> bool: #vers 5
         return False
 
 
-def open_file_dialog(self): #vers 4
-    """Unified file dialog for IMG and COL files"""
+def open_file_dialog(self): #vers 5
+    """Unified file dialog for IMG, COL, and TXD files"""
     file_path, _ = QFileDialog.getOpenFileName(
-        self, "Open IMG/COL Archive", "",
-        "All Supported (*.img *.col);;IMG Archives (*.img);;COL Archives (*.col);;All Files (*)")
+        self, "Open Archive", "",
+        "All Supported (*.img *.col *.txd);;IMG Archives (*.img);;COL Archives (*.col);;TXD Textures (*.txd);;All Files (*)")
 
     if file_path:
         self.load_file_unified(file_path)
 
 
-def _detect_file_type(self, file_path: str) -> str: #vers 3
+def _detect_file_type(self, file_path: str) -> str: #vers 4
     """Detect file type by extension and content"""
     try:
         file_ext = os.path.splitext(file_path)[1].lower()
@@ -88,6 +97,8 @@ def _detect_file_type(self, file_path: str) -> str: #vers 3
             return "IMG"
         elif file_ext == '.col':
             return "COL"
+        elif file_ext == '.txd':
+            return "TXD"
 
         # Check file content if extension is ambiguous
         with open(file_path, 'rb') as f:
@@ -104,9 +115,36 @@ def _detect_file_type(self, file_path: str) -> str: #vers 3
         elif header[:4] in [b'COLL', b'COL\x02', b'COL\x03', b'COL\x04']:
             return "COL"
 
+        # Check for TXD signature
+        elif header[:4] == b'\x16\x00\x00\x00':
+            return "TXD"
+
         # Default to IMG for unknown formats
         return "IMG"
 
     except Exception as e:
         self.log_message(f"❌ Error detecting file type: {str(e)}")
         return "UNKNOWN"
+
+
+def _load_txd_file(self, file_path: str): #vers 1
+    """Load TXD file and open in TXD Workshop"""
+    try:
+        self.log_message(f"🖼️ Loading TXD file: {os.path.basename(file_path)}")
+
+        # Open TXD Workshop with this file
+        from components.Txd_Editor.txd_workshop import open_txd_workshop
+        workshop = open_txd_workshop(self, file_path)
+
+        if workshop:
+            self.log_message(f"✅ TXD Workshop opened: {os.path.basename(file_path)}")
+        else:
+            self.log_message(f"❌ Failed to open TXD Workshop")
+
+    except ImportError:
+        self.log_message(f"❌ TXD Workshop not found")
+        QMessageBox.warning(self, "TXD Support",
+            "TXD Workshop not available. Please ensure components/Txd_Editor/ exists.")
+    except Exception as e:
+        self.log_message(f"❌ Error loading TXD: {str(e)}")
+        QMessageBox.critical(self, "Error", f"Failed to load TXD file: {str(e)}")

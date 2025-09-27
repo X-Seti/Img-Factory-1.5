@@ -887,27 +887,21 @@ class IMGFactoryMenuBar:
     # TOOLS MENU CALLBACKS
     # ========================================================================
 
-    def _open_txd_editor(self): #vers 2
+    def _open_txd_editor(self): #vers 3
         """Open TXD Workshop"""
         try:
+            # Use existing open_txd_workshop function
             from components.Txd_Editor.txd_workshop import open_txd_workshop
 
-            # Get current IMG path if available
             img_path = None
             if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
                 img_path = self.main_window.current_img.file_path
 
-            workshop = open_txd_workshop(self.main_window, img_path)
+            open_txd_workshop(self.main_window, img_path)
 
-            if workshop:
-                if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("✅ TXD Workshop opened")
-            else:
-                QMessageBox.warning(self.main_window, "TXD Workshop", "Failed to open TXD Workshop")
-
-        except ImportError as e:
+        except ImportError:
             QMessageBox.warning(self.main_window, "TXD Workshop",
-                f"TXD Workshop not found. Please ensure components/Txd_Workshop/ exists.\n{str(e)}")
+                "TXD Workshop not found in components/Txd_Editor/")
         except Exception as e:
             QMessageBox.critical(self.main_window, "Error", f"Failed to open TXD Workshop: {str(e)}")
 
