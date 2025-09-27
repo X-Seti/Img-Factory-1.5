@@ -122,7 +122,7 @@ def setup_col_tab_for_file(main_window, file_path: str) -> Optional[int]: #vers 
         else:
             col_debug_log(main_window, "Creating new tab for COL file", 'COL_TABS')
             if hasattr(main_window, 'close_manager'):
-                main_window.close_manager.create_new_tab()
+                main_window.create_tab()
                 current_index = main_window.main_tab_widget.currentIndex()
             else:
                 col_debug_log(main_window, "Close manager not available", 'COL_TABS', 'WARNING')

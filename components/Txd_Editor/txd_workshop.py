@@ -1087,15 +1087,18 @@ class TXDWorkshop(QWidget): #vers 3
         except Exception as e:
             self.preview_label.setText(f"Preview error: {str(e)}")
 
-    def open_txd_file(self): #vers 1
+    def open_txd_file(self, file_path=None): #vers 2
         """Open standalone TXD file"""
         try:
-            file_path, _ = QFileDialog.getOpenFileName(self, "Open TXD File", "", "TXD Files (*.txd);;All Files (*)")
+            if not file_path:
+                file_path, _ = QFileDialog.getOpenFileName(self, "Open TXD File", "", "TXD Files (*.txd);;All Files (*)")
+
             if file_path:
                 with open(file_path, 'rb') as f:
                     txd_data = f.read()
                 self._load_txd_textures(txd_data, os.path.basename(file_path))
                 self.setWindowTitle(f"TXD Workshop: {os.path.basename(file_path)}")
+
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to open TXD: {str(e)}")
 
@@ -1113,13 +1116,19 @@ class TXDWorkshop(QWidget): #vers 3
         event.accept()
 
 
-def open_txd_workshop(main_window, img_path=None): #vers 1
+def open_txd_workshop(main_window, img_path=None): #vers 2
     """Open TXD Workshop from main window"""
     try:
         workshop = TXDWorkshop(main_window, main_window)
 
         if img_path:
-            workshop.load_from_img_archive(img_path)
+            # Check if it's a TXD file or IMG file
+            if img_path.lower().endswith('.txd'):
+                # Load standalone TXD file
+                workshop.open_txd_file(img_path)
+            else:
+                # Load from IMG archive
+                workshop.load_from_img_archive(img_path)
         elif main_window and hasattr(main_window, 'current_img') and main_window.current_img:
             workshop.load_from_img_archive(main_window.current_img.file_path)
 

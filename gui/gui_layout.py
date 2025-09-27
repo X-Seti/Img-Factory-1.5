@@ -40,7 +40,8 @@ from core.img_merger import merge_img_function
 from core.convert import convert_img, convert_img_format
 from core.rename import rename_entry
 from core.reload import reload_current_file
-from core.img_creator import create_new_img, detect_and_open_file, open_file_dialog, detect_file_type
+from core.create import create_new_img
+from core.open import _detect_and_open_file, open_file_dialog, _detect_file_type
 from core.close import close_img_file, close_all_img, install_close_functions, setup_close_manager
 from methods.colour_ui_for_loaded_img import integrate_color_ui_system
 from gui.gui_context import open_col_editor_dialog

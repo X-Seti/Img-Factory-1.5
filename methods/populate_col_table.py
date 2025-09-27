@@ -165,7 +165,7 @@ def setup_col_tab(main_window, file_path): #vers 1
         else:
             img_debugger.debug("Creating new tab for COL file")
             if hasattr(main_window, 'close_manager'):
-                main_window.close_manager.create_new_tab()
+                main_window.create_tab()
                 current_index = main_window.main_tab_widget.currentIndex()
             else:
                 img_debugger.warning("Close manager not available")

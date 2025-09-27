@@ -62,7 +62,8 @@ from core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
 from core.convert import convert_img, convert_img_format
 from core.img_split import integrate_split_functions
 from core.theme_integration import integrate_theme_system
-from core.img_creator import create_new_img, detect_and_open_file, open_file_dialog, detect_file_type
+from core.create import create_new_img
+from core.open import _detect_and_open_file, open_file_dialog, _detect_file_type
 from core.clean import integrate_clean_utilities
 from core.close import install_close_functions, setup_close_manager
 from core.export import integrate_export_functions
@@ -552,7 +553,7 @@ class IMGFactory(QMainWindow):
             apply_visibility_fix(self)
             create_debug_keyboard_shortcuts(self)
             install_debug_control_system(self)
-            self.log_message("✅ Debug features loaded")
+            # self.log_message("✅ Debug features loaded")
         except Exception as e:
             self.log_message(f"⚠️ Debug features failed: {str(e)}")
 
@@ -1168,14 +1169,15 @@ class IMGFactory(QMainWindow):
         return False
 
 
-    def _update_button_states(self, has_selection): #vers 3 #restore
+    def update_button_states(self, has_selection): #vers 4
         """Update button enabled/disabled states based on selection"""
-        # Enable/disable buttons based on selection and loaded IMG
+        # Check what's loaded
         has_img = self.current_img is not None
         has_col = self.current_col is not None
+        has_txd = hasattr(self, 'current_txd') and self.current_txd is not None
 
         # Log the button state changes for debugging
-        self.log_message(f"Button states updated: selection={has_selection}, img_loaded={has_img}, col_loaded={has_col}")
+        self.log_message(f"Button states updated: selection={has_selection}, img_loaded={has_img}, col_loaded={has_col}, txd_loaded={has_txd}")
 
         # Find buttons in GUI layout and update their states
         # These buttons need both an IMG and selection
@@ -1188,24 +1190,25 @@ class IMGFactory(QMainWindow):
             if hasattr(self.gui_layout, btn_name):
                 button = getattr(self.gui_layout, btn_name)
                 if hasattr(button, 'setEnabled'):
-                    # Enable for IMG files with selection, disable for COL files
-                    button.setEnabled(has_selection and has_img and not has_col)
+                    # Enable for IMG files with selection, disable for COL and TXD
+                    button.setEnabled(has_selection and has_img and not has_col and not has_txd)
 
-        # These buttons only need an IMG (no selection required) - DISABLE for COL
+        # These buttons only need an IMG (no selection required) - DISABLE for COL and TXD
         img_dependent_buttons = [
             'import_btn', 'import_files_btn', 'rebuild_btn', 'close_btn',
-            'validate_btn', 'refresh_btn',  'reload_btn'
+            'validate_btn', 'refresh_btn', 'reload_btn'
         ]
 
         for btn_name in img_dependent_buttons:
             if hasattr(self.gui_layout, btn_name):
                 button = getattr(self.gui_layout, btn_name)
                 if hasattr(button, 'setEnabled'):
-                    # Special handling for rebuild - disable for COL files
+                    # Special handling for rebuild - disable for COL and TXD files
                     if btn_name == 'rebuild_btn':
-                        button.setEnabled(has_img and not has_col)
+                        button.setEnabled(has_img and not has_col and not has_txd)
                     else:
-                        button.setEnabled(has_img or has_col)
+                        # Import/Close/Validate work for IMG or COL, but not TXD
+                        button.setEnabled((has_img or has_col) and not has_txd)
 
 
     def _update_status_from_signal(self, message): #vers 3
@@ -1734,7 +1737,7 @@ class IMGFactory(QMainWindow):
 
     def open_file_dialog(self): #vers 1
         """Unified file dialog - imported from core"""
-        from core.create_img import open_file_dialog
+        from core.open_img import open_file_dialog
         return open_file_dialog(self)
 
     def _clean_on_img_loaded(self, img_file: IMGFile): #vers 6
@@ -1857,102 +1860,92 @@ class IMGFactory(QMainWindow):
             traceback.print_exc()  # Debug info
             return False
 
-
-    def _load_img_file_in_new_tab(self, file_path): #vers 4
+    def _load_img_file_in_new_tab(self, file_path): #vers [your_version + 1]
         """Load IMG file in new tab"""
-        import os
-        current_index = self.main_tab_widget.currentIndex()
-        current_tab = self.main_tab_widget.widget(current_index)
-
-        # Check if current tab is empty
-        file_object = getattr(current_tab, 'file_object', None)
-
-        if not file_object:
-            # Use current empty tab
-            self.log_message(f"Using current tab for: {os.path.basename(file_path)}")
-            tab_index = current_index
-        else:
-            # Create new tab
-            self.log_message(f"Creating new tab for: {os.path.basename(file_path)}")
-            tab_index = create_tab(self, file_path, 'IMG', None)
-
-        # Update tab with file info
-        tab_widget = self.main_tab_widget.widget(tab_index)
-        if tab_widget:
-            file_name = os.path.basename(file_path)
-            if file_name.lower().endswith('.img'):
-                file_name = file_name[:-4]
-            tab_name = f"📁 {file_name}"
-
-            tab_widget.file_path = file_path
-            tab_widget.file_type = 'IMG'
-            tab_widget.tab_name = tab_name
-            self.main_tab_widget.setTabText(tab_index, tab_name)
-
-        # Start loading
-        self.load_img_file(file_path)
-
-    def _load_col_file_in_new_tab(self, file_path): #vers 4
-        """Load COL file in new tab"""
-        import os
         try:
-            current_index = self.main_tab_widget.currentIndex()
-            current_tab = self.main_tab_widget.widget(current_index)
+            import os
+            self.log_message(f"Loading IMG in new tab: {os.path.basename(file_path)}")
 
-            # Check if current tab is empty
-            file_object = getattr(current_tab, 'file_object', None)
+            # Create new tab first
+            tab_index = self.create_tab(file_path, 'IMG', None)
 
-            if not file_object:
-                # Use current empty tab
-                self.log_message(f"Using current tab for: {os.path.basename(file_path)}")
-                tab_index = current_index
-            else:
-                # Create new tab
-                self.log_message(f"Creating new tab for: {os.path.basename(file_path)}")
-                tab_index = create_tab(self, file_path, 'COL', None)
+            # Then load IMG using your existing thread loader
+            if self.load_thread and self.load_thread.isRunning():
+                return
 
-            # Update tab with file info
-            tab_widget = self.main_tab_widget.widget(tab_index)
-            if tab_widget:
-                file_name = os.path.basename(file_path)
-                if file_name.lower().endswith('.col'):
-                    file_name = file_name[:-4]
-                tab_name = f"🛡️ {file_name}"
+            self.load_thread = IMGLoadThread(file_path)
+            self.load_thread.progress_updated.connect(self._on_img_load_progress)
+            self.load_thread.loading_finished.connect(self._on_img_loaded)
+            self.load_thread.loading_error.connect(self._on_img_load_error)
+            self.load_thread.start()
 
-                tab_widget.file_path = file_path
-                tab_widget.file_type = 'COL'
-                tab_widget.tab_name = tab_name
-                self.main_tab_widget.setTabText(tab_index, tab_name)
+        except Exception as e:
+            self.log_message(f"Error loading IMG in new tab: {str(e)}")
 
-            # Start loading COL
+    def _load_txd_file_in_new_tab(self, file_path): #vers 1
+        """Load TXD file in new tab"""
+        try:
+            import os
+
+            # Create new tab for TXD
+            tab_index = self.create_tab(file_path, 'TXD', None)
+
+            # Update tab to show it's a TXD
+            file_name = os.path.basename(file_path)[:-4]  # Remove .txd
+            self.main_tab_widget.setTabText(tab_index, f"🖼️ {file_name}")
+
+            # Open TXD Workshop for this file
+            from components.Txd_Editor.txd_workshop import open_txd_workshop
+            self.txd_workshop = open_txd_workshop(self, file_path)
+
+            if workshop:
+                self.log_message(f"✅ TXD loaded in tab {tab_index}: {file_name}")
+
+        except Exception as e:
+            self.log_message(f"❌ Error loading TXD in tab: {str(e)}")
+
+    def _load_col_file_in_new_tab(self, file_path): #vers [your_version + 1]
+        """Load COL file in new tab"""
+        try:
+            import os
+            self.log_message(f"Loading COL in new tab: {os.path.basename(file_path)}")
+
+            # Don't create tab here if load_col_file_safely creates one
+            # Just call the loader directly
             if hasattr(self, 'load_col_file_safely'):
                 self.load_col_file_safely(file_path)
             else:
-                self.log_message("❌ COL loading method not available")
+                self.log_message("Error: No COL loading method found")
 
         except Exception as e:
-            self.log_message(f"❌ Error setting up COL tab: {str(e)}")
+            self.log_message(f"Error loading COL in new tab: {str(e)}")
 
+    def open_file_dialog(main_window): #vers 8
+        """Unified file dialog for IMG, COL, and TXD files"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            main_window,
+            "Open Archive",
+            "",
+            "All Supported (*.img *.col *.txd);;IMG Archives (*.img);;COL Archives (*.col);;TXD Textures (*.txd);;All Files (*)"
+        )
 
-    def load_img_file(self, file_path: str): #vers 3
-        """Load IMG file in background thread - FIXED recursion issue"""
-        if self.load_thread and self.load_thread.isRunning():
-            return
+        if file_path:
+            file_ext = os.path.splitext(file_path)[1].lower()
 
-        self.log_message(f"Loading: {os.path.basename(file_path)}")
-
-        # Show progress - CHECK if method exists first
-        if hasattr(self.gui_layout, 'show_progress'):
-            self.gui_layout.show_progress(0, "Loading IMG file...")
-        else:
-            self.log_message("⚠️ gui_layout.show_progress not available")
-
-        # Create and start the loading thread
-        self.load_thread = IMGLoadThread(file_path)
-        self.load_thread.progress_updated.connect(self._on_img_load_progress)
-        self.load_thread.loading_finished.connect(self._on_img_loaded)
-        self.load_thread.loading_error.connect(self._on_img_load_error)
-        self.load_thread.start()
+            if file_ext == '.txd':
+                load_txd_file(main_window, file_path)
+            elif file_ext == '.col':
+                # Create new tab for COL
+                if hasattr(main_window, '_load_col_file_in_new_tab'):
+                    main_window._load_col_file_in_new_tab(file_path)
+                else:
+                    main_window.load_col_file_safely(file_path)
+            else:  # .img
+                # Create new tab for IMG
+                if hasattr(main_window, '_load_img_file_in_new_tab'):
+                    main_window._load_img_file_in_new_tab(file_path)
+                else:
+                    main_window.load_img_file(file_path)
 
 
     def _on_img_load_progress(self, progress: int, status: str): #vers 5
@@ -1969,7 +1962,8 @@ class IMGFactory(QMainWindow):
         """Update UI when no IMG file is loaded - UPDATED: Uses unified progress system"""
         # Clear current data
         self.current_img = None
-        self.current_col = None  # Also clear COL
+        self.current_col = None
+        self.current_txd = None
 
         # Update window title
         self.setWindowTitle("IMG Factory 1.5")

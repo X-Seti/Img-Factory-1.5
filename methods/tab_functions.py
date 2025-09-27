@@ -1,57 +1,55 @@
-#this belongs in methods/tab_functions.py - Version: 2
+#this belongs in methods/tab_functions.py - Version: 3
 # X-Seti - September27 2025 - IMG Factory 1.5 - Tab System with TXD Support
 
 """
 Tab System - Each tab stores its own data
-Now supports IMG, COL, and TXD files
+Supports IMG, COL, and TXD files - NO reindexing
 """
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTableWidget
 from typing import Optional, Tuple, Any
 
 ##Methods list -
+# clear_tab
+# close_tab
 # create_tab
 # get_tab_data
 # get_tab_table
-# update_references
-# close_tab
-# clear_tab
-# switch_tab
-# setup_tab_system
 # migrate_tabs
+# setup_tab_system
+# switch_tab
+# update_references
 
-def create_tab(main_window, file_path=None, file_type=None, file_object=None): #vers 2
+
+def create_tab(main_window, file_path=None, file_type=None, file_object=None): #vers 4
     """Create tab - stores ALL data on tab widget itself"""
     try:
-        # Create tab widget
         tab_widget = QWidget()
         tab_layout = QVBoxLayout(tab_widget)
         tab_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Create GUI components for this tab
+        # CRITICAL: Create NEW GUI components for this tab
+        # Don't reuse existing widgets
         main_window.gui_layout.create_main_ui_with_splitters(tab_layout)
 
-        # Get table widget for this tab and store reference
-        from PyQt6.QtWidgets import QTableWidget
+        # Get the NEW table widget created for THIS tab
         tables = tab_widget.findChildren(QTableWidget)
         if tables:
-            tab_widget.table_ref = tables[0]
+            # Make sure we get the LAST table (newest one created)
+            tab_widget.table_ref = tables[-1]  # Changed from [0] to [-1]
         else:
-            main_window.log_message("⚠️ No table found in new tab")
+            main_window.log_message("No table found in new tab")
             tab_widget.table_ref = None
 
-        # Store ALL file data on tab widget
         tab_widget.file_path = file_path
         tab_widget.file_type = file_type or 'NONE'
         tab_widget.file_object = file_object
         tab_widget.tab_ready = True
 
-        # Determine tab name with icon
         if file_path:
             import os
             file_name = os.path.basename(file_path)
 
-            # Check file extension and assign appropriate icon
             if file_name.lower().endswith('.img'):
                 file_name = file_name[:-4]
                 icon = "📦"
@@ -70,20 +68,20 @@ def create_tab(main_window, file_path=None, file_type=None, file_object=None): #
 
         tab_widget.tab_name = tab_name
 
-        # Add tab
+        # Add tab and immediately set its text to ensure it's correct
         new_index = main_window.main_tab_widget.addTab(tab_widget, tab_name)
+        main_window.main_tab_widget.setTabText(new_index, tab_name)  # Force set name
         main_window.main_tab_widget.setCurrentIndex(new_index)
 
-        main_window.log_message(f"✅ Tab created: {tab_name}")
+        main_window.log_message(f"Tab created at index {new_index}: {tab_name}")
         return new_index
 
     except Exception as e:
-        main_window.log_message(f"❌ Error creating tab: {str(e)}")
+        main_window.log_message(f"Error creating tab: {str(e)}")
         return None
 
-
 def get_tab_data(tab_widget) -> Tuple[Optional[Any], str, Optional[Any]]: #vers 1
-    """Get file data from tab widget - NO external lookups
+    """Get file data from tab widget
 
     Returns:
         (file_object, file_type, table_widget)
@@ -92,7 +90,6 @@ def get_tab_data(tab_widget) -> Tuple[Optional[Any], str, Optional[Any]]: #vers 
         if not tab_widget:
             return None, 'NONE', None
 
-        # Get data stored on tab
         file_object = getattr(tab_widget, 'file_object', None)
         file_type = getattr(tab_widget, 'file_type', 'NONE')
         table = getattr(tab_widget, 'table_ref', None)
@@ -109,12 +106,10 @@ def get_tab_table(tab_widget): #vers 1
         if hasattr(tab_widget, 'table_ref'):
             return tab_widget.table_ref
 
-        # Find and store reference
-        from PyQt6.QtWidgets import QTableWidget
         tables = tab_widget.findChildren(QTableWidget)
         if tables:
-            tab_widget.table_ref = tables[0]
-            return tables[0]
+            tab_widget.table_ref = tables[-1]
+            return tables[-1]
 
         return None
 
@@ -122,11 +117,10 @@ def get_tab_table(tab_widget): #vers 1
         return None
 
 
-def update_references(main_window, tab_index): #vers 2
+def update_references(main_window, tab_index): #vers 3
     """Update main window references to current tab's data"""
     try:
         if tab_index == -1:
-            # No tabs
             main_window.current_img = None
             main_window.current_col = None
             main_window.current_txd = None
@@ -138,14 +132,11 @@ def update_references(main_window, tab_index): #vers 2
         if not tab_widget:
             return False
 
-        # Get data from tab
         file_object, file_type, table = get_tab_data(tab_widget)
 
-        # Update gui_layout.table reference
         if table:
             main_window.gui_layout.table = table
 
-        # Update current file references based on type
         if file_type == 'IMG' and file_object:
             main_window.current_img = file_object
             main_window.current_col = None
@@ -159,81 +150,70 @@ def update_references(main_window, tab_index): #vers 2
             main_window.current_img = None
             main_window.current_col = None
         else:
-            # Empty tab
             main_window.current_img = None
             main_window.current_col = None
             main_window.current_txd = None
 
-        main_window.log_message(f"🎯 References updated to tab {tab_index} ({file_type})")
+        main_window.log_message(f"References updated to tab {tab_index} ({file_type})")
         return True
 
     except Exception as e:
-        main_window.log_message(f"❌ Error updating references: {str(e)}")
+        main_window.log_message(f"Error updating references: {str(e)}")
         return False
 
 
-def close_tab(main_window, tab_index): #vers 1
-    """Close tab - NO reindexing needed"""
+def close_tab(main_window, tab_index): #vers 2
+    """Close tab - Let currentChanged signal handle switching"""
     try:
         tab_count = main_window.main_tab_widget.count()
 
         if tab_count <= 1:
-            # Last tab - just clear it
             clear_tab(main_window, 0)
             return
 
-        # Get info before closing
         tab_widget = main_window.main_tab_widget.widget(tab_index)
         tab_name = getattr(tab_widget, 'tab_name', 'Unknown')
 
-        # Simply remove the tab
         main_window.main_tab_widget.removeTab(tab_index)
+        main_window.log_message(f"Closed tab: {tab_name}")
 
-        main_window.log_message(f"✅ Closed tab: {tab_name}")
-
-        # Update references to current tab
-        current_index = main_window.main_tab_widget.currentIndex()
-        update_references(main_window, current_index)
+        # Signal will trigger switch_tab automatically
 
     except Exception as e:
-        main_window.log_message(f"❌ Error closing tab: {str(e)}")
+        main_window.log_message(f"Error closing tab: {str(e)}")
 
 
-def clear_tab(main_window, tab_index): #vers 1
-    """Clear tab contents - leave empty tab"""
+def clear_tab(main_window, tab_index): #vers 2
+    """Clear tab contents"""
     try:
         tab_widget = main_window.main_tab_widget.widget(tab_index)
         if not tab_widget:
             return
 
-        # Clear file data
         tab_widget.file_object = None
         tab_widget.file_type = 'NONE'
         tab_widget.file_path = None
         tab_widget.tab_name = "📂 No File"
 
-        # Clear table
         if hasattr(tab_widget, 'table_ref') and tab_widget.table_ref:
             tab_widget.table_ref.setRowCount(0)
 
-        # Update tab name
         main_window.main_tab_widget.setTabText(tab_index, "📂 No File")
 
-        # Update main window references
         if tab_index == main_window.main_tab_widget.currentIndex():
             main_window.current_img = None
             main_window.current_col = None
             main_window.current_txd = None
             main_window._update_ui_for_no_img()
 
-        main_window.log_message("✅ Tab cleared")
+        main_window.log_message("Tab cleared")
 
     except Exception as e:
-        main_window.log_message(f"❌ Error clearing tab: {str(e)}")
+        main_window.log_message(f"Error clearing tab: {str(e)}")
 
 
-def switch_tab(main_window, tab_index): #vers 1
-    """Handle tab switching - updates references only"""
+def switch_tab(main_window, tab_index): #vers 4
+    """Handle tab switching - updates references AND TXD Workshop"""
     try:
         if tab_index == -1:
             main_window.current_img = None
@@ -243,28 +223,44 @@ def switch_tab(main_window, tab_index): #vers 1
                 main_window.gui_layout.table = None
             return
 
-        main_window.log_message(f"🔄 Switching to tab: {tab_index}")
-
-        # Simply update main window references
+        main_window.log_message(f"Switching to tab: {tab_index}")
         update_references(main_window, tab_index)
 
+        # DEBUG: Check if workshop exists
+        if hasattr(main_window, 'txd_workshop'):
+            main_window.log_message(f"TXD Workshop found: {main_window.txd_workshop}")
+
+            if main_window.txd_workshop and main_window.txd_workshop.isVisible():
+                tab_widget = main_window.main_tab_widget.widget(tab_index)
+                file_path = getattr(tab_widget, 'file_path', None)
+
+                main_window.log_message(f"Tab file path: {file_path}")
+
+                if file_path:
+                    if file_path.lower().endswith('.txd'):
+                        main_window.log_message("Loading TXD in workshop")
+                        main_window.txd_workshop.open_txd_file(file_path)
+                    elif file_path.lower().endswith('.img'):
+                        main_window.log_message("Loading IMG in workshop")
+                        main_window.txd_workshop.load_from_img_archive(file_path)
+        else:
+            main_window.log_message("No txd_workshop attribute found")
+
     except Exception as e:
-        main_window.log_message(f"❌ Error switching tab: {str(e)}")
+        main_window.log_message(f"Error switching tab: {str(e)}")
 
 
-def setup_tab_system(main_window): #vers 1
-    """Setup tab system - remove old handlers"""
+def setup_tab_system(main_window): #vers 3
+    """Setup tab system - connect signals"""
     try:
-        main_window.log_message("🚀 Setting up tab system...")
+        main_window.log_message("Setting up tab system...")
 
-        # Disconnect old handlers
         try:
             main_window.main_tab_widget.currentChanged.disconnect()
             main_window.main_tab_widget.tabCloseRequested.disconnect()
         except:
-            pass  # No handlers to disconnect
+            pass
 
-        # Connect new handlers
         main_window.main_tab_widget.currentChanged.connect(
             lambda index: switch_tab(main_window, index)
         )
@@ -272,22 +268,19 @@ def setup_tab_system(main_window): #vers 1
             lambda index: close_tab(main_window, index)
         )
 
-        # Install methods on main window
         main_window.create_tab = lambda fp=None, ft=None, fo=None: create_tab(main_window, fp, ft, fo)
         main_window.close_tab = lambda idx: close_tab(main_window, idx)
         main_window.clear_tab = lambda idx: clear_tab(main_window, idx)
         main_window.update_references = lambda idx: update_references(main_window, idx)
 
-        main_window.log_message("✅ Tab system active")
-        main_window.log_message("   • No reindexing")
-        main_window.log_message("   • Each tab stores own data")
-        main_window.log_message("   • Supports IMG, COL, TXD files")
-        main_window.log_message("   • Unlimited tabs supported")
+        main_window.log_message("Tab system active")
+        main_window.log_message("  No reindexing")
+        main_window.log_message("  Supports IMG, COL, TXD")
 
         return True
 
     except Exception as e:
-        main_window.log_message(f"❌ Error setting up tabs: {str(e)}")
+        main_window.log_message(f"Error setting up tabs: {str(e)}")
         return False
 
 
@@ -295,7 +288,7 @@ def migrate_tabs(main_window): #vers 2
     """Migrate existing tabs from old system"""
     try:
         tab_count = main_window.main_tab_widget.count()
-        main_window.log_message(f"🔄 Migrating {tab_count} tabs...")
+        main_window.log_message(f"Migrating {tab_count} tabs...")
 
         migrated = 0
 
@@ -304,23 +297,19 @@ def migrate_tabs(main_window): #vers 2
             if not tab_widget:
                 continue
 
-            # Get data from old open_files if available
             if hasattr(main_window, 'open_files') and i in main_window.open_files:
                 file_info = main_window.open_files[i]
 
-                # Store on tab widget
                 tab_widget.file_path = file_info.get('file_path')
                 tab_widget.file_object = file_info.get('file_object')
                 tab_widget.file_type = file_info.get('type', 'NONE')
                 tab_widget.tab_name = file_info.get('tab_name', 'Unknown')
             else:
-                # Empty tab
                 tab_widget.file_path = None
                 tab_widget.file_object = None
                 tab_widget.file_type = 'NONE'
                 tab_widget.tab_name = main_window.main_tab_widget.tabText(i)
 
-            # Get and store table reference
             table = get_tab_table(tab_widget)
             if table:
                 tab_widget.table_ref = table
@@ -328,33 +317,31 @@ def migrate_tabs(main_window): #vers 2
             tab_widget.tab_ready = True
             migrated += 1
 
-        # Disable old open_files system
         if hasattr(main_window, 'open_files'):
             main_window.open_files_backup = main_window.open_files.copy()
-            main_window.open_files = {}  # Clear it
-            main_window.log_message("🗑️ Old open_files disabled")
+            main_window.open_files = {}
+            main_window.log_message("Old open_files disabled")
 
-        main_window.log_message(f"✅ Migrated {migrated}/{tab_count} tabs")
+        main_window.log_message(f"Migrated {migrated}/{tab_count} tabs")
 
-        # Update current tab references
         current_index = main_window.main_tab_widget.currentIndex()
         update_references(main_window, current_index)
 
         return True
 
     except Exception as e:
-        main_window.log_message(f"❌ Migration error: {str(e)}")
+        main_window.log_message(f"Migration error: {str(e)}")
         return False
 
 
 __all__ = [
+    'clear_tab',
+    'close_tab',
     'create_tab',
     'get_tab_data',
     'get_tab_table',
-    'update_references',
-    'close_tab',
-    'clear_tab',
-    'switch_tab',
+    'migrate_tabs',
     'setup_tab_system',
-    'migrate_tabs'
+    'switch_tab',
+    'update_references'
 ]
