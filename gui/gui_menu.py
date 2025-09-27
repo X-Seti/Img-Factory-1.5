@@ -661,6 +661,21 @@ class IMGFactoryMenuBar:
             "collision_properties": self._collision_properties,
             "collision_debug": self._collision_debug,
 
+            # TXD menu callbacks
+            "texture_view": self._view_texture,
+            "texture_export": self._export_texture,
+            "texture_import": self._import_texture,
+            "texture_replace": self._replace_texture,
+            "texture_convert": self._convert_format,
+            "texture_validate": self._validate_txd,
+            "texture_optimize": self._optimize_textures,
+            "texture_batch_export": self._batch_export,
+            "texture_batch_convert": self._batch_convert,
+            "texture_batch_resize": self._batch_resize,
+            "texture_palette": self._extract_palette,
+            "texture_atlas": self._create_atlas,
+            "texture_properties": self._texture_properties,
+
             # Tools menu (duplicate entries for accessibility)
             "col_editor": self._open_col_editor,
             "txd_editor": self._open_txd_editor,
@@ -863,6 +878,7 @@ class IMGFactoryMenuBar:
         except Exception as e:
             QMessageBox.critical(self.main_window, "Error", f"Failed to analyze COL: {str(e)}")
 
+
     def _batch_export_collision(self):
         """Batch export collision files"""
         QMessageBox.information(self.main_window, "Batch Export", "COL batch export coming soon!")
@@ -887,17 +903,91 @@ class IMGFactoryMenuBar:
     # TOOLS MENU CALLBACKS
     # ========================================================================
 
+
+    def _view_texture(self): #vers 1
+        """View texture in TXD Workshop"""
+        self._open_txd_editor()
+
+    def _export_texture(self): #vers 1
+        """Export selected texture"""
+        try:
+            if hasattr(self.main_window, 'txd_workshops') and self.main_window.txd_workshops:
+                # Get first visible workshop
+                for workshop in self.main_window.txd_workshops:
+                    if workshop and workshop.isVisible():
+                        workshop.export_selected_texture()
+                        return
+            QMessageBox.information(self.main_window, "Export Texture",
+                "Please open TXD Workshop first (Tools → TXD Editor)")
+        except Exception as e:
+            QMessageBox.critical(self.main_window, "Error", f"Failed to export texture: {str(e)}")
+
+    def _import_texture(self): #vers 1
+        """Import texture to TXD"""
+        QMessageBox.information(self.main_window, "Import Texture", "Import texture coming soon!")
+
+    def _replace_texture(self): #vers 1
+        """Replace texture in TXD"""
+        QMessageBox.information(self.main_window, "Replace Texture", "Replace texture coming soon!")
+
+    def _convert_format(self): #vers 1
+        """Convert texture format"""
+        QMessageBox.information(self.main_window, "Convert Format", "Format conversion coming soon!")
+
+    def _validate_txd(self): #vers 1
+        """Validate TXD file structure"""
+        QMessageBox.information(self.main_window, "Validate TXD", "TXD validation coming soon!")
+
+    def _optimize_textures(self): #vers 1
+        """Optimize textures for size/quality"""
+        QMessageBox.information(self.main_window, "Optimize Textures", "Texture optimization coming soon!")
+
+    def _batch_export(self): #vers 1
+        """BatTraceback (most recent call last):
+  File "/home/x2/Documents/GitHub/Img Factory 1.5/./imgfactory.py", line 93, in <module>
+    from gui.gui_menu import IMGFactoryMenuBar
+  File "/home/x2/Documents/GitHub/Img Factory 1.5/gui/gui_menu.py", line 580
+    def __init__(self, main_window, pa            "txd_editor": self._open_txd_editor,nel_manager: PanelManager = None):
+                                                  ^^^^^^^^^^^^
+ch export textures"""
+        QMessageBox.information(self.main_window, "Batch Export", "Batch export coming soon!")
+
+    def _batch_convert(self): #vers 1
+        """Batch convert texture formats"""
+        QMessageBox.information(self.main_window, "Batch Convert", "Batch convert coming soon!")
+
+    def _batch_resize(self): #vers 1
+        """Batch resize textures"""
+        QMessageBox.information(self.main_window, "Batch Resize", "Batch resize coming soon!")
+
+    def _extract_palette(self): #vers 1
+        """Extract color palette from textures"""
+        QMessageBox.information(self.main_window, "Extract Palette", "Extract palette coming soon!")
+
+    def _create_atlas(self): #vers 1
+        """Create texture atlas"""
+        QMessageBox.information(self.main_window, "Create Atlas", "Create atlas coming soon!")
+
+    def _texture_properties(self): #vers 1
+        """Show texture properties dialog"""
+        QMessageBox.information(self.main_window, "Texture Properties", "Texture properties coming soon!")
+
     def _open_txd_editor(self): #vers 3
         """Open TXD Workshop"""
         try:
-            # Use existing open_txd_workshop function
             from components.Txd_Editor.txd_workshop import open_txd_workshop
 
             img_path = None
             if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
                 img_path = self.main_window.current_img.file_path
 
-            open_txd_workshop(self.main_window, img_path)
+            workshop = open_txd_workshop(self.main_window, img_path)
+
+            # Track workshop instance
+            if workshop:
+                if not hasattr(self.main_window, 'txd_workshops'):
+                    self.main_window.txd_workshops = []
+                self.main_window.txd_workshops.append(workshop)
 
         except ImportError:
             QMessageBox.warning(self.main_window, "TXD Workshop",

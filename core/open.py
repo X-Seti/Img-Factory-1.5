@@ -74,8 +74,8 @@ def _load_col_file(main_window, file_path): #vers 2
         main_window.log_message(f"Error loading COL: {str(e)}")
 
 
-def _load_txd_file(main_window, file_path): #vers 5
-    """Load TXD file - Opens TXD Workshop or loads in new tab"""
+def _load_txd_file(main_window, file_path):
+    """Load TXD file - tries tab method first, then workshop"""
     try:
         main_window.log_message(f"Loading TXD file: {os.path.basename(file_path)}")
 
@@ -87,22 +87,18 @@ def _load_txd_file(main_window, file_path): #vers 5
             main_window.load_txd_file_in_new_tab(file_path)
             return
 
-        # Fallback: Open TXD Workshop
+        # Fallback: Open TXD Workshop window
         from components.Txd_Editor.txd_workshop import open_txd_workshop
         workshop = open_txd_workshop(main_window, file_path)
 
         if workshop:
+            if not hasattr(main_window, 'txd_workshops'):
+                main_window.txd_workshops = []
+            main_window.txd_workshops.append(workshop)
             main_window.log_message(f"TXD Workshop opened: {os.path.basename(file_path)}")
-        else:
-            main_window.log_message("Failed to open TXD Workshop")
 
-    except ImportError:
-        main_window.log_message("TXD Workshop not found")
-        QMessageBox.warning(main_window, "TXD Support",
-            "TXD Workshop not available. Please ensure components/Txd_Editor/ exists.")
     except Exception as e:
         main_window.log_message(f"Error loading TXD: {str(e)}")
-        QMessageBox.critical(main_window, "Error", f"Failed to load TXD file: {str(e)}")
 
 
 def _detect_and_open_file(main_window, file_path): #vers 9

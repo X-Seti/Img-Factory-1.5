@@ -384,6 +384,9 @@ class IMGFactory(QMainWindow):
         # Core data initialization
         self.current_img: Optional[IMGFile] = None
         self.current_col: Optional[COLFile] = None
+
+        #self.current_txd = None
+        #self.txd_workshops = []
         self.open_files = {}
         self.tab_counter = 0
         self.load_thread: Optional[IMGLoadThread] = None
@@ -500,7 +503,7 @@ class IMGFactory(QMainWindow):
 
         # File filtering
         integrate_file_filtering(self)
-        self.txd_workshops = []
+
 
         # === PHASE 6: GUI BACKEND & SHORTCUTS (Medium) ===
 
@@ -1839,7 +1842,7 @@ class IMGFactory(QMainWindow):
 
             elif file_ext == 'col':
                 # COL file loading (unchanged - working correctly)
-                if hasattr(self, 'load_col_file_safely'):
+                if hasattr_open_txd_workshop(self, 'load_col_file_safely'):
                     self.log_message(f"🛡️ Loading COL file: {file_name}")
                     success = self.load_col_file_safely(file_path)
                     if success:
@@ -1922,9 +1925,8 @@ class IMGFactory(QMainWindow):
             self.log_message(f"Error loading COL in new tab: {str(e)}")
 
 
-    # Where you open TXD Workshop (around line 1898):
-    def _open_txd_workshop(self, file_path=None): #vers [your_version + 1]
-        """Open TXD Workshop - supports multiple instances"""
+    def _open_txd_workshop(self, file_path=None): #vers 2
+        """Open TXD Workshop - connects to tab switching"""
         from components.Txd_Editor.txd_workshop import open_txd_workshop
 
         if not file_path:
@@ -1934,19 +1936,41 @@ class IMGFactory(QMainWindow):
         workshop = open_txd_workshop(self, file_path)
 
         if workshop:
-            # Add to list and track
+            if not hasattr(self, 'txd_workshops'):
+                self.txd_workshops = []
+
             self.txd_workshops.append(workshop)
 
-            # Connect close signal to remove from list
-            workshop.workshop_closed.connect(lambda: self._on_workshop_closed(workshop))
+            # Connect workshop to tab changes
+            self.main_tab_widget.currentChanged.connect(
+                lambda idx: self._update_workshop_on_tab_change(workshop, idx)
+            )
 
-            self.log_message(f"TXD Workshop opened ({len(self.txd_workshops)} total)")
+            workshop.workshop_closed.connect(lambda: self._on_workshop_closed(workshop))
+            self.log_message(f"Workshop opened and connected ({len(self.txd_workshops)} total)")
 
         return workshop
 
+
+    def _update_workshop_on_tab_change(self, workshop, tab_index): #vers 1
+        """Update specific workshop when tab changes"""
+        if not workshop or not workshop.isVisible():
+            return
+
+        tab_widget = self.main_tab_widget.widget(tab_index)
+        if not tab_widget:
+            return
+
+        file_path = getattr(tab_widget, 'file_path', None)
+        if file_path:
+            if file_path.lower().endswith('.txd'):
+                workshop.open_txd_file(file_path)
+            elif file_path.lower().endswith('.img'):
+                workshop.load_from_img_archive(file_path)
+
     def _on_workshop_closed(self, workshop): #vers 1
         """Remove closed workshop from tracking list"""
-        if workshop in self.txd_workshops:
+        if hasattr(self, 'txd_workshops') and workshop in self.txd_workshops:
             self.txd_workshops.remove(workshop)
             self.log_message(f"Workshop closed ({len(self.txd_workshops)} remaining)")
 
