@@ -212,8 +212,8 @@ def clear_tab(main_window, tab_index): #vers 2
         main_window.log_message(f"Error clearing tab: {str(e)}")
 
 
-def switch_tab(main_window, tab_index): #vers 4
-    """Handle tab switching - updates references AND TXD Workshop"""
+def switch_tab(main_window, tab_index): #vers 5
+    """Handle tab switching - updates ALL TXD Workshops"""
     try:
         if tab_index == -1:
             main_window.current_img = None
@@ -226,29 +226,21 @@ def switch_tab(main_window, tab_index): #vers 4
         main_window.log_message(f"Switching to tab: {tab_index}")
         update_references(main_window, tab_index)
 
-        # DEBUG: Check if workshop exists
-        if hasattr(main_window, 'txd_workshop'):
-            main_window.log_message(f"TXD Workshop found: {main_window.txd_workshop}")
+        # Update ALL open TXD Workshops
+        if hasattr(main_window, 'txd_workshops'):
+            tab_widget = main_window.main_tab_widget.widget(tab_index)
+            file_path = getattr(tab_widget, 'file_path', None)
 
-            if main_window.txd_workshop and main_window.txd_workshop.isVisible():
-                tab_widget = main_window.main_tab_widget.widget(tab_index)
-                file_path = getattr(tab_widget, 'file_path', None)
-
-                main_window.log_message(f"Tab file path: {file_path}")
-
-                if file_path:
-                    if file_path.lower().endswith('.txd'):
-                        main_window.log_message("Loading TXD in workshop")
-                        main_window.txd_workshop.open_txd_file(file_path)
-                    elif file_path.lower().endswith('.img'):
-                        main_window.log_message("Loading IMG in workshop")
-                        main_window.txd_workshop.load_from_img_archive(file_path)
-        else:
-            main_window.log_message("No txd_workshop attribute found")
+            if file_path:
+                for workshop in main_window.txd_workshops:
+                    if workshop and workshop.isVisible():
+                        if file_path.lower().endswith('.txd'):
+                            workshop.open_txd_file(file_path)
+                        elif file_path.lower().endswith('.img'):
+                            workshop.load_from_img_archive(file_path)
 
     except Exception as e:
         main_window.log_message(f"Error switching tab: {str(e)}")
-
 
 def setup_tab_system(main_window): #vers 3
     """Setup tab system - connect signals"""

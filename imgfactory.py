@@ -500,6 +500,7 @@ class IMGFactory(QMainWindow):
 
         # File filtering
         integrate_file_filtering(self)
+        self.txd_workshops = []
 
         # === PHASE 6: GUI BACKEND & SHORTCUTS (Medium) ===
 
@@ -1902,7 +1903,7 @@ class IMGFactory(QMainWindow):
                 self.log_message(f"✅ TXD loaded in tab {tab_index}: {file_name}")
 
         except Exception as e:
-            self.log_message(f"❌ Error loading TXD in tab: {str(e)}")
+            self.log_message(f"❌ Error loading TXD in tab:_open_txd_workshop {str(e)}")
 
     def _load_col_file_in_new_tab(self, file_path): #vers [your_version + 1]
         """Load COL file in new tab"""
@@ -1919,6 +1920,36 @@ class IMGFactory(QMainWindow):
 
         except Exception as e:
             self.log_message(f"Error loading COL in new tab: {str(e)}")
+
+
+    # Where you open TXD Workshop (around line 1898):
+    def _open_txd_workshop(self, file_path=None): #vers [your_version + 1]
+        """Open TXD Workshop - supports multiple instances"""
+        from components.Txd_Editor.txd_workshop import open_txd_workshop
+
+        if not file_path:
+            if hasattr(self, 'current_img') and self.current_img:
+                file_path = self.current_img.file_path
+
+        workshop = open_txd_workshop(self, file_path)
+
+        if workshop:
+            # Add to list and track
+            self.txd_workshops.append(workshop)
+
+            # Connect close signal to remove from list
+            workshop.workshop_closed.connect(lambda: self._on_workshop_closed(workshop))
+
+            self.log_message(f"TXD Workshop opened ({len(self.txd_workshops)} total)")
+
+        return workshop
+
+    def _on_workshop_closed(self, workshop): #vers 1
+        """Remove closed workshop from tracking list"""
+        if workshop in self.txd_workshops:
+            self.txd_workshops.remove(workshop)
+            self.log_message(f"Workshop closed ({len(self.txd_workshops)} remaining)")
+
 
     def open_file_dialog(main_window): #vers 8
         """Unified file dialog for IMG, COL, and TXD files"""
