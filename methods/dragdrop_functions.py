@@ -323,7 +323,8 @@ def setup_drag_drop_widget(widget: QWidget, handler: DragDropHandler, target_typ
     """Setup drag-and-drop for a widget"""
     try:
         # Enable drag and drop
-        widget.setAcceptDrops(True)
+        if widget and hasattr(widget, 'setAcceptDrops'):
+            widget.setAcceptDrops(True)
         
         # Store handler and target type
         widget._drag_drop_handler = handler

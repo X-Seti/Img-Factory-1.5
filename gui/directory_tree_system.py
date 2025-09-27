@@ -758,33 +758,39 @@ def create_simple_directory_tree_widget(main_window): #vers 1
         return None
 
 
-def integrate_directory_tree_system(main_window): #vers 2
+def integrate_directory_tree_system(main_window): #vers 3
     """Replace placeholder with functional directory tree - PRESERVE TAB STRUCTURE"""
     try:
         # Find the directory tree tab in gui_layout
         if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'tab_widget'):
             main_window.log_message("❌ Tab widget not found for directory tree integration")
             return False
-            
+
         tab_widget = main_window.gui_layout.tab_widget
-        
+
         # Find the "Directory Tree" tab (should be index 1)
         directory_tab_index = -1
-        for i in range(tab_widget.count()):
-            if "Directory Tree" in tab_widget.tabText(i):
-                directory_tab_index = i
-                break
-                
+
+        # Add None check before counting
+        if tab_widget and hasattr(tab_widget, 'count'):
+            for i in range(tab_widget.count()):
+                if "Directory Tree" in tab_widget.tabText(i):
+                    directory_tab_index = i
+                    break
+        else:
+            main_window.log_message("❌ Tab widget is None or has no count method")
+            return False
+
         if directory_tab_index == -1:
             main_window.log_message("❌ Directory Tree tab not found")
             return False
-            
+
         # Get the existing tab widget at this index (to replace its contents)
         existing_tab = tab_widget.widget(directory_tab_index)
         if not existing_tab:
             main_window.log_message("❌ Directory Tree tab widget not found")
             return False
-            
+
         # Clear the existing tab contents but keep the tab
         existing_layout = existing_tab.layout()
         if existing_layout:
@@ -797,26 +803,26 @@ def integrate_directory_tree_system(main_window): #vers 2
             # Create new layout if none exists
             from PyQt6.QtWidgets import QVBoxLayout
             existing_layout = QVBoxLayout(existing_tab)
-            
+
         # Create new functional directory tree
         directory_tree = create_directory_tree_widget(main_window)
         if not directory_tree:
             return False
-            
+
         # Add the directory tree to the existing tab (replace placeholder)
         existing_layout.addWidget(directory_tree)
-        
+
         # Update the tab text with icon
         tab_widget.setTabText(directory_tab_index, "🌳 Directory Tree")
-        
+
         # Store reference for later use
         main_window.directory_tree = directory_tree
-        
+
         main_window.log_message("✅ Directory tree system integrated (tab structure preserved)")
         main_window.log_message("🌳 Use 'Set Game Root' in File menu to browse GTA directories")
-        
+
         return True
-        
+
     except Exception as e:
         main_window.log_message(f"❌ Error integrating directory tree: {str(e)}")
         return False

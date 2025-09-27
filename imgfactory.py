@@ -538,6 +538,7 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"❌ Integration failed: {e}")
 
+        """
         try:
             from core.img_corruption_analyzer import setup_corruption_analyzer
             setup_corruption_analyzer(self)
@@ -555,6 +556,7 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"⚠️ Debug features failed: {str(e)}")
 
+        """
         # === PHASE 9: HIGHLIGHTING & FINAL SETUP ===
 
         # Import highlighting
