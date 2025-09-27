@@ -9,17 +9,37 @@
 │   ├── File_Editor
 │   │   ├── file_dirtree_backend.py
 │   │   ├── file_dirtree_browser.py
-│   │   └── gta_file_editors.py
+│   │   ├── gta_file_editors.py
+│   │   └── __pycache__
+│   │       ├── gta_file_editors.cpython-312.pyc
+│   │       └── gta_file_editors.cpython-313.pyc
 │   ├── Ide_Editor
-│   │   └── ide_editor.py
+│   │   ├── ide_editor.py
+│   │   └── __pycache__
+│   │       ├── ide_editor.cpython-312.pyc
+│   │       └── ide_editor.cpython-313.pyc
 │   ├── Img_Creator
-│   │   └── img_creator.py
+│   │   ├── img_creator.py
+│   │   └── __pycache__
+│   │       ├── img_creator.cpython-312.pyc
+│   │       └── img_creator.cpython-313.pyc
 │   ├── Project_Manager
 │   │   └── img_project_manager.py
+│   ├── __pycache__
+│   │   ├── unified_signal_handler.cpython-312.pyc
+│   │   └── unified_signal_handler.cpython-313.pyc
 │   ├── Txd_Converter
 │   │   └── txd_converter.py
 │   ├── Txd_Editor
-│   │   └── txd_editor.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-313.pyc
+│   │   │   ├── txd_editor.cpython-312.pyc
+│   │   │   ├── txd_editor.cpython-313.pyc
+│   │   │   ├── TXD_Editor.cpython-313.pyc
+│   │   │   ├── txd_workshop.cpython-313.pyc
+│   │   │   └── txd_workshop_theme.cpython-313.pyc
+│   │   ├── txd_workshop.py
+│   │   └── txd_workshop_theme.py
 │   └── unified_signal_handler.py
 ├── core
 │   ├── clean.py
@@ -51,6 +71,77 @@
 │   ├── impotr.py
 │   ├── notepad.py
 │   ├── open_img.py
+│   ├── __pycache__
+│   │   ├── clean.cpython-312.pyc
+│   │   ├── clean.cpython-313.pyc
+│   │   ├── close.cpython-312.pyc
+│   │   ├── close.cpython-313.pyc
+│   │   ├── convert.cpython-312.pyc
+│   │   ├── convert.cpython-313.pyc
+│   │   ├── dialogs.cpython-312.pyc
+│   │   ├── dialogs.cpython-313.pyc
+│   │   ├── dump.cpython-312.pyc
+│   │   ├── dump.cpython-313.pyc
+│   │   ├── export.cpython-312.pyc
+│   │   ├── export.cpython-313.pyc
+│   │   ├── export_via.cpython-312.pyc
+│   │   ├── export_via.cpython-313.pyc
+│   │   ├── file_dirtree_backend.cpython-312.pyc
+│   │   ├── file_dirtree_browser.cpython-312.pyc
+│   │   ├── file_extraction.cpython-312.pyc
+│   │   ├── file_extraction.cpython-313.pyc
+│   │   ├── file_type_filter.cpython-312.pyc
+│   │   ├── file_type_filter.cpython-313.pyc
+│   │   ├── gui_search.cpython-312.pyc
+│   │   ├── gui_search.cpython-313.pyc
+│   │   ├── imgcol_convert.cpython-312.pyc
+│   │   ├── imgcol_convert.cpython-313.pyc
+│   │   ├── imgcol_rename.cpython-312.pyc
+│   │   ├── imgcol_rename.cpython-313.pyc
+│   │   ├── imgcol_replace.cpython-312.pyc
+│   │   ├── imgcol_replace.cpython-313.pyc
+│   │   ├── img_creator.cpython-312.pyc
+│   │   ├── img_creator.cpython-313.pyc
+│   │   ├── img_formats.cpython-312.pyc
+│   │   ├── img_formats.cpython-313.pyc
+│   │   ├── img_merger.cpython-312.pyc
+│   │   ├── img_merger.cpython-313.pyc
+│   │   ├── img_split.cpython-312.pyc
+│   │   ├── img_split.cpython-313.pyc
+│   │   ├── img_version1.cpython-312.pyc
+│   │   ├── img_version1.cpython-313.pyc
+│   │   ├── img_version2.cpython-312.pyc
+│   │   ├── img_version2.cpython-313.pyc
+│   │   ├── import_via.cpython-312.pyc
+│   │   ├── import_via.cpython-313.pyc
+│   │   ├── impotr.cpython-312.pyc
+│   │   ├── impotr.cpython-313.pyc
+│   │   ├── quick_export.cpython-312.pyc
+│   │   ├── quick_export.cpython-313.pyc
+│   │   ├── rebuild_all.cpython-312.pyc
+│   │   ├── rebuild_all.cpython-313.pyc
+│   │   ├── rebuild.cpython-312.pyc
+│   │   ├── rebuild.cpython-313.pyc
+│   │   ├── reload.cpython-312.pyc
+│   │   ├── reload.cpython-313.pyc
+│   │   ├── remove.cpython-312.pyc
+│   │   ├── remove.cpython-313.pyc
+│   │   ├── remove_via.cpython-312.pyc
+│   │   ├── remove_via.cpython-313.pyc
+│   │   ├── rename.cpython-312.pyc
+│   │   ├── rename.cpython-313.pyc
+│   │   ├── right_click_actions.cpython-312.pyc
+│   │   ├── right_click_actions.cpython-313.pyc
+│   │   ├── rw_unk_snapshot.cpython-312.pyc
+│   │   ├── rw_unk_snapshot.cpython-313.pyc
+│   │   ├── rw_versions.cpython-312.pyc
+│   │   ├── rw_versions.cpython-313.pyc
+│   │   ├── save_entry.cpython-312.pyc
+│   │   ├── save_entry.cpython-313.pyc
+│   │   ├── shortcuts.cpython-312.pyc
+│   │   ├── shortcuts.cpython-313.pyc
+│   │   ├── theme_integration.cpython-312.pyc
+│   │   └── theme_integration.cpython-313.pyc
 │   ├── quick_export.py
 │   ├── rebuild_all.py
 │   ├── rebuild.py
@@ -59,6 +150,7 @@
 │   ├── remove_via.py
 │   ├── rename.py
 │   ├── right_click_actions.py
+│   ├── rw_analysis_trigger.py
 │   ├── rw_unk_snapshot.py
 │   ├── rw_versions.py
 │   ├── save_entry.py
@@ -69,6 +161,13 @@
 │   ├── col_debug_functions.py
 │   ├── enh_debug_system.py
 │   ├── img_debug_functions.py
+│   ├── __pycache__
+│   │   ├── col_debug_functions.cpython-312.pyc
+│   │   ├── col_debug_functions.cpython-313.pyc
+│   │   ├── img_debug_functions.cpython-312.pyc
+│   │   ├── img_debug_functions.cpython-313.pyc
+│   │   ├── unified_debug_functions.cpython-312.pyc
+│   │   └── unified_debug_functions.cpython-313.pyc
 │   └── unified_debug_functions.py
 ├── gui
 │   ├── autosave_menu.py
@@ -92,6 +191,43 @@
 │   ├── main_window.py
 │   ├── panel_manager.py
 │   ├── pastel_button_theme.py
+│   ├── __pycache__
+│   │   ├── autosave_menu.cpython-312.pyc
+│   │   ├── autosave_menu.cpython-313.pyc
+│   │   ├── col_display.cpython-312.pyc
+│   │   ├── col_display.cpython-313.pyc
+│   │   ├── directory_tree_system.cpython-312.pyc
+│   │   ├── directory_tree_system.cpython-313.pyc
+│   │   ├── file_menu_integration.cpython-312.pyc
+│   │   ├── file_menu_integration.cpython-313.pyc
+│   │   ├── gui_backend.cpython-312.pyc
+│   │   ├── gui_backend.cpython-313.pyc
+│   │   ├── gui_context.cpython-312.pyc
+│   │   ├── gui_context.cpython-313.pyc
+│   │   ├── gui_layout.cpython-312.pyc
+│   │   ├── gui_layout.cpython-313.pyc
+│   │   ├── gui_menu.cpython-312.pyc
+│   │   ├── gui_menu.cpython-313.pyc
+│   │   ├── ide_dialog.cpython-312.pyc
+│   │   ├── ide_dialog.cpython-313.pyc
+│   │   ├── imgcol_tearoff.cpython-312.pyc
+│   │   ├── imgcol_tearoff.cpython-313.pyc
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── __init__.cpython-313.pyc
+│   │   ├── log_panel.cpython-312.pyc
+│   │   ├── log_panel.cpython-313.pyc
+│   │   ├── main_window.cpython-312.pyc
+│   │   ├── main_window.cpython-313.pyc
+│   │   ├── panel_manager.cpython-312.pyc
+│   │   ├── panel_manager.cpython-313.pyc
+│   │   ├── status_bar.cpython-312.pyc
+│   │   ├── status_bar.cpython-313.pyc
+│   │   ├── tear_off.cpython-312.pyc
+│   │   ├── tear_off.cpython-313.pyc
+│   │   ├── tearoff_integration.cpython-312.pyc
+│   │   ├── tearoff_integration.cpython-313.pyc
+│   │   ├── unified_button_theme.cpython-312.pyc
+│   │   └── unified_button_theme.cpython-313.pyc
 │   ├── status_bar.py
 │   ├── tearoff_integration.py
 │   ├── tear_off.py
@@ -122,6 +258,7 @@
 │   ├── img_analyze.py
 │   ├── img_core_classes.py
 │   ├── img_entry_operations.py
+│   ├── Imgfactory tab switching bug - Claude.html
 │   ├── img_import_export.py
 │   ├── img_import_system.py
 │   ├── img_integration.py
@@ -133,28 +270,78 @@
 │   ├── img_validation.py
 │   ├── import_highlight_system.py
 │   ├── mirror_tab_shared.py
-│   ├── new_ported
-│   │   ├── col_file_operations.py
-│   │   ├── col_operations.py
-│   │   ├── detect_file_type_version.py
-│   │   ├── img_detection.py
-│   │   └── img_entry_operations.py
-│   ├── old
-│   │   ├── col_manager.py
-│   │   ├── colour_file_table.py
-│   │   ├── col_utilities.py
-│   │   ├── img_file_operations.py
-│   │   ├── img_open_dialog.py
-│   │   └── img_utils.py
 │   ├── populate_col_table.py
 │   ├── populate_img_table.py
 │   ├── progressbar_functions.py
+│   ├── __pycache__
+│   │   ├── col_core_classes.cpython-312.pyc
+│   │   ├── col_core_classes.cpython-313.pyc
+│   │   ├── col_functions.cpython-312.pyc
+│   │   ├── col_functions.cpython-313.pyc
+│   │   ├── col_integration.cpython-312.pyc
+│   │   ├── col_integration.cpython-313.pyc
+│   │   ├── colour_ui_for_loaded_img.cpython-312.pyc
+│   │   ├── colour_ui_for_loaded_img.cpython-313.pyc
+│   │   ├── col_parsing_functions.cpython-312.pyc
+│   │   ├── col_parsing_functions.cpython-313.pyc
+│   │   ├── col_parsing_helpers.cpython-312.pyc
+│   │   ├── col_structure_manager.cpython-312.pyc
+│   │   ├── col_structure_manager.cpython-313.pyc
+│   │   ├── dragdrop_functions.cpython-312.pyc
+│   │   ├── dragdrop_functions.cpython-313.pyc
+│   │   ├── export_col_shared.cpython-312.pyc
+│   │   ├── export_col_shared.cpython-313.pyc
+│   │   ├── export_overwrite_check.cpython-312.pyc
+│   │   ├── export_overwrite_check.cpython-313.pyc
+│   │   ├── export_shared.cpython-312.pyc
+│   │   ├── export_shared.cpython-313.pyc
+│   │   ├── find_dups_functions.cpython-312.pyc
+│   │   ├── find_dups_functions.cpython-313.pyc
+│   │   ├── ide_parser_functions.cpython-312.pyc
+│   │   ├── ide_parser_functions.cpython-313.pyc
+│   │   ├── img_analyze.cpython-312.pyc
+│   │   ├── img_analyze.cpython-313.pyc
+│   │   ├── img_core_classes.cpython-312.pyc
+│   │   ├── img_core_classes.cpython-313.pyc
+│   │   ├── img_entry_operations.cpython-312.pyc
+│   │   ├── img_entry_operations.cpython-313.pyc
+│   │   ├── img_import_export.cpython-312.pyc
+│   │   ├── img_import_export.cpython-313.pyc
+│   │   ├── img_integration.cpython-312.pyc
+│   │   ├── img_integration.cpython-313.pyc
+│   │   ├── img_routing_operations.cpython-312.pyc
+│   │   ├── img_routing_operations.cpython-313.pyc
+│   │   ├── img_shared_operations.cpython-312.pyc
+│   │   ├── img_shared_operations.cpython-313.pyc
+│   │   ├── img_templates.cpython-312.pyc
+│   │   ├── img_templates.cpython-313.pyc
+│   │   ├── img_validation.cpython-312.pyc
+│   │   ├── img_validation.cpython-313.pyc
+│   │   ├── import_highlight_system.cpython-312.pyc
+│   │   ├── import_highlight_system.cpython-313.pyc
+│   │   ├── mirror_tab_shared.cpython-312.pyc
+│   │   ├── mirror_tab_shared.cpython-313.pyc
+│   │   ├── populate_col_table.cpython-312.pyc
+│   │   ├── populate_col_table.cpython-313.pyc
+│   │   ├── populate_img_table.cpython-312.pyc
+│   │   ├── populate_img_table.cpython-313.pyc
+│   │   ├── progressbar_functions.cpython-312.pyc
+│   │   ├── progressbar_functions.cpython-313.pyc
+│   │   ├── refresh_table_functions.cpython-312.pyc
+│   │   ├── refresh_table_functions.cpython-313.pyc
+│   │   ├── rw_detection.cpython-312.pyc
+│   │   ├── tab_aware_functions.cpython-312.pyc
+│   │   ├── tab_aware_functions.cpython-313.pyc
+│   │   ├── tab_functions.cpython-313.pyc
+│   │   ├── tab_independent.cpython-312.pyc
+│   │   ├── tab_independent.cpython-313.pyc
+│   │   ├── update_ui_for_loaded_img.cpython-312.pyc
+│   │   └── update_ui_for_loaded_img.cpython-313.pyc
 │   ├── refresh_table_functions.py
 │   ├── rw_detection.py
 │   ├── tab_aware_functions.py
-│   ├── tab_independent.py
+│   ├── tab_functions.py
 │   ├── tables_structure.py-old
-│   ├── tab_system.py
 │   └── update_ui_for_loaded_img.py
 ├── templates
 │   └── new_templates.json
@@ -192,6 +379,9 @@
 ├── utils
 │   ├── app_settings_system.py
 │   ├── generated_signal_cleanup.py
+│   ├── __pycache__
+│   │   ├── app_settings_system.cpython-312.pyc
+│   │   └── app_settings_system.cpython-313.pyc
 │   ├── themer_settings.json
 │   └── update_themes_script.py
 ├── windows_launcher.bat
@@ -336,4 +526,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-66 directories, 271 files
+74 directories, 453 files

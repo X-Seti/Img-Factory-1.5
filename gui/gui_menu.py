@@ -1,4 +1,4 @@
-#this belongs in gui/gui_menu.py - Version: 20
+#this belongs in gui/gui_menu.py - Version: 22
 # X-Seti - August14 2025 - IMG Factory 1.5
 
 #!/usr/bin/env python3
@@ -887,9 +887,30 @@ class IMGFactoryMenuBar:
     # TOOLS MENU CALLBACKS
     # ========================================================================
 
-    def _open_txd_editor(self):
-        """Open TXD Editor"""
-        QMessageBox.information(self.main_window, "TXD Editor", "TXD Editor coming soon!")
+    def _open_txd_editor(self): #vers 2
+        """Open TXD Workshop"""
+        try:
+            from components.Txd_Editor.txd_workshop import open_txd_workshop
+
+            # Get current IMG path if available
+            img_path = None
+            if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
+                img_path = self.main_window.current_img.file_path
+
+            workshop = open_txd_workshop(self.main_window, img_path)
+
+            if workshop:
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("✅ TXD Workshop opened")
+            else:
+                QMessageBox.warning(self.main_window, "TXD Workshop", "Failed to open TXD Workshop")
+
+        except ImportError as e:
+            QMessageBox.warning(self.main_window, "TXD Workshop",
+                f"TXD Workshop not found. Please ensure components/Txd_Workshop/ exists.\n{str(e)}")
+        except Exception as e:
+            QMessageBox.critical(self.main_window, "Error", f"Failed to open TXD Workshop: {str(e)}")
+
 
     def _open_dff_editor(self):
         """Open DFF Editor"""

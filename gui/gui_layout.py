@@ -1,4 +1,4 @@
-#this belongs in gui/ gui_layout.py - Version: 26
+#this belongs in gui/ gui_layout.py - Version: 27
 # X-Seti - JULY29 2025 - Img Factory 1.5 - GUI Layout Module
 
 import os
@@ -46,13 +46,14 @@ from methods.colour_ui_for_loaded_img import integrate_color_ui_system
 from gui.gui_context import open_col_editor_dialog
 from methods.refresh_table_functions import refresh_table
 
-def edit_txd_file(main_window): #vers 2
-    """Edit selected TXD file with TXD Editor"""
+
+def edit_txd_file(main_window): #vers 3
+    """Edit selected TXD file with TXD Workshop"""
     try:
         entries_table = main_window.gui_layout.table
         selected_items = entries_table.selectedItems()
         if not selected_items:
-            main_window.log_message("No TXD file selected")
+            main_window.log_message("❌ No TXD file selected")
             return
 
         row = selected_items[0].row()
@@ -60,17 +61,26 @@ def edit_txd_file(main_window): #vers 2
         filename = filename_item.text()
 
         if not filename.lower().endswith('.txd'):
-            main_window.log_message("Selected file is not a TXD file")
+            main_window.log_message("❌ Selected file is not a TXD file")
             return
 
-        from components.Txd_Editor.txd_editor import TXDEditor
-        txd_editor = TXDEditor()
-        txd_editor.show()
-        main_window.log_message(f"TXD Editor opened for: {filename}")
+        # Open TXD Workshop
+        from components.Txd_Editor.txd_workshop import open_txd_workshop  # FIXED PATH
+
+        # Pass current IMG path if available
+        img_path = None
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            img_path = main_window.current_img.file_path
+
+        workshop = open_txd_workshop(main_window, img_path)
+
+        if workshop:
+            main_window.log_message(f"✅ TXD Workshop opened for: {filename}")
+        else:
+            main_window.log_message(f"❌ Failed to open TXD Workshop")
 
     except Exception as e:
-        main_window.log_message(f"Error opening TXD Editor: {e}")
-
+        main_window.log_message(f"❌ Error opening TXD Workshop: {e}")
 
 class IMGFactoryGUILayout:
     """Handles the complete GUI layout for IMG Factory 1.5 with theme system"""
@@ -106,7 +116,7 @@ class IMGFactoryGUILayout:
     def _create_method_mappings(self): #vers 5
         """Create centralized method mappings for all buttons"""
         method_mappings = {
-            # IMG/COL Operations
+            # IMG/COL Operations            'edit_txd_file': lambda: edit_txd_file(self.main_window),
             'create_new_img': lambda: create_new_img(self.main_window),
             'open_img_file': lambda: open_file_dialog(self.main_window),
             'reload_table': lambda: reload_current_file(self.main_window),
@@ -130,7 +140,7 @@ class IMGFactoryGUILayout:
             # Export methods
             'export_selected': lambda: self.main_window.export_selected(),
             'export_selected_via': lambda: self.main_window.export_via(),
-            'quick_export_selected': lambda: self.main_window.quick_export(),
+            'quick_export_selected': lambda: self.main_window.quick_export(),            'edit_txd_file': lambda: edit_txd_file(self.main_window),
             'dump_entries': lambda: self.main_window.dump_all(),
 
             # Remove methods
@@ -644,16 +654,25 @@ class IMGFactoryGUILayout:
             txd_button.setToolTip("Open TXD Texture Editor")
             self.main_window.button_panel.addWidget(txd_button)
 
-    def launch_txd_editor(self): #vers 1
-        """Launch TXD Editor"""
+    def launch_txd_editor(self): #vers 2
+        """Launch TXD Workshop"""
         try:
-            if not self.main_window.txd_editor:
-                from components.Txd_Editor.txd_editor import TXDEditor
-                self.main_window.txd_editor = TXDEditor()
-            self.main_window.txd_editor.show()
-            self.main_window.txd_editor.raise_()
+            from components.Txd_Editor.txd_workshop import open_txd_workshop
+
+            # Get current IMG path if available
+            img_path = None
+            if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
+                img_path = self.main_window.current_img.file_path
+
+            workshop = open_txd_workshop(self.main_window, img_path)
+
+            if workshop:
+                self.main_window.log_message("✅ TXD Workshop opened from button")
+            else:
+                self.main_window.log_message("❌ Failed to open TXD Workshop")
+
         except Exception as e:
-            self.main_window.log_message(f"Failed to launch TXD Editor: {e}")
+            self.main_window.log_message(f"❌ Failed to launch TXD Workshop: {e}")
 
     def _update_button_theme(self, btn, bg_color): #vers 2
         """Update a single button's theme styling"""

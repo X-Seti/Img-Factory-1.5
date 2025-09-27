@@ -46,7 +46,7 @@ from utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsD
 
 #components
 from components.Img_Creator.img_creator import NewIMGDialog, IMGCreationThread
-from components.Txd_Editor.txd_editor import TXDEditor
+#from components.Txd_Editor.txd_workshop import TXDEditor
 
 #debug
 from debug.col_debug_functions import set_col_debug_enabled
