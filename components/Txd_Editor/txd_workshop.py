@@ -232,95 +232,6 @@ class TXDWorkshop(QWidget): #vers 3
 
         return panel
 
-    def _create_right_panel(self): #vers 2
-        """Create enhanced right panel - Preview and texture editing controls"""
-        panel = QFrame()
-        panel.setFrameStyle(QFrame.Shape.StyledPanel)
-        panel.setMinimumWidth(400)
-
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(5, 5, 5, 5)
-
-        self.preview_label = QLabel("No texture selected")
-        self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.preview_label.setMinimumHeight(400)
-        self.preview_label.setStyleSheet("border: 1px solid #3a3a3a; background-color: #1e1e1e;")
-        layout.addWidget(self.preview_label)
-
-        info_group = QGroupBox("Texture Information")
-        info_layout = QVBoxLayout(info_group)
-
-        # Clickable texture name for editing
-        self.info_name = QPushButton("Name: -")
-        self.info_name.clicked.connect(lambda: self._rename_texture(alpha=False))
-        self.info_name.setFlat(True)
-        self.info_name.setStyleSheet("text-align: left; font-weight: bold;")
-        self.info_name.setEnabled(False)
-        info_layout.addWidget(self.info_name)
-
-        # Clickable alpha name for editing (red text when has alpha)
-        self.info_alpha_name = QPushButton("Alpha: -")
-        self.info_alpha_name.clicked.connect(lambda: self._rename_texture(alpha=True))
-        self.info_alpha_name.setFlat(True)
-        self.info_alpha_name.setStyleSheet("text-align: left; color: red; font-weight: bold;")
-        self.info_alpha_name.setVisible(False)
-        self.info_alpha_name.setEnabled(False)
-        info_layout.addWidget(self.info_alpha_name)
-
-        # Size with resize controls
-        size_layout = QHBoxLayout()
-        self.info_size = QLabel("Size: -")
-        size_layout.addWidget(self.info_size)
-
-        self.resize_btn = QPushButton("Resize")
-        self.resize_btn.clicked.connect(self._resize_texture)
-        self.resize_btn.setEnabled(False)
-        size_layout.addWidget(self.resize_btn)
-
-        self.upscale_btn = QPushButton("AI Upscale")
-        self.upscale_btn.clicked.connect(self._upscale_texture)
-        self.upscale_btn.setEnabled(False)
-        size_layout.addWidget(self.upscale_btn)
-
-        info_layout.addLayout(size_layout)
-
-        # Format dropdown
-        format_layout = QHBoxLayout()
-        format_label = QLabel("Format:")
-        self.format_combo = QComboBox()
-        self.format_combo.addItems(["DXT1", "DXT3", "DXT5", "ARGB8888", "ARGB1555", "ARGB4444", "RGB888", "RGB565"])
-        self.format_combo.currentTextChanged.connect(self._change_format)
-        self.format_combo.setEnabled(False)
-        format_layout.addWidget(format_label)
-        format_layout.addWidget(self.format_combo)
-        info_layout.addLayout(format_layout)
-
-        # Keep the missing labels
-        self.info_format = QLabel("Format: -")  # This was missing
-        self.info_alpha = QLabel("Alpha: -")
-        info_layout.addWidget(self.info_format)
-        info_layout.addWidget(self.info_alpha)
-
-        # Compression controls
-        compression_layout = QHBoxLayout()
-        self.info_compression = QLabel("Compression: -")
-        compression_layout.addWidget(self.info_compression)
-
-        self.compress_btn = QPushButton("Compress")
-        self.compress_btn.clicked.connect(self._compress_texture)
-        self.compress_btn.setEnabled(False)
-        compression_layout.addWidget(self.compress_btn)
-
-        self.uncompress_btn = QPushButton("Uncompress")
-        self.uncompress_btn.clicked.connect(self._uncompress_texture)
-        self.uncompress_btn.setEnabled(False)
-        compression_layout.addWidget(self.uncompress_btn)
-
-        info_layout.addLayout(compression_layout)
-
-        layout.addWidget(info_group)
-        return panel
-
 
     def _show_texture_context_menu(self, position): #vers 1
         """Show right-click context menu for textures"""
@@ -423,8 +334,8 @@ class TXDWorkshop(QWidget): #vers 3
                 self.main_window.log_message(f"❌ Extract error: {str(e)}")
             return None
 
-    def _load_txd_textures(self, txd_data, txd_name): #vers 9
-        """Load textures from TXD data with DXT decompression"""
+    def _load_txd_textures(self, txd_data, txd_name): #vers 10
+        """Load textures from TXD data - display only in middle panel"""
         try:
             import struct
 
@@ -464,7 +375,7 @@ class TXDWorkshop(QWidget): #vers 3
             if not textures:
                 textures = [{'name': 'No textures', 'width': 0, 'height': 0, 'has_alpha': False, 'format': 'Unknown', 'mipmaps': 0, 'rgba_data': None}]
 
-            # Populate table with thumbnails
+            # Populate table - DISPLAY ONLY
             for tex in textures:
                 self.texture_list.append(tex)
                 row = self.texture_table.rowCount()
@@ -480,10 +391,10 @@ class TXDWorkshop(QWidget): #vers 3
                 else:
                     thumb_item.setText("🖼️")
 
-                # Build details text - show alpha name in red if it exists
+                # Build details text - DISPLAY ONLY
                 details = f"Name: {tex['name']}\n"
 
-                # Add alpha name in red if texture has alpha
+                # Add alpha name if texture has alpha
                 if tex.get('has_alpha', False):
                     alpha_name = tex.get('alpha_name', tex['name'] + 'a')
                     details += f"Alpha: {alpha_name}\n"
@@ -493,8 +404,13 @@ class TXDWorkshop(QWidget): #vers 3
                 details += f"Format: {tex['format']}\n"
                 details += f"Alpha: {'Yes' if tex.get('has_alpha', False) else 'No'}"
 
+                # Make items non-editable
+                thumb_item.setFlags(thumb_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                details_item = QTableWidgetItem(details)
+                details_item.setFlags(details_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+
                 self.texture_table.setItem(row, 0, thumb_item)
-                self.texture_table.setItem(row, 1, QTableWidgetItem(details))
+                self.texture_table.setItem(row, 1, details_item)
 
             for row in range(self.texture_table.rowCount()):
                 self.texture_table.setRowHeight(row, 80)
@@ -543,37 +459,56 @@ class TXDWorkshop(QWidget): #vers 3
                 if self.main_window and hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message(f"Texture renamed: {current_name} -> {new_name}")
 
-    def _resize_texture(self): #vers 1
-        """Resize selected texture"""
-        from PyQt6.QtWidgets import QInputDialog
+def _resize_texture(self): #vers 2
+    """Resize selected texture with large size handling"""
+    from PyQt6.QtWidgets import QInputDialog
 
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+    if not self.selected_texture:
+        QMessageBox.warning(self, "No Selection", "Please select a texture first")
+        return
+
+    current_width = self.selected_texture.get('width', 256)
+    current_height = self.selected_texture.get('height', 256)
+
+    # Get new dimensions
+    w, ok1 = QInputDialog.getInt(self, "Resize Texture", "New width:", value=current_width, min=1, max=4096)
+    if not ok1:
+        return
+    h, ok2 = QInputDialog.getInt(self, "Resize Texture", "New height:", value=current_height, min=1, max=4096)
+    if not ok2:
+        return
+
+    # Calculate size impact
+    old_pixels = current_width * current_height
+    new_pixels = w * h
+    size_multiplier = new_pixels / old_pixels if old_pixels > 0 else 1
+
+    if size_multiplier > 4:  # More than 4x pixel increase
+        reply = QMessageBox.question(self, "Large Resize",
+                                   f"Resizing to {w}x{h} will increase texture size by {size_multiplier:.1f}x. "
+                                   f"This may require IMG rebuilding. Continue?",
+                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if reply != QMessageBox.StandardButton.Yes:
             return
 
-        current_width = self.selected_texture.get('width', 256)
-        current_height = self.selected_texture.get('height', 256)
+    # Update texture data and mark as modified
+    self.selected_texture['width'] = w
+    self.selected_texture['height'] = h
 
-        # Get new dimensions
-        w, ok1 = QInputDialog.getInt(self, "Resize Texture", "New width:", value=current_width, min=1, max=4096)
-        if not ok1:
-            return
-        h, ok2 = QInputDialog.getInt(self, "Resize Texture", "New height:", value=current_height, min=1, max=4096)
-        if not ok2:
-            return
+    # If we had actual image data, we'd resize it here
+    if self.selected_texture.get('rgba_data'):
+        # This would need actual image resizing implementation
+        self._resize_texture_data(w, h)
 
-        # Update texture data (simplified - real implementation would resize image data)
-        self.selected_texture['width'] = w
-        self.selected_texture['height'] = h
+    self._update_texture_info(self.selected_texture)
+    self._update_table_display()
+    self._mark_as_modified()
 
-        self._update_texture_info(self.selected_texture)
-        self._update_table_display()
+    if self.main_window and hasattr(self.main_window, 'log_message'):
+        self.main_window.log_message(f"Resized texture to {w}x{h} (size impact: {size_multiplier:.1f}x)")
 
-        if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Resized texture to {w}x{h}")
-
-    def _upscale_texture(self): #vers 1
-        """AI upscale selected texture"""
+    def _upscale_texture(self): #vers 2
+        """AI upscale selected texture with size management"""
         from PyQt6.QtWidgets import QInputDialog
 
         if not self.selected_texture:
@@ -591,15 +526,159 @@ class TXDWorkshop(QWidget): #vers 3
         new_width = current_width * factor
         new_height = current_height * factor
 
-        # Update texture data (simplified - real implementation would upscale image data)
-        self.selected_texture['width'] = new_width
-        self.selected_texture['height'] = new_height
+        # Calculate memory and file size impact
+        old_size_mb = (current_width * current_height * 4) / (1024 * 1024)
+        new_size_mb = (new_width * new_height * 4) / (1024 * 1024)
 
-        self._update_texture_info(self.selected_texture)
-        self._update_table_display()
+        if new_size_mb > 16:  # Warn for textures over 16MB uncompressed
+            reply = QMessageBox.question(self, "Large Upscale",
+                                    f"Upscaling {factor}x will create a {new_width}x{new_height} texture "
+                                    f"(~{new_size_mb:.1f}MB uncompressed). "
+                                    f"This will significantly increase TXD size. Continue?",
+                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if reply != QMessageBox.StandardButton.Yes:
+                return
 
-        if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Upscaled texture {factor}x to {new_width}x{new_height}")
+        # Perform the upscale
+        if self._perform_ai_upscale(factor):
+            self.selected_texture['width'] = new_width
+            self.selected_texture['height'] = new_height
+
+            self._update_texture_info(self.selected_texture)
+            self._update_table_display()
+            self._mark_as_modified()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"AI upscaled texture {factor}x to {new_width}x{new_height}")
+        else:
+            QMessageBox.critical(self, "Error", "AI upscale failed")
+
+    def _upscale_texture(self): #vers 2
+        """AI upscale selected texture with size management"""
+        from PyQt6.QtWidgets import QInputDialog
+
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+            return
+
+        # Get scale factor
+        factor, ok = QInputDialog.getInt(self, "AI Upscale", "Scale factor:", value=2, min=2, max=8)
+        if not ok:
+            return
+
+        current_width = self.selected_texture.get('width', 256)
+        current_height = self.selected_texture.get('height', 256)
+
+        new_width = current_width * factor
+        new_height = current_height * factor
+
+        # Calculate memory and file size impact
+        old_size_mb = (current_width * current_height * 4) / (1024 * 1024)
+        new_size_mb = (new_width * new_height * 4) / (1024 * 1024)
+
+        if new_size_mb > 16:  # Warn for textures over 16MB uncompressed
+            reply = QMessageBox.question(self, "Large Upscale",
+                                    f"Upscaling {factor}x will create a {new_width}x{new_height} texture "
+                                    f"(~{new_size_mb:.1f}MB uncompressed). "
+                                    f"This will significantly increase TXD size. Continue?",
+                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
+        # Perform the upscale
+        if self._perform_ai_upscale(factor):
+            self.selected_texture['width'] = new_width
+            self.selected_texture['height'] = new_height
+
+            self._update_texture_info(self.selected_texture)
+            self._update_table_display()
+            self._mark_as_modified()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"AI upscaled texture {factor}x to {new_width}x{new_height}")
+        else:
+            QMessageBox.critical(self, "Error", "AI upscale failed")
+
+    def _resize_texture_data(self, new_width, new_height): #vers 1
+        """Resize the actual texture image data"""
+        try:
+            if not self.selected_texture.get('rgba_data'):
+                return False
+
+            # Convert current RGBA data to QImage
+            rgba_data = self.selected_texture['rgba_data']
+            old_width = self.selected_texture['width']
+            old_height = self.selected_texture['height']
+
+            qimg = QImage(rgba_data, old_width, old_height, old_width * 4, QImage.Format.Format_RGBA8888)
+
+            # Resize image
+            resized_img = qimg.scaled(new_width, new_height,
+                                    Qt.AspectRatioMode.IgnoreAspectRatio,
+                                    Qt.TransformationMode.SmoothTransformation)
+
+            # Convert back to RGBA data
+            resized_img = resized_img.convertToFormat(QImage.Format.Format_RGBA8888)
+            new_rgba_data = resized_img.constBits().asstring(resized_img.sizeInBytes())
+
+            self.selected_texture['rgba_data'] = new_rgba_data
+            return True
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Resize data error: {str(e)}")
+            return False
+
+    def _perform_ai_upscale(self, factor): #vers 1
+        """Perform AI upscaling on texture data"""
+        try:
+            if not self.selected_texture.get('rgba_data'):
+                return False
+
+            # For now, use basic upscaling (could be enhanced with actual AI upscaling libraries)
+            return self._resize_texture_data(
+                self.selected_texture['width'] * factor,
+                self.selected_texture['height'] * factor
+            )
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"AI upscale error: {str(e)}")
+            return False
+
+    def _calculate_new_txd_size(self): #vers 2
+        """Enhanced size calculation including actual texture data"""
+        estimated_size = 1024  # Header overhead
+
+        for texture in self.texture_list:
+            width = texture.get('width', 0)
+            height = texture.get('height', 0)
+            fmt = texture.get('format', 'DXT1')
+            has_data = texture.get('rgba_data') is not None
+
+            if has_data:
+                # Use actual data size if available
+                rgba_size = len(texture['rgba_data'])
+
+                # Estimate compressed size based on format
+                if 'DXT1' in fmt:
+                    estimated_size += rgba_size // 8  # DXT1 compression
+                elif 'DXT5' in fmt:
+                    estimated_size += rgba_size // 4  # DXT5 compression
+                else:
+                    estimated_size += rgba_size  # Uncompressed
+            else:
+                # Fallback to dimension-based estimation
+                if 'DXT1' in fmt:
+                    estimated_size += (width * height) // 2
+                elif 'DXT5' in fmt:
+                    estimated_size += width * height
+                else:
+                    estimated_size += width * height * 4
+
+            estimated_size += 200  # Header per texture
+
+        return estimated_size
 
     def _change_format(self, format_name): #vers 1
         """Change texture format"""
@@ -680,7 +759,7 @@ class TXDWorkshop(QWidget): #vers 3
         # Rebuild details text
         details = f"Name: {tex['name']}\n"
 
-        # Add alpha name in red if texture has alpha
+        # Add alpha name if texture has alpha
         if tex.get('has_alpha', False):
             alpha_name = tex.get('alpha_name', tex['name'] + 'a')
             details += f"Alpha: {alpha_name}\n"
@@ -695,7 +774,7 @@ class TXDWorkshop(QWidget): #vers 3
         if details_item:
             details_item.setText(details)
 
-    def _on_texture_selected(self): #vers 2
+    def _on_texture_selected(self): #vers 3
         """Handle texture selection and enable editing controls"""
         try:
             row = self.texture_table.currentRow()
@@ -721,8 +800,8 @@ class TXDWorkshop(QWidget): #vers 3
             self.resize_btn.setEnabled(True)
             self.upscale_btn.setEnabled(True)
             self.format_combo.setEnabled(True)
-            self.compress_btn.setEnabled(True)
-            self.uncompress_btn.setEnabled(True)
+            self.compress_btn.setEnabled(False)
+            self.uncompress_btn.setEnabled(False)
 
             # Enable alpha editing only if texture has alpha
             if self.selected_texture.get('has_alpha', False):
@@ -1044,30 +1123,123 @@ class TXDWorkshop(QWidget): #vers 3
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"Selection error: {str(e)}")
 
-    def _update_texture_info(self, texture): #vers 4
-        """Update texture information display with clickable names"""
+    def _create_right_panel(self): #vers 6
+        """Create clean right panel with right-click rename context menu"""
+        panel = QFrame()
+        panel.setFrameStyle(QFrame.Shape.StyledPanel)
+        panel.setMinimumWidth(400)
+
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(5, 5, 5, 5)
+
+        self.preview_label = QLabel("No texture selected")
+        self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.preview_label.setMinimumHeight(400)
+        self.preview_label.setStyleSheet("border: 1px solid #3a3a3a; background-color: #1e1e1e;")
+        layout.addWidget(self.preview_label)
+
+        info_group = QGroupBox("Texture Information")
+        info_layout = QVBoxLayout(info_group)
+
+        # Texture name with right-click context menu
+        self.info_name = QLabel("Name: -")
+        self.info_name.setStyleSheet("font-weight: bold; padding: 5px;")
+        self.info_name.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.info_name.customContextMenuRequested.connect(lambda pos: self._show_name_context_menu(pos, alpha=False))
+        info_layout.addWidget(self.info_name)
+
+        # Alpha name with right-click context menu
+        self.info_alpha_name = QLabel("")
+        self.info_alpha_name.setStyleSheet("color: red; font-weight: bold; padding: 5px;")
+        self.info_alpha_name.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.info_alpha_name.customContextMenuRequested.connect(lambda pos: self._show_name_context_menu(pos, alpha=True))
+        info_layout.addWidget(self.info_alpha_name)
+
+        # Size with resize controls
+        size_layout = QHBoxLayout()
+        self.info_size = QLabel("Size: -")
+        size_layout.addWidget(self.info_size)
+
+        self.resize_btn = QPushButton("Resize")
+        self.resize_btn.setEnabled(False)
+        size_layout.addWidget(self.resize_btn)
+
+        self.upscale_btn = QPushButton("AI Upscale")
+        self.upscale_btn.setEnabled(False)
+        size_layout.addWidget(self.upscale_btn)
+
+        info_layout.addLayout(size_layout)
+
+        # Format dropdown with compression status
+        format_layout = QHBoxLayout()
+        format_label = QLabel("Format:")
+        self.format_combo = QComboBox()
+        self.format_combo.addItems(["DXT1", "DXT3", "DXT5", "ARGB8888", "ARGB1555", "ARGB4444", "RGB888", "RGB565"])
+        self.format_combo.setEnabled(False)
+        format_layout.addWidget(format_label)
+        format_layout.addWidget(self.format_combo)
+
+        self.compress_btn = QPushButton("Compress")
+        self.compress_btn.setEnabled(False)
+        format_layout.addWidget(self.compress_btn)
+
+        self.uncompress_btn = QPushButton("Uncompress")
+        self.uncompress_btn.setEnabled(False)
+        format_layout.addWidget(self.uncompress_btn)
+
+        info_layout.addLayout(format_layout)
+
+        layout.addWidget(info_group)
+        return panel
+
+    def _show_name_context_menu(self, position, alpha=False): #vers 1
+        """Show context menu for renaming texture or alpha name"""
+        if not self.selected_texture:
+            return
+
+        # Don't show alpha context menu if no alpha channel
+        if alpha and not self.selected_texture.get('has_alpha', False):
+            return
+
+        menu = QMenu(self)
+
+        if alpha:
+            rename_action = menu.addAction("Rename Alpha")
+            rename_action.triggered.connect(lambda: self._rename_texture(alpha=True))
+        else:
+            rename_action = menu.addAction("Rename Texture")
+            rename_action.triggered.connect(lambda: self._rename_texture(alpha=False))
+
+        # Show menu at the cursor position
+        if alpha:
+            menu.exec(self.info_alpha_name.mapToGlobal(position))
+        else:
+            menu.exec(self.info_name.mapToGlobal(position))
+
+    def _update_texture_info(self, texture): #vers 5
+        """Update texture information display - clean version with consistent spacing"""
         try:
             name = texture.get('name', 'Unknown')
             width = texture.get('width', 0)
             height = texture.get('height', 0)
             has_alpha = texture.get('has_alpha', False)
             fmt = texture.get('format', 'Unknown')
-            mipmaps = texture.get('mipmaps', 1)
 
             # Update clickable name
             self.info_name.setText(f"Name: {name}")
 
-            # Update alpha name (clickable, show in red ONLY if has alpha)
+            # Update alpha name space (always present for consistent spacing)
             if has_alpha:
                 alpha_name = texture.get('alpha_name', name + 'a')
                 self.info_alpha_name.setText(f"Alpha: {alpha_name}")
-                self.info_alpha_name.setVisible(True)
+                self.info_alpha_name.setStyleSheet("text-align: left; color: red; font-weight: bold;")
             else:
-                self.info_alpha_name.setVisible(False)
+                # Keep the space but make it empty
+                self.info_alpha_name.setText("")
+                self.info_alpha_name.setStyleSheet("text-align: left;")
 
+            # Update size
             self.info_size.setText(f"Size: {width}x{height}" if width > 0 else "Size: Unknown")
-            self.info_format.setText(f"Format: {fmt}")
-            self.info_alpha.setText(f"Alpha: {'Yes' if has_alpha else 'No'}")
 
             # Update format combo to match current format
             if hasattr(self, 'format_combo'):
@@ -1075,17 +1247,10 @@ class TXDWorkshop(QWidget): #vers 3
                 if index >= 0:
                     self.format_combo.setCurrentIndex(index)
 
-            comp = "Compressed DXT" if 'DXT' in fmt else "Uncompressed"
-            if mipmaps > 1:
-                comp += f" | Mipmaps: {mipmaps}"
-            self.info_compression.setText(f"Compression: {comp}")
-
             # Show preview (existing preview code...)
             rgba_data = texture.get('rgba_data')
             if rgba_data and width > 0 and height > 0:
-                # Check if we should show alpha channel
                 if hasattr(self, '_show_alpha') and self._show_alpha:
-                    # Extract alpha channel as grayscale
                     alpha_data = bytearray()
                     for i in range(0, len(rgba_data), 4):
                         a = rgba_data[i+3]
@@ -1104,11 +1269,11 @@ class TXDWorkshop(QWidget): #vers 3
                                                 Qt.TransformationMode.SmoothTransformation)
                     self.preview_label.setPixmap(scaled_pixmap)
 
-                    # Update button text
-                    if hasattr(self, '_show_alpha') and self._show_alpha:
-                        self.flip_btn.setText("Normal")
-                    else:
-                        self.flip_btn.setText("Alpha")
+                    if hasattr(self, 'flip_btn'):
+                        if hasattr(self, '_show_alpha') and self._show_alpha:
+                            self.flip_btn.setText("Normal")
+                        else:
+                            self.flip_btn.setText("Alpha")
                     return
 
             self.preview_label.setText("Preview not available")
@@ -1274,22 +1439,349 @@ class TXDWorkshop(QWidget): #vers 3
         if file_path:
             QMessageBox.information(self, "Coming Soon", "Import functionality will be added soon!")
 
-    def show_properties(self): #vers 1
-        """Show detailed texture properties"""
+    def save_txd_file(self): #vers 4
+        """Enhanced save for modding with large texture support"""
+        if not self.texture_list or not self.current_txd_name:
+            QMessageBox.warning(self, "No TXD", "No TXD file loaded to save")
+            return
+
+        try:
+            # Use enhanced rebuilding for large textures
+            modified_txd_data = self._rebuild_txd_with_size_management()
+
+            if modified_txd_data:
+                # Use enhanced IMG updating
+                if self._update_img_with_large_txd(modified_txd_data):
+                    self._post_save_cleanup()
+                    QMessageBox.information(self, "Success",
+                                        "TXD saved successfully! Large textures may have triggered IMG rebuild.")
+                else:
+                    QMessageBox.critical(self, "Error", "Failed to save TXD with large textures")
+            else:
+                QMessageBox.critical(self, "Error", "Failed to rebuild TXD data")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save TXD: {str(e)}")
+
+    def _rebuild_txd_data(self): #vers 1
+        """Rebuild TXD data with modified texture names"""
+        try:
+            import struct
+
+            if not self.current_txd_data or not self.texture_list:
+                return None
+
+            # Start with original TXD data
+            original_data = bytearray(self.current_txd_data)
+
+            # Parse and update texture names
+            offset = 12
+
+            # Skip to texture count
+            if offset + 12 < len(original_data):
+                st, ss, sv = struct.unpack('<III', original_data[offset:offset+12])
+                offset += 12
+                if ss >= 4:
+                    texture_count = struct.unpack('<I', original_data[offset:offset+4])[0]
+                    offset += ss
+
+                    # Update each texture's name in the binary data
+                    texture_index = 0
+                    for i in range(texture_count):
+                        if offset + 12 > len(original_data) or texture_index >= len(self.texture_list):
+                            break
+
+                        stype, ssize, sver = struct.unpack('<III', original_data[offset:offset+12])
+                        if stype == 0x15:  # Texture Native
+                            # Update texture name in binary data
+                            self._update_texture_name_in_data(original_data, offset, self.texture_list[texture_index])
+                            texture_index += 1
+
+                        offset += 12 + ssize
+
+            return bytes(original_data)
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Rebuild error: {str(e)}")
+            return None
+
+    def _update_img_with_txd(self, modified_txd_data): #vers 3
+        """Update the IMG archive with the modified TXD data and force save"""
+        try:
+            if not self.current_img or not self.current_txd_name:
+                return False
+
+            # Find the TXD entry in the IMG
+            txd_entry = None
+            for entry in self.current_img.entries:
+                if entry.name == self.current_txd_name:
+                    txd_entry = entry
+                    break
+
+            if not txd_entry:
+                raise Exception(f"TXD entry {self.current_txd_name} not found in IMG")
+
+            # Update the entry's data directly
+            old_size = txd_entry.size
+            txd_entry.data = modified_txd_data
+            txd_entry.size = len(modified_txd_data)
+
+            # Mark IMG as modified (important for save detection)
+            if hasattr(self.current_img, 'modified'):
+                self.current_img.modified = True
+            if hasattr(self.current_img, 'is_modified'):
+                self.current_img.is_modified = True
+            if hasattr(self.current_img, '_modified'):
+                self.current_img._modified = True
+
+            # Force save the IMG file
+            if hasattr(self.current_img, 'save'):
+                result = self.current_img.save()
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"IMG save result: {result}")
+            elif hasattr(self.current_img, 'write'):
+                self.current_img.write()
+            else:
+                # Use main window save function
+                if self.main_window and hasattr(self.main_window, 'save_current_img'):
+                    self.main_window.save_current_img()
+                else:
+                    # Try to find and call the save function from core
+                    try:
+                        from core.save_entry import save_img_file
+                        save_img_file(self.main_window, self.current_img)
+                    except ImportError:
+                        if self.main_window and hasattr(self.main_window, 'log_message'):
+                            self.main_window.log_message("Warning: Could not find save function - changes in memory only")
+
+            # Log the change details
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"TXD {self.current_txd_name} updated: {old_size} -> {len(modified_txd_data)} bytes")
+
+            return True
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"IMG update error: {str(e)}")
+            return False
+
+    def _refresh_main_window(self): #vers 1
+        """Refresh the main window to show changes"""
+        try:
+            if self.main_window:
+                # Try to refresh the main table
+                if hasattr(self.main_window, 'refresh_table'):
+                    self.main_window.refresh_table()
+                elif hasattr(self.main_window, 'reload_current_file'):
+                    self.main_window.reload_current_file()
+                elif hasattr(self.main_window, 'update_display'):
+                    self.main_window.update_display()
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Refresh error: {str(e)}")
+
+    def _mark_as_modified(self): #vers 1
+        """Mark the TXD as modified and enable save button"""
+        self.save_txd_btn.setEnabled(True)
+        self.save_txd_btn.setStyleSheet("background-color: #ff6b35; font-weight: bold;")  # Orange highlight
+
+        # Update window title to show unsaved changes
+        current_title = self.windowTitle()
+        if not current_title.endswith("*"):
+            self.setWindowTitle(current_title + "*")
+
+    def _rename_texture(self, alpha=False): #vers 2
+        """Rename texture or alpha name and mark as modified"""
+        from PyQt6.QtWidgets import QInputDialog
+
         if not self.selected_texture:
             QMessageBox.warning(self, "No Selection", "Please select a texture first")
             return
 
-        QMessageBox.information(self, "Coming Soon", "Properties dialog will be added soon!")
+        current_name = self.selected_texture.get('name', 'texture')
+
+        if alpha:
+            if not self.selected_texture.get('has_alpha', False):
+                QMessageBox.information(self, "No Alpha", "This texture does not have an alpha channel")
+                return
+
+            alpha_name = self.selected_texture.get('alpha_name', current_name + 'a')
+            new_name, ok = QInputDialog.getText(self, "Rename Alpha", "Enter alpha name:", text=alpha_name)
+            if ok and new_name and new_name != alpha_name:
+                self.selected_texture['alpha_name'] = new_name
+                self.info_alpha_name.setText(f"Alpha: {new_name}")
+                self._update_table_display()
+                self._mark_as_modified()  # Mark as modified
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"Alpha renamed to: {new_name}")
+        else:
+            new_name, ok = QInputDialog.getText(self, "Rename Texture", "Enter texture name:", text=current_name)
+            if ok and new_name and new_name != current_name:
+                self.selected_texture['name'] = new_name
+                self.info_name.setText(f"Name: {new_name}")
+                self._update_table_display()
+                self._mark_as_modified()  # Mark as modified
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"Texture renamed: {current_name} -> {new_name}")
+
+    def _mark_as_modified(self): #vers 1
+        """Mark the TXD as modified and enable save button"""
+        self.save_txd_btn.setEnabled(True)
+        self.save_txd_btn.setStyleSheet("background-color: #ff6b35; font-weight: bold;")  # Orange highlight
+
+    def _update_texture_name_in_data(self, data, offset, texture_info): #vers 1
+        """Update texture name in the binary TXD data"""
+        try:
+            import struct
+
+            # Navigate to the texture name location (offset + 12 for section header + 8 for platform info + name at pos 32)
+            struct_offset = offset + 12
+            struct_type, struct_size, struct_version = struct.unpack('<III', data[struct_offset:struct_offset+12])
+
+            if struct_type == 0x01:  # Struct section
+                name_pos = struct_offset + 12 + 8  # Skip header and platform info
+
+                # Update texture name (32 bytes)
+                new_name = texture_info.get('name', 'texture')[:31]  # Max 31 chars + null terminator
+                name_bytes = new_name.encode('ascii')[:31].ljust(32, b'\x00')
+                data[name_pos:name_pos+32] = name_bytes
+
+                # Update alpha/mask name if it exists (next 32 bytes)
+                if texture_info.get('has_alpha', False) and texture_info.get('alpha_name'):
+                    alpha_name = texture_info.get('alpha_name', '')[:31]
+                    alpha_bytes = alpha_name.encode('ascii')[:31].ljust(32, b'\x00')
+                    data[name_pos+32:name_pos+64] = alpha_bytes
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Name update error: {str(e)}")
+
+        # Update window title to show unsaved changes
+        current_title = self.windowTitle()
+        if not current_title.endswith("*"):
+            self.setWindowTitle(current_title + "*")
+
+    def _rebuild_txd_with_size_management(self): #vers 1
+        """Rebuild TXD data with support for large texture replacements"""
+        try:
+            import struct
+
+            if not self.current_txd_data or not self.texture_list:
+                return None
+
+            # Calculate new TXD size requirements
+            estimated_size = self._calculate_new_txd_size()
+            original_size = len(self.current_txd_data)
+
+            if estimated_size > original_size * 3:  # More than 3x size increase
+                reply = QMessageBox.question(self, "Large Texture Replacement",
+                                        f"New TXD will be ~{estimated_size/1024/1024:.1f}MB "
+                                        f"(was {original_size/1024/1024:.1f}MB). "
+                                        f"This may require IMG rebuilding. Continue?",
+                                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                if reply != QMessageBox.StandardButton.Yes:
+                    return None
+
+            # Build new TXD from scratch rather than modifying existing
+            return self._build_new_txd_structure()
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"TXD rebuild error: {str(e)}")
+            return None
+
+    def _requires_img_rebuild(self, new_txd_data): #vers 1
+        """Check if IMG needs full rebuild due to size changes"""
+        if not self.current_txd_data:
+            return True
+
+        size_ratio = len(new_txd_data) / len(self.current_txd_data)
+        return size_ratio > 2.0  # Rebuild if more than 2x size increase
+
+    def _update_img_with_large_txd(self, modified_txd_data): #vers 1
+        """Handle IMG update with potentially large TXD replacements"""
+        try:
+            if self._requires_img_rebuild(modified_txd_data):
+                return self._rebuild_img_with_new_txd(modified_txd_data)
+            else:
+                return self._update_img_in_place(modified_txd_data)
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"IMG update error: {str(e)}")
+            return False
+
+    def _rebuild_img_with_new_txd(self, new_txd_data): #vers 1
+        """Rebuild entire IMG file to accommodate large TXD"""
+        try:
+            # This would require integration with your IMG rebuilding system
+            if self.main_window and hasattr(self.main_window, 'rebuild_current_img'):
+                # Update TXD data first
+                for entry in self.current_img.entries:
+                    if entry.name == self.current_txd_name:
+                        entry.data = new_txd_data
+                        entry.size = len(new_txd_data)
+                        break
+
+                # Trigger full IMG rebuild
+                result = self.main_window.rebuild_current_img()
+
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"IMG rebuilt due to large TXD size change")
+
+                return result
+            else:
+                # Fallback: save to new file
+                return self._save_as_new_img(new_txd_data)
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"IMG rebuild error: {str(e)}")
+            return False
+
+    def _save_as_new_img(self, new_txd_data): #vers 1
+        """Save as new IMG file when rebuild is needed"""
+        try:
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, "Save IMG with Large Textures",
+                self.current_img.file_path.replace('.img', '_hd.img'),
+                "IMG Files (*.img);;All Files (*)"
+            )
+
+            if file_path:
+                # Update TXD data
+                for entry in self.current_img.entries:
+                    if entry.name == self.current_txd_name:
+                        entry.data = new_txd_data
+                        entry.size = len(new_txd_data)
+                        break
+
+                # Save as new file
+                self.current_img.save_as(file_path)
+
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"Saved as new IMG: {file_path}")
+
+                return True
+
+            return False
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Save as new error: {str(e)}")
+            return False
 
     def open_img_archive(self): #vers 1
         """Open IMG archive and load TXD file list"""
         try:
-            file_Ipath, _ = QFileDialog.getOpenFileName(self, "Open IMG Archive", "", "IMG Files (*.img);;All Files (*)")
+            file_path, _ = QFileDialog.getOpenFileName(self, "Open IMG Archive", "", "IMG Files (*.img);;All Files (*)")
             if file_path:
                 self.load_from_img_archive(file_path)
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to open IMG: {str(e)}")
+
 
     def open_txd_file(self, file_path=None): #vers 2
         """Open standalone TXD file"""
@@ -1306,9 +1798,24 @@ class TXDWorkshop(QWidget): #vers 3
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to open TXD: {str(e)}")
 
-    def save_txd_file(self): #vers 1
-        """Save current TXD file"""
-        QMessageBox.information(self, "Save TXD", "Save functionality coming soon!")
+    def import_texture(self): #vers 1
+        """Import texture to replace selected"""
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture to replace")
+            return
+
+        file_path, _ = QFileDialog.getOpenFileName(self, "Import Texture", "",
+                                                "Image Files (*.png *.jpg *.bmp *.tga);;All Files (*)")
+        if file_path:
+            QMessageBox.information(self, "Coming Soon", "Import functionality will be added soon!")
+
+    def show_properties(self): #vers 1
+        """Show detailed texture properties"""
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+            return
+
+        QMessageBox.information(self, "Coming Soon", "Properties dialog will be added soon!")
 
     def closeEvent(self, event): #vers 1
         """Handle window close"""
