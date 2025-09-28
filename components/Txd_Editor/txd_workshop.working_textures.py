@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QListWidget,
     QListWidgetItem, QLabel, QPushButton, QFrame, QFileDialog,
     QMessageBox, QScrollArea, QGroupBox, QTableWidget, QTableWidgetItem,
-    QHeaderView, QAbstractItemView, QMenu, QComboBox
+    QHeaderView, QAbstractItemView
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage
@@ -27,27 +27,19 @@ from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage
 # _decompress_dxt3
 # _decompress_dxt5
 # _decompress_uncompressed
-# _extract_alpha_channel
 # _extract_txd_from_img
-# _export_alpha_only
 # _load_img_txd_list
 # _load_txd_textures
 # _on_texture_selected
 # _on_txd_selected
 # _parse_single_texture
-# _save_texture_png
-# _show_texture_context_menu
 # _update_texture_info
-# export_all_textures
 # export_selected_texture
-# flip_texture
-# import_texture
 # load_from_img_archive
 # open_img_archive
 # open_txd_file
 # save_txd_file
 # setup_ui
-# show_properties
 
 ##class TXDWorkshop: -
 # __init__
@@ -121,7 +113,7 @@ class TXDWorkshop(QWidget): #vers 3
                 QPushButton:hover { background-color: #4a4a4a; }
             """)
 
-    def _create_toolbar(self): #vers 2
+    def _create_toolbar(self): #vers 1
         """Create toolbar with action buttons"""
         toolbar = QFrame()
         toolbar.setFrameStyle(QFrame.Shape.StyledPanel)
@@ -134,7 +126,11 @@ class TXDWorkshop(QWidget): #vers 3
         self.open_img_btn.clicked.connect(self.open_img_archive)
         layout.addWidget(self.open_img_btn)
 
-        self.open_txd_btn = QPushButton("📄 Open TXD")
+        self.action_btn = QPushButton("⚙️ Action")
+        self.action_btn.setEnabled(False)
+        layout.addWidget(self.action_btn)
+
+        self.open_txd_btn = QPushButton("📁 Open TXD")
         self.open_txd_btn.clicked.connect(self.open_txd_file)
         layout.addWidget(self.open_txd_btn)
 
@@ -144,7 +140,6 @@ class TXDWorkshop(QWidget): #vers 3
         layout.addWidget(self.save_txd_btn)
 
         self.import_btn = QPushButton("📥 Import")
-        self.import_btn.clicked.connect(self.import_texture)
         self.import_btn.setEnabled(False)
         layout.addWidget(self.import_btn)
 
@@ -153,34 +148,15 @@ class TXDWorkshop(QWidget): #vers 3
         self.export_btn.setEnabled(False)
         layout.addWidget(self.export_btn)
 
-        self.export_all_btn = QPushButton("📤 Export All")
-        self.export_all_btn.clicked.connect(self.export_all_textures)
-        self.export_all_btn.setEnabled(False)
-        layout.addWidget(self.export_all_btn)
-
         self.flip_btn = QPushButton("🔄 Flip!")
-        self.flip_btn.clicked.connect(self.flip_texture)
         self.flip_btn.setEnabled(False)
         layout.addWidget(self.flip_btn)
 
         self.props_btn = QPushButton("📋 Properties")
-        self.props_btn.clicked.connect(self.show_properties)
         self.props_btn.setEnabled(False)
         layout.addWidget(self.props_btn)
 
         layout.addStretch()
-
-        # Window controls on the right
-        self.minimize_btn = QPushButton("_")
-        self.minimize_btn.setMaximumWidth(30)
-        self.minimize_btn.clicked.connect(self.showMinimized)
-        layout.addWidget(self.minimize_btn)
-
-        self.close_btn = QPushButton("✕")
-        self.close_btn.setMaximumWidth(30)
-        self.close_btn.clicked.connect(self.close)
-        layout.addWidget(self.close_btn)
-
         return toolbar
 
     def _create_left_panel(self): #vers 2
@@ -204,8 +180,8 @@ class TXDWorkshop(QWidget): #vers 3
 
         return panel
 
-    def _create_middle_panel(self): #vers 3
-        """Create middle panel - Texture list with context menu"""
+    def _create_middle_panel(self): #vers 2
+        """Create middle panel - Texture list"""
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.StyledPanel)
         panel.setMinimumWidth(250)
@@ -226,14 +202,12 @@ class TXDWorkshop(QWidget): #vers 3
         self.texture_table.setAlternatingRowColors(True)
         self.texture_table.itemSelectionChanged.connect(self._on_texture_selected)
         self.texture_table.setIconSize(QSize(64, 64))
-        self.texture_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.texture_table.customContextMenuRequested.connect(self._show_texture_context_menu)
         layout.addWidget(self.texture_table)
 
         return panel
 
-    def _create_right_panel(self): #vers 2
-        """Create enhanced right panel - Preview and texture editing controls"""
+    def _create_right_panel(self): #vers 1
+        """Create right panel - Large texture preview"""
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.StyledPanel)
         panel.setMinimumWidth(400)
@@ -250,110 +224,62 @@ class TXDWorkshop(QWidget): #vers 3
         info_group = QGroupBox("Texture Information")
         info_layout = QVBoxLayout(info_group)
 
-        # Clickable texture name for editing
-        self.info_name = QPushButton("Name: -")
-        self.info_name.clicked.connect(lambda: self._rename_texture(alpha=False))
-        self.info_name.setFlat(True)
-        self.info_name.setStyleSheet("text-align: left; font-weight: bold;")
-        self.info_name.setEnabled(False)
-        info_layout.addWidget(self.info_name)
-
-        # Clickable alpha name for editing (red text when has alpha)
-        self.info_alpha_name = QPushButton("Alpha: -")
-        self.info_alpha_name.clicked.connect(lambda: self._rename_texture(alpha=True))
-        self.info_alpha_name.setFlat(True)
-        self.info_alpha_name.setStyleSheet("text-align: left; color: red; font-weight: bold;")
-        self.info_alpha_name.setVisible(False)
-        self.info_alpha_name.setEnabled(False)
-        info_layout.addWidget(self.info_alpha_name)
-
-        # Size with resize controls
-        size_layout = QHBoxLayout()
+        self.info_name = QLabel("Name: -")
         self.info_size = QLabel("Size: -")
-        size_layout.addWidget(self.info_size)
-
-        self.resize_btn = QPushButton("Resize")
-        self.resize_btn.clicked.connect(self._resize_texture)
-        self.resize_btn.setEnabled(False)
-        size_layout.addWidget(self.resize_btn)
-
-        self.upscale_btn = QPushButton("AI Upscale")
-        self.upscale_btn.clicked.connect(self._upscale_texture)
-        self.upscale_btn.setEnabled(False)
-        size_layout.addWidget(self.upscale_btn)
-
-        info_layout.addLayout(size_layout)
-
-        # Format dropdown
-        format_layout = QHBoxLayout()
-        format_label = QLabel("Format:")
-        self.format_combo = QComboBox()
-        self.format_combo.addItems(["DXT1", "DXT3", "DXT5", "ARGB8888", "ARGB1555", "ARGB4444", "RGB888", "RGB565"])
-        self.format_combo.currentTextChanged.connect(self._change_format)
-        self.format_combo.setEnabled(False)
-        format_layout.addWidget(format_label)
-        format_layout.addWidget(self.format_combo)
-        info_layout.addLayout(format_layout)
-
-        # Keep the missing labels
-        self.info_format = QLabel("Format: -")  # This was missing
+        self.info_format = QLabel("Format: -")
         self.info_alpha = QLabel("Alpha: -")
+        self.info_compression = QLabel("Compression: -")
+
+        info_layout.addWidget(self.info_name)
+        info_layout.addWidget(self.info_size)
         info_layout.addWidget(self.info_format)
         info_layout.addWidget(self.info_alpha)
-
-        # Compression controls
-        compression_layout = QHBoxLayout()
-        self.info_compression = QLabel("Compression: -")
-        compression_layout.addWidget(self.info_compression)
-
-        self.compress_btn = QPushButton("Compress")
-        self.compress_btn.clicked.connect(self._compress_texture)
-        self.compress_btn.setEnabled(False)
-        compression_layout.addWidget(self.compress_btn)
-
-        self.uncompress_btn = QPushButton("Uncompress")
-        self.uncompress_btn.clicked.connect(self._uncompress_texture)
-        self.uncompress_btn.setEnabled(False)
-        compression_layout.addWidget(self.uncompress_btn)
-
-        info_layout.addLayout(compression_layout)
+        info_layout.addWidget(self.info_compression)
 
         layout.addWidget(info_group)
         return panel
 
+    def _rename_texture(self): #vers 1
+        """Rename selected texture"""
+        from PyQt6.QtWidgets import QInputDialog
 
-    def _show_texture_context_menu(self, position): #vers 1
-        """Show right-click context menu for textures"""
-        if not self.texture_table.selectedItems():
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
             return
 
-        menu = QMenu(self)
+        old_name = self.selected_texture.get('name', 'texture')
 
-        export_action = menu.addAction("📤 Export Texture")
-        export_action.triggered.connect(self.export_selected_texture)
+        new_name, ok = QInputDialog.getText(
+            self,
+            "Rename Texture",
+            "Enter new name:",
+            text=old_name
+        )
 
-        export_alpha_action = menu.addAction("📤 Export Alpha Channel")
-        export_alpha_action.triggered.connect(lambda: self._export_alpha_only())
+        if ok and new_name and new_name != old_name:
+            self.selected_texture['name'] = new_name
 
-        menu.addSeparator()
+            row = self.texture_table.currentRow()
+            if row >= 0:
+                details_item = self.texture_table.item(row, 1)
+                if details_item:
+                    text = details_item.text()
+                    updated_text = text.replace(f"Name: {old_name}", f"Name: {new_name}")
+                    details_item.setText(updated_text)
 
-        import_action = menu.addAction("📥 Import/Replace")
-        import_action.triggered.connect(self.import_texture)
+            self.info_name.setText(f"Name: {new_name}")
 
-        menu.addSeparator()
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Texture renamed: {old_name} -> {new_name}")
 
-        view_alpha_action = menu.addAction("👁️ View Alpha Channel")
-        view_alpha_action.triggered.connect(lambda: setattr(self, '_show_alpha', True) or self._update_texture_info(self.selected_texture))
-
-        view_normal_action = menu.addAction("👁️ View Normal")
-        view_normal_action.triggered.connect(lambda: setattr(self, '_show_alpha', False) or self._update_texture_info(self.selected_texture))
-
-        menu.addSeparator()
-
-        props_action = menu.addAction("📋 Properties")
-        props_action.triggered.connect(self.show_properties)
-
-        menu.exec(self.texture_table.viewport().mapToGlobal(position))
+    def open_img_archive(self): #vers 1
+        """Open IMG archive and load TXD file list"""
+        try:
+            file_path, _ = QFileDialog.getOpenFileName(self, "Open IMG Archive", "", "IMG Files (*.img);;All Files (*)")
+            if file_path:
+                self.load_from_img_archive(file_path)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to open IMG: {str(e)}")
 
     def load_from_img_archive(self, img_path): #vers 1
         """Load TXD list from IMG archive"""
@@ -423,7 +349,7 @@ class TXDWorkshop(QWidget): #vers 3
                 self.main_window.log_message(f"❌ Extract error: {str(e)}")
             return None
 
-    def _load_txd_textures(self, txd_data, txd_name): #vers 9
+    def _load_txd_textures(self, txd_data, txd_name): #vers 8
         """Load textures from TXD data with DXT decompression"""
         try:
             import struct
@@ -480,18 +406,10 @@ class TXDWorkshop(QWidget): #vers 3
                 else:
                     thumb_item.setText("🖼️")
 
-                # Build details text - show alpha name in red if it exists
                 details = f"Name: {tex['name']}\n"
-
-                # Add alpha name in red if texture has alpha
-                if tex.get('has_alpha', False):
-                    alpha_name = tex.get('alpha_name', tex['name'] + 'a')
-                    details += f"Alpha: {alpha_name}\n"
-
                 if tex['width'] > 0:
                     details += f"Size: {tex['width']}x{tex['height']}\n"
-                details += f"Format: {tex['format']}\n"
-                details += f"Alpha: {'Yes' if tex.get('has_alpha', False) else 'No'}"
+                details += f"Format: {tex['format']}\nAlpha: {'Yes' if tex['has_alpha'] else 'No'}"
 
                 self.texture_table.setItem(row, 0, thumb_item)
                 self.texture_table.setItem(row, 1, QTableWidgetItem(details))
@@ -502,237 +420,12 @@ class TXDWorkshop(QWidget): #vers 3
 
             self.save_txd_btn.setEnabled(True)
             self.import_btn.setEnabled(True)
-            self.export_all_btn.setEnabled(True)
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"✅ Loaded {len(textures)} textures from {txd_name}")
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"❌ Error: {str(e)}")
-
-    def _rename_texture(self, alpha=False): #vers 1
-        """Rename texture or alpha name"""
-        from PyQt6.QtWidgets import QInputDialog
-
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
-            return
-
-        current_name = self.selected_texture.get('name', 'texture')
-
-        if alpha:
-            # Only allow alpha renaming if texture has alpha
-            if not self.selected_texture.get('has_alpha', False):
-                QMessageBox.information(self, "No Alpha", "This texture does not have an alpha channel")
-                return
-
-            alpha_name = self.selected_texture.get('alpha_name', current_name + 'a')
-            new_name, ok = QInputDialog.getText(self, "Rename Alpha", "Enter alpha name:", text=alpha_name)
-            if ok and new_name:
-                self.selected_texture['alpha_name'] = new_name
-                self.info_alpha_name.setText(f"Alpha: {new_name}")
-                self._update_table_display()
-                if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"Alpha renamed to: {new_name}")
-        else:
-            new_name, ok = QInputDialog.getText(self, "Rename Texture", "Enter texture name:", text=current_name)
-            if ok and new_name and new_name != current_name:
-                self.selected_texture['name'] = new_name
-                self.info_name.setText(f"Name: {new_name}")
-                self._update_table_display()
-                if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"Texture renamed: {current_name} -> {new_name}")
-
-    def _resize_texture(self): #vers 1
-        """Resize selected texture"""
-        from PyQt6.QtWidgets import QInputDialog
-
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
-            return
-
-        current_width = self.selected_texture.get('width', 256)
-        current_height = self.selected_texture.get('height', 256)
-
-        # Get new dimensions
-        w, ok1 = QInputDialog.getInt(self, "Resize Texture", "New width:", value=current_width, min=1, max=4096)
-        if not ok1:
-            return
-        h, ok2 = QInputDialog.getInt(self, "Resize Texture", "New height:", value=current_height, min=1, max=4096)
-        if not ok2:
-            return
-
-        # Update texture data (simplified - real implementation would resize image data)
-        self.selected_texture['width'] = w
-        self.selected_texture['height'] = h
-
-        self._update_texture_info(self.selected_texture)
-        self._update_table_display()
-
-        if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Resized texture to {w}x{h}")
-
-    def _upscale_texture(self): #vers 1
-        """AI upscale selected texture"""
-        from PyQt6.QtWidgets import QInputDialog
-
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
-            return
-
-        # Get scale factor
-        factor, ok = QInputDialog.getInt(self, "AI Upscale", "Scale factor:", value=2, min=2, max=8)
-        if not ok:
-            return
-
-        current_width = self.selected_texture.get('width', 256)
-        current_height = self.selected_texture.get('height', 256)
-
-        new_width = current_width * factor
-        new_height = current_height * factor
-
-        # Update texture data (simplified - real implementation would upscale image data)
-        self.selected_texture['width'] = new_width
-        self.selected_texture['height'] = new_height
-
-        self._update_texture_info(self.selected_texture)
-        self._update_table_display()
-
-        if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Upscaled texture {factor}x to {new_width}x{new_height}")
-
-    def _change_format(self, format_name): #vers 1
-        """Change texture format"""
-        if not self.selected_texture:
-            return
-
-        old_format = self.selected_texture.get('format', 'Unknown')
-        self.selected_texture['format'] = format_name
-
-        # Update alpha flag based on format
-        if format_name in ['DXT3', 'DXT5', 'ARGB8888', 'ARGB1555', 'ARGB4444']:
-            self.selected_texture['has_alpha'] = True
-        elif format_name in ['DXT1', 'RGB888', 'RGB565']:
-            self.selected_texture['has_alpha'] = False
-
-        self._update_texture_info(self.selected_texture)
-        self._update_table_display()
-
-        if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Format changed: {old_format} -> {format_name}")
-
-    def _compress_texture(self): #vers 1
-        """Compress selected texture"""
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
-            return
-
-        current_format = self.selected_texture.get('format', 'ARGB8888')
-
-        if 'DXT' in current_format:
-            QMessageBox.information(self, "Already Compressed", "Texture is already compressed")
-            return
-
-        # Choose compression format based on alpha
-        has_alpha = self.selected_texture.get('has_alpha', False)
-        new_format = 'DXT5' if has_alpha else 'DXT1'
-
-        self.selected_texture['format'] = new_format
-        self._update_texture_info(self.selected_texture)
-        self._update_table_display()
-
-        if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Compressed texture to {new_format}")
-
-    def _uncompress_texture(self): #vers 1
-        """Uncompress selected texture"""
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
-            return
-
-        current_format = self.selected_texture.get('format', 'ARGB8888')
-
-        if 'DXT' not in current_format:
-            QMessageBox.information(self, "Not Compressed", "Texture is not compressed")
-            return
-
-        # Uncompress to ARGB8888
-        self.selected_texture['format'] = 'ARGB8888'
-        self.selected_texture['has_alpha'] = True
-
-        self._update_texture_info(self.selected_texture)
-        self._update_table_display()
-
-        if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Uncompressed texture to ARGB8888")
-
-    def _update_table_display(self): #vers 1
-        """Update the middle panel table display after edits"""
-        if not self.selected_texture:
-            return
-
-        row = self.texture_table.currentRow()
-        if row < 0 or row >= len(self.texture_list):
-            return
-
-        tex = self.selected_texture
-
-        # Rebuild details text
-        details = f"Name: {tex['name']}\n"
-
-        # Add alpha name in red if texture has alpha
-        if tex.get('has_alpha', False):
-            alpha_name = tex.get('alpha_name', tex['name'] + 'a')
-            details += f"Alpha: {alpha_name}\n"
-
-        if tex['width'] > 0:
-            details += f"Size: {tex['width']}x{tex['height']}\n"
-        details += f"Format: {tex['format']}\n"
-        details += f"Alpha: {'Yes' if tex.get('has_alpha', False) else 'No'}"
-
-        # Update the table item
-        details_item = self.texture_table.item(row, 1)
-        if details_item:
-            details_item.setText(details)
-
-    def _on_texture_selected(self): #vers 2
-        """Handle texture selection and enable editing controls"""
-        try:
-            row = self.texture_table.currentRow()
-            if row < 0 or row >= len(self.texture_list):
-                # Disable all controls
-                self.info_name.setEnabled(False)
-                self.info_alpha_name.setEnabled(False)
-                self.resize_btn.setEnabled(False)
-                self.upscale_btn.setEnabled(False)
-                self.format_combo.setEnabled(False)
-                self.compress_btn.setEnabled(False)
-                self.uncompress_btn.setEnabled(False)
-                return
-
-            self.selected_texture = self.texture_list[row]
-            self._update_texture_info(self.selected_texture)
-
-            # Enable editing controls
-            self.export_btn.setEnabled(True)
-            self.flip_btn.setEnabled(True)
-            self.props_btn.setEnabled(True)
-            self.info_name.setEnabled(True)
-            self.resize_btn.setEnabled(True)
-            self.upscale_btn.setEnabled(True)
-            self.format_combo.setEnabled(True)
-            self.compress_btn.setEnabled(True)
-            self.uncompress_btn.setEnabled(True)
-
-            # Enable alpha editing only if texture has alpha
-            if self.selected_texture.get('has_alpha', False):
-                self.info_alpha_name.setEnabled(True)
-            else:
-                self.info_alpha_name.setEnabled(False)
-
-        except Exception as e:
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Selection error: {str(e)}")
 
     def _parse_single_texture(self, txd_data, offset, index): #vers 14
         """Parse single texture - Following working txd.py structure exactly"""
@@ -928,6 +621,7 @@ class TXDWorkshop(QWidget): #vers 3
                     a0 = dxt_data[block_offset]
                     a1 = dxt_data[block_offset + 1]
                     alpha_indices = struct.unpack('<Q', dxt_data[block_offset:block_offset+8])[0] >> 16
+
                     alpha_palette = [a0, a1]
                     if a0 > a1:
                         for i in range(1, 7):
@@ -1013,39 +707,166 @@ class TXDWorkshop(QWidget): #vers 3
         except:
             return None
 
-    def _create_thumbnail(self, rgba_data, width, height): #vers 1
-        """Create thumbnail from RGBA data"""
-        try:
-            if not rgba_data or width <= 0 or height <= 0:
-                return None
+    def _create_toolbar(self): #vers 2
+        """Create toolbar with action buttons"""
+        toolbar = QFrame()
+        toolbar.setFrameStyle(QFrame.Shape.StyledPanel)
+        toolbar.setMaximumHeight(50)
 
-            image = QImage(rgba_data, width, height, width*4, QImage.Format.Format_RGBA8888)
-            if image.isNull():
-                return None
+        layout = QHBoxLayout(toolbar)
+        layout.setContentsMargins(5, 5, 5, 5)
 
-            pixmap = QPixmap.fromImage(image)
-            return pixmap.scaled(64, 64, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-        except:
-            return None
+        self.open_img_btn = QPushButton("📂 Open IMG")
+        self.open_img_btn.clicked.connect(self.open_img_archive)
+        layout.addWidget(self.open_img_btn)
 
-    def _on_texture_selected(self): #vers 1
-        """Handle texture selection"""
-        try:
-            row = self.texture_table.currentRow()
-            if row < 0 or row >= len(self.texture_list):
-                return
+        self.open_txd_btn = QPushButton("📁 Open TXD")
+        self.open_txd_btn.clicked.connect(self.open_txd_file)
+        layout.addWidget(self.open_txd_btn)
 
-            self.selected_texture = self.texture_list[row]
-            self._update_texture_info(self.selected_texture)
-            self.export_btn.setEnabled(True)
-            self.flip_btn.setEnabled(True)
-            self.props_btn.setEnabled(True)
-        except Exception as e:
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Selection error: {str(e)}")
+        self.save_txd_btn = QPushButton("💾 Save TXD")
+        self.save_txd_btn.clicked.connect(self.save_txd_file)
+        self.save_txd_btn.setEnabled(False)
+        layout.addWidget(self.save_txd_btn)
 
-    def _update_texture_info(self, texture): #vers 4
-        """Update texture information display with clickable names"""
+        self.import_btn = QPushButton("📥 Import")
+        self.import_btn.clicked.connect(self.import_texture)
+        self.import_btn.setEnabled(False)
+        layout.addWidget(self.import_btn)
+
+        self.export_btn = QPushButton("📤 Export")
+        self.export_btn.clicked.connect(self.export_selected_texture)
+        self.export_btn.setEnabled(False)
+        layout.addWidget(self.export_btn)
+
+        self.export_all_btn = QPushButton("📤 Export All")
+        self.export_all_btn.clicked.connect(self.export_all_textures)
+        self.export_all_btn.setEnabled(False)
+        layout.addWidget(self.export_all_btn)
+
+        self.flip_btn = QPushButton("🔄 Flip!")
+        self.flip_btn.clicked.connect(self.flip_texture)
+        self.flip_btn.setEnabled(False)
+        layout.addWidget(self.flip_btn)
+
+        self.props_btn = QPushButton("📋 Properties")
+        self.props_btn.clicked.connect(self.show_properties)
+        self.props_btn.setEnabled(False)
+        layout.addWidget(self.props_btn)
+
+        layout.addStretch()
+
+        # Window controls on the right
+        self.minimize_btn = QPushButton("_")
+        self.minimize_btn.setMaximumWidth(30)
+        self.minimize_btn.clicked.connect(self.showMinimized)
+        layout.addWidget(self.minimize_btn)
+
+        self.close_btn = QPushButton("✕")
+        self.close_btn.setMaximumWidth(30)
+        self.close_btn.clicked.connect(self.close)
+        layout.addWidget(self.close_btn)
+
+        return toolbar
+
+    def _create_middle_panel(self): #vers 3
+        """Create middle panel - Texture list with context menu"""
+        panel = QFrame()
+        panel.setFrameStyle(QFrame.Shape.StyledPanel)
+        panel.setMinimumWidth(250)
+
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(5, 5, 5, 5)
+
+        header = QLabel("Textures")
+        header.setFont(QFont("Arial", 10, QFont.Weight.Bold))
+        layout.addWidget(header)
+
+        self.texture_table = QTableWidget()
+        self.texture_table.setColumnCount(2)
+        self.texture_table.setHorizontalHeaderLabels(["Preview", "Details"])
+        self.texture_table.horizontalHeader().setStretchLastSection(True)
+        self.texture_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.texture_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.texture_table.setAlternatingRowColors(True)
+        self.texture_table.itemSelectionChanged.connect(self._on_texture_selected)
+        self.texture_table.setIconSize(QSize(64, 64))
+        self.texture_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.texture_table.customContextMenuRequested.connect(self._show_texture_context_menu)
+        layout.addWidget(self.texture_table)
+
+        return panel
+
+    def _show_texture_context_menu(self, position): #vers 1
+        """Show right-click context menu for textures"""
+        if not self.texture_table.selectedItems():
+            return
+
+        menu = QMenu(self)
+
+        export_action = menu.addAction("📤 Export Texture")
+        export_action.triggered.connect(self.export_selected_texture)
+
+        export_alpha_action = menu.addAction("📤 Export Alpha Channel")
+        export_alpha_action.triggered.connect(lambda: self._export_alpha_only())
+
+        menu.addSeparator()
+
+        import_action = menu.addAction("📥 Import/Replace")
+        import_action.triggered.connect(self.import_texture)
+
+        menu.addSeparator()
+
+        view_alpha_action = menu.addAction("👁️ View Alpha Channel")
+        view_alpha_action.triggered.connect(lambda: setattr(self, '_show_alpha', True) or self._update_texture_info(self.selected_texture))
+
+        view_normal_action = menu.addAction("👁️ View Normal")
+        view_normal_action.triggered.connect(lambda: setattr(self, '_show_alpha', False) or self._update_texture_info(self.selected_texture))
+
+        menu.addSeparator()
+
+        props_action = menu.addAction("📋 Properties")
+        props_action.triggered.connect(self.show_properties)
+
+        menu.exec(self.texture_table.viewport().mapToGlobal(position))
+
+    def _export_alpha_only(self): #vers 1
+        """Export only alpha channel"""
+        if not self.selected_texture:
+            return
+
+        name = self.selected_texture.get('name', 'texture')
+        file_path, _ = QFileDialog.getSaveFileName(self, "Export Alpha Channel", f"{name}_alpha.png",
+                                                "PNG Files (*.png)")
+        if file_path:
+            rgba_data = self.selected_texture.get('rgba_data')
+            width = self.selected_texture.get('width', 0)
+            height = self.selected_texture.get('height', 0)
+
+            if rgba_data:
+                alpha_data = self._extract_alpha_channel(rgba_data)
+                self._save_texture_png(alpha_data, width, height, file_path)
+                QMessageBox.information(self, "Success", "Alpha channel exported!")
+
+    def flip_texture(self): #vers 1
+        """Flip between normal and alpha channel view"""
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+            return
+
+        # Toggle alpha view flag
+        if not hasattr(self, '_show_alpha'):
+            self._show_alpha = False
+
+        self._show_alpha = not self._show_alpha
+        self._update_texture_info(self.selected_texture)
+
+        mode = "Alpha Channel" if self._show_alpha else "Normal View"
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            self.main_window.log_message(f"👁️ Switched to {mode}")
+
+    def _update_texture_info(self, texture): #vers 3
+        """Update texture information display with preview and channel support"""
         try:
             name = texture.get('name', 'Unknown')
             width = texture.get('width', 0)
@@ -1054,33 +875,17 @@ class TXDWorkshop(QWidget): #vers 3
             fmt = texture.get('format', 'Unknown')
             mipmaps = texture.get('mipmaps', 1)
 
-            # Update clickable name
             self.info_name.setText(f"Name: {name}")
-
-            # Update alpha name (clickable, show in red ONLY if has alpha)
-            if has_alpha:
-                alpha_name = texture.get('alpha_name', name + 'a')
-                self.info_alpha_name.setText(f"Alpha: {alpha_name}")
-                self.info_alpha_name.setVisible(True)
-            else:
-                self.info_alpha_name.setVisible(False)
-
             self.info_size.setText(f"Size: {width}x{height}" if width > 0 else "Size: Unknown")
             self.info_format.setText(f"Format: {fmt}")
             self.info_alpha.setText(f"Alpha: {'Yes' if has_alpha else 'No'}")
 
-            # Update format combo to match current format
-            if hasattr(self, 'format_combo'):
-                index = self.format_combo.findText(fmt)
-                if index >= 0:
-                    self.format_combo.setCurrentIndex(index)
-
-            comp = "Compressed DXT" if 'DXT' in fmt else "Uncompressed"
+            comp = "Compressed DXT"
             if mipmaps > 1:
                 comp += f" | Mipmaps: {mipmaps}"
             self.info_compression.setText(f"Compression: {comp}")
 
-            # Show preview (existing preview code...)
+            # Show preview
             rgba_data = texture.get('rgba_data')
             if rgba_data and width > 0 and height > 0:
                 # Check if we should show alpha channel
@@ -1106,31 +911,14 @@ class TXDWorkshop(QWidget): #vers 3
 
                     # Update button text
                     if hasattr(self, '_show_alpha') and self._show_alpha:
-                        self.flip_btn.setText("Normal")
+                        self.flip_btn.setText("🔄 Normal")
                     else:
-                        self.flip_btn.setText("Alpha")
+                        self.flip_btn.setText("🔄 Alpha")
                     return
 
             self.preview_label.setText("Preview not available")
         except Exception as e:
             self.preview_label.setText(f"Preview error: {str(e)}")
-
-    def flip_texture(self): #vers 1
-        """Flip between normal and alpha channel view"""
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
-            return
-
-        # Toggle alpha view flag
-        if not hasattr(self, '_show_alpha'):
-            self._show_alpha = False
-
-        self._show_alpha = not self._show_alpha
-        self._update_texture_info(self.selected_texture)
-
-        mode = "Alpha Channel" if self._show_alpha else "Normal View"
-        if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Switched to {mode}")
 
     def export_selected_texture(self): #vers 2
         """Export selected texture with channel options"""
@@ -1176,13 +964,13 @@ class TXDWorkshop(QWidget): #vers 3
             if clicked == normal_btn:
                 self._save_texture_png(rgba_data, width, height, file_path)
                 if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"Exported: {file_path}")
+                    self.main_window.log_message(f"✅ Exported: {file_path}")
 
             elif clicked == alpha_btn:
                 alpha_data = self._extract_alpha_channel(rgba_data)
                 self._save_texture_png(alpha_data, width, height, file_path)
                 if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"Exported alpha: {file_path}")
+                    self.main_window.log_message(f"✅ Exported alpha: {file_path}")
 
             elif clicked == both_btn:
                 # Save normal
@@ -1192,7 +980,7 @@ class TXDWorkshop(QWidget): #vers 3
                 alpha_data = self._extract_alpha_channel(rgba_data)
                 self._save_texture_png(alpha_data, width, height, alpha_path)
                 if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"Exported both: {file_path} and {alpha_path}")
+                    self.main_window.log_message(f"✅ Exported both: {file_path} and {alpha_path}")
 
             QMessageBox.information(self, "Success", "Texture exported successfully!")
 
@@ -1224,7 +1012,7 @@ class TXDWorkshop(QWidget): #vers 3
                     exported += 1
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Exported {exported} textures to {output_dir}")
+                self.main_window.log_message(f"✅ Exported {exported} textures to {output_dir}")
 
             QMessageBox.information(self, "Success", f"Exported {exported} textures successfully!")
 
@@ -1245,24 +1033,6 @@ class TXDWorkshop(QWidget): #vers 3
         if not image.save(file_path):
             raise Exception("Failed to save PNG")
 
-    def _export_alpha_only(self): #vers 1
-        """Export only alpha channel"""
-        if not self.selected_texture:
-            return
-
-        name = self.selected_texture.get('name', 'texture')
-        file_path, _ = QFileDialog.getSaveFileName(self, "Export Alpha Channel", f"{name}_alpha.png",
-                                                "PNG Files (*.png)")
-        if file_path:
-            rgba_data = self.selected_texture.get('rgba_data')
-            width = self.selected_texture.get('width', 0)
-            height = self.selected_texture.get('height', 0)
-
-            if rgba_data:
-                alpha_data = self._extract_alpha_channel(rgba_data)
-                self._save_texture_png(alpha_data, width, height, file_path)
-                QMessageBox.information(self, "Success", "Alpha channel exported!")
-
     def import_texture(self): #vers 1
         """Import texture to replace selected"""
         if not self.selected_texture:
@@ -1282,14 +1052,73 @@ class TXDWorkshop(QWidget): #vers 3
 
         QMessageBox.information(self, "Coming Soon", "Properties dialog will be added soon!")
 
-    def open_img_archive(self): #vers 1
-        """Open IMG archive and load TXD file list"""
+    def save_txd_file(self): #vers 1
+        """Save current TXD file"""
+        QMessageBox.information(self, "Coming Soon", "Save TXD functionality will be added soon!")
+
+    def _create_thumbnail(self, rgba_data, width, height): #vers 1
+        """Create thumbnail from RGBA data"""
         try:
-            file_Ipath, _ = QFileDialog.getOpenFileName(self, "Open IMG Archive", "", "IMG Files (*.img);;All Files (*)")
-            if file_path:
-                self.load_from_img_archive(file_path)
+            if not rgba_data or width <= 0 or height <= 0:
+                return None
+
+            image = QImage(rgba_data, width, height, width*4, QImage.Format.Format_RGBA8888)
+            if image.isNull():
+                return None
+
+            pixmap = QPixmap.fromImage(image)
+            return pixmap.scaled(64, 64, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        except:
+            return None
+
+    def _on_texture_selected(self): #vers 1
+        """Handle texture selection"""
+        try:
+            row = self.texture_table.currentRow()
+            if row < 0 or row >= len(self.texture_list):
+                return
+
+            self.selected_texture = self.texture_list[row]
+            self._update_texture_info(self.selected_texture)
+            self.export_btn.setEnabled(True)
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to open IMG: {str(e)}")
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Selection error: {str(e)}")
+
+    def _update_texture_info(self, texture): #vers 2
+        """Update texture information display with preview"""
+        try:
+            name = texture.get('name', 'Unknown')
+            width = texture.get('width', 0)
+            height = texture.get('height', 0)
+            has_alpha = texture.get('has_alpha', False)
+            fmt = texture.get('format', 'Unknown')
+            mipmaps = texture.get('mipmaps', 1)
+
+            self.info_name.setText(f"Name: {name}")
+            self.info_size.setText(f"Size: {width}x{height}" if width > 0 else "Size: Unknown")
+            self.info_format.setText(f"Format: {fmt}")
+            self.info_alpha.setText(f"Alpha: {'Yes' if has_alpha else 'No'}")
+
+            comp = "Compressed DXT"
+            if mipmaps > 1:
+                comp += f" | Mipmaps: {mipmaps}"
+            self.info_compression.setText(f"Compression: {comp}")
+
+            # Show preview if we have RGBA data
+            rgba_data = texture.get('rgba_data')
+            if rgba_data and width > 0 and height > 0:
+                image = QImage(rgba_data, width, height, width*4, QImage.Format.Format_RGBA8888)
+                if not image.isNull():
+                    pixmap = QPixmap.fromImage(image)
+                    label_size = self.preview_label.size()
+                    scaled_pixmap = pixmap.scaled(label_size.width()-20, label_size.height()-20, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                    self.preview_label.setPixmap(scaled_pixmap)
+                    return
+
+            self.preview_label.setText("Preview not available")
+        except Exception as e:
+            self.preview_label.setText(f"Preview error: {str(e)}")
 
     def open_txd_file(self, file_path=None): #vers 2
         """Open standalone TXD file"""
@@ -1309,6 +1138,10 @@ class TXDWorkshop(QWidget): #vers 3
     def save_txd_file(self): #vers 1
         """Save current TXD file"""
         QMessageBox.information(self, "Save TXD", "Save functionality coming soon!")
+
+    def export_selected_texture(self): #vers 1
+        """Export selected texture"""
+        QMessageBox.information(self, "Export", "Export functionality coming soon!")
 
     def closeEvent(self, event): #vers 1
         """Handle window close"""

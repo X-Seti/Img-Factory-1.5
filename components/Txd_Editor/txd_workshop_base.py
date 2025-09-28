@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QListWidget,
     QListWidgetItem, QLabel, QPushButton, QFrame, QFileDialog,
     QMessageBox, QScrollArea, QGroupBox, QTableWidget, QTableWidgetItem,
-    QHeaderView, QAbstractItemView, QMenu, QComboBox
+    QHeaderView, QAbstractItemView, QMenu
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage
@@ -232,8 +232,8 @@ class TXDWorkshop(QWidget): #vers 3
 
         return panel
 
-    def _create_right_panel(self): #vers 2
-        """Create enhanced right panel - Preview and texture editing controls"""
+    def _create_right_panel(self): #vers 1
+        """Create right panel - Large texture preview"""
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.StyledPanel)
         panel.setMinimumWidth(400)
@@ -250,77 +250,20 @@ class TXDWorkshop(QWidget): #vers 3
         info_group = QGroupBox("Texture Information")
         info_layout = QVBoxLayout(info_group)
 
-        # Clickable texture name for editing
-        self.info_name = QPushButton("Name: -")
-        self.info_name.clicked.connect(lambda: self._rename_texture(alpha=False))
-        self.info_name.setFlat(True)
-        self.info_name.setStyleSheet("text-align: left; font-weight: bold;")
-        self.info_name.setEnabled(False)
-        info_layout.addWidget(self.info_name)
-
-        # Clickable alpha name for editing (red text when has alpha)
-        self.info_alpha_name = QPushButton("Alpha: -")
-        self.info_alpha_name.clicked.connect(lambda: self._rename_texture(alpha=True))
-        self.info_alpha_name.setFlat(True)
-        self.info_alpha_name.setStyleSheet("text-align: left; color: red; font-weight: bold;")
-        self.info_alpha_name.setVisible(False)
-        self.info_alpha_name.setEnabled(False)
-        info_layout.addWidget(self.info_alpha_name)
-
-        # Size with resize controls
-        size_layout = QHBoxLayout()
+        self.info_name = QLabel("Name: -")
         self.info_size = QLabel("Size: -")
-        size_layout.addWidget(self.info_size)
-
-        self.resize_btn = QPushButton("Resize")
-        self.resize_btn.clicked.connect(self._resize_texture)
-        self.resize_btn.setEnabled(False)
-        size_layout.addWidget(self.resize_btn)
-
-        self.upscale_btn = QPushButton("AI Upscale")
-        self.upscale_btn.clicked.connect(self._upscale_texture)
-        self.upscale_btn.setEnabled(False)
-        size_layout.addWidget(self.upscale_btn)
-
-        info_layout.addLayout(size_layout)
-
-        # Format dropdown
-        format_layout = QHBoxLayout()
-        format_label = QLabel("Format:")
-        self.format_combo = QComboBox()
-        self.format_combo.addItems(["DXT1", "DXT3", "DXT5", "ARGB8888", "ARGB1555", "ARGB4444", "RGB888", "RGB565"])
-        self.format_combo.currentTextChanged.connect(self._change_format)
-        self.format_combo.setEnabled(False)
-        format_layout.addWidget(format_label)
-        format_layout.addWidget(self.format_combo)
-        info_layout.addLayout(format_layout)
-
-        # Keep the missing labels
-        self.info_format = QLabel("Format: -")  # This was missing
+        self.info_format = QLabel("Format: -")
         self.info_alpha = QLabel("Alpha: -")
+        self.info_compression = QLabel("Compression: -")
+
+        info_layout.addWidget(self.info_name)
+        info_layout.addWidget(self.info_size)
         info_layout.addWidget(self.info_format)
         info_layout.addWidget(self.info_alpha)
-
-        # Compression controls
-        compression_layout = QHBoxLayout()
-        self.info_compression = QLabel("Compression: -")
-        compression_layout.addWidget(self.info_compression)
-
-        self.compress_btn = QPushButton("Compress")
-        self.compress_btn.clicked.connect(self._compress_texture)
-        self.compress_btn.setEnabled(False)
-        compression_layout.addWidget(self.compress_btn)
-
-        self.uncompress_btn = QPushButton("Uncompress")
-        self.uncompress_btn.clicked.connect(self._uncompress_texture)
-        self.uncompress_btn.setEnabled(False)
-        compression_layout.addWidget(self.uncompress_btn)
-
-        info_layout.addLayout(compression_layout)
+        info_layout.addWidget(self.info_compression)
 
         layout.addWidget(info_group)
         return panel
-
 
     def _show_texture_context_menu(self, position): #vers 1
         """Show right-click context menu for textures"""
@@ -423,7 +366,7 @@ class TXDWorkshop(QWidget): #vers 3
                 self.main_window.log_message(f"❌ Extract error: {str(e)}")
             return None
 
-    def _load_txd_textures(self, txd_data, txd_name): #vers 9
+    def _load_txd_textures(self, txd_data, txd_name): #vers 8
         """Load textures from TXD data with DXT decompression"""
         try:
             import struct
@@ -480,18 +423,10 @@ class TXDWorkshop(QWidget): #vers 3
                 else:
                     thumb_item.setText("🖼️")
 
-                # Build details text - show alpha name in red if it exists
                 details = f"Name: {tex['name']}\n"
-
-                # Add alpha name in red if texture has alpha
-                if tex.get('has_alpha', False):
-                    alpha_name = tex.get('alpha_name', tex['name'] + 'a')
-                    details += f"Alpha: {alpha_name}\n"
-
                 if tex['width'] > 0:
                     details += f"Size: {tex['width']}x{tex['height']}\n"
-                details += f"Format: {tex['format']}\n"
-                details += f"Alpha: {'Yes' if tex.get('has_alpha', False) else 'No'}"
+                details += f"Format: {tex['format']}\nAlpha: {'Yes' if tex['has_alpha'] else 'No'}"
 
                 self.texture_table.setItem(row, 0, thumb_item)
                 self.texture_table.setItem(row, 1, QTableWidgetItem(details))
@@ -509,230 +444,6 @@ class TXDWorkshop(QWidget): #vers 3
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"❌ Error: {str(e)}")
-
-    def _rename_texture(self, alpha=False): #vers 1
-        """Rename texture or alpha name"""
-        from PyQt6.QtWidgets import QInputDialog
-
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
-            return
-
-        current_name = self.selected_texture.get('name', 'texture')
-
-        if alpha:
-            # Only allow alpha renaming if texture has alpha
-            if not self.selected_texture.get('has_alpha', False):
-                QMessageBox.information(self, "No Alpha", "This texture does not have an alpha channel")
-                return
-
-            alpha_name = self.selected_texture.get('alpha_name', current_name + 'a')
-            new_name, ok = QInputDialog.getText(self, "Rename Alpha", "Enter alpha name:", text=alpha_name)
-            if ok and new_name:
-                self.selected_texture['alpha_name'] = new_name
-                self.info_alpha_name.setText(f"Alpha: {new_name}")
-                self._update_table_display()
-                if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"Alpha renamed to: {new_name}")
-        else:
-            new_name, ok = QInputDialog.getText(self, "Rename Texture", "Enter texture name:", text=current_name)
-            if ok and new_name and new_name != current_name:
-                self.selected_texture['name'] = new_name
-                self.info_name.setText(f"Name: {new_name}")
-                self._update_table_display()
-                if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"Texture renamed: {current_name} -> {new_name}")
-
-    def _resize_texture(self): #vers 1
-        """Resize selected texture"""
-        from PyQt6.QtWidgets import QInputDialog
-
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
-            return
-
-        current_width = self.selected_texture.get('width', 256)
-        current_height = self.selected_texture.get('height', 256)
-
-        # Get new dimensions
-        w, ok1 = QInputDialog.getInt(self, "Resize Texture", "New width:", value=current_width, min=1, max=4096)
-        if not ok1:
-            return
-        h, ok2 = QInputDialog.getInt(self, "Resize Texture", "New height:", value=current_height, min=1, max=4096)
-        if not ok2:
-            return
-
-        # Update texture data (simplified - real implementation would resize image data)
-        self.selected_texture['width'] = w
-        self.selected_texture['height'] = h
-
-        self._update_texture_info(self.selected_texture)
-        self._update_table_display()
-
-        if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Resized texture to {w}x{h}")
-
-    def _upscale_texture(self): #vers 1
-        """AI upscale selected texture"""
-        from PyQt6.QtWidgets import QInputDialog
-
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
-            return
-
-        # Get scale factor
-        factor, ok = QInputDialog.getInt(self, "AI Upscale", "Scale factor:", value=2, min=2, max=8)
-        if not ok:
-            return
-
-        current_width = self.selected_texture.get('width', 256)
-        current_height = self.selected_texture.get('height', 256)
-
-        new_width = current_width * factor
-        new_height = current_height * factor
-
-        # Update texture data (simplified - real implementation would upscale image data)
-        self.selected_texture['width'] = new_width
-        self.selected_texture['height'] = new_height
-
-        self._update_texture_info(self.selected_texture)
-        self._update_table_display()
-
-        if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Upscaled texture {factor}x to {new_width}x{new_height}")
-
-    def _change_format(self, format_name): #vers 1
-        """Change texture format"""
-        if not self.selected_texture:
-            return
-
-        old_format = self.selected_texture.get('format', 'Unknown')
-        self.selected_texture['format'] = format_name
-
-        # Update alpha flag based on format
-        if format_name in ['DXT3', 'DXT5', 'ARGB8888', 'ARGB1555', 'ARGB4444']:
-            self.selected_texture['has_alpha'] = True
-        elif format_name in ['DXT1', 'RGB888', 'RGB565']:
-            self.selected_texture['has_alpha'] = False
-
-        self._update_texture_info(self.selected_texture)
-        self._update_table_display()
-
-        if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Format changed: {old_format} -> {format_name}")
-
-    def _compress_texture(self): #vers 1
-        """Compress selected texture"""
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
-            return
-
-        current_format = self.selected_texture.get('format', 'ARGB8888')
-
-        if 'DXT' in current_format:
-            QMessageBox.information(self, "Already Compressed", "Texture is already compressed")
-            return
-
-        # Choose compression format based on alpha
-        has_alpha = self.selected_texture.get('has_alpha', False)
-        new_format = 'DXT5' if has_alpha else 'DXT1'
-
-        self.selected_texture['format'] = new_format
-        self._update_texture_info(self.selected_texture)
-        self._update_table_display()
-
-        if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Compressed texture to {new_format}")
-
-    def _uncompress_texture(self): #vers 1
-        """Uncompress selected texture"""
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
-            return
-
-        current_format = self.selected_texture.get('format', 'ARGB8888')
-
-        if 'DXT' not in current_format:
-            QMessageBox.information(self, "Not Compressed", "Texture is not compressed")
-            return
-
-        # Uncompress to ARGB8888
-        self.selected_texture['format'] = 'ARGB8888'
-        self.selected_texture['has_alpha'] = True
-
-        self._update_texture_info(self.selected_texture)
-        self._update_table_display()
-
-        if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Uncompressed texture to ARGB8888")
-
-    def _update_table_display(self): #vers 1
-        """Update the middle panel table display after edits"""
-        if not self.selected_texture:
-            return
-
-        row = self.texture_table.currentRow()
-        if row < 0 or row >= len(self.texture_list):
-            return
-
-        tex = self.selected_texture
-
-        # Rebuild details text
-        details = f"Name: {tex['name']}\n"
-
-        # Add alpha name in red if texture has alpha
-        if tex.get('has_alpha', False):
-            alpha_name = tex.get('alpha_name', tex['name'] + 'a')
-            details += f"Alpha: {alpha_name}\n"
-
-        if tex['width'] > 0:
-            details += f"Size: {tex['width']}x{tex['height']}\n"
-        details += f"Format: {tex['format']}\n"
-        details += f"Alpha: {'Yes' if tex.get('has_alpha', False) else 'No'}"
-
-        # Update the table item
-        details_item = self.texture_table.item(row, 1)
-        if details_item:
-            details_item.setText(details)
-
-    def _on_texture_selected(self): #vers 2
-        """Handle texture selection and enable editing controls"""
-        try:
-            row = self.texture_table.currentRow()
-            if row < 0 or row >= len(self.texture_list):
-                # Disable all controls
-                self.info_name.setEnabled(False)
-                self.info_alpha_name.setEnabled(False)
-                self.resize_btn.setEnabled(False)
-                self.upscale_btn.setEnabled(False)
-                self.format_combo.setEnabled(False)
-                self.compress_btn.setEnabled(False)
-                self.uncompress_btn.setEnabled(False)
-                return
-
-            self.selected_texture = self.texture_list[row]
-            self._update_texture_info(self.selected_texture)
-
-            # Enable editing controls
-            self.export_btn.setEnabled(True)
-            self.flip_btn.setEnabled(True)
-            self.props_btn.setEnabled(True)
-            self.info_name.setEnabled(True)
-            self.resize_btn.setEnabled(True)
-            self.upscale_btn.setEnabled(True)
-            self.format_combo.setEnabled(True)
-            self.compress_btn.setEnabled(True)
-            self.uncompress_btn.setEnabled(True)
-
-            # Enable alpha editing only if texture has alpha
-            if self.selected_texture.get('has_alpha', False):
-                self.info_alpha_name.setEnabled(True)
-            else:
-                self.info_alpha_name.setEnabled(False)
-
-        except Exception as e:
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Selection error: {str(e)}")
 
     def _parse_single_texture(self, txd_data, offset, index): #vers 14
         """Parse single texture - Following working txd.py structure exactly"""
@@ -839,88 +550,6 @@ class TXDWorkshop(QWidget): #vers 3
 
             for by in range(blocks_y):
                 for bx in range(blocks_x):
-                    block_offset = (by * blocks_x + bx) * 8
-                    if block_offset + 8 > len(dxt_data):
-                        break
-
-                    c0, c1 = struct.unpack('<HH', dxt_data[block_offset:block_offset+4])
-                    indices = struct.unpack('<I', dxt_data[block_offset+4:block_offset+8])[0]
-
-                    colors = []
-                    for c in [c0, c1]:
-                        r = ((c >> 11) & 0x1F) << 3
-                        g = ((c >> 5) & 0x3F) << 2
-                        b = (c & 0x1F) << 3
-                        colors.append((r, g, b, 255))
-
-                    if c0 > c1:
-                        colors.append(((2*colors[0][0]+colors[1][0])//3, (2*colors[0][1]+colors[1][1])//3, (2*colors[0][2]+colors[1][2])//3, 255))
-                        colors.append(((colors[0][0]+2*colors[1][0])//3, (colors[0][1]+2*colors[1][1])//3, (colors[0][2]+2*colors[1][2])//3, 255))
-                    else:
-                        colors.append(((colors[0][0]+colors[1][0])//2, (colors[0][1]+colors[1][1])//2, (colors[0][2]+colors[1][2])//2, 255))
-                        colors.append((0, 0, 0, 0))
-
-                    for py in range(4):
-                        for px in range(4):
-                            if (bx*4+px < width) and (by*4+py < height):
-                                index = (indices >> ((py*4+px)*2)) & 0x03
-                                pixel_offset = ((by*4+py)*width+(bx*4+px))*4
-                                rgba[pixel_offset:pixel_offset+4] = colors[index]
-            return bytes(rgba)
-        except:
-            return None
-
-    def _decompress_dxt3(self, dxt_data, width, height): #vers 1
-        """DXT3 decompression"""
-        try:
-            import struct
-            rgba = bytearray(width * height * 4)
-            blocks_x = (width + 3) // 4
-            blocks_y = (height + 3) // 4
-
-            for by in range(blocks_y):
-                for bx in range(blocks_x):
-                    block_offset = (by * blocks_x + bx) * 16
-                    if block_offset + 16 > len(dxt_data):
-                        break
-
-                    alpha_data = struct.unpack('<Q', dxt_data[block_offset:block_offset+8])[0]
-                    c0, c1 = struct.unpack('<HH', dxt_data[block_offset+8:block_offset+12])
-                    indices = struct.unpack('<I', dxt_data[block_offset+12:block_offset+16])[0]
-
-                    colors = []
-                    for c in [c0, c1]:
-                        r = ((c >> 11) & 0x1F) << 3
-                        g = ((c >> 5) & 0x3F) << 2
-                        b = (c & 0x1F) << 3
-                        colors.append((r, g, b))
-
-                    colors.append(((2*colors[0][0]+colors[1][0])//3, (2*colors[0][1]+colors[1][1])//3, (2*colors[0][2]+colors[1][2])//3))
-                    colors.append(((colors[0][0]+2*colors[1][0])//3, (colors[0][1]+2*colors[1][1])//3, (colors[0][2]+2*colors[1][2])//3))
-
-                    for py in range(4):
-                        for px in range(4):
-                            if (bx*4+px < width) and (by*4+py < height):
-                                color_index = (indices >> ((py*4+px)*2)) & 0x03
-                                alpha_index = py*4 + px
-                                alpha = ((alpha_data >> (alpha_index*4)) & 0x0F) * 17
-                                pixel_offset = ((by*4+py)*width+(bx*4+px))*4
-                                rgba[pixel_offset:pixel_offset+3] = colors[color_index]
-                                rgba[pixel_offset+3] = alpha
-            return bytes(rgba)
-        except:
-            return None
-
-    def _decompress_dxt5(self, dxt_data, width, height): #vers 1
-        """DXT5 decompression"""
-        try:
-            import struct
-            rgba = bytearray(width * height * 4)
-            blocks_x = (width + 3) // 4
-            blocks_y = (height + 3) // 4
-
-            for by in range(blocks_y):
-                for bx in range(blocks_x):
                     block_offset = (by * blocks_x + bx) * 16
                     if block_offset + 16 > len(dxt_data):
                         break
@@ -928,6 +557,7 @@ class TXDWorkshop(QWidget): #vers 3
                     a0 = dxt_data[block_offset]
                     a1 = dxt_data[block_offset + 1]
                     alpha_indices = struct.unpack('<Q', dxt_data[block_offset:block_offset+8])[0] >> 16
+
                     alpha_palette = [a0, a1]
                     if a0 > a1:
                         for i in range(1, 7):
@@ -1042,10 +672,10 @@ class TXDWorkshop(QWidget): #vers 3
             self.props_btn.setEnabled(True)
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Selection error: {str(e)}")
+                self.main_window.log_message(f"❌ Selection error: {str(e)}")
 
-    def _update_texture_info(self, texture): #vers 4
-        """Update texture information display with clickable names"""
+    def _update_texture_info(self, texture): #vers 3
+        """Update texture information display with preview and channel support"""
         try:
             name = texture.get('name', 'Unknown')
             width = texture.get('width', 0)
@@ -1054,33 +684,17 @@ class TXDWorkshop(QWidget): #vers 3
             fmt = texture.get('format', 'Unknown')
             mipmaps = texture.get('mipmaps', 1)
 
-            # Update clickable name
             self.info_name.setText(f"Name: {name}")
-
-            # Update alpha name (clickable, show in red ONLY if has alpha)
-            if has_alpha:
-                alpha_name = texture.get('alpha_name', name + 'a')
-                self.info_alpha_name.setText(f"Alpha: {alpha_name}")
-                self.info_alpha_name.setVisible(True)
-            else:
-                self.info_alpha_name.setVisible(False)
-
             self.info_size.setText(f"Size: {width}x{height}" if width > 0 else "Size: Unknown")
             self.info_format.setText(f"Format: {fmt}")
             self.info_alpha.setText(f"Alpha: {'Yes' if has_alpha else 'No'}")
 
-            # Update format combo to match current format
-            if hasattr(self, 'format_combo'):
-                index = self.format_combo.findText(fmt)
-                if index >= 0:
-                    self.format_combo.setCurrentIndex(index)
-
-            comp = "Compressed DXT" if 'DXT' in fmt else "Uncompressed"
+            comp = "Compressed DXT"
             if mipmaps > 1:
                 comp += f" | Mipmaps: {mipmaps}"
             self.info_compression.setText(f"Compression: {comp}")
 
-            # Show preview (existing preview code...)
+            # Show preview
             rgba_data = texture.get('rgba_data')
             if rgba_data and width > 0 and height > 0:
                 # Check if we should show alpha channel
@@ -1106,9 +720,9 @@ class TXDWorkshop(QWidget): #vers 3
 
                     # Update button text
                     if hasattr(self, '_show_alpha') and self._show_alpha:
-                        self.flip_btn.setText("Normal")
+                        self.flip_btn.setText("🔄 Normal")
                     else:
-                        self.flip_btn.setText("Alpha")
+                        self.flip_btn.setText("🔄 Alpha")
                     return
 
             self.preview_label.setText("Preview not available")
@@ -1130,7 +744,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         mode = "Alpha Channel" if self._show_alpha else "Normal View"
         if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Switched to {mode}")
+            self.main_window.log_message(f"👁️ Switched to {mode}")
 
     def export_selected_texture(self): #vers 2
         """Export selected texture with channel options"""
@@ -1176,13 +790,13 @@ class TXDWorkshop(QWidget): #vers 3
             if clicked == normal_btn:
                 self._save_texture_png(rgba_data, width, height, file_path)
                 if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"Exported: {file_path}")
+                    self.main_window.log_message(f"✅ Exported: {file_path}")
 
             elif clicked == alpha_btn:
                 alpha_data = self._extract_alpha_channel(rgba_data)
                 self._save_texture_png(alpha_data, width, height, file_path)
                 if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"Exported alpha: {file_path}")
+                    self.main_window.log_message(f"✅ Exported alpha: {file_path}")
 
             elif clicked == both_btn:
                 # Save normal
@@ -1192,7 +806,7 @@ class TXDWorkshop(QWidget): #vers 3
                 alpha_data = self._extract_alpha_channel(rgba_data)
                 self._save_texture_png(alpha_data, width, height, alpha_path)
                 if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"Exported both: {file_path} and {alpha_path}")
+                    self.main_window.log_message(f"✅ Exported both: {file_path} and {alpha_path}")
 
             QMessageBox.information(self, "Success", "Texture exported successfully!")
 
@@ -1224,7 +838,7 @@ class TXDWorkshop(QWidget): #vers 3
                     exported += 1
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Exported {exported} textures to {output_dir}")
+                self.main_window.log_message(f"✅ Exported {exported} textures to {output_dir}")
 
             QMessageBox.information(self, "Success", f"Exported {exported} textures successfully!")
 
@@ -1285,7 +899,7 @@ class TXDWorkshop(QWidget): #vers 3
     def open_img_archive(self): #vers 1
         """Open IMG archive and load TXD file list"""
         try:
-            file_Ipath, _ = QFileDialog.getOpenFileName(self, "Open IMG Archive", "", "IMG Files (*.img);;All Files (*)")
+            file_path, _ = QFileDialog.getOpenFileName(self, "Open IMG Archive", "", "IMG Files (*.img);;All Files (*)")
             if file_path:
                 self.load_from_img_archive(file_path)
         except Exception as e:
@@ -1337,3 +951,85 @@ def open_txd_workshop(main_window, img_path=None): #vers 2
     except Exception as e:
         QMessageBox.critical(main_window, "Error", f"Failed to open TXD Workshop: {str(e)}")
         return None
+                for bx in range(blocks_x):
+                    block_offset = (by * blocks_x + bx) * 8
+                    if block_offset + 8 > len(dxt_data):
+                        break
+
+                    c0, c1 = struct.unpack('<HH', dxt_data[block_offset:block_offset+4])
+                    indices = struct.unpack('<I', dxt_data[block_offset+4:block_offset+8])[0]
+
+                    colors = []
+                    for c in [c0, c1]:
+                        r = ((c >> 11) & 0x1F) << 3
+                        g = ((c >> 5) & 0x3F) << 2
+                        b = (c & 0x1F) << 3
+                        colors.append((r, g, b, 255))
+
+                    if c0 > c1:
+                        colors.append(((2*colors[0][0]+colors[1][0])//3, (2*colors[0][1]+colors[1][1])//3, (2*colors[0][2]+colors[1][2])//3, 255))
+                        colors.append(((colors[0][0]+2*colors[1][0])//3, (colors[0][1]+2*colors[1][1])//3, (colors[0][2]+2*colors[1][2])//3, 255))
+                    else:
+                        colors.append(((colors[0][0]+colors[1][0])//2, (colors[0][1]+colors[1][1])//2, (colors[0][2]+colors[1][2])//2, 255))
+                        colors.append((0, 0, 0, 0))
+
+                    for py in range(4):
+                        for px in range(4):
+                            if (bx*4+px < width) and (by*4+py < height):
+                                index = (indices >> ((py*4+px)*2)) & 0x03
+                                pixel_offset = ((by*4+py)*width+(bx*4+px))*4
+                                rgba[pixel_offset:pixel_offset+4] = colors[index]
+            return bytes(rgba)
+        except:
+            return None
+
+    def _decompress_dxt3(self, dxt_data, width, height): #vers 1
+        """DXT3 decompression"""
+        try:
+            import struct
+            rgba = bytearray(width * height * 4)
+            blocks_x = (width + 3) // 4
+            blocks_y = (height + 3) // 4
+
+            for by in range(blocks_y):
+                for bx in range(blocks_x):
+                    block_offset = (by * blocks_x + bx) * 16
+                    if block_offset + 16 > len(dxt_data):
+                        break
+
+                    alpha_data = struct.unpack('<Q', dxt_data[block_offset:block_offset+8])[0]
+                    c0, c1 = struct.unpack('<HH', dxt_data[block_offset+8:block_offset+12])
+                    indices = struct.unpack('<I', dxt_data[block_offset+12:block_offset+16])[0]
+
+                    colors = []
+                    for c in [c0, c1]:
+                        r = ((c >> 11) & 0x1F) << 3
+                        g = ((c >> 5) & 0x3F) << 2
+                        b = (c & 0x1F) << 3
+                        colors.append((r, g, b))
+
+                    colors.append(((2*colors[0][0]+colors[1][0])//3, (2*colors[0][1]+colors[1][1])//3, (2*colors[0][2]+colors[1][2])//3))
+                    colors.append(((colors[0][0]+2*colors[1][0])//3, (colors[0][1]+2*colors[1][1])//3, (colors[0][2]+2*colors[1][2])//3))
+
+                    for py in range(4):
+                        for px in range(4):
+                            if (bx*4+px < width) and (by*4+py < height):
+                                color_index = (indices >> ((py*4+px)*2)) & 0x03
+                                alpha_index = py*4 + px
+                                alpha = ((alpha_data >> (alpha_index*4)) & 0x0F) * 17
+                                pixel_offset = ((by*4+py)*width+(bx*4+px))*4
+                                rgba[pixel_offset:pixel_offset+3] = colors[color_index]
+                                rgba[pixel_offset+3] = alpha
+            return bytes(rgba)
+        except:
+            return None
+
+    def _decompress_dxt5(self, dxt_data, width, height): #vers 1
+        """DXT5 decompression"""
+        try:
+            import struct
+            rgba = bytearray(width * height * 4)
+            blocks_x = (width + 3) // 4
+            blocks_y = (height + 3) // 4
+
+            for by in range(blocks_y):
