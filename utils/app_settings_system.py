@@ -46,42 +46,42 @@ except ImportError:
 class ThemeSaveDialog(QDialog):
     """Enhanced dialog for saving themes with complete metadata"""
 
-    def __init__(self, app_settings, current_theme_data, parent=None):
+    def __init__(self, app_settings, current_theme_data, parent=None): #vers 1
         super().__init__(parent)
         self.app_settings = app_settings
         self.current_theme_data = current_theme_data
         self.result_theme_data = None
 
-        self.setWindowTitle("💾 Save Theme - IMG Factory 1.5")
+        self.setWindowTitle("Save Theme - IMG Factory 1.5")
         self.setMinimumSize(500, 600)
         self.setModal(True)
 
         self._setup_ui()
         self._detect_theme_type()
 
-    def _setup_ui(self):
+    def _setup_ui(self): #vers 1
         """Create the save dialog UI"""
         layout = QVBoxLayout(self)
 
         # Theme Detection Display
         self.detection_label = QLabel()
-        self.detection_label.setStyleSheet("font-weight: bold; padding: 0px; border-radius: 0px;")
+        self.detection_label.setStyleSheet("font-weight: bold; padding: 8px; border-radius: 4px;")
         layout.addWidget(self.detection_label)
 
         # Instructions
         instructions = QLabel("""
         <b>Theme Naming Guidelines:</b><br>
-        • Dark themes: Add "_Dark" suffix, Light themes: Add "_Light"
+        - Dark themes: Add "_Dark" suffix<br>
+        - Light themes: Add "_Light" suffix
         """)
         instructions.setWordWrap(True)
-        instructions.setStyleSheet("padding: 6px; border-radius:0px; margin: 0px;")
+        instructions.setStyleSheet("padding: 6px; border-radius: 4px; margin: 4px;")
         layout.addWidget(instructions)
 
         # Form Group
-        form_group = QGroupBox("🎨 Theme Information")
+        form_group = QGroupBox("Theme Information")
         form_layout = QVBoxLayout(form_group)
 
-        # Use QGridLayout for better alignment
         grid_layout = QGridLayout()
 
         # Theme Name
@@ -108,23 +108,23 @@ class ThemeSaveDialog(QDialog):
         self.category_combo = QComboBox()
         self.category_combo.setEditable(True)
         categories = [
-            "🏢 Professional",
-            "🌙 Dark Themes",
-            "☀️ Light Themes",
-            "🌿 Nature",
-            "🎨 Creative",
-            "🚀 Gaming",
-            "💼 Business",
-            "🌈 Colorful",
-            "⚡ High Contrast",
-            "🎭 Custom"
+            "Professional",
+            "Dark Themes",
+            "Light Themes",
+            "Nature",
+            "Creative",
+            "Gaming",
+            "Business",
+            "Colorful",
+            "High Contrast",
+            "Custom"
         ]
         self.category_combo.addItems(categories)
         grid_layout.addWidget(self.category_combo, 4, 1, 1, 2)
 
         # Author
         grid_layout.addWidget(QLabel("Author:"), 5, 0)
-        self.author_input = QLineEdit("Somebody")  # Default author
+        self.author_input = QLineEdit("X-Seti")
         grid_layout.addWidget(self.author_input, 5, 1, 1, 2)
 
         # Version
@@ -133,17 +133,15 @@ class ThemeSaveDialog(QDialog):
         self.version_input.setMaximumWidth(100)
         grid_layout.addWidget(self.version_input, 6, 1)
 
-        # Set column proportions - labels smaller, inputs larger
-        grid_layout.setColumnStretch(0, 0)  # Labels: fixed width
-        grid_layout.setColumnStretch(1, 1)  # Main input: expandable
-        grid_layout.setColumnStretch(2, 1)  # Second column: expandable
+        grid_layout.setColumnStretch(0, 0)
+        grid_layout.setColumnStretch(1, 1)
+        grid_layout.setColumnStretch(2, 1)
 
         form_layout.addLayout(grid_layout)
-
         layout.addWidget(form_group)
 
         # Color Summary
-        color_group = QGroupBox("🎨 Color Summary")
+        color_group = QGroupBox("Color Summary")
         color_layout = QVBoxLayout(color_group)
 
         self.color_summary = QLabel()
@@ -155,28 +153,27 @@ class ThemeSaveDialog(QDialog):
         # Buttons
         button_layout = QHBoxLayout()
 
-        self.auto_detect_btn = QPushButton("🔍 Auto-Detect Theme Type")
+        self.auto_detect_btn = QPushButton("Auto-Detect Theme Type")
         self.auto_detect_btn.clicked.connect(self._detect_theme_type)
         button_layout.addWidget(self.auto_detect_btn)
 
         button_layout.addStretch()
 
-        cancel_btn = QPushButton("❌ Cancel")
+        cancel_btn = QPushButton("Cancel")
         cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(cancel_btn)
 
-        self.save_btn = QPushButton("💾 Save Theme")
+        self.save_btn = QPushButton("Save Theme")
         self.save_btn.clicked.connect(self._save_theme)
         self.save_btn.setEnabled(False)
         button_layout.addWidget(self.save_btn)
 
         layout.addLayout(button_layout)
 
-        # Initialize form
         self._populate_current_data()
         self._update_color_summary()
 
-    def _detect_theme_type(self):
+    def _detect_theme_type(self): #vers 1
         """Auto-detect if theme is dark or light based on colors"""
         if not self.current_theme_data or "colors" not in self.current_theme_data:
             return
@@ -184,7 +181,6 @@ class ThemeSaveDialog(QDialog):
         colors = self.current_theme_data["colors"]
         bg_primary = colors.get("bg_primary", "#ffffff")
 
-        # Calculate brightness of primary background
         try:
             hex_color = bg_primary.lstrip('#')
             if len(hex_color) == 6:
@@ -192,55 +188,51 @@ class ThemeSaveDialog(QDialog):
                 g = int(hex_color[2:4], 16)
                 b = int(hex_color[4:6], 16)
 
-                # Calculate perceived brightness (0-255)
                 brightness = (r * 0.299 + g * 0.587 + b * 0.114)
 
                 if brightness < 128:
                     theme_type = "Dark"
-                    self.detection_label.setText("🌙 DARK THEME DETECTED")
+                    self.detection_label.setText("DARK THEME DETECTED")
                     self.detection_label.setStyleSheet(
                         "background: #1A1A1A; color: #FFFFFF; padding: 8px; "
                         "border-radius: 4px; font-weight: bold;"
                     )
-                    self.category_combo.setCurrentText("🌙 Dark Themes")
+                    self.category_combo.setCurrentText("Dark Themes")
                 else:
                     theme_type = "Light"
-                    self.detection_label.setText("☀️ LIGHT THEME DETECTED")
+                    self.detection_label.setText("LIGHT THEME DETECTED")
                     self.detection_label.setStyleSheet(
                         "background: #F5F5F5; color: #333333; padding: 8px; "
                         "border-radius: 4px; font-weight: bold;"
                     )
-                    self.category_combo.setCurrentText("☀️ Light Themes")
+                    self.category_combo.setCurrentText("Light Themes")
 
-                # Auto-suggest name suffix if not present
                 current_name = self.name_input.text()
                 if current_name and not current_name.endswith(f"_{theme_type}"):
                     if not current_name.endswith("_Dark") and not current_name.endswith("_Light"):
                         self.name_input.setText(f"{current_name}_{theme_type}")
 
         except Exception as e:
-            self.detection_label.setText("⚠️ Could not detect theme type")
+            self.detection_label.setText("Could not detect theme type")
             print(f"Theme detection error: {e}")
 
-    def _add_suffix(self, suffix):
+    def _add_suffix(self, suffix): #vers 1
         """Add suffix to theme name"""
         current_name = self.name_input.text()
         if current_name:
-            # Remove existing suffix if present
             for existing_suffix in ["_Dark", "_Light"]:
                 if current_name.endswith(existing_suffix):
                     current_name = current_name[:-len(existing_suffix)]
                     break
-
             self.name_input.setText(f"{current_name}{suffix}")
 
-    def _populate_current_data(self):
+    def _populate_current_data(self): #vers 1
         """Populate form with current theme data"""
         if self.current_theme_data:
             self.display_input.setText(self.current_theme_data.get("name", ""))
             self.description_input.setText(self.current_theme_data.get("description", ""))
 
-            category = self.current_theme_data.get("category", "🎭 Custom")
+            category = self.current_theme_data.get("category", "Custom")
             index = self.category_combo.findText(category)
             if index >= 0:
                 self.category_combo.setCurrentIndex(index)
@@ -250,7 +242,7 @@ class ThemeSaveDialog(QDialog):
             self.author_input.setText(self.current_theme_data.get("author", "X-Seti"))
             self.version_input.setText(self.current_theme_data.get("version", "1.0"))
 
-    def _update_color_summary(self):
+    def _update_color_summary(self): #vers 1
         """Update color summary display"""
         if not self.current_theme_data or "colors" not in self.current_theme_data:
             return
@@ -259,11 +251,11 @@ class ThemeSaveDialog(QDialog):
 
         summary_html = f"""
         <b>Primary Colors:</b><br>
-        • Background: <span style='background-color: {colors.get('bg_primary', '#fff')};
+        - Background: <span style='background-color: {colors.get('bg_primary', '#fff')};
           padding: 2px 8px; border: 1px solid #ccc;'>{colors.get('bg_primary', '#fff')}</span><br>
-        • Accent: <span style='background-color: {colors.get('accent_primary', '#000')};
+        - Accent: <span style='background-color: {colors.get('accent_primary', '#000')};
           color: white; padding: 2px 8px;'>{colors.get('accent_primary', '#000')}</span><br>
-        • Text: <span style='background-color: {colors.get('text_primary', '#000')};
+        - Text: <span style='background-color: {colors.get('text_primary', '#000')};
           color: white; padding: 2px 8px;'>{colors.get('text_primary', '#000')}</span><br>
         <br>
         <b>Total Colors:</b> {len(colors)} defined
@@ -271,36 +263,29 @@ class ThemeSaveDialog(QDialog):
 
         self.color_summary.setText(summary_html)
 
-    def _validate_inputs(self):
+    def _validate_inputs(self): #vers 1
         """Validate form inputs"""
         name = self.name_input.text().strip()
-        display = self.display_input.text().strip()
 
-        # Check if theme name is valid
         valid = bool(name and len(name) >= 3)
 
-        # Check for valid characters
         if valid:
             import re
             valid = bool(re.match(r'^[a-zA-Z0-9_\-\s]+$', name))
 
-        # Enable save button
         self.save_btn.setEnabled(valid)
 
-        # Update button text with validation status
         if valid:
-            self.save_btn.setText("💾 Save Theme")
+            self.save_btn.setText("Save Theme")
             self.save_btn.setStyleSheet("")
         else:
-            self.save_btn.setText("❌ Invalid Name")
+            self.save_btn.setText("Invalid Name")
             self.save_btn.setStyleSheet("background-color: #ffcccb;")
 
-    def _save_theme(self):
+    def _save_theme(self): #vers 1
         """Save the theme with all metadata"""
-        # Collect all form data
         theme_name = self.name_input.text().strip()
 
-        # Create complete theme data
         self.result_theme_data = {
             "name": self.display_input.text().strip() or theme_name,
             "description": self.description_input.text().strip() or f"Custom theme: {theme_name}",
@@ -310,15 +295,14 @@ class ThemeSaveDialog(QDialog):
             "colors": self.current_theme_data.get("colors", {})
         }
 
-        # Add creation timestamp
         from datetime import datetime
         self.result_theme_data["created"] = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-        # Save to file
         success = self.app_settings.save_theme(theme_name, self.result_theme_data)
 
         if success:
-            QMessageBox.information(self, "✅ Theme Saved",
+            QMessageBox.information(
+                self, "Theme Saved",
                 f"Theme '{theme_name}' saved successfully!\n\n"
                 f"Display Name: {self.result_theme_data['name']}\n"
                 f"Category: {self.result_theme_data['category']}\n"
@@ -326,21 +310,22 @@ class ThemeSaveDialog(QDialog):
             )
             self.accept()
         else:
-            QMessageBox.warning(self, "❌ Save Failed",
+            QMessageBox.warning(
+                self, "Save Failed",
                 f"Failed to save theme '{theme_name}'.\n"
                 "Please check file permissions and try again."
             )
 
-    def get_theme_data(self):
+    def get_theme_data(self): #vers 1
         """Get the final theme data after dialog closes"""
         return self.result_theme_data
 
 
 class ColorPickerWidget(QWidget):
     """SAFE, simple color picker widget - NO THREADING"""
-    colorPicked = pyqtSignal(str)  # Emits hex color
+    colorPicked = pyqtSignal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None): #vers 1
         super().__init__(parent)
         self.setFixedSize(280, 35)
         self.current_color = "#ffffff"
@@ -350,8 +335,8 @@ class ColorPickerWidget(QWidget):
         self.pick_button = None
         self._setup_ui()
 
-    def _setup_ui(self):
-        # Main horizontal layout - just the color picker line
+    def _setup_ui(self): #vers 1
+        """Setup UI - main horizontal layout"""
         main_layout = QHBoxLayout(self)
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(2, 2, 2, 2)
@@ -365,7 +350,7 @@ class ColorPickerWidget(QWidget):
         # Hex value display
         self.color_value = QLabel("#FFFFFF")
         self.color_value.setFixedWidth(100)
-        self.color_value.setFixedHeight(27)  # Match button height
+        self.color_value.setFixedHeight(27)
         self.color_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.color_value.setStyleSheet("""
             font-family: monospace;
@@ -388,27 +373,7 @@ class ColorPickerWidget(QWidget):
         # Initialize display
         self.update_color_display("#ffffff")
 
-    def update_color_display(self, hex_color):
-        """Update the color display"""
-        if self.color_display:
-            self.color_display.setStyleSheet(f"border: 1px solid #999; border-radius: 3px; background-color: {hex_color};")
-        if self.color_value:
-            self.color_value.setText(hex_color.upper())
-
-    def open_color_dialog(self):
-        """Open Qt color dialog"""
-        from PyQt6.QtWidgets import QColorDialog
-        from PyQt6.QtGui import QColor
-
-        color = QColorDialog.getColor(QColor("#ffffff"), self)
-        if color.isValid():
-            hex_color = color.name()
-            self.update_color_display(hex_color)
-            # Emit signal if needed
-            if hasattr(self, 'colorPicked'):
-                self.colorPicked.emit(hex_color)
-
-    def open_color_dialog(self):
+    def open_color_dialog(self): #vers 1
         """Open simple Qt color dialog - SAFE"""
         try:
             color = QColorDialog.getColor(QColor(self.current_color), self)
@@ -417,11 +382,11 @@ class ColorPickerWidget(QWidget):
                 self.current_color = hex_color
                 self.update_color_display(hex_color)
                 self.colorPicked.emit(hex_color)
-                print(f"✅ Color selected: {hex_color}")
+                print(f"Color selected: {hex_color}")
         except Exception as e:
             print(f"Color dialog error: {e}")
 
-    def update_color_display(self, hex_color):
+    def update_color_display(self, hex_color): #vers 1
         """Update the color display safely"""
         try:
             if not hex_color or not isinstance(hex_color, str):
@@ -446,15 +411,16 @@ class ColorPickerWidget(QWidget):
                 self.color_value.setText(hex_color.upper())
 
         except Exception as e:
-            print(f"❌ Display update error: {e}")
+            print(f"Display update error: {e}")
 
-    def closeEvent(self, event):
+    def closeEvent(self, event): #vers 1
         """Clean up when widget is closed"""
         super().closeEvent(event)
 
-    def __del__(self):
+    def __del__(self): #vers 1
         """Clean up when object is destroyed"""
         pass
+
 
 class ScreenCaptureThread(QThread):
     """Background thread for screen capture to avoid blocking UI"""
@@ -637,82 +603,69 @@ class XPColorPicker(QWidget): #vers 1
         sliders_layout = QVBoxLayout(sliders_frame)
         sliders_layout.setSpacing(3)
 
-        # Hue slider
+        # Global Hue Slider
         hue_layout = QHBoxLayout()
-        hue_layout.addWidget(QLabel("Hue:", font=QFont("MS Sans Serif", 7)))
-        self.hue_slider = QSlider(Qt.Orientation.Horizontal)
-        self.hue_slider.setMinimum(0)
-        self.hue_slider.setMaximum(360)
-        self.hue_slider.setValue(240)
-        self.hue_slider.setFixedWidth(80)
-        self.hue_slider.setStyleSheet("""
-            QSlider {
-                height: 16px;
-            }
-            QSlider::groove:horizontal {
-                background: #e0e0e0;
-                border: 1px inset #f0f0f0;
-                height: 14px;
-            }
-            QSlider::handle:horizontal {
-                background: #c0c0c0;
-                border: 1px outset #c0c0c0;
-                width: 6px;
-                height: 12px;
-            }
-        """)
-        self.hue_slider.valueChanged.connect(self._on_hue_changed)
-        hue_layout.addWidget(self.hue_slider)
+        hue_layout.addWidget(QLabel("Hue:"))
+        self.global_hue_slider = QSlider(Qt.Orientation.Horizontal)
+        self.global_hue_slider.setMinimum(-180)
+        self.global_hue_slider.setMaximum(180)
+        self.global_hue_slider.setValue(0)
+        self.global_hue_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.global_hue_slider.setTickInterval(30)
+        hue_layout.addWidget(self.global_hue_slider)
+        self.global_hue_value = QLabel("0")
+        self.global_hue_value.setFixedWidth(40)
+        self.global_hue_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        hue_layout.addWidget(self.global_hue_value)
+        global_sliders_layout.addLayout(hue_layout)
 
-        self.hue_value = QLabel("240")
-        self.hue_value.setFixedWidth(30)
-        self.hue_value.setFont(QFont("MS Sans Serif", 7))
-        self.hue_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        hue_layout.addWidget(self.hue_value)
-        sliders_layout.addLayout(hue_layout)
-
-        # Saturation slider
+        # Global Saturation Slider
         sat_layout = QHBoxLayout()
-        sat_layout.addWidget(QLabel("Sat:", font=QFont("MS Sans Serif", 7)))
-        self.sat_slider = QSlider(Qt.Orientation.Horizontal)
-        self.sat_slider.setMinimum(0)
-        self.sat_slider.setMaximum(100)
-        self.sat_slider.setValue(100)
-        self.sat_slider.setFixedWidth(80)
-        self.sat_slider.setStyleSheet(self.hue_slider.styleSheet())
-        self.sat_slider.valueChanged.connect(self._on_sat_changed)
-        sat_layout.addWidget(self.sat_slider)
+        sat_layout.addWidget(QLabel("Sat:"))
+        self.global_sat_slider = QSlider(Qt.Orientation.Horizontal)
+        self.global_sat_slider.setMinimum(-100)
+        self.global_sat_slider.setMaximum(100)
+        self.global_sat_slider.setValue(0)
+        self.global_sat_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.global_sat_slider.setTickInterval(20)
+        sat_layout.addWidget(self.global_sat_slider)
+        self.global_sat_value = QLabel("0")
+        self.global_sat_value.setFixedWidth(40)
+        self.global_sat_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        sat_layout.addWidget(self.global_sat_value)
+        global_sliders_layout.addLayout(sat_layout)
 
-        self.sat_value = QLabel("100")
-        self.sat_value.setFixedWidth(30)
-        self.sat_value.setFont(QFont("MS Sans Serif", 7))
-        self.sat_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        sat_layout.addWidget(self.sat_value)
-        sliders_layout.addLayout(sat_layout)
-
-        # Brightness slider
+        # Global Brightness Slider
         bri_layout = QHBoxLayout()
-        bri_layout.addWidget(QLabel("Bri:", font=QFont("MS Sans Serif", 7)))
-        self.bri_slider = QSlider(Qt.Orientation.Horizontal)
-        self.bri_slider.setMinimum(0)
-        self.bri_slider.setMaximum(100)
-        self.bri_slider.setValue(25)
-        self.bri_slider.setFixedWidth(80)
-        self.bri_slider.setStyleSheet(self.hue_slider.styleSheet())
-        self.bri_slider.valueChanged.connect(self._on_bri_changed)
-        bri_layout.addWidget(self.bri_slider)
+        bri_layout.addWidget(QLabel("Bri:"))
+        self.global_bri_slider = QSlider(Qt.Orientation.Horizontal)
+        self.global_bri_slider.setMinimum(-100)
+        self.global_bri_slider.setMaximum(100)
+        self.global_bri_slider.setValue(0)
+        self.global_bri_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.global_bri_slider.setTickInterval(20)
+        bri_layout.addWidget(self.global_bri_slider)
+        self.global_bri_value = QLabel("0")
+        self.global_bri_value.setFixedWidth(40)
+        self.global_bri_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        bri_layout.addWidget(self.global_bri_value)
+        global_sliders_layout.addLayout(bri_layout)
 
-        self.bri_value = QLabel("25")
-        self.bri_value.setFixedWidth(30)
-        self.bri_value.setFont(QFont("MS Sans Serif", 7))
-        self.bri_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        bri_layout.addWidget(self.bri_value)
-        sliders_layout.addLayout(bri_layout)
+        # Reset button
+        reset_btn = QPushButton("Reset Global Adjustments")
+        reset_btn.clicked.connect(self._reset_global_sliders)
+        global_sliders_layout.addWidget(reset_btn)
+
+        self.global_hue_slider.valueChanged.connect(self._on_global_hue_changed)
+        self.global_sat_slider.valueChanged.connect(self._on_global_sat_changed)
+        self.global_bri_slider.valueChanged.connect(self._on_global_bri_changed)
 
         right_layout.addWidget(sliders_frame)
         right_layout.addStretch()
 
         main_layout.addWidget(right_widget)
+
+
 
     def _load_theme_colors(self): #vers 1
         """Load colors from current theme"""
@@ -814,23 +767,33 @@ class XPColorPicker(QWidget): #vers 1
 
 
 class ThemeColorEditor(QWidget):
-    """Widget for editing individual theme colors"""
-    colorChanged = pyqtSignal(str, str)  # color_key, hex_value
+    """Widget for editing individual theme colors with lock protection"""
+    colorChanged = pyqtSignal(str, str)
+    lockChanged = pyqtSignal(str, bool)  # NEW: Signal when lock state changes
 
-    def __init__(self, color_key, color_name, current_value, parent=None):
+    def __init__(self, color_key, color_name, current_value, parent=None): #vers 3
         super().__init__(parent)
         self.color_key = color_key
         self.color_name = color_name
         self.current_value = current_value
+        self.is_locked = False  # NEW: Track lock state
         self._setup_ui()
 
-    def _setup_ui(self):
+    def _setup_ui(self): #vers 3
         layout = QHBoxLayout(self)
         layout.setContentsMargins(5, 2, 5, 2)
 
-        # Color name label
+        # NEW: Lock checkbox
+        self.lock_check = QCheckBox()
+        self.lock_check.setFixedWidth(30)
+        self.lock_check.setToolTip("Lock to prevent global adjustments")
+        self.lock_check.stateChanged.connect(self._on_lock_changed)
+        layout.addWidget(self.lock_check)
+
+        # Color name label - FIXED WIDTH for alignment
         name_label = QLabel(self.color_name)
-        name_label.setMinimumWidth(120)
+        name_label.setMinimumWidth(150)
+        name_label.setMaximumWidth(150)
         layout.addWidget(name_label)
 
         # Color preview
@@ -839,51 +802,66 @@ class ThemeColorEditor(QWidget):
         self.update_preview(self.current_value)
         layout.addWidget(self.color_preview)
 
-        # Color value input
+        # Color value input - FIXED WIDTH for column alignment
         self.color_input = QLineEdit(self.current_value)
-        self.color_input.setMaximumWidth(80)
-        self.color_input.setFont(QFont("monospace"))
+        self.color_input.setMinimumWidth(85)
+        self.color_input.setMaximumWidth(85)
+        self.color_input.setFont(QFont("monospace", 9))
         self.color_input.textChanged.connect(self.on_color_changed)
         layout.addWidget(self.color_input)
 
         # Color dialog button
-        dialog_btn = QPushButton("🎨")
-        dialog_btn.setFixedSize(25, 25)
+        dialog_btn = QPushButton("Pick")
+        dialog_btn.setFixedSize(50, 25)
         dialog_btn.clicked.connect(self.open_color_dialog)
         layout.addWidget(dialog_btn)
 
         layout.addStretch()
 
-    def update_preview(self, hex_color):
-        """Update color preview"""
-        try:
-            self.color_preview.setStyleSheet(
-                f"background-color: {hex_color}; border: 1px solid #999; border-radius: 3px;"
-            )
-        except:
-            self.color_preview.setStyleSheet("background-color: #ff0000; border: 1px solid #999;")
+    def _on_lock_changed(self, state): #vers 1
+        """Handle lock state change"""
+        self.is_locked = (state == Qt.CheckState.Checked.value)
+        self.lockChanged.emit(self.color_key, self.is_locked)
 
-    def on_color_changed(self, text):
-        """Handle color input change"""
+        # Visual feedback - dim when locked
+        if self.is_locked:
+            self.color_input.setStyleSheet("background-color: #f0f0f0; color: #666;")
+            self.lock_check.setToolTip("Locked - Click to unlock")
+        else:
+            self.color_input.setStyleSheet("")
+            self.lock_check.setToolTip("Unlocked - Click to lock")
+
+    def on_color_changed(self, text): #vers 1
+        """Handle color input text change"""
         if text.startswith('#') and len(text) == 7:
-            try:
-                # Validate hex color
-                QColor(text)
-                self.current_value = text
-                self.update_preview(text)
-                self.colorChanged.emit(self.color_key, text)
-            except:
-                pass
+            self.current_value = text
+            self.update_preview(text)
+            self.colorChanged.emit(self.color_key, text)
 
-    def open_color_dialog(self):
-        """Open Qt color dialog"""
+    def open_color_dialog(self): #vers 1
+        """Open color picker dialog"""
         color = QColorDialog.getColor(QColor(self.current_value), self)
         if color.isValid():
             hex_color = color.name()
             self.color_input.setText(hex_color)
+
+    def update_color(self, hex_color): #vers 2
+        """Update color from external source - respects lock"""
+        # Only update if not locked
+        if not self.is_locked:
+            self.color_input.setText(hex_color)
             self.current_value = hex_color
             self.update_preview(hex_color)
-            self.colorChanged.emit(self.color_key, hex_color)
+
+    def set_locked(self, locked): #vers 1
+        """Programmatically set lock state"""
+        self.lock_check.setChecked(locked)
+
+    def update_preview(self, hex_color): #vers 1
+        """Update the color preview"""
+        self.color_preview.setStyleSheet(
+            f"background-color: {hex_color}; border: 1px solid #999;"
+        )
 
     def set_color(self, hex_color):
         """Set color from external source (like color picker)"""
@@ -927,57 +905,75 @@ class DebugSettings:
         return self.debug_enabled
 
 class AppSettings:
-    def __init__(self, settings_file="imgfactory.settings.json"):
-    #def __init__(self):
-        # Get the directory where this file is located
+    def __init__(self, settings_file="imgfactory.settings.json"): #vers 3
+        """Initialize application settings with Windows compatibility"""
         current_file_dir = Path(__file__).parent
-        self.settings_file = settings_file
 
-        # FIXED: Set paths based on where we are
+        # FIXED: Set paths based on where we are - Windows compatible
         if current_file_dir.name == "utils":
-            # We're in utils/, so themes are in ../themes/
             self.themes_dir = current_file_dir.parent / "themes"
-            self.settings_file = current_file_dir.parent / "imgfactory.settings.json"
+            self.settings_file = current_file_dir.parent / settings_file
         else:
-            # We're in root, so themes are in ./themes/
             self.themes_dir = current_file_dir / "themes"
-            self.settings_file = current_file_dir / "imgfactory.settings.json"
+            self.settings_file = current_file_dir / settings_file
 
-        # Initialize default settings first
+        # FIXED: Windows-compatible default paths using Path objects
+        if os.name == 'nt':  # Windows
+            user_home = Path.home()
+            desktop = user_home / "Desktop"
+            steam_paths = [
+                Path("C:/Program Files (x86)/Steam/steamapps/common/Grand Theft Auto Vice City"),
+                Path("C:/Program Files/Steam/steamapps/common/Grand Theft Auto Vice City"),
+                user_home / ".steam/steam/steamapps/common/Grand Theft Auto Vice City"
+            ]
+            working_gta = next((str(p) for p in steam_paths if p.exists()), str(desktop / "GTA_VC"))
+        else:  # Linux/Mac
+            user_home = Path.home()
+            desktop = user_home / "Desktop"
+            working_gta = str(user_home / ".steam/steam/steamapps/common/Grand Theft Auto Vice City")
+
+        # Initialize default settings with Windows-safe paths
         self.default_settings = {
             'debug_mode': False,
             'debug_level': 'INFO',
             'current_theme': 'img_factory',
+            'theme': 'img_factory',
             'debug_categories': ['IMG_LOADING', 'TABLE_POPULATION', 'BUTTON_ACTIONS', 'FILE_OPERATIONS'],
-            'working_gta_folder': os.path.expanduser("~/.steamapps/common/GTA Vice City/"),
-            'assists_folder': os.path.expanduser("~/Desktop/Assists/"),
-            'textures_folder': os.path.expanduser("~/Desktop/Textures/"),
-            'collisions_folder': os.path.expanduser("~/Desktop/Collisions/"),
-            'generics_folder': os.path.expanduser("~/Desktop/Generics/"),
-            'water_folder': os.path.expanduser("~/Desktop/Water/"),
-            'radar_folder': os.path.expanduser("~/Desktop/Radartiles/"),
-            'gameart_folder': os.path.expanduser("~/Desktop/Gameart/"),
-            'peds_folder': os.path.expanduser("~/Desktop/Peds/"),
-            'vehicles_folder': os.path.expanduser("~/Desktop/Vehicles/"),
-            'weapons_folder': os.path.expanduser("~/Desktop/Weapons/")
+            'working_gta_folder': working_gta,
+            'assists_folder': str(desktop / "Assists"),
+            'textures_folder': str(desktop / "Textures"),
+            'collisions_folder': str(desktop / "Collisions"),
+            'generics_folder': str(desktop / "Generics"),
+            'water_folder': str(desktop / "Water"),
+            'radar_folder': str(desktop / "Radartiles"),
+            'gameart_folder': str(desktop / "Gameart"),
+            'peds_folder': str(desktop / "Peds"),
+            'vehicles_folder': str(desktop / "Vehicles"),
+            'weapons_folder': str(desktop / "Weapons"),
+            'font_family': 'Segoe UI' if os.name == 'nt' else 'Sans Serif',
+            'font_size': 9,
+            'show_tooltips': True,
+            'show_menu_icons': True,
+            'show_button_icons': True,
+            'panel_opacity': 95,
+            'remember_img_output_path': True,
+            'remember_import_path': True,
+            'remember_export_path': True,
+            'last_img_output_path': '',
+            'last_import_path': '',
+            'last_export_path': ''
         }
 
-        # Debug: Show what we found
-        print(f"🎨 Looking for themes in: {self.themes_dir}")
-        print(f"📁 Themes directory exists: {self.themes_dir.exists()}")
+        print(f"Looking for themes in: {self.themes_dir}")
+        print(f"Themes directory exists: {self.themes_dir.exists()}")
         if self.themes_dir.exists():
             theme_files = list(self.themes_dir.glob("*.json"))
-            print(f"📄 Found {len(theme_files)} theme files")
-            for theme_file in theme_files:
-                print(f"  - {theme_file.name}")
+            print(f"Found {len(theme_files)} theme files")
 
-        # Load themes first
         self.themes = self._load_all_themes()
-
-        # Fixed: Initialize current_settings
         self.current_settings = self._load_settings()
 
-        # GTA Project Directories - use values from settings
+        # GTA Project Directories
         self.working_gta_folder = self.current_settings.get('working_gta_folder', self.default_settings['working_gta_folder'])
         self.assists_folder = self.current_settings.get('assists_folder', self.default_settings['assists_folder'])
         self.textures_folder = self.current_settings.get('textures_folder', self.default_settings['textures_folder'])
@@ -989,6 +985,8 @@ class AppSettings:
         self.peds_folder = self.current_settings.get('peds_folder', self.default_settings['peds_folder'])
         self.vehicles_folder = self.current_settings.get('vehicles_folder', self.default_settings['vehicles_folder'])
         self.weapons_folder = self.current_settings.get('weapons_folder', self.default_settings['weapons_folder'])
+
+
 
     # For creating directories if they don't exist
     def ensure_directories_exist(self):
@@ -1021,45 +1019,71 @@ class AppSettings:
             return getattr(self, 'assists_folder', default)
         return getattr(self, key, default)
 
-    def _load_settings(self):
-        """Load settings from file"""
+    def _load_settings(self): #vers 2
+        """Load settings from file - Windows compatible"""
         try:
             if self.settings_file.exists():
-                with open(self.settings_file, 'r') as f:
-                    settings = json.load(f)
-                    # Merge with defaults to ensure all keys exist
-                    merged_settings = self.default_settings.copy()
-                    merged_settings.update(settings)
-                    return merged_settings
-        except Exception as e:
-            print(f"⚠️ Could not load settings: {e}")
+                # FIXED: Use explicit encoding for Windows
+                with open(self.settings_file, 'r', encoding='utf-8') as f:
+                    loaded_settings = json.load(f)
 
-        # Return defaults if loading failed
+                settings = self.default_settings.copy()
+                settings.update(loaded_settings)
+
+                theme_name = settings.get("theme")
+                if theme_name and theme_name not in self.themes:
+                    print(f"Theme '{theme_name}' not found, using default")
+                    if self.themes:
+                        settings["theme"] = list(self.themes.keys())[0]
+                    else:
+                        settings["theme"] = "img_factory"
+
+                return settings
+        except Exception as e:
+            print(f"Error loading settings: {e}")
+
         return self.default_settings.copy()
 
-    def _load_all_themes(self):
-        """Load all theme files from themes directory"""
+
+    def _load_all_themes(self): #vers 2
+        """Load all theme files from themes directory - Windows compatible"""
         themes = {}
         try:
             if self.themes_dir.exists():
                 for theme_file in self.themes_dir.glob("*.json"):
                     try:
-                        with open(theme_file, 'r') as f:
+                        # FIXED: Use explicit encoding for Windows
+                        with open(theme_file, 'r', encoding='utf-8') as f:
                             theme_data = json.load(f)
                             theme_name = theme_file.stem
                             themes[theme_name] = theme_data
+                            print(f"  Loaded: {theme_file.name}")
                     except Exception as e:
-                        print(f"⚠️ Could not load theme {theme_file.name}: {e}")
+                        print(f"  Error loading {theme_file.name}: {e}")
+            else:
+                print(f"Themes directory not found: {self.themes_dir}")
         except Exception as e:
-            print(f"⚠️ Error loading themes: {e}")
+            print(f"Error accessing themes directory: {e}")
+
+        if not themes:
+            print("No themes loaded from files, using built-in themes")
+            themes = self._get_builtin_themes()
+        else:
+            print(f"Successfully loaded {len(themes)} themes from files")
+            builtin = self._get_builtin_themes()
+            for name, data in builtin.items():
+                if name not in themes:
+                    themes[name] = data
+                    print(f"   Added built-in fallback: {name}")
 
         return themes
 
     def save_settings(self):
         """Save current settings to file"""
         try:
-            with open(self.settings_file, 'w') as f:
-                json.dump(self.current_settings, f, indent=2)
+            self.settings_file.parent.mkdir(parents=True, exist_ok=True)  # ADD THIS LINE
+            with open(self.settings_file, 'w', encoding='utf-8') as f:  # ADD encoding='utf-8'
+                json.dump(self.current_settings, f, indent=2, ensure_ascii=False)  # ADD ensure_ascii=False
         except Exception as e:
             print(f"⚠️ Could not save settings: {e}")
         # Map old 'project_folder' to assists_folder for compatibility
@@ -1420,27 +1444,26 @@ class AppSettings:
             print(f"Error saving theme {theme_name}: {e}")
             return False
 
-    def save_theme(self, theme_name: str, theme_data: dict) -> bool:
-        """Save a theme to file and immediately reload themes"""
+    def save_theme(self, theme_name: str, theme_data: dict): #vers 2
+        """Save a theme to file and immediately reload themes - Windows compatible"""
         try:
-            # Ensure themes directory exists
-            self.themes_dir.mkdir(exist_ok=True)
+            self.themes_dir.mkdir(parents=True, exist_ok=True)
 
-            # Save theme file
             theme_file = self.themes_dir / f"{theme_name}.json"
             with open(theme_file, 'w', encoding='utf-8') as f:
                 json.dump(theme_data, f, indent=2, ensure_ascii=False)
 
-            print(f"💾 Saved theme: {theme_name} -> {theme_file}")
-
-            # IMPORTANT: Immediately reload themes so the new theme is available
+            print(f"Saved theme: {theme_name} -> {theme_file}")
             self.refresh_themes()
 
             return True
 
         except Exception as e:
-            print(f"❌ Error saving theme {theme_name}: {e}")
+            print(f"Error saving theme {theme_name}: {e}")
+            import traceback
+            traceback.print_exc()
             return False
+
 
     def refresh_themes(self):
         """Reload themes from disk - HOT RELOAD functionality"""
@@ -1737,6 +1760,76 @@ class SettingsDialog(QDialog):
             current_row = self.color_picker.element_list.currentRow()
             self.color_picker._on_element_selected(current_row)
 
+    def _on_global_hue_changed(self, value): #vers 2
+        """Handle global hue slider change - applies to ALL colors"""
+        self.global_hue_value.setText(str(value))
+
+        hue_shift = value
+        sat_shift = self.global_sat_slider.value()
+        bri_shift = self.global_bri_slider.value()
+
+        self.apply_global_hsb_to_all_colors(hue_shift, sat_shift, bri_shift)
+
+    def _on_global_sat_changed(self, value): #vers 2
+        """Handle global saturation slider change - applies to ALL colors"""
+        self.global_sat_value.setText(str(value))
+
+        hue_shift = self.global_hue_slider.value()
+        sat_shift = value
+        bri_shift = self.global_bri_slider.value()
+
+        self.apply_global_hsb_to_all_colors(hue_shift, sat_shift, bri_shift)
+
+    def _on_global_bri_changed(self, value): #vers 2
+        """Handle global brightness slider change - applies to ALL colors"""
+        self.global_bri_value.setText(str(value))
+
+        hue_shift = self.global_hue_slider.value()
+        sat_shift = self.global_sat_slider.value()
+        bri_shift = value
+
+        self.apply_global_hsb_to_all_colors(hue_shift, sat_shift, bri_shift)
+
+    def apply_global_hsb_to_all_colors(self, hue_shift, sat_shift, bri_shift): #vers 1
+        """Apply HSB adjustments to ALL theme colors globally"""
+        current_theme = self.theme_selector_combo.currentData()
+        original_colors = self.app_settings.get_theme_colors(current_theme)
+
+        # Apply adjustments to each color
+        for color_key, original_hex in original_colors.items():
+            # Convert to HSL
+            h, s, l = rgb_to_hsl(original_hex)
+
+            # Apply shifts
+            h = (h + hue_shift) % 360
+            s = max(0, min(100, s + sat_shift))
+            l = max(0, min(100, l + bri_shift))
+
+            # Convert back to hex
+            new_hex = hsl_to_rgb(h, s, l)
+
+            # Update the color editor
+            if color_key in self.color_editors:
+                self.color_editors[color_key].update_color(new_hex)
+
+            # Store modified color
+            self._modified_colors[color_key] = new_hex
+
+    def _reset_global_sliders(self): #vers 1
+        """Reset global HSB sliders to default (0)"""
+        self.global_hue_slider.setValue(0)
+        self.global_sat_slider.setValue(0)
+        self.global_bri_slider.setValue(0)
+
+        current_theme = self.theme_selector_combo.currentData()
+        if current_theme:
+            original_colors = self.app_settings.get_theme_colors(current_theme)
+            self._modified_colors = original_colors.copy()
+
+            for color_key, editor in self.color_editors.items():
+                if color_key in original_colors:
+                    editor.update_color(original_colors[color_key])
+
     def _on_color_changed(self, element_key, hex_color): #vers 1
         """Handle color change from color picker - ADD TO SettingsDialog"""
         # Update the theme colors in memory
@@ -1744,6 +1837,87 @@ class SettingsDialog(QDialog):
             self._modified_colors = self.app_settings.get_theme_colors().copy()
 
         self._modified_colors[element_key] = hex_color
+
+    def apply_global_hsb_to_all_colors(self, hue_shift, sat_shift, bri_shift): #vers 3
+        """Apply HSB adjustments to ALL theme colors globally - respects locks"""
+        if not hasattr(self, 'color_editors'):
+            print("Warning: color_editors not created yet")
+            return
+
+        if not hasattr(self, 'theme_selector_combo'):
+            print("Warning: theme_selector_combo not created yet")
+            return
+
+        current_theme = self.theme_selector_combo.currentData()
+        if not current_theme:
+            return
+
+        original_colors = self.app_settings.get_theme_colors(current_theme)
+
+        # Count locked/unlocked
+        locked_count = 0
+        updated_count = 0
+
+        # Apply adjustments to each color
+        for color_key, original_hex in original_colors.items():
+            if color_key not in self.color_editors:
+                continue
+
+            editor = self.color_editors[color_key]
+
+            # SKIP if locked
+            if editor.is_locked:
+                locked_count += 1
+                continue
+
+            # Convert to HSL
+            h, s, l = rgb_to_hsl(original_hex)
+
+            # Apply shifts
+            h = (h + hue_shift) % 360
+            s = max(0, min(100, s + sat_shift))
+            l = max(0, min(100, l + bri_shift))
+
+            # Convert back to hex
+            new_hex = hsl_to_rgb(h, s, l)
+
+            # Update the color editor
+            editor.update_color(new_hex)
+            updated_count += 1
+
+            # Store modified color
+            if not hasattr(self, '_modified_colors'):
+                self._modified_colors = {}
+            self._modified_colors[color_key] = new_hex
+
+        # Optional: Show feedback
+        if hasattr(self, 'picked_color_hex'):
+            if locked_count > 0:
+                self.picked_color_hex.setText(f"Updated: {updated_count}, Locked: {locked_count}")
+
+
+    # ADD helper methods to SettingsDialog for lock management
+
+    def _lock_all_colors(self): #vers 1
+        """Lock all color editors"""
+        if hasattr(self, 'color_editors'):
+            for editor in self.color_editors.values():
+                editor.set_locked(True)
+
+    def _unlock_all_colors(self): #vers 1
+        """Unlock all color editors"""
+        if hasattr(self, 'color_editors'):
+            for editor in self.color_editors.values():
+                editor.set_locked(False)
+
+    def _lock_text_colors(self): #vers 1
+        """Lock only text-related colors"""
+        if hasattr(self, 'color_editors'):
+            text_keys = ['text_primary', 'text_secondary', 'text_accent', 'button_text_color']
+            for key in text_keys:
+                if key in self.color_editors:
+                    self.color_editors[key].set_locked(True)
+
 
     def _refresh_themes(self): #vers 1
         """Refresh themes from disk - ADD TO SettingsDialog"""
@@ -2774,6 +2948,78 @@ class SettingsDialog(QDialog):
             palette_layout.addWidget(color_btn, row, col)
 
         left_layout.addWidget(palette_group)
+
+
+        # Global Theme Sliders Group
+        global_sliders_group = QGroupBox("Global Theme Sliders")
+        global_sliders_layout = QVBoxLayout(global_sliders_group)
+
+        info_label = QLabel("<b>Adjust ALL colors globally:</b>")
+        global_sliders_layout.addWidget(info_label)
+
+        # Global Hue Slider
+        hue_layout = QHBoxLayout()
+        hue_layout.addWidget(QLabel("Hue:"))
+        self.global_hue_slider = QSlider(Qt.Orientation.Horizontal)
+        self.global_hue_slider.setMinimum(-180)
+        self.global_hue_slider.setMaximum(180)
+        self.global_hue_slider.setValue(0)
+        hue_layout.addWidget(self.global_hue_slider)
+        self.global_hue_value = QLabel("0")
+        self.global_hue_value.setFixedWidth(40)
+        hue_layout.addWidget(self.global_hue_value)
+        global_sliders_layout.addLayout(hue_layout)
+
+        # Global Saturation Slider
+        sat_layout = QHBoxLayout()
+        sat_layout.addWidget(QLabel("Sat:"))
+        self.global_sat_slider = QSlider(Qt.Orientation.Horizontal)
+        self.global_sat_slider.setMinimum(-100)
+        self.global_sat_slider.setMaximum(100)
+        self.global_sat_slider.setValue(0)
+        sat_layout.addWidget(self.global_sat_slider)
+        self.global_sat_value = QLabel("0")
+        self.global_sat_value.setFixedWidth(40)
+        sat_layout.addWidget(self.global_sat_value)
+        global_sliders_layout.addLayout(sat_layout)
+
+        # Global Brightness Slider
+        bri_layout = QHBoxLayout()
+        bri_layout.addWidget(QLabel("Bri:"))
+        self.global_bri_slider = QSlider(Qt.Orientation.Horizontal)
+        self.global_bri_slider.setMinimum(-100)
+        self.global_bri_slider.setMaximum(100)
+        self.global_bri_slider.setValue(0)
+        bri_layout.addWidget(self.global_bri_slider)
+        self.global_bri_value = QLabel("0")
+        self.global_bri_value.setFixedWidth(40)
+        bri_layout.addWidget(self.global_bri_value)
+        global_sliders_layout.addLayout(bri_layout)
+
+        # Reset + Lock buttons
+        buttons_layout = QHBoxLayout()
+        reset_btn = QPushButton("Reset")
+        reset_btn.clicked.connect(self._reset_global_sliders)
+        buttons_layout.addWidget(reset_btn)
+
+        lock_all_btn = QPushButton("Lock All")
+        lock_all_btn.clicked.connect(self._lock_all_colors)
+        buttons_layout.addWidget(lock_all_btn)
+
+        unlock_all_btn = QPushButton("Unlock All")
+        unlock_all_btn.clicked.connect(self._unlock_all_colors)
+        buttons_layout.addWidget(unlock_all_btn)
+
+        global_sliders_layout.addLayout(buttons_layout)
+
+        left_layout.addWidget(global_sliders_group)
+
+        # THEN at the END of _create_color_picker_tab, AFTER color_editors are created, ADD:
+        # Connect sliders (must be AFTER color_editors exist)
+        self.global_hue_slider.valueChanged.connect(self._on_global_hue_changed)
+        self.global_sat_slider.valueChanged.connect(self._on_global_sat_changed)
+        self.global_bri_slider.valueChanged.connect(self._on_global_bri_changed)
+
 
         # Windows XP style color picker
         color_group = QGroupBox("Global Theme Sliders")
