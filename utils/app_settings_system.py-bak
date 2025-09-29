@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
 # $vers" X-Seti - June26, 2025 - Img Factory 1.5 theme settings"
 
+#!/usr/bin/env python3
 """
 IMG Factory App Settings System - Clean Version
 Settings management without demo code
@@ -1913,36 +1913,6 @@ class SettingsDialog(QDialog): #vers 4
         self._create_ui()
         self._load_current_settings()
 
-    # ===== DEMO TAB FUNCTIONS =====
-
-    def _apply_demo_theme(self, theme_name: str): #vers 1
-        """Apply theme to demo elements"""
-        if theme_name not in self.app_settings.themes:
-            return
-
-        # Temporarily update settings for preview
-        self.app_settings.current_settings["theme"] = theme_name
-
-        # Apply theme stylesheet
-        stylesheet = self.app_settings.get_stylesheet()
-
-        # Apply to demo widgets if instant apply enabled
-        if hasattr(self, 'instant_apply_check') and self.instant_apply_check.isChecked():
-            self.setStyleSheet(stylesheet)
-            self.themeChanged.emit(theme_name)
-
-        if hasattr(self, 'demo_log'):
-            self.demo_log.append(f"🎨 Previewing: {theme_name}")
-
-    def _reset_demo_theme(self): #vers 1
-        """Reset to original theme"""
-        original = getattr(self, '_original_theme', self.app_settings.current_settings["theme"])
-        if hasattr(self, 'demo_theme_combo'):
-            self.demo_theme_combo.setCurrentText(original)
-        self._apply_demo_theme(original)
-
-    # ===== PICKER FUNCTIONS =====
-
     def _create_ui(self): #vers 4
         """Create the settings dialog UI - FIXED"""
         layout = QVBoxLayout(self)
@@ -1955,37 +1925,37 @@ class SettingsDialog(QDialog): #vers 4
 
         # Add tabs
         self.color_picker_tab = self._create_color_picker_tab()
-        self.tabs.addTab(self.color_picker_tab, "Color Picker")
+        self.tabs.addTab(self.color_picker_tab, "🎨 Color Picker")
 
-        #self.demo_tab = self._create_demo_tab()
-        #self.tabs.addTab(self.demo_tab, "Demo")
+        self.demo_tab = self._create_demo_tab()
+        self.tabs.addTab(self.demo_tab, "🎭 Demo")
 
         self.debug_tab = self._create_debug_tab()
-        self.tabs.addTab(self.debug_tab, "Debug")
+        self.tabs.addTab(self.debug_tab, "🐛 Debug")
 
         self.interface_tab = self._create_interface_tab()
-        self.tabs.addTab(self.interface_tab, "Interface")
+        self.tabs.addTab(self.interface_tab, "⚙️ Interface")
 
         layout.addWidget(self.tabs)
 
         # Buttons
         button_layout = QHBoxLayout()
 
-        reset_btn = QPushButton("Reset to Defaults")
+        reset_btn = QPushButton("🔄 Reset to Defaults")
         reset_btn.clicked.connect(self._reset_to_defaults)
         button_layout.addWidget(reset_btn)
 
         button_layout.addStretch()
 
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton("❌ Cancel")
         cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(cancel_btn)
 
-        apply_btn = QPushButton("Apply")
+        apply_btn = QPushButton("✅ Apply")
         apply_btn.clicked.connect(self._apply_settings)
         button_layout.addWidget(apply_btn)
 
-        ok_btn = QPushButton("OK")
+        ok_btn = QPushButton("💾 OK")
         ok_btn.clicked.connect(self._ok_clicked)
         ok_btn.setDefault(True)
         button_layout.addWidget(ok_btn)
@@ -2003,7 +1973,7 @@ class SettingsDialog(QDialog): #vers 4
         left_panel.setMaximumWidth(350)
 
         # Screen Color Picker Group
-        picker_group = QGroupBox("Color Picker")
+        picker_group = QGroupBox("🎯 Screen Color Picker")
         picker_layout = QVBoxLayout(picker_group)
 
         self.color_picker = ColorPickerWidget()
@@ -2024,7 +1994,7 @@ class SettingsDialog(QDialog): #vers 4
         left_layout.addWidget(picker_group)
 
         # Palette Colors Group
-        palette_group = QGroupBox("Quick Colors")
+        palette_group = QGroupBox("🎨 Quick Colors")
         palette_layout = QGridLayout(palette_group)
 
         palette_colors = [
@@ -2114,23 +2084,16 @@ class SettingsDialog(QDialog): #vers 4
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
 
-
         # Theme Selection
         theme_sel_group = QGroupBox("🎨 Theme Selection")
         theme_sel_layout = QVBoxLayout(theme_sel_group)
-
-        # Instant apply checkbox
-        self.instant_apply_check = QCheckBox("Instant Apply")
-        theme_sel_layout.addWidget(self.instant_apply_check)
 
         self.theme_selector_combo = QComboBox()
         for theme_key, theme_data in self.app_settings.themes.items():
             display_name = theme_data.get("name", theme_key)
             self.theme_selector_combo.addItem(display_name, theme_key)
         self.theme_selector_combo.currentTextChanged.connect(self._on_theme_changed)
-        self.theme_selector_combo.currentTextChanged.connect(self._apply_demo_theme)
         theme_sel_layout.addWidget(self.theme_selector_combo)
-
 
         # Theme action buttons
         theme_buttons_layout = QHBoxLayout()
@@ -2541,6 +2504,33 @@ class SettingsDialog(QDialog): #vers 4
             if hasattr(self, 'demo_log'):
                 self.demo_log.append(f"🔄 Refreshed: {len(self.app_settings.themes)} themes")
 
+    # ===== DEMO TAB FUNCTIONS =====
+
+    def _apply_demo_theme(self, theme_name: str): #vers 1
+        """Apply theme to demo elements"""
+        if theme_name not in self.app_settings.themes:
+            return
+
+        # Temporarily update settings for preview
+        self.app_settings.current_settings["theme"] = theme_name
+
+        # Apply theme stylesheet
+        stylesheet = self.app_settings.get_stylesheet()
+
+        # Apply to demo widgets if instant apply enabled
+        if hasattr(self, 'instant_apply_check') and self.instant_apply_check.isChecked():
+            self.setStyleSheet(stylesheet)
+            self.themeChanged.emit(theme_name)
+
+        if hasattr(self, 'demo_log'):
+            self.demo_log.append(f"🎨 Previewing: {theme_name}")
+
+    def _reset_demo_theme(self): #vers 1
+        """Reset to original theme"""
+        original = getattr(self, '_original_theme', self.app_settings.current_settings["theme"])
+        if hasattr(self, 'demo_theme_combo'):
+            self.demo_theme_combo.setCurrentText(original)
+        self._apply_demo_theme(original)
 
     # ===== SETTINGS MANAGEMENT =====
 
