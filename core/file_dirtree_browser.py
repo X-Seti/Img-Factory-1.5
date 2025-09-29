@@ -1171,7 +1171,7 @@ class FileBrowserWidget(QWidget):
                         font-family: 'Segoe UI', Arial, sans-serif;
                         border: 1px solid {theme_colors.get('border', '#cccccc')};
                         outline: none;
-                        selection-background-color: {theme_colors.get('accent_primary', '#0078d4')};
+                        selection-background-color: {theme_colors.get('accent_primary', '#FFECEE')};
                         alternate-background-color: {theme_colors.get('bg_tertiary', '#f0f0f0')};
                         gridline-color: {theme_colors.get('border', '#e0e0e0')};
                         show-decoration-selected: 1;
@@ -1187,11 +1187,11 @@ class FileBrowserWidget(QWidget):
                         background-color: {theme_colors.get('button_hover', '#e8e8e8')};
                     }}
                     QTreeWidget::item:selected {{
-                        background-color: {theme_colors.get('accent_primary', '#0078d4')};
+                        background-color: {theme_colors.get('accent_primary', '#FFECEE')};
                         color: #ffffff;
                     }}
                     QTreeWidget::item:selected:hover {{
-                        background-color: {theme_colors.get('accent_secondary', '#106ebe')};
+                        background-color: {theme_colors.get('accent_secondary', '#FFECEE')};
                         color: #ffffff;
                     }}
                     QHeaderView {{
@@ -1237,7 +1237,7 @@ class FileBrowserWidget(QWidget):
                         background-color: #e8e8e8;
                     }}
                     QTreeWidget::item:selected {{
-                        background-color: #0078d4;
+                        background-color: #FFECEE;
                         color: #ffffff;
                     }}
                     QHeaderView {{

@@ -1330,7 +1330,7 @@ class IMGFactoryGUILayout:
             return {
                 'bg_primary': '#2b2b2b', 'bg_secondary': '#3c3c3c', 'bg_tertiary': '#4a4a4a',
                 'panel_bg': '#333333', 'text_primary': '#ffffff', 'text_secondary': '#cccccc',
-                'border': '#666666', 'accent_primary': '#0078d4', 'button_normal': '#404040'
+                'border': '#666666', 'accent_primary': '#FFECEE', 'button_normal': '#404040'
             }
         else:
             return {

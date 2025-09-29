@@ -1132,6 +1132,26 @@ ch export textures"""
         """Exit the application"""
         self.main_window.close()
 
+    def _apply_instant_theme(self, theme_name): #vers 1
+        """Apply theme change instantly to main window"""
+        try:
+            # Get the stylesheet
+            stylesheet = self.main_window.app_settings.get_stylesheet()
+
+            # Apply to main window
+            self.main_window.setStyleSheet(stylesheet)
+
+            # Apply to gui_layout components
+            if hasattr(self.main_window, 'gui_layout'):
+                if hasattr(self.main_window.gui_layout, 'apply_all_window_themes'):
+                    self.main_window.gui_layout.apply_all_window_themes()
+
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"🎨 Theme changed: {theme_name}")
+
+        except Exception as e:
+            print(f"❌ Instant theme apply error: {e}")
+
     def _show_preferences(self):
         """Show preferences dialog with proper lifecycle management"""
         try:
@@ -1152,6 +1172,11 @@ ch export textures"""
 
                 # Create new dialog
                 self._preferences_dialog = SettingsDialog(self.main_window.app_settings, self.main_window)
+
+                # Connect theme change signal for instant apply
+                self._preferences_dialog.themeChanged.connect(
+                    lambda theme_name: self._apply_instant_theme(theme_name)
+                )
 
                 # Connect cleanup signal
                 self._preferences_dialog.finished.connect(self._on_preferences_closed)

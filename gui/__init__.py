@@ -51,7 +51,7 @@ def apply_gui_theme(main_window, theme_name="default"):
                     'border': '#3e3e42', 
                     'text_secondary': '#ffffff',
                     'bg_tertiary': '#383838',
-                    'accent_primary': '#0078d4',
+                    'accent_primary': '#FFECEE',
                     'button_normal': '#404040',
                     'button_hover': '#505050',
                     'button_pressed': '#606060'
@@ -107,7 +107,7 @@ def apply_gui_theme(main_window, theme_name="default"):
                         color: #ffffff;
                     }
                     QProgressBar::chunk {
-                        background-color: #0078d4;
+                        background-color: #FFECEE;
                     }
                 """)
             else:

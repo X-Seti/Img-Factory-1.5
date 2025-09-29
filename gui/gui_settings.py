@@ -1069,7 +1069,7 @@ class GUISettingsDialog(QDialog):
             "light": {
                 "background": "#ffffff",
                 "text": "#000000",
-                "accent": "#0066cc",
+                "accent": "#FFEFEE",
                 "button": "#f0f0f0"
             },
             "light_professional": {

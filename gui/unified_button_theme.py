@@ -171,7 +171,7 @@ def get_button_theme_colors(theme_colors, is_dark):
                 background-color: #404040;
             }
             QPushButton:focus {
-                border-color: #0078d4;
+                border-color: #FFECEE;
                 outline: none;
             }
             """

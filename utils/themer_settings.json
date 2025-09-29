@@ -22,7 +22,7 @@
   "button_remove_color": "#f44336",
   "button_update_color": "#ff9800",
   "button_convert_color": "#9c27b0",
-  "button_default_color": "#0078d4",
+  "button_default_color": "#FFECEE",
   "debug_mode": false,
   "debug_level": "INFO",
   "debug_categories": [

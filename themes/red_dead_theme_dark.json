@@ -1,0 +1,25 @@
+{
+  "name": "Red_Dead_Theme_dark",
+  "description": "Custom theme created from Red Dead Theme",
+  "category": "\ud83c\udfad Custom",
+  "author": "User",
+  "version": "1.0",
+  "colors": {
+    "bg_primary": "#430001",
+    "bg_secondary": "#3a0001",
+    "bg_tertiary": "#380001",
+    "panel_bg": "#4c0001",
+    "accent_primary": "#5e1c42",
+    "accent_secondary": "#6f2a47",
+    "text_primary": "#cce5d1",
+    "text_secondary": "#aa0000",
+    "text_accent": "#ff0000",
+    "button_normal": "#500001",
+    "button_hover": "#000000",
+    "button_pressed": "#642641",
+    "border": "#3d001c",
+    "success": "#11005c",
+    "warning": "#00806c",
+    "error": "#06ac25"
+  }
+}

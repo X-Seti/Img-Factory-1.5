@@ -366,7 +366,7 @@ class ColorPickerWidget(QWidget):
 
         # Pick button
         self.pick_button = QPushButton("Pick")
-        self.pick_button.setFixedSize(60, 27)
+        self.pick_button.setFixedSize(60, 20)
         self.pick_button.clicked.connect(self.open_color_dialog)
         main_layout.addWidget(self.pick_button)
 
@@ -1302,7 +1302,7 @@ class AppSettings:
             "button_remove_color": "#f44336",
             "button_update_color": "#ff9800",
             "button_convert_color": "#9c27b0",
-            "button_default_color": "#0078d4",
+            "button_default_color": "#FFECEE",
             # Icon control settings
             "show_button_icons": False,
             "show_menu_icons": True,
@@ -1752,7 +1752,7 @@ class AppSettings:
             subcontrol-origin: margin;
             left: 10px;
             padding: 0 5px 0 5px;
-            color: {colors.get('text_accent', '#0078d4')};
+            color: {colors.get('text_accent', '#FFECEE')};
         }}
 
         QPushButton {{
@@ -1915,6 +1915,96 @@ class SettingsDialog(QDialog): #vers 4
 
     # ===== DEMO TAB FUNCTIONS =====
 
+    def _apply_quick_theme(self, theme_name: str):
+        """Apply quick theme with animation effect"""
+        self.demo_theme_combo.setCurrentText(theme_name)
+        self._apply_demo_theme(theme_name)
+
+        # Animate button click
+        sender = self.sender()
+        if sender:
+            original_text = sender.text()
+            sender.setText(f"✨ Applied!")
+            QTimer.singleShot(1000, lambda: sender.setText(original_text))
+
+    def _random_theme(self):
+        """Apply random theme"""
+        import random
+        themes = list(self.app_settings.themes.keys())
+        current = self.demo_theme_combo.currentText()
+        themes.remove(current)  # Don't pick the same theme
+
+        random_theme = random.choice(themes)
+        self.demo_theme_combo.setCurrentText(random_theme)
+        self._apply_demo_theme(random_theme)
+
+        self.demo_log.append(f"🎲 Random theme: {random_theme}")
+
+    def _toggle_instant_apply(self, enabled: bool):
+        """Enhanced instant apply toggle"""
+        if enabled:
+            current_theme = self.demo_theme_combo.currentText()
+            self._apply_demo_theme(current_theme)
+            self.preview_status.setText("Instant apply: ON")
+            self.demo_log.append("⚡ Instant apply enabled")
+        else:
+            self.preview_status.setText("Instant apply: OFF")
+            self.demo_log.append("⏸️ Instant apply disabled")
+
+    def _change_preview_scope(self, scope: str):
+        """Change preview scope"""
+        self.demo_log.append(f"🎯 Preview scope: {scope}")
+        current_theme = self.demo_theme_combo.currentText()
+        self._apply_demo_theme(current_theme)
+
+    def _update_theme_info(self):
+        """Update theme information display"""
+        current_theme = self.demo_theme_combo.currentText()
+        if current_theme in self.app_settings.themes:
+            theme_data = self.app_settings.themes[current_theme]
+
+            info_text = f"""
+            <b>{theme_data.get('name', current_theme)}</b><br>
+            <i>{theme_data.get('description', 'No description available')}</i><br><br>
+
+            <b>Colors:</b><br>
+            • Primary: {theme_data['colors'].get('accent_primary', 'N/A')}<br>
+            • Background: {theme_data['colors'].get('bg_primary', 'N/A')}<br>
+            • Text: {theme_data['colors'].get('text_primary', 'N/A')}<br>
+
+            <b>Category:</b> {theme_data.get('category', 'Standard')}<br>
+            <b>Author:</b> {theme_data.get('author', 'Unknown')}
+            """
+
+            if hasattr(self, 'theme_info_label'):
+                self.theme_info_label.setText(info_text)
+
+    def _update_preview_stats(self):
+        """Update preview statistics"""
+        if hasattr(self, 'stats_labels'):
+            current_count = int(self.stats_labels["Preview Changes:"].text()) + 1
+            self.stats_labels["Preview Changes:"].setText(str(current_count))
+            self.stats_labels["Last Applied:"].setText(self.demo_theme_combo.currentText())
+
+    def _show_full_preview(self):
+        """Show full preview window"""
+        QMessageBox.information(self, "Full Preview",
+            "Full preview window would open here!\n\n"
+            "This would show a complete IMG Factory interface\n"
+            "with the selected theme applied.")
+
+
+    def _preview_theme_instantly(self, theme_name: str):
+        """Enhanced instant preview with better feedback"""
+        if hasattr(self, 'auto_preview_check') and self.auto_preview_check.isChecked():
+            self._apply_demo_theme(theme_name)
+            self._update_theme_info()
+            self._update_preview_stats()
+
+            # Update status
+            self.preview_status.setText(f"Previewing: {theme_name}")
+            self.demo_log.append(f"🎨 Theme preview: {theme_name}")
+
     def _apply_demo_theme(self, theme_name: str): #vers 1
         """Apply theme to demo elements"""
         if theme_name not in self.app_settings.themes:
@@ -1957,8 +2047,8 @@ class SettingsDialog(QDialog): #vers 4
         self.color_picker_tab = self._create_color_picker_tab()
         self.tabs.addTab(self.color_picker_tab, "Color Picker")
 
-        #self.demo_tab = self._create_demo_tab()
-        #self.tabs.addTab(self.demo_tab, "Demo")
+        self.demo_tab = self._create_demo_tab()
+        self.tabs.addTab(self.demo_tab, "Demo")
 
         self.debug_tab = self._create_debug_tab()
         self.tabs.addTab(self.debug_tab, "Debug")
@@ -2128,7 +2218,7 @@ class SettingsDialog(QDialog): #vers 4
             display_name = theme_data.get("name", theme_key)
             self.theme_selector_combo.addItem(display_name, theme_key)
         self.theme_selector_combo.currentTextChanged.connect(self._on_theme_changed)
-        self.theme_selector_combo.currentTextChanged.connect(self._apply_demo_theme)
+        #self.theme_selector_combo.currentTextChanged.connect(self._apply_demo_theme)
         theme_sel_layout.addWidget(self.theme_selector_combo)
 
 
@@ -2230,35 +2320,226 @@ class SettingsDialog(QDialog): #vers 4
         if selected_data and selected_data in self.color_editors:
             self.color_editors[selected_data].set_color(color)
 
-    def _create_demo_tab(self): #vers 2
-        """Create demo tab for theme preview"""
+
+    def _create_demo_tab(self) -> QWidget:
+        """Create improved demo tab with better layout"""
         tab = QWidget()
-        layout = QVBoxLayout(tab)
+        main_layout = QHBoxLayout(tab)  # Changed to horizontal for better space usage
 
-        # Demo controls
-        demo_group = QGroupBox("🎭 Theme Preview")
-        demo_layout = QVBoxLayout(demo_group)
+        # Left column - Controls
+        left_widget = QWidget()
+        left_layout = QVBoxLayout(left_widget)
+        left_widget.setMaximumWidth(300)
 
+        # Theme Selection Group
+        theme_group = QGroupBox("🎨 Theme Selection")
+        theme_layout = QVBoxLayout(theme_group)
+
+        # Current theme display
+        current_layout = QHBoxLayout()
+        current_layout.addWidget(QLabel("Active Theme:"))
+        self.current_theme_label = QLabel(self.app_settings.current_settings["theme"])
+        self.current_theme_label.setStyleSheet("font-weight: bold; color: #2E7D32;")
+        current_layout.addWidget(self.current_theme_label)
+        current_layout.addStretch()
+        theme_layout.addLayout(current_layout)
+
+        # Theme selector
+        preview_layout = QHBoxLayout()
+        preview_layout.addWidget(QLabel("Preview:"))
         self.demo_theme_combo = QComboBox()
-        for theme_key in self.app_settings.themes.keys():
-            self.demo_theme_combo.addItem(theme_key)
-        self.demo_theme_combo.currentTextChanged.connect(self._apply_demo_theme)
-        demo_layout.addWidget(self.demo_theme_combo)
+        available_themes = list(self.app_settings.themes.keys())
+        self.demo_theme_combo.addItems(available_themes)
+        refresh_themes_btn = QPushButton("🔄 Refresh Themes")
+        refresh_themes_btn.setToolTip("Reload themes from themes/ folder")
+        refresh_themes_btn.clicked.connect(self.refresh_themes_in_dialog)
+        self.demo_theme_combo.setCurrentText(self.app_settings.current_settings["theme"])
+        self.demo_theme_combo.currentTextChanged.connect(self._preview_theme_instantly)
 
-        # Instant apply checkbox
-        self.instant_apply_check = QCheckBox("Instant Apply")
-        demo_layout.addWidget(self.instant_apply_check)
+        preview_layout.addWidget(self.demo_theme_combo)
+        theme_layout.addLayout(preview_layout)
 
-        # Demo log
+        left_layout.addWidget(theme_group)
+
+        # Real-time Controls Group
+        controls_group = QGroupBox("⚡ Live Controls")
+        controls_layout = QVBoxLayout(controls_group)
+
+        # Instant apply toggle
+        self.instant_apply_check = QCheckBox("Apply changes instantly")
+        self.instant_apply_check.setChecked(True)
+        self.instant_apply_check.toggled.connect(self._toggle_instant_apply)
+        controls_layout.addWidget(self.instant_apply_check)
+
+        # Auto-preview toggle
+        self.auto_preview_check = QCheckBox("Auto-preview on selection")
+        self.auto_preview_check.setChecked(True)
+        controls_layout.addWidget(self.auto_preview_check)
+
+        # Preview scope
+        scope_layout = QHBoxLayout()
+        scope_layout.addWidget(QLabel("Preview Scope:"))
+        self.preview_scope_combo = QComboBox()
+        self.preview_scope_combo.addItems(["Demo Only", "Dialog Only", "Full Application"])
+        self.preview_scope_combo.setCurrentIndex(2)  # Full Application
+        self.preview_scope_combo.currentTextChanged.connect(self._change_preview_scope)
+        scope_layout.addWidget(self.preview_scope_combo)
+        controls_layout.addLayout(scope_layout)
+
+        left_layout.addWidget(controls_group)
+
+        # Quick Themes Group
+        quick_group = QGroupBox("🚀 Quick Themes")
+        quick_layout = QVBoxLayout(quick_group)
+
+        # Popular themes
+        popular_themes = ["LCARS", "IMG_Factory", "Deep_Purple", "Cyberpunk", "Matrix"]
+        for theme_name in popular_themes:
+            if theme_name in self.app_settings.themes:
+                quick_btn = QPushButton(f"🎭 {theme_name}")
+                quick_btn.clicked.connect(lambda checked, t=theme_name: self._apply_quick_theme(t))
+                quick_btn.setMinimumHeight(35)
+                quick_layout.addWidget(quick_btn)
+
+        # Reset and randomize buttons
+        button_layout = QHBoxLayout()
+        reset_btn = QPushButton("🔄 Reset")
+        reset_btn.clicked.connect(self._reset_demo_theme)
+        random_btn = QPushButton("🎲 Random")
+        random_btn.clicked.connect(self._random_theme)
+        button_layout.addWidget(reset_btn)
+        button_layout.addWidget(random_btn)
+        quick_layout.addLayout(button_layout)
+
+        left_layout.addWidget(quick_group)
+
+        # Theme Info Group
+        info_group = QGroupBox("ℹ️ Theme Info")
+        info_layout = QVBoxLayout(info_group)
+
+        self.theme_info_label = QLabel()
+        self.theme_info_label.setWordWrap(True)
+        self.theme_info_label.setMinimumHeight(100)
+        #self.theme_info_label.setStyleSheet("padding: 8px;  border-radius: 4px;")
+        info_layout.addWidget(self.theme_info_label)
+
+        left_layout.addWidget(info_group)
+        left_layout.addStretch()
+
+        main_layout.addWidget(left_widget)
+
+        # Right column - Preview Area
+        right_widget = QWidget()
+        right_layout = QVBoxLayout(right_widget)
+
+        # Preview Header
+        preview_header = QGroupBox("📺 Live Preview - IMG Factory Interface")
+        header_layout = QHBoxLayout(preview_header)
+
+        self.preview_status = QLabel("Ready for preview")
+        self.preview_status.setStyleSheet("color: #4CAF50; font-weight: bold;")
+        header_layout.addWidget(self.preview_status)
+        header_layout.addStretch()
+
+        # Preview controls
+        self.full_preview_btn = QPushButton("🖥️ Full Preview")
+        self.full_preview_btn.clicked.connect(self._show_full_preview)
+        header_layout.addWidget(self.full_preview_btn)
+
+        right_layout.addWidget(preview_header)
+
+        # Sample IMG Factory Toolbar
+        toolbar_group = QGroupBox("🔧 Sample Toolbar")
+        toolbar_layout = QGridLayout(toolbar_group)
+
+        self.demo_buttons = []
+        toolbar_buttons = [
+            ("Open IMG", "import", "Open IMG archive"),
+            ("Import Files", "import", "Import files to archive"),
+            ("Export Selected", "export", "Export selected entries"),
+            ("Remove Entry", "remove", "Remove selected entry"),
+            ("Refresh", "update", "Refresh entry list"),
+            ("Convert Format", "convert", "Convert file format"),
+            ("Save Archive", None, "Save current archive"),
+            ("Settings", None, "Open settings dialog")
+        ]
+
+        for i, (text, action_type, tooltip) in enumerate(toolbar_buttons):
+            btn = QPushButton(text)
+            if action_type:
+                btn.setProperty("action-type", action_type)
+            btn.setToolTip(tooltip)
+            btn.setMinimumHeight(35)
+            self.demo_buttons.append(btn)
+            toolbar_layout.addWidget(btn, i // 4, i % 4)
+
+        right_layout.addWidget(toolbar_group)
+
+        # Sample Table
+        table_group = QGroupBox("📋 Sample IMG Entries Table")
+        table_layout = QVBoxLayout(table_group)
+
+        self.demo_table = QTableWidget(5, 5)
+        self.demo_table.setHorizontalHeaderLabels(["Filename", "Type", "Size", "Version", "Status"])
+        self.demo_table.setMaximumHeight(180)
+
+        # Auto-resize columns
+        self.demo_table.resizeColumnsToContents()
+        table_layout.addWidget(self.demo_table)
+
+        right_layout.addWidget(table_group)
+
+        # Sample Log Output
+        log_group = QGroupBox("📜 Sample Activity Log")
+        log_layout = QVBoxLayout(log_group)
+
         self.demo_log = QTextEdit()
-        self.demo_log.setMaximumHeight(150)
+        self.demo_log.setMaximumHeight(120)
         self.demo_log.setReadOnly(True)
-        demo_layout.addWidget(self.demo_log)
 
-        layout.addWidget(demo_group)
-        layout.addStretch()
+        # Enhanced log content
+        initial_log = """🎮 IMG Factory 1.5 - Live Theme Preview
+📁 Current IMG: sample_archive.img (150 MB)
+📊 Entries loaded: 1,247 files
+🎨 Active theme: """ + self.app_settings.current_settings["theme"] + """
+⚡ Live preview mode: ACTIVE
+📋 Ready for operations..."""
+
+        self.demo_log.setPlainText(initial_log)
+        log_layout.addWidget(self.demo_log)
+
+        right_layout.addWidget(log_group)
+
+        # Preview Statistics
+        stats_group = QGroupBox("📊 Preview Statistics")
+        stats_layout = QGridLayout(stats_group)
+
+        self.stats_labels = {}
+        stats_data = [
+            ("Themes Available:", str(len(available_themes))),
+            ("Preview Changes:", "0"),
+            ("Last Applied:", "None"),
+            ("Performance:", "Excellent")
+        ]
+
+        for i, (label, value) in enumerate(stats_data):
+            stats_layout.addWidget(QLabel(label), i, 0)
+            value_label = QLabel(value)
+            value_label.setStyleSheet("font-weight: bold; color: #1976D2;")
+            self.stats_labels[label] = value_label
+            stats_layout.addWidget(value_label, i, 1)
+
+        right_layout.addWidget(stats_group)
+
+        main_layout.addWidget(right_widget)
+
+        # Initialize preview
+        self._update_theme_info()
+        self._apply_demo_theme(self.app_settings.current_settings["theme"])
 
         return tab
+
+
 
     def _create_debug_tab(self): #vers 2
         """Create debug settings tab"""
@@ -2465,7 +2746,7 @@ class SettingsDialog(QDialog): #vers 4
 
     # ===== THEME MANAGEMENT =====
 
-    def _on_theme_changed(self, theme_name): #vers 1
+    def _on_theme_changed(self, theme_name): #vers 2
         """Handle theme selection change"""
         theme_key = None
         for key, data in self.app_settings.themes.items():
@@ -2475,6 +2756,18 @@ class SettingsDialog(QDialog): #vers 4
 
         if theme_key:
             self._load_theme_colors(theme_key)
+
+            # Apply instantly if checkbox is enabled (copied from _apply_demo_theme)
+            if hasattr(self, 'instant_apply_check') and self.instant_apply_check.isChecked():
+                # Update settings temporarily
+                self.app_settings.current_settings["theme"] = theme_key
+
+                # Get and apply stylesheet
+                stylesheet = self.app_settings.get_stylesheet()
+                self.setStyleSheet(stylesheet)
+
+                # Emit signal to parent
+                self.themeChanged.emit(theme_key)
 
     def _load_theme_colors(self, theme_key): #vers 1
         """Load colors for selected theme into editors"""
@@ -2695,18 +2988,21 @@ class SettingsDialog(QDialog): #vers 4
                 f"Theme '{current_theme}' saved successfully!"
             )
 
-    def _save_theme_as(self): #vers 1
+    def _save_theme_as(self): #vers 2
         """Save current theme as a new theme"""
-        from PyQt6.QtWidgets import QInputDialog, QFileDialog
+        from PyQt6.QtWidgets import QInputDialog, QFileDialog, QMessageBox
         import json
         import os
 
-        # Ask for new theme name
+        # Ask for new theme name with instructions
         theme_name, ok = QInputDialog.getText(
             self,
             "Save Theme As",
+            "Theme Naming Guidelines:\n"
+            "• Dark themes: Add _Dark suffix (e.g., Ocean_Dark)\n"
+            "• Light themes: Add _Light suffix (e.g., Ocean_Light)\n\n"
             "Enter new theme name:",
-            text="My Custom Theme"
+            text="My_Custom_Theme"
         )
 
         if not ok or not theme_name:
@@ -2719,7 +3015,7 @@ class SettingsDialog(QDialog): #vers 4
         # Collect all current colors
         colors = {}
         for color_key, editor in self.color_editors.items():
-            colors[color_key] = editor.current_value
+            colors[color_key] = editor.color_input.text()
 
         # Create theme data
         theme_data = {
@@ -2731,8 +3027,8 @@ class SettingsDialog(QDialog): #vers 4
             "colors": colors
         }
 
-        # Ask where to save
-        themes_dir = os.path.join(os.getcwd(), "themes")
+        # Use app_settings themes_dir
+        themes_dir = str(self.app_settings.themes_dir)
         os.makedirs(themes_dir, exist_ok=True)
 
         default_path = os.path.join(themes_dir, f"{safe_filename}.json")
@@ -2749,7 +3045,7 @@ class SettingsDialog(QDialog): #vers 4
                 with open(file_path, 'w', encoding='utf-8') as f:
                     json.dump(theme_data, f, indent=2)
 
-                # Refresh themes to include the new one
+                # Refresh themes
                 self._refresh_themes()
 
                 QMessageBox.information(

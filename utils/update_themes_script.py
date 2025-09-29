@@ -17,7 +17,7 @@ def get_smart_colors_for_theme(theme_colors: Dict[str, str]) -> Dict[str, str]:
     # Get base colors from theme
     bg_primary = theme_colors.get('bg_primary', '#ffffff')
     bg_secondary = theme_colors.get('bg_secondary', '#f5f5f5')
-    accent_primary = theme_colors.get('accent_primary', '#0078d4')
+    accent_primary = theme_colors.get('accent_primary', '#FFECEE')
     border_color = theme_colors.get('border', '#cccccc')
     text_primary = theme_colors.get('text_primary', '#000000')
     
