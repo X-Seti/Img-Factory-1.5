@@ -2,13 +2,12 @@
   "debug_mode": false,
   "debug_level": "INFO",
   "current_theme": "img_factory",
+  "theme": "gta_forums_dark_red",
   "debug_categories": [
     "IMG_LOADING",
     "TABLE_POPULATION",
     "BUTTON_ACTIONS",
-    "FILE_OPERATIONS",
-    "FILTERING",
-    "SIGNAL_SYSTEM"
+    "FILE_OPERATIONS"
   ],
   "working_gta_folder": "/home/x2/.steamapps/common/GTA Vice City/",
   "assists_folder": "/home/x2/Desktop/Assists/",
@@ -21,10 +20,16 @@
   "peds_folder": "/home/x2/Desktop/Peds/",
   "vehicles_folder": "/home/x2/Desktop/Vehicles/",
   "weapons_folder": "/home/x2/Desktop/Weapons/",
-  "theme": "gta_forums_dark",
   "font_family": "Segoe UI",
   "font_size": 9,
   "show_tooltips": true,
   "show_menu_icons": true,
-  "show_button_icons": false
+  "show_button_icons": false,
+  "panel_opacity": 95,
+  "remember_img_output_path": true,
+  "remember_import_path": true,
+  "remember_export_path": true,
+  "last_img_output_path": "",
+  "last_import_path": "",
+  "last_export_path": ""
 }

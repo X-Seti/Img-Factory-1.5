@@ -502,12 +502,12 @@ class ScreenCaptureThread(QThread):
         """Stop the capture thread"""
         self.running = False
 
-class XPColorPicker(QWidget): #vers 1
+class XPColorPicker(QWidget): #vers 2
     """XP Display Properties style color picker"""
 
     colorChanged = pyqtSignal(str, str)  # element_name, hex_color
 
-    def __init__(self, theme_colors, parent=None):
+    def __init__(self, theme_colors, parent=None): #vers 1
         super().__init__(parent)
         self.theme_colors = theme_colors
         self.current_hue = 240
@@ -534,20 +534,21 @@ class XPColorPicker(QWidget): #vers 1
             'error': {'name': 'Error Color', 'h': 4, 's': 90, 'b': 58}
         }
 
-        self._init_ui()
         self._load_theme_colors()
+        self._init_ui()
 
-    def _init_ui(self): #vers 1
-        """Initialize the XP style UI"""
+    def _init_ui(self): #vers 2
+        """Initialize the XP style UI - FIXED: Removed duplicate global sliders"""
         main_layout = QHBoxLayout(self)
         main_layout.setContentsMargins(5, 5, 5, 5)
 
         # Left side - Element list
         left_widget = QWidget()
-        left_layout = QVBoxLayout()
+        left_layout = QVBoxLayout(left_widget)
 
         # Element selection
-        element_label = QLabel("")
+        element_label = QLabel("Select Element:")
+        element_label.setFont(QFont("MS Sans Serif", 8, QFont.Weight.Bold))
         left_layout.addWidget(element_label)
 
         self.element_list = QListWidget()
@@ -574,7 +575,7 @@ class XPColorPicker(QWidget): #vers 1
 
         self.element_list.setCurrentRow(0)
         self.element_list.currentRowChanged.connect(self._on_element_selected)
-        #left_layout.addWidget(self.element_list)
+        left_layout.addWidget(self.element_list)
 
         main_layout.addWidget(left_widget)
 
@@ -597,75 +598,69 @@ class XPColorPicker(QWidget): #vers 1
         """)
         right_layout.addWidget(self.color_preview)
 
-        # HSL Sliders
+        # HSL Sliders - FOR INDIVIDUAL ELEMENT EDITING ONLY
         sliders_frame = QFrame()
         sliders_frame.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Sunken)
         sliders_layout = QVBoxLayout(sliders_frame)
         sliders_layout.setSpacing(3)
 
-        # Global Hue Slider
+        # Hue Slider
         hue_layout = QHBoxLayout()
         hue_layout.addWidget(QLabel("Hue:"))
-        self.global_hue_slider = QSlider(Qt.Orientation.Horizontal)
-        self.global_hue_slider.setMinimum(-180)
-        self.global_hue_slider.setMaximum(180)
-        self.global_hue_slider.setValue(0)
-        self.global_hue_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        self.global_hue_slider.setTickInterval(30)
-        hue_layout.addWidget(self.global_hue_slider)
-        self.global_hue_value = QLabel("0")
-        self.global_hue_value.setFixedWidth(40)
-        self.global_hue_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        hue_layout.addWidget(self.global_hue_value)
-        global_sliders_layout.addLayout(hue_layout)
+        self.hue_slider = QSlider(Qt.Orientation.Horizontal)
+        self.hue_slider.setMinimum(0)
+        self.hue_slider.setMaximum(360)
+        self.hue_slider.setValue(240)
+        self.hue_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.hue_slider.setTickInterval(30)
+        hue_layout.addWidget(self.hue_slider)
+        self.hue_value = QLabel("240")
+        self.hue_value.setFixedWidth(40)
+        self.hue_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        hue_layout.addWidget(self.hue_value)
+        sliders_layout.addLayout(hue_layout)
 
-        # Global Saturation Slider
+        # Saturation Slider
         sat_layout = QHBoxLayout()
         sat_layout.addWidget(QLabel("Sat:"))
-        self.global_sat_slider = QSlider(Qt.Orientation.Horizontal)
-        self.global_sat_slider.setMinimum(-100)
-        self.global_sat_slider.setMaximum(100)
-        self.global_sat_slider.setValue(0)
-        self.global_sat_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        self.global_sat_slider.setTickInterval(20)
-        sat_layout.addWidget(self.global_sat_slider)
-        self.global_sat_value = QLabel("0")
-        self.global_sat_value.setFixedWidth(40)
-        self.global_sat_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        sat_layout.addWidget(self.global_sat_value)
-        global_sliders_layout.addLayout(sat_layout)
+        self.sat_slider = QSlider(Qt.Orientation.Horizontal)
+        self.sat_slider.setMinimum(0)
+        self.sat_slider.setMaximum(100)
+        self.sat_slider.setValue(100)
+        self.sat_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.sat_slider.setTickInterval(10)
+        sat_layout.addWidget(self.sat_slider)
+        self.sat_value = QLabel("100")
+        self.sat_value.setFixedWidth(40)
+        self.sat_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        sat_layout.addWidget(self.sat_value)
+        sliders_layout.addLayout(sat_layout)
 
-        # Global Brightness Slider
+        # Brightness Slider
         bri_layout = QHBoxLayout()
         bri_layout.addWidget(QLabel("Bri:"))
-        self.global_bri_slider = QSlider(Qt.Orientation.Horizontal)
-        self.global_bri_slider.setMinimum(-100)
-        self.global_bri_slider.setMaximum(100)
-        self.global_bri_slider.setValue(0)
-        self.global_bri_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        self.global_bri_slider.setTickInterval(20)
-        bri_layout.addWidget(self.global_bri_slider)
-        self.global_bri_value = QLabel("0")
-        self.global_bri_value.setFixedWidth(40)
-        self.global_bri_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        bri_layout.addWidget(self.global_bri_value)
-        global_sliders_layout.addLayout(bri_layout)
-
-        # Reset button
-        reset_btn = QPushButton("Reset Global Adjustments")
-        reset_btn.clicked.connect(self._reset_global_sliders)
-        global_sliders_layout.addWidget(reset_btn)
-
-        self.global_hue_slider.valueChanged.connect(self._on_global_hue_changed)
-        self.global_sat_slider.valueChanged.connect(self._on_global_sat_changed)
-        self.global_bri_slider.valueChanged.connect(self._on_global_bri_changed)
+        self.bri_slider = QSlider(Qt.Orientation.Horizontal)
+        self.bri_slider.setMinimum(0)
+        self.bri_slider.setMaximum(100)
+        self.bri_slider.setValue(25)
+        self.bri_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.bri_slider.setTickInterval(10)
+        bri_layout.addWidget(self.bri_slider)
+        self.bri_value = QLabel("25")
+        self.bri_value.setFixedWidth(40)
+        self.bri_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        bri_layout.addWidget(self.bri_value)
+        sliders_layout.addLayout(bri_layout)
 
         right_layout.addWidget(sliders_frame)
+
+        # Connect sliders
+        self.hue_slider.valueChanged.connect(self._on_hue_changed)
+        self.sat_slider.valueChanged.connect(self._on_sat_changed)
+        self.bri_slider.valueChanged.connect(self._on_bri_changed)
+
         right_layout.addStretch()
-
         main_layout.addWidget(right_widget)
-
-
 
     def _load_theme_colors(self): #vers 1
         """Load colors from current theme"""
@@ -758,6 +753,19 @@ class XPColorPicker(QWidget): #vers 1
                 'b': self.current_bri
             })
 
+    def update_color_display(self, hex_color): #vers 1
+        """Update display with picked color"""
+        try:
+            h, s, l = rgb_to_hsl(hex_color)
+            self.current_hue = h
+            self.current_sat = s
+            self.current_bri = l
+            self._update_sliders()
+            self._update_color_preview()
+            self._save_current_color()
+        except Exception as e:
+            print(f"Error updating color display: {e}")
+
     def get_all_colors(self): #vers 1
         """Get all colors as hex values"""
         colors = {}
@@ -765,25 +773,25 @@ class XPColorPicker(QWidget): #vers 1
             colors[element_key] = hsl_to_rgb(data['h'], data['s'], data['b'])
         return colors
 
-
-class ThemeColorEditor(QWidget):
-    """Widget for editing individual theme colors with lock protection"""
-    colorChanged = pyqtSignal(str, str)
-    lockChanged = pyqtSignal(str, bool)  # NEW: Signal when lock state changes
+class ThemeColorEditor(QWidget): #vers 4
+    """Widget for editing individual theme colors with lock protection - FIXED Pick button"""
+    colorChanged = pyqtSignal(str, str)  # color_key, hex_color
+    lockChanged = pyqtSignal(str, bool)  # color_key, is_locked
 
     def __init__(self, color_key, color_name, current_value, parent=None): #vers 3
         super().__init__(parent)
         self.color_key = color_key
         self.color_name = color_name
         self.current_value = current_value
-        self.is_locked = False  # NEW: Track lock state
+        self.is_locked = False
         self._setup_ui()
 
-    def _setup_ui(self): #vers 3
+    def _setup_ui(self): #vers 4
+        """Setup the editor UI with lock checkbox - FIXED: Wider Pick button"""
         layout = QHBoxLayout(self)
         layout.setContentsMargins(5, 2, 5, 2)
 
-        # NEW: Lock checkbox
+        # Lock checkbox
         self.lock_check = QCheckBox()
         self.lock_check.setFixedWidth(30)
         self.lock_check.setToolTip("Lock to prevent global adjustments")
@@ -810,9 +818,11 @@ class ThemeColorEditor(QWidget):
         self.color_input.textChanged.connect(self.on_color_changed)
         layout.addWidget(self.color_input)
 
-        # Color dialog button
+        # Color dialog button - FIXED: Wider for better visibility
         dialog_btn = QPushButton("Pick")
-        dialog_btn.setFixedSize(50, 25)
+        dialog_btn.setMinimumWidth(70)  # CHANGED from setFixedSize(50, 25)
+        dialog_btn.setFixedHeight(25)
+        dialog_btn.setToolTip("Open color picker dialog")
         dialog_btn.clicked.connect(self.open_color_dialog)
         layout.addWidget(dialog_btn)
 
@@ -863,12 +873,175 @@ class ThemeColorEditor(QWidget):
             f"background-color: {hex_color}; border: 1px solid #999;"
         )
 
-    def set_color(self, hex_color):
+    def set_color(self, hex_color): #vers 1
         """Set color from external source (like color picker)"""
         self.color_input.setText(hex_color)
         self.current_value = hex_color
         self.update_preview(hex_color)
         self.colorChanged.emit(self.color_key, hex_color)
+
+
+class DebugActionsHelper: #vers 1
+    """Helper class for debug tab actions in SettingsDialog"""
+
+    def __init__(self, settings_dialog): #vers 1
+        """Initialize with reference to settings dialog"""
+        self.dialog = settings_dialog
+        self.main_window = settings_dialog.parent()
+
+    def test_debug_output(self): #vers 1
+        """Test debug output - sends test messages to activity log"""
+        if hasattr(self.main_window, 'log_message'):
+            # Send test messages
+            self.main_window.log_message("🧪 Debug test message - debug system working!")
+            self.main_window.log_message(
+                f"🐛 [DEBUG-TEST] Debug enabled: {self.dialog.debug_enabled_check.isChecked()}"
+            )
+            self.main_window.log_message(
+                f"🐛 [DEBUG-TEST] Debug level: {self.dialog.debug_level_combo.currentText()}"
+            )
+
+            # Get enabled categories
+            enabled_categories = [
+                cat for cat, cb in self.dialog.debug_categories.items()
+                if cb.isChecked()
+            ]
+            self.main_window.log_message(
+                f"🐛 [DEBUG-TEST] Active categories: {', '.join(enabled_categories)}"
+            )
+
+            # Test each category
+            for category in enabled_categories:
+                self.main_window.log_message(f"🐛 [DEBUG-TEST] Testing {category} category")
+
+        else:
+            QMessageBox.information(
+                self.dialog,
+                "Debug Test",
+                "Debug test completed!\nCheck the activity log for output."
+            )
+
+    def debug_current_img(self): #vers 1
+        """Debug current IMG file - analyzes loaded IMG and table state"""
+        if not hasattr(self.main_window, 'current_img'):
+            self._show_no_img_message()
+            return
+
+        if not self.main_window.current_img:
+            self._show_no_img_message()
+            return
+
+        img = self.main_window.current_img
+
+        # Basic IMG info
+        self.main_window.log_message(f"🐛 [DEBUG-IMG] Current IMG: {img.file_path}")
+        self.main_window.log_message(f"🐛 [DEBUG-IMG] Entries: {len(img.entries)}")
+
+        # File type analysis
+        file_types = {}
+        all_extensions = set()
+
+        for entry in img.entries:
+            ext = entry.name.split('.')[-1].upper() if '.' in entry.name else "NO_EXT"
+            file_types[ext] = file_types.get(ext, 0) + 1
+            all_extensions.add(ext)
+
+        self.main_window.log_message(f"🐛 [DEBUG-IMG] File types found:")
+        for ext, count in sorted(file_types.items()):
+            self.main_window.log_message(f"🐛 [DEBUG-IMG]   {ext}: {count} files")
+
+        self.main_window.log_message(
+            f"🐛 [DEBUG-IMG] Unique extensions: {sorted(all_extensions)}"
+        )
+
+        # Table state analysis
+        self._debug_table_state()
+
+        # Memory info
+        total_size = sum(entry.size for entry in img.entries)
+        self.main_window.log_message(
+            f"🐛 [DEBUG-IMG] Total size: {self._format_size(total_size)}"
+        )
+
+    def _debug_table_state(self): #vers 1
+        """Debug table widget state"""
+        if not hasattr(self.main_window, 'gui_layout'):
+            return
+
+        if not hasattr(self.main_window.gui_layout, 'table'):
+            return
+
+        table = self.main_window.gui_layout.table
+        table_rows = table.rowCount()
+
+        # Count hidden rows
+        hidden_rows = sum(1 for row in range(table_rows) if table.isRowHidden(row))
+        visible_rows = table_rows - hidden_rows
+
+        self.main_window.log_message(f"🐛 [DEBUG-IMG] Table Analysis:")
+        self.main_window.log_message(f"🐛 [DEBUG-IMG]   Total rows: {table_rows}")
+        self.main_window.log_message(f"🐛 [DEBUG-IMG]   Visible rows: {visible_rows}")
+        self.main_window.log_message(f"🐛 [DEBUG-IMG]   Hidden rows: {hidden_rows}")
+
+        # Selection info
+        selected_rows = table.selectedItems()
+        selected_count = len(set(item.row() for item in selected_rows))
+        self.main_window.log_message(f"🐛 [DEBUG-IMG]   Selected rows: {selected_count}")
+
+        # Column info
+        column_count = table.columnCount()
+        self.main_window.log_message(f"🐛 [DEBUG-IMG]   Columns: {column_count}")
+
+        # Header info
+        headers = [table.horizontalHeaderItem(i).text() for i in range(column_count)]
+        self.main_window.log_message(f"🐛 [DEBUG-IMG]   Headers: {', '.join(headers)}")
+
+    def clear_debug_log(self): #vers 1
+        """Clear the activity log"""
+        if hasattr(self.main_window, 'gui_layout') and hasattr(self.main_window.gui_layout, 'log'):
+            self.main_window.gui_layout.log.clear()
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("🗑️ Debug log cleared")
+        else:
+            QMessageBox.information(
+                self.dialog,
+                "Clear Log",
+                "Activity log cleared (if available)."
+            )
+
+    # Helper methods
+
+    def _show_no_img_message(self): #vers 1
+        """Show no IMG loaded message"""
+        if hasattr(self.main_window, 'log_message'):
+            self.main_window.log_message("🐛 [DEBUG-IMG] No IMG file currently loaded")
+        else:
+            QMessageBox.information(
+                self.dialog,
+                "Debug IMG",
+                "No IMG file loaded."
+            )
+
+    def _format_size(self, size_bytes): #vers 1
+        """Format byte size to human readable"""
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size_bytes < 1024.0:
+                return f"{size_bytes:.2f} {unit}"
+            size_bytes /= 1024.0
+        return f"{size_bytes:.2f} TB"
+
+
+# Integration function for SettingsDialog
+def integrate_debug_actions(settings_dialog): #vers 1
+    """Integrate debug actions helper into SettingsDialog"""
+    helper = DebugActionsHelper(settings_dialog)
+
+    # Add helper methods to dialog
+    settings_dialog._test_debug_output = helper.test_debug_output
+    settings_dialog._debug_current_img = helper.debug_current_img
+    settings_dialog._clear_debug_log = helper.clear_debug_log
+
+    return helper
 
 class DebugSettings:
     """Debug mode settings and utilities"""
@@ -1717,1208 +1890,102 @@ class AppSettings:
             fallback_theme = list(self.themes.keys())[0] if self.themes else "IMG_Factory"
             return self.themes.get(fallback_theme, {"colors": {}})
 
-#
-        
-class SettingsDialog(QDialog):
-    """Settings dialog for theme and preference management"""
-    
+
+
+class SettingsDialog(QDialog): #vers 4
+    """Settings dialog for theme and preference management - COMPLETE CLEAN VERSION"""
+
     themeChanged = pyqtSignal(str)  # theme_name
     settingsChanged = pyqtSignal()
-    
-    def __init__(self, app_settings, parent=None):
+
+    def __init__(self, app_settings, parent=None): #vers 4
+        """Initialize settings dialog"""
         super().__init__(parent)
         self.setWindowTitle("IMG Factory Settings")
-        self.setMinimumSize(600, 500)
+        self.setMinimumSize(800, 600)
         self.setModal(True)
-        
+
         self.app_settings = app_settings
         self.original_settings = app_settings.current_settings.copy()
-        
+        self._modified_colors = {}
+        self.color_editors = {}
+
         self._create_ui()
         self._load_current_settings()
-    
-    def _get_dialog_settings(self) -> dict:
-        """Collect all settings from dialog controls"""
-        settings = {}
 
-    def _on_theme_changed(self, theme_name): #vers 1
-        """Handle theme selection change - ADD TO SettingsDialog"""
-        # Find the actual theme key
-        theme_key = None
-        for key, data in self.app_settings.themes.items():
-            if data.get("name", key) == theme_name:
-                theme_key = key
-                break
-
-        if theme_key:
-            # Update color picker with new theme colors
-            new_colors = self.app_settings.get_theme_colors(theme_key)
-            self.color_picker.theme_colors = new_colors
-            self.color_picker._load_theme_colors()
-
-            # Refresh the current element display
-            current_row = self.color_picker.element_list.currentRow()
-            self.color_picker._on_element_selected(current_row)
-
-    def _on_global_hue_changed(self, value): #vers 2
-        """Handle global hue slider change - applies to ALL colors"""
-        self.global_hue_value.setText(str(value))
-
-        hue_shift = value
-        sat_shift = self.global_sat_slider.value()
-        bri_shift = self.global_bri_slider.value()
-
-        self.apply_global_hsb_to_all_colors(hue_shift, sat_shift, bri_shift)
-
-    def _on_global_sat_changed(self, value): #vers 2
-        """Handle global saturation slider change - applies to ALL colors"""
-        self.global_sat_value.setText(str(value))
-
-        hue_shift = self.global_hue_slider.value()
-        sat_shift = value
-        bri_shift = self.global_bri_slider.value()
-
-        self.apply_global_hsb_to_all_colors(hue_shift, sat_shift, bri_shift)
-
-    def _on_global_bri_changed(self, value): #vers 2
-        """Handle global brightness slider change - applies to ALL colors"""
-        self.global_bri_value.setText(str(value))
-
-        hue_shift = self.global_hue_slider.value()
-        sat_shift = self.global_sat_slider.value()
-        bri_shift = value
-
-        self.apply_global_hsb_to_all_colors(hue_shift, sat_shift, bri_shift)
-
-    def apply_global_hsb_to_all_colors(self, hue_shift, sat_shift, bri_shift): #vers 1
-        """Apply HSB adjustments to ALL theme colors globally"""
-        current_theme = self.theme_selector_combo.currentData()
-        original_colors = self.app_settings.get_theme_colors(current_theme)
-
-        # Apply adjustments to each color
-        for color_key, original_hex in original_colors.items():
-            # Convert to HSL
-            h, s, l = rgb_to_hsl(original_hex)
-
-            # Apply shifts
-            h = (h + hue_shift) % 360
-            s = max(0, min(100, s + sat_shift))
-            l = max(0, min(100, l + bri_shift))
-
-            # Convert back to hex
-            new_hex = hsl_to_rgb(h, s, l)
-
-            # Update the color editor
-            if color_key in self.color_editors:
-                self.color_editors[color_key].update_color(new_hex)
-
-            # Store modified color
-            self._modified_colors[color_key] = new_hex
-
-    def _reset_global_sliders(self): #vers 1
-        """Reset global HSB sliders to default (0)"""
-        self.global_hue_slider.setValue(0)
-        self.global_sat_slider.setValue(0)
-        self.global_bri_slider.setValue(0)
-
-        current_theme = self.theme_selector_combo.currentData()
-        if current_theme:
-            original_colors = self.app_settings.get_theme_colors(current_theme)
-            self._modified_colors = original_colors.copy()
-
-            for color_key, editor in self.color_editors.items():
-                if color_key in original_colors:
-                    editor.update_color(original_colors[color_key])
-
-    def _on_color_changed(self, element_key, hex_color): #vers 1
-        """Handle color change from color picker - ADD TO SettingsDialog"""
-        # Update the theme colors in memory
-        if not hasattr(self, '_modified_colors'):
-            self._modified_colors = self.app_settings.get_theme_colors().copy()
-
-        self._modified_colors[element_key] = hex_color
-
-    def apply_global_hsb_to_all_colors(self, hue_shift, sat_shift, bri_shift): #vers 3
-        """Apply HSB adjustments to ALL theme colors globally - respects locks"""
-        if not hasattr(self, 'color_editors'):
-            print("Warning: color_editors not created yet")
-            return
-
-        if not hasattr(self, 'theme_selector_combo'):
-            print("Warning: theme_selector_combo not created yet")
-            return
-
-        current_theme = self.theme_selector_combo.currentData()
-        if not current_theme:
-            return
-
-        original_colors = self.app_settings.get_theme_colors(current_theme)
-
-        # Count locked/unlocked
-        locked_count = 0
-        updated_count = 0
-
-        # Apply adjustments to each color
-        for color_key, original_hex in original_colors.items():
-            if color_key not in self.color_editors:
-                continue
-
-            editor = self.color_editors[color_key]
-
-            # SKIP if locked
-            if editor.is_locked:
-                locked_count += 1
-                continue
-
-            # Convert to HSL
-            h, s, l = rgb_to_hsl(original_hex)
-
-            # Apply shifts
-            h = (h + hue_shift) % 360
-            s = max(0, min(100, s + sat_shift))
-            l = max(0, min(100, l + bri_shift))
-
-            # Convert back to hex
-            new_hex = hsl_to_rgb(h, s, l)
-
-            # Update the color editor
-            editor.update_color(new_hex)
-            updated_count += 1
-
-            # Store modified color
-            if not hasattr(self, '_modified_colors'):
-                self._modified_colors = {}
-            self._modified_colors[color_key] = new_hex
-
-        # Optional: Show feedback
-        if hasattr(self, 'picked_color_hex'):
-            if locked_count > 0:
-                self.picked_color_hex.setText(f"Updated: {updated_count}, Locked: {locked_count}")
-
-
-    # ADD helper methods to SettingsDialog for lock management
-
-    def _lock_all_colors(self): #vers 1
-        """Lock all color editors"""
-        if hasattr(self, 'color_editors'):
-            for editor in self.color_editors.values():
-                editor.set_locked(True)
-
-    def _unlock_all_colors(self): #vers 1
-        """Unlock all color editors"""
-        if hasattr(self, 'color_editors'):
-            for editor in self.color_editors.values():
-                editor.set_locked(False)
-
-    def _lock_text_colors(self): #vers 1
-        """Lock only text-related colors"""
-        if hasattr(self, 'color_editors'):
-            text_keys = ['text_primary', 'text_secondary', 'text_accent', 'button_text_color']
-            for key in text_keys:
-                if key in self.color_editors:
-                    self.color_editors[key].set_locked(True)
-
-
-    def _refresh_themes(self): #vers 1
-        """Refresh themes from disk - ADD TO SettingsDialog"""
-        current_theme = self.theme_combo.currentData()
-
-        self.app_settings.refresh_themes()
-
-        self.theme_combo.clear()
-        for theme_name, theme_data in self.app_settings.themes.items():
-            display_name = theme_data.get("name", theme_name)
-            self.theme_combo.addItem(display_name, theme_name)
-
-        # Try to restore selection
-        index = self.theme_combo.findData(current_theme)
-        if index >= 0:
-            self.theme_combo.setCurrentIndex(index)
-
-    def refresh_themes_in_dialog(self):
-        """Refresh themes in settings dialog"""
-        if hasattr(self, 'demo_theme_combo'):
-            current_theme = self.demo_theme_combo.currentText()
-
-            # Refresh themes from disk
-            self.app_settings.refresh_themes()
-
-            # Update combo box
-            self.demo_theme_combo.clear()
-            for theme_name, theme_data in self.app_settings.themes.items():
-                display_name = theme_data.get("name", theme_name)
-                self.demo_theme_combo.addItem(f"{display_name}", theme_name)
-
-            # Try to restore previous selection
-            index = self.demo_theme_combo.findData(current_theme)
-            if index >= 0:
-                self.demo_theme_combo.setCurrentIndex(index)
-
-            if hasattr(self, 'demo_log'):
-                self.demo_log.append(f"🔄 Refreshed themes: {len(self.app_settings.themes)} available")
-
-
-        # Theme settings (if you have theme controls)
-        if hasattr(self, 'theme_combo'):
-            settings["theme"] = self.theme_combo.currentText()
-        elif hasattr(self, 'demo_theme_combo'):
-            settings["theme"] = self.demo_theme_combo.currentText()
-
-        # Font settings (if you have font controls)
-        if hasattr(self, 'font_family_combo'):
-            settings["font_family"] = self.font_family_combo.currentText()
-        if hasattr(self, 'font_size_spin'):
-            settings["font_size"] = self.font_size_spin.value()
-
-        # Interface settings (if you have these controls)
-        if hasattr(self, 'opacity_slider'):
-            settings["panel_opacity"] = self.opacity_slider.value()
-        if hasattr(self, 'tooltips_check'):
-            settings["show_tooltips"] = self.tooltips_check.isChecked()
-        if hasattr(self, 'auto_save_check'):
-            settings["auto_save"] = self.auto_save_check.isChecked()
-        if hasattr(self, 'animations_check'):
-            settings["animations"] = self.animations_check.isChecked()
-
-        # Grid settings (if you have these controls)
-        if hasattr(self, 'grid_size_spin'):
-            settings["grid_size"] = self.grid_size_spin.value()
-        if hasattr(self, 'snap_to_grid_check'):
-            settings["snap_to_grid"] = self.snap_to_grid_check.isChecked()
-        if hasattr(self, 'show_grid_check'):
-            settings["show_grid"] = self.show_grid_check.isChecked()
-
-        # Add any other settings you have controls for
-        # Example pattern:
-        # if hasattr(self, 'your_control_name'):
-        #     settings["your_setting_key"] = self.your_control_name.value()  # or .isChecked() or .currentText()
-
-        return settings
-
-    def _get_dialog_settings(self) -> dict:
-        """Simple version - collect basic settings"""
-        settings = {}
-
-        # Get theme from demo tab if available
-        if hasattr(self, 'demo_theme_combo'):
-            settings["theme"] = self.demo_theme_combo.currentText()
-        else:
-            # Keep current theme if no demo tab
-            settings["theme"] = self.app_settings.current_settings["theme"]
-
-        # Add any other simple settings here
-        return settings
-
-
-
-
-    # REPLACE: Improved Demo tab with better layout and complete functionality
-
-    def get_contrast_text_color(self, bg_color: str) -> str:
-        """
-        Calculate whether to use black or white text based on background color brightness
-        Returns '#000000' for light backgrounds, '#ffffff' for dark backgrounds
-        """
-        # Remove # if present
-        if bg_color.startswith('#'):
-            bg_color = bg_color[1:]
-
-        # Handle 3-digit hex codes
-        if len(bg_color) == 3:
-            bg_color = ''.join([c*2 for c in bg_color])
-
-        # Convert to RGB
-        try:
-            r = int(bg_color[:2], 16)
-            g = int(bg_color[2:4], 16)
-            b = int(bg_color[4:6], 16)
-        except (ValueError, IndexError):
-            # Fallback to black text if color parsing fails
-            return '#000000'
-
-        # Calculate relative luminance using WCAG formula
-        # https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html
-        def relative_luminance(c):
-            c = c / 255.0
-            if c <= 0.03928:
-                return c / 12.92
-            else:
-                return pow((c + 0.055) / 1.055, 2.4)
-
-        r_rel = relative_luminance(r)
-        g_rel = relative_luminance(g)
-        b_rel = relative_luminance(b)
-
-        luminance = 0.2126 * r_rel + 0.7152 * g_rel + 0.0722 * b_rel
-
-        # Return white text for dark backgrounds (luminance < 0.5)
-        # Return black text for light backgrounds (luminance >= 0.5)
-        return '#ffffff' if luminance < 0.5 else '#000000'
-
-    # UPDATE your get_stylesheet() method to use smart text colors:
-
-    def get_stylesheet(self):
-        """Generate complete stylesheet for current theme with JSON button text colors"""
-        theme = self.get_theme()
-        colors = theme["colors"]
-
-        # Use custom button colors if enabled
-        if self.current_settings["custom_button_colors"]:
-            button_colors = {
-                "import": self.current_settings["button_import_color"],
-                "export": self.current_settings["button_export_color"],
-                "remove": self.current_settings["button_remove_color"],
-                "update": self.current_settings["button_update_color"],
-                "convert": self.current_settings["button_convert_color"],
-                "default": self.current_settings["button_default_color"]
-            }
-        else:
-            button_colors = {
-                "import": colors.get("action_import", colors["accent_primary"]),
-                "export": colors.get("action_export", colors["success"]),
-                "remove": colors.get("action_remove", colors["error"]),
-                "update": colors.get("action_update", colors["warning"]),
-                "convert": colors.get("action_convert", colors["accent_secondary"]),
-                "default": colors["button_normal"]
-            }
-
-        # Build font strings
-        main_font = f'{self.current_settings["font_family"]}, {self.current_settings["font_size"]}pt'
-        panel_font = f'{self.current_settings["panel_font_family"]}, {self.current_settings["panel_font_size"]}pt'
-        button_font = f'{self.current_settings["button_font_family"]}, {self.current_settings["button_font_size"]}pt'
-
-        # GET BUTTON TEXT COLORS FROM JSON THEME (this is the key fix!)
-        button_text = colors.get("button_text_color", "#000000")        # Use JSON color
-        button_text_hover = colors.get("button_text_hover", button_text)  # Use JSON color
-        button_text_pressed = colors.get("button_text_pressed", button_text)  # Use JSON color
-
-        # Icon control CSS
-        icon_style = ""
-        if not self.current_settings.get("show_button_icons", False):
-            icon_style = """
-            QPushButton {
-                qproperty-iconSize: 0px 0px;
-            }
-            """
-
-        return f"""
-            /* Main Window and Widgets */
-            QMainWindow {{
-                background-color: {colors["bg_primary"]};
-                color: {colors["text_primary"]};
-                font: {main_font};
-            }}
-
-            QWidget {{
-                background-color: {colors["bg_primary"]};
-                color: {colors["text_primary"]};
-                font: {main_font};
-            }}
-
-            /* Panels and Group Boxes */
-            QGroupBox {{
-                background-color: {colors["panel_bg"]};
-                border: 2px solid {colors["border"]};
-                border-radius: 8px;
-                margin-top: 1ex;
-                padding-top: 10px;
-                font: {panel_font};
-                font-weight: {self.current_settings["panel_font_weight"]};
-                color: {colors["text_accent"]};
-            }}
-
-            QGroupBox::title {{
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 8px 0 8px;
-                color: {colors["accent_primary"]};
-                font-weight: bold;
-            }}
-
-            /* FIXED: Default Buttons with JSON text color */
-            QPushButton {{
-                background-color: {button_colors["default"]};
-                border: 2px solid {colors["accent_primary"]};
-                border-radius: 6px;
-                padding: 8px 16px;
-                color: {button_text};  /* USE JSON BUTTON TEXT COLOR */
-                font: {button_font};
-                font-weight: {self.current_settings["button_font_weight"]};
-                min-height: 20px;
-            }}
-
-            QPushButton:hover {{
-                background-color: {colors["button_hover"]};
-                border-color: {colors["accent_secondary"]};
-                color: {button_text_hover};  /* USE JSON HOVER TEXT COLOR */
-            }}
-
-            QPushButton:pressed {{
-                background-color: {colors["button_pressed"]};
-                color: {button_text_pressed};  /* USE JSON PRESSED TEXT COLOR */
-            }}
-
-            /* FIXED: Action-specific buttons with JSON text colors */
-            QPushButton[action-type="import"] {{
-                background-color: {button_colors["import"]};
-                border-color: {button_colors["import"]};
-                color: {button_text};  /* USE JSON TEXT COLOR */
-            }}
-
-            QPushButton[action-type="export"] {{
-                background-color: {button_colors["export"]};
-                border-color: {button_colors["export"]};
-                color: {button_text};  /* USE JSON TEXT COLOR */
-            }}
-
-            QPushButton[action-type="remove"] {{
-                background-color: {button_colors["remove"]};
-                border-color: {button_colors["remove"]};
-                color: {button_text};  /* USE JSON TEXT COLOR */
-            }}
-
-            QPushButton[action-type="update"] {{
-                background-color: {button_colors["update"]};
-                border-color: {button_colors["update"]};
-                color: {button_text};  /* USE JSON TEXT COLOR */
-            }}
-
-            QPushButton[action-type="convert"] {{
-                background-color: {button_colors["convert"]};
-                border-color: {button_colors["convert"]};
-                color: {button_text};  /* USE JSON TEXT COLOR */
-            }}
-
-            /* Action button hover states */
-            QPushButton[action-type="import"]:hover,
-            QPushButton[action-type="export"]:hover,
-            QPushButton[action-type="remove"]:hover,
-            QPushButton[action-type="update"]:hover,
-            QPushButton[action-type="convert"]:hover {{
-                color: {button_text_hover};  /* USE JSON HOVER TEXT COLOR */
-            }}
-
-            /* Action button pressed states */
-            QPushButton[action-type="import"]:pressed,
-            QPushButton[action-type="export"]:pressed,
-            QPushButton[action-type="remove"]:pressed,
-            QPushButton[action-type="update"]:pressed,
-            QPushButton[action-type="convert"]:pressed {{
-                color: {button_text_pressed};  /* USE JSON PRESSED TEXT COLOR */
-            }}
-
-            /* Combo Boxes */
-            QComboBox {{
-                background-color: {colors["bg_secondary"]};
-                border: 2px solid {colors["border"]};
-                border-radius: 4px;
-                padding: 4px 8px;
-                color: {colors["text_primary"]};
-                min-height: 20px;
-                font: {main_font};
-            }}
-
-            QComboBox:hover {{
-                border-color: {colors["accent_primary"]};
-            }}
-
-            QComboBox QAbstractItemView {{
-                background-color: {colors["bg_secondary"]};
-                border: 2px solid {colors["accent_primary"]};
-                selection-background-color: {colors["accent_primary"]};
-                color: {colors["text_primary"]};
-            }}
-
-            /* Tables */
-            QTableWidget {{
-                background-color: {colors["bg_secondary"]};
-                border: 1px solid {colors["border"]};
-                color: {colors["text_primary"]};
-                gridline-color: {colors["grid"]};
-                font: {main_font};
-            }}
-
-            QTableWidget::item {{
-                padding: 4px;
-                border-bottom: 1px solid {colors["grid"]};
-            }}
-
-            QTableWidget::item:selected {{
-                background-color: {colors["accent_primary"]};
-                color: {colors["bg_primary"]};
-            }}
-
-            QHeaderView::section {{
-                background-color: {colors["panel_bg"]};
-                color: {colors["text_accent"]};
-                padding: 6px;
-                border: 1px solid {colors["border"]};
-                font-weight: bold;
-            }}
-
-            /* Text Edit */
-            QTextEdit {{
-                background-color: {colors["bg_secondary"]};
-                border: 1px solid {colors["border"]};
-                color: {colors["text_primary"]};
-                padding: 4px;
-                font: {main_font};
-            }}
-
-            /* Line Edit */
-            QLineEdit {{
-                background-color: {colors["bg_secondary"]};
-                border: 2px solid {colors["border"]};
-                border-radius: 4px;
-                padding: 4px 8px;
-                color: {colors["text_primary"]};
-                font: {main_font};
-            }}
-
-            QLineEdit:focus {{
-                border-color: {colors["accent_primary"]};
-            }}
-
-            /* Checkboxes */
-            QCheckBox {{
-                color: {colors["text_primary"]};
-                font: {main_font};
-            }}
-
-            QCheckBox::indicator {{
-                width: 16px;
-                height: 16px;
-                border: 2px solid {colors["border"]};
-                border-radius: 3px;
-                background-color: {colors["bg_secondary"]};
-            }}
-
-            QCheckBox::indicator:checked {{
-                background-color: {colors["accent_primary"]};
-                border-color: {colors["accent_primary"]};
-            }}
-
-            /* Icon control */
-            {icon_style}
-        """
-
-    def _create_demo_tab(self) -> QWidget:
-        """Create improved demo tab with better layout"""
-        tab = QWidget()
-        main_layout = QHBoxLayout(tab)  # Changed to horizontal for better space usage
-
-        # Left column - Controls
-        left_widget = QWidget()
-        left_layout = QVBoxLayout(left_widget)
-        left_widget.setMaximumWidth(300)
-
-        # Theme Selection Group
-        theme_group = QGroupBox("🎨 Theme Selection")
-        theme_layout = QVBoxLayout(theme_group)
-
-        # Current theme display
-        current_layout = QHBoxLayout()
-        current_layout.addWidget(QLabel("Active Theme:"))
-        self.current_theme_label = QLabel(self.app_settings.current_settings["theme"])
-        self.current_theme_label.setStyleSheet("font-weight: bold; color: #2E7D32;")
-        current_layout.addWidget(self.current_theme_label)
-        current_layout.addStretch()
-        theme_layout.addLayout(current_layout)
-
-        # Theme selector
-        preview_layout = QHBoxLayout()
-        preview_layout.addWidget(QLabel("Preview:"))
-        self.demo_theme_combo = QComboBox()
-        available_themes = list(self.app_settings.themes.keys())
-        self.demo_theme_combo.addItems(available_themes)
-        refresh_themes_btn = QPushButton("🔄 Refresh Themes")
-        refresh_themes_btn.setToolTip("Reload themes from themes/ folder")
-        refresh_themes_btn.clicked.connect(self.refresh_themes_in_dialog)
-        self.demo_theme_combo.setCurrentText(self.app_settings.current_settings["theme"])
-        self.demo_theme_combo.currentTextChanged.connect(self._preview_theme_instantly)
-
-        preview_layout.addWidget(self.demo_theme_combo)
-        theme_layout.addLayout(preview_layout)
-
-        left_layout.addWidget(theme_group)
-
-        # Real-time Controls Group
-        controls_group = QGroupBox("⚡ Live Controls")
-        controls_layout = QVBoxLayout(controls_group)
-
-        # Instant apply toggle
-        self.instant_apply_check = QCheckBox("Apply changes instantly")
-        self.instant_apply_check.setChecked(True)
-        self.instant_apply_check.toggled.connect(self._toggle_instant_apply)
-        controls_layout.addWidget(self.instant_apply_check)
-
-        # Auto-preview toggle
-        self.auto_preview_check = QCheckBox("Auto-preview on selection")
-        self.auto_preview_check.setChecked(True)
-        controls_layout.addWidget(self.auto_preview_check)
-
-        # Preview scope
-        scope_layout = QHBoxLayout()
-        scope_layout.addWidget(QLabel("Preview Scope:"))
-        self.preview_scope_combo = QComboBox()
-        self.preview_scope_combo.addItems(["Demo Only", "Dialog Only", "Full Application"])
-        self.preview_scope_combo.setCurrentIndex(2)  # Full Application
-        self.preview_scope_combo.currentTextChanged.connect(self._change_preview_scope)
-        scope_layout.addWidget(self.preview_scope_combo)
-        controls_layout.addLayout(scope_layout)
-
-        left_layout.addWidget(controls_group)
-
-        # Quick Themes Group
-        quick_group = QGroupBox("🚀 Quick Themes")
-        quick_layout = QVBoxLayout(quick_group)
-
-        # Popular themes
-        popular_themes = ["LCARS", "IMG_Factory", "Deep_Purple", "Cyberpunk", "Matrix"]
-        for theme_name in popular_themes:
-            if theme_name in self.app_settings.themes:
-                quick_btn = QPushButton(f"🎭 {theme_name}")
-                quick_btn.clicked.connect(lambda checked, t=theme_name: self._apply_quick_theme(t))
-                quick_btn.setMinimumHeight(35)
-                quick_layout.addWidget(quick_btn)
-
-        # Reset and randomize buttons
-        button_layout = QHBoxLayout()
-        reset_btn = QPushButton("🔄 Reset")
-        reset_btn.clicked.connect(self._reset_demo_theme)
-        random_btn = QPushButton("🎲 Random")
-        random_btn.clicked.connect(self._random_theme)
-        button_layout.addWidget(reset_btn)
-        button_layout.addWidget(random_btn)
-        quick_layout.addLayout(button_layout)
-
-        left_layout.addWidget(quick_group)
-
-        # Theme Info Group
-        info_group = QGroupBox("ℹ️ Theme Info")
-        info_layout = QVBoxLayout(info_group)
-
-        self.theme_info_label = QLabel()
-        self.theme_info_label.setWordWrap(True)
-        self.theme_info_label.setMinimumHeight(100)
-        #self.theme_info_label.setStyleSheet("padding: 8px;  border-radius: 4px;")
-        info_layout.addWidget(self.theme_info_label)
-
-        left_layout.addWidget(info_group)
-        left_layout.addStretch()
-
-        main_layout.addWidget(left_widget)
-
-        # Right column - Preview Area
-        right_widget = QWidget()
-        right_layout = QVBoxLayout(right_widget)
-
-        # Preview Header
-        preview_header = QGroupBox("📺 Live Preview - IMG Factory Interface")
-        header_layout = QHBoxLayout(preview_header)
-
-        self.preview_status = QLabel("Ready for preview")
-        self.preview_status.setStyleSheet("color: #4CAF50; font-weight: bold;")
-        header_layout.addWidget(self.preview_status)
-        header_layout.addStretch()
-
-        # Preview controls
-        self.full_preview_btn = QPushButton("🖥️ Full Preview")
-        self.full_preview_btn.clicked.connect(self._show_full_preview)
-        header_layout.addWidget(self.full_preview_btn)
-
-        right_layout.addWidget(preview_header)
-
-        # Sample IMG Factory Toolbar
-        toolbar_group = QGroupBox("🔧 Sample Toolbar")
-        toolbar_layout = QGridLayout(toolbar_group)
-
-        self.demo_buttons = []
-        toolbar_buttons = [
-            ("Open IMG", "import", "Open IMG archive"),
-            ("Import Files", "import", "Import files to archive"),
-            ("Export Selected", "export", "Export selected entries"),
-            ("Remove Entry", "remove", "Remove selected entry"),
-            ("Refresh", "update", "Refresh entry list"),
-            ("Convert Format", "convert", "Convert file format"),
-            ("Save Archive", None, "Save current archive"),
-            ("Settings", None, "Open settings dialog")
-        ]
-
-        for i, (text, action_type, tooltip) in enumerate(toolbar_buttons):
-            btn = QPushButton(text)
-            if action_type:
-                btn.setProperty("action-type", action_type)
-            btn.setToolTip(tooltip)
-            btn.setMinimumHeight(35)
-            self.demo_buttons.append(btn)
-            toolbar_layout.addWidget(btn, i // 4, i % 4)
-
-        right_layout.addWidget(toolbar_group)
-
-        # Sample Table
-        table_group = QGroupBox("📋 Sample IMG Entries Table")
-        table_layout = QVBoxLayout(table_group)
-
-        self.demo_table = QTableWidget(5, 5)
-        self.demo_table.setHorizontalHeaderLabels(["Filename", "Type", "Size", "Version", "Status"])
-        self.demo_table.setMaximumHeight(180)
-
-        # Auto-resize columns
-        self.demo_table.resizeColumnsToContents()
-        table_layout.addWidget(self.demo_table)
-
-        right_layout.addWidget(table_group)
-
-        # Sample Log Output
-        log_group = QGroupBox("📜 Sample Activity Log")
-        log_layout = QVBoxLayout(log_group)
-
-        self.demo_log = QTextEdit()
-        self.demo_log.setMaximumHeight(120)
-        self.demo_log.setReadOnly(True)
-
-        # Enhanced log content
-        initial_log = """🎮 IMG Factory 1.5 - Live Theme Preview
-📁 Current IMG: sample_archive.img (150 MB)
-📊 Entries loaded: 1,247 files
-🎨 Active theme: """ + self.app_settings.current_settings["theme"] + """
-⚡ Live preview mode: ACTIVE
-📋 Ready for operations..."""
-
-        self.demo_log.setPlainText(initial_log)
-        log_layout.addWidget(self.demo_log)
-
-        right_layout.addWidget(log_group)
-
-        # Preview Statistics
-        stats_group = QGroupBox("📊 Preview Statistics")
-        stats_layout = QGridLayout(stats_group)
-
-        self.stats_labels = {}
-        stats_data = [
-            ("Themes Available:", str(len(available_themes))),
-            ("Preview Changes:", "0"),
-            ("Last Applied:", "None"),
-            ("Performance:", "Excellent")
-        ]
-
-        for i, (label, value) in enumerate(stats_data):
-            stats_layout.addWidget(QLabel(label), i, 0)
-            value_label = QLabel(value)
-            value_label.setStyleSheet("font-weight: bold; color: #1976D2;")
-            self.stats_labels[label] = value_label
-            stats_layout.addWidget(value_label, i, 1)
-
-        right_layout.addWidget(stats_group)
-
-        main_layout.addWidget(right_widget)
-
-        # Initialize preview
-        self._update_theme_info()
-        self._apply_demo_theme(self.app_settings.current_settings["theme"])
-
-        return tab
-
-    def _preview_theme_instantly(self, theme_name: str):
-        """Enhanced instant preview with better feedback"""
-        if hasattr(self, 'auto_preview_check') and self.auto_preview_check.isChecked():
-            self._apply_demo_theme(theme_name)
-            self._update_theme_info()
-            self._update_preview_stats()
-
-            # Update status
-            self.preview_status.setText(f"Previewing: {theme_name}")
-            self.demo_log.append(f"🎨 Theme preview: {theme_name}")
-
-    def _apply_demo_theme(self, theme_name: str):
-        """Enhanced theme application with scope control"""
-        if theme_name not in self.app_settings.themes:
-            return
-
-        # Temporarily update settings
-        self.app_settings.current_settings["theme"] = theme_name
-        stylesheet = self.app_settings.get_stylesheet()
-
-        scope = getattr(self, 'preview_scope_combo', None)
-        scope_text = scope.currentText() if scope else "Demo Only"
-
-        # Apply to demo elements
-        for btn in self.demo_buttons:
-            btn.setStyleSheet(stylesheet)
-        self.demo_table.setStyleSheet(stylesheet)
-        self.demo_log.setStyleSheet(stylesheet)
-
-        # Apply based on scope
-        if scope_text == "Dialog Only" or scope_text == "Full Application":
-            self.setStyleSheet(stylesheet)
-
-        if scope_text == "Full Application":
-            self.themeChanged.emit(theme_name)
-
-        # Update current theme label
-        if hasattr(self, 'current_theme_label'):
-            self.current_theme_label.setText(theme_name)
-
-    def _apply_quick_theme(self, theme_name: str):
-        """Apply quick theme with animation effect"""
-        self.demo_theme_combo.setCurrentText(theme_name)
-        self._apply_demo_theme(theme_name)
-
-        # Animate button click
-        sender = self.sender()
-        if sender:
-            original_text = sender.text()
-            sender.setText(f"✨ Applied!")
-            QTimer.singleShot(1000, lambda: sender.setText(original_text))
-
-    def _random_theme(self):
-        """Apply random theme"""
-        import random
-        themes = list(self.app_settings.themes.keys())
-        current = self.demo_theme_combo.currentText()
-        themes.remove(current)  # Don't pick the same theme
-
-        random_theme = random.choice(themes)
-        self.demo_theme_combo.setCurrentText(random_theme)
-        self._apply_demo_theme(random_theme)
-
-        self.demo_log.append(f"🎲 Random theme: {random_theme}")
-
-    def _toggle_instant_apply(self, enabled: bool):
-        """Enhanced instant apply toggle"""
-        if enabled:
-            current_theme = self.demo_theme_combo.currentText()
-            self._apply_demo_theme(current_theme)
-            self.preview_status.setText("Instant apply: ON")
-            self.demo_log.append("⚡ Instant apply enabled")
-        else:
-            self.preview_status.setText("Instant apply: OFF")
-            self.demo_log.append("⏸️ Instant apply disabled")
-
-    def _change_preview_scope(self, scope: str):
-        """Change preview scope"""
-        self.demo_log.append(f"🎯 Preview scope: {scope}")
-        current_theme = self.demo_theme_combo.currentText()
-        self._apply_demo_theme(current_theme)
-
-    def _update_theme_info(self):
-        """Update theme information display"""
-        current_theme = self.demo_theme_combo.currentText()
-        if current_theme in self.app_settings.themes:
-            theme_data = self.app_settings.themes[current_theme]
-
-            info_text = f"""
-            <b>{theme_data.get('name', current_theme)}</b><br>
-            <i>{theme_data.get('description', 'No description available')}</i><br><br>
-
-            <b>Colors:</b><br>
-            • Primary: {theme_data['colors'].get('accent_primary', 'N/A')}<br>
-            • Background: {theme_data['colors'].get('bg_primary', 'N/A')}<br>
-            • Text: {theme_data['colors'].get('text_primary', 'N/A')}<br>
-
-            <b>Category:</b> {theme_data.get('category', 'Standard')}<br>
-            <b>Author:</b> {theme_data.get('author', 'Unknown')}
-            """
-
-            if hasattr(self, 'theme_info_label'):
-                self.theme_info_label.setText(info_text)
-
-    def _update_preview_stats(self):
-        """Update preview statistics"""
-        if hasattr(self, 'stats_labels'):
-            current_count = int(self.stats_labels["Preview Changes:"].text()) + 1
-            self.stats_labels["Preview Changes:"].setText(str(current_count))
-            self.stats_labels["Last Applied:"].setText(self.demo_theme_combo.currentText())
-
-    def _show_full_preview(self):
-        """Show full preview window"""
-        QMessageBox.information(self, "Full Preview",
-            "Full preview window would open here!\n\n"
-            "This would show a complete IMG Factory interface\n"
-            "with the selected theme applied.")
-
-    def _reset_demo_theme(self):
-        """Enhanced reset with confirmation"""
-        original = getattr(self, '_original_theme', self.app_settings.current_settings["theme"])
-        self.demo_theme_combo.setCurrentText(original)
-        self._apply_demo_theme(original)
-
-        # Reset stats
-        if hasattr(self, 'stats_labels'):
-            self.stats_labels["Preview Changes:"].setText("0")
-            self.stats_labels["Last Applied:"].setText("Reset")
-
-        self.demo_log.append(f"🔄 Reset to original: {original}")
-        self.preview_status.setText("Reset to original theme")
-
-    def _preview_theme_instantly(self, theme_name: str):
-        """Preview theme in real-time without saving"""
-        if hasattr(self, 'instant_apply_check') and self.instant_apply_check.isChecked():
-            self._apply_demo_theme(theme_name)
-            self.demo_log.append(f"🎨 Previewing theme: {theme_name}")
-
-    def _apply_demo_theme(self, theme_name: str):
-        """Apply theme to demo elements only"""
-        if theme_name not in self.app_settings.themes:
-            return
-
-        # Temporarily update settings for preview
-        original_theme = self.app_settings.current_settings["theme"]
-        self.app_settings.current_settings["theme"] = theme_name
-
-        # Apply theme to demo elements
-        stylesheet = self.app_settings.get_stylesheet()
-
-        # Apply to demo widgets
-        for btn in self.demo_buttons:
-            btn.setStyleSheet(stylesheet)
-
-        self.demo_table.setStyleSheet(stylesheet)
-        self.demo_log.setStyleSheet(stylesheet)
-
-        # Apply to main dialog if instant apply is enabled
-        if hasattr(self, 'instant_apply_check') and self.instant_apply_check.isChecked():
-            self.setStyleSheet(stylesheet)
-
-        # Emit theme change signal for main app
-        self.themeChanged.emit(theme_name)
-
-    def _apply_quick_theme(self, theme_name: str):
-        """Apply quick theme selection"""
-        self.demo_theme_combo.setCurrentText(theme_name)
-        self._apply_demo_theme(theme_name)
-
-    def _toggle_instant_apply(self, enabled: bool):
-        """Toggle instant apply mode"""
-        if enabled:
-            current_theme = self.demo_theme_combo.currentText()
-            self._apply_demo_theme(current_theme)
-            self.demo_log.append("⚡ Instant apply enabled")
-        else:
-            self.demo_log.append("⏸️ Instant apply disabled")
-
-    def _reset_demo_theme(self):
-        """Reset to original theme"""
-        original_theme = getattr(self, '_original_theme', self.app_settings.current_settings["theme"])
-        self.demo_theme_combo.setCurrentText(original_theme)
-        self._apply_demo_theme(original_theme)
-        self.demo_log.append(f"🔄 Reset to original theme: {original_theme}")
-
-    # UPDATE: Add demo tab to your existing _create_ui method
-    def _create_ui(self):
-        """Create the enhanced settings dialog UI"""
+    def _create_ui(self): #vers 4
+        """Create the settings dialog UI - FIXED"""
         layout = QVBoxLayout(self)
 
         # Store original theme for reset
-        self._original_theme = self.app_settings.current_settings["theme"]
+        self._original_theme = self.app_settings.current_settings.get("theme", "IMG_Factory")
 
         # Create tab widget
         self.tabs = QTabWidget()
-        layout.addWidget(self.tabs)
 
-        # Existing tabs...
-        # Color picker tab (replaces themes tab)
+        # Add tabs
         self.color_picker_tab = self._create_color_picker_tab()
         self.tabs.addTab(self.color_picker_tab, "🎨 Color Picker")
 
-        self.tabs.addTab(self.color_picker_tab, "🎨 Color Picker")
-
-        # NEW: Add demo tab
         self.demo_tab = self._create_demo_tab()
         self.tabs.addTab(self.demo_tab, "🎭 Demo")
 
         self.debug_tab = self._create_debug_tab()
         self.tabs.addTab(self.debug_tab, "🐛 Debug")
 
-        # Interface tab
         self.interface_tab = self._create_interface_tab()
         self.tabs.addTab(self.interface_tab, "⚙️ Interface")
-        
+
         layout.addWidget(self.tabs)
-        
+
         # Buttons
         button_layout = QHBoxLayout()
-        
+
         reset_btn = QPushButton("🔄 Reset to Defaults")
         reset_btn.clicked.connect(self._reset_to_defaults)
         button_layout.addWidget(reset_btn)
-        
+
         button_layout.addStretch()
-        
+
         cancel_btn = QPushButton("❌ Cancel")
         cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(cancel_btn)
-        
+
         apply_btn = QPushButton("✅ Apply")
         apply_btn.clicked.connect(self._apply_settings)
         button_layout.addWidget(apply_btn)
-        
+
         ok_btn = QPushButton("💾 OK")
         ok_btn.clicked.connect(self._ok_clicked)
+        ok_btn.setDefault(True)
         button_layout.addWidget(ok_btn)
-        
+
         layout.addLayout(button_layout)
-    
-    def _create_debug_tab(self):
-        """Create debug settings tab"""
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
 
-        # Debug Mode Group
-        debug_group = QGroupBox("🐛 Debug Mode")
-        debug_layout = QVBoxLayout(debug_group)
-
-        self.debug_enabled_check = QCheckBox("Enable debug mode")
-        self.debug_enabled_check.setChecked(self.app_settings.current_settings.get('debug_mode', False))
-        self.debug_enabled_check.setToolTip("Enable detailed debug logging throughout the application")
-        debug_layout.addWidget(self.debug_enabled_check)
-
-        # Debug Level
-        level_layout = QHBoxLayout()
-        level_layout.addWidget(QLabel("Debug Level:"))
-        self.debug_level_combo = QComboBox()
-        self.debug_level_combo.addItems(["ERROR", "WARNING", "INFO", "DEBUG", "VERBOSE"])
-        self.debug_level_combo.setCurrentText(self.app_settings.current_settings.get('debug_level', 'INFO'))
-        self.debug_level_combo.setToolTip("Set the verbosity level for debug output")
-        level_layout.addWidget(self.debug_level_combo)
-        level_layout.addStretch()
-        debug_layout.addLayout(level_layout)
-
-        layout.addWidget(debug_group)
-
-        # Debug Categories Group
-        categories_group = QGroupBox("📋 Debug Categories")
-        categories_layout = QGridLayout(categories_group)
-
-        self.debug_categories = {}
-        default_categories = [
-            ('IMG_LOADING', 'IMG file loading and parsing'),
-            ('TABLE_POPULATION', 'Table display and entry population'),
-            ('BUTTON_ACTIONS', 'Button clicks and UI actions'),
-            ('FILE_OPERATIONS', 'File read/write operations'),
-            ('FILTERING', 'Table filtering and search'),
-            ('SIGNAL_SYSTEM', 'Unified signal system')
-        ]
-
-        enabled_categories = self.app_settings.current_settings.get('debug_categories', [cat[0] for cat in default_categories])
-
-        for i, (category, description) in enumerate(default_categories):
-            checkbox = QCheckBox(category.replace('_', ' ').title())
-            checkbox.setChecked(category in enabled_categories)
-            checkbox.setToolTip(description)
-            self.debug_categories[category] = checkbox
-
-            row = i // 2
-            col = i % 2
-            categories_layout.addWidget(checkbox, row, col)
-
-        layout.addWidget(categories_group)
-
-        # Debug Actions Group
-        actions_group = QGroupBox("🔧 Debug Actions")
-        actions_layout = QVBoxLayout(actions_group)
-
-        # Quick debug buttons
-        buttons_layout = QHBoxLayout()
-
-        test_debug_btn = QPushButton("🧪 Test Debug")
-        test_debug_btn.setToolTip("Send a test debug message")
-        test_debug_btn.clicked.connect(self._test_debug_output)
-        buttons_layout.addWidget(test_debug_btn)
-
-        debug_img_btn = QPushButton("📁 Debug IMG")
-        debug_img_btn.setToolTip("Debug current IMG file (if loaded)")
-        debug_img_btn.clicked.connect(self._debug_current_img)
-        buttons_layout.addWidget(debug_img_btn)
-
-        clear_log_btn = QPushButton("🗑️ Clear Log")
-        clear_log_btn.setToolTip("Clear the activity log")
-        clear_log_btn.clicked.connect(self._clear_debug_log)
-        buttons_layout.addWidget(clear_log_btn)
-
-        actions_layout.addLayout(buttons_layout)
-        layout.addWidget(actions_group)
-        layout.addStretch()
-
-        return widget
-
-    def _test_debug_output(self):
-        """Test debug output"""
-        if hasattr(self.parent(), 'log_message'):
-            self.parent().log_message("🧪 Debug test message - debug system working!")
-            self.parent().log_message(f"🐛 [DEBUG-TEST] Debug enabled: {self.debug_enabled_check.isChecked()}")
-            self.parent().log_message(f"🐛 [DEBUG-TEST] Debug level: {self.debug_level_combo.currentText()}")
-
-            enabled_categories = [cat for cat, cb in self.debug_categories.items() if cb.isChecked()]
-            self.parent().log_message(f"🐛 [DEBUG-TEST] Active categories: {', '.join(enabled_categories)}")
-        else:
-            QMessageBox.information(self, "Debug Test", "Debug test completed!\nCheck the activity log for output.")
-
-    def _debug_current_img(self):
-        """Debug current IMG file"""
-        if hasattr(self.parent(), 'current_img') and self.parent().current_img:
-            img = self.parent().current_img
-            self.parent().log_message(f"🐛 [DEBUG-IMG] Current IMG: {img.file_path}")
-            self.parent().log_message(f"🐛 [DEBUG-IMG] Entries: {len(img.entries)}")
-
-            # Count file types
-            file_types = {}
-            for entry in img.entries:
-                ext = entry.name.split('.')[-1].upper() if '.' in entry.name else "NO_EXT"
-                file_types[ext] = file_types.get(ext, 0) + 1
-
-            self.parent().log_message(f"🐛 [DEBUG-IMG] File types found:")
-            for ext, count in sorted(file_types.items()):
-                self.parent().log_message(f"🐛 [DEBUG-IMG]   {ext}: {count} files")
-
-            # Check table rows
-            if hasattr(self.parent(), 'gui_layout') and hasattr(self.parent().gui_layout, 'table'):
-                table = self.parent().gui_layout.table
-                table_rows = table.rowCount()
-                hidden_rows = sum(1 for row in range(table_rows) if table.isRowHidden(row))
-                self.parent().log_message(f"🐛 [DEBUG-IMG] Table: {table_rows} rows, {hidden_rows} hidden")
-
-        elif hasattr(self.parent(), 'log_message'):
-            self.parent().log_message("🐛 [DEBUG-IMG] No IMG file currently loaded")
-        else:
-            QMessageBox.information(self, "Debug IMG", "No IMG file loaded or no debug function available.")
-
-    def _clear_debug_log(self):
-        """Clear the activity log"""
-        if hasattr(self.parent(), 'gui_layout') and hasattr(self.parent().gui_layout, 'log'):
-            self.parent().gui_layout.log.clear()
-            self.parent().log_message("🗑️ Debug log cleared")
-        else:
-            QMessageBox.information(self, "Clear Log", "Activity log cleared (if available).")
-
-    # keep
-    def _create_color_picker_tab(self):
-        """Create color picker and theme editor tab"""
+    def _create_color_picker_tab(self): #vers 4
+        """Create color picker and theme editor tab - FIXED global sliders"""
         tab = QWidget()
         main_layout = QHBoxLayout(tab)
 
-        # Left Panel - Color Picker Tools
+        # Left Panel - Color Picker Tools and Global Sliders
         left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
-        left_panel.setMaximumWidth(300)
+        left_panel.setMaximumWidth(350)
 
         # Screen Color Picker Group
-
         picker_group = QGroupBox("🎯 Screen Color Picker")
         picker_layout = QVBoxLayout(picker_group)
 
         self.color_picker = ColorPickerWidget()
         picker_layout.addWidget(self.color_picker)
 
-        # Instructions
         instructions = QLabel("""
-    <b>How to use:</b><br>
-    1. Click 'Pick Color from Screen'<br>
-    2. Move mouse over any color<br>
-    3. Left-click to select or "ESC" to cancel<br>
-    <br>
-    <i>Picked colors can be applied to theme elements →</i>
+<b>How to use:</b><br>
+1. Click 'Pick Color from Screen'<br>
+2. Move mouse over any color<br>
+3. Left-click to select or "ESC" to cancel<br>
+<br>
+<i>Picked colors can be applied to theme elements →</i>
         """)
         instructions.setWordWrap(True)
         instructions.setStyleSheet("padding: 8px; border-radius: 4px;")
@@ -2930,10 +1997,11 @@ class SettingsDialog(QDialog):
         palette_group = QGroupBox("🎨 Quick Colors")
         palette_layout = QGridLayout(palette_group)
 
-        # Common colors
         palette_colors = [
-            "#000000", "#333333", "#666666", "#999999", "#CCCCCC", "#FFFFFF", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF",
-            "#FF8000", "#8000FF", "#0080FF", "#80FF00", "#FF0080", "#00FF80", "#800000", "#008000", "#000080", "#808000", "#800080", "#008080"
+            "#000000", "#333333", "#666666", "#999999", "#CCCCCC", "#FFFFFF",
+            "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF",
+            "#FF8000", "#8000FF", "#0080FF", "#80FF00", "#FF0080", "#00FF80",
+            "#800000", "#008000", "#000080", "#808000", "#800080", "#008080"
         ]
 
         for i, color in enumerate(palette_colors):
@@ -2941,17 +2009,15 @@ class SettingsDialog(QDialog):
             color_btn.setFixedSize(25, 25)
             color_btn.setStyleSheet(f"background-color: {color}; border: 1px solid #999;")
             color_btn.setToolTip(color)
-            color_btn.clicked.connect(lambda checked, c=color: self.color_picker.update_color_display(c))
-
+            color_btn.clicked.connect(lambda checked, c=color: self._apply_palette_color(c))
             row = i // 6
             col = i % 6
             palette_layout.addWidget(color_btn, row, col)
 
         left_layout.addWidget(palette_group)
 
-
-        # Global Theme Sliders Group
-        global_sliders_group = QGroupBox("Global Theme Sliders")
+        # GLOBAL THEME SLIDERS - PROPERLY PLACED HERE
+        global_sliders_group = QGroupBox("🎛️ Global Theme Sliders")
         global_sliders_layout = QVBoxLayout(global_sliders_group)
 
         info_label = QLabel("<b>Adjust ALL colors globally:</b>")
@@ -3011,107 +2077,91 @@ class SettingsDialog(QDialog):
         buttons_layout.addWidget(unlock_all_btn)
 
         global_sliders_layout.addLayout(buttons_layout)
-
         left_layout.addWidget(global_sliders_group)
-
-        # THEN at the END of _create_color_picker_tab, AFTER color_editors are created, ADD:
-        # Connect sliders (must be AFTER color_editors exist)
-        self.global_hue_slider.valueChanged.connect(self._on_global_hue_changed)
-        self.global_sat_slider.valueChanged.connect(self._on_global_sat_changed)
-        self.global_bri_slider.valueChanged.connect(self._on_global_bri_changed)
-
-
-        # Windows XP style color picker
-        color_group = QGroupBox("Global Theme Sliders")
-        color_layout = QVBoxLayout(color_group)
-
-        # Get current theme colors
-        current_colors = self.app_settings.get_theme_colors()
-        self.color_picker = XPColorPicker(current_colors, self)
-        self.color_picker.colorChanged.connect(self._on_color_changed)
-        color_layout.addWidget(self.color_picker)
-
-        left_layout.addWidget(color_group)
-
         left_layout.addStretch()
-        main_layout.addWidget(left_panel)
 
-        # Right Panel - Theme Color Editor
+        # Right Panel - Theme Selection and Color Editors
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
 
-        # Theme Selection Header
-        theme_header = QGroupBox("🎨 Theme Color Editor")
-        header_layout = QHBoxLayout(theme_header)
+        # Theme Selection
+        theme_sel_group = QGroupBox("🎨 Theme Selection")
+        theme_sel_layout = QVBoxLayout(theme_sel_group)
 
-        header_layout.addWidget(QLabel("Current Theme:"))
         self.theme_selector_combo = QComboBox()
+        for theme_key, theme_data in self.app_settings.themes.items():
+            display_name = theme_data.get("name", theme_key)
+            self.theme_selector_combo.addItem(display_name, theme_key)
+        self.theme_selector_combo.currentTextChanged.connect(self._on_theme_changed)
+        theme_sel_layout.addWidget(self.theme_selector_combo)
 
-        # Populate with available themes
-        for theme_name in self.app_settings.themes.keys():
-            self.theme_selector_combo.addItem(theme_name)
-        self.theme_selector_combo.setCurrentText(self.app_settings.current_settings["theme"])
-        self.theme_selector_combo.currentTextChanged.connect(self._load_theme_colors)
+        # Theme action buttons
+        theme_buttons_layout = QHBoxLayout()
 
-        header_layout.addWidget(self.theme_selector_combo)
+        refresh_themes_btn = QPushButton("🔄 Refresh")
+        refresh_themes_btn.clicked.connect(self._refresh_themes)
+        refresh_themes_btn.setToolTip("Refresh theme list from disk")
+        theme_buttons_layout.addWidget(refresh_themes_btn)
 
-        save_theme_btn = QPushButton("💾 Save Theme")
+        save_theme_btn = QPushButton("💾 Save")
         save_theme_btn.clicked.connect(self._save_current_theme)
-        header_layout.addWidget(save_theme_btn)
+        save_theme_btn.setToolTip("Save changes to current theme")
+        theme_buttons_layout.addWidget(save_theme_btn)
 
-        right_layout.addWidget(theme_header)
+        save_as_theme_btn = QPushButton("💾 Save As...")
+        save_as_theme_btn.clicked.connect(self._save_theme_as)
+        save_as_theme_btn.setToolTip("Save as new theme")
+        theme_buttons_layout.addWidget(save_as_theme_btn)
 
-        # Scrollable color editor area
+        theme_sel_layout.addLayout(theme_buttons_layout)
+
+        right_layout.addWidget(theme_sel_group)
+
+        # Color Editors Scroll Area
         scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
         scroll_widget = QWidget()
         scroll_layout = QVBoxLayout(scroll_widget)
 
-        # Theme color definitions
+        # Theme color labels
         self.theme_colors = {
-            "bg_primary": "Primary Background",
-            "bg_secondary": "Secondary Background",
-            "bg_tertiary": "Tertiary Background",
-            "panel_bg": "Panel Background",
-            "accent_primary": "Primary Accent",
-            "accent_secondary": "Secondary Accent",
-            "text_primary": "Primary Text",
-            "text_secondary": "Secondary Text",
-            "text_accent": "Accent Text",
-            "button_normal": "Button Normal",
-            "button_hover": "Button Hover",
-            "button_pressed": "Button Pressed",
-            "button_text_color": "Button Text",
-            "border": "Borders",
-            "success": "Success Color",
-            "warning": "Warning Color",
-            "error": "Error Color",
-            "action_import": "Import Action",
-            "action_export": "Export Action",
-            "action_remove": "Remove Action",
-            "action_update": "Update Action",
-            "action_convert": "Convert Action"
+            'bg_primary': 'Window Background',
+            'bg_secondary': 'Panel Background',
+            'bg_tertiary': 'Alternate Background',
+            'panel_bg': 'GroupBox Background',
+            'accent_primary': 'Primary Accent',
+            'accent_secondary': 'Secondary Accent',
+            'text_primary': 'Primary Text',
+            'text_secondary': 'Secondary Text',
+            'text_accent': 'Accent Text',
+            'button_normal': 'Button Face',
+            'button_hover': 'Button Hover',
+            'button_pressed': 'Button Pressed',
+            'border': 'Border Color',
+            'success': 'Success Color',
+            'warning': 'Warning Color',
+            'error': 'Error Color'
         }
 
         # Create color editors
         self.color_editors = {}
-        for color_key, color_name in self.theme_colors.items():
-            # Get current color value from theme
-            current_value = "#ffffff"  # Default
-            current_theme = self.app_settings.current_settings["theme"]
-            if current_theme in self.app_settings.themes:
-                colors = self.app_settings.themes[current_theme].get("colors", {})
+        current_theme = self.app_settings.current_settings.get("theme", "IMG_Factory")
+        if current_theme in self.app_settings.themes:
+            colors = self.app_settings.themes[current_theme].get("colors", {})
+
+            for color_key, color_name in self.theme_colors.items():
                 current_value = colors.get(color_key, "#ffffff")
+                editor = ThemeColorEditor(color_key, color_name, current_value)
+                editor.colorChanged.connect(self._on_theme_color_changed)
+                editor.lockChanged.connect(lambda key, locked: None)  # Handle lock changes
+                self.color_editors[color_key] = editor
+                scroll_layout.addWidget(editor)
 
-            editor = ThemeColorEditor(color_key, color_name, current_value)
-            editor.colorChanged.connect(self._on_theme_color_changed)
-            self.color_editors[color_key] = editor
-            scroll_layout.addWidget(editor)
-
+        scroll_layout.addStretch()
         scroll_area.setWidget(scroll_widget)
-        scroll_area.setWidgetResizable(True)
         right_layout.addWidget(scroll_area)
 
-        # Selected element display
+        # Apply to Element Group
         selection_group = QGroupBox("🎯 Apply Picked Color")
         selection_layout = QVBoxLayout(selection_group)
 
@@ -3126,35 +2176,291 @@ class SettingsDialog(QDialog):
 
         right_layout.addWidget(selection_group)
 
-        main_layout.addWidget(right_panel)
+        # Add panels to main layout
+        main_layout.addWidget(left_panel)
+        main_layout.addWidget(right_panel, 1)
+
+        # IMPORTANT: Connect sliders AFTER all widgets are created
+        self.global_hue_slider.valueChanged.connect(self._on_global_hue_changed)
+        self.global_sat_slider.valueChanged.connect(self._on_global_sat_changed)
+        self.global_bri_slider.valueChanged.connect(self._on_global_bri_changed)
 
         return tab
 
-    def _load_theme_colors(self, theme_name):
+    def _apply_palette_color(self, color): #vers 1
+        """Apply palette color to selected element"""
+        selected_data = self.selected_element_combo.currentData()
+        if selected_data and selected_data in self.color_editors:
+            self.color_editors[selected_data].set_color(color)
+
+    def _create_demo_tab(self): #vers 2
+        """Create demo tab for theme preview"""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+
+        # Demo controls
+        demo_group = QGroupBox("🎭 Theme Preview")
+        demo_layout = QVBoxLayout(demo_group)
+
+        self.demo_theme_combo = QComboBox()
+        for theme_key in self.app_settings.themes.keys():
+            self.demo_theme_combo.addItem(theme_key)
+        self.demo_theme_combo.currentTextChanged.connect(self._apply_demo_theme)
+        demo_layout.addWidget(self.demo_theme_combo)
+
+        # Instant apply checkbox
+        self.instant_apply_check = QCheckBox("Instant Apply")
+        demo_layout.addWidget(self.instant_apply_check)
+
+        # Demo log
+        self.demo_log = QTextEdit()
+        self.demo_log.setMaximumHeight(150)
+        self.demo_log.setReadOnly(True)
+        demo_layout.addWidget(self.demo_log)
+
+        layout.addWidget(demo_group)
+        layout.addStretch()
+
+        return tab
+
+    def _create_debug_tab(self): #vers 2
+        """Create debug settings tab"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        # Debug Mode Group
+        debug_group = QGroupBox("🐛 Debug Mode")
+        debug_layout = QVBoxLayout(debug_group)
+
+        self.debug_enabled_check = QCheckBox("Enable debug mode")
+        self.debug_enabled_check.setChecked(
+            self.app_settings.current_settings.get('debug_mode', False)
+        )
+        debug_layout.addWidget(self.debug_enabled_check)
+
+        # Debug Level
+        level_layout = QHBoxLayout()
+        level_layout.addWidget(QLabel("Debug Level:"))
+        self.debug_level_combo = QComboBox()
+        self.debug_level_combo.addItems(["ERROR", "WARNING", "INFO", "DEBUG", "VERBOSE"])
+        self.debug_level_combo.setCurrentText(
+            self.app_settings.current_settings.get('debug_level', 'INFO')
+        )
+        level_layout.addWidget(self.debug_level_combo)
+        level_layout.addStretch()
+        debug_layout.addLayout(level_layout)
+
+        layout.addWidget(debug_group)
+
+        # Debug Categories
+        categories_group = QGroupBox("📋 Debug Categories")
+        categories_layout = QGridLayout(categories_group)
+
+        self.debug_categories = {}
+        default_categories = [
+            ('IMG_LOADING', 'IMG file loading'),
+            ('TABLE_POPULATION', 'Table population'),
+            ('BUTTON_ACTIONS', 'Button actions'),
+            ('FILE_OPERATIONS', 'File operations'),
+            ('COL_PARSING', 'COL parsing'),
+            ('THEME_SYSTEM', 'Theme system')
+        ]
+
+        enabled_cats = self.app_settings.current_settings.get('debug_categories', [])
+        for i, (cat_id, cat_name) in enumerate(default_categories):
+            checkbox = QCheckBox(cat_name)
+            checkbox.setChecked(cat_id in enabled_cats)
+            self.debug_categories[cat_id] = checkbox
+            row = i // 2
+            col = i % 2
+            categories_layout.addWidget(checkbox, row, col)
+
+        layout.addWidget(categories_group)
+
+        # Clear log button
+        clear_btn = QPushButton("🗑️ Clear Debug Log")
+        clear_btn.clicked.connect(self._clear_debug_log)
+        layout.addWidget(clear_btn)
+
+        layout.addStretch()
+        return widget
+
+    def _create_interface_tab(self): #vers 2
+        """Create interface settings tab"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        # Font settings
+        font_group = QGroupBox("🔤 Font Settings")
+        font_layout = QVBoxLayout(font_group)
+
+        font_family_layout = QHBoxLayout()
+        font_family_layout.addWidget(QLabel("Font Family:"))
+        self.font_family_combo = QComboBox()
+        self.font_family_combo.addItems(["Segoe UI", "Arial", "Tahoma", "Verdana", "Consolas"])
+        font_family_layout.addWidget(self.font_family_combo)
+        font_layout.addLayout(font_family_layout)
+
+        font_size_layout = QHBoxLayout()
+        font_size_layout.addWidget(QLabel("Font Size:"))
+        self.font_size_spin = QSpinBox()
+        self.font_size_spin.setRange(8, 16)
+        font_size_layout.addWidget(self.font_size_spin)
+        font_size_layout.addStretch()
+        font_layout.addLayout(font_size_layout)
+
+        layout.addWidget(font_group)
+
+        # Interface options
+        interface_group = QGroupBox("⚙️ Interface Options")
+        interface_layout = QVBoxLayout(interface_group)
+
+        self.tooltips_check = QCheckBox("Show tooltips")
+        interface_layout.addWidget(self.tooltips_check)
+
+        self.menu_icons_check = QCheckBox("Show menu icons")
+        interface_layout.addWidget(self.menu_icons_check)
+
+        self.button_icons_check = QCheckBox("Show button icons")
+        interface_layout.addWidget(self.button_icons_check)
+
+        layout.addWidget(interface_group)
+        layout.addStretch()
+
+        return widget
+
+    # ===== GLOBAL SLIDER HANDLERS =====
+
+    def _on_global_hue_changed(self, value): #vers 2
+        """Handle global hue slider change - applies to ALL colors"""
+        self.global_hue_value.setText(str(value))
+        hue_shift = value
+        sat_shift = self.global_sat_slider.value()
+        bri_shift = self.global_bri_slider.value()
+        self.apply_global_hsb_to_all_colors(hue_shift, sat_shift, bri_shift)
+
+    def _on_global_sat_changed(self, value): #vers 2
+        """Handle global saturation slider change - applies to ALL colors"""
+        self.global_sat_value.setText(str(value))
+        hue_shift = self.global_hue_slider.value()
+        sat_shift = value
+        bri_shift = self.global_bri_slider.value()
+        self.apply_global_hsb_to_all_colors(hue_shift, sat_shift, bri_shift)
+
+    def _on_global_bri_changed(self, value): #vers 2
+        """Handle global brightness slider change - applies to ALL colors"""
+        self.global_bri_value.setText(str(value))
+        hue_shift = self.global_hue_slider.value()
+        sat_shift = self.global_sat_slider.value()
+        bri_shift = value
+        self.apply_global_hsb_to_all_colors(hue_shift, sat_shift, bri_shift)
+
+    def apply_global_hsb_to_all_colors(self, hue_shift, sat_shift, bri_shift): #vers 3
+        """Apply HSB adjustments to ALL theme colors globally - respects locks"""
+        if not hasattr(self, 'color_editors'):
+            return
+
+        if not hasattr(self, 'theme_selector_combo'):
+            return
+
+        current_theme = self.theme_selector_combo.currentData()
+        if not current_theme:
+            return
+
+        original_colors = self.app_settings.get_theme_colors(current_theme)
+
+        # Apply adjustments to each color
+        for color_key, original_hex in original_colors.items():
+            if color_key not in self.color_editors:
+                continue
+
+            editor = self.color_editors[color_key]
+
+            # SKIP if locked
+            if editor.is_locked:
+                continue
+
+            # Convert to HSL
+            h, s, l = rgb_to_hsl(original_hex)
+
+            # Apply shifts
+            h = (h + hue_shift) % 360
+            s = max(0, min(100, s + sat_shift))
+            l = max(0, min(100, l + bri_shift))
+
+            # Convert back to hex
+            new_hex = hsl_to_rgb(h, s, l)
+
+            # Update the color editor
+            editor.update_color(new_hex)
+
+            # Store modified color
+            if not hasattr(self, '_modified_colors'):
+                self._modified_colors = {}
+            self._modified_colors[color_key] = new_hex
+
+    def _reset_global_sliders(self): #vers 1
+        """Reset global HSB sliders to default (0)"""
+        self.global_hue_slider.setValue(0)
+        self.global_sat_slider.setValue(0)
+        self.global_bri_slider.setValue(0)
+
+        current_theme = self.theme_selector_combo.currentData()
+        if current_theme:
+            original_colors = self.app_settings.get_theme_colors(current_theme)
+            self._modified_colors = original_colors.copy()
+
+            for color_key, editor in self.color_editors.items():
+                if color_key in original_colors:
+                    editor.update_color(original_colors[color_key])
+
+    def _lock_all_colors(self): #vers 1
+        """Lock all color editors"""
+        if hasattr(self, 'color_editors'):
+            for editor in self.color_editors.values():
+                editor.set_locked(True)
+
+    def _unlock_all_colors(self): #vers 1
+        """Unlock all color editors"""
+        if hasattr(self, 'color_editors'):
+            for editor in self.color_editors.values():
+                editor.set_locked(False)
+
+    # ===== THEME MANAGEMENT =====
+
+    def _on_theme_changed(self, theme_name): #vers 1
+        """Handle theme selection change"""
+        theme_key = None
+        for key, data in self.app_settings.themes.items():
+            if data.get("name", key) == theme_name:
+                theme_key = key
+                break
+
+        if theme_key:
+            self._load_theme_colors(theme_key)
+
+    def _load_theme_colors(self, theme_key): #vers 1
         """Load colors for selected theme into editors"""
-        if theme_name in self.app_settings.themes:
-            colors = self.app_settings.themes[theme_name].get("colors", {})
+        if theme_key in self.app_settings.themes:
+            colors = self.app_settings.themes[theme_key].get("colors", {})
 
             for color_key, editor in self.color_editors.items():
                 color_value = colors.get(color_key, "#ffffff")
                 editor.set_color(color_value)
 
-    def _on_theme_color_changed(self, color_key, hex_value):
+    def _on_theme_color_changed(self, color_key, hex_value): #vers 1
         """Handle individual color changes"""
-        # Update the current theme with new color
-        current_theme = self.theme_selector_combo.currentText()
-        if current_theme in self.app_settings.themes:
-            if "colors" not in self.app_settings.themes[current_theme]:
-                self.app_settings.themes[current_theme]["colors"] = {}
+        if not hasattr(self, '_modified_colors'):
+            self._modified_colors = {}
+        self._modified_colors[color_key] = hex_value
 
-            self.app_settings.themes[current_theme]["colors"][color_key] = hex_value
+    def _on_color_changed(self, element_key, hex_color): #vers 1
+        """Handle color change from color picker"""
+        if not hasattr(self, '_modified_colors'):
+            self._modified_colors = self.app_settings.get_theme_colors().copy()
+        self._modified_colors[element_key] = hex_color
 
-            # Apply changes if instant preview is enabled
-            if hasattr(self, 'instant_apply_check') and self.instant_apply_check.isChecked():
-                self.app_settings.current_settings["theme"] = current_theme
-                self.themeChanged.emit(current_theme)
-
-    def _apply_picked_color(self):
+    def _apply_picked_color(self): #vers 1
         """Apply picked color to selected element"""
         picked_color = self.color_picker.current_color
         selected_data = self.selected_element_combo.currentData()
@@ -3163,215 +2469,393 @@ class SettingsDialog(QDialog):
             if selected_data in self.color_editors:
                 self.color_editors[selected_data].set_color(picked_color)
 
-            # Log the action
             if hasattr(self, 'demo_log'):
                 element_name = self.selected_element_combo.currentText()
                 self.demo_log.append(f"🎨 Applied {picked_color} to {element_name}")
 
+    def _refresh_themes(self): #vers 1
+        """Refresh themes from disk"""
+        current_theme = self.theme_selector_combo.currentData()
+        self.app_settings.refresh_themes()
 
-    def _save_current_theme(self):
-        """Enhanced save current theme with metadata dialog"""
-        current_theme = self.theme_selector_combo.currentText()
+        self.theme_selector_combo.clear()
+        for theme_key, theme_data in self.app_settings.themes.items():
+            display_name = theme_data.get("name", theme_key)
+            self.theme_selector_combo.addItem(display_name, theme_key)
 
-        # Collect all current colors
-        colors = {}
-        for color_key, editor in self.color_editors.items():
-            colors[color_key] = editor.current_value
+        index = self.theme_selector_combo.findData(current_theme)
+        if index >= 0:
+            self.theme_selector_combo.setCurrentIndex(index)
 
-        # Create theme data for the save dialog
-        current_theme_data = {
-            "name": current_theme,
-            "description": f"Modified version of {current_theme}",
-            "category": "🎭 Custom",
-            "author": "X-Seti",
-            "version": "1.0",
-            "colors": colors
-        }
+    def refresh_themes_in_dialog(self): #vers 1
+        """Refresh themes in settings dialog"""
+        if hasattr(self, 'demo_theme_combo'):
+            current_theme = self.demo_theme_combo.currentText()
+            self.app_settings.refresh_themes()
 
-        # Open enhanced save dialog
-        save_dialog = ThemeSaveDialog(self.app_settings, current_theme_data, self)
+            self.demo_theme_combo.clear()
+            for theme_key in self.app_settings.themes.keys():
+                self.demo_theme_combo.addItem(theme_key)
 
-        if save_dialog.exec():
-            theme_data = save_dialog.get_theme_data()
-            if theme_data:
-                # Refresh themes in current dialog
-                self.refresh_themes_in_dialog()
+            index = self.demo_theme_combo.findText(current_theme)
+            if index >= 0:
+                self.demo_theme_combo.setCurrentIndex(index)
 
-                # Log success
-                if hasattr(self, 'demo_log'):
-                    self.demo_log.append(f"💾 Theme saved: {theme_data.get('name', 'Unknown')}")
-                    self.demo_log.append(f"   File: {save_dialog.name_input.text()}.json")
-                    self.demo_log.append(f"   Colors: {len(theme_data.get('colors', {}))}")
+            if hasattr(self, 'demo_log'):
+                self.demo_log.append(f"🔄 Refreshed: {len(self.app_settings.themes)} themes")
 
-    
-    def _create_interface_tab(self):
-        """Create interface settings tab"""
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        
-        # Font settings
-        font_group = QGroupBox("Font Settings")
-        font_layout = QVBoxLayout(font_group)
-        
-        # Font family
-        font_family_layout = QHBoxLayout()
-        font_family_layout.addWidget(QLabel("Font Family:"))
-        self.font_family_combo = QComboBox()
-        self.font_family_combo.addItems(["Segoe UI", "Arial", "Tahoma", "Verdana", "Consolas"])
-        font_family_layout.addWidget(self.font_family_combo)
-        font_layout.addLayout(font_family_layout)
-        
-        # Font size
-        font_size_layout = QHBoxLayout()
-        font_size_layout.addWidget(QLabel("Font Size:"))
-        self.font_size_spin = QSpinBox()
-        self.font_size_spin.setRange(8, 16)
-        font_size_layout.addWidget(self.font_size_spin)
-        font_size_layout.addStretch()
-        font_layout.addLayout(font_size_layout)
-        
-        layout.addWidget(font_group)
-        
-        # Interface options
-        interface_group = QGroupBox("Interface Options")
-        interface_layout = QVBoxLayout(interface_group)
-        
-        self.tooltips_check = QCheckBox("Show tooltips")
-        interface_layout.addWidget(self.tooltips_check)
-        
-        self.menu_icons_check = QCheckBox("Show menu icons")
-        interface_layout.addWidget(self.menu_icons_check)
-        
-        self.button_icons_check = QCheckBox("Show button icons")
-        interface_layout.addWidget(self.button_icons_check)
-        
-        layout.addWidget(interface_group)
-        layout.addStretch()
-        
-        return widget
-    
-    def _load_current_settings(self):
+    # ===== DEMO TAB FUNCTIONS =====
+
+    def _apply_demo_theme(self, theme_name: str): #vers 1
+        """Apply theme to demo elements"""
+        if theme_name not in self.app_settings.themes:
+            return
+
+        # Temporarily update settings for preview
+        self.app_settings.current_settings["theme"] = theme_name
+
+        # Apply theme stylesheet
+        stylesheet = self.app_settings.get_stylesheet()
+
+        # Apply to demo widgets if instant apply enabled
+        if hasattr(self, 'instant_apply_check') and self.instant_apply_check.isChecked():
+            self.setStyleSheet(stylesheet)
+            self.themeChanged.emit(theme_name)
+
+        if hasattr(self, 'demo_log'):
+            self.demo_log.append(f"🎨 Previewing: {theme_name}")
+
+    def _reset_demo_theme(self): #vers 1
+        """Reset to original theme"""
+        original = getattr(self, '_original_theme', self.app_settings.current_settings["theme"])
+        if hasattr(self, 'demo_theme_combo'):
+            self.demo_theme_combo.setCurrentText(original)
+        self._apply_demo_theme(original)
+
+    # ===== SETTINGS MANAGEMENT =====
+
+    def _load_current_settings(self): #vers 2
         """Load current settings into UI"""
-        # Set theme in color picker tab
+        # Set theme
         if hasattr(self, 'theme_selector_combo'):
             current_theme = self.app_settings.current_settings.get("theme", "IMG_Factory")
-            self.theme_selector_combo.setCurrentText(current_theme)
-            self._load_theme_colors(current_theme)
+            index = self.theme_selector_combo.findData(current_theme)
+            if index >= 0:
+                self.theme_selector_combo.setCurrentIndex(index)
 
-        # Set interface settings (keep the rest as is)
+        # Set interface settings
         if hasattr(self, 'font_family_combo'):
-            self.font_family_combo.setCurrentText(self.app_settings.current_settings.get("font_family", "Segoe UI"))
+            self.font_family_combo.setCurrentText(
+                self.app_settings.current_settings.get("font_family", "Segoe UI")
+            )
         if hasattr(self, 'font_size_spin'):
-            self.font_size_spin.setValue(self.app_settings.current_settings.get("font_size", 9))
+            self.font_size_spin.setValue(
+                self.app_settings.current_settings.get("font_size", 9)
+            )
         if hasattr(self, 'tooltips_check'):
-            self.tooltips_check.setChecked(self.app_settings.current_settings.get("show_tooltips", True))
+            self.tooltips_check.setChecked(
+                self.app_settings.current_settings.get("show_tooltips", True)
+            )
         if hasattr(self, 'menu_icons_check'):
-            self.menu_icons_check.setChecked(self.app_settings.current_settings.get("show_menu_icons", True))
+            self.menu_icons_check.setChecked(
+                self.app_settings.current_settings.get("show_menu_icons", True)
+            )
         if hasattr(self, 'button_icons_check'):
-            self.button_icons_check.setChecked(self.app_settings.current_settings.get("show_button_icons", False))
+            self.button_icons_check.setChecked(
+                self.app_settings.current_settings.get("show_button_icons", False)
+            )
 
-    def _apply_settings(self):
-        """Apply settings permanently including demo theme"""
-        new_settings = self._get_dialog_settings()
-        self.app_settings.current_settings.update(settings)
+    def _get_dialog_settings(self): #vers 2
+        """Collect all settings from dialog controls"""
+        settings = {}
 
-        # If demo theme is different, use it
+        # Get theme from demo tab if available
         if hasattr(self, 'demo_theme_combo'):
-            theme_name = self.demo_theme_combo.currentText()
-            new_settings["theme"] = theme_name
-            self.app_settings.current_settings["theme"] = theme_name
-            print(f"🎨\n\nActive theme: {theme_name}")
-
-        if hasattr(self, 'theme_combo'):
-            theme_data = self.theme_combo.currentData()
+            settings["theme"] = self.demo_theme_combo.currentText()
+        elif hasattr(self, 'theme_selector_combo'):
+            theme_data = self.theme_selector_combo.currentData()
             if theme_data:
                 settings["theme"] = theme_data
+        else:
+            settings["theme"] = self.app_settings.current_settings["theme"]
 
-        if hasattr(self, 'font_combo'):
-            settings["font_family"] = self.font_combo.currentText()
+        # Font settings
+        if hasattr(self, 'font_family_combo'):
+            settings["font_family"] = self.font_family_combo.currentText()
         if hasattr(self, 'font_size_spin'):
             settings["font_size"] = self.font_size_spin.value()
 
         # Interface settings
         if hasattr(self, 'tooltips_check'):
             settings["show_tooltips"] = self.tooltips_check.isChecked()
-        if hasattr(self, 'auto_save_check'):
-            settings["auto_save"] = self.auto_save_check.isChecked()
-
-        old_theme = self.app_settings.current_settings["theme"]
-
-        self.app_settings.current_settings.update(new_settings)
-        self.app_settings.save_settings()
-
-
-        if hasattr(self, '_modified_colors'):
-            current_theme = self.app_settings.current_settings["theme"]
-            if current_theme in self.app_settings.themes:
-                self.app_settings.themes[current_theme]["colors"].update(self._modified_colors)
-
-        if new_settings["theme"] != old_theme:
-            self.themeChanged.emit(new_settings["theme"])
-
-        self.settingsChanged.emit()
-
-        QMessageBox.information(self, "Applied", f"Settings applied successfully! 🎨\n\nActive theme: {new_settings['theme']}")
-
-        # Apply interface settings
-        self.app_settings.current_settings['debug_mode'] = self.debug_enabled_check.isChecked()
-        self.app_settings.current_settings['debug_level'] = self.debug_level_combo.currentText()
-
-        enabled_categories = []
-        for category, checkbox in self.debug_categories.items():
-            if checkbox.isChecked():
-                enabled_categories.append(category)
-        self.app_settings.current_settings['debug_categories'] = enabled_categories
-        
-
-        if hasattr(self, 'font_family_combo'):
-            self.app_settings.current_settings["font_family"] = self.font_family_combo.currentText()
-        if hasattr(self, 'font_size_spin'):
-            self.app_settings.current_settings["font_size"] = self.font_size_spin.value()
-        if hasattr(self, 'tooltips_check'):
-            self.app_settings.current_settings["show_tooltips"] = self.tooltips_check.isChecked()
         if hasattr(self, 'menu_icons_check'):
-            self.app_settings.current_settings["show_menu_icons"] = self.menu_icons_check.isChecked()
+            settings["show_menu_icons"] = self.menu_icons_check.isChecked()
         if hasattr(self, 'button_icons_check'):
-            self.app_settings.current_settings["show_button_icons"] = self.button_icons_check.isChecked()
+            settings["show_button_icons"] = self.button_icons_check.isChecked()
 
-        # FIXED: Debug settings with safety checks
+        # Debug settings
         if hasattr(self, 'debug_enabled_check'):
-            self.app_settings.current_settings['debug_mode'] = self.debug_enabled_check.isChecked()
+            settings["debug_mode"] = self.debug_enabled_check.isChecked()
         if hasattr(self, 'debug_level_combo'):
-            self.app_settings.current_settings['debug_level'] = self.debug_level_combo.currentText()
+            settings["debug_level"] = self.debug_level_combo.currentText()
         if hasattr(self, 'debug_categories'):
             enabled_categories = []
             for category, checkbox in self.debug_categories.items():
                 if checkbox.isChecked():
                     enabled_categories.append(category)
-            self.app_settings.current_settings['debug_categories'] = enabled_categories
+            settings["debug_categories"] = enabled_categories
+
+        return settings
+
+    def _apply_settings(self): #vers 2
+        """Apply settings permanently"""
+        new_settings = self._get_dialog_settings()
+        old_theme = self.app_settings.current_settings["theme"]
+
+        # Update settings
+        self.app_settings.current_settings.update(new_settings)
+
+        # Update modified colors if any
+        if hasattr(self, '_modified_colors') and self._modified_colors:
+            current_theme = self.app_settings.current_settings["theme"]
+            if current_theme in self.app_settings.themes:
+                if "colors" not in self.app_settings.themes[current_theme]:
+                    self.app_settings.themes[current_theme]["colors"] = {}
+                self.app_settings.themes[current_theme]["colors"].update(self._modified_colors)
 
         # Save settings
         self.app_settings.save_settings()
-        self.settingsChanged.emit()
-
-        # Emit theme change
-        self.themeChanged.emit(self.app_settings.current_settings["theme"])
 
         # Emit signals
-        if hasattr(self, 'themeChanged'):
-            self.themeChanged.emit(self.app_settings.current_settings["theme"])
-        if hasattr(self, 'settingsChanged'):
-            self.settingsChanged.emit()
-    
-    def _ok_clicked(self):
+        if new_settings["theme"] != old_theme:
+            self.themeChanged.emit(new_settings["theme"])
+        self.settingsChanged.emit()
+
+        QMessageBox.information(
+            self,
+            "Applied",
+            f"Settings applied successfully!\n\nActive theme: {new_settings['theme']}"
+        )
+
+    def _reset_to_defaults(self): #vers 1
+        """Reset to default settings"""
+        reply = QMessageBox.question(
+            self,
+            "Reset to Defaults",
+            "This will reset all settings to their default values.\n\nAre you sure?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            self.app_settings.current_settings = self.app_settings.default_settings.copy()
+            self._load_current_settings()
+            QMessageBox.information(self, "Reset", "Settings reset to defaults")
+
+    def _clear_debug_log(self): #vers 1
+        """Clear the activity log"""
+        if hasattr(self.parent(), 'gui_layout') and hasattr(self.parent().gui_layout, 'log'):
+            self.parent().gui_layout.log.clear()
+            if hasattr(self.parent(), 'log_message'):
+                self.parent().log_message("🗑️ Debug log cleared")
+        else:
+            QMessageBox.information(self, "Clear Log", "Activity log cleared (if available).")
+
+    def _ok_clicked(self): #vers 1
         """OK button clicked"""
         self._apply_settings()
         self.accept()
-    
-    def _reset_to_defaults(self):
-        """Reset to default settings"""
-        self.app_settings.current_settings = self.app_settings.default_settings.copy()
-        self._load_current_settings()
+
+    def _save_current_theme(self): #vers 2
+        """Save current theme with modifications"""
+        # Collect all current colors
+        colors = {}
+        for color_key, editor in self.color_editors.items():
+            colors[color_key] = editor.current_value
+
+        # Update theme
+        current_theme = self.theme_selector_combo.currentData()
+        if current_theme in self.app_settings.themes:
+            self.app_settings.themes[current_theme]["colors"] = colors
+            self.app_settings.save_settings()
+
+            QMessageBox.information(
+                self,
+                "Theme Saved",
+                f"Theme '{current_theme}' saved successfully!"
+            )
+
+    def _save_theme_as(self): #vers 1
+        """Save current theme as a new theme"""
+        from PyQt6.QtWidgets import QInputDialog, QFileDialog
+        import json
+        import os
+
+        # Ask for new theme name
+        theme_name, ok = QInputDialog.getText(
+            self,
+            "Save Theme As",
+            "Enter new theme name:",
+            text="My Custom Theme"
+        )
+
+        if not ok or not theme_name:
+            return
+
+        # Create safe filename
+        safe_filename = "".join(c if c.isalnum() or c in (' ', '_', '-') else '_' for c in theme_name)
+        safe_filename = safe_filename.replace(' ', '_').lower()
+
+        # Collect all current colors
+        colors = {}
+        for color_key, editor in self.color_editors.items():
+            colors[color_key] = editor.current_value
+
+        # Create theme data
+        theme_data = {
+            "name": theme_name,
+            "description": f"Custom theme created from {self.theme_selector_combo.currentText()}",
+            "category": "🎭 Custom",
+            "author": "User",
+            "version": "1.0",
+            "colors": colors
+        }
+
+        # Ask where to save
+        themes_dir = os.path.join(os.getcwd(), "themes")
+        os.makedirs(themes_dir, exist_ok=True)
+
+        default_path = os.path.join(themes_dir, f"{safe_filename}.json")
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Theme File",
+            default_path,
+            "JSON Files (*.json)"
+        )
+
+        if file_path:
+            try:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    json.dump(theme_data, f, indent=2)
+
+                # Refresh themes to include the new one
+                self._refresh_themes()
+
+                QMessageBox.information(
+                    self,
+                    "Theme Saved",
+                    f"Theme '{theme_name}' saved successfully!\n\nFile: {os.path.basename(file_path)}"
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Save Error",
+                    f"Failed to save theme:\n{str(e)}"
+                )
+
+    def get_contrast_text_color(self, bg_color: str) -> str: #vers 1
+        """
+        Calculate whether to use black or white text based on background brightness
+        Returns '#000000' for light backgrounds, '#ffffff' for dark backgrounds
+        """
+        # Remove # if present
+        if bg_color.startswith('#'):
+            bg_color = bg_color[1:]
+
+        # Handle 3-digit hex codes
+        if len(bg_color) == 3:
+            bg_color = ''.join([c*2 for c in bg_color])
+
+        # Convert to RGB
+        try:
+            r = int(bg_color[:2], 16)
+            g = int(bg_color[2:4], 16)
+            b = int(bg_color[4:6], 16)
+        except (ValueError, IndexError):
+            return '#000000'  # Fallback to black
+
+        # Calculate relative luminance using WCAG formula
+        def get_luminance_component(c):
+            c = c / 255.0
+            if c <= 0.03928:
+                return c / 12.92
+            else:
+                return ((c + 0.055) / 1.055) ** 2.4
+
+        r_lum = get_luminance_component(r)
+        g_lum = get_luminance_component(g)
+        b_lum = get_luminance_component(b)
+
+        luminance = 0.2126 * r_lum + 0.7152 * g_lum + 0.0722 * b_lum
+
+        # Use white text for dark backgrounds (luminance < 0.5)
+        # Use black text for light backgrounds (luminance >= 0.5)
+        return '#ffffff' if luminance < 0.5 else '#000000'
+
+
+
+
+def rgb_to_hsl(hex_color): #vers 1
+    """Convert hex color to HSL"""
+    hex_color = hex_color.lstrip('#')
+    if len(hex_color) == 3:
+        hex_color = ''.join([c*2 for c in hex_color])
+
+    r, g, b = [int(hex_color[i:i+2], 16) / 255.0 for i in (0, 2, 4)]
+
+    max_c = max(r, g, b)
+    min_c = min(r, g, b)
+    l = (max_c + min_c) / 2.0
+
+    if max_c == min_c:
+        h = s = 0.0
+    else:
+        d = max_c - min_c
+        s = d / (2.0 - max_c - min_c) if l > 0.5 else d / (max_c + min_c)
+
+        if max_c == r:
+            h = (g - b) / d + (6 if g < b else 0)
+        elif max_c == g:
+            h = (b - r) / d + 2
+        else:
+            h = (r - g) / d + 4
+        h /= 6.0
+
+    return int(h * 360), int(s * 100), int(l * 100)
+
+
+def hsl_to_rgb(h, s, l): #vers 1
+    """Convert HSL to hex color"""
+    h = h / 360.0
+    s = s / 100.0
+    l = l / 100.0
+
+    def hue_to_rgb(p, q, t):
+        if t < 0:
+            t += 1
+        if t > 1:
+            t -= 1
+        if t < 1/6:
+            return p + (q - p) * 6 * t
+        if t < 1/2:
+            return q
+        if t < 2/3:
+            return p + (q - p) * (2/3 - t) * 6
+        return p
+
+    if s == 0:
+        r = g = b = l
+    else:
+        q = l * (1 + s) if l < 0.5 else l + s - l * s
+        p = 2 * l - q
+        r = hue_to_rgb(p, q, h + 1/3)
+        g = hue_to_rgb(p, q, h)
+        b = hue_to_rgb(p, q, h - 1/3)
+
+    return f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
+
+
 
 
 def _create_debug_tab(self):

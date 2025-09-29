@@ -1,0 +1,25 @@
+{
+  "name": "gta_forums_dark_red",
+  "description": "Custom theme created from gta_forums_dark",
+  "category": "\ud83c\udfad Custom",
+  "author": "User",
+  "version": "1.0",
+  "colors": {
+    "bg_primary": "#080205",
+    "bg_secondary": "#210813",
+    "bg_tertiary": "#000000",
+    "panel_bg": "#19060b",
+    "accent_primary": "#5e1c42",
+    "accent_secondary": "#6f2a47",
+    "text_primary": "#cce5d1",
+    "text_secondary": "#c194ff",
+    "text_accent": "#705ad3",
+    "button_normal": "#1f0913",
+    "button_hover": "#000000",
+    "button_pressed": "#642641",
+    "border": "#3d001c",
+    "success": "#11005c",
+    "warning": "#00806c",
+    "error": "#06ac25"
+  }
+}
