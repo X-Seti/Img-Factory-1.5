@@ -2047,8 +2047,8 @@ class SettingsDialog(QDialog): #vers 4
         self.color_picker_tab = self._create_color_picker_tab()
         self.tabs.addTab(self.color_picker_tab, "Color Picker")
 
-        self.demo_tab = self._create_demo_tab()
-        self.tabs.addTab(self.demo_tab, "Demo")
+        #self.demo_tab = self._create_demo_tab()
+        #self.tabs.addTab(self.demo_tab, "Demo")
 
         self.debug_tab = self._create_debug_tab()
         self.tabs.addTab(self.debug_tab, "Debug")
