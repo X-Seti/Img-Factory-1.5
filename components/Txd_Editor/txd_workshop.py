@@ -456,23 +456,35 @@ class TXDWorkshop(QWidget): #vers 3
         """Create enhanced right panel with editing controls"""
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.StyledPanel)
+
         panel.setMinimumWidth(400)
+        main_layout = QVBoxLayout(panel)
+        main_layout.setContentsMargins(5, 5, 5, 5)
 
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(5, 5, 5, 5)
+        # Sub-layout to place transform panel and preview side by side
+        top_layout = QHBoxLayout()
 
-        # Preview area
+        # Transform panel (left in the sub-layout)
+        transform_panel = self._create_transform_panel()
+        top_layout.addWidget(transform_panel, stretch=1)
+
+        # Preview area (right in the sub-layout)
         self.preview_label = QLabel("No texture selected")
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview_label.setMinimumHeight(400)
+        self.preview_label.setMinimumWidth(400)
         self.preview_label.setStyleSheet("border: 1px solid #3a3a3a; background-color: #1e1e1e;")
-        layout.addWidget(self.preview_label)
+        top_layout.addWidget(self.preview_label, stretch=2)
+
+        # Add the top horizontal layout to the main vertical layout
+        main_layout.addLayout(top_layout)
 
         # Information group
         info_group = QGroupBox("Texture Information")
         info_layout = QVBoxLayout(info_group)
 
         # Clickable texture name
+        texname_layout = QHBoxLayout()
         self.info_name = QLabel("Name: -")
         self.info_name.setStyleSheet("font-weight: bold; padding: 5px; border: 1px solid #3a3a3a;")
         self.info_name.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -480,11 +492,12 @@ class TXDWorkshop(QWidget): #vers 3
         info_layout.addWidget(self.info_name)
 
         # Clickable alpha name
-        self.info_alpha_name = QLabel("")
+        self.info_alpha_name = QLabel("Alpha: -")
         self.info_alpha_name.setStyleSheet("color: red; font-weight: bold; padding: 5px; border: 1px solid #3a3a3a;")
         self.info_alpha_name.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.info_alpha_name.customContextMenuRequested.connect(lambda pos: self._show_name_context_menu(pos, alpha=True))
         info_layout.addWidget(self.info_alpha_name)
+        info_layout.addLayout(texname_layout)
 
         # Size with resize controls
         size_layout = QHBoxLayout()
@@ -506,10 +519,12 @@ class TXDWorkshop(QWidget): #vers 3
         # Format dropdown with compression controls
         format_layout = QHBoxLayout()
         format_label = QLabel("Format:")
+
         self.format_combo = QComboBox()
         self.format_combo.addItems(["DXT1", "DXT3", "DXT5", "ARGB8888", "ARGB1555", "ARGB4444", "RGB888", "RGB565"])
         self.format_combo.currentTextChanged.connect(self._change_format)
         self.format_combo.setEnabled(False)
+
         format_layout.addWidget(format_label)
         format_layout.addWidget(self.format_combo)
 
@@ -526,13 +541,10 @@ class TXDWorkshop(QWidget): #vers 3
         info_layout.addLayout(format_layout)
 
         # Additional info
-        self.info_format = QLabel("Other: -")
+        self.info_format = QLabel("Mipmaps:")
         info_layout.addWidget(self.info_format)
 
-        self.info_alpha = QLabel(" ")
-        info_layout.addWidget(self.info_alpha)
-
-        layout.addWidget(info_group)
+        main_layout.addWidget(info_group)
         return panel
 
     def _update_editing_controls(self): #vers 1
@@ -2594,19 +2606,17 @@ class TXDWorkshop(QWidget): #vers 3
         panel.setFrameStyle(QFrame.Shape.StyledPanel)
         panel.setMinimumWidth(600)  # Increased to fit all panels
 
-        # Right side - Transform controls
-        transform_panel = self._create_transform_panel()
-        main_layout.addWidget(transform_panel)
-
-        # Main horizontal layout
-        main_layout = QHBoxLayout(panel)
-        main_layout.setContentsMargins(5, 5, 5, 5)
-        main_layout.setSpacing(5)
-
         # Left side - Preview and info
         left_widget = QWidget()
         left_layout = QVBoxLayout(left_widget)
         left_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Sub-layout to place transform panel and preview side by side
+        top_layout = QHBoxLayout()
+
+        # Transform panel (left in the sub-layout)
+        transform_panel = self._create_transform_panel()
+        top_layout.addWidget(transform_panel, stretch=1)
 
         # Preview
         self.preview_label = QLabel("No texture selected")
@@ -2615,6 +2625,9 @@ class TXDWorkshop(QWidget): #vers 3
         self.preview_label.setMinimumWidth(400)
         self.preview_label.setStyleSheet("border: 1px solid #3a3a3a; background-color: #1e1e1e;")
         left_layout.addWidget(self.preview_label)
+
+        # Add the top_layout (horizontal) to the main vertical layout
+        layout.addLayout(top_layout)
 
         # Info group
         info_group = QGroupBox("Texture Information")
