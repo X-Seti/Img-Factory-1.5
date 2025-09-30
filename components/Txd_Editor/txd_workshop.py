@@ -22,8 +22,21 @@ from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage
 
 ##Methods list -
+# _get_resize_direction
+# _handle_resize
+# _is_on_draggable_area
+# _toggle_maximize
+# _update_cursor
+# mouseDoubleClickEvent
+# mouseMoveEvent
+# mousePressEvent
+# mouseReleaseEvent
+# _create_blank_texture
+# _create_empty_txd_data
 # _create_left_panel
 # _create_middle_panel
+# _create_new_texture_entry
+# _create_new_txd
 # _create_right_panel
 # _create_thumbnail
 # _create_toolbar
@@ -31,16 +44,21 @@ from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage
 # _decompress_dxt3
 # _decompress_dxt5
 # _decompress_uncompressed
+# _delete_texture
 # _extract_alpha_channel
 # _extract_txd_from_img
 # _export_alpha_only
 # _load_img_txd_list
 # _load_txd_textures
+# _mark_as_modified
 # _on_texture_selected
 # _on_txd_selected
 # _parse_single_texture
+# _reload_texture_table
 # _save_texture_png
+# _save_undo_state
 # _show_texture_context_menu
+# _undo_last_action
 # _update_texture_info
 # export_all_textures
 # export_selected_texture
@@ -52,11 +70,6 @@ from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage
 # save_txd_file
 # setup_ui
 # show_properties
-# _create_enhanced_middle_panel
-# _create_enhanced_toolbar_buttons
-# _enable_txd_features_after_load
-# _initialize_enhanced_features
-# setup_enhanced_ui
 
 ##class TXDWorkshop: -
 # __init__
@@ -76,10 +89,16 @@ class TXDWorkshop(QWidget): #vers 3
         self.txd_list = []
         self.texture_list = []
         self.selected_texture = None
+        self.undo_stack = []
 
         self.setWindowTitle("TXD Workshop: No File")
-        self.resize(1200, 700)
+        self.resize(1400, 800)
         self._initialize_enhanced_features()
+        self.dragging = False
+        self.drag_position = None
+        self.resizing = False
+        self.resize_direction = None
+        self.resize_margin = 10  # Pixels from edge to enable resize
 
         # Position window below menu bar
         if parent:
@@ -87,6 +106,15 @@ class TXDWorkshop(QWidget): #vers 3
             self.move(parent_pos.x() + 50, parent_pos.y() + 80)
 
         self.setup_ui()
+            # Add resize grip to bottom-right corner
+
+        from PyQt6.QtWidgets import QSizeGrip
+        self.size_grip = QSizeGrip(self)
+        self.size_grip.setFixedSize(16, 16)
+
+        # Position in bottom-right corner
+        self.size_grip.move(self.width() - 16, self.height() - 16)
+        self.size_grip.raise_()
         self._apply_theme()
 
 
@@ -220,6 +248,169 @@ class TXDWorkshop(QWidget): #vers 3
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"Enhanced features init error: {str(e)}")
+
+
+    def mousePressEvent(self, event): #vers 1
+        """Handle mouse press for dragging and resizing"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            # Check if clicking on resize edge
+            self.resize_direction = self._get_resize_direction(event.pos())
+
+            if self.resize_direction:
+                self.resizing = True
+                self.drag_position = event.globalPosition().toPoint()
+            else:
+                # Check if clicking on toolbar for dragging
+                if self._is_on_draggable_area(event.pos()):
+                    self.dragging = True
+                    self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+
+            event.accept()
+
+
+    def mouseMoveEvent(self, event): #vers 1
+        """Handle mouse move for dragging and resizing"""
+        if event.buttons() == Qt.MouseButton.LeftButton:
+            if self.resizing and self.resize_direction:
+                self._handle_resize(event.globalPosition().toPoint())
+            elif self.dragging:
+                self.move(event.globalPosition().toPoint() - self.drag_position)
+            event.accept()
+        else:
+            # Update cursor based on position
+            resize_dir = self._get_resize_direction(event.pos())
+            self._update_cursor(resize_dir)
+
+
+    def mouseReleaseEvent(self, event): #vers 1
+        """Handle mouse release"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.dragging = False
+            self.resizing = False
+            self.resize_direction = None
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+            event.accept()
+
+
+    def _is_on_draggable_area(self, pos): #vers 1
+        """Check if position is on draggable area (toolbar)"""
+        # Allow dragging from toolbar area (top 50 pixels)
+        if pos.y() <= 50:
+            # But not on buttons
+            toolbar_widgets = [
+                self.open_img_btn, self.open_txd_btn, self.save_txd_btn,
+                self.import_btn, self.export_btn, self.export_all_btn,
+                self.flip_btn, self.props_btn, self.minimize_btn, self.close_btn
+            ]
+
+            for widget in toolbar_widgets:
+                if widget.geometry().contains(pos):
+                    return False
+
+            return True
+        return False
+
+    def resizeEvent(self, event): #vers 1
+        '''Keep resize grip in bottom-right corner'''
+        super().resizeEvent(event)
+        if hasattr(self, 'size_grip'):
+            self.size_grip.move(self.width() - 16, self.height() - 16)
+
+    def _get_resize_direction(self, pos): #vers 1
+        """Determine resize direction based on mouse position"""
+        rect = self.rect()
+        margin = self.resize_margin
+
+        left = pos.x() < margin
+        right = pos.x() > rect.width() - margin
+        top = pos.y() < margin
+        bottom = pos.y() > rect.height() - margin
+
+        if left and top:
+            return "top-left"
+        elif right and top:
+            return "top-right"
+        elif left and bottom:
+            return "bottom-left"
+        elif right and bottom:
+            return "bottom-right"
+        elif left:
+            return "left"
+        elif right:
+            return "right"
+        elif top:
+            return "top"
+        elif bottom:
+            return "bottom"
+
+        return None
+
+
+    def _update_cursor(self, direction): #vers 1
+        """Update cursor based on resize direction"""
+        if direction == "top" or direction == "bottom":
+            self.setCursor(Qt.CursorShape.SizeVerCursor)
+        elif direction == "left" or direction == "right":
+            self.setCursor(Qt.CursorShape.SizeHorCursor)
+        elif direction == "top-left" or direction == "bottom-right":
+            self.setCursor(Qt.CursorShape.SizeFDiagCursor)
+        elif direction == "top-right" or direction == "bottom-left":
+            self.setCursor(Qt.CursorShape.SizeBDiagCursor)
+        else:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+
+
+    def _handle_resize(self, global_pos): #vers 1
+        """Handle window resizing"""
+        if not self.resize_direction or not self.drag_position:
+            return
+
+        delta = global_pos - self.drag_position
+        geometry = self.frameGeometry()
+
+        min_width = 800
+        min_height = 600
+
+        # Handle horizontal resizing
+        if "left" in self.resize_direction:
+            new_width = geometry.width() - delta.x()
+            if new_width >= min_width:
+                geometry.setLeft(geometry.left() + delta.x())
+        elif "right" in self.resize_direction:
+            new_width = geometry.width() + delta.x()
+            if new_width >= min_width:
+                geometry.setRight(geometry.right() + delta.x())
+
+        # Handle vertical resizing
+        if "top" in self.resize_direction:
+            new_height = geometry.height() - delta.y()
+            if new_height >= min_height:
+                geometry.setTop(geometry.top() + delta.y())
+        elif "bottom" in self.resize_direction:
+            new_height = geometry.height() + delta.y()
+            if new_height >= min_height:
+                geometry.setBottom(geometry.bottom() + delta.y())
+
+        self.setGeometry(geometry)
+        self.drag_position = global_pos
+
+
+    def mouseDoubleClickEvent(self, event): #vers 1
+        """Handle double-click on toolbar to maximize/restore"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            if self._is_on_draggable_area(event.pos()):
+                self._toggle_maximize()
+                event.accept()
+            else:
+                super().mouseDoubleClickEvent(event)
+
+    def _toggle_maximize(self): #vers 1
+        """Toggle window maximize state"""
+        if self.isMaximized():
+            self.showNormal()
+        else:
+            self.showMaximized()
+
 
     def _enable_txd_features_after_load(self): #vers 1
         """Enable TXD features after successful texture load"""
@@ -545,6 +736,172 @@ class TXDWorkshop(QWidget): #vers 3
                 self.status_modified.setStyleSheet("")
 
 
+    def _import_normal_texture(self): #vers 1
+        """Import normal texture (RGB/RGBA)"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Import Normal Texture", "",
+            "Image Files (*.png *.jpg *.bmp *.tga);;All Files (*)"
+        )
+
+        if not file_path:
+            return
+
+        try:
+            from PyQt6.QtGui import QImage
+
+            # Load image
+            img = QImage(file_path)
+            if img.isNull():
+                QMessageBox.critical(self, "Error", "Failed to load image")
+                return
+
+            # Convert to RGBA8888
+            img = img.convertToFormat(QImage.Format.Format_RGBA8888)
+
+            # Get image data
+            width = img.width()
+            height = img.height()
+            ptr = img.bits()
+            ptr.setsize(img.sizeInBytes())
+            rgba_data = bytes(ptr)
+
+            # Check if image has alpha
+            has_alpha = False
+            for i in range(3, len(rgba_data), 4):
+                if rgba_data[i] < 255:
+                    has_alpha = True
+                    break
+
+            # Update texture
+            self._save_undo_state("Import normal texture")
+            self.selected_texture['width'] = width
+            self.selected_texture['height'] = height
+            self.selected_texture['rgba_data'] = rgba_data
+            self.selected_texture['has_alpha'] = has_alpha
+
+            # Update alpha name if texture now has alpha
+            if has_alpha and 'alpha_name' not in self.selected_texture:
+                self.selected_texture['alpha_name'] = self.selected_texture['name'] + 'a'
+
+            self._update_texture_info(self.selected_texture)
+            self._update_table_display()
+            self._mark_as_modified()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                alpha_msg = "with alpha" if has_alpha else "no alpha"
+                self.main_window.log_message(f"✅ Imported normal texture: {width}x{height} ({alpha_msg})")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Import Error", f"Failed to import: {str(e)}")
+
+
+    def _import_alpha_texture(self): #vers 2
+        """Import alpha channel - creates alpha if doesn't exist"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Import Alpha Channel", "",
+            "Image Files (*.png *.jpg *.bmp *.tga);;All Files (*)"
+        )
+
+        if not file_path:
+            return
+
+        try:
+            from PyQt6.QtGui import QImage
+
+            # Load alpha image
+            img = QImage(file_path)
+            if img.isNull():
+                QMessageBox.critical(self, "Error", "Failed to load image")
+                return
+
+            # Get current texture dimensions
+            tex_width = self.selected_texture.get('width', 0)
+            tex_height = self.selected_texture.get('height', 0)
+
+            # If no texture data exists, create blank texture with alpha
+            if not self.selected_texture.get('rgba_data') or tex_width == 0 or tex_height == 0:
+                # Use alpha image dimensions
+                tex_width = img.width()
+                tex_height = img.height()
+
+                # Create blank RGB texture (gray)
+                blank_rgba = bytearray()
+                for _ in range(tex_width * tex_height):
+                    blank_rgba.extend([128, 128, 128, 255])  # Gray with full alpha
+
+                self.selected_texture['width'] = tex_width
+                self.selected_texture['height'] = tex_height
+                self.selected_texture['rgba_data'] = bytes(blank_rgba)
+
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"ℹ️ Created blank texture {tex_width}x{tex_height} for alpha import")
+
+            # Check dimensions match
+            if img.width() != tex_width or img.height() != tex_height:
+                reply = QMessageBox.question(
+                    self, "Size Mismatch",
+                    f"Alpha image is {img.width()}x{img.height()}, texture is {tex_width}x{tex_height}. Resize alpha?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+
+                if reply == QMessageBox.StandardButton.Yes:
+                    img = img.scaled(tex_width, tex_height, Qt.AspectRatioMode.IgnoreAspectRatio,
+                                Qt.TransformationMode.SmoothTransformation)
+                else:
+                    return
+
+            # Convert to grayscale
+            img = img.convertToFormat(QImage.Format.Format_Grayscale8)
+
+            # Get alpha data
+            ptr = img.bits()
+            ptr.setsize(img.sizeInBytes())
+            alpha_data = bytes(ptr)
+
+            # Apply alpha to existing texture
+            self._save_undo_state("Import alpha channel")
+
+            rgba_data = bytearray(self.selected_texture['rgba_data'])
+
+            # If current texture has no alpha (all 255), we're adding it
+            has_existing_alpha = any(rgba_data[i] < 255 for i in range(3, len(rgba_data), 4))
+
+            for i, alpha_val in enumerate(alpha_data):
+                if i * 4 + 3 < len(rgba_data):
+                    rgba_data[i * 4 + 3] = alpha_val  # Set alpha channel
+
+            self.selected_texture['rgba_data'] = bytes(rgba_data)
+            self.selected_texture['has_alpha'] = True
+
+            # Add alpha name if not present
+            if 'alpha_name' not in self.selected_texture:
+                self.selected_texture['alpha_name'] = self.selected_texture['name'] + 'a'
+
+            # Update format to support alpha if currently non-alpha format
+            current_format = self.selected_texture.get('format', 'DXT1')
+            if current_format in ['DXT1', 'RGB888', 'RGB565']:
+                # Switch to alpha-capable format
+                if 'DXT' in current_format:
+                    self.selected_texture['format'] = 'DXT5'
+                    format_msg = " (format changed to DXT5)"
+                else:
+                    self.selected_texture['format'] = 'ARGB8888'
+                    format_msg = " (format changed to ARGB8888)"
+            else:
+                format_msg = ""
+
+            self._update_texture_info(self.selected_texture)
+            self._update_table_display()
+            self._mark_as_modified()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                action = "Added" if not has_existing_alpha else "Replaced"
+                self.main_window.log_message(f"✅ {action} alpha channel from: {os.path.basename(file_path)}{format_msg}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Import Error", f"Failed to import alpha: {str(e)}")
+
+
     def _on_texture_selected(self): #vers 3
         """Handle texture selection with full feature support"""
         try:
@@ -553,8 +910,18 @@ class TXDWorkshop(QWidget): #vers 3
                 self.selected_texture = None
 
                 self.export_btn.setEnabled(False)
+
+                # Update flip button based on alpha existence
                 if hasattr(self, 'flip_btn'):
-                    self.flip_btn.setEnabled(False)
+                    has_alpha = self.selected_texture.get('has_alpha', False)
+                    self.flip_btn.setEnabled(has_alpha)
+                    if has_alpha:
+                        self.flip_btn.setText("Alpha")
+                        self.flip_btn.setToolTip("Toggle between normal and alpha view")
+                    else:
+                        self.flip_btn.setText("Flip")
+                        self.flip_btn.setToolTip("This texture has no alpha channel")
+
                 if hasattr(self, 'props_btn'):
                     self.props_btn.setEnabled(False)
                 if hasattr(self, 'duplicate_btn'):
@@ -578,6 +945,24 @@ class TXDWorkshop(QWidget): #vers 3
                 self.duplicate_btn.setEnabled(True)
             if hasattr(self, 'remove_btn'):
                 self.remove_btn.setEnabled(True)
+
+            # Enable transform buttons
+            if hasattr(self, 'flip_vert_btn'):
+                self.flip_vert_btn.setEnabled(True)
+            if hasattr(self, 'flip_horz_btn'):
+                self.flip_horz_btn.setEnabled(True)
+            if hasattr(self, 'rotate_cw_btn'):
+                self.rotate_cw_btn.setEnabled(True)
+            if hasattr(self, 'rotate_ccw_btn'):
+                self.rotate_ccw_btn.setEnabled(True)
+            if hasattr(self, 'copy_btn'):
+                self.copy_btn.setEnabled(True)
+            if hasattr(self, 'paste_btn'):
+                self.paste_btn.setEnabled(True)
+            if hasattr(self, 'edit_btn'):
+                self.edit_btn.setEnabled(True)
+            if hasattr(self, 'convert_btn'):
+                self.convert_btn.setEnabled(True)
 
             self._update_editing_controls()
             self._update_status_indicators()
@@ -603,64 +988,106 @@ class TXDWorkshop(QWidget): #vers 3
                 QPushButton:hover { background-color: #4a4a4a; }
             """)
 
-    def _create_toolbar(self): #vers 2
-        """Create toolbar with action buttons"""
+
+    def _create_toolbar(self): #vers 4
+        """Create toolbar with action buttons and visible window controls"""
         toolbar = QFrame()
         toolbar.setFrameStyle(QFrame.Shape.StyledPanel)
         toolbar.setMaximumHeight(50)
 
         layout = QHBoxLayout(toolbar)
         layout.setContentsMargins(5, 5, 5, 5)
+        layout.setSpacing(5)
 
-        self.open_img_btn = QPushButton("📂 Open IMG")
+        self.open_img_btn = QPushButton("Open IMG")
+        self.open_img_btn.setIcon(self._create_folder_icon())
+        self.open_img_btn.setIconSize(QSize(20, 20))
         self.open_img_btn.clicked.connect(self.open_img_archive)
         layout.addWidget(self.open_img_btn)
 
-        self.open_txd_btn = QPushButton("📄 Open TXD")
+        self.open_txd_btn = QPushButton("Open TXD")
+        self.open_txd_btn.setIcon(self._create_file_icon())
+        self.open_txd_btn.setIconSize(QSize(20, 20))
         self.open_txd_btn.clicked.connect(self.open_txd_file)
         layout.addWidget(self.open_txd_btn)
 
-        self.save_txd_btn = QPushButton("💾 Save TXD")
+        self.save_txd_btn = QPushButton("Save TXD")
+        self.save_txd_btn.setIcon(self._create_save_icon())
+        self.save_txd_btn.setIconSize(QSize(20, 20))
         self.save_txd_btn.clicked.connect(self.save_txd_file)
         self.save_txd_btn.setEnabled(False)
         layout.addWidget(self.save_txd_btn)
 
-        self.import_btn = QPushButton("📥 Import")
+        layout.addSpacing(10)
+
+        self.import_btn = QPushButton("Import")
+        self.import_btn.setIcon(self._create_import_icon())
+        self.import_btn.setIconSize(QSize(20, 20))
         self.import_btn.clicked.connect(self.import_texture)
         self.import_btn.setEnabled(False)
         layout.addWidget(self.import_btn)
 
-        self.export_btn = QPushButton("📤 Export")
+        self.export_btn = QPushButton("Export")
+        self.export_btn.setIcon(self._create_export_icon())
+        self.export_btn.setIconSize(QSize(20, 20))
         self.export_btn.clicked.connect(self.export_selected_texture)
         self.export_btn.setEnabled(False)
         layout.addWidget(self.export_btn)
 
-        self.export_all_btn = QPushButton("📤 Export All")
+        self.export_all_btn = QPushButton("Export All")
+        self.export_all_btn.setIcon(self._create_package_icon())
+        self.export_all_btn.setIconSize(QSize(20, 20))
         self.export_all_btn.clicked.connect(self.export_all_textures)
         self.export_all_btn.setEnabled(False)
         layout.addWidget(self.export_all_btn)
 
-        self.flip_btn = QPushButton("🔄 Flip!")
+        layout.addSpacing(10)
+
+        self.flip_btn = QPushButton("Switch")
+        self.flip_btn.setIcon(self._create_flip_vert_icon())
+        self.flip_btn.setIconSize(QSize(20, 20))
         self.flip_btn.clicked.connect(self.flip_texture)
         self.flip_btn.setEnabled(False)
         layout.addWidget(self.flip_btn)
 
-        self.props_btn = QPushButton("📋 Properties")
+        self.props_btn = QPushButton("Properties")
+        self.props_btn.setIcon(self._create_properties_icon())
+        self.props_btn.setIconSize(QSize(20, 20))
         self.props_btn.clicked.connect(self.show_properties)
         self.props_btn.setEnabled(False)
         layout.addWidget(self.props_btn)
 
         layout.addStretch()
 
-        # Window controls on the right
-        self.minimize_btn = QPushButton("_")
-        self.minimize_btn.setMaximumWidth(30)
+        # Window controls
+        self.maximize_btn = QPushButton()
+        self.maximize_btn.setIcon(self._create_maximize_icon())
+        self.maximize_btn.setIconSize(QSize(16, 16))
+        self.maximize_btn.setMinimumWidth(40)
+        self.maximize_btn.setMaximumWidth(40)
+        self.maximize_btn.setMinimumHeight(30)
+        self.maximize_btn.clicked.connect(self._toggle_maximize)
+        self.maximize_btn.setToolTip("Maximize/Restore Window")
+        layout.addWidget(self.maximize_btn)
+
+        self.minimize_btn = QPushButton()
+        self.minimize_btn.setIcon(self._create_minimize_icon())
+        self.minimize_btn.setIconSize(QSize(16, 16))
+        self.minimize_btn.setMinimumWidth(40)
+        self.minimize_btn.setMaximumWidth(40)
+        self.minimize_btn.setMinimumHeight(30)
         self.minimize_btn.clicked.connect(self.showMinimized)
+        self.minimize_btn.setToolTip("Minimize Window")
         layout.addWidget(self.minimize_btn)
 
-        self.close_btn = QPushButton("✕")
-        self.close_btn.setMaximumWidth(30)
+        self.close_btn = QPushButton()
+        self.close_btn.setIcon(self._create_close_icon())
+        self.close_btn.setIconSize(QSize(16, 16))
+        self.close_btn.setMinimumWidth(40)
+        self.close_btn.setMaximumWidth(40)
+        self.close_btn.setMinimumHeight(30)
         self.close_btn.clicked.connect(self.close)
+        self.close_btn.setToolTip("Close Window")
         layout.addWidget(self.close_btn)
 
         return toolbar
@@ -715,38 +1142,276 @@ class TXDWorkshop(QWidget): #vers 3
         return panel
 
 
-    def _show_texture_context_menu(self, position): #vers 1
-        """Show right-click context menu for textures"""
-        if not self.texture_table.selectedItems():
+    def _create_blank_texture(self, width, height, with_alpha=False): #vers 2
+        """Create blank RGBA texture data with optional alpha"""
+        if with_alpha:
+            # Gray with transparent alpha (128)
+            return bytes([128, 128, 128, 128] * (width * height))
+        else:
+            # Gray with full opaque alpha (255)
+            return bytes([128, 128, 128, 255] * (width * height))
+
+
+    def _create_empty_txd_data(self): #vers 1
+        """Create minimal empty TXD structure"""
+        import struct
+        # RenderWare TXD header (simplified)
+        header = struct.pack('<III', 0x16, 0, 0x1803FFFF)  # Type, Size, Version
+        return header
+
+    def _create_new_texture_entry(self): #vers 2
+        """Create a new texture entry in current TXD with optional alpha channel"""
+        if not self.current_txd_data:
+            QMessageBox.warning(self, "No TXD", "Please load or create a TXD file first")
             return
 
+        name, ok = QInputDialog.getText(self, "New Texture Entry", "Enter texture name:")
+        if not ok or not name:
+            return
+
+        # Ask if user wants alpha channel
+        reply = QMessageBox.question(
+            self, "Alpha Channel",
+            "Create texture with alpha channel?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        create_with_alpha = (reply == QMessageBox.StandardButton.Yes)
+
+        # Create basic texture entry
+        new_texture = {
+            'name': name,
+            'width': 256,
+            'height': 256,
+            'format': 'DXT5' if create_with_alpha else 'DXT1',
+            'has_alpha': create_with_alpha,
+            'mipmaps': 1,
+            'rgba_data': self._create_blank_texture(256, 256, create_with_alpha)
+        }
+
+        # Add alpha name if creating with alpha
+        if create_with_alpha:
+            new_texture['alpha_name'] = name + 'a'
+
+        self.texture_list.append(new_texture)
+        self._save_undo_state("Create texture entry")
+        self._reload_texture_table()
+        self._mark_as_modified()
+
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            alpha_msg = "with alpha" if create_with_alpha else "no alpha"
+            self.main_window.log_message(f"✅ Created texture entry: {name} ({alpha_msg})")
+
+
+
+    def _create_new_txd(self): #vers 1
+        """Create a new empty TXD file"""
+        name, ok = QInputDialog.getText(self, "New TXD", "Enter TXD filename (without .txd):")
+        if ok and name:
+            if not name.lower().endswith('.txd'):
+                name += '.txd'
+
+            # Create minimal TXD structure
+            self.current_txd_name = name
+            self.current_txd_data = self._create_empty_txd_data()
+            self.texture_list = []
+            self.texture_table.setRowCount(0)
+
+            self.setWindowTitle(f"TXD Workshop: {name}")
+            self.save_txd_btn.setEnabled(True)
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✅ Created new TXD: {name}")
+
+
+    def _delete_texture(self): #vers 1
+        """Delete selected texture from TXD"""
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture to delete")
+            return
+
+        reply = QMessageBox.question(
+            self, "Delete Texture",
+            f"Delete texture '{self.selected_texture['name']}'?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            self._save_undo_state("Delete texture")
+            self.texture_list.remove(self.selected_texture)
+            self.selected_texture = None
+            self._reload_texture_table()
+            self._mark_as_modified()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("✅ Texture deleted")
+
+
+    def _mark_as_modified(self): #vers 1
+        """Mark TXD as modified"""
+        self.save_txd_btn.setEnabled(True)
+        current_title = self.windowTitle()
+        if not current_title.endswith("*"):
+            self.setWindowTitle(current_title + "*")
+
+
+    def _reload_texture_table(self): #vers 1
+        """Reload texture table display"""
+        self.texture_table.setRowCount(0)
+
+        for tex in self.texture_list:
+            row = self.texture_table.rowCount()
+            self.texture_table.insertRow(row)
+
+            thumb_item = QTableWidgetItem()
+            if tex.get('rgba_data') and tex['width'] > 0:
+                pixmap = self._create_thumbnail(tex['rgba_data'], tex['width'], tex['height'])
+                if pixmap:
+                    thumb_item.setData(Qt.ItemDataRole.DecorationRole, pixmap)
+                else:
+                    thumb_item.setText("🖼️")
+            else:
+                thumb_item.setText("🖼️")
+
+            details = f"Name: {tex['name']}\n"
+            if tex.get('has_alpha', False):
+                alpha_name = tex.get('alpha_name', tex['name'] + 'a')
+                details += f"Alpha: {alpha_name}\n"
+            if tex['width'] > 0:
+                details += f"Size: {tex['width']}x{tex['height']}\n"
+            details += f"Format: {tex['format']}\n"
+
+            # ADD BIT DEPTH
+            depth = tex.get('depth', 32)  # Default to 32-bit if not specified
+            details += f"Depth: {depth}-bit\n"
+
+            details += f"Alpha: {'Yes' if tex.get('has_alpha', False) else 'No'}"
+
+            thumb_item.setFlags(thumb_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            details_item = QTableWidgetItem(details)
+            details_item.setFlags(details_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+
+            self.texture_table.setItem(row, 0, thumb_item)
+            self.texture_table.setItem(row, 1, details_item)
+
+        for row in range(self.texture_table.rowCount()):
+            self.texture_table.setRowHeight(row, 80)
+        self.texture_table.setColumnWidth(0, 80)
+
+
+    def _save_undo_state(self, action_name): #vers 1
+        """Save current state to undo stack"""
+        import copy
+        state = {
+            'action': action_name,
+            'texture_list': copy.deepcopy(self.texture_list)
+        }
+        self.undo_stack.append(state)
+
+        # Limit undo stack to 10 items
+        if len(self.undo_stack) > 10:
+            self.undo_stack.pop(0)
+
+
+    def _undo_last_action(self): #vers 1
+        """Undo the last action"""
+        if not self.undo_stack:
+            QMessageBox.information(self, "Undo", "Nothing to undo")
+            return
+
+        previous_state = self.undo_stack.pop()
+        self.texture_list = previous_state['texture_list']
+        self._reload_texture_table()
+
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            self.main_window.log_message(f"↶ Undo: {previous_state['action']}")
+
+
+    def _show_texture_context_menu(self, position): #vers 4
+        """Show context menu with all alpha-related items conditional on has_alpha"""
         menu = QMenu(self)
 
-        export_action = menu.addAction("📤 Export Texture")
-        export_action.triggered.connect(self.export_selected_texture)
+        # Basic operations (always available)
+        create_entry_action = menu.addAction(self._create_plus_icon(), "Create New Entry")
+        create_entry_action.triggered.connect(self._create_new_texture_entry)
 
-        export_alpha_action = menu.addAction("📤 Export Alpha Channel")
-        export_alpha_action.triggered.connect(lambda: self._export_alpha_only())
-
-        menu.addSeparator()
-
-        import_action = menu.addAction("📥 Import/Replace")
-        import_action.triggered.connect(self.import_texture)
+        create_txd_action = menu.addAction(self._create_document_icon(), "Create New TXD")
+        create_txd_action.triggered.connect(self._create_new_txd)
 
         menu.addSeparator()
 
-        view_alpha_action = menu.addAction("👁️ View Alpha Channel")
-        view_alpha_action.triggered.connect(lambda: setattr(self, '_show_alpha', True) or self._update_texture_info(self.selected_texture))
+        # Selection-required operations
+        if self.texture_table.selectedItems() and self.selected_texture:
+            has_alpha = self.selected_texture.get('has_alpha', False)
 
-        view_normal_action = menu.addAction("👁️ View Normal")
-        view_normal_action.triggered.connect(lambda: setattr(self, '_show_alpha', False) or self._update_texture_info(self.selected_texture))
+            undo_action = menu.addAction(self._create_undo_icon(), "Undo")
+            undo_action.triggered.connect(self._undo_last_action)
+            undo_action.setEnabled(len(self.undo_stack) > 0)
 
-        menu.addSeparator()
+            menu.addSeparator()
 
-        props_action = menu.addAction("📋 Properties")
-        props_action.triggered.connect(self.show_properties)
+            edit_action = menu.addAction(self._create_pencil_icon(), "Edit Texture")
+            edit_action.triggered.connect(lambda: self.show_properties())
+            delete_action = menu.addAction(self._create_trash_icon(), "Delete Texture")
+            delete_action.triggered.connect(self._delete_texture)
+
+            menu.addSeparator()
+
+            # Import submenu
+            import_menu = menu.addMenu("Import")
+            import_normal_action = import_menu.addAction(self._create_import_icon(), "Import Normal Texture")
+
+            import_normal_action.triggered.connect(self._import_normal_texture)
+            import_alpha_action = import_menu.addAction(self._create_import_icon(), "Import Alpha Channel")
+            import_alpha_action.triggered.connect(self._import_alpha_texture)
+            import_alpha_action.setToolTip("Creates alpha channel if it doesn't exist")
+
+            # Export submenu
+            export_menu = menu.addMenu("Export")
+            export_texture_action = export_menu.addAction(self._create_export_icon(), "Export Texture")
+            export_texture_action.triggered.connect(self.export_selected_texture)
+
+            # Only show "Export Alpha Channel" if texture has alpha
+            if has_alpha:
+                export_alpha_action = export_menu.addAction(self._create_export_icon(), "Export Alpha Channel")
+                export_alpha_action.triggered.connect(lambda: self._export_alpha_only())
+
+            export_all_action = export_menu.addAction(self._create_package_icon(), "Export All Textures")
+            export_all_action.triggered.connect(self.export_all_textures)
+
+            menu.addSeparator()
+
+            # View options - only show if texture has alpha
+            if has_alpha:
+                view_menu = menu.addMenu("View")
+
+                view_normal_action = view_menu.addAction(self._create_eye_icon(), "View Normal")
+                view_normal_action.triggered.connect(lambda: setattr(self, '_show_alpha', False) or self._update_texture_info(self.selected_texture))
+
+                view_alpha_action = view_menu.addAction(self._create_eye_icon(), "View Alpha Channel")
+                view_alpha_action.triggered.connect(lambda: setattr(self, '_show_alpha', True) or self._update_texture_info(self.selected_texture))
+
+                menu.addSeparator()
+
+            # Flip button behavior - conditional text
+            if hasattr(self, 'flip_btn'):
+                if has_alpha:
+                    flip_action = menu.addAction("Toggle Alpha/Normal View")
+                    flip_action.triggered.connect(self.flip_texture)
+                else:
+                    # Could add other flip operations for non-alpha textures
+                    flip_action = menu.addAction("Flip Vertical")
+                    flip_action.triggered.connect(self._flip_vertical)
+                    flip_action.setEnabled(False)  # Not implemented yet
+                    flip_action.setToolTip("Coming soon")
+
+            menu.addSeparator()
+
+            props_action = menu.addAction(self._create_list_icon(), "Properties")
+            props_action.triggered.connect(self.show_properties)
 
         menu.exec(self.texture_table.viewport().mapToGlobal(position))
+
 
     def load_from_img_archive(self, img_path): #vers 1
         """Load TXD list from IMG archive"""
@@ -873,18 +1538,26 @@ class TXDWorkshop(QWidget): #vers 3
                 else:
                     thumb_item.setText("🖼️")
 
-                # Build details text - DISPLAY ONLY
-                details = f"Name: {tex['name']}\n"
+                # Build details text with proper formatting
+                depth = tex.get('depth', 32)  # Default to 32-bit
 
-                # Add alpha name if texture has alpha
+                # Line 1: Name and bit depth
+                details = f"Name: {tex['name']} - {depth}bit\n"
+
+                # Line 2: Alpha name (if exists) - otherwise empty line for spacing
                 if tex.get('has_alpha', False):
                     alpha_name = tex.get('alpha_name', tex['name'] + 'a')
                     details += f"Alpha: {alpha_name}\n"
+                else:
+                    details += "\n"  # Empty line for consistent spacing
 
+                # Line 3: Texture size and format
                 if tex['width'] > 0:
-                    details += f"Size: {tex['width']}x{tex['height']}\n"
-                details += f"Format: {tex['format']}\n"
-                details += f"Alpha: {'Yes' if tex.get('has_alpha', False) else 'No'}"
+                    details += f"Size: {tex['width']}x{tex['height']} | Format: {tex['format']}"
+                else:
+                    details += f"Format: {tex['format']}"
+
+                #details += f"Alpha: {'Yes' if tex.get('has_alpha', False) else 'No'}"
 
                 # Make items non-editable
                 thumb_item.setFlags(thumb_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
@@ -1188,26 +1861,55 @@ class TXDWorkshop(QWidget): #vers 3
                 QMessageBox.information(self, "Success", "Alpha channel exported!")
 
 
-    def _change_format(self, format_name): #vers 1
-        """Change texture format"""
+    def _change_format(self, format_name): #vers 2
+        """Change texture format - only set has_alpha if alpha data exists"""
         if not self.selected_texture:
             return
 
         old_format = self.selected_texture.get('format', 'Unknown')
         self.selected_texture['format'] = format_name
 
-        # Update alpha flag based on format
+        # Check if texture actually has alpha data
+        has_actual_alpha = False
+        rgba_data = self.selected_texture.get('rgba_data')
+
+        if rgba_data:
+            # Check if any alpha values are not 255 (fully opaque)
+            width = self.selected_texture.get('width', 0)
+            height = self.selected_texture.get('height', 0)
+
+            if width > 0 and height > 0:
+                # Sample alpha channel - check every pixel's alpha value
+                for i in range(3, len(rgba_data), 4):  # Every 4th byte is alpha
+                    if rgba_data[i] < 255:  # Found non-opaque pixel
+                        has_actual_alpha = True
+                        break
+
+        # Update alpha flag based on format AND actual alpha data
         if format_name in ['DXT3', 'DXT5', 'ARGB8888', 'ARGB1555', 'ARGB4444']:
-            self.selected_texture['has_alpha'] = True
+            # Only set has_alpha if texture actually contains alpha data
+            self.selected_texture['has_alpha'] = has_actual_alpha
+
+            # If format supports alpha but texture doesn't have it, warn user
+            if not has_actual_alpha:
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"⚠️ {format_name} supports alpha, but texture has no alpha data")
+
         elif format_name in ['DXT1', 'RGB888', 'RGB565']:
+            # These formats don't support alpha
             self.selected_texture['has_alpha'] = False
+
+            # Remove alpha_name if switching to non-alpha format
+            if 'alpha_name' in self.selected_texture:
+                del self.selected_texture['alpha_name']
 
         self._update_texture_info(self.selected_texture)
         self._update_table_display()
         self._mark_as_modified()
 
         if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Format changed: {old_format} -> {format_name}")
+            alpha_status = "with alpha" if self.selected_texture['has_alpha'] else "no alpha"
+            self.main_window.log_message(f"Format changed: {old_format} -> {format_name} ({alpha_status})")
 
     def _compress_texture(self): #vers 1
         """Compress selected texture"""
@@ -1886,144 +2588,749 @@ class TXDWorkshop(QWidget): #vers 3
             return None
 
 
-    def _create_right_panel(self): #vers 6
-        """Create clean right panel with right-click rename context menu"""
+    def _create_right_panel(self): #vers 4
+        """Create right panel with preview, info, and transform controls side by side"""
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.StyledPanel)
-        panel.setMinimumWidth(400)
+        panel.setMinimumWidth(600)  # Increased to fit all panels
 
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(5, 5, 5, 5)
+        # Right side - Transform controls
+        transform_panel = self._create_transform_panel()
+        main_layout.addWidget(transform_panel)
 
+        # Main horizontal layout
+        main_layout = QHBoxLayout(panel)
+        main_layout.setContentsMargins(5, 5, 5, 5)
+        main_layout.setSpacing(5)
+
+        # Left side - Preview and info
+        left_widget = QWidget()
+        left_layout = QVBoxLayout(left_widget)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Preview
         self.preview_label = QLabel("No texture selected")
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview_label.setMinimumHeight(400)
+        self.preview_label.setMinimumWidth(400)
         self.preview_label.setStyleSheet("border: 1px solid #3a3a3a; background-color: #1e1e1e;")
-        layout.addWidget(self.preview_label)
+        left_layout.addWidget(self.preview_label)
 
+        # Info group
         info_group = QGroupBox("Texture Information")
         info_layout = QVBoxLayout(info_group)
 
-        # Texture name with right-click context menu
+        # Name (clickable for rename)
         self.info_name = QLabel("Name: -")
         self.info_name.setStyleSheet("font-weight: bold; padding: 5px;")
         self.info_name.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.info_name.customContextMenuRequested.connect(lambda pos: self._show_name_context_menu(pos, alpha=False))
         info_layout.addWidget(self.info_name)
 
-        # Alpha name with right-click context menu
+        # Alpha name (clickable for rename, if exists)
         self.info_alpha_name = QLabel("")
-        self.info_alpha_name.setStyleSheet("color: red; font-weight: bold; padding: 5px;")
+        self.info_alpha_name.setStyleSheet("color: #ff6b6b; font-weight: bold; padding: 5px;")
         self.info_alpha_name.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.info_alpha_name.customContextMenuRequested.connect(lambda pos: self._show_name_context_menu(pos, alpha=True))
         info_layout.addWidget(self.info_alpha_name)
 
-        # Size with resize controls
-        size_layout = QHBoxLayout()
+        # Size
         self.info_size = QLabel("Size: -")
-        size_layout.addWidget(self.info_size)
+        self.info_size.setStyleSheet("padding: 3px;")
+        info_layout.addWidget(self.info_size)
 
-        self.resize_btn = QPushButton("Resize")
-        self.resize_btn.setEnabled(False)
-        size_layout.addWidget(self.resize_btn)
+        # Format
+        self.info_format = QLabel("Format: -")
+        self.info_format.setStyleSheet("padding: 3px;")
+        info_layout.addWidget(self.info_format)
 
-        self.upscale_btn = QPushButton("AI Upscale")
-        self.upscale_btn.setEnabled(False)
-        size_layout.addWidget(self.upscale_btn)
+        # Other info
+        #self.info_other = QLabel("Other: -")
+        #self.info_other.setStyleSheet("padding: 3px;")
+        #info_layout.addWidget(self.info_other)
 
-        info_layout.addLayout(size_layout)
+        left_layout.addWidget(info_group)
+        main_layout.addWidget(left_widget)
 
-        # Format dropdown with compression status
-        format_layout = QHBoxLayout()
-        format_label = QLabel("Format:")
-        self.format_combo = QComboBox()
-        self.format_combo.addItems(["DXT1", "DXT3", "DXT5", "ARGB8888", "ARGB1555", "ARGB4444", "RGB888", "RGB565"])
-        self.format_combo.setEnabled(False)
-        format_layout.addWidget(format_label)
-        format_layout.addWidget(self.format_combo)
-
-        self.compress_btn = QPushButton("Compress")
-        self.compress_btn.setEnabled(False)
-        format_layout.addWidget(self.compress_btn)
-
-        self.uncompress_btn = QPushButton("Uncompress")
-        self.uncompress_btn.setEnabled(False)
-        format_layout.addWidget(self.uncompress_btn)
-
-        info_layout.addLayout(format_layout)
-
-        layout.addWidget(info_group)
         return panel
 
 
-    def _update_texture_info(self, texture): #vers 5
-        """Update texture information display - clean version with consistent spacing"""
+    def _create_transform_panel(self): #vers 2
+        """Create transform and edit controls panel with SVG icons"""
+        panel = QFrame()
+        panel.setFrameStyle(QFrame.Shape.StyledPanel)
+        panel.setMinimumWidth(150)
+        panel.setMaximumWidth(200)
+
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setSpacing(5)
+
+        header = QLabel("Transform")
+        header.setFont(QFont("Arial", 10, QFont.Weight.Bold))
+        layout.addWidget(header)
+
+        # Flip operations with SVG icons
+        self.flip_vert_btn = QPushButton()
+        self.flip_vert_btn.setIcon(self._create_flip_vert_icon())
+        self.flip_vert_btn.setText("Flip Vertical")
+        self.flip_vert_btn.clicked.connect(self._flip_vertical)
+        self.flip_vert_btn.setEnabled(False)
+        self.flip_vert_btn.setToolTip("Flip texture vertically")
+        self.flip_vert_btn.setIconSize(QSize(20, 20))
+        layout.addWidget(self.flip_vert_btn)
+
+        self.flip_horz_btn = QPushButton()
+        self.flip_horz_btn.setIcon(self._create_flip_horz_icon())
+        self.flip_horz_btn.setText("Flip Horizontal")
+        self.flip_horz_btn.clicked.connect(self._flip_horizontal)
+        self.flip_horz_btn.setEnabled(False)
+        self.flip_horz_btn.setToolTip("Flip texture horizontally")
+        self.flip_horz_btn.setIconSize(QSize(20, 20))
+        layout.addWidget(self.flip_horz_btn)
+
+        layout.addSpacing(5)
+
+        # Rotate operations with SVG icons
+        self.rotate_cw_btn = QPushButton()
+        self.rotate_cw_btn.setIcon(self._create_rotate_cw_icon())
+        self.rotate_cw_btn.setText("Rotate 90° CW")
+        self.rotate_cw_btn.clicked.connect(self._rotate_clockwise)
+        self.rotate_cw_btn.setEnabled(False)
+        self.rotate_cw_btn.setToolTip("Rotate 90 degrees clockwise")
+        self.rotate_cw_btn.setIconSize(QSize(20, 20))
+        layout.addWidget(self.rotate_cw_btn)
+
+        self.rotate_ccw_btn = QPushButton()
+        self.rotate_ccw_btn.setIcon(self._create_rotate_ccw_icon())
+        self.rotate_ccw_btn.setText("Rotate 90° CCW")
+        self.rotate_ccw_btn.clicked.connect(self._rotate_counterclockwise)
+        self.rotate_ccw_btn.setEnabled(False)
+        self.rotate_ccw_btn.setToolTip("Rotate 90 degrees counter-clockwise")
+        self.rotate_ccw_btn.setIconSize(QSize(20, 20))
+        layout.addWidget(self.rotate_ccw_btn)
+
+        layout.addSpacing(10)
+
+        # Edit operations with SVG icons
+        edit_header = QLabel("Edit")
+        edit_header.setFont(QFont("Arial", 10, QFont.Weight.Bold))
+        layout.addWidget(edit_header)
+
+        self.copy_btn = QPushButton()
+        self.copy_btn.setIcon(self._create_copy_icon())
+        self.copy_btn.setText("Copy")
+        self.copy_btn.clicked.connect(self._copy_texture)
+        self.copy_btn.setEnabled(False)
+        self.copy_btn.setToolTip("Copy texture to clipboard")
+        self.copy_btn.setIconSize(QSize(20, 20))
+        layout.addWidget(self.copy_btn)
+
+        self.paste_btn = QPushButton()
+        self.paste_btn.setIcon(self._create_paste_icon())
+        self.paste_btn.setText("Paste")
+        self.paste_btn.clicked.connect(self._paste_texture)
+        self.paste_btn.setEnabled(False)
+        self.paste_btn.setToolTip("Paste texture from clipboard")
+        self.paste_btn.setIconSize(QSize(20, 20))
+        layout.addWidget(self.paste_btn)
+
+        layout.addSpacing(5)
+
+        self.edit_btn = QPushButton()
+        self.edit_btn.setIcon(self._create_edit_icon())
+        self.edit_btn.setText("Edit")
+        self.edit_btn.clicked.connect(self._edit_texture_external)
+        self.edit_btn.setEnabled(False)
+        self.edit_btn.setToolTip("Edit in external editor (coming soon)")
+        self.edit_btn.setIconSize(QSize(20, 20))
+        layout.addWidget(self.edit_btn)
+
+        self.convert_btn = QPushButton()
+        self.convert_btn.setIcon(self._create_convert_icon())
+        self.convert_btn.setText("Convert")
+        self.convert_btn.clicked.connect(self._convert_texture_format)
+        self.convert_btn.setEnabled(False)
+        self.convert_btn.setToolTip("Convert format (coming soon)")
+        self.convert_btn.setIconSize(QSize(20, 20))
+        layout.addWidget(self.convert_btn)
+
+        layout.addStretch()
+
+        return panel
+
+
+    def _create_flip_vert_icon(self): #vers 1
+        """Create vertical flip SVG icon"""
+        from PyQt6.QtGui import QIcon, QPixmap, QPainter
+        from PyQt6.QtSvg import QSvgRenderer
+
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 12h18M8 7l-4 5 4 5M16 7l4 5-4 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_flip_horz_icon(self): #vers 1
+        """Create horizontal flip SVG icon"""
+        from PyQt6.QtGui import QIcon, QPixmap, QPainter
+        from PyQt6.QtSvg import QSvgRenderer
+
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 3v18M7 8l5-4 5 4M7 16l5 4 5-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_rotate_cw_icon(self): #vers 1
+        """Create clockwise rotation SVG icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 12a9 9 0 11-9-9v6M21 3l-3 6-6-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_rotate_ccw_icon(self): #vers 1
+        """Create counter-clockwise rotation SVG icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 12a9 9 0 109-9v6M3 3l3 6 6-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_copy_icon(self): #vers 1
+        """Create copy SVG icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/>
+            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_paste_icon(self): #vers 1
+        """Create paste SVG icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" stroke="currentColor" stroke-width="2"/>
+            <rect x="8" y="2" width="8" height="4" rx="1" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_edit_icon(self): #vers 1
+        """Create edit SVG icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="2"/>
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_convert_icon(self): #vers 1
+        """Create convert SVG icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 12h18M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_folder_icon(self): #vers 1
+        """Open IMG - Folder icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-7l-2-2H5a2 2 0 00-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_file_icon(self): #vers 1
+        """Open TXD - File icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="2"/>
+            <path d="M14 2v6h6" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_save_icon(self): #vers 1
+        """Save TXD - Floppy disk icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2"/>
+            <path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_import_icon(self): #vers 1
+        """Import - Download/Import icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_export_icon(self): #vers 1
+        """Export - Upload/Export icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_package_icon(self): #vers 1
+        """Export All - Package/Box icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" stroke-width="2"/>
+            <path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_properties_icon(self): #vers 1
+        """Properties - Info/Details icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 16v-4M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+    # CONTEXT MENU ICONS
+
+    def _create_plus_icon(self): #vers 1
+        """Create New Entry - Plus icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_document_icon(self): #vers 1
+        """Create New TXD - Document icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="2"/>
+            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_undo_icon(self): #vers 1
+        """Undo - Curved arrow icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 7v6h6M3 13a9 9 0 1018 0 9 9 0 00-18 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_pencil_icon(self): #vers 1
+        """Edit - Pencil icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_trash_icon(self): #vers 1
+        """Delete - Trash icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_eye_icon(self): #vers 1
+        """View - Eye icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
+            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_list_icon(self): #vers 1
+        """Properties List - List icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+    # WINDOW CONTROL ICONS
+
+    def _create_minimize_icon(self): #vers 1
+        """Minimize - Horizontal line"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_maximize_icon(self): #vers 1
+        """Maximize - Square"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_close_icon(self): #vers 1
+        """Close - X icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+
+
+    def _svg_to_icon(self, svg_data, size=24): #vers 2
+        """Convert SVG data to QIcon with theme color support"""
+        from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor
+        from PyQt6.QtSvg import QSvgRenderer
+        from PyQt6.QtCore import QByteArray
+
+        try:
+            # Get current text color from palette
+            text_color = self.palette().color(self.foregroundRole())
+
+            # Replace currentColor with actual color
+            svg_str = svg_data.decode('utf-8')
+            svg_str = svg_str.replace('currentColor', text_color.name())
+            svg_data = svg_str.encode('utf-8')
+
+            renderer = QSvgRenderer(QByteArray(svg_data))
+            pixmap = QPixmap(size, size)
+            pixmap.fill(QColor(0, 0, 0, 0))  # Transparent background
+
+            painter = QPainter(pixmap)
+            renderer.render(painter)
+            painter.end()
+
+            return QIcon(pixmap)
+        except:
+            # Fallback to no icon if SVG fails
+            return QIcon()
+
+
+    def _update_texture_info(self, texture): #vers 6
+        """Update texture information display with proper formatting"""
         try:
             name = texture.get('name', 'Unknown')
             width = texture.get('width', 0)
             height = texture.get('height', 0)
             has_alpha = texture.get('has_alpha', False)
             fmt = texture.get('format', 'Unknown')
+            depth = texture.get('depth', 32)
 
-            # Update clickable name
-            self.info_name.setText(f"Name: {name}")
+            # Line 1: Name and bit depth
+            self.info_name.setText(f"Name: {name} - {depth}bit")
 
-            # Update alpha name space (always present for consistent spacing)
+            # Line 2: Alpha name (if exists) or empty
             if has_alpha:
                 alpha_name = texture.get('alpha_name', name + 'a')
                 self.info_alpha_name.setText(f"Alpha: {alpha_name}")
-                self.info_alpha_name.setStyleSheet("text-align: left; color: red; font-weight: bold;")
+                self.info_alpha_name.setVisible(True)
             else:
-                # Keep the space but make it empty
                 self.info_alpha_name.setText("")
-                self.info_alpha_name.setStyleSheet("text-align: left;")
+                self.info_alpha_name.setVisible(False)
 
-            # Update size
+            # Line 3: Size
             self.info_size.setText(f"Size: {width}x{height}" if width > 0 else "Size: Unknown")
 
-            # Update format combo to match current format
-            if hasattr(self, 'format_combo'):
-                index = self.format_combo.findText(fmt)
-                if index >= 0:
-                    self.format_combo.setCurrentIndex(index)
+            # Line 4: Format
+            #self.info_format.setText(f"Format: {fmt}")
 
-            # Show preview (existing preview code...)
+            # Line 5: Other info (mipmaps, etc.)
+
+            #mipmaps = texture.get('mipmaps', 1)
+            #self.info_other.setText(f"Mipmaps: {mipmaps}")
+
+            # Update preview
             rgba_data = texture.get('rgba_data')
             if rgba_data and width > 0 and height > 0:
-                if hasattr(self, '_show_alpha') and self._show_alpha:
-                    alpha_data = bytearray()
-                    for i in range(0, len(rgba_data), 4):
-                        a = rgba_data[i+3]
-                        alpha_data.extend([a, a, a, 255])
-                    display_data = bytes(alpha_data)
+                # Show alpha or normal view
+                if hasattr(self, '_show_alpha') and self._show_alpha and has_alpha:
+                    display_data = self._extract_alpha_for_display(rgba_data)
                 else:
                     display_data = rgba_data
 
+                from PyQt6.QtGui import QImage, QPixmap
                 image = QImage(display_data, width, height, width*4, QImage.Format.Format_RGBA8888)
 
                 if not image.isNull():
                     pixmap = QPixmap.fromImage(image)
                     label_size = self.preview_label.size()
-                    scaled_pixmap = pixmap.scaled(label_size.width()-20, label_size.height()-20,
-                                                Qt.AspectRatioMode.KeepAspectRatio,
-                                                Qt.TransformationMode.SmoothTransformation)
+                    scaled_pixmap = pixmap.scaled(
+                        label_size.width()-20,
+                        label_size.height()-20,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
                     self.preview_label.setPixmap(scaled_pixmap)
-
-                    if hasattr(self, 'flip_btn'):
-                        if hasattr(self, '_show_alpha') and self._show_alpha:
-                            self.flip_btn.setText("Normal")
-                        else:
-                            self.flip_btn.setText("Alpha")
                     return
 
-            self.preview_label.setText("Preview not available")
+            self.preview_label.setText("No preview available")
+
         except Exception as e:
             self.preview_label.setText(f"Preview error: {str(e)}")
 
-    def flip_texture(self): #vers 1
-        """Flip between normal and alpha channel view"""
+
+    def _extract_alpha_for_display(self, rgba_data): #vers 1
+        """Extract alpha channel as grayscale for display"""
+        alpha_display = bytearray()
+        for i in range(3, len(rgba_data), 4):
+            a = rgba_data[i]
+            alpha_display.extend([a, a, a, 255])  # Grayscale with full opacity
+        return bytes(alpha_display)
+
+
+    def _flip_vertical(self): #vers 2
+        """Flip texture vertically"""
+        if not self.selected_texture or not self.selected_texture.get('rgba_data'):
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+            return
+
+        try:
+            width = self.selected_texture['width']
+            height = self.selected_texture['height']
+            rgba_data = bytearray(self.selected_texture['rgba_data'])
+
+            # Flip vertically - swap rows
+            flipped = bytearray(len(rgba_data))
+            for y in range(height):
+                for x in range(width):
+                    src_idx = (y * width + x) * 4
+                    dst_idx = ((height - 1 - y) * width + x) * 4
+                    flipped[dst_idx:dst_idx+4] = rgba_data[src_idx:src_idx+4]
+
+            self._save_undo_state("Flip vertical")
+            self.selected_texture['rgba_data'] = bytes(flipped)
+            self._update_texture_info(self.selected_texture)
+            self._update_table_display()
+            self._mark_as_modified()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("✅ Flipped texture vertically")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to flip: {str(e)}")
+
+
+    def _flip_horizontal(self): #vers 1
+        """Flip texture horizontally"""
+        if not self.selected_texture or not self.selected_texture.get('rgba_data'):
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+            return
+
+        try:
+            width = self.selected_texture['width']
+            height = self.selected_texture['height']
+            rgba_data = bytearray(self.selected_texture['rgba_data'])
+
+            # Flip horizontally - swap columns
+            flipped = bytearray(len(rgba_data))
+            for y in range(height):
+                for x in range(width):
+                    src_idx = (y * width + x) * 4
+                    dst_idx = (y * width + (width - 1 - x)) * 4
+                    flipped[dst_idx:dst_idx+4] = rgba_data[src_idx:src_idx+4]
+
+            self._save_undo_state("Flip horizontal")
+            self.selected_texture['rgba_data'] = bytes(flipped)
+            self._update_texture_info(self.selected_texture)
+            self._update_table_display()
+            self._mark_as_modified()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("✅ Flipped texture horizontally")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to flip: {str(e)}")
+
+
+    def _rotate_clockwise(self): #vers 1
+        """Rotate texture 90 degrees clockwise"""
+        if not self.selected_texture or not self.selected_texture.get('rgba_data'):
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+            return
+
+        try:
+            width = self.selected_texture['width']
+            height = self.selected_texture['height']
+            rgba_data = self.selected_texture['rgba_data']
+
+            # Use QImage for rotation
+            from PyQt6.QtGui import QImage, QTransform
+            img = QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+
+            transform = QTransform().rotate(90)
+            rotated = img.transformed(transform)
+
+            # Get rotated data
+            ptr = rotated.bits()
+            ptr.setsize(rotated.sizeInBytes())
+            rotated_data = bytes(ptr)
+
+            self._save_undo_state("Rotate 90° CW")
+            self.selected_texture['rgba_data'] = rotated_data
+            self.selected_texture['width'] = rotated.width()
+            self.selected_texture['height'] = rotated.height()
+
+            self._update_texture_info(self.selected_texture)
+            self._update_table_display()
+            self._mark_as_modified()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✅ Rotated 90° CW: now {rotated.width()}x{rotated.height()}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to rotate: {str(e)}")
+
+
+    def _rotate_counterclockwise(self): #vers 1
+        """Rotate texture 90 degrees counter-clockwise"""
+        if not self.selected_texture or not self.selected_texture.get('rgba_data'):
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+            return
+
+        try:
+            width = self.selected_texture['width']
+            height = self.selected_texture['height']
+            rgba_data = self.selected_texture['rgba_data']
+
+            # Use QImage for rotation
+            from PyQt6.QtGui import QImage, QTransform
+            img = QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+
+            transform = QTransform().rotate(-90)
+            rotated = img.transformed(transform)
+
+            # Get rotated data
+            ptr = rotated.bits()
+            ptr.setsize(rotated.sizeInBytes())
+            rotated_data = bytes(ptr)
+
+            self._save_undo_state("Rotate 90° CCW")
+            self.selected_texture['rgba_data'] = rotated_data
+            self.selected_texture['width'] = rotated.width()
+            self.selected_texture['height'] = rotated.height()
+
+            self._update_texture_info(self.selected_texture)
+            self._update_table_display()
+            self._mark_as_modified()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✅ Rotated 90° CCW: now {rotated.width()}x{rotated.height()}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to rotate: {str(e)}")
+
+
+    def _copy_texture(self): #vers 1
+        """Copy texture to clipboard"""
+        if not self.selected_texture or not self.selected_texture.get('rgba_data'):
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+            return
+
+        try:
+            from PyQt6.QtGui import QImage, QClipboard
+            from PyQt6.QtWidgets import QApplication
+
+            width = self.selected_texture['width']
+            height = self.selected_texture['height']
+            rgba_data = self.selected_texture['rgba_data']
+
+            img = QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+
+            clipboard = QApplication.clipboard()
+            clipboard.setImage(img)
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✅ Copied texture to clipboard: {self.selected_texture['name']}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to copy: {str(e)}")
+
+
+    def _paste_texture(self): #vers 1
+        """Paste texture from clipboard"""
         if not self.selected_texture:
             QMessageBox.warning(self, "No Selection", "Please select a texture first")
+            return
+
+        try:
+            from PyQt6.QtGui import QClipboard
+            from PyQt6.QtWidgets import QApplication
+
+            clipboard = QApplication.clipboard()
+            img = clipboard.image()
+
+            if img.isNull():
+                QMessageBox.warning(self, "No Image", "No image in clipboard")
+                return
+
+            # Convert to RGBA8888
+            img = img.convertToFormat(QImage.Format.Format_RGBA8888)
+
+            width = img.width()
+            height = img.height()
+            ptr = img.bits()
+            ptr.setsize(img.sizeInBytes())
+            rgba_data = bytes(ptr)
+
+            self._save_undo_state("Paste texture")
+            self.selected_texture['width'] = width
+            self.selected_texture['height'] = height
+            self.selected_texture['rgba_data'] = rgba_data
+
+            self._update_texture_info(self.selected_texture)
+            self._update_table_display()
+            self._mark_as_modified()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✅ Pasted texture from clipboard: {width}x{height}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to paste: {str(e)}")
+
+
+    def _edit_texture_external(self): #vers 1
+        """Edit texture in external editor (placeholder)"""
+        QMessageBox.information(self, "Coming Soon",
+            "External editor integration will be added soon!\n\n"
+            "Will support:\n"
+            "• Open in GIMP/Photoshop\n"
+            "• Auto-reload on save\n"
+            "• Custom editor paths")
+
+
+    def _convert_texture_format(self): #vers 1
+        """Convert texture format (placeholder)"""
+        QMessageBox.information(self, "Coming Soon",
+            "Format conversion tools will be added soon!\n\n"
+            "Will support:\n"
+            "• Batch DXT compression\n"
+            "• Color depth conversion\n"
+            "• Palette generation")
+
+
+    def flip_texture(self): #vers 2
+        """Flip between normal and alpha channel view (only if alpha exists)"""
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+            return
+
+        # Check if texture has alpha
+        if not self.selected_texture.get('has_alpha', False):
+            QMessageBox.information(self, "No Alpha",
+                "This texture has no alpha channel to view.\n\n"
+                "Use 'Import → Import Alpha Channel' to add one.")
             return
 
         # Toggle alpha view flag
@@ -2034,12 +3341,13 @@ class TXDWorkshop(QWidget): #vers 3
         self._update_texture_info(self.selected_texture)
 
         mode = "Alpha Channel" if self._show_alpha else "Normal View"
+
+        # Update flip button text if it exists
+        if hasattr(self, 'flip_btn'):
+            self.flip_btn.setText("🔄 Normal" if self._show_alpha else "🔄 Alpha")
+
         if self.main_window and hasattr(self.main_window, 'log_message'):
             self.main_window.log_message(f"Switched to {mode}")
-
-
-
-
 
 
     def import_texture(self): #vers 1
@@ -2926,8 +4234,9 @@ def _call_external_upscaler(self, qimg, factor, command): #vers 1
         except Exception:
             pass
 
-def open_txd_workshop(main_window, img_path=None): #vers 2
-    """Open TXD Workshop from main window"""
+
+def open_txd_workshop(main_window, img_path=None): #vers 3
+    """Open TXD Workshop from main window - works with or without IMG"""
     try:
         workshop = TXDWorkshop(main_window, main_window)
 
@@ -2939,11 +4248,14 @@ def open_txd_workshop(main_window, img_path=None): #vers 2
             else:
                 # Load from IMG archive
                 workshop.load_from_img_archive(img_path)
-        elif main_window and hasattr(main_window, 'current_img') and main_window.current_img:
-            workshop.load_from_img_archive(main_window.current_img.file_path)
+        else:
+            # Open in standalone mode (no IMG loaded)
+            if main_window and hasattr(main_window, 'log_message'):
+                main_window.log_message("TXD Workshop opened in standalone mode")
 
         workshop.show()
         return workshop
     except Exception as e:
         QMessageBox.critical(main_window, "Error", f"Failed to open TXD Workshop: {str(e)}")
         return None
+

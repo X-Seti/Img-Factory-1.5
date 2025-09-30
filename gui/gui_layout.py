@@ -655,20 +655,24 @@ class IMGFactoryGUILayout:
             txd_button.setToolTip("Open TXD Texture Editor")
             self.main_window.button_panel.addWidget(txd_button)
 
-    def launch_txd_editor(self): #vers 2
-        """Launch TXD Workshop"""
+    def launch_txd_editor(self): #vers 3
+        """Launch TXD Workshop - works with or without IMG loaded"""
         try:
             from components.Txd_Editor.txd_workshop import open_txd_workshop
 
-            # Get current IMG path if available
+            # Get current IMG path if available (optional)
             img_path = None
             if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
                 img_path = self.main_window.current_img.file_path
 
+            # Open workshop - works without IMG too
             workshop = open_txd_workshop(self.main_window, img_path)
 
             if workshop:
-                self.main_window.log_message("✅ TXD Workshop opened from button")
+                if img_path:
+                    self.main_window.log_message("✅ TXD Workshop opened with IMG")
+                else:
+                    self.main_window.log_message("✅ TXD Workshop opened (standalone mode)")
             else:
                 self.main_window.log_message("❌ Failed to open TXD Workshop")
 

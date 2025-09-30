@@ -59,10 +59,16 @@ def apply_theme_to_workshop(workshop, main_window=None): #vers 1
         print(f"❌ TXD Workshop theme error: {str(e)}")
         return False
 
-def get_workshop_stylesheet(theme_colors): #vers 1
+#this belongs in components/Txd_Editor/ txd_workshop_theme.py - Version: 2
+# X-Seti - September30 2025 - Img Factory 1.5 - TXD Workshop Theme Support
+
+"""
+ADD THIS TO get_workshop_stylesheet() function - Insert before the return statement
+"""
+
+def get_workshop_stylesheet(theme_colors): #vers 2
     """Generate TXD Workshop stylesheet from theme colors"""
 
-    # Extract colors with fallbacks
     bg_primary = theme_colors.get('bg_primary', '#2b2b2b')
     bg_secondary = theme_colors.get('bg_secondary', '#1e1e1e')
     bg_tertiary = theme_colors.get('bg_tertiary', '#3a3a3a')
@@ -75,74 +81,22 @@ def get_workshop_stylesheet(theme_colors): #vers 1
     button_pressed = theme_colors.get('button_pressed', '#2a2a2a')
 
     stylesheet = f"""
-    /* Main Window */
     QWidget {{
         background-color: {bg_primary};
         color: {text_primary};
-        font-family: Arial, sans-serif;
     }}
 
-    /* Frames and Panels */
-    QFrame {{
-        background-color: {bg_secondary};
-        border: 1px solid {border};
-    }}
-
-    /* List Widgets */
-    QListWidget {{
-        background-color: {bg_secondary};
-        border: 1px solid {border};
-        padding: 5px;
+    QLabel {{
         color: {text_primary};
     }}
 
-    QListWidget::item {{
-        padding: 5px;
-        border-radius: 2px;
-    }}
-
-    QListWidget::item:selected {{
-        background-color: {accent_primary};
-        color: white;
-    }}
-
-    QListWidget::item:hover {{
-        background-color: {bg_tertiary};
-    }}
-
-    /* Table Widget */
-    QTableWidget {{
-        background-color: {bg_secondary};
-        border: 1px solid {border};
-        gridline-color: {border};
-        color: {text_primary};
-    }}
-
-    QTableWidget::item {{
-        padding: 5px;
-    }}
-
-    QTableWidget::item:selected {{
-        background-color: {accent_primary};
-        color: white;
-    }}
-
-    QHeaderView::section {{
-        background-color: {bg_tertiary};
-        color: {text_primary};
-        padding: 5px;
-        border: 1px solid {border};
-        font-weight: bold;
-    }}
-
-    /* Buttons */
     QPushButton {{
         background-color: {button_normal};
-        border: 1px solid {border};
-        padding: 5px 15px;
-        border-radius: 3px;
         color: {text_primary};
-        font-weight: normal;
+        border: 1px solid {border};
+        padding: 5px;
+        border-radius: 3px;
+        font-weight: bold;
     }}
 
     QPushButton:hover {{
@@ -154,54 +108,190 @@ def get_workshop_stylesheet(theme_colors): #vers 1
     }}
 
     QPushButton:disabled {{
-        background-color: {bg_tertiary};
+        background-color: {bg_secondary};
         color: {text_secondary};
     }}
 
-    /* Labels */
-    QLabel {{
+    /* Window Control Buttons - Minimize */
+    QPushButton#minimize_button {{
+        background-color: {button_normal};
+        border: 1px solid {border};
+        border-radius: 3px;
         color: {text_primary};
+        font-size: 14pt;
+        font-weight: bold;
         padding: 2px;
+        min-width: 40px;
+        max-width: 40px;
+        min-height: 30px;
     }}
 
-    /* Group Boxes */
-    QGroupBox {{
+    QPushButton#minimize_button:hover {{
+        background-color: {button_hover};
+    }}
+
+    QPushButton#minimize_button:pressed {{
+        background-color: {button_pressed};
+    }}
+
+    /* Window Control Buttons - Close */
+    QPushButton#close_button {{
+        background-color: {button_normal};
         border: 1px solid {border};
-        border-radius: 5px;
-        margin-top: 10px;
-        padding-top: 10px;
+        border-radius: 3px;
         color: {text_primary};
+        font-size: 14pt;
+        font-weight: bold;
+        padding: 2px;
+        min-width: 40px;
+        max-width: 40px;
+        min-height: 30px;
+    }}
+
+    QPushButton#close_button:hover {{
+        background-color: {accent_primary};
+    }}
+
+    QPushButton#close_button:pressed {{
+        background-color: {button_pressed};
+    }}
+
+    QListWidget, QTableWidget {{
+        background-color: {bg_secondary};
+        border: 1px solid {border};
+        color: {text_primary};
+    }}
+
+    QListWidget::item:selected, QTableWidget::item:selected {{
+        background-color: {accent_primary};
+        color: {text_primary};
+    }}
+    """
+
+
+
+def get_workshop_stylesheet(theme_colors): #vers 2
+    """Generate TXD Workshop stylesheet from theme colors"""
+
+    bg_primary = theme_colors.get('bg_primary', '#2b2b2b')
+    bg_secondary = theme_colors.get('bg_secondary', '#1e1e1e')
+    bg_tertiary = theme_colors.get('bg_tertiary', '#3a3a3a')
+    text_primary = theme_colors.get('text_primary', '#e0e0e0')
+    text_secondary = theme_colors.get('text_secondary', '#b0b0b0')
+    accent_primary = theme_colors.get('accent_primary', '#0d47a1')
+    border = theme_colors.get('border', '#3a3a3a')
+    button_normal = theme_colors.get('button_normal', '#3a3a3a')
+    button_hover = theme_colors.get('button_hover', '#4a4a4a')
+    button_pressed = theme_colors.get('button_pressed', '#2a2a2a')
+
+    stylesheet = f"""
+    QWidget {{
+        background-color: {bg_primary};
+        color: {text_primary};
+    }}
+
+    QLabel {{
+        color: {text_primary};
+    }}
+
+    QPushButton {{
+        background-color: {button_normal};
+        color: {text_primary};
+        border: 1px solid {border};
+        padding: 5px;
+        border-radius: 3px;
         font-weight: bold;
     }}
 
-    QGroupBox::title {{
-        subcontrol-origin: margin;
-        subcontrol-position: top left;
-        padding: 0 5px;
+    QPushButton:hover {{
+        background-color: {button_hover};
+    }}
+
+    QPushButton:pressed {{
+        background-color: {button_pressed};
+    }}
+
+    QPushButton:disabled {{
+        background-color: {bg_secondary};
+        color: {text_secondary};
+    }}
+
+    /* Window Control Buttons - Minimize */
+    QPushButton#minimize_button {{
+        background-color: {button_normal};
+        border: 1px solid {border};
+        border-radius: 3px;
+        color: {text_primary};
+        font-size: 14pt;
+        font-weight: bold;
+        padding: 2px;
+        min-width: 40px;
+        max-width: 40px;
+        min-height: 30px;
+    }}
+
+    QPushButton#minimize_button:hover {{
+        background-color: {button_hover};
+    }}
+
+    QPushButton#minimize_button:pressed {{
+        background-color: {button_pressed};
+    }}
+
+    /* Window Control Buttons - Close */
+    QPushButton#close_button {{
+        background-color: {button_normal};
+        border: 1px solid {border};
+        border-radius: 3px;
+        color: {text_primary};
+        font-size: 14pt;
+        font-weight: bold;
+        padding: 2px;
+        min-width: 40px;
+        max-width: 40px;
+        min-height: 30px;
+    }}
+
+    QPushButton#close_button:hover {{
+        background-color: {accent_primary};
+    }}
+
+    QPushButton#close_button:pressed {{
+        background-color: {button_pressed};
+    }}
+
+    QListWidget, QTableWidget {{
+        background-color: {bg_secondary};
+        border: 1px solid {border};
         color: {text_primary};
     }}
 
-    /* Preview Label */
-    QLabel#preview_label {{
-        border: 1px solid {border};
-        background-color: {bg_secondary};
-    }}
-
-    /* Toolbar */
-    QFrame#toolbar {{
-        background-color: {bg_tertiary};
-        border-bottom: 1px solid {border};
-    }}
-
-    /* Splitter */
-    QSplitter::handle {{
-        background-color: {border};
-        width: 3px;
-        height: 3px;
-    }}
-
-    QSplitter::handle:hover {{
+    QListWidget::item:selected, QTableWidget::item:selected {{
         background-color: {accent_primary};
+        color: {text_primary};
+    }}
+
+    QGroupBox {{
+        border: 1px solid {border};
+        border-radius: 3px;
+        margin-top: 10px;
+        padding-top: 10px;
+        color: {text_primary};
+    }}
+
+    QGroupBox::title {{
+        color: {text_primary};
+    }}
+
+    QFrame {{
+        border: 1px solid {border};
+    }}
+
+    QHeaderView::section {{
+        background-color: {bg_tertiary};
+        color: {text_primary};
+        padding: 4px;
+        border: 1px solid {border};
     }}
     """
 
