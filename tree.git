@@ -19,12 +19,8 @@
 │   ├── Txd_Converter
 │   │   └── txd_converter.py
 │   ├── Txd_Editor
-│   │   ├── txd_workshop_base.py
-│   │   ├── txd_workshop_lastest.py
 │   │   ├── txd_workshop.py
-│   │   ├── txd_workshop.py-old
-│   │   ├── txd_workshop_theme.py
-│   │   └── txd_workshop.working_textures.py
+│   │   └── txd_workshop_theme.py
 │   └── unified_signal_handler.py
 ├── core
 │   ├── clean.py
@@ -175,6 +171,8 @@
 │   ├── peach_theme_light.json
 │   ├── pink_theme_light.json
 │   ├── professional_light.json
+│   ├── red_dead_theme_dark.json
+│   ├── red_theme_dark.json
 │   ├── rockstar_dark.json
 │   ├── synthwave_outrun_dark.json
 │   ├── tea_and_toast_dark.json
@@ -185,8 +183,8 @@
 ├── unix_launcher.sh
 ├── utils
 │   ├── app_settings_system.py
-│   ├── generated_signal_cleanup.py
 │   ├── themer_settings.json
+│   ├── themes -> /home/x2/Documents/GitHub/Img Factory 1.5/themes
 │   └── update_themes_script.py
 ├── windows_launcher.bat
 └── windows_source
@@ -330,4 +328,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-64 directories, 267 files
+65 directories, 264 files

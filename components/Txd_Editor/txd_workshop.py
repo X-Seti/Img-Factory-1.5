@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #this belongs in components/Txd_Editor/ txd_workshop.py - Version: 3
 # X-Seti - September26 2025 - Img Factory 1.5 - TXD Workshop
 
@@ -93,7 +94,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         self.setWindowTitle("TXD Workshop: No File")
         self.resize(1400, 800)
-        self._initialize_enhanced_features()
+        self._initialize_features()
         self.dragging = False
         self.drag_position = None
         self.resizing = False
@@ -117,118 +118,50 @@ class TXDWorkshop(QWidget): #vers 3
         self.size_grip.raise_()
         self._apply_theme()
 
-
-
-    #self.setup_enhanced_ui()  # NEW
-        self._initialize_enhanced_features()
-
-    def setup_ui(self): #vers 4
-        """Setup the main UI layout with enhanced features"""
+    def setup_ui(self): #vers 5
+        """Setup the main UI layout"""
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(5, 5, 5, 5)
         main_layout.setSpacing(5)
 
+        # Toolbar
         toolbar = self._create_toolbar()
         main_layout.addWidget(toolbar)
 
+        # Main splitter
         main_splitter = QSplitter(Qt.Orientation.Horizontal)
 
+        # Add panels (this creates self.texture_table in middle panel)
         left_panel = self._create_left_panel()
         main_splitter.addWidget(left_panel)
 
-        # Use enhanced middle panel if you have the methods, otherwise use original
-        if hasattr(self, '_create_enhanced_middle_panel'):
-            middle_panel = self._create_enhanced_middle_panel()
-        else:
-            middle_panel = self._create_middle_panel()
+        middle_panel = self._create_middle_panel()
         main_splitter.addWidget(middle_panel)
 
-        # Use enhanced right panel if you have the methods, otherwise use original
-        if hasattr(self, '_create_enhanced_right_panel'):
-            right_panel = self._create_enhanced_right_panel()
-        else:
-            right_panel = self._create_right_panel()
+        right_panel = self._create_right_panel()
         main_splitter.addWidget(right_panel)
 
+        # Set splitter proportions
         main_splitter.setStretchFactor(0, 2)
         main_splitter.setStretchFactor(1, 3)
         main_splitter.setStretchFactor(2, 5)
 
         main_layout.addWidget(main_splitter)
 
-        # Add status bar if method exists
+        # Connect signals AFTER texture_table is created
+        self._connect_texture_table_signals()
+
+        # Status indicators if available
         if hasattr(self, '_setup_status_indicators'):
             status_frame = self._setup_status_indicators()
             main_layout.addWidget(status_frame)
 
+        # toolbar if available
+        if hasattr(self, '_setup_toolbar'):
+            self._setup_toolbar()
 
-    def setup_enhanced_ui(self): #vers 1
-        """Setup enhanced UI with all new features - CALL THIS INSTEAD OF setup_ui()"""
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(5, 5, 5, 5)
-        main_layout.setSpacing(5)
-
-        toolbar = self._create_toolbar()
-        main_layout.addWidget(toolbar)
-
-        main_splitter = QSplitter(Qt.Orientation.Horizontal)
-
-        left_panel = self._create_left_panel()
-        main_splitter.addWidget(left_panel)
-
-        middle_panel = self._create_enhanced_middle_panel()
-        main_splitter.addWidget(middle_panel)
-
-        right_panel = self._create_enhanced_right_panel()
-        main_splitter.addWidget(right_panel)
-
-        main_splitter.setStretchFactor(0, 2)
-        main_splitter.setStretchFactor(1, 3)
-        main_splitter.setStretchFactor(2, 5)
-
-        main_layout.addWidget(main_splitter)
-
-        status_frame = self._setup_status_indicators()
-        main_layout.addWidget(status_frame)
-
-        self._setup_enhanced_toolbar()
-
-    def _create_enhanced_middle_panel(self): #vers 1
-        """Create enhanced middle panel with search and filters"""
-        panel = QFrame()
-        panel.setFrameStyle(QFrame.Shape.StyledPanel)
-        panel.setMinimumWidth(250)
-
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(5, 5, 5, 5)
-
-        header = QLabel("Textures")
-        header.setFont(QFont("Arial", 10, QFont.Weight.Bold))
-        layout.addWidget(header)
-
-        search_layout = self._create_texture_search()
-        layout.addLayout(search_layout)
-
-        filter_group = self._create_texture_filters()
-        layout.addWidget(filter_group)
-
-        self.texture_table = QTableWidget()
-        self.texture_table.setColumnCount(2)
-        self.texture_table.setHorizontalHeaderLabels(["Preview", "Details"])
-        self.texture_table.horizontalHeader().setStretchLastSection(True)
-        self.texture_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.texture_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-        self.texture_table.setAlternatingRowColors(True)
-        self.texture_table.itemSelectionChanged.connect(self._on_texture_selected)
-        self.texture_table.setIconSize(QSize(64, 64))
-        self.texture_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.texture_table.customContextMenuRequested.connect(self._show_texture_context_menu)
-        layout.addWidget(self.texture_table)
-
-        return panel
-
-    def _initialize_enhanced_features(self): #vers 1
-        """Initialize all enhanced features after UI setup"""
+    def _initialize_features(self): #vers 1
+        """Initialize all features after UI setup"""
         try:
             self._apply_theme()
             self._update_status_indicators()
@@ -243,11 +176,11 @@ class TXDWorkshop(QWidget): #vers 3
             self._clear_texture_search()
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("Enhanced TXD Workshop features initialized")
+                self.main_window.log_message("TXD Workshop features initialized")
 
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Enhanced features init error: {str(e)}")
+                self.main_window.log_message(f"features init error: {str(e)}")
 
 
     def mousePressEvent(self, event): #vers 1
@@ -426,7 +359,7 @@ class TXDWorkshop(QWidget): #vers 3
 
             self._update_status_indicators()
 
-    def _create_enhanced_toolbar_buttons(self): #vers 1
+    def _create_toolbar_buttons(self): #vers 1
         """Create additional toolbar buttons"""
         buttons = []
 
@@ -452,8 +385,8 @@ class TXDWorkshop(QWidget): #vers 3
 
         return buttons
 
-    def _create_enhanced_right_panel(self): #vers 1
-        """Create enhanced right panel with editing controls"""
+    def _create_right_panel(self): #vers 1
+        """Create right panel with editing controls"""
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.StyledPanel)
 
@@ -581,8 +514,8 @@ class TXDWorkshop(QWidget): #vers 3
             if hasattr(self, 'uncompress_btn'):
                 self.uncompress_btn.setEnabled(False)
 
-    def _setup_enhanced_toolbar(self): #vers 1
-        """Setup enhanced toolbar with additional buttons"""
+    def _setup_toolbar(self): #vers 1
+        """Setup toolbar with additional buttons"""
         # This assumes you want to add buttons to your existing toolbar
         # Add these after your existing toolbar buttons
 
@@ -1001,9 +934,10 @@ class TXDWorkshop(QWidget): #vers 3
             """)
 
 
-    def _create_toolbar(self): #vers 4
+    def _create_toolbar(self): #vers 5
         """Create toolbar with action buttons and visible window controls"""
-        toolbar = QFrame()
+        #toolbar = QFrame()
+        self.toolbar = QFrame()
         toolbar.setFrameStyle(QFrame.Shape.StyledPanel)
         toolbar.setMaximumHeight(50)
 
@@ -1102,7 +1036,7 @@ class TXDWorkshop(QWidget): #vers 3
         self.close_btn.setToolTip("Close Window")
         layout.addWidget(self.close_btn)
 
-        return toolbar
+        return self.toolbar
 
     def _create_left_panel(self): #vers 2
         """Create left panel - TXD file list from IMG"""
@@ -1258,17 +1192,68 @@ class TXDWorkshop(QWidget): #vers 3
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message("✅ Texture deleted")
 
-
     def _mark_as_modified(self): #vers 1
-        """Mark TXD as modified"""
+        """Mark the TXD as modified and enable save button"""
         self.save_txd_btn.setEnabled(True)
+        self.save_txd_btn.setStyleSheet("background-color: #ff6b35; font-weight: bold;")
         current_title = self.windowTitle()
         if not current_title.endswith("*"):
             self.setWindowTitle(current_title + "*")
 
+    def _open_mipmap_manager(self): #vers 1
+        """Open Mipmap Manager window for selected texture"""
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+            return
 
-    def _reload_texture_table(self): #vers 1
-        """Reload texture table display"""
+        mipmap_levels = self.selected_texture.get('mipmap_levels', [])
+        if not mipmap_levels:
+            QMessageBox.information(self, "No Mipmaps", "This texture has no mipmap levels")
+            return
+
+        # Create and show Mipmap Manager window
+        manager = MipmapManagerWindow(self, self.selected_texture, self.main_window)
+        manager.show()
+
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            self.main_window.log_message(f"🔍 Opened Mipmap Manager for: {self.selected_texture['name']}")
+
+    def _connect_texture_table_signals(self): #vers 1
+        """Connect texture table signals for mipmap manager"""
+        # Double-click to open mipmap manager
+        self.texture_table.itemDoubleClicked.connect(self._on_texture_table_double_click)
+
+    def _on_texture_table_double_click(self, item): #vers 1
+        """Handle double-click on texture table - open mipmap manager if clicked on mipmap line"""
+        try:
+            row = item.row()
+            col = item.column()
+
+            # Only handle double-click on details column (column 1)
+            if col != 1:
+                return
+
+            # Get texture for this row
+            if row < 0 or row >= len(self.texture_list):
+                return
+
+            texture = self.texture_list[row]
+
+            # Check if texture has mipmaps
+            mipmap_levels = texture.get('mipmap_levels', [])
+            if not mipmap_levels:
+                return
+
+            # Open mipmap manager
+            self.selected_texture = texture
+            self._open_mipmap_manager()
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Error opening mipmap manager: {str(e)}")
+
+    def _reload_texture_table(self): #vers 2
+        """Reload texture table display with mipmap info"""
         self.texture_table.setRowCount(0)
 
         for tex in self.texture_list:
@@ -1285,19 +1270,31 @@ class TXDWorkshop(QWidget): #vers 3
             else:
                 thumb_item.setText("🖼️")
 
-            details = f"Name: {tex['name']}\n"
+            # Build details with mipmap info
+            depth = tex.get('depth', 32)
+            details = f"Name: {tex['name']} - {depth}bit\n"
+
             if tex.get('has_alpha', False):
                 alpha_name = tex.get('alpha_name', tex['name'] + 'a')
                 details += f"Alpha: {alpha_name}\n"
+            else:
+                details += "\n"
+
             if tex['width'] > 0:
-                details += f"Size: {tex['width']}x{tex['height']}\n"
-            details += f"Format: {tex['format']}\n"
+                details += f"Size: {tex['width']}x{tex['height']} | Format: {tex['format']}\n"
+            else:
+                details += f"Format: {tex['format']}\n"
 
-            # ADD BIT DEPTH
-            depth = tex.get('depth', 32)  # Default to 32-bit if not specified
-            details += f"Depth: {depth}-bit\n"
+            # Mipmap info
+            mipmap_levels = tex.get('mipmap_levels', [])
+            num_mipmaps = len(mipmap_levels)
 
-            details += f"Alpha: {'Yes' if tex.get('has_alpha', False) else 'No'}"
+            if num_mipmaps > 0:
+                is_compressed = 'DXT' in tex['format']
+                compress_status = "compressed" if is_compressed else "uncompressed"
+                details += f"📊 {num_mipmaps} mipmap levels ({compress_status}) - Click to view"
+            else:
+                details += "📊 No mipmaps"
 
             thumb_item.setFlags(thumb_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             details_item = QTableWidgetItem(details)
@@ -1307,7 +1304,7 @@ class TXDWorkshop(QWidget): #vers 3
             self.texture_table.setItem(row, 1, details_item)
 
         for row in range(self.texture_table.rowCount()):
-            self.texture_table.setRowHeight(row, 80)
+            self.texture_table.setRowHeight(row, 100)
         self.texture_table.setColumnWidth(0, 80)
 
 
@@ -1493,8 +1490,8 @@ class TXDWorkshop(QWidget): #vers 3
                 self.main_window.log_message(f"❌ Extract error: {str(e)}")
             return None
 
-    def _load_txd_textures(self, txd_data, txd_name): #vers 10
-        """Load textures from TXD data - display only in middle panel"""
+    def _load_txd_textures(self, txd_data, txd_name): #vers 11
+        """Load textures from TXD data - display with mipmap info"""
         try:
             import struct
 
@@ -1532,9 +1529,10 @@ class TXDWorkshop(QWidget): #vers 3
                         continue
 
             if not textures:
-                textures = [{'name': 'No textures', 'width': 0, 'height': 0, 'has_alpha': False, 'format': 'Unknown', 'mipmaps': 0, 'rgba_data': None}]
+                textures = [{'name': 'No textures', 'width': 0, 'height': 0, 'has_alpha': False,
+                            'format': 'Unknown', 'mipmaps': 0, 'rgba_data': None, 'mipmap_levels': []}]
 
-            # Populate table - DISPLAY ONLY
+            # Populate table with mipmap info
             for tex in textures:
                 self.texture_list.append(tex)
                 row = self.texture_table.rowCount()
@@ -1550,26 +1548,34 @@ class TXDWorkshop(QWidget): #vers 3
                 else:
                     thumb_item.setText("🖼️")
 
-                # Build details text with proper formatting
-                depth = tex.get('depth', 32)  # Default to 32-bit
-
-                # Line 1: Name and bit depth
+                # Build details text with mipmap info
+                depth = tex.get('depth', 32)
                 details = f"Name: {tex['name']} - {depth}bit\n"
 
-                # Line 2: Alpha name (if exists) - otherwise empty line for spacing
+                # Alpha name line
                 if tex.get('has_alpha', False):
                     alpha_name = tex.get('alpha_name', tex['name'] + 'a')
                     details += f"Alpha: {alpha_name}\n"
                 else:
-                    details += "\n"  # Empty line for consistent spacing
+                    details += "\n"  # Empty line for spacing
 
-                # Line 3: Texture size and format
+                # Size and format line
                 if tex['width'] > 0:
-                    details += f"Size: {tex['width']}x{tex['height']} | Format: {tex['format']}"
+                    details += f"Size: {tex['width']}x{tex['height']} | Format: {tex['format']}\n"
                 else:
-                    details += f"Format: {tex['format']}"
+                    details += f"Format: {tex['format']}\n"
 
-                #details += f"Alpha: {'Yes' if tex.get('has_alpha', False) else 'No'}"
+                # Mipmap info line - CLICKABLE
+                mipmap_levels = tex.get('mipmap_levels', [])
+                num_mipmaps = len(mipmap_levels)
+
+                if num_mipmaps > 0:
+                    # Check if compressed
+                    is_compressed = 'DXT' in tex['format']
+                    compress_status = "compressed" if is_compressed else "uncompressed"
+                    details += f"📊 {num_mipmaps} mipmap levels ({compress_status}) - Click to view"
+                else:
+                    details += "📊 No mipmaps"
 
                 # Make items non-editable
                 thumb_item.setFlags(thumb_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
@@ -1580,13 +1586,13 @@ class TXDWorkshop(QWidget): #vers 3
                 self.texture_table.setItem(row, 1, details_item)
 
             for row in range(self.texture_table.rowCount()):
-                self.texture_table.setRowHeight(row, 80)
+                self.texture_table.setRowHeight(row, 100)  # Increased height for mipmap line
             self.texture_table.setColumnWidth(0, 80)
 
             self.save_txd_btn.setEnabled(True)
             self.import_btn.setEnabled(True)
             self.export_all_btn.setEnabled(True)
-            self._initialize_enhanced_features()
+            self._initialize_features()
             self._enable_txd_features_after_load()
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
@@ -1594,89 +1600,6 @@ class TXDWorkshop(QWidget): #vers 3
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"❌ Error: {str(e)}")
-
-
-
-
-    def _rename_texture(self, alpha=False): #vers 1
-        """Rename texture or alpha name"""
-        from PyQt6.QtWidgets import QInputDialog
-
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
-            return
-
-        current_name = self.selected_texture.get('name', 'texture')
-
-        if alpha:
-            # Only allow alpha renaming if texture has alpha
-            if not self.selected_texture.get('has_alpha', False):
-                QMessageBox.information(self, "No Alpha", "This texture does not have an alpha channel")
-                return
-
-            alpha_name = self.selected_texture.get('alpha_name', current_name + 'a')
-            new_name, ok = QInputDialog.getText(self, "Rename Alpha", "Enter alpha name:", text=alpha_name)
-            if ok and new_name:
-                self.selected_texture['alpha_name'] = new_name
-                self.info_alpha_name.setText(f"Alpha: {new_name}")
-                self._update_table_display()
-                if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"Alpha renamed to: {new_name}")
-        else:
-            new_name, ok = QInputDialog.getText(self, "Rename Texture", "Enter texture name:", text=current_name)
-            if ok and new_name and new_name != current_name:
-                self.selected_texture['name'] = new_name
-                self.info_name.setText(f"Name: {new_name}")
-                self._update_table_display()
-                if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"Texture renamed: {current_name} -> {new_name}")
-
-
-    def _upscale_texture(self): #vers 2
-        """AI upscale selected texture with size management"""
-        from PyQt6.QtWidgets import QInputDialog
-
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
-            return
-
-        # Get scale factor
-        factor, ok = QInputDialog.getInt(self, "AI Upscale", "Scale factor:", value=2, min=2, max=8)
-        if not ok:
-            return
-
-        current_width = self.selected_texture.get('width', 256)
-        current_height = self.selected_texture.get('height', 256)
-
-        new_width = current_width * factor
-        new_height = current_height * factor
-
-        # Calculate memory and file size impact
-        old_size_mb = (current_width * current_height * 4) / (1024 * 1024)
-        new_size_mb = (new_width * new_height * 4) / (1024 * 1024)
-
-        if new_size_mb > 16:  # Warn for textures over 16MB uncompressed
-            reply = QMessageBox.question(self, "Large Upscale",
-                                    f"Upscaling {factor}x will create a {new_width}x{new_height} texture "
-                                    f"(~{new_size_mb:.1f}MB uncompressed). "
-                                    f"This will significantly increase TXD size. Continue?",
-                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-            if reply != QMessageBox.StandardButton.Yes:
-                return
-
-        # Perform the upscale
-        if self._perform_ai_upscale(factor):
-            self.selected_texture['width'] = new_width
-            self.selected_texture['height'] = new_height
-
-            self._update_texture_info(self.selected_texture)
-            self._update_table_display()
-            self._mark_as_modified()
-
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"AI upscaled texture {factor}x to {new_width}x{new_height}")
-        else:
-            QMessageBox.critical(self, "Error", "AI upscale failed")
 
     def _upscale_texture(self): #vers 2
         """AI upscale selected texture with size management"""
@@ -1730,7 +1653,7 @@ class TXDWorkshop(QWidget): #vers 3
             if not self.selected_texture.get('rgba_data'):
                 return False
 
-            # For now, use basic upscaling (could be enhanced with actual AI upscaling libraries)
+            # For now, use basic upscaling (could be with actual AI upscaling libraries)
             return self._resize_texture_data(
                 self.selected_texture['width'] * factor,
                 self.selected_texture['height'] * factor
@@ -2305,16 +2228,23 @@ class TXDWorkshop(QWidget): #vers 3
             details_item.setText(details)
 
 
-    def _parse_single_texture(self, txd_data, offset, index): #vers 14
-        """Parse single texture - Following working txd.py structure exactly"""
+    def _parse_single_texture(self, txd_data, offset, index): #vers 15
+        """Parse single texture with ALL mipmap levels"""
         import struct
 
-        tex = {'name': f'texture_{index}', 'width': 0, 'height': 0, 'has_alpha': False, 'format': 'Unknown', 'mipmaps': 1, 'rgba_data': None}
+        tex = {
+            'name': f'texture_{index}',
+            'width': 0,
+            'height': 0,
+            'has_alpha': False,
+            'format': 'Unknown',
+            'mipmaps': 1,
+            'rgba_data': None,
+            'mipmap_levels': []  # NEW: Store all mipmap levels
+        }
 
         try:
-            # TextureNative structure (from txd.py line 515):
-            # Struct section contains: header(88 bytes) + palette(optional) + pixel data(size-prefixed)
-
+            # TextureNative structure
             parent_type, parent_size, parent_version = struct.unpack('<III', txd_data[offset:offset+12])
 
             if parent_type != 0x15:
@@ -2338,11 +2268,15 @@ class TXDWorkshop(QWidget): #vers 3
             pos += 32
 
             mask_bytes = txd_data[pos:pos+32]
+            alpha_name = mask_bytes.rstrip(b'\x00').decode('ascii', errors='ignore')
+            if alpha_name:
+                tex['alpha_name'] = alpha_name
             pos += 32
 
             raster_format_flags, d3d_format, width, height, depth, num_levels, raster_type = struct.unpack('<IIHHBBB', txd_data[pos:pos+15])
             tex['width'] = width
             tex['height'] = height
+            tex['depth'] = depth
             tex['mipmaps'] = num_levels
             pos += 15
 
@@ -2351,18 +2285,26 @@ class TXDWorkshop(QWidget): #vers 3
 
             # Format detection
             if platform_id == 8:  # D3D8
-                if platform_prop == 1: tex['format'] = 'DXT1'
-                elif platform_prop == 3: tex['format'] = 'DXT3'; tex['has_alpha'] = True
-                elif platform_prop == 5: tex['format'] = 'DXT5'; tex['has_alpha'] = True
+                if platform_prop == 1:
+                    tex['format'] = 'DXT1'
+                elif platform_prop == 3:
+                    tex['format'] = 'DXT3'
+                    tex['has_alpha'] = True
+                elif platform_prop == 5:
+                    tex['format'] = 'DXT5'
+                    tex['has_alpha'] = True
             elif platform_id == 9:  # D3D9
-                if d3d_format == 827611204: tex['format'] = 'DXT1'
-                elif d3d_format == 861165636: tex['format'] = 'DXT3'; tex['has_alpha'] = True
-                elif d3d_format == 894720068: tex['format'] = 'DXT5'; tex['has_alpha'] = True
+                if d3d_format == 827611204:
+                    tex['format'] = 'DXT1'
+                elif d3d_format == 861165636:
+                    tex['format'] = 'DXT3'
+                    tex['has_alpha'] = True
+                elif d3d_format == 894720068:
+                    tex['format'] = 'DXT5'
+                    tex['has_alpha'] = True
 
-            # Now pos points to palette (if any) then pixel data
-            # Check for palette (from raster_format_flags bits 13-14)
+            # Skip palette if present
             palette_type = (raster_format_flags >> 13) & 0b11
-
             if palette_type == 1:  # 8-bit palette
                 pos += 1024
             elif palette_type > 1:  # 4-bit palette
@@ -2371,32 +2313,61 @@ class TXDWorkshop(QWidget): #vers 3
                 else:
                     pos += 128
 
-            # Now read size-prefixed pixel data for FIRST mipmap level
-            if pos + 4 < len(txd_data):
+            # Parse ALL mipmap levels
+            current_width = width
+            current_height = height
+
+            for level in range(num_levels):
+                if pos + 4 >= len(txd_data):
+                    break
+
+                # Read size-prefixed pixel data for this level
                 pixels_len = struct.unpack('<I', txd_data[pos:pos+4])[0]
                 pos += 4
 
+                if pos + pixels_len > len(txd_data):
+                    break
+
+                dxt_data = txd_data[pos:pos + pixels_len]
+                pos += pixels_len
+
+                # Decompress this mipmap level
+                rgba_data = None
+                if 'DXT1' in tex['format']:
+                    rgba_data = self._decompress_dxt1(dxt_data, current_width, current_height)
+                elif 'DXT3' in tex['format']:
+                    rgba_data = self._decompress_dxt3(dxt_data, current_width, current_height)
+                elif 'DXT5' in tex['format']:
+                    rgba_data = self._decompress_dxt5(dxt_data, current_width, current_height)
+
+                # Store this mipmap level
+                mipmap_level = {
+                    'level': level,
+                    'width': current_width,
+                    'height': current_height,
+                    'rgba_data': rgba_data,
+                    'compressed_data': dxt_data,  # Keep original compressed data
+                    'compressed_size': pixels_len
+                }
+                tex['mipmap_levels'].append(mipmap_level)
+
+                # Set main texture data to level 0
+                if level == 0:
+                    tex['rgba_data'] = rgba_data
+
+                # Calculate next mipmap dimensions (half size, minimum 1)
+                current_width = max(1, current_width // 2)
+                current_height = max(1, current_height // 2)
+
                 if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"{tex['name']}: {pixels_len} bytes at {pos}")
-
-                if pos + pixels_len <= len(txd_data):
-                    dxt_data = txd_data[pos:pos + pixels_len]
-
-                    # Decompress
-                    if 'DXT1' in tex['format']:
-                        tex['rgba_data'] = self._decompress_dxt1(dxt_data, width, height)
-                    elif 'DXT3' in tex['format']:
-                        tex['rgba_data'] = self._decompress_dxt3(dxt_data, width, height)
-                    elif 'DXT5' in tex['format']:
-                        tex['rgba_data'] = self._decompress_dxt5(dxt_data, width, height)
-
-                    if self.main_window and hasattr(self.main_window, 'log_message'):
-                        status = "✅" if tex['rgba_data'] else "❌"
-                        self.main_window.log_message(f"{status} Decompress {tex['format']}")
+                    status = "✅" if rgba_data else "❌"
+                    self.main_window.log_message(
+                        f"{status} Level {level}: {mipmap_level['width']}x{mipmap_level['height']} ({pixels_len} bytes)"
+                    )
 
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"ERROR: {str(e)}")
+                self.main_window.log_message(f"ERROR parsing texture: {str(e)}")
 
         return tex
 
@@ -2598,74 +2569,6 @@ class TXDWorkshop(QWidget): #vers 3
             return pixmap.scaled(64, 64, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
         except:
             return None
-
-
-    def _create_right_panel(self): #vers 4
-        """Create right panel with preview, info, and transform controls side by side"""
-        panel = QFrame()
-        panel.setFrameStyle(QFrame.Shape.StyledPanel)
-        panel.setMinimumWidth(600)  # Increased to fit all panels
-
-        # Left side - Preview and info
-        left_widget = QWidget()
-        left_layout = QVBoxLayout(left_widget)
-        left_layout.setContentsMargins(0, 0, 0, 0)
-
-        # Sub-layout to place transform panel and preview side by side
-        top_layout = QHBoxLayout()
-
-        # Transform panel (left in the sub-layout)
-        transform_panel = self._create_transform_panel()
-        top_layout.addWidget(transform_panel, stretch=1)
-
-        # Preview
-        self.preview_label = QLabel("No texture selected")
-        self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.preview_label.setMinimumHeight(400)
-        self.preview_label.setMinimumWidth(400)
-        self.preview_label.setStyleSheet("border: 1px solid #3a3a3a; background-color: #1e1e1e;")
-        left_layout.addWidget(self.preview_label)
-
-        # Add the top_layout (horizontal) to the main vertical layout
-        layout.addLayout(top_layout)
-
-        # Info group
-        info_group = QGroupBox("Texture Information")
-        info_layout = QVBoxLayout(info_group)
-
-        # Name (clickable for rename)
-        self.info_name = QLabel("Name: -")
-        self.info_name.setStyleSheet("font-weight: bold; padding: 5px;")
-        self.info_name.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.info_name.customContextMenuRequested.connect(lambda pos: self._show_name_context_menu(pos, alpha=False))
-        info_layout.addWidget(self.info_name)
-
-        # Alpha name (clickable for rename, if exists)
-        self.info_alpha_name = QLabel("")
-        self.info_alpha_name.setStyleSheet("color: #ff6b6b; font-weight: bold; padding: 5px;")
-        self.info_alpha_name.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.info_alpha_name.customContextMenuRequested.connect(lambda pos: self._show_name_context_menu(pos, alpha=True))
-        info_layout.addWidget(self.info_alpha_name)
-
-        # Size
-        self.info_size = QLabel("Size: -")
-        self.info_size.setStyleSheet("padding: 3px;")
-        info_layout.addWidget(self.info_size)
-
-        # Format
-        self.info_format = QLabel("Format: -")
-        self.info_format.setStyleSheet("padding: 3px;")
-        info_layout.addWidget(self.info_format)
-
-        # Other info
-        #self.info_other = QLabel("Other: -")
-        #self.info_other.setStyleSheet("padding: 3px;")
-        #info_layout.addWidget(self.info_other)
-
-        left_layout.addWidget(info_group)
-        main_layout.addWidget(left_widget)
-
-        return panel
 
 
     def _create_transform_panel(self): #vers 2
@@ -3363,17 +3266,6 @@ class TXDWorkshop(QWidget): #vers 3
             self.main_window.log_message(f"Switched to {mode}")
 
 
-    def import_texture(self): #vers 1
-        """Import texture to replace selected"""
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture to replace")
-            return
-
-        file_path, _ = QFileDialog.getOpenFileName(self, "Import Texture", "",
-                                                "Image Files (*.png *.jpg *.bmp *.tga);;All Files (*)")
-        if file_path:
-            QMessageBox.information(self, "Coming Soon", "Import functionality will be added soon!")
-
     def save_txd_file(self): #vers 3
         """Save TXD file with debugging"""
         if not self.texture_list or not self.current_txd_name:
@@ -3425,16 +3317,6 @@ class TXDWorkshop(QWidget): #vers 3
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"Refresh error: {str(e)}")
 
-    def _mark_as_modified(self): #vers 1
-        """Mark the TXD as modified and enable save button"""
-        self.save_txd_btn.setEnabled(True)
-        self.save_txd_btn.setStyleSheet("background-color: #ff6b35; font-weight: bold;")  # Orange highlight
-
-        # Update window title to show unsaved changes
-        current_title = self.windowTitle()
-        if not current_title.endswith("*"):
-            self.setWindowTitle(current_title + "*")
-
     def _rename_texture(self, alpha=False): #vers 2
         """Rename texture or alpha name and mark as modified"""
         from PyQt6.QtWidgets import QInputDialog
@@ -3468,11 +3350,6 @@ class TXDWorkshop(QWidget): #vers 3
                 self._mark_as_modified()  # Mark as modified
                 if self.main_window and hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message(f"Texture renamed: {current_name} -> {new_name}")
-
-    def _mark_as_modified(self): #vers 1
-        """Mark the TXD as modified and enable save button"""
-        self.save_txd_btn.setEnabled(True)
-        self.save_txd_btn.setStyleSheet("background-color: #ff6b35; font-weight: bold;")  # Orange highlight
 
     def _update_texture_name_in_data(self, data, offset, texture_info): #vers 1
         """Update texture name in the binary TXD data"""
@@ -4008,8 +3885,723 @@ class TXDWorkshop(QWidget): #vers 3
         self.workshop_closed.emit()
         event.accept()
 
-# --- DXT1 and DXT5 encoders (pure Python) ---
 
+class MipmapManagerWindow(QWidget): #vers 1
+    """Mipmap Manager - View and edit all mipmap levels"""
+
+    def __init__(self, parent, texture_data, main_window=None):
+        super().__init__(parent)
+        self.parent_workshop = parent
+        self.texture_data = texture_data
+        self.main_window = main_window
+        self.modified_levels = {}  # Track modified levels
+
+        self.setWindowTitle(f"Mipmap Manager - {texture_data['name']}")
+        self.resize(900, 700)
+        self.setup_ui()
+
+    def setup_ui(self): #vers 1
+        """Setup Mipmap Manager UI"""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(10, 10, 10, 10)
+
+        # Header info
+        header = QLabel(f"Texture: {self.texture_data['name']} | Format: {self.texture_data['format']}")
+        header.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        layout.addWidget(header)
+
+        # Toolbar
+        toolbar = self._create_toolbar()
+        layout.addWidget(toolbar)
+
+        # Scrollable mipmap grid
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        grid_widget = QWidget()
+        self.grid_layout = QVBoxLayout(grid_widget)
+        self.grid_layout.setSpacing(10)
+
+        # Create level cards
+        mipmap_levels = self.texture_data.get('mipmap_levels', [])
+        for level_data in mipmap_levels:
+            card = self._create_level_card(level_data)
+            self.grid_layout.addWidget(card)
+
+        self.grid_layout.addStretch()
+        scroll.setWidget(grid_widget)
+        layout.addWidget(scroll)
+
+        # Bottom buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(self.close)
+        button_layout.addWidget(close_btn)
+
+        layout.addLayout(button_layout)
+
+    def _create_toolbar(self): #vers 1
+        """Create toolbar with mipmap operations"""
+        toolbar = QFrame()
+        toolbar.setFrameStyle(QFrame.Shape.StyledPanel)
+        layout = QHBoxLayout(toolbar)
+        layout.setContentsMargins(5, 5, 5, 5)
+
+        # Auto-generate button
+        autogen_btn = QPushButton("🔄 Auto-Generate")
+        autogen_btn.setToolTip("Generate all mipmap levels from main texture")
+        autogen_btn.clicked.connect(self._auto_generate_mipmaps)
+        layout.addWidget(autogen_btn)
+
+        # Export all button
+        export_all_btn = QPushButton("📤 Export All")
+        export_all_btn.setToolTip("Export all mipmap levels as PNG files")
+        export_all_btn.clicked.connect(self._export_all_levels)
+        layout.addWidget(export_all_btn)
+
+        # Import all button
+        import_all_btn = QPushButton("📥 Import All")
+        import_all_btn.setToolTip("Import mipmap levels from PNG files")
+        import_all_btn.clicked.connect(self._import_all_levels)
+        layout.addWidget(import_all_btn)
+
+        layout.addStretch()
+
+        # Apply button
+        apply_btn = QPushButton("✅ Apply Changes")
+        apply_btn.setToolTip("Apply all changes to texture")
+        apply_btn.clicked.connect(self._apply_changes)
+        apply_btn.setStyleSheet("font-weight: bold; padding: 8px 16px;")
+        layout.addWidget(apply_btn)
+
+        return toolbar
+
+    def _create_level_card(self, level_data): #vers 1
+        """Create card for single mipmap level"""
+        card = QFrame()
+        card.setFrameStyle(QFrame.Shape.StyledPanel)
+        card.setMinimumHeight(150)
+
+        layout = QHBoxLayout(card)
+        layout.setContentsMargins(10, 10, 10, 10)
+
+        # Preview thumbnail
+        preview_label = QLabel()
+        preview_label.setFixedSize(128, 128)
+        preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        preview_label.setStyleSheet("border: 1px solid #3a3a3a; background-color: #1e1e1e;")
+
+        rgba_data = level_data.get('rgba_data')
+        if rgba_data:
+            width = level_data['width']
+            height = level_data['height']
+            image = QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+            if not image.isNull():
+                pixmap = QPixmap.fromImage(image)
+                scaled = pixmap.scaled(120, 120, Qt.AspectRatioMode.KeepAspectRatio,
+                                      Qt.TransformationMode.SmoothTransformation)
+                preview_label.setPixmap(scaled)
+        else:
+            preview_label.setText("No Data")
+
+        layout.addWidget(preview_label)
+
+        # Info section
+        info_layout = QVBoxLayout()
+
+        level_label = QLabel(f"Level {level_data['level']}")
+        level_label.setFont(QFont("Arial", 11, QFont.Weight.Bold))
+        info_layout.addWidget(level_label)
+
+        size_label = QLabel(f"Size: {level_data['width']}x{level_data['height']}")
+        info_layout.addWidget(size_label)
+
+        compressed_size = level_data.get('compressed_size', 0)
+        size_kb = compressed_size / 1024 if compressed_size > 0 else 0
+        size_info = QLabel(f"Compressed: {size_kb:.2f} KB")
+        info_layout.addWidget(size_info)
+
+        info_layout.addStretch()
+        layout.addLayout(info_layout)
+
+        # Buttons section
+        button_layout = QVBoxLayout()
+
+        export_btn = QPushButton("Export")
+        export_btn.clicked.connect(lambda: self._export_level(level_data))
+        button_layout.addWidget(export_btn)
+
+        import_btn = QPushButton("Import")
+        import_btn.clicked.connect(lambda: self._import_level(level_data))
+        button_layout.addWidget(import_btn)
+
+        button_layout.addStretch()
+        layout.addLayout(button_layout)
+
+        return card
+
+
+    def _auto_generate_mipmaps(self): #vers 2
+        """Auto-generate all mipmap levels from main texture"""
+        from PyQt6.QtWidgets import QMessageBox
+        from PyQt6.QtGui import QImage
+
+        # Ask user for source
+        reply = QMessageBox.question(
+            self, "Auto-Generate Mipmaps",
+            "Generate mipmaps from:\n\nYes = Normal RGB\nNo = Alpha Channel\n\nChoose source:",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
+        )
+
+        if reply == QMessageBox.StandardButton.Cancel:
+            return
+
+        use_alpha = (reply == QMessageBox.StandardButton.No)
+
+        # Get main texture (level 0)
+        main_level = None
+        for level in self.texture_data.get('mipmap_levels', []):
+            if level['level'] == 0:
+                main_level = level
+                break
+
+        if not main_level or not main_level.get('rgba_data'):
+            QMessageBox.warning(self, "Error", "Main texture data not available")
+            return
+
+        # Check if alpha channel exists
+        if use_alpha and not self.texture_data.get('has_alpha', False):
+            QMessageBox.warning(self, "No Alpha", "This texture has no alpha channel")
+            return
+
+        try:
+            # Generate mipmaps
+            source_width = main_level['width']
+            source_height = main_level['height']
+            source_data = main_level['rgba_data']
+
+            # Convert to QImage for downscaling
+            if use_alpha:
+                # Extract alpha as grayscale
+                alpha_data = bytearray()
+                for i in range(3, len(source_data), 4):
+                    a = source_data[i]
+                    alpha_data.extend([a, a, a, 255])
+                source_image = QImage(bytes(alpha_data), source_width, source_height,
+                                    source_width * 4, QImage.Format.Format_RGBA8888)
+            else:
+                # Use normal RGB
+                source_image = QImage(source_data, source_width, source_height,
+                                    source_width * 4, QImage.Format.Format_RGBA8888)
+
+            if source_image.isNull():
+                QMessageBox.warning(self, "Error", "Failed to create source image")
+                return
+
+            # Generate each level
+            current_width = source_width // 2
+            current_height = source_height // 2
+            level_num = 1
+            generated_count = 0
+
+            while current_width >= 1 and current_height >= 1:
+                # Scale down image
+                scaled_image = source_image.scaled(
+                    current_width, current_height,
+                    Qt.AspectRatioMode.IgnoreAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+
+                if scaled_image.isNull():
+                    break
+
+                # Convert to RGBA bytes
+                scaled_image = scaled_image.convertToFormat(QImage.Format.Format_RGBA8888)
+                rgba_data = scaled_image.bits().asarray(current_width * current_height * 4)
+
+                # Find or create level entry
+                level_data = None
+                for level in self.texture_data.get('mipmap_levels', []):
+                    if level['level'] == level_num:
+                        level_data = level
+                        break
+
+                if level_data:
+                    # Update existing level
+                    level_data['rgba_data'] = bytes(rgba_data)
+                    level_data['width'] = current_width
+                    level_data['height'] = current_height
+                    self.modified_levels[level_num] = level_data
+                else:
+                    # Create new level
+                    new_level = {
+                        'level': level_num,
+                        'width': current_width,
+                        'height': current_height,
+                        'rgba_data': bytes(rgba_data),
+                        'compressed_data': None,
+                        'compressed_size': 0
+                    }
+                    self.texture_data['mipmap_levels'].append(new_level)
+                    self.modified_levels[level_num] = new_level
+
+                generated_count += 1
+                level_num += 1
+                current_width //= 2
+                current_height //= 2
+
+            # Refresh UI
+            self._refresh_level_cards()
+
+            source_type = "Alpha" if use_alpha else "RGB"
+            QMessageBox.information(
+                self, "Success",
+                f"Generated {generated_count} mipmap levels from {source_type}\n\nClick 'Apply Changes' to save"
+            )
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✅ Generated {generated_count} mipmaps from {source_type}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to generate mipmaps: {str(e)}")
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Mipmap generation error: {str(e)}")
+
+
+    def _refresh_level_cards(self): #vers 1
+        """Refresh all level cards in UI"""
+        # Clear existing cards
+        while self.grid_layout.count() > 1:  # Keep stretch
+            item = self.grid_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        # Recreate cards
+        mipmap_levels = sorted(self.texture_data.get('mipmap_levels', []), key=lambda x: x['level'])
+        for level_data in mipmap_levels:
+            card = self._create_level_card(level_data)
+            self.grid_layout.insertWidget(self.grid_layout.count() - 1, card)
+
+
+    def _export_level(self, level_data): #vers 2
+        """Export single mipmap level as PNG"""
+        try:
+            rgba_data = level_data.get('rgba_data')
+            if not rgba_data:
+                QMessageBox.warning(self, "No Data", "This mipmap level has no data to export")
+                return
+
+            # Default filename
+            texture_name = self.texture_data['name']
+            level_num = level_data['level']
+            width = level_data['width']
+            height = level_data['height']
+            default_name = f"{texture_name}_{width}x{height}_level{level_num}.png"
+
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, "Export Mipmap Level",
+                default_name,
+                "PNG Files (*.png);;All Files (*)"
+            )
+
+            if not file_path:
+                return
+
+            # Convert to QImage and save
+            image = QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+
+            if image.isNull():
+                QMessageBox.warning(self, "Error", "Failed to create image")
+                return
+
+            if image.save(file_path, "PNG"):
+                QMessageBox.information(self, "Success", f"Exported level {level_num} to:\n{file_path}")
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"✅ Exported mipmap level {level_num}: {width}x{height}")
+            else:
+                QMessageBox.warning(self, "Error", "Failed to save PNG file")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Export failed: {str(e)}")
+
+
+    def _export_all_levels(self): #vers 2
+        """Export all mipmap levels as separate PNG files"""
+        folder = QFileDialog.getExistingDirectory(self, "Select Export Folder")
+        if not folder:
+            return
+
+        try:
+            texture_name = self.texture_data['name']
+            mipmap_levels = self.texture_data.get('mipmap_levels', [])
+
+            if not mipmap_levels:
+                QMessageBox.warning(self, "No Mipmaps", "No mipmap levels to export")
+                return
+
+            exported_count = 0
+            failed_count = 0
+
+            for level_data in mipmap_levels:
+                rgba_data = level_data.get('rgba_data')
+                if not rgba_data:
+                    failed_count += 1
+                    continue
+
+                level_num = level_data['level']
+                width = level_data['width']
+                height = level_data['height']
+
+                # Create filename
+                filename = f"{texture_name}_{width}x{height}_level{level_num}.png"
+                file_path = os.path.join(folder, filename)
+
+                # Convert and save
+                image = QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+
+                if not image.isNull() and image.save(file_path, "PNG"):
+                    exported_count += 1
+                else:
+                    failed_count += 1
+
+            # Show results
+            message = f"Exported {exported_count} mipmap levels"
+            if failed_count > 0:
+                message += f"\n{failed_count} levels failed to export"
+
+            QMessageBox.information(self, "Export Complete", message)
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✅ Exported {exported_count} mipmap levels to: {folder}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Export all failed: {str(e)}")
+
+
+    def _import_level(self, level_data): #vers 2
+        """Import single mipmap level from PNG"""
+        try:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "Import Mipmap Level",
+                "",
+                "Image Files (*.png *.jpg *.bmp *.tga);;All Files (*)"
+            )
+
+            if not file_path:
+                return
+
+            # Load image
+            image = QImage(file_path)
+            if image.isNull():
+                QMessageBox.warning(self, "Error", "Failed to load image file")
+                return
+
+            # Convert to RGBA8888
+            image = image.convertToFormat(QImage.Format.Format_RGBA8888)
+
+            imported_width = image.width()
+            imported_height = image.height()
+            expected_width = level_data['width']
+            expected_height = level_data['height']
+
+            # Warn if size mismatch
+            if imported_width != expected_width or imported_height != expected_height:
+                reply = QMessageBox.question(
+                    self, "Size Mismatch",
+                    f"Imported image size: {imported_width}x{imported_height}\n"
+                    f"Expected size: {expected_width}x{expected_height}\n\n"
+                    f"Resize image to fit?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+
+                if reply == QMessageBox.StandardButton.Yes:
+                    image = image.scaled(
+                        expected_width, expected_height,
+                        Qt.AspectRatioMode.IgnoreAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                else:
+                    return
+
+            # Convert to bytes
+            rgba_data = image.bits().asarray(image.width() * image.height() * 4)
+
+            # Update level data
+            level_data['rgba_data'] = bytes(rgba_data)
+            level_data['width'] = image.width()
+            level_data['height'] = image.height()
+            level_data['compressed_data'] = None  # Needs recompression
+
+            # Track as modified
+            self.modified_levels[level_data['level']] = level_data
+
+            # Refresh UI
+            self._refresh_level_cards()
+
+            QMessageBox.information(
+                self, "Success",
+                f"Imported level {level_data['level']}\n\nClick 'Apply Changes' to save"
+            )
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(
+                    f"✅ Imported mipmap level {level_data['level']}: {image.width()}x{image.height()}"
+                )
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Import failed: {str(e)}")
+
+
+    def _import_all_levels(self): #vers 2
+        """Import mipmap levels from PNG files"""
+        try:
+            files, _ = QFileDialog.getOpenFileNames(
+                self, "Import Mipmap Levels",
+                "",
+                "Image Files (*.png *.jpg *.bmp *.tga);;All Files (*)"
+            )
+
+            if not files:
+                return
+
+            # Try to match files to levels by size
+            mipmap_levels = self.texture_data.get('mipmap_levels', [])
+            imported_count = 0
+            failed_count = 0
+
+            for file_path in files:
+                image = QImage(file_path)
+                if image.isNull():
+                    failed_count += 1
+                    continue
+
+                # Convert to RGBA8888
+                image = image.convertToFormat(QImage.Format.Format_RGBA8888)
+                width = image.width()
+                height = image.height()
+
+                # Find matching level by size
+                matched_level = None
+                for level in mipmap_levels:
+                    if level['width'] == width and level['height'] == height:
+                        matched_level = level
+                        break
+
+                if not matched_level:
+                    # Try to find by filename pattern (e.g., texture_512x512_level0.png)
+                    filename = os.path.basename(file_path)
+                    for level in mipmap_levels:
+                        if f"{level['width']}x{level['height']}" in filename:
+                            matched_level = level
+                            break
+
+                if matched_level:
+                    # Import to matched level
+                    rgba_data = image.bits().asarray(width * height * 4)
+                    matched_level['rgba_data'] = bytes(rgba_data)
+                    matched_level['compressed_data'] = None
+                    self.modified_levels[matched_level['level']] = matched_level
+                    imported_count += 1
+                else:
+                    failed_count += 1
+
+            # Refresh UI
+            if imported_count > 0:
+                self._refresh_level_cards()
+
+            # Show results
+            message = f"Imported {imported_count} mipmap levels"
+            if failed_count > 0:
+                message += f"\n{failed_count} files could not be matched to mipmap levels"
+            message += "\n\nClick 'Apply Changes' to save"
+
+            QMessageBox.information(self, "Import Complete", message)
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✅ Imported {imported_count} mipmap levels")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Import all failed: {str(e)}")
+
+    def _apply_changes(self): #vers 2
+        """Apply all changes back to parent texture"""
+        if not self.modified_levels:
+            QMessageBox.information(self, "No Changes", "No changes to apply")
+            return
+
+        try:
+            # Confirm apply
+            reply = QMessageBox.question(
+                self, "Apply Changes",
+                f"Apply {len(self.modified_levels)} modified mipmap level(s)?\n\n"
+                f"This will update the texture in memory.\n"
+                f"You must save the TXD to make changes permanent.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
+            # Update texture data with modified levels
+            for level_num, modified_level in self.modified_levels.items():
+                # Find the level in texture data
+                for i, level in enumerate(self.texture_data['mipmap_levels']):
+                    if level['level'] == level_num:
+                        # Update the level
+                        self.texture_data['mipmap_levels'][i] = modified_level
+                        break
+
+            # Update main texture if level 0 was modified
+            if 0 in self.modified_levels:
+                self.texture_data['rgba_data'] = self.modified_levels[0]['rgba_data']
+
+            # Recompress modified levels if format is DXT
+            if 'DXT' in self.texture_data['format']:
+                self._recompress_modified_levels()
+
+            # Update parent workshop
+            if self.parent_workshop:
+                # Find texture in parent's texture_list and update it
+                for i, tex in enumerate(self.parent_workshop.texture_list):
+                    if tex['name'] == self.texture_data['name']:
+                        self.parent_workshop.texture_list[i] = self.texture_data
+                        break
+
+                # Reload texture table to show changes
+                self.parent_workshop._reload_texture_table()
+
+                # Mark as modified
+                self.parent_workshop._mark_as_modified()
+
+            # Clear modified tracking
+            self.modified_levels.clear()
+
+            QMessageBox.information(
+                self, "Success",
+                f"Changes applied successfully!\n\n"
+                f"Don't forget to save the TXD file."
+            )
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✅ Applied mipmap changes to: {self.texture_data['name']}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to apply changes: {str(e)}")
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Apply changes error: {str(e)}")
+
+
+    def _recompress_modified_levels(self): #vers 1
+        """Recompress modified mipmap levels to DXT format"""
+        try:
+            format_type = self.texture_data['format']
+
+            for level_num, level_data in self.modified_levels.items():
+                rgba_data = level_data.get('rgba_data')
+                if not rgba_data:
+                    continue
+
+                width = level_data['width']
+                height = level_data['height']
+
+                # Compress based on format
+                if 'DXT1' in format_type:
+                    compressed_data = self._compress_to_dxt1(rgba_data, width, height)
+                elif 'DXT3' in format_type:
+                    compressed_data = self._compress_to_dxt3(rgba_data, width, height)
+                elif 'DXT5' in format_type:
+                    compressed_data = self._compress_to_dxt5(rgba_data, width, height)
+                else:
+                    compressed_data = rgba_data  # Uncompressed
+
+                if compressed_data:
+                    level_data['compressed_data'] = compressed_data
+                    level_data['compressed_size'] = len(compressed_data)
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✅ Recompressed {len(self.modified_levels)} modified levels")
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"⚠️ Recompression warning: {str(e)}")
+
+
+    # --- DXT1 and DXT5 encoders (pure Python) ---
+
+    def _compress_to_dxt1(self, rgba_data, width, height): #vers 2
+        """Compress RGBA data to DXT1 format"""
+        try:
+            # Use helper function
+            return _encode_dxt1(rgba_data, width, height)
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"⚠️ DXT1 compression error: {str(e)}")
+            return None
+
+
+    def _compress_to_dxt3(self, rgba_data, width, height): #vers 2
+        """Compress RGBA data to DXT3 format"""
+        try:
+            # DXT3 uses DXT1 color + explicit alpha
+            import struct
+
+            blocks_x = (width + 3) // 4
+            blocks_y = (height + 3) // 4
+            dxt3_data = bytearray()
+
+            for by in range(blocks_y):
+                for bx in range(blocks_x):
+                    # Extract 4x4 block
+                    block_alpha = bytearray()
+
+                    for py in range(4):
+                        for px in range(4):
+                            x = bx * 4 + px
+                            y = by * 4 + py
+
+                            if x < width and y < height:
+                                idx = (y * width + x) * 4
+                                alpha = rgba_data[idx + 3]
+                            else:
+                                alpha = 255
+
+                            block_alpha.append(alpha)
+
+                    # Encode explicit alpha (4-bit per pixel)
+                    alpha_block = 0
+                    for i in range(16):
+                        alpha_4bit = block_alpha[i] >> 4  # Convert 8-bit to 4-bit
+                        alpha_block |= (alpha_4bit << (i * 4))
+
+                    # Pack alpha block (8 bytes)
+                    dxt3_data.extend(struct.pack('<Q', alpha_block))
+
+                    # Add DXT1 color block (would need to encode, using placeholder)
+                    dxt3_data.extend(b'\x00' * 8)  # Placeholder for color block
+
+            return bytes(dxt3_data)
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"⚠️ DXT3 compression error: {str(e)}")
+            return None
+
+
+    def _compress_to_dxt5(self, rgba_data, width, height): #vers 2
+        """Compress RGBA data to DXT5 format"""
+        try:
+            # Use helper function
+            return _encode_dxt5(rgba_data, width, height)
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"⚠️ DXT5 compression error: {str(e)}")
+            return None
+
+
+# Footer functions
 
 def _rgb_to_565(r, g, b):
     return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)

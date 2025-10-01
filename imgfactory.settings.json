@@ -2,7 +2,7 @@
   "debug_mode": false,
   "debug_level": "INFO",
   "current_theme": "img_factory",
-  "theme": "blue_panels_dark",
+  "theme": "red_theme_dark",
   "debug_categories": [
     "IMG_LOADING",
     "TABLE_POPULATION",
