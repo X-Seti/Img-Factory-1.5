@@ -81,7 +81,7 @@ class TXDWorkshop(QWidget): #vers 3
 
     workshop_closed = pyqtSignal()
 
-    def __init__(self, parent=None, main_window=None): #vers 4
+    def __init__(self, parent=None, main_window=None): #vers 5
         super().__init__(parent)
         self.main_window = main_window
         self.current_img = None
@@ -92,6 +92,10 @@ class TXDWorkshop(QWidget): #vers 3
         self.selected_texture = None
         self.undo_stack = []
 
+        # Detect standalone mode
+        self.standalone_mode = (main_window is None)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+
         self.setWindowTitle("TXD Workshop: No File")
         self.resize(1400, 800)
         self._initialize_features()
@@ -99,26 +103,22 @@ class TXDWorkshop(QWidget): #vers 3
         self.drag_position = None
         self.resizing = False
         self.resize_direction = None
-        self.resize_margin = 10  # Pixels from edge to enable resize
+        self.resize_margin = 10
 
-        # Position window below menu bar
         if parent:
             parent_pos = parent.pos()
             self.move(parent_pos.x() + 50, parent_pos.y() + 80)
 
         self.setup_ui()
-            # Add resize grip to bottom-right corner
 
         from PyQt6.QtWidgets import QSizeGrip
         self.size_grip = QSizeGrip(self)
         self.size_grip.setFixedSize(16, 16)
-
-        # Position in bottom-right corner
         self.size_grip.move(self.width() - 16, self.height() - 16)
         self.size_grip.raise_()
         self._apply_theme()
 
-    def setup_ui(self): #vers 5
+    def setup_ui(self): #vers 6
         """Setup the main UI layout"""
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(5, 5, 5, 5)
@@ -131,20 +131,26 @@ class TXDWorkshop(QWidget): #vers 3
         # Main splitter
         main_splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        # Add panels (this creates self.texture_table in middle panel)
+        # Create all panels first
         left_panel = self._create_left_panel()
-        main_splitter.addWidget(left_panel)
-
         middle_panel = self._create_middle_panel()
-        main_splitter.addWidget(middle_panel)
-
         right_panel = self._create_right_panel()
-        main_splitter.addWidget(right_panel)
 
-        # Set splitter proportions
-        main_splitter.setStretchFactor(0, 2)
-        main_splitter.setStretchFactor(1, 3)
-        main_splitter.setStretchFactor(2, 5)
+        # Add panels to splitter based on mode
+        if left_panel is not None:  # IMG Factory mode
+            main_splitter.addWidget(left_panel)
+            main_splitter.addWidget(middle_panel)
+            main_splitter.addWidget(right_panel)
+            # Set proportions (2:3:5)
+            main_splitter.setStretchFactor(0, 2)
+            main_splitter.setStretchFactor(1, 3)
+            main_splitter.setStretchFactor(2, 5)
+        else:  # Standalone mode
+            main_splitter.addWidget(middle_panel)
+            main_splitter.addWidget(right_panel)
+            # Set proportions (1:1)
+            main_splitter.setStretchFactor(0, 1)
+            main_splitter.setStretchFactor(1, 1)
 
         main_layout.addWidget(main_splitter)
 
@@ -155,10 +161,6 @@ class TXDWorkshop(QWidget): #vers 3
         if hasattr(self, '_setup_status_indicators'):
             status_frame = self._setup_status_indicators()
             main_layout.addWidget(status_frame)
-
-        # toolbar if available
-        if hasattr(self, '_setup_toolbar'):
-            self._setup_toolbar()
 
     def _initialize_features(self): #vers 1
         """Initialize all features after UI setup"""
@@ -223,25 +225,6 @@ class TXDWorkshop(QWidget): #vers 3
             self.resize_direction = None
             self.setCursor(Qt.CursorShape.ArrowCursor)
             event.accept()
-
-
-    def _is_on_draggable_area(self, pos): #vers 1
-        """Check if position is on draggable area (toolbar)"""
-        # Allow dragging from toolbar area (top 50 pixels)
-        if pos.y() <= 50:
-            # But not on buttons
-            toolbar_widgets = [
-                self.open_img_btn, self.open_txd_btn, self.save_txd_btn,
-                self.import_btn, self.export_btn, self.export_all_btn,
-                self.flip_btn, self.props_btn, self.minimize_btn, self.close_btn
-            ]
-
-            for widget in toolbar_widgets:
-                if widget.geometry().contains(pos):
-                    return False
-
-            return True
-        return False
 
     def resizeEvent(self, event): #vers 1
         '''Keep resize grip in bottom-right corner'''
@@ -359,38 +342,305 @@ class TXDWorkshop(QWidget): #vers 3
 
             self._update_status_indicators()
 
-    def _create_toolbar_buttons(self): #vers 1
-        """Create additional toolbar buttons"""
-        buttons = []
+    def _is_on_draggable_area(self, pos): #vers 3
+        """Check if position is on draggable toolbar area (stretch space, not buttons)"""
+        if not hasattr(self, 'toolbar'):
+            return False
 
-        self.new_texture_btn = QPushButton("New")
-        self.new_texture_btn.clicked.connect(self._create_new_texture)
-        self.new_texture_btn.setEnabled(False)
-        buttons.append(self.new_texture_btn)
+        toolbar_rect = self.toolbar.geometry()
+        if not toolbar_rect.contains(pos):
+            return False
 
-        self.duplicate_btn = QPushButton("Duplicate")
-        self.duplicate_btn.clicked.connect(self._duplicate_texture)
-        self.duplicate_btn.setEnabled(False)
-        buttons.append(self.duplicate_btn)
+        # Get all buttons in toolbar
+        buttons_to_check = []
 
-        self.remove_btn = QPushButton("Remove")
-        self.remove_btn.clicked.connect(self._remove_texture)
-        self.remove_btn.setEnabled(False)
-        buttons.append(self.remove_btn)
+        if hasattr(self, 'open_img_btn'):
+            buttons_to_check.append(self.open_img_btn)
+        if hasattr(self, 'open_txd_btn'):
+            buttons_to_check.append(self.open_txd_btn)
+        if hasattr(self, 'save_txd_btn'):
+            buttons_to_check.append(self.save_txd_btn)
+        if hasattr(self, 'import_btn'):
+            buttons_to_check.append(self.import_btn)
+        if hasattr(self, 'export_btn'):
+            buttons_to_check.append(self.export_btn)
+        if hasattr(self, 'export_all_btn'):
+            buttons_to_check.append(self.export_all_btn)
+        if hasattr(self, 'flip_btn'):
+            buttons_to_check.append(self.flip_btn)
+        if hasattr(self, 'props_btn'):
+            buttons_to_check.append(self.props_btn)
+        if hasattr(self, 'info_btn'):
+            buttons_to_check.append(self.info_btn)
+        if hasattr(self, 'minimize_btn'):
+            buttons_to_check.append(self.minimize_btn)
+        if hasattr(self, 'maximize_btn'):
+            buttons_to_check.append(self.maximize_btn)
+        if hasattr(self, 'close_btn'):
+            buttons_to_check.append(self.close_btn)
 
-        self.stats_btn = QPushButton("Statistics")
-        self.stats_btn.clicked.connect(self._texture_statistics)
-        self.stats_btn.setEnabled(False)
-        buttons.append(self.stats_btn)
+        if not hasattr(self, 'drag_btn'):
+            return False
 
-        return buttons
+        # Convert to toolbar coordinates
+        toolbar_local_pos = self.toolbar.mapFrom(self, pos)
 
-    def _create_right_panel(self): #vers 1
-        """Create right panel with editing controls"""
+        # Check if clicking on drag button
+        return self.drag_btn.geometry().contains(toolbar_local_pos)
+
+        # Check if position is NOT on any button (i.e., on stretch area)
+        for btn in buttons_to_check:
+            btn_global_rect = btn.geometry()
+            btn_rect = btn_global_rect.translated(toolbar_rect.topLeft())
+            if btn_rect.contains(pos):
+                return False  # On a button, not draggable
+
+        return True  # On empty stretch area, draggable
+
+
+    def _create_resize_icon(self): #vers 1
+        """Resize grip icon - diagonal arrows"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 6l-8 8M10 6h4v4M6 14v-4h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _setup_status_indicators(self): #vers 4
+        """Setup status indicators with visible resize button"""
+        self.status_frame = QFrame()
+        self.status_layout = QHBoxLayout(self.status_frame)
+        self.status_layout.setContentsMargins(5, 2, 5, 2)
+
+        self.status_textures = QLabel("Textures: 0")
+        self.status_layout.addWidget(self.status_textures)
+
+        self.status_selected = QLabel("Selected: None")
+        self.status_layout.addWidget(self.status_selected)
+
+        self.status_size = QLabel("TXD Size: Unknown")
+        self.status_layout.addWidget(self.status_size)
+
+        self.status_layout.addStretch()
+
+        self.status_modified = QLabel("")
+        self.status_layout.addWidget(self.status_modified)
+
+        # Add visible resize button with icon
+        self.resize_grip_btn = QPushButton()
+        self.resize_grip_btn.setIcon(self._create_resize_icon())
+        self.resize_grip_btn.setIconSize(QSize(16, 16))
+        self.resize_grip_btn.setFixedSize(20, 20)
+        self.resize_grip_btn.setToolTip("Drag to resize window")
+        self.resize_grip_btn.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                padding: 0px;
+            }
+            QPushButton:hover {
+                background-color: #555555;
+            }
+        """)
+        # Make it act like a resize grip
+        self.resize_grip_btn.setCursor(Qt.CursorShape.SizeFDiagCursor)
+        self.status_layout.addWidget(self.resize_grip_btn)
+
+        return self.status_frame
+
+    def _create_toolbar(self): #vers 9
+        """Create toolbar with drag and tear-off buttons"""
+        self.toolbar = QFrame()
+        self.toolbar.setFrameStyle(QFrame.Shape.StyledPanel)
+        self.toolbar.setMaximumHeight(50)
+
+        layout = QHBoxLayout(self.toolbar)
+        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setSpacing(5)
+
+        # Only show "Open IMG" button if NOT standalone
+        if not self.standalone_mode:
+            self.open_img_btn = QPushButton("Open IMG")
+            self.open_img_btn.setIcon(self._create_folder_icon())
+            self.open_img_btn.setIconSize(QSize(20, 20))
+            self.open_img_btn.clicked.connect(self.open_img_archive)
+            layout.addWidget(self.open_img_btn)
+
+        self.open_txd_btn = QPushButton("Open TXD")
+        self.open_txd_btn.setIcon(self._create_file_icon())
+        self.open_txd_btn.setIconSize(QSize(20, 20))
+        self.open_txd_btn.clicked.connect(self.open_txd_file)
+        layout.addWidget(self.open_txd_btn)
+
+        self.save_txd_btn = QPushButton("Save TXD")
+        self.save_txd_btn.setIcon(self._create_save_icon())
+        self.save_txd_btn.setIconSize(QSize(20, 20))
+        self.save_txd_btn.clicked.connect(self.save_txd_file)
+        self.save_txd_btn.setEnabled(False)
+        layout.addWidget(self.save_txd_btn)
+
+        layout.addSpacing(10)
+
+        self.import_btn = QPushButton("Import")
+        self.import_btn.setIcon(self._create_import_icon())
+        self.import_btn.setIconSize(QSize(20, 20))
+        self.import_btn.clicked.connect(self.import_texture)
+        self.import_btn.setEnabled(False)
+        layout.addWidget(self.import_btn)
+
+        self.export_btn = QPushButton("Export")
+        self.export_btn.setIcon(self._create_export_icon())
+        self.export_btn.setIconSize(QSize(20, 20))
+        self.export_btn.clicked.connect(self.export_selected_texture)
+        self.export_btn.setEnabled(False)
+        layout.addWidget(self.export_btn)
+
+        self.export_all_btn = QPushButton("Export All")
+        self.export_all_btn.setIcon(self._create_package_icon())
+        self.export_all_btn.setIconSize(QSize(20, 20))
+        self.export_all_btn.clicked.connect(self.export_all_textures)
+        self.export_all_btn.setEnabled(False)
+        layout.addWidget(self.export_all_btn)
+
+        layout.addSpacing(10)
+
+        self.flip_btn = QPushButton("Switch")
+        self.flip_btn.setIcon(self._create_flip_vert_icon())
+        self.flip_btn.setIconSize(QSize(20, 20))
+        self.flip_btn.clicked.connect(self.flip_texture)
+        self.flip_btn.setEnabled(False)
+        layout.addWidget(self.flip_btn)
+
+        self.props_btn = QPushButton("Properties")
+        self.props_btn.setIcon(self._create_properties_icon())
+        self.props_btn.setIconSize(QSize(20, 20))
+        self.props_btn.clicked.connect(self.show_properties)
+        self.props_btn.setEnabled(False)
+        layout.addWidget(self.props_btn)
+
+        self.info_btn = QPushButton("Info")
+        self.info_btn.setIcon(self._create_info_icon())
+        self.info_btn.setIconSize(QSize(20, 20))
+        self.info_btn.clicked.connect(self._show_detailed_info)
+        self.info_btn.setEnabled(False)
+        layout.addWidget(self.info_btn)
+
+        layout.addStretch()
+
+        # Drag button [D]
+        self.drag_btn = QPushButton("D")
+        self.drag_btn.setMinimumWidth(40)
+        self.drag_btn.setMaximumWidth(40)
+        self.drag_btn.setMinimumHeight(30)
+        self.drag_btn.setToolTip("Drag to move window")
+        self.drag_btn.setStyleSheet("""
+            QPushButton {
+                font-weight: bold;
+                background-color: #4a4a4a;
+                border: 1px solid #5a5a5a;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #5a5a5a;
+            }
+        """)
+        self.drag_btn.setCursor(Qt.CursorShape.SizeAllCursor)
+        layout.addWidget(self.drag_btn)
+
+        # Tear-off button [T] - only in IMG Factory mode
+        if not self.standalone_mode:
+            self.tearoff_btn = QPushButton("T")
+            self.tearoff_btn.setMinimumWidth(40)
+            self.tearoff_btn.setMaximumWidth(40)
+            self.tearoff_btn.setMinimumHeight(30)
+            self.tearoff_btn.clicked.connect(self._toggle_tearoff)
+            self.tearoff_btn.setToolTip("Merge back to IMG Factory window")
+            self.tearoff_btn.setStyleSheet("""
+                QPushButton {
+                    font-weight: bold;
+                    background-color: #4a4a4a;
+                    border: 1px solid #5a5a5a;
+                    border-radius: 3px;
+                }
+                QPushButton:hover {
+                    background-color: #5a5a5a;
+                }
+            """)
+            layout.addWidget(self.tearoff_btn)
+
+        # Window controls
+        self.minimize_btn = QPushButton()
+        self.minimize_btn.setIcon(self._create_minimize_icon())
+        self.minimize_btn.setIconSize(QSize(16, 16))
+        self.minimize_btn.setMinimumWidth(40)
+        self.minimize_btn.setMaximumWidth(40)
+        self.minimize_btn.setMinimumHeight(30)
+        self.minimize_btn.clicked.connect(self.showMinimized)
+        self.minimize_btn.setToolTip("Minimize Window")
+        layout.addWidget(self.minimize_btn)
+
+        self.maximize_btn = QPushButton()
+        self.maximize_btn.setIcon(self._create_maximize_icon())
+        self.maximize_btn.setIconSize(QSize(16, 16))
+        self.maximize_btn.setMinimumWidth(40)
+        self.maximize_btn.setMaximumWidth(40)
+        self.maximize_btn.setMinimumHeight(30)
+        self.maximize_btn.clicked.connect(self._toggle_maximize)
+        self.maximize_btn.setToolTip("Maximize/Restore Window")
+        layout.addWidget(self.maximize_btn)
+
+        self.close_btn = QPushButton()
+        self.close_btn.setIcon(self._create_close_icon())
+        self.close_btn.setIconSize(QSize(16, 16))
+        self.close_btn.setMinimumWidth(40)
+        self.close_btn.setMaximumWidth(40)
+        self.close_btn.setMinimumHeight(30)
+        self.close_btn.clicked.connect(self.close)
+        self.close_btn.setToolTip("Close Window")
+        layout.addWidget(self.close_btn)
+
+        return self.toolbar
+
+    def _toggle_tearoff(self): #vers 1
+        """Toggle tear-off state (merge back to IMG Factory)"""
+        QMessageBox.information(self, "Tear-off",
+            "Merge back to IMG Factory functionality coming soon!\n\n"
+            "This will dock the TXD Workshop back into the main window.")
+
+
+
+    def _on_texture_table_double_click(self, item): #vers 1
+        """Handle double-click on texture table - open mipmap manager"""
+        try:
+            row = item.row()
+
+            # Get texture for this row
+            if row < 0 or row >= len(self.texture_list):
+                return
+
+            texture = self.texture_list[row]
+
+            # Check if texture has mipmaps
+            mipmap_levels = texture.get('mipmap_levels', [])
+            if len(mipmap_levels) > 1:
+                # Has mipmaps - open mipmap manager
+                self.selected_texture = texture
+                self._open_mipmap_manager()
+            else:
+                # No mipmaps - just select the texture
+                self.selected_texture = texture
+                self._update_texture_info(texture)
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Double-click error: {str(e)}")
+
+
+    def _create_right_panel(self): #vers 5
+        """Create right panel with editing controls - aligned button layout"""
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.StyledPanel)
-
         panel.setMinimumWidth(400)
+
         main_layout = QVBoxLayout(panel)
         main_layout.setContentsMargins(5, 5, 5, 5)
 
@@ -416,26 +666,37 @@ class TXDWorkshop(QWidget): #vers 3
         info_group = QGroupBox("Texture Information")
         info_layout = QVBoxLayout(info_group)
 
-        # Clickable texture name
-        texname_layout = QHBoxLayout()
+        # Row 1: Texture name and alpha name (full width, no buttons)
+        name_layout = QHBoxLayout()
+
         self.info_name = QLabel("Name: -")
         self.info_name.setStyleSheet("font-weight: bold; padding: 5px; border: 1px solid #3a3a3a;")
         self.info_name.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.info_name.customContextMenuRequested.connect(lambda pos: self._show_name_context_menu(pos, alpha=False))
-        info_layout.addWidget(self.info_name)
+        name_layout.addWidget(self.info_name, stretch=1)
 
-        # Clickable alpha name
         self.info_alpha_name = QLabel("Alpha: -")
         self.info_alpha_name.setStyleSheet("color: red; font-weight: bold; padding: 5px; border: 1px solid #3a3a3a;")
         self.info_alpha_name.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.info_alpha_name.customContextMenuRequested.connect(lambda pos: self._show_name_context_menu(pos, alpha=True))
-        info_layout.addWidget(self.info_alpha_name)
-        info_layout.addLayout(texname_layout)
+        self.info_alpha_name.setVisible(False)
+        name_layout.addWidget(self.info_alpha_name, stretch=1)
 
-        # Size with resize controls
+        info_layout.addLayout(name_layout)
+        info_layout.addSpacing(5)
+
+        # Row 2: Size label (left) + buttons (right, aligned)
         size_layout = QHBoxLayout()
         self.info_size = QLabel("Size: -")
+        self.info_size.setMinimumWidth(120)
         size_layout.addWidget(self.info_size)
+
+        size_layout.addStretch()
+
+        self.bitdepth_btn = QPushButton("Bit Depth")
+        self.bitdepth_btn.clicked.connect(self._change_bit_depth)
+        self.bitdepth_btn.setEnabled(False)
+        size_layout.addWidget(self.bitdepth_btn)
 
         self.resize_btn = QPushButton("Resize")
         self.resize_btn.clicked.connect(self._resize_texture)
@@ -449,16 +710,19 @@ class TXDWorkshop(QWidget): #vers 3
 
         info_layout.addLayout(size_layout)
 
-        # Format dropdown with compression controls
+        # Row 3: Format label (left) + dropdown, buttons, and bit depth indicator (right, aligned)
         format_layout = QHBoxLayout()
-        format_label = QLabel("Format:")
+
+        self.format_status_label = QLabel("Format: -")
+        self.format_status_label.setMinimumWidth(120)
+        format_layout.addWidget(self.format_status_label)
+
+        format_layout.addStretch()
 
         self.format_combo = QComboBox()
         self.format_combo.addItems(["DXT1", "DXT3", "DXT5", "ARGB8888", "ARGB1555", "ARGB4444", "RGB888", "RGB565"])
         self.format_combo.currentTextChanged.connect(self._change_format)
         self.format_combo.setEnabled(False)
-
-        format_layout.addWidget(format_label)
         format_layout.addWidget(self.format_combo)
 
         self.compress_btn = QPushButton("Compress")
@@ -471,16 +735,90 @@ class TXDWorkshop(QWidget): #vers 3
         self.uncompress_btn.setEnabled(False)
         format_layout.addWidget(self.uncompress_btn)
 
+        # Bit depth indicator (read-only display)
+        self.info_bitdepth = QLabel("[32bit]")
+        self.info_bitdepth.setStyleSheet("font-weight: bold; padding: 5px; border: 1px solid #3a3a3a;")
+        format_layout.addWidget(self.info_bitdepth)
+
         info_layout.addLayout(format_layout)
 
-        # Additional info
+        # Row 4: Mipmaps label (left) + button (right, aligned)
+        mipmap_layout = QHBoxLayout()
         self.info_format = QLabel("Mipmaps:")
-        info_layout.addWidget(self.info_format)
+        self.info_format.setMinimumWidth(120)
+        mipmap_layout.addWidget(self.info_format)
+
+        mipmap_layout.addStretch()
+
+        self.show_mipmaps_btn = QPushButton("View Mipmaps")
+        self.show_mipmaps_btn.clicked.connect(self._open_mipmap_manager)
+        self.show_mipmaps_btn.setEnabled(False)
+        self.show_mipmaps_btn.setToolTip("View all mipmap levels")
+        mipmap_layout.addWidget(self.show_mipmaps_btn)
+
+        info_layout.addLayout(mipmap_layout)
 
         main_layout.addWidget(info_group)
         return panel
 
-    def _update_editing_controls(self): #vers 1
+    def _change_bit_depth(self): #vers 1
+        """Change texture bit depth"""
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+            return
+
+        from PyQt6.QtWidgets import QInputDialog
+
+        current_depth = self.selected_texture.get('depth', 32)
+
+        bit_depths = ["32bit (RGBA)", "24bit (RGB)", "16bit (ARGB1555)", "16bit (ARGB4444)", "16bit (RGB565)", "8bit (Indexed)"]
+        depth_values = [32, 24, 16, 16, 16, 8]
+
+        # Find current selection
+        try:
+            current_index = depth_values.index(current_depth)
+        except:
+            current_index = 0
+
+        choice, ok = QInputDialog.getItem(
+            self,
+            "Change Bit Depth",
+            f"Current: {current_depth}bit\n\nSelect new bit depth:",
+            bit_depths,
+            current_index,
+            False
+        )
+
+        if ok:
+            new_depth = depth_values[bit_depths.index(choice)]
+
+            if new_depth != current_depth:
+                self._save_undo_state("Change bit depth")
+                self.selected_texture['depth'] = new_depth
+
+                self._update_texture_info(self.selected_texture)
+                self._update_table_display()
+                self._mark_as_modified()
+
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"✅ Bit depth changed: {current_depth}bit → {new_depth}bit")
+
+    def _mipmap_io_menu(self): #vers 1
+        """Show export/import menu for mipmaps"""
+        if not self.selected_texture:
+            return
+
+        menu = QMenu(self)
+        export_action = menu.addAction("📤 Export All Levels")
+        export_action.triggered.connect(self._export_all_levels)
+
+        import_action = menu.addAction("📥 Import All Levels")
+        import_action.triggered.connect(self._import_all_levels)
+
+        menu.exec(self.mipmap_io_btn.mapToGlobal(self.mipmap_io_btn.rect().bottomLeft()))
+
+
+    def _update_editing_controls(self): #vers 2
         """Update editing control states based on selection"""
         has_selection = self.selected_texture is not None
 
@@ -493,52 +831,21 @@ class TXDWorkshop(QWidget): #vers 3
             self.format_combo.setEnabled(has_selection)
 
         if has_selection:
-            # Format-specific controls
-            current_format = self.selected_texture.get('format', 'Unknown')
-
-            # Enable/disable compression buttons
+            # Compress button - always enabled (can compress or change DXT format)
             if hasattr(self, 'compress_btn'):
-                self.compress_btn.setEnabled('DXT' not in current_format)
-            if hasattr(self, 'uncompress_btn'):
-                self.uncompress_btn.setEnabled('DXT' in current_format)
+                self.compress_btn.setEnabled(True)
 
-            # Update format combo
-            if hasattr(self, 'format_combo'):
-                index = self.format_combo.findText(current_format)
-                if index >= 0:
-                    self.format_combo.setCurrentIndex(index)
+            # Uncompress button - only enabled if currently DXT format
+            if hasattr(self, 'uncompress_btn'):
+                current_format = self.selected_texture.get('format', 'Unknown')
+                self.uncompress_btn.setEnabled('DXT' in current_format)
         else:
-            # Disable all format controls
+            # No selection - disable both
             if hasattr(self, 'compress_btn'):
                 self.compress_btn.setEnabled(False)
             if hasattr(self, 'uncompress_btn'):
                 self.uncompress_btn.setEnabled(False)
 
-    def _setup_toolbar(self): #vers 1
-        """Setup toolbar with additional buttons"""
-        # This assumes you want to add buttons to your existing toolbar
-        # Add these after your existing toolbar buttons
-
-        if hasattr(self, '_create_toolbar'):
-            # Add separator
-            self.toolbar_layout = self.toolbar.layout()
-
-            # Add new buttons
-            self.batch_export_btn = QPushButton("Batch Export")
-            self.batch_export_btn.clicked.connect(self._batch_export_dialog)
-            self.batch_export_btn.setEnabled(False)
-
-            self.texture_info_btn = QPushButton("Info")
-            self.texture_info_btn.clicked.connect(self._show_detailed_info)
-            self.texture_info_btn.setEnabled(False)
-
-            # Insert before stretch if it exists
-            if self.toolbar_layout:
-                count = self.toolbar_layout.count()
-                if count > 0:
-                    # Insert before the last item (usually stretch)
-                    self.toolbar_layout.insertWidget(count-1, self.batch_export_btn)
-                    self.toolbar_layout.insertWidget(count-1, self.texture_info_btn)
 
     def _batch_export_dialog(self): #vers 1
         """Show batch export options dialog"""
@@ -630,28 +937,6 @@ class TXDWorkshop(QWidget): #vers 3
 
         QMessageBox.information(self, "Detailed Texture Information", info)
 
-    def _setup_status_indicators(self): #vers 1
-        """Setup status indicators for texture state"""
-        # Create status bar at bottom of window
-        self.status_frame = QFrame()
-        self.status_layout = QHBoxLayout(self.status_frame)
-        self.status_layout.setContentsMargins(5, 2, 5, 2)
-
-        self.status_textures = QLabel("Textures: 0")
-        self.status_layout.addWidget(self.status_textures)
-
-        self.status_selected = QLabel("Selected: None")
-        self.status_layout.addWidget(self.status_selected)
-
-        self.status_size = QLabel("TXD Size: Unknown")
-        self.status_layout.addWidget(self.status_size)
-
-        self.status_layout.addStretch()
-
-        self.status_modified = QLabel("")
-        self.status_layout.addWidget(self.status_modified)
-
-        return self.status_frame
 
     def _update_status_indicators(self): #vers 1
         """Update status indicators"""
@@ -908,6 +1193,14 @@ class TXDWorkshop(QWidget): #vers 3
                 self.edit_btn.setEnabled(True)
             if hasattr(self, 'convert_btn'):
                 self.convert_btn.setEnabled(True)
+            # Enable mipmap buttons if texture selected
+            if hasattr(self, 'generate_mipmaps_btn'):
+                self.generate_mipmaps_btn.setEnabled(True)
+            if hasattr(self, 'show_mipmaps_btn'):
+                has_mipmaps = len(self.selected_texture.get('mipmap_levels', [])) > 1
+                self.show_mipmaps_btn.setEnabled(has_mipmaps)
+            if hasattr(self, 'mipmap_io_btn'):
+                self.mipmap_io_btn.setEnabled(True)
 
             self._update_editing_controls()
             self._update_status_indicators()
@@ -934,112 +1227,15 @@ class TXDWorkshop(QWidget): #vers 3
             """)
 
 
-    def _create_toolbar(self): #vers 5
-        """Create toolbar with action buttons and visible window controls"""
-        #toolbar = QFrame()
-        self.toolbar = QFrame()
-        toolbar.setFrameStyle(QFrame.Shape.StyledPanel)
-        toolbar.setMaximumHeight(50)
 
-        layout = QHBoxLayout(toolbar)
-        layout.setContentsMargins(5, 5, 5, 5)
-        layout.setSpacing(5)
+    def _create_left_panel(self): #vers 5
+        """Create left panel - TXD file list (only in IMG Factory mode)"""
+        # In standalone mode, don't create this panel
+        if self.standalone_mode:
+            self.txd_list_widget = None  # Explicitly set to None
+            return None
 
-        self.open_img_btn = QPushButton("Open IMG")
-        self.open_img_btn.setIcon(self._create_folder_icon())
-        self.open_img_btn.setIconSize(QSize(20, 20))
-        self.open_img_btn.clicked.connect(self.open_img_archive)
-        layout.addWidget(self.open_img_btn)
-
-        self.open_txd_btn = QPushButton("Open TXD")
-        self.open_txd_btn.setIcon(self._create_file_icon())
-        self.open_txd_btn.setIconSize(QSize(20, 20))
-        self.open_txd_btn.clicked.connect(self.open_txd_file)
-        layout.addWidget(self.open_txd_btn)
-
-        self.save_txd_btn = QPushButton("Save TXD")
-        self.save_txd_btn.setIcon(self._create_save_icon())
-        self.save_txd_btn.setIconSize(QSize(20, 20))
-        self.save_txd_btn.clicked.connect(self.save_txd_file)
-        self.save_txd_btn.setEnabled(False)
-        layout.addWidget(self.save_txd_btn)
-
-        layout.addSpacing(10)
-
-        self.import_btn = QPushButton("Import")
-        self.import_btn.setIcon(self._create_import_icon())
-        self.import_btn.setIconSize(QSize(20, 20))
-        self.import_btn.clicked.connect(self.import_texture)
-        self.import_btn.setEnabled(False)
-        layout.addWidget(self.import_btn)
-
-        self.export_btn = QPushButton("Export")
-        self.export_btn.setIcon(self._create_export_icon())
-        self.export_btn.setIconSize(QSize(20, 20))
-        self.export_btn.clicked.connect(self.export_selected_texture)
-        self.export_btn.setEnabled(False)
-        layout.addWidget(self.export_btn)
-
-        self.export_all_btn = QPushButton("Export All")
-        self.export_all_btn.setIcon(self._create_package_icon())
-        self.export_all_btn.setIconSize(QSize(20, 20))
-        self.export_all_btn.clicked.connect(self.export_all_textures)
-        self.export_all_btn.setEnabled(False)
-        layout.addWidget(self.export_all_btn)
-
-        layout.addSpacing(10)
-
-        self.flip_btn = QPushButton("Switch")
-        self.flip_btn.setIcon(self._create_flip_vert_icon())
-        self.flip_btn.setIconSize(QSize(20, 20))
-        self.flip_btn.clicked.connect(self.flip_texture)
-        self.flip_btn.setEnabled(False)
-        layout.addWidget(self.flip_btn)
-
-        self.props_btn = QPushButton("Properties")
-        self.props_btn.setIcon(self._create_properties_icon())
-        self.props_btn.setIconSize(QSize(20, 20))
-        self.props_btn.clicked.connect(self.show_properties)
-        self.props_btn.setEnabled(False)
-        layout.addWidget(self.props_btn)
-
-        layout.addStretch()
-
-        # Window controls
-        self.maximize_btn = QPushButton()
-        self.maximize_btn.setIcon(self._create_maximize_icon())
-        self.maximize_btn.setIconSize(QSize(16, 16))
-        self.maximize_btn.setMinimumWidth(40)
-        self.maximize_btn.setMaximumWidth(40)
-        self.maximize_btn.setMinimumHeight(30)
-        self.maximize_btn.clicked.connect(self._toggle_maximize)
-        self.maximize_btn.setToolTip("Maximize/Restore Window")
-        layout.addWidget(self.maximize_btn)
-
-        self.minimize_btn = QPushButton()
-        self.minimize_btn.setIcon(self._create_minimize_icon())
-        self.minimize_btn.setIconSize(QSize(16, 16))
-        self.minimize_btn.setMinimumWidth(40)
-        self.minimize_btn.setMaximumWidth(40)
-        self.minimize_btn.setMinimumHeight(30)
-        self.minimize_btn.clicked.connect(self.showMinimized)
-        self.minimize_btn.setToolTip("Minimize Window")
-        layout.addWidget(self.minimize_btn)
-
-        self.close_btn = QPushButton()
-        self.close_btn.setIcon(self._create_close_icon())
-        self.close_btn.setIconSize(QSize(16, 16))
-        self.close_btn.setMinimumWidth(40)
-        self.close_btn.setMaximumWidth(40)
-        self.close_btn.setMinimumHeight(30)
-        self.close_btn.clicked.connect(self.close)
-        self.close_btn.setToolTip("Close Window")
-        layout.addWidget(self.close_btn)
-
-        return self.toolbar
-
-    def _create_left_panel(self): #vers 2
-        """Create left panel - TXD file list from IMG"""
+        # Only create panel in IMG Factory mode
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.StyledPanel)
         panel.setMinimumWidth(200)
@@ -1058,6 +1254,35 @@ class TXDWorkshop(QWidget): #vers 3
         layout.addWidget(self.txd_list_widget)
 
         return panel
+
+    def _load_img_txd_list(self): #vers 2
+        """Load TXD files from IMG archive"""
+        try:
+            # Safety check for standalone mode
+            if self.standalone_mode or not hasattr(self, 'txd_list_widget') or self.txd_list_widget is None:
+                return
+
+            self.txd_list_widget.clear()
+            self.txd_list = []
+
+            if not self.current_img:
+                return
+
+            for entry in self.current_img.entries:
+                if entry.name.lower().endswith('.txd'):
+                    self.txd_list.append(entry)
+                    item = QListWidgetItem(entry.name)
+                    item.setData(Qt.ItemDataRole.UserRole, entry)
+                    size_kb = entry.size / 1024
+                    item.setToolTip(f"{entry.name}\nSize: {size_kb:.1f} KB")
+                    self.txd_list_widget.addItem(item)
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"📋 Found {len(self.txd_list)} TXD files")
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Error loading TXD list: {str(e)}")
+
 
     def _create_middle_panel(self): #vers 3
         """Create middle panel - Texture list with context menu"""
@@ -1223,34 +1448,108 @@ class TXDWorkshop(QWidget): #vers 3
         # Double-click to open mipmap manager
         self.texture_table.itemDoubleClicked.connect(self._on_texture_table_double_click)
 
-    def _on_texture_table_double_click(self, item): #vers 1
-        """Handle double-click on texture table - open mipmap manager if clicked on mipmap line"""
+
+    def _on_texture_selected(self): #vers 4
+        """Handle texture selection - read-only, no modifications"""
         try:
-            row = item.row()
-            col = item.column()
+            row = self.texture_table.currentRow()
 
-            # Only handle double-click on details column (column 1)
-            if col != 1:
-                return
-
-            # Get texture for this row
+            # Invalid selection
             if row < 0 or row >= len(self.texture_list):
+                self.selected_texture = None
+                self.export_btn.setEnabled(False)
+
+                if hasattr(self, 'flip_btn'):
+                    self.flip_btn.setEnabled(False)
+                if hasattr(self, 'props_btn'):
+                    self.props_btn.setEnabled(False)
+                if hasattr(self, 'duplicate_btn'):
+                    self.duplicate_btn.setEnabled(False)
+                if hasattr(self, 'remove_btn'):
+                    self.remove_btn.setEnabled(False)
+                if hasattr(self, 'resize_btn'):
+                    self.resize_btn.setEnabled(False)
+                if hasattr(self, 'upscale_btn'):
+                    self.upscale_btn.setEnabled(False)
+                if hasattr(self, 'format_combo'):
+                    self.format_combo.setEnabled(False)
+                if hasattr(self, 'compress_btn'):
+                    self.compress_btn.setEnabled(False)
+                if hasattr(self, 'uncompress_btn'):
+                    self.uncompress_btn.setEnabled(False)
+                if hasattr(self, 'show_mipmaps_btn'):
+                    self.show_mipmaps_btn.setEnabled(False)
+
+                self._update_editing_controls()
+                self._update_status_indicators()
                 return
 
-            texture = self.texture_list[row]
+            # Valid selection - set selected texture
+            self.selected_texture = self.texture_list[row]
 
-            # Check if texture has mipmaps
-            mipmap_levels = texture.get('mipmap_levels', [])
-            if not mipmap_levels:
-                return
+            # Update display (read-only)
+            self._update_texture_info(self.selected_texture)
 
-            # Open mipmap manager
-            self.selected_texture = texture
-            self._open_mipmap_manager()
+            # Enable buttons based on selection
+            self.export_btn.setEnabled(True)
+
+            if hasattr(self, 'props_btn'):
+                self.props_btn.setEnabled(True)
+            if hasattr(self, 'duplicate_btn'):
+                self.duplicate_btn.setEnabled(True)
+            if hasattr(self, 'remove_btn'):
+                self.remove_btn.setEnabled(True)
+            if hasattr(self, 'resize_btn'):
+                self.resize_btn.setEnabled(True)
+            if hasattr(self, 'upscale_btn'):
+                self.upscale_btn.setEnabled(True)
+            if hasattr(self, 'format_combo'):
+                self.format_combo.setEnabled(True)
+            if hasattr(self, 'compress_btn'):
+                self.compress_btn.setEnabled(True)
+            if hasattr(self, 'uncompress_btn'):
+                self.uncompress_btn.setEnabled(True)
+
+            # Flip button - enable only if has alpha
+            if hasattr(self, 'flip_btn'):
+                has_alpha = self.selected_texture.get('has_alpha', False)
+                self.flip_btn.setEnabled(has_alpha)
+                if has_alpha:
+                    self.flip_btn.setText("Switch")
+                    self.flip_btn.setToolTip("Toggle between normal and alpha view")
+                else:
+                    self.flip_btn.setText("Switch")
+                    self.flip_btn.setToolTip("No alpha channel to view")
+
+            # Mipmap button - enable only if has mipmaps
+            if hasattr(self, 'show_mipmaps_btn'):
+                has_mipmaps = len(self.selected_texture.get('mipmap_levels', [])) > 1
+                self.show_mipmaps_btn.setEnabled(has_mipmaps)
+
+            # Enable transform buttons if they exist
+            if hasattr(self, 'flip_vert_btn'):
+                self.flip_vert_btn.setEnabled(True)
+            if hasattr(self, 'flip_horz_btn'):
+                self.flip_horz_btn.setEnabled(True)
+            if hasattr(self, 'rotate_cw_btn'):
+                self.rotate_cw_btn.setEnabled(True)
+            if hasattr(self, 'rotate_ccw_btn'):
+                self.rotate_ccw_btn.setEnabled(True)
+            if hasattr(self, 'copy_btn'):
+                self.copy_btn.setEnabled(True)
+            if hasattr(self, 'paste_btn'):
+                self.paste_btn.setEnabled(True)
+            if hasattr(self, 'edit_btn'):
+                self.edit_btn.setEnabled(True)
+            if hasattr(self, 'convert_btn'):
+                self.convert_btn.setEnabled(True)
+
+            self._update_editing_controls()
+            self._update_status_indicators()
 
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Error opening mipmap manager: {str(e)}")
+                self.main_window.log_message(f"Selection error: {str(e)}")
 
     def _reload_texture_table(self): #vers 2
         """Reload texture table display with mipmap info"""
@@ -1335,92 +1634,147 @@ class TXDWorkshop(QWidget): #vers 3
         if self.main_window and hasattr(self.main_window, 'log_message'):
             self.main_window.log_message(f"↶ Undo: {previous_state['action']}")
 
+    def _auto_generate_mipmaps(self): #vers 1
+        """Auto-generate all mipmap levels from main texture"""
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+            return
 
-    def _show_texture_context_menu(self, position): #vers 4
-        """Show context menu with all alpha-related items conditional on has_alpha"""
+        # Get main texture (level 0)
+        main_rgba = self.selected_texture.get('rgba_data')
+        if not main_rgba:
+            QMessageBox.warning(self, "No Data", "Texture has no image data")
+            return
+
+        try:
+            width = self.selected_texture['width']
+            height = self.selected_texture['height']
+
+            # Convert to QImage
+            source_image = QImage(main_rgba, width, height, width * 4, QImage.Format.Format_RGBA8888)
+
+            if source_image.isNull():
+                QMessageBox.warning(self, "Error", "Failed to create source image")
+                return
+
+            # Clear existing mipmap levels except level 0
+            if 'mipmap_levels' not in self.selected_texture:
+                self.selected_texture['mipmap_levels'] = []
+
+            # Keep level 0 if it exists
+            level_0 = None
+            for level in self.selected_texture['mipmap_levels']:
+                if level['level'] == 0:
+                    level_0 = level
+                    break
+
+            # Start fresh
+            self.selected_texture['mipmap_levels'] = []
+
+            # Add level 0
+            if level_0:
+                self.selected_texture['mipmap_levels'].append(level_0)
+            else:
+                self.selected_texture['mipmap_levels'].append({
+                    'level': 0,
+                    'width': width,
+                    'height': height,
+                    'rgba_data': main_rgba,
+                    'compressed_data': None,
+                    'compressed_size': len(main_rgba)
+                })
+
+            # Generate remaining levels
+            current_width = width // 2
+            current_height = height // 2
+            level_num = 1
+
+            while current_width >= 1 and current_height >= 1:
+                # Scale down
+                scaled_image = source_image.scaled(
+                    current_width, current_height,
+                    Qt.AspectRatioMode.IgnoreAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+
+                if scaled_image.isNull():
+                    break
+
+                # Convert to RGBA
+                scaled_image = scaled_image.convertToFormat(QImage.Format.Format_RGBA8888)
+                ptr = scaled_image.bits()
+                ptr.setsize(scaled_image.sizeInBytes())
+                rgba_data = bytes(ptr)
+
+                # Add mipmap level
+                mipmap_level = {
+                    'level': level_num,
+                    'width': current_width,
+                    'height': current_height,
+                    'rgba_data': rgba_data,
+                    'compressed_data': None,
+                    'compressed_size': len(rgba_data)
+                }
+                self.selected_texture['mipmap_levels'].append(mipmap_level)
+
+                # Next level
+                current_width = max(1, current_width // 2)
+                current_height = max(1, current_height // 2)
+                level_num += 1
+
+            # Update mipmap count
+            self.selected_texture['mipmaps'] = len(self.selected_texture['mipmap_levels'])
+
+            # Update display
+            self._update_texture_info(self.selected_texture)
+            self._mark_as_modified()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✅ Generated {level_num} mipmap levels")
+
+            QMessageBox.information(self, "Success",
+                f"Generated {level_num} mipmap levels\n"
+                f"From {width}x{height} down to {current_width*2}x{current_height*2}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to generate mipmaps: {str(e)}")
+
+    def _show_texture_context_menu(self, position): #vers 2
+        """Show context menu for texture operations - simplified"""
+        if not self.selected_texture:
+            return
+
+        has_alpha = self.selected_texture.get('has_alpha', False)
+
         menu = QMenu(self)
 
-        # Basic operations (always available)
-        create_entry_action = menu.addAction(self._create_plus_icon(), "Create New Entry")
-        create_entry_action.triggered.connect(self._create_new_texture_entry)
+        # Import submenu
+        import_menu = menu.addMenu(self._create_import_icon(), "Import")
 
-        create_txd_action = menu.addAction(self._create_document_icon(), "Create New TXD")
-        create_txd_action.triggered.connect(self._create_new_txd)
+        import_normal_action = import_menu.addAction("Import Texture")
+        import_normal_action.triggered.connect(self._import_normal_texture)
+
+        if has_alpha:
+            import_alpha_action = import_menu.addAction("Import Alpha Channel")
+            import_alpha_action.triggered.connect(self._import_alpha_texture)
+
+        # Export submenu
+        export_menu = menu.addMenu(self._create_export_icon(), "Export")
+
+        export_texture_action = export_menu.addAction("Export Texture")
+        export_texture_action.triggered.connect(self.export_selected_texture)
+
+        if has_alpha:
+            export_alpha_action = export_menu.addAction("Export Alpha Channel")
+            export_alpha_action.triggered.connect(self._export_alpha_only)
 
         menu.addSeparator()
 
-        # Selection-required operations
-        if self.texture_table.selectedItems() and self.selected_texture:
-            has_alpha = self.selected_texture.get('has_alpha', False)
-
-            undo_action = menu.addAction(self._create_undo_icon(), "Undo")
-            undo_action.triggered.connect(self._undo_last_action)
-            undo_action.setEnabled(len(self.undo_stack) > 0)
-
-            menu.addSeparator()
-
-            edit_action = menu.addAction(self._create_pencil_icon(), "Edit Texture")
-            edit_action.triggered.connect(lambda: self.show_properties())
-            delete_action = menu.addAction(self._create_trash_icon(), "Delete Texture")
-            delete_action.triggered.connect(self._delete_texture)
-
-            menu.addSeparator()
-
-            # Import submenu
-            import_menu = menu.addMenu("Import")
-            import_normal_action = import_menu.addAction(self._create_import_icon(), "Import Normal Texture")
-
-            import_normal_action.triggered.connect(self._import_normal_texture)
-            import_alpha_action = import_menu.addAction(self._create_import_icon(), "Import Alpha Channel")
-            import_alpha_action.triggered.connect(self._import_alpha_texture)
-            import_alpha_action.setToolTip("Creates alpha channel if it doesn't exist")
-
-            # Export submenu
-            export_menu = menu.addMenu("Export")
-            export_texture_action = export_menu.addAction(self._create_export_icon(), "Export Texture")
-            export_texture_action.triggered.connect(self.export_selected_texture)
-
-            # Only show "Export Alpha Channel" if texture has alpha
-            if has_alpha:
-                export_alpha_action = export_menu.addAction(self._create_export_icon(), "Export Alpha Channel")
-                export_alpha_action.triggered.connect(lambda: self._export_alpha_only())
-
-            export_all_action = export_menu.addAction(self._create_package_icon(), "Export All Textures")
-            export_all_action.triggered.connect(self.export_all_textures)
-
-            menu.addSeparator()
-
-            # View options - only show if texture has alpha
-            if has_alpha:
-                view_menu = menu.addMenu("View")
-
-                view_normal_action = view_menu.addAction(self._create_eye_icon(), "View Normal")
-                view_normal_action.triggered.connect(lambda: setattr(self, '_show_alpha', False) or self._update_texture_info(self.selected_texture))
-
-                view_alpha_action = view_menu.addAction(self._create_eye_icon(), "View Alpha Channel")
-                view_alpha_action.triggered.connect(lambda: setattr(self, '_show_alpha', True) or self._update_texture_info(self.selected_texture))
-
-                menu.addSeparator()
-
-            # Flip button behavior - conditional text
-            if hasattr(self, 'flip_btn'):
-                if has_alpha:
-                    flip_action = menu.addAction("Toggle Alpha/Normal View")
-                    flip_action.triggered.connect(self.flip_texture)
-                else:
-                    # Could add other flip operations for non-alpha textures
-                    flip_action = menu.addAction("Flip Vertical")
-                    flip_action.triggered.connect(self._flip_vertical)
-                    flip_action.setEnabled(False)  # Not implemented yet
-                    flip_action.setToolTip("Coming soon")
-
-            menu.addSeparator()
-
-            props_action = menu.addAction(self._create_list_icon(), "Properties")
-            props_action.triggered.connect(self.show_properties)
+        # Delete texture
+        delete_action = menu.addAction(self._create_trash_icon(), "Delete Texture")
+        delete_action.triggered.connect(self._delete_texture)
 
         menu.exec(self.texture_table.viewport().mapToGlobal(position))
-
 
     def load_from_img_archive(self, img_path): #vers 1
         """Load TXD list from IMG archive"""
@@ -1589,7 +1943,7 @@ class TXDWorkshop(QWidget): #vers 3
                 self.texture_table.setRowHeight(row, 100)  # Increased height for mipmap line
             self.texture_table.setColumnWidth(0, 80)
 
-            self.save_txd_btn.setEnabled(True)
+            self.save_txd_btn.setEnabled(False)
             self.import_btn.setEnabled(True)
             self.export_all_btn.setEnabled(True)
             self._initialize_features()
@@ -1846,8 +2200,9 @@ class TXDWorkshop(QWidget): #vers 3
             alpha_status = "with alpha" if self.selected_texture['has_alpha'] else "no alpha"
             self.main_window.log_message(f"Format changed: {old_format} -> {format_name} ({alpha_status})")
 
-    def _compress_texture(self): #vers 1
-        """Compress selected texture"""
+
+    def _compress_texture(self): #vers 3
+        """Compress selected texture to DXT format"""
         if not self.selected_texture:
             QMessageBox.warning(self, "No Selection", "Please select a texture first")
             return
@@ -1855,23 +2210,109 @@ class TXDWorkshop(QWidget): #vers 3
         current_format = self.selected_texture.get('format', 'ARGB8888')
 
         if 'DXT' in current_format:
-            QMessageBox.information(self, "Already Compressed", "Texture is already compressed")
+            # Already compressed - offer to change DXT version
+            from PyQt6.QtWidgets import QInputDialog
+
+            dxt_formats = ["DXT1", "DXT3", "DXT5"]
+            new_format, ok = QInputDialog.getItem(
+                self,
+                "Change DXT Format",
+                f"Current format: {current_format}\n\nSelect target DXT format:",
+                dxt_formats,
+                0,
+                False
+            )
+
+            if ok and new_format != current_format:
+                self._save_undo_state("Change DXT format")
+                self.selected_texture['format'] = new_format
+
+                # Update has_alpha based on format
+                if new_format == 'DXT1':
+                    # DXT1 can have 1-bit alpha, keep existing alpha state
+                    pass
+                elif new_format in ['DXT3', 'DXT5']:
+                    # DXT3/DXT5 have alpha
+                    if not self.selected_texture.get('has_alpha'):
+                        self.selected_texture['has_alpha'] = True
+                        if 'alpha_name' not in self.selected_texture:
+                            self.selected_texture['alpha_name'] = self.selected_texture['name'] + 'a'
+
+                # Update dropdown
+                if hasattr(self, 'format_combo'):
+                    index = self.format_combo.findText(new_format)
+                    if index >= 0:
+                        self.format_combo.setCurrentIndex(index)
+
+                self._update_texture_info(self.selected_texture)
+                self._update_table_display()
+                self._mark_as_modified()
+
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"✅ Changed format: {current_format} → {new_format}")
+
             return
 
-        # Choose compression format based on alpha
-        has_alpha = self.selected_texture.get('has_alpha', False)
-        new_format = 'DXT5' if has_alpha else 'DXT1'
+        # Not compressed - compress to DXT
+        if not self.selected_texture.get('rgba_data'):
+            QMessageBox.warning(self, "No Data", "Texture has no image data to compress")
+            return
 
-        self.selected_texture['format'] = new_format
-        self._update_texture_info(self.selected_texture)
-        self._update_table_display()
-        self._mark_as_modified()
+        try:
+            # Let user choose DXT format
+            from PyQt6.QtWidgets import QInputDialog
 
-        if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Compressed texture to {new_format}")
+            has_alpha = self.selected_texture.get('has_alpha', False)
 
-    def _uncompress_texture(self): #vers 1
-        """Uncompress selected texture"""
+            if has_alpha:
+                dxt_formats = ["DXT3", "DXT5", "DXT1"]
+                default_format = "DXT5"
+                message = "Texture has alpha channel.\n\nRecommended: DXT5 (best quality)\nAlternative: DXT3 (simpler alpha)\nDXT1: 1-bit alpha only"
+            else:
+                dxt_formats = ["DXT1", "DXT3", "DXT5"]
+                default_format = "DXT1"
+                message = "Texture has no alpha channel.\n\nRecommended: DXT1 (smallest size)"
+
+            target_format, ok = QInputDialog.getItem(
+                self,
+                "Compress Texture",
+                f"Current format: {current_format}\n\n{message}\n\nSelect DXT format:",
+                dxt_formats,
+                dxt_formats.index(default_format),
+                False
+            )
+
+            if not ok:
+                return
+
+            # Save undo state
+            self._save_undo_state("Compress texture")
+            self.selected_texture['format'] = target_format
+
+            # Update has_alpha if compressing to DXT3/DXT5
+            if target_format in ['DXT3', 'DXT5'] and not has_alpha:
+                self.selected_texture['has_alpha'] = True
+                self.selected_texture['alpha_name'] = self.selected_texture['name'] + 'a'
+
+            # Update dropdown
+            if hasattr(self, 'format_combo'):
+                index = self.format_combo.findText(target_format)
+                if index >= 0:
+                    self.format_combo.setCurrentIndex(index)
+
+            self._update_texture_info(self.selected_texture)
+            self._update_table_display()
+            self._mark_as_modified()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✅ Compressed: {current_format} → {target_format}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to compress: {str(e)}")
+
+
+    def _uncompress_texture(self): #vers 3
+        """Uncompress selected texture from DXT to ARGB8888"""
         if not self.selected_texture:
             QMessageBox.warning(self, "No Selection", "Please select a texture first")
             return
@@ -1879,19 +2320,44 @@ class TXDWorkshop(QWidget): #vers 3
         current_format = self.selected_texture.get('format', 'ARGB8888')
 
         if 'DXT' not in current_format:
-            QMessageBox.information(self, "Not Compressed", "Texture is not compressed")
+            QMessageBox.information(self, "Not Compressed", "Texture is not in DXT format")
             return
 
-        # Uncompress to ARGB8888
-        self.selected_texture['format'] = 'ARGB8888'
-        self.selected_texture['has_alpha'] = True
+        try:
+            reply = QMessageBox.question(
+                self,
+                "Uncompress Texture",
+                f"Uncompress to ARGB8888?\n\n"
+                f"Current: {current_format}\n"
+                f"Target: ARGB8888\n\n"
+                f"This will convert the texture to uncompressed format.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
 
-        self._update_texture_info(self.selected_texture)
-        self._update_table_display()
-        self._mark_as_modified()
+            if reply != QMessageBox.StandardButton.Yes:
+                return
 
-        if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Uncompressed texture to ARGB8888")
+            if self.selected_texture.get('rgba_data'):
+                self._save_undo_state("Uncompress texture")
+                self.selected_texture['format'] = 'ARGB8888'
+
+                # Update dropdown to show ARGB8888
+                if hasattr(self, 'format_combo'):
+                    index = self.format_combo.findText('ARGB8888')
+                    if index >= 0:
+                        self.format_combo.setCurrentIndex(index)
+
+                self._update_texture_info(self.selected_texture)
+                self._update_table_display()
+                self._mark_as_modified()
+
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"✅ Uncompressed: {current_format} → ARGB8888")
+            else:
+                QMessageBox.warning(self, "No Data", "Texture has no decompressed data available")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to uncompress: {str(e)}")
 
     def _show_name_context_menu(self, position, alpha=False): #vers 1
         """Show context menu for renaming texture or alpha name"""
@@ -2198,7 +2664,7 @@ class TXDWorkshop(QWidget): #vers 3
                 self.main_window.log_message(f"Resize data error: {str(e)}")
             return False
 
-    def _update_table_display(self): #vers 1
+    def _update_table_display(self): #vers 2
         """Update the middle panel table display after edits"""
         if not self.selected_texture:
             return
@@ -2209,7 +2675,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         tex = self.selected_texture
 
-        # Rebuild details text
+        # Rebuild details text with compression status
         details = f"Name: {tex['name']}\n"
 
         # Add alpha name if texture has alpha
@@ -2219,7 +2685,14 @@ class TXDWorkshop(QWidget): #vers 3
 
         if tex['width'] > 0:
             details += f"Size: {tex['width']}x{tex['height']}\n"
-        details += f"Format: {tex['format']}\n"
+
+        # Show format with compression status
+        fmt = tex['format']
+        if 'DXT' in fmt:
+            details += f"Format: {fmt} (Compressed)\n"
+        else:
+            details += f"Format: {fmt} (Uncompressed)\n"
+
         details += f"Alpha: {'Yes' if tex.get('has_alpha', False) else 'No'}"
 
         # Update the table item
@@ -2227,8 +2700,7 @@ class TXDWorkshop(QWidget): #vers 3
         if details_item:
             details_item.setText(details)
 
-
-    def _parse_single_texture(self, txd_data, offset, index): #vers 15
+    def _parse_single_texture(self, txd_data, offset, index): #vers 16
         """Parse single texture with ALL mipmap levels"""
         import struct
 
@@ -2240,7 +2712,7 @@ class TXDWorkshop(QWidget): #vers 3
             'format': 'Unknown',
             'mipmaps': 1,
             'rgba_data': None,
-            'mipmap_levels': []  # NEW: Store all mipmap levels
+            'mipmap_levels': []  # Store all mipmap levels
         }
 
         try:
@@ -2271,6 +2743,7 @@ class TXDWorkshop(QWidget): #vers 3
             alpha_name = mask_bytes.rstrip(b'\x00').decode('ascii', errors='ignore')
             if alpha_name:
                 tex['alpha_name'] = alpha_name
+                tex['has_alpha'] = True  # If alpha_name exists, has_alpha is True
             pos += 32
 
             raster_format_flags, d3d_format, width, height, depth, num_levels, raster_type = struct.unpack('<IIHHBBB', txd_data[pos:pos+15])
@@ -2283,25 +2756,36 @@ class TXDWorkshop(QWidget): #vers 3
             platform_prop = struct.unpack('<B', txd_data[pos:pos+1])[0]
             pos += 1
 
-            # Format detection
+            # Format detection - only set has_alpha if not already set by alpha_name
             if platform_id == 8:  # D3D8
                 if platform_prop == 1:
                     tex['format'] = 'DXT1'
                 elif platform_prop == 3:
                     tex['format'] = 'DXT3'
-                    tex['has_alpha'] = True
+                    if not tex.get('has_alpha'):
+                        tex['has_alpha'] = True
                 elif platform_prop == 5:
                     tex['format'] = 'DXT5'
-                    tex['has_alpha'] = True
-            elif platform_id == 9:  # D3D9
-                if d3d_format == 827611204:
-                    tex['format'] = 'DXT1'
-                elif d3d_format == 861165636:
-                    tex['format'] = 'DXT3'
-                    tex['has_alpha'] = True
-                elif d3d_format == 894720068:
-                    tex['format'] = 'DXT5'
-                    tex['has_alpha'] = True
+                    if not tex.get('has_alpha'):
+                        tex['has_alpha'] = True
+                elif d3d_format == 21:  # ARGB8888
+                    tex['format'] = 'ARGB8888'
+                    if not tex.get('has_alpha'):
+                        tex['has_alpha'] = True
+                elif d3d_format == 22:  # RGB888
+                    tex['format'] = 'RGB888'
+                    # RGB888 can still have alpha channel if alpha_name exists
+                elif d3d_format == 25:  # ARGB1555
+                    tex['format'] = 'ARGB1555'
+                    if not tex.get('has_alpha'):
+                        tex['has_alpha'] = True
+                elif d3d_format == 26:  # ARGB4444
+                    tex['format'] = 'ARGB4444'
+                    if not tex.get('has_alpha'):
+                        tex['has_alpha'] = True
+                elif d3d_format == 23:  # RGB565
+                    tex['format'] = 'RGB565'
+                    # RGB565 can still have alpha channel if alpha_name exists
 
             # Skip palette if present
             palette_type = (raster_format_flags >> 13) & 0b11
@@ -2346,7 +2830,7 @@ class TXDWorkshop(QWidget): #vers 3
                     'width': current_width,
                     'height': current_height,
                     'rgba_data': rgba_data,
-                    'compressed_data': dxt_data,  # Keep original compressed data
+                    'compressed_data': dxt_data,
                     'compressed_size': pixels_len
                 }
                 tex['mipmap_levels'].append(mipmap_level)
@@ -2757,6 +3241,14 @@ class TXDWorkshop(QWidget): #vers 3
 
         return self._svg_to_icon(svg_data)
 
+    def _create_info_icon(self): #vers 1
+        """Info - circle with 'i' icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 11v6M12 8v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
 
     def _create_folder_icon(self): #vers 1
         """Open IMG - Folder icon"""
@@ -2933,9 +3425,8 @@ class TXDWorkshop(QWidget): #vers 3
             # Fallback to no icon if SVG fails
             return QIcon()
 
-
-    def _update_texture_info(self, texture): #vers 6
-        """Update texture information display with proper formatting"""
+    def _update_texture_info(self, texture): #vers 8
+        """Update texture information display with compression status"""
         try:
             name = texture.get('name', 'Unknown')
             width = texture.get('width', 0)
@@ -2947,55 +3438,62 @@ class TXDWorkshop(QWidget): #vers 3
             # Line 1: Name and bit depth
             self.info_name.setText(f"Name: {name} - {depth}bit")
 
-            # Line 2: Alpha name (if exists) or empty
+            # Line 2: Alpha name (if exists)
             if has_alpha:
                 alpha_name = texture.get('alpha_name', name + 'a')
                 self.info_alpha_name.setText(f"Alpha: {alpha_name}")
                 self.info_alpha_name.setVisible(True)
             else:
-                self.info_alpha_name.setText("")
+                self.info_alpha_name.setText("Alpha: -")
                 self.info_alpha_name.setVisible(False)
 
             # Line 3: Size
             self.info_size.setText(f"Size: {width}x{height}" if width > 0 else "Size: Unknown")
 
-            # Line 4: Format
-            #self.info_format.setText(f"Format: {fmt}")
+            # Line 4: Format with compression status
+            if 'DXT' in fmt:
+                compression_status = "Compressed"
+            else:
+                compression_status = "Uncompressed"
 
-            # Line 5: Other info (mipmaps, etc.)
+            if hasattr(self, 'format_status_label'):
+                self.format_status_label.setText(f"Format: {fmt} ({compression_status})")
 
-            #mipmaps = texture.get('mipmaps', 1)
-            #self.info_other.setText(f"Mipmaps: {mipmaps}")
+            # Update bit depth indicator
+            if hasattr(self, 'info_bitdepth'):
+                self.info_bitdepth.setText(f"[{depth}bit]")
 
-            # Update preview
+            # Line 5: Mipmaps info
+            num_mipmaps = len(texture.get('mipmap_levels', []))
+            if num_mipmaps > 1:
+                self.info_format.setText(f"Mipmaps: {num_mipmaps} levels")
+            elif num_mipmaps == 1:
+                self.info_format.setText(f"Mipmaps: 1 level (no mipmaps)")
+            else:
+                self.info_format.setText(f"Mipmaps: None")
+
+            # Update preview image
             rgba_data = texture.get('rgba_data')
             if rgba_data and width > 0 and height > 0:
-                # Show alpha or normal view
-                if hasattr(self, '_show_alpha') and self._show_alpha and has_alpha:
-                    display_data = self._extract_alpha_for_display(rgba_data)
-                else:
-                    display_data = rgba_data
+                try:
+                    # Create QImage from RGBA data
+                    qimg = QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
 
-                from PyQt6.QtGui import QImage, QPixmap
-                image = QImage(display_data, width, height, width*4, QImage.Format.Format_RGBA8888)
+                    # Scale to fit preview area (max 400x400)
+                    scaled = qimg.scaled(400, 400, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
 
-                if not image.isNull():
-                    pixmap = QPixmap.fromImage(image)
-                    label_size = self.preview_label.size()
-                    scaled_pixmap = pixmap.scaled(
-                        label_size.width()-20,
-                        label_size.height()-20,
-                        Qt.AspectRatioMode.KeepAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation
-                    )
-                    self.preview_label.setPixmap(scaled_pixmap)
-                    return
-
-            self.preview_label.setText("No preview available")
+                    # Convert to pixmap and display
+                    pixmap = QPixmap.fromImage(scaled)
+                    self.preview_label.setPixmap(pixmap)
+                    self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                except Exception as e:
+                    self.preview_label.setText(f"Preview error: {str(e)}")
+            else:
+                self.preview_label.setText("No preview available")
 
         except Exception as e:
-            self.preview_label.setText(f"Preview error: {str(e)}")
-
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Update info error: {str(e)}")
 
     def _extract_alpha_for_display(self, rgba_data): #vers 1
         """Extract alpha channel as grayscale for display"""
@@ -3840,8 +4338,8 @@ class TXDWorkshop(QWidget): #vers 3
 
         QMessageBox.information(self, "TXD Statistics", stats)
 
-    def _add_texture_to_table(self, texture): #vers 1
-        """Add single texture to table"""
+    def _add_texture_to_table(self, texture): #vers 2
+        """Add a texture to the table with compression status"""
         row = self.texture_table.rowCount()
         self.texture_table.insertRow(row)
 
@@ -3860,14 +4358,21 @@ class TXDWorkshop(QWidget): #vers 3
         else:
             thumb_item.setText("🖼️")
 
-        # Create details
+        # Create details with compression status
         details = f"Name: {texture['name']}\n"
         if texture.get('has_alpha', False):
             alpha_name = texture.get('alpha_name', texture['name'] + 'a')
             details += f"Alpha: {alpha_name}\n"
         if width > 0:
             details += f"Size: {width}x{height}\n"
-        details += f"Format: {texture['format']}\n"
+
+        # Show format with compression status
+        fmt = texture['format']
+        if 'DXT' in fmt:
+            details += f"Format: {fmt} (Compressed)\n"
+        else:
+            details += f"Format: {fmt} (Uncompressed)\n"
+
         details += f"Alpha: {'Yes' if texture.get('has_alpha', False) else 'No'}"
 
         details_item = QTableWidgetItem(details)
@@ -3879,11 +4384,6 @@ class TXDWorkshop(QWidget): #vers 3
         self.texture_table.setItem(row, 0, thumb_item)
         self.texture_table.setItem(row, 1, details_item)
         self.texture_table.setRowHeight(row, 80)
-
-    def closeEvent(self, event): #vers 1
-        """Handle window close"""
-        self.workshop_closed.emit()
-        event.accept()
 
 
 class MipmapManagerWindow(QWidget): #vers 1
@@ -3942,6 +4442,7 @@ class MipmapManagerWindow(QWidget): #vers 1
         button_layout.addWidget(close_btn)
 
         layout.addLayout(button_layout)
+
 
     def _create_toolbar(self): #vers 1
         """Create toolbar with mipmap operations"""
@@ -4864,3 +5365,11 @@ def open_txd_workshop(main_window, img_path=None): #vers 3
         QMessageBox.critical(main_window, "Error", f"Failed to open TXD Workshop: {str(e)}")
         return None
 
+if __name__ == '__main__':
+    import sys
+    from PyQt6.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
+    workshop = TXDWorkshop(None, None)
+    workshop.show()
+    sys.exit(app.exec())
