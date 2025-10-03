@@ -81,7 +81,8 @@ class TXDWorkshop(QWidget): #vers 3
 
     workshop_closed = pyqtSignal()
 
-    def __init__(self, parent=None, main_window=None): #vers 5
+
+    def __init__(self, parent=None, main_window=None): #vers 6
         super().__init__(parent)
         self.main_window = main_window
         self.current_img = None
@@ -99,24 +100,25 @@ class TXDWorkshop(QWidget): #vers 3
         self.setWindowTitle("TXD Workshop: No File")
         self.resize(1400, 800)
         self._initialize_features()
+
+        # Corner resize variables
         self.dragging = False
         self.drag_position = None
         self.resizing = False
-        self.resize_direction = None
-        self.resize_margin = 10
+        self.resize_corner = None  # Changed from resize_direction
+        self.corner_size = 20  # Size of corner resize areas
+        self.hover_corner = None  # Track which corner is hovered
 
         if parent:
             parent_pos = parent.pos()
             self.move(parent_pos.x() + 50, parent_pos.y() + 80)
 
         self.setup_ui()
-
-        from PyQt6.QtWidgets import QSizeGrip
-        self.size_grip = QSizeGrip(self)
-        self.size_grip.setFixedSize(16, 16)
-        self.size_grip.move(self.width() - 16, self.height() - 16)
-        self.size_grip.raise_()
         self._apply_theme()
+
+        # Enable mouse tracking for hover effects
+        self.setMouseTracking(True)
+
 
     def setup_ui(self): #vers 6
         """Setup the main UI layout"""
@@ -162,6 +164,7 @@ class TXDWorkshop(QWidget): #vers 3
             status_frame = self._setup_status_indicators()
             main_layout.addWidget(status_frame)
 
+
     def _initialize_features(self): #vers 1
         """Initialize all features after UI setup"""
         try:
@@ -185,15 +188,87 @@ class TXDWorkshop(QWidget): #vers 3
                 self.main_window.log_message(f"features init error: {str(e)}")
 
 
-    def mousePressEvent(self, event): #vers 1
+    def paintEvent(self, event): #vers 2
+        """Paint corner resize triangles"""
+        super().paintEvent(event)
+
+        from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QPainterPath
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # Colors
+        normal_color = QColor(100, 100, 100, 150)
+        hover_color = QColor(150, 150, 255, 200)
+
+        w = self.width()
+        h = self.height()
+        size = self.corner_size
+
+        # Define corner triangles
+        corners = {
+            'top-left': [(0, 0), (size, 0), (0, size)],
+            'top-right': [(w, 0), (w-size, 0), (w, size)],
+            'bottom-left': [(0, h), (size, h), (0, h-size)],
+            'bottom-right': [(w, h), (w-size, h), (w, h-size)]
+        }
+
+        for corner_name, points in corners.items():
+            # Choose color based on hover state
+            if self.hover_corner == corner_name:
+                painter.setBrush(QBrush(hover_color))
+                painter.setPen(QPen(hover_color.darker(120), 1))
+            else:
+                painter.setBrush(QBrush(normal_color))
+                painter.setPen(QPen(normal_color.darker(120), 1))
+
+            # Draw triangle
+            path = QPainterPath()
+            path.moveTo(points[0][0], points[0][1])
+            path.lineTo(points[1][0], points[1][1])
+            path.lineTo(points[2][0], points[2][1])
+            path.closeSubpath()
+
+            painter.drawPath(path)
+
+        painter.end()
+
+
+    def _get_resize_corner(self, pos): #vers 2
+        """Determine which corner is under mouse position"""
+        size = self.corner_size
+        w = self.width()
+        h = self.height()
+
+        # Top-left corner
+        if pos.x() < size and pos.y() < size:
+            return "top-left"
+
+        # Top-right corner
+        if pos.x() > w - size and pos.y() < size:
+            return "top-right"
+
+        # Bottom-left corner
+        if pos.x() < size and pos.y() > h - size:
+            return "bottom-left"
+
+        # Bottom-right corner
+        if pos.x() > w - size and pos.y() > h - size:
+            return "bottom-right"
+
+        return None
+
+
+    def mousePressEvent(self, event): #vers 2
         """Handle mouse press for dragging and resizing"""
         if event.button() == Qt.MouseButton.LeftButton:
-            # Check if clicking on resize edge
-            self.resize_direction = self._get_resize_direction(event.pos())
+            # Check if clicking on resize corner
+            self.resize_corner = self._get_resize_corner(event.pos())
 
-            if self.resize_direction:
+            if self.resize_corner:
                 self.resizing = True
                 self.drag_position = event.globalPosition().toPoint()
+                self.initial_geometry = self.geometry()
             else:
                 # Check if clicking on toolbar for dragging
                 if self._is_on_draggable_area(event.pos()):
@@ -203,28 +278,81 @@ class TXDWorkshop(QWidget): #vers 3
             event.accept()
 
 
-    def mouseMoveEvent(self, event): #vers 1
-        """Handle mouse move for dragging and resizing"""
+    def mouseMoveEvent(self, event): #vers 2
+        """Handle mouse move for dragging, resizing, and hover effects"""
         if event.buttons() == Qt.MouseButton.LeftButton:
-            if self.resizing and self.resize_direction:
-                self._handle_resize(event.globalPosition().toPoint())
+            if self.resizing and self.resize_corner:
+                self._handle_corner_resize(event.globalPosition().toPoint())
             elif self.dragging:
                 self.move(event.globalPosition().toPoint() - self.drag_position)
             event.accept()
         else:
-            # Update cursor based on position
-            resize_dir = self._get_resize_direction(event.pos())
-            self._update_cursor(resize_dir)
+            # Update hover state and cursor
+            corner = self._get_resize_corner(event.pos())
+            if corner != self.hover_corner:
+                self.hover_corner = corner
+                self.update()  # Trigger repaint for hover effect
+            self._update_cursor(corner)
 
 
-    def mouseReleaseEvent(self, event): #vers 1
+    def mouseReleaseEvent(self, event): #vers 2
         """Handle mouse release"""
         if event.button() == Qt.MouseButton.LeftButton:
             self.dragging = False
             self.resizing = False
-            self.resize_direction = None
+            self.resize_corner = None
             self.setCursor(Qt.CursorShape.ArrowCursor)
             event.accept()
+
+
+    def _handle_corner_resize(self, global_pos): #vers 2
+        """Handle window resizing from corners"""
+        if not self.resize_corner or not self.drag_position:
+            return
+
+        delta = global_pos - self.drag_position
+        geometry = self.initial_geometry
+
+        min_width = 800
+        min_height = 600
+
+        # Calculate new geometry based on corner
+        if self.resize_corner == "top-left":
+            # Move top-left corner
+            new_x = geometry.x() + delta.x()
+            new_y = geometry.y() + delta.y()
+            new_width = geometry.width() - delta.x()
+            new_height = geometry.height() - delta.y()
+
+            if new_width >= min_width and new_height >= min_height:
+                self.setGeometry(new_x, new_y, new_width, new_height)
+
+        elif self.resize_corner == "top-right":
+            # Move top-right corner
+            new_y = geometry.y() + delta.y()
+            new_width = geometry.width() + delta.x()
+            new_height = geometry.height() - delta.y()
+
+            if new_width >= min_width and new_height >= min_height:
+                self.setGeometry(geometry.x(), new_y, new_width, new_height)
+
+        elif self.resize_corner == "bottom-left":
+            # Move bottom-left corner
+            new_x = geometry.x() + delta.x()
+            new_width = geometry.width() - delta.x()
+            new_height = geometry.height() + delta.y()
+
+            if new_width >= min_width and new_height >= min_height:
+                self.setGeometry(new_x, geometry.y(), new_width, new_height)
+
+        elif self.resize_corner == "bottom-right":
+            # Move bottom-right corner
+            new_width = geometry.width() + delta.x()
+            new_height = geometry.height() + delta.y()
+
+            if new_width >= min_width and new_height >= min_height:
+                self.resize(new_width, new_height)
+
 
     def resizeEvent(self, event): #vers 1
         '''Keep resize grip in bottom-right corner'''
