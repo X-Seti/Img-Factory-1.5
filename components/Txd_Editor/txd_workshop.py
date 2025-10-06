@@ -2203,7 +2203,7 @@ class TXDWorkshop(QWidget): #vers 3
         """Apply theme from main window"""
         try:
             if self.main_window and hasattr(self.main_window, 'app_settings'):
-                from components.Txd_Editor.txd_workshop_theme import apply_theme_to_workshop, connect_workshop_to_theme_system
+                from depends.txd_workshop_theme import apply_theme_to_workshop, connect_workshop_to_theme_system
                 apply_theme_to_workshop(self, self.main_window)
                 connect_workshop_to_theme_system(self, self.main_window)
         except:
