@@ -1013,12 +1013,12 @@ class TXDWorkshop(QWidget): #vers 3
         layout.addStretch()
 
         # Drag button [D]
-        self.drag_btn = QPushButton("D")
-        self.drag_btn.setMinimumWidth(40)
-        self.drag_btn.setMaximumWidth(40)
-        self.drag_btn.setMinimumHeight(30)
-        self.drag_btn.setToolTip("Drag to move window")
-        self.drag_btn.setStyleSheet("""
+        self.dock_btn = QPushButton("D")
+        self.dock_btn.setMinimumWidth(40)
+        self.dock_btn.setMaximumWidth(40)
+        self.dock_btn.setMinimumHeight(30)
+        self.dock_btn.setToolTip("Dock")
+        self.dock_btn.setStyleSheet("""
             QPushButton {
                 font-weight: bold;
                 background-color: #4a4a4a;
@@ -1029,8 +1029,8 @@ class TXDWorkshop(QWidget): #vers 3
                 background-color: #5a5a5a;
             }
         """)
-        self.drag_btn.setCursor(Qt.CursorShape.SizeAllCursor)
-        layout.addWidget(self.drag_btn)
+        self.dock_btn.clicked.connect(self.toggle_dock_mode)
+        layout.addWidget(self.dock_btn)
 
         # Tear-off button [T] - only in IMG Factory mode
         if not self.standalone_mode:
