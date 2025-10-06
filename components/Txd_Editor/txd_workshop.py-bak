@@ -13,7 +13,7 @@ import subprocess
 import shutil
 import struct
 from typing import Optional, List, Dict
-from PyQt6.QtWidgets import (QApplication,
+from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QListWidget, QDialog, QFormLayout,
     QListWidgetItem, QLabel, QPushButton, QFrame, QFileDialog, QLineEdit, QTextEdit,
     QMessageBox, QScrollArea, QGroupBox, QTableWidget, QTableWidgetItem, QColorDialog,
@@ -151,10 +151,6 @@ class TXDWorkshop(QWidget): #vers 3
         self.standalone_mode = (main_window is None)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
 
-        # NEW: Docking state
-        self.is_docked = False
-        self.dock_widget = None
-
         self.setWindowTitle("TXD Workshop: No File")
         self.resize(1400, 800)
         self._initialize_features()
@@ -276,88 +272,6 @@ class TXDWorkshop(QWidget): #vers 3
 
         dialog.exec()
 
-    def keyPressEvent(self, event): #vers 1
-        """Handle keyboard shortcuts"""
-        from PyQt6.QtCore import Qt
-
-        # D key - Dock/Undock toggle
-        if event.key() == Qt.Key.Key_D and not event.modifiers():
-            self.toggle_dock_mode()
-            event.accept()
-            return
-
-        # T key - Tear out (same as undock)
-        if event.key() == Qt.Key.Key_T and not event.modifiers():
-            if self.is_docked:
-                self._undock_from_main()
-            event.accept()
-            return
-
-        super().keyPressEvent(event)
-
-    def toggle_dock_mode(self): #vers 1
-        """Toggle between docked and standalone mode"""
-        if self.is_docked:
-            self._undock_from_main()
-        else:
-            self._dock_to_main()
-
-    def _dock_to_main(self): #vers 1
-        """Dock TXD Workshop into IMG Factory as a tab"""
-        if not self.main_window:
-            print("No main window available for docking")
-            return
-
-        # Check if main window has tab system
-        if not hasattr(self.main_window, 'content_tabs'):
-            print("Main window does not support tabs")
-            return
-
-        # Create dock widget if it doesn't exist
-        if not self.dock_widget:
-            from PyQt6.QtWidgets import QWidget, QVBoxLayout
-            self.dock_widget = QWidget()
-            layout = QVBoxLayout(self.dock_widget)
-            layout.setContentsMargins(0, 0, 0, 0)
-            layout.addWidget(self)
-
-        # Add as new tab
-        tab_index = self.main_window.content_tabs.addTab(
-            self.dock_widget,
-            "TXD Workshop"
-        )
-        self.main_window.content_tabs.setCurrentIndex(tab_index)
-
-        self.is_docked = True
-
-        if hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message("TXD Workshop docked")
-
-    def _undock_from_main(self): #vers 1
-        """Undock TXD Workshop into standalone window"""
-        if not self.main_window or not self.dock_widget:
-            return
-
-        # Remove from tabs
-        if hasattr(self.main_window, 'content_tabs'):
-            for i in range(self.main_window.content_tabs.count()):
-                if self.main_window.content_tabs.widget(i) == self.dock_widget:
-                    self.main_window.content_tabs.removeTab(i)
-                    break
-
-        # Remove from dock widget
-        self.setParent(None)
-
-        # Show as standalone window
-        self.setWindowTitle("TXD Workshop - Standalone")
-        self.resize(1200, 800)
-        self.show()
-
-        self.is_docked = False
-
-        if hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message("TXD Workshop undocked")
-
 
     def _apply_button_mode(self, dialog): #vers 1
         """Apply button display mode"""
@@ -435,36 +349,30 @@ class TXDWorkshop(QWidget): #vers 3
                 self._apply_button_mode_to_button(button, btn_text)
 
 
-    def _apply_button_mode_to_button(self, button, text): #vers 3
-        """Apply display mode to a single button with proper spacing"""
+    def _apply_button_mode_to_button(self, button, text): #vers 2
+        """Apply display mode to a single button"""
         # Store original icon if not already stored
         if not hasattr(button, '_original_icon'):
             button._original_icon = button.icon()
 
         if self.button_display_mode == 'icons':
-            # Icons only - hide text, compact size
+            # Icons only - hide text
             button.setText("")
             if not button._original_icon.isNull():
                 button.setIcon(button._original_icon)
-                button.setIconSize(QSize(20, 20))
-            button.setMinimumWidth(32)
-            button.setMaximumWidth(32)
+                button.setIconSize(QSize(24, 24))  # Larger icons
 
         elif self.button_display_mode == 'text':
-            # Text only - show text, hide icon, auto-size
+            # Text only - show text, hide icon
             button.setText(text)
-            button.setIcon(QIcon())
-            button.setMinimumWidth(60)  # Minimum for text readability
-            button.setMaximumWidth(16777215)  # No max limit
+            button.setIcon(QIcon())  # Remove icon temporarily
 
         elif self.button_display_mode == 'both':
-            # Icons + Text - show both, normal size
+            # Icons + Text - show both
             button.setText(text)
             if not button._original_icon.isNull():
                 button.setIcon(button._original_icon)
-                button.setIconSize(QSize(16, 16))
-            button.setMinimumWidth(80)
-            button.setMaximumWidth(16777215)
+                button.setIconSize(QSize(20, 20))  # Normal icon size
 
 
     def _initialize_features(self): #vers 1
@@ -1344,17 +1252,22 @@ class TXDWorkshop(QWidget): #vers 3
 
         # === LINE 2: Size + Format + Bit Depth + Buttons (MERGED) ===
         size_format_layout = QHBoxLayout()
-        size_format_layout.setSpacing(5)
 
         # Size label
-        self.info_size = QLabel("Size: -")
+        self.info_size = QLabel("Size: ")
         self.info_size.setMinimumWidth(100)
         size_format_layout.addWidget(self.info_size)
 
         # Format label
-        self.format_status_label = QLabel("Format: -")
+        self.format_status_label = QLabel("Format: ")
         self.format_status_label.setMinimumWidth(90)
         size_format_layout.addWidget(self.format_status_label)
+
+        # Bit depth indicator
+        self.info_bitdepth = QLabel("[32bit]")
+        self.info_bitdepth.setStyleSheet("font-weight: bold; padding: 3px 8px; border: 1px solid #3a3a3a;")
+        self.info_bitdepth.setMaximumWidth(90)
+        size_format_layout.addWidget(self.info_bitdepth)
 
         size_format_layout.addStretch()
 
@@ -1366,160 +1279,130 @@ class TXDWorkshop(QWidget): #vers 3
         self.format_combo.setMaximumWidth(100)
         size_format_layout.addWidget(self.format_combo)
 
-        # Bit depth indicator (read-only display)
-        self.info_bitdepth = QLabel("[32bit]")
-        self.info_bitdepth.setStyleSheet("font-weight: bold; padding: 3px 8px; border: 1px solid #3a3a3a;")
-        self.info_bitdepth.setMinimumWidth(50)
-        size_format_layout.addWidget(self.info_bitdepth)
 
-        # Buttons with TEXT AND ICONS (FIXED)
-        self.bitdepth_btn = QPushButton("Bit Depth")
+        # Buttons with icons
+        self.bitdepth_btn = QPushButton()
         self.bitdepth_btn.setIcon(self._create_bitdepth_icon())
         self.bitdepth_btn.setIconSize(QSize(16, 16))
-        self.bitdepth_btn.setToolTip("Change bit depth")
+        self.bitdepth_btn.setToolTip("Change Bit Depth")
         self.bitdepth_btn.clicked.connect(self._change_bit_depth)
         self.bitdepth_btn.setEnabled(False)
-        print(f"Created bitdepth icon: {not self.bitdepth_btn.icon().isNull()}")  # ADD THIS
-
+        self.bitdepth_btn.setMaximumWidth(32)
         size_format_layout.addWidget(self.bitdepth_btn)
 
-        self.resize_btn = QPushButton("Resize")
+        self.resize_btn = QPushButton()
         self.resize_btn.setIcon(self._create_resize_icon())
         self.resize_btn.setIconSize(QSize(16, 16))
-        self.resize_btn.setToolTip("Resize texture")
+        self.resize_btn.setToolTip("Resize Texture")
         self.resize_btn.clicked.connect(self._resize_texture)
         self.resize_btn.setEnabled(False)
-        print(f"Created resize icon: {not self.resize_btn.icon().isNull()}")  # ADD THIS
+        self.resize_btn.setMaximumWidth(32)
         size_format_layout.addWidget(self.resize_btn)
 
-        self.upscale_btn = QPushButton("AI Upscale")
+        self.upscale_btn = QPushButton()
         self.upscale_btn.setIcon(self._create_upscale_icon())
         self.upscale_btn.setIconSize(QSize(16, 16))
-        self.upscale_btn.setToolTip("AI upscale texture")
+        self.upscale_btn.setToolTip("AI Upscale")
         self.upscale_btn.clicked.connect(self._upscale_texture)
         self.upscale_btn.setEnabled(False)
+        self.upscale_btn.setMaximumWidth(32)
         size_format_layout.addWidget(self.upscale_btn)
 
-        self.compress_btn = QPushButton("Compress")
+        self.compress_btn = QPushButton()
         self.compress_btn.setIcon(self._create_compress_icon())
         self.compress_btn.setIconSize(QSize(16, 16))
-        self.compress_btn.setToolTip("Compress texture")
+        self.compress_btn.setToolTip("Compress")
         self.compress_btn.clicked.connect(self._compress_texture)
         self.compress_btn.setEnabled(False)
+        self.compress_btn.setMaximumWidth(32)
         size_format_layout.addWidget(self.compress_btn)
 
-        self.uncompress_btn = QPushButton("Uncompress")
+        self.uncompress_btn = QPushButton()
         self.uncompress_btn.setIcon(self._create_uncompress_icon())
         self.uncompress_btn.setIconSize(QSize(16, 16))
-        self.uncompress_btn.setToolTip("Uncompress texture")
+        self.uncompress_btn.setToolTip("Uncompress")
         self.uncompress_btn.clicked.connect(self._uncompress_texture)
         self.uncompress_btn.setEnabled(False)
+        self.uncompress_btn.setMaximumWidth(32)
         size_format_layout.addWidget(self.uncompress_btn)
 
         info_layout.addLayout(size_format_layout)
 
         # === LINE 3: Mipmaps + Bumpmaps (MERGED) ===
-
         mipbump_layout = QHBoxLayout()
-        mipbump_layout.setSpacing(5)  # Consistent spacing
 
         # Mipmaps section
-        self.info_format = QLabel("Mipmaps: None")
-        self.info_format.setMinimumWidth(100)
-        self.info_format.setStyleSheet("font-weight: bold;")
+        self.info_format = QLabel("Mipmaps:")
+        self.info_format.setMinimumWidth(70)
         mipbump_layout.addWidget(self.info_format)
 
-        # Mipmap buttons - ensure they have icons
-        self.show_mipmaps_btn = QPushButton("View")
+        self.show_mipmaps_btn = QPushButton()
         self.show_mipmaps_btn.setIcon(self._create_view_icon())
         self.show_mipmaps_btn.setIconSize(QSize(16, 16))
-        self.show_mipmaps_btn.setToolTip("View all mipmap levels")
+        self.show_mipmaps_btn.setToolTip("View Mipmaps")
         self.show_mipmaps_btn.clicked.connect(self._open_mipmap_manager)
         self.show_mipmaps_btn.setEnabled(False)
+        self.show_mipmaps_btn.setMaximumWidth(32)
         mipbump_layout.addWidget(self.show_mipmaps_btn)
 
-        self.create_mipmaps_btn = QPushButton("Create")
+        self.create_mipmaps_btn = QPushButton()
         self.create_mipmaps_btn.setIcon(self._create_add_icon())
         self.create_mipmaps_btn.setIconSize(QSize(16, 16))
-        self.create_mipmaps_btn.setToolTip("Generate mipmaps")
+        self.create_mipmaps_btn.setToolTip("Create Mipmaps")
         self.create_mipmaps_btn.clicked.connect(self._create_mipmaps_dialog)
         self.create_mipmaps_btn.setEnabled(False)
+        self.create_mipmaps_btn.setMaximumWidth(32)
         mipbump_layout.addWidget(self.create_mipmaps_btn)
 
-        self.remove_mipmaps_btn = QPushButton("Remove")
+        self.remove_mipmaps_btn = QPushButton()
         self.remove_mipmaps_btn.setIcon(self._create_delete_icon())
         self.remove_mipmaps_btn.setIconSize(QSize(16, 16))
-        self.remove_mipmaps_btn.setToolTip("Remove all mipmaps")
+        self.remove_mipmaps_btn.setToolTip("Remove Mipmaps")
         self.remove_mipmaps_btn.clicked.connect(self._remove_mipmaps)
         self.remove_mipmaps_btn.setEnabled(False)
+        self.remove_mipmaps_btn.setMaximumWidth(32)
         mipbump_layout.addWidget(self.remove_mipmaps_btn)
 
-        mipbump_layout.addSpacing(30)  # Spacer between sections
-
-        # Bumpmaps section
-        self.info_format_b = QLabel("Bumpmaps: No data")
-        self.info_format_b.setMinimumWidth(120)
-        self.info_format_b.setStyleSheet("font-weight: bold; color: #757575;")
-        mipbump_layout.addWidget(self.info_format_b)
-
-        # Bumpmap buttons - ensure they have icons
-        self.view_bumpmap_btn = QPushButton("View")
-        self.view_bumpmap_btn.setIcon(self._create_view_icon())
-        self.view_bumpmap_btn.setIconSize(QSize(16, 16))
-        self.view_bumpmap_btn.setToolTip("View bumpmap channel")
-        self.view_bumpmap_btn.clicked.connect(self._view_bumpmap)
-        self.view_bumpmap_btn.setEnabled(False)
-        mipbump_layout.addWidget(self.view_bumpmap_btn)
-
-        self.export_bumpmap_btn = QPushButton("Export")
-        self.export_bumpmap_btn.setIcon(self._create_export_icon())
-        self.export_bumpmap_btn.setIconSize(QSize(16, 16))
-        self.export_bumpmap_btn.setToolTip("Export bumpmap as PNG")
-        self.export_bumpmap_btn.clicked.connect(self._export_bumpmap)
-        self.export_bumpmap_btn.setEnabled(False)
-        mipbump_layout.addWidget(self.export_bumpmap_btn)
-
-        self.import_bumpmap_btn = QPushButton("Import")
-        self.import_bumpmap_btn.setIcon(self._create_import_icon())
-        self.import_bumpmap_btn.setIconSize(QSize(16, 16))
-        self.import_bumpmap_btn.setToolTip("Import bumpmap from image")
-        self.import_bumpmap_btn.clicked.connect(self._import_bumpmap)
-        self.import_bumpmap_btn.setEnabled(False)
-        mipbump_layout.addWidget(self.import_bumpmap_btn)
-
+        #mipbump_layout.addSpacing(20)
         mipbump_layout.addStretch()
 
+        # Bumpmaps section
+        self.info_format_b = QLabel("Bumpmaps:")
+        self.info_format_b.setMinimumWidth(80)
+        mipbump_layout.addWidget(self.info_format_b)
+
+        self.bumpmap_label = QLabel("No data")
+        self.bumpmap_label.setMinimumWidth(60)
+        mipbump_layout.addWidget(self.bumpmap_label)
+
+        self.view_bumpmap_btn = QPushButton()
+        self.view_bumpmap_btn.setIcon(self._create_view_icon())
+        self.view_bumpmap_btn.setIconSize(QSize(16, 16))
+        self.view_bumpmap_btn.setToolTip("View Bumpmap")
+        self.view_bumpmap_btn.clicked.connect(self._view_bumpmap)
+        self.view_bumpmap_btn.setEnabled(False)
+        self.view_bumpmap_btn.setMaximumWidth(32)
+        mipbump_layout.addWidget(self.view_bumpmap_btn)
+
+        self.export_bumpmap_btn = QPushButton()
+        self.export_bumpmap_btn.setIcon(self._create_export_icon())
+        self.export_bumpmap_btn.setIconSize(QSize(16, 16))
+        self.export_bumpmap_btn.setToolTip("Export Bumpmap")
+        self.export_bumpmap_btn.clicked.connect(self._export_bumpmap)
+        self.export_bumpmap_btn.setEnabled(False)
+        self.export_bumpmap_btn.setMaximumWidth(32)
+        mipbump_layout.addWidget(self.export_bumpmap_btn)
+
+        self.import_bumpmap_btn = QPushButton()
+        self.import_bumpmap_btn.setIcon(self._create_import_icon())
+        self.import_bumpmap_btn.setIconSize(QSize(16, 16))
+        self.import_bumpmap_btn.setToolTip("Import Bumpmap")
+        self.import_bumpmap_btn.clicked.connect(self._import_bumpmap)
+        self.import_bumpmap_btn.setEnabled(False)
+        self.import_bumpmap_btn.setMaximumWidth(32)
+        mipbump_layout.addWidget(self.import_bumpmap_btn)
+
         info_layout.addLayout(mipbump_layout)
-
-        # Debug - check if icons exist at creation time
-        if hasattr(self, 'main_window') and self.main_window:
-            print("\n=== ICON DEBUG ===")
-            print(f"Bitdepth: {not self.bitdepth_btn.icon().isNull()}")
-            print(f"Resize: {not self.resize_btn.icon().isNull()}")
-            print(f"Upscale: {not self.upscale_btn.icon().isNull()}")
-            print(f"Compress: {not self.compress_btn.icon().isNull()}")
-            print(f"Uncompress: {not self.uncompress_btn.icon().isNull()}")
-            print(f"View Mip: {not self.show_mipmaps_btn.icon().isNull()}")
-            print(f"Create Mip: {not self.create_mipmaps_btn.icon().isNull()}")
-            print(f"Remove Mip: {not self.remove_mipmaps_btn.icon().isNull()}")
-            print(f"View Bump: {not self.view_bumpmap_btn.icon().isNull()}")
-            print(f"Export Bump: {not self.export_bumpmap_btn.icon().isNull()}")
-            print(f"Import Bump: {not self.import_bumpmap_btn.icon().isNull()}")
-            print("==================\n")
-
-        if self.main_window:
-            for btn_name in ['bitdepth_btn', 'resize_btn', 'upscale_btn', 'compress_btn', 'uncompress_btn']:
-                if hasattr(self, btn_name):
-                    btn = getattr(self, btn_name)
-                    self.main_window.log_message(f"{btn_name} icon null: {btn.icon().isNull()}")
-
-        if self.main_window:
-            self.main_window.log_message("Testing icon creation:")
-            self.main_window.log_message(f"  Bitdepth: {self.bitdepth_btn.icon().isNull()}")
-            self.main_window.log_message(f"  Resize: {self.resize_btn.icon().isNull()}")
-            self.main_window.log_message(f"  Compress: {self.compress_btn.icon().isNull()}")
-            self.main_window.log_message(f"  View mip: {self.show_mipmaps_btn.icon().isNull()}")
-            self.main_window.log_message(f"  Create mip: {self.create_mipmaps_btn.icon().isNull()}")
 
         main_layout.addWidget(info_group)
         return panel
@@ -6145,48 +6028,57 @@ class TXDWorkshop(QWidget): #vers 3
 #class SvgIcons: #vers 1 - Once functions are updated this class will be moved to the bottom
     """SVG icon data to QIcon with theme color support"""
 
+    def _create_paste_icon(self):  # vers 1
+        """Create paste icon"""
+        svg_data = '''<svg viewBox="0 0 24 24">
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+                fill="none" stroke="currentColor" stroke-width="2"/>
+            <rect x="8" y="2" width="8" height="4" rx="1"
+                fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
 
-    def _create_bitdepth_icon(self): #vers 3
+    def _create_bitdepth_icon(self):  # vers 1
         """Create bit depth icon"""
-        svg_data = b'''<svg viewBox="0 0 24 24">
+        svg_data = '''<svg viewBox="0 0 24 24">
             <path fill="currentColor"
                 d="M3,5H9V11H3V5M5,7V9H7V7H5M11,7H21V9H11V7M11,15H21V17H11V15M5,20L1.5,16.5L2.91,15.09L5,17.17L9.59,12.59L11,14L5,20Z"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
-    def _create_resize_icon(self): #vers 2
+    def _create_resize_icon(self):  # vers 1
         """Create resize icon"""
-        svg_data = b'''<svg viewBox="0 0 24 24">
+        svg_data = '''<svg viewBox="0 0 24 24">
             <path fill="currentColor"
                 d="M10,21V19H6.41L10.91,14.5L9.5,13.09L5,17.59V14H3V21H10M14.5,10.91L19,6.41V10H21V3H14V5H17.59L13.09,9.5L14.5,10.91Z"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
-    def _create_upscale_icon(self): #vers 2
+    def _create_upscale_icon(self):  # vers 1
         """Create upscale icon"""
-        svg_data = b'''<svg viewBox="0 0 24 24">
+        svg_data = '''<svg viewBox="0 0 24 24">
             <path fill="currentColor" d="M7,15L12,10L17,15H7Z"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
-    def _create_compress_icon(self): #vers 2
+    def _create_compress_icon(self):  # vers 1
         """Create compress icon"""
-        svg_data = b'''<svg viewBox="0 0 24 24">
+        svg_data = '''<svg viewBox="0 0 24 24">
             <path fill="currentColor"
                 d="M4,2H20V4H13V10H20V12H4V10H11V4H4V2M4,13H20V15H13V21H20V23H4V21H11V15H4V13Z"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
-    def _create_uncompress_icon(self): #vers 2
+    def _create_uncompress_icon(self):  # vers 1
         """Create uncompress icon"""
-        svg_data = b'''<svg viewBox="0 0 24 24">
+        svg_data = '''<svg viewBox="0 0 24 24">
             <path fill="currentColor" d="M11,4V2H13V4H11M13,21V19H11V21H13M4,12V10H20V12H4Z"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
-    def _create_view_icon(self): #vers 2
+    def _create_view_icon(self):  # vers 1
         """Create view/eye icon"""
-        svg_data = b'''<svg viewBox="0 0 24 24">
+        svg_data = '''<svg viewBox="0 0 24 24">
             <path fill="currentColor"
                 d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9
                     M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17
@@ -6196,19 +6088,20 @@ class TXDWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
-    def _create_add_icon(self): #vers 2
+    def _create_add_icon(self):  # vers 1
         """Create add/plus icon"""
-        svg_data = b'''<svg viewBox="0 0 24 24">
+        svg_data = '''<svg viewBox="0 0 24 24">
             <path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
-    def _create_delete_icon(self): #vers 2
+    def _create_delete_icon(self):  # vers 1
         """Create delete/minus icon"""
-        svg_data = b'''<svg viewBox="0 0 24 24">
+        svg_data = '''<svg viewBox="0 0 24 24">
             <path fill="currentColor" d="M19,13H5V11H19V13Z"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_color_picker_icon(self): #vers 1
         """Color picker icon"""
@@ -9054,29 +8947,11 @@ def open_txd_workshop(main_window, img_path=None): #vers 3
         QMessageBox.critical(main_window, "Error", f"Failed to open TXD Workshop: {str(e)}")
         return None
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import sys
-    import traceback
+    from PyQt6.QtWidgets import QApplication
 
-    print("Starting TXD Workshop...")
-
-    try:
-        app = QApplication(sys.argv)
-        print("QApplication created")
-
-        workshop = TXDWorkshop()
-        print("TXDWorkshop instance created")
-
-        workshop.setWindowTitle("TXD Workshop - Standalone")
-        workshop.resize(1200, 800)
-        workshop.show()
-        print("Window shown, entering event loop")
-        print(f"Window visible: {workshop.isVisible()}")
-        print(f"Window geometry: {workshop.geometry()}")
-
-        sys.exit(app.exec())
-
-    except Exception as e:
-        print(f"ERROR: {e}")
-        traceback.print_exc()
-        sys.exit(1)
+    app = QApplication(sys.argv)
+    workshop = TXDWorkshop(None, None)
+    workshop.show()
+    sys.exit(app.exec())

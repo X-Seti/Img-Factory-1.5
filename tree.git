@@ -19,7 +19,13 @@
 │   ├── Txd_Converter
 │   │   └── txd_converter.py
 │   ├── Txd_Editor
+│   │   ├── depends
+│   │   │   ├── txd_serializer.py
+│   │   │   └── txd_versions.py
+│   │   ├── ImgFactoty1.5-combined.png
+│   │   ├── ImgFactoty1.5.png
 │   │   ├── txd_workshop.py
+│   │   ├── txd_workshop.py-bak
 │   │   └── txd_workshop_theme.py
 │   └── unified_signal_handler.py
 ├── core
@@ -145,6 +151,8 @@
 │   ├── tab_aware_functions.py
 │   ├── tab_functions.py
 │   ├── tables_structure.py-old
+│   ├── txd_serializer.py
+│   ├── txd_versions.py
 │   └── update_ui_for_loaded_img.py
 ├── templates
 │   └── new_templates.json
@@ -173,6 +181,7 @@
 │   ├── professional_light.json
 │   ├── red_dead_theme_dark.json
 │   ├── red_theme_dark.json
+│   ├── red_wine_dark.json
 │   ├── rockstar_dark.json
 │   ├── synthwave_outrun_dark.json
 │   ├── tea_and_toast_dark.json
@@ -328,4 +337,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-65 directories, 264 files
+66 directories, 272 files
