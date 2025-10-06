@@ -291,9 +291,8 @@ class TXDWorkshop(QWidget): #vers 3
         dialog.close()
 
 
-    def _update_all_buttons(self): #vers 1
+    def _update_all_buttons(self): #vers 2
         """Update all buttons to match display mode"""
-        # List of all buttons to update (add your button names here)
         buttons_to_update = [
             # Toolbar buttons
             ('open_img_btn', 'Open IMG'),
@@ -305,7 +304,6 @@ class TXDWorkshop(QWidget): #vers 3
             ('flip_btn', 'Switch'),
             ('props_btn', 'Properties'),
             ('info_btn', 'Info'),
-
             # Transform buttons
             ('flip_vert_btn', 'Flip V'),
             ('flip_horz_btn', 'Flip H'),
@@ -315,19 +313,27 @@ class TXDWorkshop(QWidget): #vers 3
             ('paste_btn', 'Paste'),
             ('edit_btn', 'Edit'),
             ('convert_btn', 'Convert'),
-
             # Manage buttons
             ('create_texture_btn', 'Create'),
             ('delete_texture_btn', 'Delete'),
             ('duplicate_texture_btn', 'Clone'),
-
             # Effects buttons
             ('filters_btn', 'Filters'),
-
+            ('paint_btn', 'Paint'),
+            # Format/Size buttons
+            ('bitdepth_btn', 'Bit Depth'),
+            ('resize_btn', 'Resize'),
+            ('upscale_btn', 'Upscale'),
+            ('compress_btn', 'Compress'),
+            ('uncompress_btn', 'Uncompress'),
             # Mipmap buttons
+            ('show_mipmaps_btn', 'View'),
             ('create_mipmaps_btn', 'Create'),
             ('remove_mipmaps_btn', 'Remove'),
-            ('show_mipmaps_btn', 'View'),
+            # Bumpmap buttons
+            ('view_bumpmap_btn', 'View'),
+            ('export_bumpmap_btn', 'Export'),
+            ('import_bumpmap_btn', 'Import'),
         ]
 
         # Adjust transform panel width based on mode
@@ -1182,8 +1188,8 @@ class TXDWorkshop(QWidget): #vers 3
                 self.main_window.log_message(f"Double-click error: {str(e)}")
 
 
-    def _create_right_panel(self): #vers 7
-        """Create right panel with editing controls - aligned button layout"""
+    def _create_right_panel(self): #vers 8
+        """Create right panel with editing controls - compact 3-line layout"""
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.StyledPanel)
         panel.setMinimumWidth(400)
@@ -1205,18 +1211,15 @@ class TXDWorkshop(QWidget): #vers 3
         preview_controls = self._create_preview_controls()
         top_layout.addWidget(preview_controls)
 
-        # Add the top horizontal layout to the main vertical layout
         main_layout.addLayout(top_layout)
 
-        # Information group below
+        # Information group below - COMPACT VERSION
         info_group = QGroupBox("Texture Information")
-
         info_layout = QVBoxLayout(info_group)
 
-        # Row 1: Texture name and alpha name (EDITABLE with labels outside)
+        # === LINE 1: Texture name and alpha name ===
         name_layout = QHBoxLayout()
 
-        # Texture name section
         name_label = QLabel("Name:")
         name_label.setStyleSheet("font-weight: bold;")
         name_layout.addWidget(name_label)
@@ -1230,7 +1233,6 @@ class TXDWorkshop(QWidget): #vers 3
         self.info_name.mousePressEvent = lambda e: self._enable_name_edit(e, False)
         name_layout.addWidget(self.info_name, stretch=1)
 
-        # Alpha name section (initially hidden)
         self.alpha_label = QLabel("Alpha:")
         self.alpha_label.setStyleSheet("font-weight: bold; color: red; margin-left: 10px;")
         self.alpha_label.setVisible(False)
@@ -1247,131 +1249,160 @@ class TXDWorkshop(QWidget): #vers 3
         name_layout.addWidget(self.info_alpha_name, stretch=1)
 
         info_layout.addLayout(name_layout)
-        info_layout.addSpacing(5)
 
+        # === LINE 2: Size + Format + Bit Depth + Buttons (MERGED) ===
+        size_format_layout = QHBoxLayout()
 
-        # Row 2: Size label (left) + buttons (right, aligned)
-        size_layout = QHBoxLayout()
-        self.info_size = QLabel("Size: -")
-        self.info_size.setMinimumWidth(120)
-        size_layout.addWidget(self.info_size)
+        # Size label
+        self.info_size = QLabel("Size: ")
+        self.info_size.setMinimumWidth(100)
+        size_format_layout.addWidget(self.info_size)
 
-        size_layout.addStretch()
+        # Format label
+        self.format_status_label = QLabel("Format: ")
+        self.format_status_label.setMinimumWidth(90)
+        size_format_layout.addWidget(self.format_status_label)
 
-        self.bitdepth_btn = QPushButton("Bit Depth")
-        self.bitdepth_btn.clicked.connect(self._change_bit_depth)
-        self.bitdepth_btn.setEnabled(False)
-        size_layout.addWidget(self.bitdepth_btn)
+        # Bit depth indicator
+        self.info_bitdepth = QLabel("[32bit]")
+        self.info_bitdepth.setStyleSheet("font-weight: bold; padding: 3px 8px; border: 1px solid #3a3a3a;")
+        self.info_bitdepth.setMaximumWidth(90)
+        size_format_layout.addWidget(self.info_bitdepth)
 
-        self.resize_btn = QPushButton("Resize")
-        self.resize_btn.clicked.connect(self._resize_texture)
-        self.resize_btn.setEnabled(False)
-        size_layout.addWidget(self.resize_btn)
+        size_format_layout.addStretch()
 
-        self.upscale_btn = QPushButton("AI Upscale")
-        self.upscale_btn.clicked.connect(self._upscale_texture)
-        self.upscale_btn.setEnabled(False)
-        size_layout.addWidget(self.upscale_btn)
-
-        info_layout.addLayout(size_layout)
-
-        # Row 3: Format label (left) + dropdown, buttons, and bit depth indicator (right, aligned)
-        format_layout = QHBoxLayout()
-
-        self.format_status_label = QLabel("Format: -")
-        self.format_status_label.setMinimumWidth(120)
-        format_layout.addWidget(self.format_status_label)
-
-        format_layout.addStretch()
-
+        # Format dropdown
         self.format_combo = QComboBox()
         self.format_combo.addItems(["DXT1", "DXT3", "DXT5", "ARGB8888", "ARGB1555", "ARGB4444", "RGB888", "RGB565"])
         self.format_combo.currentTextChanged.connect(self._change_format)
         self.format_combo.setEnabled(False)
-        format_layout.addWidget(self.format_combo)
+        self.format_combo.setMaximumWidth(100)
+        size_format_layout.addWidget(self.format_combo)
 
-        self.compress_btn = QPushButton("Compress")
+
+        # Buttons with icons
+        self.bitdepth_btn = QPushButton()
+        self.bitdepth_btn.setIcon(self._create_bitdepth_icon())
+        self.bitdepth_btn.setIconSize(QSize(16, 16))
+        self.bitdepth_btn.setToolTip("Change Bit Depth")
+        self.bitdepth_btn.clicked.connect(self._change_bit_depth)
+        self.bitdepth_btn.setEnabled(False)
+        self.bitdepth_btn.setMaximumWidth(32)
+        size_format_layout.addWidget(self.bitdepth_btn)
+
+        self.resize_btn = QPushButton()
+        self.resize_btn.setIcon(self._create_resize_icon())
+        self.resize_btn.setIconSize(QSize(16, 16))
+        self.resize_btn.setToolTip("Resize Texture")
+        self.resize_btn.clicked.connect(self._resize_texture)
+        self.resize_btn.setEnabled(False)
+        self.resize_btn.setMaximumWidth(32)
+        size_format_layout.addWidget(self.resize_btn)
+
+        self.upscale_btn = QPushButton()
+        self.upscale_btn.setIcon(self._create_upscale_icon())
+        self.upscale_btn.setIconSize(QSize(16, 16))
+        self.upscale_btn.setToolTip("AI Upscale")
+        self.upscale_btn.clicked.connect(self._upscale_texture)
+        self.upscale_btn.setEnabled(False)
+        self.upscale_btn.setMaximumWidth(32)
+        size_format_layout.addWidget(self.upscale_btn)
+
+        self.compress_btn = QPushButton()
+        self.compress_btn.setIcon(self._create_compress_icon())
+        self.compress_btn.setIconSize(QSize(16, 16))
+        self.compress_btn.setToolTip("Compress")
         self.compress_btn.clicked.connect(self._compress_texture)
         self.compress_btn.setEnabled(False)
-        format_layout.addWidget(self.compress_btn)
+        self.compress_btn.setMaximumWidth(32)
+        size_format_layout.addWidget(self.compress_btn)
 
-        self.uncompress_btn = QPushButton("Uncompress")
+        self.uncompress_btn = QPushButton()
+        self.uncompress_btn.setIcon(self._create_uncompress_icon())
+        self.uncompress_btn.setIconSize(QSize(16, 16))
+        self.uncompress_btn.setToolTip("Uncompress")
         self.uncompress_btn.clicked.connect(self._uncompress_texture)
         self.uncompress_btn.setEnabled(False)
-        format_layout.addWidget(self.uncompress_btn)
+        self.uncompress_btn.setMaximumWidth(32)
+        size_format_layout.addWidget(self.uncompress_btn)
 
-        # Bit depth indicator (read-only display)
-        self.info_bitdepth = QLabel("[32bit]")
-        self.info_bitdepth.setStyleSheet("font-weight: bold; padding: 5px; border: 1px solid #3a3a3a;")
-        format_layout.addWidget(self.info_bitdepth)
+        info_layout.addLayout(size_format_layout)
 
-        info_layout.addLayout(format_layout)
+        # === LINE 3: Mipmaps + Bumpmaps (MERGED) ===
+        mipbump_layout = QHBoxLayout()
 
-        # Row 4: Mipmaps label (left) + buttons (left, aligned)
-
-        # Should show Mipmaps: [View] [Create] [Remove] - Bumpmaps: [View] [Import] [Export]
-        mipmap_layout = QHBoxLayout()
+        # Mipmaps section
         self.info_format = QLabel("Mipmaps:")
-        self.info_format.setMinimumWidth(60)
-        mipmap_layout.addWidget(self.info_format)
+        self.info_format.setMinimumWidth(70)
+        mipbump_layout.addWidget(self.info_format)
 
-        mipmap_layout.addStretch()
-
-        # View button - opens mipmap manager
-        self.show_mipmaps_btn = QPushButton("View")
+        self.show_mipmaps_btn = QPushButton()
+        self.show_mipmaps_btn.setIcon(self._create_view_icon())
+        self.show_mipmaps_btn.setIconSize(QSize(16, 16))
+        self.show_mipmaps_btn.setToolTip("View Mipmaps")
         self.show_mipmaps_btn.clicked.connect(self._open_mipmap_manager)
         self.show_mipmaps_btn.setEnabled(False)
-        self.show_mipmaps_btn.setToolTip("View all mipmap levels")
-        mipmap_layout.addWidget(self.show_mipmaps_btn)
+        self.show_mipmaps_btn.setMaximumWidth(32)
+        mipbump_layout.addWidget(self.show_mipmaps_btn)
 
-        # Create button - opens depth slider dialog
-        self.create_mipmaps_btn = QPushButton("Create")
+        self.create_mipmaps_btn = QPushButton()
+        self.create_mipmaps_btn.setIcon(self._create_add_icon())
+        self.create_mipmaps_btn.setIconSize(QSize(16, 16))
+        self.create_mipmaps_btn.setToolTip("Create Mipmaps")
         self.create_mipmaps_btn.clicked.connect(self._create_mipmaps_dialog)
         self.create_mipmaps_btn.setEnabled(False)
-        self.create_mipmaps_btn.setToolTip("Generate mipmaps with depth selection")
-        mipmap_layout.addWidget(self.create_mipmaps_btn)
+        self.create_mipmaps_btn.setMaximumWidth(32)
+        mipbump_layout.addWidget(self.create_mipmaps_btn)
 
-        # Remove button - strips all mipmaps except level 0
-        self.remove_mipmaps_btn = QPushButton("Remove")
+        self.remove_mipmaps_btn = QPushButton()
+        self.remove_mipmaps_btn.setIcon(self._create_delete_icon())
+        self.remove_mipmaps_btn.setIconSize(QSize(16, 16))
+        self.remove_mipmaps_btn.setToolTip("Remove Mipmaps")
         self.remove_mipmaps_btn.clicked.connect(self._remove_mipmaps)
         self.remove_mipmaps_btn.setEnabled(False)
-        self.remove_mipmaps_btn.setToolTip("Remove all mipmap levels")
-        mipmap_layout.addWidget(self.remove_mipmaps_btn)
+        self.remove_mipmaps_btn.setMaximumWidth(32)
+        mipbump_layout.addWidget(self.remove_mipmaps_btn)
 
-        info_layout.addLayout(mipmap_layout)
+        #mipbump_layout.addSpacing(20)
+        mipbump_layout.addStretch()
 
-        # Bumpmap Section Right - should be info_formatb
-        bumpmap_layout = QHBoxLayout()
+        # Bumpmaps section
         self.info_format_b = QLabel("Bumpmaps:")
-        self.info_format_b.setMinimumWidth(60)
-        bumpmap_layout.addWidget(self.info_format_b)
+        self.info_format_b.setMinimumWidth(80)
+        mipbump_layout.addWidget(self.info_format_b)
 
-        bumpmap_layout.addStretch()
+        self.bumpmap_label = QLabel("No data")
+        self.bumpmap_label.setMinimumWidth(60)
+        mipbump_layout.addWidget(self.bumpmap_label)
 
-        self.bumpmap_label = QLabel("No bumpmap data")
-        self.bumpmap_label.setWordWrap(True)
-        bumpmap_layout.addWidget(self.bumpmap_label)
-
-        # Bumpmap buttons
-        self.view_bumpmap_btn = QPushButton("View")
+        self.view_bumpmap_btn = QPushButton()
+        self.view_bumpmap_btn.setIcon(self._create_view_icon())
+        self.view_bumpmap_btn.setIconSize(QSize(16, 16))
+        self.view_bumpmap_btn.setToolTip("View Bumpmap")
         self.view_bumpmap_btn.clicked.connect(self._view_bumpmap)
         self.view_bumpmap_btn.setEnabled(False)
-        self.view_bumpmap_btn.setToolTip("View Bumpmaps")
-        bumpmap_layout.addWidget(self.view_bumpmap_btn)
+        self.view_bumpmap_btn.setMaximumWidth(32)
+        mipbump_layout.addWidget(self.view_bumpmap_btn)
 
-        self.export_bumpmap_btn = QPushButton("Export")
+        self.export_bumpmap_btn = QPushButton()
+        self.export_bumpmap_btn.setIcon(self._create_export_icon())
+        self.export_bumpmap_btn.setIconSize(QSize(16, 16))
+        self.export_bumpmap_btn.setToolTip("Export Bumpmap")
         self.export_bumpmap_btn.clicked.connect(self._export_bumpmap)
         self.export_bumpmap_btn.setEnabled(False)
-        self.export_bumpmap_btn.setToolTip("Export Bump Maps")
-        bumpmap_layout.addWidget(self.export_bumpmap_btn)
+        self.export_bumpmap_btn.setMaximumWidth(32)
+        mipbump_layout.addWidget(self.export_bumpmap_btn)
 
-        self.import_bumpmap_btn = QPushButton("Import")
+        self.import_bumpmap_btn = QPushButton()
+        self.import_bumpmap_btn.setIcon(self._create_import_icon())
+        self.import_bumpmap_btn.setIconSize(QSize(16, 16))
+        self.import_bumpmap_btn.setToolTip("Import Bumpmap")
         self.import_bumpmap_btn.clicked.connect(self._import_bumpmap)
         self.import_bumpmap_btn.setEnabled(False)
-        self.import_bumpmap_btn.setToolTip("Import Bump Maps")
-        bumpmap_layout.addWidget(self.import_bumpmap_btn)
+        self.import_bumpmap_btn.setMaximumWidth(32)
+        mipbump_layout.addWidget(self.import_bumpmap_btn)
 
-        info_layout.addLayout(bumpmap_layout)
+        info_layout.addLayout(mipbump_layout)
 
         main_layout.addWidget(info_group)
         return panel
@@ -1418,6 +1449,28 @@ class TXDWorkshop(QWidget): #vers 3
 
                 if self.main_window and hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message(f"✅ Bit depth changed: {current_depth}bit → {new_depth}bit")
+
+
+    def _has_bumpmap_data(self, texture_data: dict) -> bool: #vers 1
+        """Check if texture has bumpmap data"""
+        try:
+            # Check explicit flag
+            if texture_data.get('has_bumpmap', False):
+                return True
+
+            # Check for bumpmap data key
+            if 'bumpmap_data' in texture_data and texture_data['bumpmap_data']:
+                return True
+
+            # Check raster format flags
+            flags = texture_data.get('raster_format_flags', 0)
+            if flags & 0x10:  # Environment map bit
+                return True
+
+            return False
+
+        except Exception:
+            return False
 
 
     def _mipmap_io_menu(self): #vers 1
@@ -2301,7 +2354,7 @@ class TXDWorkshop(QWidget): #vers 3
         self.texture_table.itemDoubleClicked.connect(self._on_texture_table_double_click)
 
 
-    def _on_texture_selected(self): #vers 5
+    def _on_texture_selected(self): #vers 6
         """Handle texture selection - UNIFIED VERSION"""
         try:
             row = self.texture_table.currentRow()
@@ -2330,7 +2383,8 @@ class TXDWorkshop(QWidget): #vers 3
                     self.compress_btn.setEnabled(False)
                 if hasattr(self, 'uncompress_btn'):
                     self.uncompress_btn.setEnabled(False)
-
+                if hasattr(self, 'bitdepth_btn'):
+                    self.bitdepth_btn.setEnabled(False)
 
                 # Disable mipmap buttons
                 if hasattr(self, 'create_mipmaps_btn'):
@@ -2340,28 +2394,47 @@ class TXDWorkshop(QWidget): #vers 3
                 if hasattr(self, 'show_mipmaps_btn'):
                     self.show_mipmaps_btn.setEnabled(False)
 
+                # Disable bumpmap buttons
+                if hasattr(self, 'view_bumpmap_btn'):
+                    self.view_bumpmap_btn.setEnabled(False)
+                if hasattr(self, 'export_bumpmap_btn'):
+                    self.export_bumpmap_btn.setEnabled(False)
+                if hasattr(self, 'import_bumpmap_btn'):
+                    self.import_bumpmap_btn.setEnabled(False)
 
-                self._update_editing_controls()
-                self._update_status_indicators()
+                # Disable transform buttons
+                if hasattr(self, 'flip_vert_btn'):
+                    self.flip_vert_btn.setEnabled(False)
+                if hasattr(self, 'flip_horz_btn'):
+                    self.flip_horz_btn.setEnabled(False)
+                if hasattr(self, 'rotate_cw_btn'):
+                    self.rotate_cw_btn.setEnabled(False)
+                if hasattr(self, 'rotate_ccw_btn'):
+                    self.rotate_ccw_btn.setEnabled(False)
+
                 return
 
-            # Valid selection - enable buttons
+            # Valid selection - get texture data
             self.selected_texture = self.texture_list[row]
 
-            # Check mipmap state FIRST
+            # Check mipmap state
             mipmap_levels = self.selected_texture.get('mipmap_levels', [])
             num_levels = len(mipmap_levels)
             has_mipmaps = num_levels > 1
+
+            # Check bumpmap state
+            has_bumpmap = self._has_bumpmap_data(self.selected_texture) if hasattr(self, '_has_bumpmap_data') else False
+            can_support_bumpmap = is_bumpmap_supported(self.txd_version_id, self.txd_device_id) if self.txd_version_id else False
+
+            # Update display FIRST (this should show the texture preview)
+            self._update_texture_info(self.selected_texture)
 
             # Debug log
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(
                     f"Selected: {self.selected_texture.get('name')} | "
-                    f"Levels: {num_levels} | Has mipmaps: {has_mipmaps}"
+                    f"Levels: {num_levels} | Mipmaps: {has_mipmaps} | Bumpmap: {has_bumpmap}"
                 )
-
-            # Update display
-            self._update_texture_info(self.selected_texture)
 
             # Enable basic buttons
             self.export_btn.setEnabled(True)
@@ -2382,32 +2455,31 @@ class TXDWorkshop(QWidget): #vers 3
                 self.compress_btn.setEnabled(True)
             if hasattr(self, 'uncompress_btn'):
                 self.uncompress_btn.setEnabled(True)
+            if hasattr(self, 'bitdepth_btn'):
+                self.bitdepth_btn.setEnabled(True)
 
             # Flip button - enable only if has alpha
             if hasattr(self, 'flip_btn'):
                 has_alpha = self.selected_texture.get('has_alpha', False)
                 self.flip_btn.setEnabled(has_alpha)
-                if has_alpha:
-                    self.flip_btn.setText("Switch")
-                    self.flip_btn.setToolTip("Toggle between normal and alpha view")
-                else:
-                    self.flip_btn.setText("Switch")
-                    self.flip_btn.setToolTip("No alpha channel to view")
 
-            # MIPMAP BUTTONS - Correct logic
+            # Mipmap buttons
             if hasattr(self, 'create_mipmaps_btn'):
-                # Create enabled when NO mipmaps (only level 0 or empty)
                 self.create_mipmaps_btn.setEnabled(not has_mipmaps)
-
             if hasattr(self, 'remove_mipmaps_btn'):
-                # Remove enabled when HAS mipmaps
                 self.remove_mipmaps_btn.setEnabled(has_mipmaps)
-
             if hasattr(self, 'show_mipmaps_btn'):
-                # View enabled when HAS mipmaps
                 self.show_mipmaps_btn.setEnabled(has_mipmaps)
 
-            # Enable transform buttons
+            # Bumpmap buttons
+            if hasattr(self, 'view_bumpmap_btn'):
+                self.view_bumpmap_btn.setEnabled(has_bumpmap)
+            if hasattr(self, 'export_bumpmap_btn'):
+                self.export_bumpmap_btn.setEnabled(has_bumpmap)
+            if hasattr(self, 'import_bumpmap_btn'):
+                self.import_bumpmap_btn.setEnabled(can_support_bumpmap)
+
+            # Transform buttons
             if hasattr(self, 'flip_vert_btn'):
                 self.flip_vert_btn.setEnabled(True)
             if hasattr(self, 'flip_horz_btn'):
@@ -2416,6 +2488,8 @@ class TXDWorkshop(QWidget): #vers 3
                 self.rotate_cw_btn.setEnabled(True)
             if hasattr(self, 'rotate_ccw_btn'):
                 self.rotate_ccw_btn.setEnabled(True)
+
+            # Additional buttons
             if hasattr(self, 'copy_btn'):
                 self.copy_btn.setEnabled(True)
             if hasattr(self, 'paste_btn'):
@@ -2424,32 +2498,14 @@ class TXDWorkshop(QWidget): #vers 3
                 self.edit_btn.setEnabled(True)
             if hasattr(self, 'convert_btn'):
                 self.convert_btn.setEnabled(True)
-            if hasattr(self, 'delete_texture_btn'):
-                self.delete_texture_btn.setEnabled(True)
-            if hasattr(self, 'duplicate_texture_btn'):
-                self.duplicate_texture_btn.setEnabled(True)
             if hasattr(self, 'paint_btn'):
                 self.paint_btn.setEnabled(True)
             if hasattr(self, 'filters_btn'):
                 self.filters_btn.setEnabled(True)
-            if hasattr(self, 'bitdepth_btn'):
-                self.bitdepth_btn.setEnabled(True)
-            if hasattr(self, 'props_btn'):
-                self.props_btn.setEnabled(True)
-
-            if row < 0 or row >= len(self.texture_list):
-                self.selected_texture = None
-                self.export_btn.setEnabled(False)
-
-                if hasattr(self, 'bitdepth_btn'):
-                    self.bitdepth_btn.setEnabled(False)
-
-            self._update_editing_controls()
-            self._update_status_indicators()
 
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Selection error: {str(e)}")
+                self.main_window.log_message(f"Selection error: {str(e)}")
                 import traceback
                 self.main_window.log_message(traceback.format_exc())
 
@@ -4740,7 +4796,7 @@ class TXDWorkshop(QWidget): #vers 3
         dialog.exec()
 
 
-    def _update_texture_info(self, texture): #vers 5
+    def _update_texture_info(self, texture): #vers 6
         """Update texture information display"""
         if not texture:
             self.info_name.setText("")
@@ -4795,36 +4851,37 @@ class TXDWorkshop(QWidget): #vers 3
             else:
                 self.info_format.setText("Mipmaps: None")
 
-        # NEW: Bumpmap detection
+        # Bumpmap detection (FIXED - using 'texture' not 'texture_data')
         has_bumpmap = False
         bumpmap_info = "No bumpmap data"
 
-        """
-        if hasattr(self, 'info_formatb'):
-            if num_bumpmaps > 1:
-                self.info_formatb.setText(f"Bumpmaps: {num_bumpmaps}")
-            else:
-                self.info_formatb.setText("Bumpmaps: No bumpmap data")
-        """
-
         # Check if this version supports bumpmaps
         if is_bumpmap_supported(self.txd_version_id, self.txd_device_id):
-            # Check texture data for bumpmap indicators
-            # Bumpmaps typically have specific raster format flags
-            if 'raster_format_flags' in texture_data:
-                flags = texture_data['raster_format_flags']
-                # Check for bumpmap format bits (typically bit 4 set for bumpmaps)
-                if flags & 0x10:  # Simplified check
+            # Check for bumpmap format bits
+            if 'raster_format_flags' in texture:
+                flags = texture.get('raster_format_flags', 0)
+                if flags & 0x10:  # Bit 4 indicates environment/bumpmap
                     has_bumpmap = True
-                    bumpmap_info = f"Bumpmap present\nFormat: Environment map"
+                    bumpmap_info = "Bumpmap present"
+
+            # Also check for explicit bumpmap data
+            if 'bumpmap_data' in texture or texture.get('has_bumpmap', False):
+                has_bumpmap = True
+                bumpmap_info = "Bumpmap present"
+        else:
+            bumpmap_info = f"Not supported ({self.txd_game})"
 
         # Update bumpmap UI
-        self.bumpmap_label.setText(bumpmap_info)
-        self.view_bumpmap_btn.setEnabled(has_bumpmap)
-        self.export_bumpmap_btn.setEnabled(has_bumpmap)
-        self.import_bumpmap_btn.setEnabled(
-            is_bumpmap_supported(self.txd_version_id, self.txd_device_id)
-        )
+        if hasattr(self, 'bumpmap_label'):
+            self.bumpmap_label.setText(bumpmap_info)
+
+        if hasattr(self, 'info_format_b'):
+            if has_bumpmap:
+                self.info_format_b.setStyleSheet("font-weight: bold; color: #4CAF50;")  # Green
+            else:
+                self.info_format_b.setStyleSheet("font-weight: bold; color: #757575;")  # Gray
+
+        # Bumpmap buttons handled in _on_texture_selected()
 
         # Update preview with new widget
         rgba_data = texture.get('rgba_data')
@@ -4834,8 +4891,12 @@ class TXDWorkshop(QWidget): #vers 3
                 if not image.isNull():
                     pixmap = QPixmap.fromImage(image)
                     self.preview_widget.set_image(pixmap)
+                else:
+                    self.preview_widget.setText("Invalid image data")
             except Exception as e:
-                self.preview_widget.setText(f"Error: {str(e)}")
+                self.preview_widget.setText(f"Preview error: {str(e)}")
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"Preview error: {str(e)}")
         elif hasattr(self, 'preview_widget'):
             self.preview_widget.setText("No preview available")
 
@@ -5966,6 +6027,81 @@ class TXDWorkshop(QWidget): #vers 3
 
 #class SvgIcons: #vers 1 - Once functions are updated this class will be moved to the bottom
     """SVG icon data to QIcon with theme color support"""
+
+    def _create_paste_icon(self):  # vers 1
+        """Create paste icon"""
+        svg_data = '''<svg viewBox="0 0 24 24">
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+                fill="none" stroke="currentColor" stroke-width="2"/>
+            <rect x="8" y="2" width="8" height="4" rx="1"
+                fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_bitdepth_icon(self):  # vers 1
+        """Create bit depth icon"""
+        svg_data = '''<svg viewBox="0 0 24 24">
+            <path fill="currentColor"
+                d="M3,5H9V11H3V5M5,7V9H7V7H5M11,7H21V9H11V7M11,15H21V17H11V15M5,20L1.5,16.5L2.91,15.09L5,17.17L9.59,12.59L11,14L5,20Z"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_resize_icon(self):  # vers 1
+        """Create resize icon"""
+        svg_data = '''<svg viewBox="0 0 24 24">
+            <path fill="currentColor"
+                d="M10,21V19H6.41L10.91,14.5L9.5,13.09L5,17.59V14H3V21H10M14.5,10.91L19,6.41V10H21V3H14V5H17.59L13.09,9.5L14.5,10.91Z"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_upscale_icon(self):  # vers 1
+        """Create upscale icon"""
+        svg_data = '''<svg viewBox="0 0 24 24">
+            <path fill="currentColor" d="M7,15L12,10L17,15H7Z"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_compress_icon(self):  # vers 1
+        """Create compress icon"""
+        svg_data = '''<svg viewBox="0 0 24 24">
+            <path fill="currentColor"
+                d="M4,2H20V4H13V10H20V12H4V10H11V4H4V2M4,13H20V15H13V21H20V23H4V21H11V15H4V13Z"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_uncompress_icon(self):  # vers 1
+        """Create uncompress icon"""
+        svg_data = '''<svg viewBox="0 0 24 24">
+            <path fill="currentColor" d="M11,4V2H13V4H11M13,21V19H11V21H13M4,12V10H20V12H4Z"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_view_icon(self):  # vers 1
+        """Create view/eye icon"""
+        svg_data = '''<svg viewBox="0 0 24 24">
+            <path fill="currentColor"
+                d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9
+                    M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17
+                    M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5
+                    C17,19.5 21.27,16.39 23,12
+                    C21.27,7.61 17,4.5 12,4.5Z"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_add_icon(self):  # vers 1
+        """Create add/plus icon"""
+        svg_data = '''<svg viewBox="0 0 24 24">
+            <path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_delete_icon(self):  # vers 1
+        """Create delete/minus icon"""
+        svg_data = '''<svg viewBox="0 0 24 24">
+            <path fill="currentColor" d="M19,13H5V11H19V13Z"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_color_picker_icon(self): #vers 1
         """Color picker icon"""
