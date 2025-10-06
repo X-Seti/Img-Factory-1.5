@@ -1306,7 +1306,7 @@ class TXDWorkshop(QWidget): #vers 3
         main_layout.addLayout(top_layout)
 
         # Information group below - COMPACT VERSION
-        info_group = QGroupBox("Texture Information")
+        info_group = QGroupBox("")
         info_layout = QVBoxLayout(info_group)
 
         # === LINE 1: Texture name and alpha name ===
@@ -1490,36 +1490,6 @@ class TXDWorkshop(QWidget): #vers 3
         mipbump_layout.addStretch()
 
         info_layout.addLayout(mipbump_layout)
-
-        # Debug - check if icons exist at creation time
-        if hasattr(self, 'main_window') and self.main_window:
-            print("\n=== ICON DEBUG ===")
-            print(f"Bitdepth: {not self.bitdepth_btn.icon().isNull()}")
-            print(f"Resize: {not self.resize_btn.icon().isNull()}")
-            print(f"Upscale: {not self.upscale_btn.icon().isNull()}")
-            print(f"Compress: {not self.compress_btn.icon().isNull()}")
-            print(f"Uncompress: {not self.uncompress_btn.icon().isNull()}")
-            print(f"View Mip: {not self.show_mipmaps_btn.icon().isNull()}")
-            print(f"Create Mip: {not self.create_mipmaps_btn.icon().isNull()}")
-            print(f"Remove Mip: {not self.remove_mipmaps_btn.icon().isNull()}")
-            print(f"View Bump: {not self.view_bumpmap_btn.icon().isNull()}")
-            print(f"Export Bump: {not self.export_bumpmap_btn.icon().isNull()}")
-            print(f"Import Bump: {not self.import_bumpmap_btn.icon().isNull()}")
-            print("==================\n")
-
-        if self.main_window:
-            for btn_name in ['bitdepth_btn', 'resize_btn', 'upscale_btn', 'compress_btn', 'uncompress_btn']:
-                if hasattr(self, btn_name):
-                    btn = getattr(self, btn_name)
-                    self.main_window.log_message(f"{btn_name} icon null: {btn.icon().isNull()}")
-
-        if self.main_window:
-            self.main_window.log_message("Testing icon creation:")
-            self.main_window.log_message(f"  Bitdepth: {self.bitdepth_btn.icon().isNull()}")
-            self.main_window.log_message(f"  Resize: {self.resize_btn.icon().isNull()}")
-            self.main_window.log_message(f"  Compress: {self.compress_btn.icon().isNull()}")
-            self.main_window.log_message(f"  View mip: {self.show_mipmaps_btn.icon().isNull()}")
-            self.main_window.log_message(f"  Create mip: {self.create_mipmaps_btn.icon().isNull()}")
 
         main_layout.addWidget(info_group)
         return panel

@@ -877,6 +877,22 @@ class IMGFactory(QMainWindow):
             QMessageBox.critical(self, "Export Error",
                                f"Report export failed:\n{str(e)}")
 
+    def open_txd_workshop_docked(self, txd_name=None, txd_data=None): #vers 1
+        """Open TXD Workshop in docked mode"""
+        from components.Txd_Editor.txd_workshop import TXDWorkshop
+
+        # Create TXD Workshop instance
+        workshop = TXDWorkshop(parent=self, main_window=self)
+
+        # If TXD data provided, load it
+        if txd_name and txd_data:
+            workshop._load_txd_textures(txd_data, txd_name)
+
+        # Dock it immediately
+        workshop._dock_to_main()
+
+        return workshop
+
     def setup_unified_signals(self): #vers 6
         """Setup unified signal handler for all table interactions"""
         from components.unified_signal_handler import connect_table_signals
