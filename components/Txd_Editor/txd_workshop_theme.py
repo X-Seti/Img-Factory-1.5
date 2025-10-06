@@ -59,12 +59,6 @@ def apply_theme_to_workshop(workshop, main_window=None): #vers 1
         print(f"❌ TXD Workshop theme error: {str(e)}")
         return False
 
-#this belongs in components/Txd_Editor/ txd_workshop_theme.py - Version: 2
-# X-Seti - September30 2025 - Img Factory 1.5 - TXD Workshop Theme Support
-
-"""
-ADD THIS TO get_workshop_stylesheet() function - Insert before the return statement
-"""
 
 def get_workshop_stylesheet(theme_colors): #vers 2
     """Generate TXD Workshop stylesheet from theme colors"""

@@ -22,51 +22,94 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint, QRect
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QColor
 
+try:
+    # Try main app path first
+    from methods.txd_versions import (
+        detect_txd_version, get_platform_name, get_game_from_version,
+        get_version_capabilities, get_platform_capabilities,
+        is_mipmap_supported, is_bumpmap_supported,
+        validate_txd_format, TXDPlatform, detect_platform_from_data
+    )
+except ImportError:
+    # Fallback to standalone depends folder
+    from depends.txd_versions import (
+        detect_txd_version, get_platform_name, get_game_from_version,
+        get_version_capabilities, get_platform_capabilities,
+        is_mipmap_supported, is_bumpmap_supported,
+        validate_txd_format, TXDPlatform, detect_platform_from_data
+    )
+
+
 ##Methods list -
-# _get_resize_direction
-# _handle_resize
-# _is_on_draggable_area
-# _toggle_maximize
-# _update_cursor
-# mouseDoubleClickEvent
-# mouseMoveEvent
-# mousePressEvent
-# mouseReleaseEvent
+# _compress_to_dxt1
+# _compress_to_dxt3
+# _compress_to_dxt5
 # _create_blank_texture
 # _create_empty_txd_data
+# _create_export_icon
+# _create_file_icon
+# _create_flip_horiz_icon
+# _create_flip_vert_icon
+# _create_folder_icon
+# _create_import_icon
+# _create_info_icon
 # _create_left_panel
 # _create_middle_panel
 # _create_new_texture_entry
 # _create_new_txd
+# _create_package_icon
+# _create_properties_icon
 # _create_right_panel
+# _create_save_icon
 # _create_thumbnail
 # _create_toolbar
+# _create_undo_icon
+# _decode_bumpmap
 # _decompress_dxt1
 # _decompress_dxt3
 # _decompress_dxt5
 # _decompress_uncompressed
 # _delete_texture
+# _detect_txd_info
+# _encode_bumpmap
+# _export_bumpmap
 # _extract_alpha_channel
 # _extract_txd_from_img
 # _export_alpha_only
+# _get_format_description
+# _get_resize_direction
+# _handle_resize
+# _import_bumpmap
+# _is_on_draggable_area
 # _load_img_txd_list
 # _load_txd_textures
 # _mark_as_modified
 # _on_texture_selected
 # _on_txd_selected
 # _parse_single_texture
+# _rebuild_txd_data
 # _reload_texture_table
+# _save_as_new_txd
+# _save_as_txd_file
 # _save_texture_png
+# _save_to_img
 # _save_undo_state
+# _show_detailed_info
 # _show_texture_context_menu
+# _toggle_maximize
 # _undo_last_action
+# _update_cursor
 # _update_texture_info
+# _view_bumpmap
 # export_all_textures
 # export_selected_texture
-
 # flip_texture
 # import_texture
 # load_from_img_archive
+# mouseDoubleClickEvent
+# mouseMoveEvent
+# mousePressEvent
+# mouseReleaseEvent
 # open_img_archive
 # open_txd_file
 # save_txd_file
@@ -77,13 +120,14 @@ from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QColor
 # __init__
 # closeEvent
 
+
 class TXDWorkshop(QWidget): #vers 3
     """TXD Workshop - Main texture editing window"""
 
     workshop_closed = pyqtSignal()
 
 
-    def __init__(self, parent=None, main_window=None): #vers 6
+    def __init__(self, parent=None, main_window=None): #vers 7
         super().__init__(parent)
         self.main_window = main_window
         self.current_img = None
@@ -94,6 +138,14 @@ class TXDWorkshop(QWidget): #vers 3
         self.selected_texture = None
         self.undo_stack = []
         self.button_display_mode = 'both'
+
+        # TXD version tracking variables
+        self.txd_version_id = 0
+        self.txd_device_id = 0
+        self.txd_version_str = "Unknown"
+        self.txd_platform_name = "Unknown"
+        self.txd_game = "Unknown"
+        self.txd_capabilities = {}
 
         # Detect standalone mode
         self.standalone_mode = (main_window is None)
@@ -338,6 +390,46 @@ class TXDWorkshop(QWidget): #vers 3
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"features init error: {str(e)}")
+
+
+    def _detect_txd_info(self, txd_data: bytes) -> bool: #vers 1
+        """
+        Detect and store TXD version and platform information
+        Called when loading any TXD file
+        """
+        try:
+            # Validate format first
+            is_valid, message = validate_txd_format(txd_data)
+
+            if not is_valid:
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"TXD Validation: {message}")
+                return False
+
+            # Detect version info
+            self.txd_version_id, self.txd_device_id, self.txd_version_str = detect_txd_version(txd_data)
+
+            # Get platform and game info
+            self.txd_platform_name = get_platform_name(self.txd_device_id)
+            self.txd_game = get_game_from_version(self.txd_version_id, self.txd_device_id)
+
+            # Get capabilities
+            self.txd_capabilities = get_version_capabilities(self.txd_version_id)
+
+            # Log detection
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(
+                    f"TXD: {self.txd_version_str} | "
+                    f"Platform: {self.txd_platform_name} | "
+                    f"Game: {self.txd_game}"
+                )
+
+            return True
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Version detection error: {str(e)}")
+            return False
 
 
     def paintEvent(self, event): #vers 2
@@ -1090,7 +1182,7 @@ class TXDWorkshop(QWidget): #vers 3
                 self.main_window.log_message(f"Double-click error: {str(e)}")
 
 
-    def _create_right_panel(self): #vers 6
+    def _create_right_panel(self): #vers 7
         """Create right panel with editing controls - aligned button layout"""
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.StyledPanel)
@@ -1215,13 +1307,22 @@ class TXDWorkshop(QWidget): #vers 3
 
         info_layout.addLayout(format_layout)
 
-        # Row 4: Mipmaps label (left) + buttons (right, aligned)
+        # Row 4: Mipmaps label (left) + buttons (left, aligned)
+
+        # Should show Mipmaps: [View] [Create] [Remove] - Bumpmaps: [View] [Import] [Export]
         mipmap_layout = QHBoxLayout()
         self.info_format = QLabel("Mipmaps:")
-        self.info_format.setMinimumWidth(120)
+        self.info_format.setMinimumWidth(60)
         mipmap_layout.addWidget(self.info_format)
 
         mipmap_layout.addStretch()
+
+        # View button - opens mipmap manager
+        self.show_mipmaps_btn = QPushButton("View")
+        self.show_mipmaps_btn.clicked.connect(self._open_mipmap_manager)
+        self.show_mipmaps_btn.setEnabled(False)
+        self.show_mipmaps_btn.setToolTip("View all mipmap levels")
+        mipmap_layout.addWidget(self.show_mipmaps_btn)
 
         # Create button - opens depth slider dialog
         self.create_mipmaps_btn = QPushButton("Create")
@@ -1237,14 +1338,40 @@ class TXDWorkshop(QWidget): #vers 3
         self.remove_mipmaps_btn.setToolTip("Remove all mipmap levels")
         mipmap_layout.addWidget(self.remove_mipmaps_btn)
 
-        # View button - opens mipmap manager
-        self.show_mipmaps_btn = QPushButton("View")
-        self.show_mipmaps_btn.clicked.connect(self._open_mipmap_manager)
-        self.show_mipmaps_btn.setEnabled(False)
-        self.show_mipmaps_btn.setToolTip("View all mipmap levels")
-        mipmap_layout.addWidget(self.show_mipmaps_btn)
-
         info_layout.addLayout(mipmap_layout)
+
+        # Bumpmap Section Right - should be info_formatb
+        bumpmap_layout = QHBoxLayout()
+        self.info_format_b = QLabel("Bumpmaps:")
+        self.info_format_b.setMinimumWidth(60)
+        bumpmap_layout.addWidget(self.info_format_b)
+
+        bumpmap_layout.addStretch()
+
+        self.bumpmap_label = QLabel("No bumpmap data")
+        self.bumpmap_label.setWordWrap(True)
+        bumpmap_layout.addWidget(self.bumpmap_label)
+
+        # Bumpmap buttons
+        self.view_bumpmap_btn = QPushButton("View")
+        self.view_bumpmap_btn.clicked.connect(self._view_bumpmap)
+        self.view_bumpmap_btn.setEnabled(False)
+        self.view_bumpmap_btn.setToolTip("View Bumpmaps")
+        bumpmap_layout.addWidget(self.view_bumpmap_btn)
+
+        self.export_bumpmap_btn = QPushButton("Export")
+        self.export_bumpmap_btn.clicked.connect(self._export_bumpmap)
+        self.export_bumpmap_btn.setEnabled(False)
+        self.export_bumpmap_btn.setToolTip("Export Bump Maps")
+        bumpmap_layout.addWidget(self.export_bumpmap_btn)
+
+        self.import_bumpmap_btn = QPushButton("Import")
+        self.import_bumpmap_btn.clicked.connect(self._import_bumpmap)
+        self.import_bumpmap_btn.setEnabled(False)
+        self.import_bumpmap_btn.setToolTip("Import Bump Maps")
+        bumpmap_layout.addWidget(self.import_bumpmap_btn)
+
+        info_layout.addLayout(bumpmap_layout)
 
         main_layout.addWidget(info_group)
         return panel
@@ -2627,7 +2754,7 @@ class TXDWorkshop(QWidget): #vers 3
             return None
 
 
-    def _load_txd_textures(self, txd_data, txd_name): #vers 11
+    def _load_txd_textures(self, txd_data, txd_name): #vers 12
         """Load textures from TXD data - display with mipmap info"""
         try:
             import struct
@@ -2636,6 +2763,11 @@ class TXDWorkshop(QWidget): #vers 3
             self.texture_list = []
             textures = []
             offset = 12
+            if self.txd_version_id == 0:
+                self._detect_txd_info(txd_data)
+
+            self.current_txd_data = txd_data
+            self.current_txd_name = txd_name
 
             # Get texture count
             texture_count = 0
@@ -3345,33 +3477,66 @@ class TXDWorkshop(QWidget): #vers 3
     def _rebuild_txd_data(self): #vers 2
         """Rebuild TXD data with modified texture names and properties"""
         try:
+            if not self.current_txd_data:
+                return None
+
+            # NEW: Preserve original version header
+            if len(self.current_txd_data) < 28:
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("Cannot rebuild: insufficient header data")
+                return None
+
+            # Read original header to preserve version
+            original_header = self.current_txd_data[:28]
+
+            # Extract version info if not already detected
+            if self.txd_version_id == 0:
+                self._detect_txd_info(self.current_txd_data)
+
+            # Log rebuild info
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(
+                    f"Rebuilding TXD with version: {self.txd_version_str}"
+                )
+
+            # Import struct for header manipulation
             import struct
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"🔧 Rebuilding TXD...")
+                self.main_window.log_message(f"Rebuilding TXD...")
 
             # If we have original data, update it in place
             if self.current_txd_data and len(self.current_txd_data) > 100:
                 original_data = bytearray(self.current_txd_data)
-                # ... rest of your existing vers 1 code ...
 
                 if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"✅ Rebuilt: {len(original_data)} bytes")
+                    self.main_window.log_message(f"Rebuilt: {len(original_data)} bytes")
+
                 return bytes(original_data)
 
-            # No original data? Use serializer as fallback
+            # No original data? Use serializer as fallback docked
             if self.texture_list:
                 if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"   Using serializer...")
+                    self.main_window.log_message(f"Using serializer...")
 
-                from components.Txd_Editor.txd_serializer import serialize_txd_file
+                from methods.txd_serializer import serialize_txd_file
+                return serialize_txd_file(self.texture_list)
+
+            return None
+
+            # No original data? Use serializer as fallback standalone
+            if self.texture_list:
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"Using serializer...")
+
+                from depends.txd_serializer import serialize_txd_file
                 return serialize_txd_file(self.texture_list)
 
             return None
 
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Rebuild error: {str(e)}")
+                self.main_window.log_message(f"Rebuild error: {str(e)}")
             return None
 
 
@@ -3401,6 +3566,35 @@ class TXDWorkshop(QWidget): #vers 3
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"Name update error: {str(e)}")
+
+
+    def _get_format_description(self) -> str: #vers 1
+        """Get human-readable format description for UI display"""
+        desc_parts = []
+
+        if self.txd_capabilities:
+            # Bit depths
+            if self.txd_capabilities.get('bit_depths'):
+                depths = ', '.join(str(d) for d in self.txd_capabilities['bit_depths'])
+                desc_parts.append(f"{depths}-bit")
+
+            # Features
+            features = []
+            if self.txd_capabilities.get('mipmaps'):
+                features.append("Mipmaps")
+            if self.txd_capabilities.get('bumpmaps'):
+                features.append("Bumpmaps")
+            if self.txd_capabilities.get('dxt_compression'):
+                features.append("DXT")
+            if self.txd_capabilities.get('palette'):
+                features.append("Palette")
+            if self.txd_capabilities.get('swizzled'):
+                features.append("Swizzled")
+
+            if features:
+                desc_parts.append(', '.join(features))
+
+        return ' | '.join(desc_parts) if desc_parts else "Standard format"
 
 
     def _update_img_with_txd(self, modified_txd_data): #vers 3
@@ -3586,19 +3780,35 @@ class TXDWorkshop(QWidget): #vers 3
             return False
 
 
-    def save_txd_file(self): #vers 5
-        """Save TXD - handles both IMG and standalone modes"""
-        if not self.texture_list:
-            QMessageBox.warning(self, "No Textures", "No textures to save")
+    def save_txd_file(self): #vers 6
+        """Save TXD with preserved version information"""
+        if not self.current_txd_data:
+            QMessageBox.warning(self, "No Data", "No TXD file loaded")
             return
 
-        # Check if we're working with an IMG or standalone TXD
-        if self.current_img and not self.standalone_mode:
-            # Save back to IMG archive
-            self._save_to_img()
-        else:
-            # Save as standalone TXD file
-            self._save_as_txd_file()
+        try:
+            # Check if loaded from IMG
+            if self.current_img and self.current_txd_name:
+                reply = QMessageBox.question(
+                    self, "Save Location",
+                    "Save back to IMG archive or as new TXD file?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
+                    QMessageBox.StandardButton.Yes
+                )
+
+                if reply == QMessageBox.StandardButton.Yes:
+                    self._save_to_img()
+                elif reply == QMessageBox.StandardButton.No:
+                    self._save_as_txd_file()
+            else:
+                # Save as standalone TXD file
+                self._save_as_txd_file()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Save Error", f"Failed to save: {str(e)}")
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Save error: {str(e)}")
+
 
     def _save_to_img(self): #vers 1
         """Save TXD back to IMG archive"""
@@ -4530,422 +4740,7 @@ class TXDWorkshop(QWidget): #vers 3
         dialog.exec()
 
 
-    def _create_color_picker_icon(self): #vers 1
-        """Color picker icon"""
-        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="2"/>
-            <path d="M10 3v4M10 13v4M3 10h4M13 10h4" stroke="currentColor" stroke-width="2"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=20)
-
-    def _create_zoom_in_icon(self): #vers 1
-        """Zoom in icon (+)"""
-        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2"/>
-            <path d="M8 5v6M5 8h6" stroke="currentColor" stroke-width="2"/>
-            <path d="M13 13l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=20)
-
-    def _create_zoom_out_icon(self): #vers 1
-        """Zoom out icon (-)"""
-        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2"/>
-            <path d="M5 8h6" stroke="currentColor" stroke-width="2"/>
-            <path d="M13 13l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=20)
-
-    def _create_reset_icon(self): #vers 1
-        """Reset/1:1 icon"""
-        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16 10A6 6 0 1 1 4 10M4 10l3-3m-3 3l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=20)
-
-    def _create_fit_icon(self): #vers 1
-        """Fit to window icon"""
-        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="3" y="3" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"/>
-            <path d="M7 7l6 6M13 7l-6 6" stroke="currentColor" stroke-width="2"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=20)
-
-    def _create_arrow_up_icon(self): #vers 1
-        """Arrow up"""
-        svg_data = b'''<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 3v10M4 7l4-4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=16)
-
-    def _create_arrow_down_icon(self): #vers 1
-        """Arrow down"""
-        svg_data = b'''<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 13V3M12 9l-4 4-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=16)
-
-    def _create_arrow_left_icon(self): #vers 1
-        """Arrow left"""
-        svg_data = b'''<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 8h10M7 4L3 8l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=16)
-
-    def _create_arrow_right_icon(self): #vers 1
-        """Arrow right"""
-        svg_data = b'''<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M13 8H3M9 12l4-4-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=16)
-
-
-
-    def _create_flip_vert_icon(self): #vers 1
-        """Create vertical flip SVG icon"""
-        from PyQt6.QtGui import QIcon, QPixmap, QPainter
-        from PyQt6.QtSvg import QSvgRenderer
-
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 12h18M8 7l-4 5 4 5M16 7l4 5-4 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>'''
-
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_flip_horz_icon(self): #vers 1
-        """Create horizontal flip SVG icon"""
-        from PyQt6.QtGui import QIcon, QPixmap, QPainter
-        from PyQt6.QtSvg import QSvgRenderer
-
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 3v18M7 8l5-4 5 4M7 16l5 4 5-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>'''
-
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_rotate_cw_icon(self): #vers 1
-        """Create clockwise rotation SVG icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21 12a9 9 0 11-9-9v6M21 3l-3 6-6-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>'''
-
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_rotate_ccw_icon(self): #vers 1
-        """Create counter-clockwise rotation SVG icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 12a9 9 0 109-9v6M3 3l3 6 6-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>'''
-
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_copy_icon(self): #vers 1
-        """Create copy SVG icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/>
-            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" stroke-width="2"/>
-        </svg>'''
-
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_paste_icon(self): #vers 1
-        """Create paste SVG icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" stroke="currentColor" stroke-width="2"/>
-            <rect x="8" y="2" width="8" height="4" rx="1" stroke="currentColor" stroke-width="2"/>
-        </svg>'''
-
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_edit_icon(self): #vers 1
-        """Create edit SVG icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="2"/>
-            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2"/>
-        </svg>'''
-
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_convert_icon(self): #vers 1
-        """Create convert SVG icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 12h18M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-        </svg>'''
-
-        return self._svg_to_icon(svg_data)
-
-    def _create_info_icon(self): #vers 1
-        """Info - circle with 'i' icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
-            <path d="M12 11v6M12 8v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_folder_icon(self): #vers 1
-        """Open IMG - Folder icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-7l-2-2H5a2 2 0 00-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_file_icon(self): #vers 1
-        """Open TXD - File icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="2"/>
-            <path d="M14 2v6h6" stroke="currentColor" stroke-width="2"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_save_icon(self): #vers 1
-        """Save TXD - Floppy disk icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2"/>
-            <path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_import_icon(self): #vers 1
-        """Import - Download/Import icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_export_icon(self): #vers 1
-        """Export - Upload/Export icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_package_icon(self): #vers 1
-        """Export All - Package/Box icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" stroke-width="2"/>
-            <path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12" stroke="currentColor" stroke-width="2"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_properties_icon(self): #vers 1
-        """Properties - Info/Details icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-            <path d="M12 16v-4M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-    # CONTEXT MENU ICONS
-
-    def _create_plus_icon(self): #vers 1
-        """Create New Entry - Plus icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-            <path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_document_icon(self): #vers 1
-        """Create New TXD - Document icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="2"/>
-            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_undo_icon(self): #vers 1
-        """Undo - Curved arrow icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 7v6h6M3 13a9 9 0 1018 0 9 9 0 00-18 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_filter_icon(self): #vers 1
-        """Filter/sliders icon"""
-        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="6" cy="4" r="2" fill="currentColor"/>
-            <rect x="5" y="8" width="2" height="8" fill="currentColor"/>
-            <circle cx="14" cy="12" r="2" fill="currentColor"/>
-            <rect x="13" y="4" width="2" height="6" fill="currentColor"/>
-            <circle cx="10" cy="8" r="2" fill="currentColor"/>
-            <rect x="9" y="12" width="2" height="4" fill="currentColor"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=20)
-
-    def _create_add_icon(self): #vers 1
-        """Add/plus icon"""
-        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=20)
-
-    def _create_trash_icon(self): #vers 1
-        """Delete/trash icon"""
-        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 5h14M8 5V3h4v2M6 5v11a1 1 0 001 1h6a1 1 0 001-1V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=20)
-
-    def _create_filter_icon(self): #vers 1
-        """Filter/sliders icon"""
-        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="6" cy="4" r="2" fill="currentColor"/>
-            <rect x="5" y="8" width="2" height="8" fill="currentColor"/>
-            <circle cx="14" cy="12" r="2" fill="currentColor"/>
-            <rect x="13" y="4" width="2" height="6" fill="currentColor"/>
-            <circle cx="10" cy="8" r="2" fill="currentColor"/>
-            <rect x="9" y="12" width="2" height="4" fill="currentColor"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=20)
-
-    def _create_delete_icon(self): #vers 1
-        """Delete/trash icon"""
-        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 5h14M8 5V3h4v2M6 5v11a1 1 0 001 1h6a1 1 0 001-1V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=20)
-
-    def _create_duplicate_icon(self): #vers 1
-        """Duplicate/copy icon"""
-        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="6" y="6" width="10" height="10" stroke="currentColor" stroke-width="2" fill="none"/>
-            <path d="M4 4h8v2H6v8H4V4z" fill="currentColor"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=20)
-
-    def _create_create_icon(self): #vers 1
-        """Create/new icon"""
-        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=20)
-
-    def _create_filter_icon(self): #vers 1
-        """Filter/sliders icon"""
-        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="6" cy="4" r="2" fill="currentColor"/>
-            <rect x="5" y="8" width="2" height="8" fill="currentColor"/>
-            <circle cx="14" cy="12" r="2" fill="currentColor"/>
-            <rect x="13" y="4" width="2" height="6" fill="currentColor"/>
-            <circle cx="10" cy="8" r="2" fill="currentColor"/>
-            <rect x="9" y="12" width="2" height="4" fill="currentColor"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=20)
-
-    def _create_pencil_icon(self): #vers 1
-        """Edit - Pencil icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" stroke="currentColor" stroke-width="2"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_trash_icon(self): #vers 1
-        """Delete - Trash icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_eye_icon(self): #vers 1
-        """View - Eye icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
-            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_list_icon(self): #vers 1
-        """Properties List - List icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-    # WINDOW CONTROL ICONS
-
-    def _create_minimize_icon(self): #vers 1
-        """Minimize - Horizontal line"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_maximize_icon(self): #vers 1
-        """Maximize - Square"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-
-    def _create_close_icon(self): #vers 1
-        """Close - X icon"""
-        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data)
-
-    def _create_settings_icon(self): #vers 1
-        """Settings/gear icon"""
-        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
-            <path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.93 4.93l1.41 1.41M13.66 13.66l1.41 1.41M4.93 15.07l1.41-1.41M13.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=20)
-
-
-    def _svg_to_icon(self, svg_data, size=24): #vers 2
-        """Convert SVG data to QIcon with theme color support"""
-        from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor
-        from PyQt6.QtSvg import QSvgRenderer
-        from PyQt6.QtCore import QByteArray
-
-        try:
-            # Get current text color from palette
-            text_color = self.palette().color(self.foregroundRole())
-
-            # Replace currentColor with actual color
-            svg_str = svg_data.decode('utf-8')
-            svg_str = svg_str.replace('currentColor', text_color.name())
-            svg_data = svg_str.encode('utf-8')
-
-            renderer = QSvgRenderer(QByteArray(svg_data))
-            pixmap = QPixmap(size, size)
-            pixmap.fill(QColor(0, 0, 0, 0))  # Transparent background
-
-            painter = QPainter(pixmap)
-            renderer.render(painter)
-            painter.end()
-
-            return QIcon(pixmap)
-        except:
-            # Fallback to no icon if SVG fails
-            return QIcon()
-
-
-    def _update_texture_info(self, texture): #vers 4
+    def _update_texture_info(self, texture): #vers 5
         """Update texture information display"""
         if not texture:
             self.info_name.setText("")
@@ -5000,6 +4795,37 @@ class TXDWorkshop(QWidget): #vers 3
             else:
                 self.info_format.setText("Mipmaps: None")
 
+        # NEW: Bumpmap detection
+        has_bumpmap = False
+        bumpmap_info = "No bumpmap data"
+
+        """
+        if hasattr(self, 'info_formatb'):
+            if num_bumpmaps > 1:
+                self.info_formatb.setText(f"Bumpmaps: {num_bumpmaps}")
+            else:
+                self.info_formatb.setText("Bumpmaps: No bumpmap data")
+        """
+
+        # Check if this version supports bumpmaps
+        if is_bumpmap_supported(self.txd_version_id, self.txd_device_id):
+            # Check texture data for bumpmap indicators
+            # Bumpmaps typically have specific raster format flags
+            if 'raster_format_flags' in texture_data:
+                flags = texture_data['raster_format_flags']
+                # Check for bumpmap format bits (typically bit 4 set for bumpmaps)
+                if flags & 0x10:  # Simplified check
+                    has_bumpmap = True
+                    bumpmap_info = f"Bumpmap present\nFormat: Environment map"
+
+        # Update bumpmap UI
+        self.bumpmap_label.setText(bumpmap_info)
+        self.view_bumpmap_btn.setEnabled(has_bumpmap)
+        self.export_bumpmap_btn.setEnabled(has_bumpmap)
+        self.import_bumpmap_btn.setEnabled(
+            is_bumpmap_supported(self.txd_version_id, self.txd_device_id)
+        )
+
         # Update preview with new widget
         rgba_data = texture.get('rgba_data')
         if rgba_data and width > 0 and hasattr(self, 'preview_widget'):
@@ -5012,6 +4838,189 @@ class TXDWorkshop(QWidget): #vers 3
                 self.preview_widget.setText(f"Error: {str(e)}")
         elif hasattr(self, 'preview_widget'):
             self.preview_widget.setText("No preview available")
+
+
+    def _view_bumpmap(self): #vers 1
+        """Display bumpmap in preview window"""
+        if not self.selected_texture:
+            return
+
+        try:
+            texture_data = self.selected_texture
+
+            # Extract bumpmap channel
+            # Bumpmaps are typically stored as additional texture data
+            # This is a simplified implementation
+
+            if 'bumpmap_data' in texture_data:
+                bumpmap_image = self._decode_bumpmap(texture_data['bumpmap_data'])
+
+                # Display in preview
+                pixmap = QPixmap.fromImage(bumpmap_image)
+                self.texture_preview.setPixmap(
+                    pixmap.scaled(self.texture_preview.size(),
+                                Qt.AspectRatioMode.KeepAspectRatio,
+                                Qt.TransformationMode.SmoothTransformation)
+                )
+
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("Displaying bumpmap channel")
+            else:
+                QMessageBox.information(self, "No Bumpmap",
+                    "Bumpmap data not found in texture")
+
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to view bumpmap: {str(e)}")
+
+
+    def _export_bumpmap(self): #vers 1
+        """Export bumpmap as separate image file"""
+        if not self.selected_texture:
+            return
+
+        try:
+            texture_data = self.selected_texture
+            texture_name = texture_data.get('name', 'texture')
+
+            # Get save path
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, "Export Bumpmap",
+                f"{texture_name}_bumpmap.png",
+                "PNG Images (*.png);;All Files (*)"
+            )
+
+            if not file_path:
+                return
+
+            # Extract and save bumpmap
+            if 'bumpmap_data' in texture_data:
+                bumpmap_image = self._decode_bumpmap(texture_data['bumpmap_data'])
+
+                if bumpmap_image.save(file_path):
+                    QMessageBox.information(self, "Success",
+                        f"Bumpmap exported to:\n{file_path}")
+
+                    if self.main_window and hasattr(self.main_window, 'log_message'):
+                        self.main_window.log_message(f"Exported bumpmap: {os.path.basename(file_path)}")
+                else:
+                    QMessageBox.warning(self, "Error", "Failed to save bumpmap")
+            else:
+                QMessageBox.information(self, "No Bumpmap",
+                    "No bumpmap data found in texture")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Export failed: {str(e)}")
+
+
+    def _import_bumpmap(self): #vers 1
+        """Import bumpmap from image file"""
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection",
+                "Please select a texture to add bumpmap to")
+            return
+
+        # Check if version supports bumpmaps
+        if not is_bumpmap_supported(self.txd_version_id, self.txd_device_id):
+            QMessageBox.warning(self, "Not Supported",
+                f"Bumpmaps not supported for {self.txd_game}\n"
+                f"Only San Andreas and State of Liberty support bumpmaps")
+            return
+
+        try:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "Import Bumpmap",
+                "",
+                "Image Files (*.png *.jpg *.bmp *.tga);;All Files (*)"
+            )
+
+            if not file_path:
+                return
+
+            # Load bumpmap image
+            bumpmap_image = QImage(file_path)
+
+            if bumpmap_image.isNull():
+                QMessageBox.warning(self, "Error", "Failed to load bumpmap image")
+                return
+
+            # Encode bumpmap data
+            bumpmap_data = self._encode_bumpmap(bumpmap_image)
+
+            # Add to texture data
+            self.selected_texture['bumpmap_data'] = bumpmap_data
+            self.selected_texture['has_bumpmap'] = True
+
+            # Mark as modified
+            self._mark_as_modified()
+
+            # Update UI
+            self._update_texture_info(self.selected_texture)
+
+            QMessageBox.information(self, "Success",
+                "Bumpmap imported successfully")
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(
+                    f"Imported bumpmap from: {os.path.basename(file_path)}"
+                )
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Import failed: {str(e)}")
+
+
+    def _decode_bumpmap(self, bumpmap_data: bytes) -> QImage: #vers 1
+        """Decode bumpmap data to QImage"""
+        try:
+            # Bumpmaps are typically stored as grayscale or normal maps
+            # This is a simplified decoder
+
+            # Assume 8-bit grayscale for now
+            width = self.selected_texture.get('width', 256)
+            height = self.selected_texture.get('height', 256)
+
+            # Create grayscale image
+            image = QImage(width, height, QImage.Format.Format_Grayscale8)
+
+            # Copy data
+            for y in range(height):
+                for x in range(width):
+                    idx = y * width + x
+                    if idx < len(bumpmap_data):
+                        value = bumpmap_data[idx]
+                        image.setPixel(x, y, value)
+
+            return image
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Bumpmap decode error: {str(e)}")
+            return QImage()
+
+    def _encode_bumpmap(self, image: QImage) -> bytes: #vers 1
+        """Encode QImage to bumpmap data"""
+        try:
+            # Convert to grayscale if not already
+            if image.format() != QImage.Format.Format_Grayscale8:
+                image = image.convertToFormat(QImage.Format.Format_Grayscale8)
+
+            # Extract pixel data
+            width = image.width()
+            height = image.height()
+            bumpmap_data = bytearray(width * height)
+
+            for y in range(height):
+                for x in range(width):
+                    pixel = image.pixel(x, y)
+                    # Extract grayscale value
+                    gray = pixel & 0xFF
+                    bumpmap_data[y * width + x] = gray
+
+            return bytes(bumpmap_data)
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Bumpmap encode error: {str(e)}")
+            return b''
 
 
     def _extract_alpha_for_display(self, rgba_data): #vers 1
@@ -5493,17 +5502,33 @@ class TXDWorkshop(QWidget): #vers 3
             QMessageBox.critical(self, "Error", f"Failed to open IMG: {str(e)}")
 
 
-    def open_txd_file(self, file_path=None): #vers 2
-        """Open standalone TXD file"""
+    def open_txd_file(self, file_path=None): #vers 3
+        """Open standalone TXD file with version detection"""
         try:
             if not file_path:
-                file_path, _ = QFileDialog.getOpenFileName(self, "Open TXD File", "", "TXD Files (*.txd);;All Files (*)")
+                file_path, _ = QFileDialog.getOpenFileName(
+                    self, "Open TXD File", "",
+                    "TXD Files (*.txd);;All Files (*)"
+                )
 
             if file_path:
                 with open(file_path, 'rb') as f:
                     txd_data = f.read()
+
+                # Detect version info FIRST
+                if not self._detect_txd_info(txd_data):
+                    QMessageBox.warning(self, "Invalid TXD",
+                        "Could not detect valid TXD format")
+                    return
+
+                # Load textures
                 self._load_txd_textures(txd_data, os.path.basename(file_path))
-                self.setWindowTitle(f"TXD Workshop: {os.path.basename(file_path)}")
+
+                # Update window title with version info
+                self.setWindowTitle(
+                    f"TXD Workshop: {os.path.basename(file_path)} "
+                    f"[{self.txd_version_str}]"
+                )
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to open TXD: {str(e)}")
@@ -5522,13 +5547,61 @@ class TXDWorkshop(QWidget): #vers 3
 
 
     def show_properties(self): #vers 2
-        """Show detailed texture properties dialog"""
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+        """Show TXD properties including version and platform information"""
+        if not self.current_txd_name:
+            QMessageBox.information(self, "No TXD", "No TXD file loaded")
             return
 
-        dialog = TexturePropertiesDialog(self, self.selected_texture, self.main_window)
-        dialog.exec()
+        try:
+            dialog = QDialog(self)
+            dialog.setWindowTitle("TXD Properties")
+            dialog.setMinimumWidth(500)
+
+            layout = QFormLayout(dialog)
+
+            # Basic info
+            layout.addRow("TXD Name:", QLabel(self.current_txd_name))
+            layout.addRow("Texture Count:", QLabel(str(len(self.texture_list))))
+
+            # NEW: Version information
+            layout.addRow("", QLabel(""))  # Spacer
+            layout.addRow("RenderWare Version:", QLabel(self.txd_version_str))
+            layout.addRow("Platform:", QLabel(self.txd_platform_name))
+            layout.addRow("Game:", QLabel(self.txd_game))
+            layout.addRow("Format:", QLabel(self._get_format_description()))
+
+            # NEW: Capabilities
+            if self.txd_capabilities:
+                layout.addRow("", QLabel(""))  # Spacer
+                caps_label = QLabel("<b>Capabilities:</b>")
+                layout.addRow(caps_label)
+
+                if self.txd_capabilities.get('mipmaps'):
+                    layout.addRow("  Mipmaps:", QLabel("Supported"))
+                if self.txd_capabilities.get('bumpmaps'):
+                    layout.addRow("  Bumpmaps:", QLabel("Supported"))
+                if self.txd_capabilities.get('dxt_compression'):
+                    layout.addRow("  DXT Compression:", QLabel("Supported"))
+                if self.txd_capabilities.get('palette'):
+                    layout.addRow("  Palette:", QLabel("Supported"))
+                if self.txd_capabilities.get('swizzled'):
+                    layout.addRow("  Swizzled:", QLabel("Yes (Console)"))
+
+            # File size info
+            if self.current_txd_data:
+                size_kb = len(self.current_txd_data) / 1024
+                layout.addRow("", QLabel(""))  # Spacer
+                layout.addRow("File Size:", QLabel(f"{size_kb:.2f} KB"))
+
+            # Close button
+            close_btn = QPushButton("Close")
+            close_btn.clicked.connect(dialog.accept)
+            layout.addRow("", close_btn)
+
+            dialog.exec()
+
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Could not show properties: {str(e)}")
 
 
     def _create_texture_filters(self): #vers 1
@@ -5889,6 +5962,405 @@ class TXDWorkshop(QWidget): #vers 3
         self.texture_table.setItem(row, 0, thumb_item)
         self.texture_table.setItem(row, 1, details_item)
         self.texture_table.setRowHeight(row, 80)
+
+
+#class SvgIcons: #vers 1 - Once functions are updated this class will be moved to the bottom
+    """SVG icon data to QIcon with theme color support"""
+
+    def _create_color_picker_icon(self): #vers 1
+        """Color picker icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="2"/>
+            <path d="M10 3v4M10 13v4M3 10h4M13 10h4" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_zoom_in_icon(self): #vers 1
+        """Zoom in icon (+)"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2"/>
+            <path d="M8 5v6M5 8h6" stroke="currentColor" stroke-width="2"/>
+            <path d="M13 13l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_zoom_out_icon(self): #vers 1
+        """Zoom out icon (-)"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2"/>
+            <path d="M5 8h6" stroke="currentColor" stroke-width="2"/>
+            <path d="M13 13l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_reset_icon(self): #vers 1
+        """Reset/1:1 icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 10A6 6 0 1 1 4 10M4 10l3-3m-3 3l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_fit_icon(self): #vers 1
+        """Fit to window icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="3" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M7 7l6 6M13 7l-6 6" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_arrow_up_icon(self): #vers 1
+        """Arrow up"""
+        svg_data = b'''<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 3v10M4 7l4-4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=16)
+
+    def _create_arrow_down_icon(self): #vers 1
+        """Arrow down"""
+        svg_data = b'''<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 13V3M12 9l-4 4-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=16)
+
+    def _create_arrow_left_icon(self): #vers 1
+        """Arrow left"""
+        svg_data = b'''<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 8h10M7 4L3 8l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=16)
+
+    def _create_arrow_right_icon(self): #vers 1
+        """Arrow right"""
+        svg_data = b'''<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 8H3M9 12l4-4-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=16)
+
+    def _create_flip_vert_icon(self): #vers 1
+        """Create vertical flip SVG icon"""
+        from PyQt6.QtGui import QIcon, QPixmap, QPainter
+        from PyQt6.QtSvg import QSvgRenderer
+
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 12h18M8 7l-4 5 4 5M16 7l4 5-4 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+
+        return self._svg_to_icon(svg_data)
+
+    def _create_flip_horz_icon(self): #vers 1
+        """Create horizontal flip SVG icon"""
+        from PyQt6.QtGui import QIcon, QPixmap, QPainter
+        from PyQt6.QtSvg import QSvgRenderer
+
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 3v18M7 8l5-4 5 4M7 16l5 4 5-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+
+        return self._svg_to_icon(svg_data)
+
+    def _create_rotate_cw_icon(self): #vers 1
+        """Create clockwise rotation SVG icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 12a9 9 0 11-9-9v6M21 3l-3 6-6-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+
+        return self._svg_to_icon(svg_data)
+
+    def _create_rotate_ccw_icon(self): #vers 1
+        """Create counter-clockwise rotation SVG icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 12a9 9 0 109-9v6M3 3l3 6 6-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+
+        return self._svg_to_icon(svg_data)
+
+    def _create_copy_icon(self): #vers 1
+        """Create copy SVG icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/>
+            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+
+        return self._svg_to_icon(svg_data)
+
+    def _create_paste_icon(self): #vers 1
+        """Create paste SVG icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" stroke="currentColor" stroke-width="2"/>
+            <rect x="8" y="2" width="8" height="4" rx="1" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+
+        return self._svg_to_icon(svg_data)
+
+    def _create_edit_icon(self): #vers 1
+        """Create edit SVG icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="2"/>
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+
+        return self._svg_to_icon(svg_data)
+
+    def _create_convert_icon(self): #vers 1
+        """Create convert SVG icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 12h18M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+
+        return self._svg_to_icon(svg_data)
+
+    def _create_info_icon(self): #vers 1
+        """Info - circle with 'i' icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 11v6M12 8v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+    def _create_folder_icon(self): #vers 1
+        """Open IMG - Folder icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-7l-2-2H5a2 2 0 00-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+    def _create_file_icon(self): #vers 1
+        """Open TXD - File icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="2"/>
+            <path d="M14 2v6h6" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+    def _create_save_icon(self): #vers 1
+        """Save TXD - Floppy disk icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2"/>
+            <path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+    def _create_import_icon(self): #vers 1
+        """Import - Download/Import icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+    def _create_export_icon(self): #vers 1
+        """Export - Upload/Export icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+    def _create_package_icon(self): #vers 1
+        """Export All - Package/Box icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" stroke-width="2"/>
+            <path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+    def _create_properties_icon(self): #vers 1
+        """Properties - Info/Details icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 16v-4M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+    # CONTEXT MENU ICONS
+
+    def _create_plus_icon(self): #vers 1
+        """Create New Entry - Plus icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+    def _create_document_icon(self): #vers 1
+        """Create New TXD - Document icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="2"/>
+            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+    def _create_undo_icon(self): #vers 1
+        """Undo - Curved arrow icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 7v6h6M3 13a9 9 0 1018 0 9 9 0 00-18 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+    def _create_filter_icon(self): #vers 1
+        """Filter/sliders icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="6" cy="4" r="2" fill="currentColor"/>
+            <rect x="5" y="8" width="2" height="8" fill="currentColor"/>
+            <circle cx="14" cy="12" r="2" fill="currentColor"/>
+            <rect x="13" y="4" width="2" height="6" fill="currentColor"/>
+            <circle cx="10" cy="8" r="2" fill="currentColor"/>
+            <rect x="9" y="12" width="2" height="4" fill="currentColor"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_add_icon(self): #vers 1
+        """Add/plus icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_trash_icon(self): #vers 1
+        """Delete/trash icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 5h14M8 5V3h4v2M6 5v11a1 1 0 001 1h6a1 1 0 001-1V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_filter_icon(self): #vers 1
+        """Filter/sliders icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="6" cy="4" r="2" fill="currentColor"/>
+            <rect x="5" y="8" width="2" height="8" fill="currentColor"/>
+            <circle cx="14" cy="12" r="2" fill="currentColor"/>
+            <rect x="13" y="4" width="2" height="6" fill="currentColor"/>
+            <circle cx="10" cy="8" r="2" fill="currentColor"/>
+            <rect x="9" y="12" width="2" height="4" fill="currentColor"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_delete_icon(self): #vers 1
+        """Delete/trash icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 5h14M8 5V3h4v2M6 5v11a1 1 0 001 1h6a1 1 0 001-1V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_duplicate_icon(self): #vers 1
+        """Duplicate/copy icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="6" y="6" width="10" height="10" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M4 4h8v2H6v8H4V4z" fill="currentColor"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_create_icon(self): #vers 1
+        """Create/new icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_filter_icon(self): #vers 1
+        """Filter/sliders icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="6" cy="4" r="2" fill="currentColor"/>
+            <rect x="5" y="8" width="2" height="8" fill="currentColor"/>
+            <circle cx="14" cy="12" r="2" fill="currentColor"/>
+            <rect x="13" y="4" width="2" height="6" fill="currentColor"/>
+            <circle cx="10" cy="8" r="2" fill="currentColor"/>
+            <rect x="9" y="12" width="2" height="4" fill="currentColor"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_pencil_icon(self): #vers 1
+        """Edit - Pencil icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_trash_icon(self): #vers 1
+        """Delete - Trash icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_eye_icon(self): #vers 1
+        """View - Eye icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
+            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_list_icon(self): #vers 1
+        """Properties List - List icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+    # WINDOW CONTROL ICONS
+
+    def _create_minimize_icon(self): #vers 1
+        """Minimize - Horizontal line"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_maximize_icon(self): #vers 1
+        """Maximize - Square"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+
+    def _create_close_icon(self): #vers 1
+        """Close - X icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
+    def _create_settings_icon(self): #vers 1
+        """Settings/gear icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
+            <path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.93 4.93l1.41 1.41M13.66 13.66l1.41 1.41M4.93 15.07l1.41-1.41M13.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+
+    def _svg_to_icon(self, svg_data, size=24): #vers 2
+        """Convert SVG data to QIcon with theme color support"""
+        from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor
+        from PyQt6.QtSvg import QSvgRenderer
+        from PyQt6.QtCore import QByteArray
+
+        try:
+            # Get current text color from palette
+            text_color = self.palette().color(self.foregroundRole())
+
+            # Replace currentColor with actual color
+            svg_str = svg_data.decode('utf-8')
+            svg_str = svg_str.replace('currentColor', text_color.name())
+            svg_data = svg_str.encode('utf-8')
+
+            renderer = QSvgRenderer(QByteArray(svg_data))
+            pixmap = QPixmap(size, size)
+            pixmap.fill(QColor(0, 0, 0, 0))  # Transparent background
+
+            painter = QPainter(pixmap)
+            renderer.render(painter)
+            painter.end()
+
+            return QIcon(pixmap)
+        except:
+            # Fallback to no icon if SVG fails
+            return QIcon()
 
 
 
