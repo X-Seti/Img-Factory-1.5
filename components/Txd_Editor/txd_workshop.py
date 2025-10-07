@@ -120,7 +120,14 @@ except ImportError:
 # __init__
 # closeEvent
 
-
+def _create_undo_icon(self): #vers 2
+    """Undo - Curved arrow icon"""
+    svg_data = b'''<svg viewBox="0 0 24 24">
+        <path d="M3 7v6h6M3 13a9 9 0 1018 0 9 9 0 00-18 0z"
+              stroke="currentColor" stroke-width="2" fill="none"
+              stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>'''
+    return self._svg_to_icon(svg_data, size=20)
 class TXDWorkshop(QWidget): #vers 3
     """TXD Workshop - Main texture editing window"""
 
@@ -175,6 +182,9 @@ class TXDWorkshop(QWidget): #vers 3
             parent_pos = parent.pos()
             self.move(parent_pos.x() + 50, parent_pos.y() + 80)
 
+        self.txd_tabs = []  # List of open TXD data
+        self.current_tab_index = 0
+
         self.setup_ui()
         self._apply_theme()
 
@@ -191,6 +201,18 @@ class TXDWorkshop(QWidget): #vers 3
         # Toolbar
         toolbar = self._create_toolbar()
         main_layout.addWidget(toolbar)
+
+        # Tab bar for multiple TXD files
+        self.txd_tabs = QTabWidget()
+        self.txd_tabs.setTabsClosable(True)
+        self.txd_tabs.tabCloseRequested.connect(self._close_txd_tab)
+        self.txd_tabs.currentChanged.connect(self._switch_txd_tab)
+
+        # Create initial tab with main content
+        initial_tab = QWidget()
+        tab_layout = QVBoxLayout(initial_tab)
+        tab_layout.setContentsMargins(0, 0, 0, 0)
+
 
         # Main splitter
         main_splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -229,6 +251,16 @@ class TXDWorkshop(QWidget): #vers 3
         if hasattr(self, '_setup_status_indicators'):
             status_frame = self._setup_status_indicators()
             main_layout.addWidget(status_frame)
+
+    def _add_txd_tab(self, txd_data, txd_name): #vers 1
+        """Add new TXD as tab"""
+        tab_info = {
+            'name': txd_name,
+            'data': txd_data,
+            'textures': [],
+            'modified': False
+        }
+        self.txd_tabs.append(tab_info)
 
     def _create_status_bar(self): #vers 5
         """Create bottom status bar - single line compact"""
@@ -682,6 +714,9 @@ class TXDWorkshop(QWidget): #vers 3
             ('flip_btn', 'Switch'),
             ('props_btn', 'Properties'),
             ('info_btn', 'Info'),
+            ('undo_btn', 'Undo'),
+            ('paint_btn', 'Paint'),
+            ('build_from_dff_btn', 'Build from DFF'),
             # Transform buttons
             ('flip_vert_btn', 'Flip Vertical'),
             ('flip_horz_btn', 'Flip Horizontal'),
@@ -727,39 +762,39 @@ class TXDWorkshop(QWidget): #vers 3
                 self._apply_button_mode_to_button(button, btn_text)
 
 
-    def _apply_button_mode_to_button(self, button, text): #vers 3
+    def _apply_button_mode_to_button(self, button, text): #vers 5
         """Apply display mode to a single button with proper spacing"""
         # Store original icon if not already stored
         if not hasattr(button, '_original_icon'):
             button._original_icon = button.icon()
 
         if self.button_display_mode == 'icons':
-            # Icons only - hide text, COMPACT size
+            # Icons only - SQUARE buttons like transform panel
             button.setText("")
             if not button._original_icon.isNull():
                 button.setIcon(button._original_icon)
                 button.setIconSize(QSize(20, 20))
-
-            button.setMinimumWidth(28)  # Reduced from 32
-            button.setMaximumWidth(28)
-            button.setContentsMargins(2, 2, 2, 2)  # Tight margins
+            button.setFixedSize(40, 40)  # SQUARE - match transform panel
 
         elif self.button_display_mode == 'text':
-            # Text only - show text, hide icon, auto-size
+            # Text only - auto-size for text
             button.setText(text)
             button.setIcon(QIcon())
-            button.setMinimumWidth(60)  # Minimum for text readability
-            button.setMaximumWidth(16777215)  # No max limit
+            button.setMinimumWidth(60)
+            button.setMaximumWidth(16777215)
+            button.setMinimumHeight(0)  # Remove fixed height
+            button.setMaximumHeight(16777215)
 
         elif self.button_display_mode == 'both':
-            # Icons + Text - show both, normal size
+            # Icons + Text - auto-size for both
             button.setText(text)
             if not button._original_icon.isNull():
                 button.setIcon(button._original_icon)
                 button.setIconSize(QSize(20, 20))
-
-            button.setMinimumWidth(80)
+            button.setMinimumWidth(0)
             button.setMaximumWidth(16777215)
+            button.setMinimumHeight(0)  # Remove fixed height
+            button.setMaximumHeight(16777215)
 
 
     def _on_display_mode_changed(self, text): #vers 2
@@ -907,10 +942,10 @@ class TXDWorkshop(QWidget): #vers 3
         self.info_format_b.setStyleSheet("font-weight: bold;")
         info_layout.addWidget(self.info_format_b)
 
-        self.view_bumpmap_btn = QPushButton("View")
-        self.view_bumpmap_btn.setIcon(self._create_view_icon())
+        self.view_bumpmap_btn = QPushButton("Manage")
+        self.view_bumpmap_btn.setIcon(self.create_manage_icon())
         self.view_bumpmap_btn.setIconSize(QSize(20, 20))
-        self.view_bumpmap_btn.setToolTip("View bumpmap channel")
+        self.view_bumpmap_btn.setToolTip("View and Manage bumpmaps")
         self.view_bumpmap_btn.clicked.connect(self._view_bumpmap)
         self.view_bumpmap_btn.setEnabled(False)
         info_layout.addWidget(self.view_bumpmap_btn)
@@ -1322,6 +1357,14 @@ class TXDWorkshop(QWidget): #vers 3
             buttons_to_check.append(self.maximize_btn)
         if hasattr(self, 'close_btn'):
             buttons_to_check.append(self.close_btn)
+        # Should be enabled on selection:
+        if hasattr(self, 'undo_btn'):
+            # Undo depends on undo stack, not selection
+            self.undo_btn.setEnabled(len(self.undo_stack) > 0)
+
+        if hasattr(self, 'check_dff_btn'):
+            # Always enabled if textures exist
+            self.check_dff_btn.setEnabled(len(self.texture_list) > 0)
 
         if not hasattr(self, 'drag_btn'):
             return False
@@ -1474,19 +1517,34 @@ class TXDWorkshop(QWidget): #vers 3
         self.flip_btn.setEnabled(False)
         layout.addWidget(self.flip_btn)
 
-        self.props_btn = QPushButton("Properties")
+        # Properties button
+        self.props_btn = QPushButton()
         self.props_btn.setIcon(self._create_properties_icon())
+        self.props_btn.setText("Properties")
         self.props_btn.setIconSize(QSize(20, 20))
         self.props_btn.clicked.connect(self.show_properties)
         self.props_btn.setEnabled(False)
+        self.props_btn.setToolTip("Show texture properties")
         layout.addWidget(self.props_btn)
 
-        self.info_btn = QPushButton("Info")
+        self.undo_btn = QPushButton()
+        self.undo_btn.setIcon(self._create_undo_icon())
+        self.undo_btn.setText("Undo")
+        self.undo_btn.setIconSize(QSize(20, 20))
+        self.undo_btn.clicked.connect(self._undo_last_action)
+        self.undo_btn.setEnabled(False)
+        self.undo_btn.setToolTip("Undo last action")
+        layout.addWidget(self.undo_btn)
+
+        # Info button
+        self.info_btn = QPushButton()
         self.info_btn.setIcon(self._create_info_icon())
+        self.info_btn.setText("Info")
         self.info_btn.setIconSize(QSize(20, 20))
-        self.info_btn.clicked.connect(self._show_detailed_info)
-        self.info_btn.setEnabled(False)
+        self.info_btn.clicked.connect(self._show_txd_info)
+        self.info_btn.setToolTip("Show TXD file information")
         layout.addWidget(self.info_btn)
+
 
         layout.addStretch()
 
@@ -1843,7 +1901,17 @@ class TXDWorkshop(QWidget): #vers 3
             self.info_bitdepth.setStyleSheet("font-weight: bold; padding: 3px 8px; border: 1px solid #3a3a3a;")
             self.info_bitdepth.setMinimumWidth(50)
             format_layout.addWidget(self.info_bitdepth)
+
             format_layout.addStretch()
+
+            # Convert
+            self.convert_btn = QPushButton("Convert")
+            self.convert_btn.setIcon(self._create_convert_icon())
+            self.convert_btn.setIconSize(QSize(20, 20))
+            self.convert_btn.setToolTip("Convert texture format")
+            self.convert_btn.clicked.connect(self._convert_texture)
+            self.convert_btn.setEnabled(False)
+            format_layout.addWidget(self.convert_btn)
 
             # Line 3: Mipmaps + Bumpmaps
             mipbump_layout = QHBoxLayout()
@@ -1887,10 +1955,10 @@ class TXDWorkshop(QWidget): #vers 3
 
             view_layout = QHBoxLayout()
             view_layout.setSpacing(5)
-            self.view_bumpmap_btn = QPushButton("View")
-            self.view_bumpmap_btn.setIcon(self._create_view_icon())
+            self.view_bumpmap_btn = QPushButton("Manage")
+            self.view_bumpmap_btn.setIcon(self._create_manage_icon())
             self.view_bumpmap_btn.setIconSize(QSize(20, 20))
-            self.view_bumpmap_btn.setToolTip("View bumpmap channel")
+            self.view_bumpmap_btn.setToolTip("View and Manage Bumpmaps")
             self.view_bumpmap_btn.clicked.connect(self._view_bumpmap)
             self.view_bumpmap_btn.setEnabled(False)
             mipbump_layout.addWidget(self.view_bumpmap_btn)
@@ -2144,6 +2212,177 @@ class TXDWorkshop(QWidget): #vers 3
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to generate mipmaps: {str(e)}")
+
+    def _manage_bumpmaps(self): #vers 1
+        """Open bumpmap manager dialog"""
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture")
+            return
+
+        # Check if version supports bumpmaps
+        if not is_bumpmap_supported(self.txd_version_id, self.txd_device_id):
+            QMessageBox.warning(self, "Not Supported",
+                f"Bumpmaps not supported for {self.txd_game}\n"
+                f"Only San Andreas and State of Liberty support bumpmaps")
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Bumpmap Manager")
+        dialog.setMinimumWidth(500)
+        dialog.setMinimumHeight(400)
+
+        layout = QVBoxLayout(dialog)
+
+        # Info section
+        info_group = QGroupBox("Bumpmap Information")
+        info_layout = QFormLayout()
+
+        texture_name = self.selected_texture.get('name', 'Unknown')
+        info_layout.addRow("Texture:", QLabel(texture_name))
+
+        has_bumpmap = self._has_bumpmap_data(self.selected_texture)
+        status = "Present" if has_bumpmap else "Not present"
+        info_layout.addRow("Status:", QLabel(status))
+
+        info_layout.addRow("Format:", QLabel("Environment map (Normal map)"))
+
+        info_group.setLayout(info_layout)
+        layout.addWidget(info_group)
+
+        # Preview section
+        preview_group = QGroupBox("Preview")
+        preview_layout = QVBoxLayout()
+
+        preview_label = QLabel("Bumpmap preview")
+        preview_label.setMinimumHeight(200)
+        preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        preview_label.setStyleSheet("border: 1px solid #3a3a3a; background: #2a2a2a;")
+
+        if has_bumpmap:
+            # TODO: Display actual bumpmap preview
+            preview_label.setText("Bumpmap data present\n(Preview coming soon)")
+        else:
+            preview_label.setText("No bumpmap data")
+
+        preview_layout.addWidget(preview_label)
+        preview_group.setLayout(preview_layout)
+        layout.addWidget(preview_group)
+
+        # Action buttons
+        button_layout = QHBoxLayout()
+
+        # View button
+        view_btn = QPushButton("View")
+        view_btn.setIcon(self._create_view_icon())
+        view_btn.clicked.connect(lambda: self._view_bumpmap_in_manager(preview_label))
+        view_btn.setEnabled(has_bumpmap)
+        button_layout.addWidget(view_btn)
+
+        # Generate button
+        generate_btn = QPushButton("Generate")
+        generate_btn.setIcon(self._create_add_icon())
+        generate_btn.clicked.connect(lambda: self._generate_bumpmap_dialog(dialog))
+        generate_btn.setToolTip("Generate bumpmap from texture")
+        button_layout.addWidget(generate_btn)
+
+        # Import button
+        import_btn = QPushButton("Import")
+        import_btn.setIcon(self._create_import_icon())
+        import_btn.clicked.connect(lambda: self._import_bumpmap_in_manager(dialog))
+        button_layout.addWidget(import_btn)
+
+        # Export button
+        export_btn = QPushButton("Export")
+        export_btn.setIcon(self._create_export_icon())
+        export_btn.clicked.connect(self._export_bumpmap)
+        export_btn.setEnabled(has_bumpmap)
+        button_layout.addWidget(export_btn)
+
+        # Delete button
+        delete_btn = QPushButton("Delete")
+        delete_btn.setIcon(self._create_trash_icon())
+        delete_btn.clicked.connect(lambda: self._delete_bumpmap_in_manager(dialog))
+        delete_btn.setEnabled(has_bumpmap)
+        delete_btn.setToolTip("Remove bumpmap from texture")
+        button_layout.addWidget(delete_btn)
+
+        layout.addLayout(button_layout)
+
+        # Close button
+        close_layout = QHBoxLayout()
+        close_layout.addStretch()
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dialog.accept)
+        close_layout.addWidget(close_btn)
+        layout.addLayout(close_layout)
+
+        dialog.exec()
+
+    def _view_bumpmap_in_manager(self, preview_label): #vers 1
+        """View bumpmap in manager preview"""
+        if not self.selected_texture:
+            return
+
+        try:
+            if 'bumpmap_data' in self.selected_texture:
+                bumpmap_image = self._decode_bumpmap(self.selected_texture['bumpmap_data'])
+                pixmap = QPixmap.fromImage(bumpmap_image)
+                preview_label.setPixmap(
+                    pixmap.scaled(preview_label.size(),
+                                Qt.AspectRatioMode.KeepAspectRatio,
+                                Qt.TransformationMode.SmoothTransformation)
+                )
+            else:
+                preview_label.setText("No bumpmap data found")
+
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to view bumpmap: {str(e)}")
+
+    def _generate_bumpmap_dialog(self, parent_dialog): #vers 1
+        """Generate bumpmap from texture (placeholder)"""
+        reply = QMessageBox.question(
+            parent_dialog, "Generate Bumpmap",
+            "Generate bumpmap from current texture?\n\n"
+            "This will create a normal map from the texture's height information.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            # TODO: Implement bumpmap generation
+            QMessageBox.information(parent_dialog, "Generate",
+                "Bumpmap generation coming soon.\n\n"
+                "Will use Sobel filter to detect edges and create normal map.")
+
+    def _import_bumpmap_in_manager(self, parent_dialog): #vers 1
+        """Import bumpmap in manager dialog"""
+        self._import_bumpmap()
+        parent_dialog.accept()  # Close and refresh
+
+    def _delete_bumpmap_in_manager(self, parent_dialog): #vers 1
+        """Delete bumpmap from texture"""
+        if not self.selected_texture:
+            return
+
+        reply = QMessageBox.question(
+            parent_dialog, "Confirm Delete",
+            "Remove bumpmap data from this texture?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            # Remove bumpmap data
+            if 'bumpmap_data' in self.selected_texture:
+                del self.selected_texture['bumpmap_data']
+            if 'has_bumpmap' in self.selected_texture:
+                self.selected_texture['has_bumpmap'] = False
+
+            self._mark_as_modified()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("Bumpmap removed")
+
+            parent_dialog.accept()  # Close manager
 
 
     def _update_editing_controls(self): #vers 2
@@ -3029,27 +3268,43 @@ class TXDWorkshop(QWidget): #vers 3
                 self.main_window.log_message(f"✅ Created new TXD: {name}")
 
 
-    def _delete_texture(self): #vers 1
+    def _delete_texture(self): #vers 2
         """Delete selected texture from TXD"""
         if not self.selected_texture:
             QMessageBox.warning(self, "No Selection", "Please select a texture to delete")
             return
 
+        # Confirm deletion
+        texture_name = self.selected_texture.get('name', 'Unknown')
         reply = QMessageBox.question(
-            self, "Delete Texture",
-            f"Delete texture '{self.selected_texture['name']}'?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            self, "Confirm Delete",
+            f"Delete texture '{texture_name}'?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
         )
 
-        if reply == QMessageBox.StandardButton.Yes:
-            self._save_undo_state("Delete texture")
-            self.texture_list.remove(self.selected_texture)
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        try:
+            # Find and remove from list
+            if self.selected_texture in self.texture_list:
+                self.texture_list.remove(self.selected_texture)
+
+            # Clear selection
             self.selected_texture = None
+
+            # Reload table
             self._reload_texture_table()
+
+            # Mark as modified
             self._mark_as_modified()
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("✅ Texture deleted")
+                self.main_window.log_message(f"Deleted: {texture_name}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Delete Error", f"Failed to delete texture: {str(e)}")
 
 
     def _mark_as_modified(self): #vers 1
@@ -3312,18 +3567,29 @@ class TXDWorkshop(QWidget): #vers 3
             self.undo_stack.pop(0)
 
 
-    def _undo_last_action(self): #vers 1
-        """Undo the last action"""
+    def _undo_last_action(self): #vers 2
+        """Undo the last action from undo stack"""
         if not self.undo_stack:
-            QMessageBox.information(self, "Undo", "Nothing to undo")
             return
 
-        previous_state = self.undo_stack.pop()
-        self.texture_list = previous_state['texture_list']
-        self._reload_texture_table()
+        try:
+            # Pop last action
+            last_state = self.undo_stack.pop()
 
-        if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"↶ Undo: {previous_state['action']}")
+            # Restore texture list state
+            self.texture_list = last_state.get('texture_list', [])
+
+            # Reload table
+            self._reload_texture_table()
+
+            # Update undo button state
+            self.undo_btn.setEnabled(len(self.undo_stack) > 0)
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("Undo applied")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Undo Error", f"Failed to undo: {str(e)}")
 
 
     def _auto_generate_mipmaps(self): #vers 1
@@ -3488,6 +3754,39 @@ class TXDWorkshop(QWidget): #vers 3
                 self.main_window.log_message(f"✅ TXD Workshop loaded: {img_name}")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load IMG: {str(e)}")
+
+    def _show_txd_info(self): #vers 1
+        """Show TXD file information dialog"""
+        if not self.current_txd_name:
+            QMessageBox.information(self, "No TXD", "No TXD file loaded")
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("TXD Information")
+        dialog.setMinimumWidth(450)
+
+        layout = QFormLayout(dialog)
+
+        # File info
+        layout.addRow("File Name:", QLabel(self.current_txd_name))
+        layout.addRow("Texture Count:", QLabel(str(len(self.texture_list))))
+
+        if self.current_txd_data:
+            size_kb = len(self.current_txd_data) / 1024
+            layout.addRow("File Size:", QLabel(f"{size_kb:.2f} KB"))
+
+        # Version info
+        layout.addRow("", QLabel(""))  # Spacer
+        layout.addRow("RW Version:", QLabel(self.txd_version_str))
+        layout.addRow("Platform:", QLabel(self.txd_platform_name))
+        layout.addRow("Game:", QLabel(self.txd_game))
+
+        # Close button
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dialog.accept)
+        layout.addRow("", close_btn)
+
+        dialog.exec()
 
 
     def _load_img_txd_list(self): #vers 1
@@ -5324,7 +5623,8 @@ class TXDWorkshop(QWidget): #vers 3
         dialog.exec()
 
 
-    def _create_transform_panel(self): #vers 8
+    #Left side vertical panel
+    def _create_transform_panel(self): #vers 11
         """Create transform panel with variable width - no headers"""
         self.transform_panel = QFrame()
         self.transform_panel.setFrameStyle(QFrame.Shape.StyledPanel)
@@ -5416,31 +5716,39 @@ class TXDWorkshop(QWidget): #vers 3
         self.paste_btn.setToolTip("Paste texture from clipboard")
         layout.addWidget(self.paste_btn)
 
-        # Edit
-        self.edit_btn = QPushButton()
-        self.edit_btn.setIcon(self._create_edit_icon())
-        self.edit_btn.setText("Edit")
-        self.edit_btn.setIconSize(QSize(20, 20))
+        self.paint_btn = QPushButton()
+        self.paint_btn.setIcon(self._create_paint_icon())
+        self.paint_btn.setText("Paint")
+        self.paint_btn.setIconSize(QSize(20, 20))
         if self.button_display_mode == 'icons':
-            self.edit_btn.setFixedSize(40, 40)
-        self.edit_btn.clicked.connect(self._edit_texture)
-        self.edit_btn.setEnabled(False)
-        self.edit_btn.setToolTip("Edit texture in external editor")
-        layout.addWidget(self.edit_btn)
-
-        # Convert
-        self.convert_btn = QPushButton()
-        self.convert_btn.setIcon(self._create_convert_icon())
-        self.convert_btn.setText("Convert")
-        self.convert_btn.setIconSize(QSize(20, 20))
-        if self.button_display_mode == 'icons':
-            self.convert_btn.setFixedSize(40, 40)
-        self.convert_btn.clicked.connect(self._convert_texture)
-        self.convert_btn.setEnabled(False)
-        self.convert_btn.setToolTip("Convert texture format")
-        layout.addWidget(self.convert_btn)
+            self.paint_btn.setFixedSize(40, 40)
+        self.paint_btn.clicked.connect(self._open_paint_editor)
+        self.paint_btn.setEnabled(False)
+        self.paint_btn.setToolTip("Paint on texture")
+        layout.addWidget(self.paint_btn)
 
         layout.addSpacing(5)
+
+        # Check TXD vs DFF
+        self.check_dff_btn = QPushButton()
+        self.check_dff_btn.setIcon(self._create_check_icon())
+        self.check_dff_btn.setText("Check DFF")
+        self.check_dff_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.check_dff_btn.setFixedSize(40, 40)
+        self.check_dff_btn.clicked.connect(self._check_txd_vs_dff)
+        self.check_dff_btn.setToolTip("Verify textures against DFF model file")
+        layout.addWidget(self.check_dff_btn)
+
+        self.build_from_dff_btn = QPushButton()
+        self.build_from_dff_btn.setIcon(self._create_build_icon())
+        self.build_from_dff_btn.setText("Build TXD via")
+        self.build_from_dff_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.build_from_dff_btn.setFixedSize(40, 40)
+        self.build_from_dff_btn.clicked.connect(self._build_txd_from_dff)
+        self.build_from_dff_btn.setToolTip("Create TXD structure from DFF material names")
+        layout.addWidget(self.build_from_dff_btn)
 
         # Create Texture
         self.create_texture_btn = QPushButton()
@@ -5508,25 +5816,6 @@ class TXDWorkshop(QWidget): #vers 3
                 f"Import texture functionality:\n{os.path.basename(file_path)}\n\n"
                 "Will create new texture entry in TXD")
 
-
-    def _duplicate_texture(self): #vers 1
-        """Duplicate selected texture"""
-        if not self.selected_texture:
-            return
-
-        import copy
-        new_texture = copy.deepcopy(self.selected_texture)
-        new_texture['name'] = f"{new_texture['name']}_copy"
-        if new_texture.get('has_alpha'):
-            new_texture['alpha_name'] = f"{new_texture.get('alpha_name', '')}_copy"
-
-        self.texture_list.append(new_texture)
-        self._save_undo_state("Duplicate texture")
-        self._reload_texture_table()
-        self._mark_as_modified()
-
-        if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"📋 Duplicated: {self.selected_texture['name']}")
 
 
     def _edit_texture(self): #vers 1
@@ -6067,72 +6356,59 @@ class TXDWorkshop(QWidget): #vers 3
             QMessageBox.critical(self, "Error", f"Failed to rotate: {str(e)}")
 
 
-    def _copy_texture(self): #vers 1
-        """Copy texture to clipboard"""
-        if not self.selected_texture or not self.selected_texture.get('rgba_data'):
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+    def _copy_texture(self): #vers 2
+        """Copy selected texture data to clipboard"""
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture to copy")
             return
 
         try:
-            from PyQt6.QtGui import QImage, QClipboard
-            from PyQt6.QtWidgets import QApplication
+            # Store full texture data
+            self.clipboard_texture = {
+                'name': self.selected_texture.get('name', 'texture'),
+                'width': self.selected_texture.get('width', 0),
+                'height': self.selected_texture.get('height', 0),
+                'format': self.selected_texture.get('format', 'Unknown'),
+                'depth': self.selected_texture.get('depth', 32),
+                'rgba_data': self.selected_texture.get('rgba_data'),
+                'has_alpha': self.selected_texture.get('has_alpha', False),
+                'alpha_name': self.selected_texture.get('alpha_name', ''),
+                'mipmap_levels': self.selected_texture.get('mipmap_levels', []),
+            }
 
-            width = self.selected_texture['width']
-            height = self.selected_texture['height']
-            rgba_data = self.selected_texture['rgba_data']
-
-            img = QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
-
-            clipboard = QApplication.clipboard()
-            clipboard.setImage(img)
+            self.paste_btn.setEnabled(True)
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"✅ Copied texture to clipboard: {self.selected_texture['name']}")
+                self.main_window.log_message(f"Copied: {self.selected_texture.get('name')}")
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to copy: {str(e)}")
+            QMessageBox.critical(self, "Copy Error", f"Failed to copy texture: {str(e)}")
 
-
-    def _paste_texture(self): #vers 1
-        """Paste texture from clipboard"""
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+    def _paste_texture(self): #vers 2
+        """Paste copied texture data"""
+        if not hasattr(self, 'clipboard_texture') or not self.clipboard_texture:
+            QMessageBox.warning(self, "Nothing to Paste", "Clipboard is empty")
             return
 
         try:
-            from PyQt6.QtGui import QClipboard
-            from PyQt6.QtWidgets import QApplication
+            # Create new texture entry with clipboard data
+            new_texture = self.clipboard_texture.copy()
+            new_texture['name'] = new_texture['name'] + "_copy"
 
-            clipboard = QApplication.clipboard()
-            img = clipboard.image()
+            # Add to texture list
+            self.texture_list.append(new_texture)
 
-            if img.isNull():
-                QMessageBox.warning(self, "No Image", "No image in clipboard")
-                return
+            # Reload table
+            self._reload_texture_table()
 
-            # Convert to RGBA8888
-            img = img.convertToFormat(QImage.Format.Format_RGBA8888)
-
-            width = img.width()
-            height = img.height()
-            ptr = img.bits()
-            ptr.setsize(img.sizeInBytes())
-            rgba_data = bytes(ptr)
-
-            self._save_undo_state("Paste texture")
-            self.selected_texture['width'] = width
-            self.selected_texture['height'] = height
-            self.selected_texture['rgba_data'] = rgba_data
-
-            self._update_texture_info(self.selected_texture)
-            self._update_table_display()
+            # Mark as modified
             self._mark_as_modified()
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"✅ Pasted texture from clipboard: {width}x{height}")
+                self.main_window.log_message(f"Pasted: {new_texture['name']}")
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to paste: {str(e)}")
+            QMessageBox.critical(self, "Paste Error", f"Failed to paste texture: {str(e)}")
 
 
     def _edit_texture_external(self): #vers 1
@@ -6623,46 +6899,40 @@ class TXDWorkshop(QWidget): #vers 3
             for row in range(self.texture_table.rowCount()):
                 self.texture_table.setRowHidden(row, False)
 
-
-    def _duplicate_texture(self): #vers 1
+    def _duplicate_texture(self): #vers 2
         """Duplicate selected texture"""
         if not self.selected_texture:
             QMessageBox.warning(self, "No Selection", "Please select a texture to duplicate")
             return
 
         try:
-            # Create duplicate
-            original = self.selected_texture
-            duplicate = original.copy()
-
-            # Generate unique name
-            base_name = original.get('name', 'texture')
-            counter = 1
-            new_name = f"{base_name}_copy"
-
-            # Check for existing names
-            existing_names = [t.get('name', '') for t in self.texture_list]
-            while new_name in existing_names:
-                counter += 1
-                new_name = f"{base_name}_copy{counter}"
-
-            duplicate['name'] = new_name
+            # Create deep copy of texture
+            new_texture = {
+                'name': self.selected_texture.get('name', 'texture') + "_copy",
+                'width': self.selected_texture.get('width', 0),
+                'height': self.selected_texture.get('height', 0),
+                'format': self.selected_texture.get('format', 'Unknown'),
+                'depth': self.selected_texture.get('depth', 32),
+                'rgba_data': self.selected_texture.get('rgba_data'),
+                'has_alpha': self.selected_texture.get('has_alpha', False),
+                'alpha_name': self.selected_texture.get('alpha_name', '') + "_copy" if self.selected_texture.get('alpha_name') else '',
+                'mipmap_levels': self.selected_texture.get('mipmap_levels', []).copy(),
+            }
 
             # Add to texture list
-            self.texture_list.append(duplicate)
+            self.texture_list.append(new_texture)
 
-            # Update table
-            self._add_texture_to_table(duplicate)
+            # Reload table
+            self._reload_texture_table()
 
             # Mark as modified
             self._mark_as_modified()
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Duplicated texture: {base_name} -> {new_name}")
+                self.main_window.log_message(f"Duplicated: {new_texture['name']}")
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to duplicate texture: {str(e)}")
-
+            QMessageBox.critical(self, "Duplicate Error", f"Failed to duplicate texture: {str(e)}")
 
     def _remove_texture(self): #vers 1
         """Remove selected texture"""
@@ -6754,6 +7024,41 @@ class TXDWorkshop(QWidget): #vers 3
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to create texture: {str(e)}")
 
+    def _close_txd_tab(self, index): #vers 1
+        """Close TXD tab"""
+        if self.txd_tabs.count() <= 1:
+            QMessageBox.warning(self, "Cannot Close", "Cannot close the last tab")
+            return
+
+        # Check if modified
+        # TODO: Check modification state
+
+        self.txd_tabs.removeTab(index)
+
+    def _switch_txd_tab(self, index): #vers 1
+        """Switch to different TXD tab"""
+        if index < 0:
+            return
+
+        # TODO: Load texture list for this tab
+        tab_name = self.txd_tabs.tabText(index)
+
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            self.main_window.log_message(f"Switched to tab: {tab_name}")
+
+    def _add_new_txd_tab(self, txd_name, txd_data): #vers 1
+        """Add new TXD as a tab"""
+        # Create new tab widget
+        new_tab = QWidget()
+        tab_layout = QVBoxLayout(new_tab)
+        tab_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Create splitter for this tab
+        # ... similar to initial tab setup ...
+
+        # Add tab
+        tab_index = self.txd_tabs.addTab(new_tab, txd_name)
+        self.txd_tabs.setCurrentIndex(tab_index)
 
     def _texture_statistics(self): #vers 1
         """Show texture statistics"""
@@ -6808,6 +7113,65 @@ class TXDWorkshop(QWidget): #vers 3
 
         QMessageBox.information(self, "TXD Statistics", stats)
 
+    def _check_txd_vs_dff(self): #vers 2
+        """Check TXD texture names against DFF model"""
+        if not self.texture_list:
+            QMessageBox.warning(self, "No Textures", "No textures loaded in TXD")
+            return
+
+        # Select DFF file
+        dff_path, _ = QFileDialog.getOpenFileName(
+            self, "Select DFF Model File", "",
+            "DFF Files (*.dff);;All Files (*)"
+        )
+
+        if not dff_path:
+            return
+
+        try:
+            # TODO: Parse DFF file and extract material/texture names
+            # For now, show placeholder
+            # Show the dff/ mdl model texture list.
+
+            result_text = "DFF Texture Check Results:\n\n"
+            result_text += f"TXD has {len(self.texture_list)} textures\n"
+            result_text += f"DFF file: {os.path.basename(dff_path)}\n\n"
+            result_text += "Full implementation requires DFF parser"
+
+            QMessageBox.information(self, "Check Complete", result_text)
+
+        except Exception as e:
+            QMessageBox.critical(self, "Check Error", f"Failed to check DFF: {str(e)}")
+
+    def _build_txd_from_dff(self): #vers 1
+        """Build TXD structure from DFF material names"""
+        dff_path, _ = QFileDialog.getOpenFileName(
+            self, "Select DFF File", "",
+            "DFF Files (*.dff);;All Files (*)"
+        )
+
+        if not dff_path:
+            return
+
+        try:
+            # TODO: Parse DFF, extract material names, create blank textures
+            QMessageBox.information(self, "Build from DFF",
+                "Build from DFF functionality coming soon.\n\n"
+                "This will:\n"
+                "- Parse DFF material names\n"
+                "- Create blank textures for each\n"
+                "- Set up proper TXD structure"
+                "- import texture files from bmp/png assists")
+        except Exception as e:
+            QMessageBox.critical(self, "Build Error", f"Failed: {str(e)}")
+
+    def _open_paint_editor(self): #vers 1
+        """Open paint editor for texture"""
+        if not self.selected_texture:
+            return
+
+        QMessageBox.information(self, "Paint Editor",
+            "Paint editor functionality coming soon")
 
     def _add_texture_to_table(self, texture): #vers 2
         """Add a texture to the table with compression status"""
@@ -6935,12 +7299,37 @@ class TXDWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+    def _create_manage_icon(self): #vers 1
+        """Create manage/settings icon for bumpmap manager"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <!-- Gear/cog icon for management -->
+            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_paint_icon(self): #vers 1
+        """Create paint brush icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"
+                fill="currentColor"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
 
     def _create_compress_icon(self): #vers 2
         """Create compress icon"""
         svg_data = b'''<svg viewBox="0 0 24 24">
             <path fill="currentColor"
                 d="M4,2H20V4H13V10H20V12H4V10H11V4H4V2M4,13H20V15H13V21H20V23H4V21H11V15H4V13Z"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_build_icon(self): #vers 1
+        """Create build/construct icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <path d="M22,9 L12,2 L2,9 L12,16 L22,9 Z M12,18 L4,13 L4,19 L12,24 L20,19 L20,13 L12,18 Z"
+                fill="currentColor"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
@@ -7120,6 +7509,15 @@ class TXDWorkshop(QWidget): #vers 3
 
         return self._svg_to_icon(svg_data)
 
+    def _create_undo_icon(self): #vers 2
+        """Undo - Curved arrow icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <path d="M3 7v6h6M3 13a9 9 0 1018 0 9 9 0 00-18 0z"
+                stroke="currentColor" stroke-width="2" fill="none"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
     def _create_info_icon(self): #vers 1
         """Info - circle with 'i' icon"""
         svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -7293,6 +7691,18 @@ class TXDWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data)
 
+    def _create_check_icon(self): #vers 2
+        """Create check/verify icon - document with checkmark"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
+                fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M14 2v6h6"
+                stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M9 13l2 2 4-4"
+                stroke="currentColor" stroke-width="2" fill="none"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
 
     def _create_eye_icon(self): #vers 1
         """View - Eye icon"""
@@ -7492,8 +7902,7 @@ class MipmapManagerWindow(QWidget): #vers 2
 
         return title_bar
 
-
-    def _create_toolbar(self): #vers 2
+    def _create_toolbar(self): #vers 5
         """Create toolbar with action buttons AND Apply/Close"""
         toolbar = QFrame()
         toolbar.setFrameStyle(QFrame.Shape.StyledPanel)
