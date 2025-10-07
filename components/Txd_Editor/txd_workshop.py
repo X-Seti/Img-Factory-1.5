@@ -139,6 +139,10 @@ class TXDWorkshop(QWidget): #vers 3
         self.undo_stack = []
         self.button_display_mode = 'both'
 
+        # Export preferences
+        self.export_target_game = "auto"  # auto, gta3, vc, sa, manhunt
+        self.export_target_platform = "pc"  # pc, xbox, ps2, android, multi
+
         # TXD version tracking variables
         self.txd_version_id = 0
         self.txd_device_id = 0
@@ -178,7 +182,7 @@ class TXDWorkshop(QWidget): #vers 3
         self.setMouseTracking(True)
 
 
-    def setup_ui(self): #vers 6
+    def setup_ui(self): #vers 7
         """Setup the main UI layout"""
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(5, 5, 5, 5)
@@ -217,61 +221,349 @@ class TXDWorkshop(QWidget): #vers 3
         # Connect signals AFTER texture_table is created
         self._connect_texture_table_signals()
 
+        # NEW: Status bar at bottom with texture info
+        #self.status_bar = self._create_status_bar()
+        #main_layout.addWidget(self.status_bar)
+
         # Status indicators if available
         if hasattr(self, '_setup_status_indicators'):
             status_frame = self._setup_status_indicators()
             main_layout.addWidget(status_frame)
 
+    def _create_status_bar(self): #vers 5
+        """Create bottom status bar - single line compact"""
+        from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
-    def _show_workshop_settings(self): #vers 1
-        """Show workshop settings dialog"""
-        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QGroupBox
+        status_bar = QFrame()
+        status_bar.setFrameStyle(QFrame.Shape.StyledPanel | QFrame.Shadow.Sunken)
+        status_bar.setFixedHeight(22)
 
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Workshop Settings")
-        dialog.setModal(True)
-        dialog.resize(400, 300)
+        layout = QHBoxLayout(status_bar)
+        layout.setContentsMargins(5, 0, 5, 0)
+        layout.setSpacing(15)
 
-        layout = QVBoxLayout(dialog)
+        # Left: Ready
+        self.status_label = QLabel("Ready")
+        layout.addWidget(self.status_label)
 
-        # Appearance group
-        appearance_group = QGroupBox("Button Appearance")
-        appearance_layout = QVBoxLayout(appearance_group)
+        if hasattr(self, 'status_txd_info'):
+            size_kb = len(txd_data) / 1024
+            tex_count = len(self.texture_list)
+            self.status_txd_info.setText(f"Textures: {tex_count} | TXD: {size_kb:.1f} KB")
 
-        # Button display mode
-        mode_layout = QHBoxLayout()
-        mode_layout.addWidget(QLabel("Button Style:"))
-
-        self.button_mode_combo = QComboBox()
-        self.button_mode_combo.addItems([
-            "Icons + Text",
-            "Icons Only",
-            "Text Only"
-        ])
-
-        # Set current mode
-        mode_map = {'both': 0, 'icons': 1, 'text': 2}
-        self.button_mode_combo.setCurrentIndex(mode_map.get(self.button_display_mode, 0))
-
-        mode_layout.addWidget(self.button_mode_combo)
-        appearance_layout.addLayout(mode_layout)
-
-        layout.addWidget(appearance_group)
+        # TXD info
+        self.status_txd_info = QLabel("TXD: None")
+        layout.addWidget(self.status_txd_info)
 
         layout.addStretch()
 
-        # Buttons
+        # Right: Size and Format
+        self.info_size = QLabel("Size: -")
+        layout.addWidget(self.info_size)
+
+        self.format_status_label = QLabel("Format: -")
+        layout.addWidget(self.format_status_label)
+
+        return status_bar
+
+
+    def _show_workshop_settings(self): #vers 3
+        """Show workshop settings dialog with dynamic locale list"""
+        from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTabWidget,
+                                    QGroupBox, QFormLayout, QSpinBox, QFontComboBox,
+                                    QPushButton, QLabel, QComboBox, QWidget)
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("TXD Workshop Settings")
+        dialog.setMinimumWidth(500)
+        dialog.setMinimumHeight(400)
+
+        palette = self.palette()
+        layout = QVBoxLayout(dialog)
+        tabs = QTabWidget()
+
+        # === APPEARANCE TAB ===
+        appearance_tab = QWidget()
+        appearance_layout = QVBoxLayout(appearance_tab)
+
+        # Font settings group
+        font_group = QGroupBox("Font Settings")
+        font_layout = QFormLayout()
+
+        self.settings_font_combo = QFontComboBox()
+        current_font = self.font()
+        self.settings_font_combo.setCurrentFont(current_font)
+        font_layout.addRow("Font Family:", self.settings_font_combo)
+
+        self.settings_font_size = QSpinBox()
+        self.settings_font_size.setRange(8, 24)
+        self.settings_font_size.setValue(current_font.pointSize())
+        font_layout.addRow("Font Size:", self.settings_font_size)
+
+        font_group.setLayout(font_layout)
+        appearance_layout.addWidget(font_group)
+
+        # Button display mode
+        display_group = QGroupBox("Button Display")
+        display_layout = QFormLayout()
+
+        self.settings_display_combo = QComboBox()
+        self.settings_display_combo.addItems(["Icons Only", "Text Only", "Both"])
+        current_mode = {"icons": 0, "text": 1, "both": 2}.get(self.button_display_mode, 2)
+        self.settings_display_combo.setCurrentIndex(current_mode)
+        display_layout.addRow("Button Mode:", self.settings_display_combo)
+
+        display_group.setLayout(display_layout)
+        appearance_layout.addWidget(display_group)
+
+        appearance_layout.addStretch()
+        tabs.addTab(appearance_tab, "Appearance")
+
+        # === LOCALIZATION TAB ===
+        locale_tab = QWidget()
+        locale_layout = QVBoxLayout(locale_tab)
+
+        locale_group = QGroupBox("Language Settings")
+        locale_form = QFormLayout()
+
+        # Scan available locales dynamically
+        available_locales = self._scan_available_locales()
+
+        self.settings_locale_combo = QComboBox()
+        self.locale_data = {}  # Store locale info
+
+        for lang_name, lang_code, filepath in available_locales:
+            display_text = lang_name
+            if lang_code != "en":
+                display_text = f"{lang_name} ({lang_code})"
+            self.settings_locale_combo.addItem(display_text)
+            self.locale_data[display_text] = (lang_code, filepath)
+
+        # Show current locale count
+        locale_count = QLabel(f"{len(available_locales)} language(s) installed")
+        locale_count.setStyleSheet(f"font-style: italic;")
+        locale_form.addRow("Available:", locale_count)
+
+        locale_form.addRow("Language:", self.settings_locale_combo)
+
+        # Note about restart
+        note_color = palette.color(palette.ColorRole.PlaceholderText)
+        locale_note = QLabel("Note: Language changes require restart")
+        locale_note.setStyleSheet(f"color: {note_color.name()}; font-style: italic;")
+        locale_form.addRow("", locale_note)
+
+        locale_group.setLayout(locale_form)
+        locale_layout.addWidget(locale_group)
+
+        locale_layout.addStretch()
+        tabs.addTab(locale_tab, "Localization")
+
+        # === ADVANCED TAB ===
+        advanced_tab = QWidget()
+        advanced_layout = QVBoxLayout(advanced_tab)
+
+        if self.main_window:
+            dock_group = QGroupBox("Docking")
+            dock_layout = QVBoxLayout()
+
+            dock_label = QLabel(f"Current State: {'Docked' if self.is_docked else 'Standalone'}")
+            dock_layout.addWidget(dock_label)
+
+            dock_btn = QPushButton("Toggle Dock Mode (D)")
+            dock_btn.clicked.connect(lambda: (self.toggle_dock_mode(), dialog.close()))
+            dock_layout.addWidget(dock_btn)
+
+            dock_group.setLayout(dock_layout)
+            advanced_layout.addWidget(dock_group)
+
+        advanced_layout.addStretch()
+        tabs.addTab(advanced_tab, "Advanced")
+
+        layout.addWidget(tabs)
+
+        # Dialog buttons
         button_layout = QHBoxLayout()
         button_layout.addStretch()
 
         apply_btn = QPushButton("Apply")
-        apply_btn.clicked.connect(lambda: self._apply_button_mode(dialog))
+        apply_btn.clicked.connect(lambda: self._apply_settings(dialog))
         button_layout.addWidget(apply_btn)
 
-        close_btn = QPushButton("Close")
-        close_btn.clicked.connect(dialog.close)
-        button_layout.addWidget(close_btn)
+        ok_btn = QPushButton("OK")
+        ok_btn.clicked.connect(lambda: (self._apply_settings(dialog), dialog.accept()))
+        button_layout.addWidget(ok_btn)
 
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(dialog.reject)
+        button_layout.addWidget(cancel_btn)
+
+        layout.addLayout(button_layout)
+
+        # === EXPORT TAB ===
+        export_tab = QWidget()
+        export_layout = QVBoxLayout(export_tab)
+
+        # Game version targeting
+        game_group = QGroupBox("Game Version Targeting")
+        game_layout = QVBoxLayout()
+
+        game_label = QLabel("Save TXD files optimized for specific game versions:")
+        game_layout.addWidget(game_label)
+
+        self.export_game_combo = QComboBox()
+        self.export_game_combo.addItems([
+            "Auto-detect from source",
+            "GTA III (PC)",
+            "GTA Vice City (PC)",
+            "GTA San Andreas (PC)",
+            "Manhunt (PC)"
+        ])
+        game_layout.addWidget(self.export_game_combo)
+
+        game_group.setLayout(game_layout)
+        export_layout.addWidget(game_group)
+
+        # Platform targeting
+        platform_group = QGroupBox("Platform Targeting")
+        platform_layout = QVBoxLayout()
+
+        platform_label = QLabel("Enable multi-platform format conversion:")
+        platform_layout.addWidget(platform_label)
+
+        self.export_platform_combo = QComboBox()
+        self.export_platform_combo.addItems([
+            "PC Only",
+            "Xbox (Original)",
+            "PlayStation 2",
+            "Android/Mobile",
+            "Multi-platform (Convert on save)"
+        ])
+        platform_layout.addWidget(self.export_platform_combo)
+
+        # Warning label
+        platform_note = QLabel(
+            "Note: Platform conversion may alter texture format, compression, "
+            "and swizzling. Always test on target platform."
+        )
+        note_color = palette.color(palette.ColorRole.PlaceholderText)
+        platform_note.setStyleSheet(f"color: {note_color.name()}; font-style: italic;")
+        platform_note.setWordWrap(True)
+        platform_layout.addWidget(platform_note)
+
+        platform_group.setLayout(platform_layout)
+        export_layout.addWidget(platform_group)
+
+        export_layout.addStretch()
+        tabs.addTab(export_tab, "Export Options")
+
+        dialog.exec()
+
+    def _scan_available_locales(self): #vers 2
+        """Scan locale folder and return list of available languages"""
+        import os
+        import configparser
+
+        locales = []
+        locale_path = os.path.join(os.path.dirname(__file__), 'locale')
+
+        if not os.path.exists(locale_path):
+            # Easter egg: Amiga Workbench 3.1 style error
+            self._show_amiga_locale_error()
+            # Return default English
+            return [("English", "en", None)]
+
+        try:
+            for filename in os.listdir(locale_path):
+                if filename.endswith('.lang'):
+                    filepath = os.path.join(locale_path, filename)
+
+                    try:
+                        config = configparser.ConfigParser()
+                        config.read(filepath, encoding='utf-8')
+
+                        if 'Metadata' in config:
+                            lang_name = config['Metadata'].get('LanguageName', 'Unknown')
+                            lang_code = config['Metadata'].get('LanguageCode', 'unknown')
+                            locales.append((lang_name, lang_code, filepath))
+
+                    except Exception as e:
+                        if self.main_window and hasattr(self.main_window, 'log_message'):
+                            self.main_window.log_message(f"Failed to load locale {filename}: {e}")
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Locale scan error: {e}")
+
+        locales.sort(key=lambda x: x[0])
+
+        if not locales:
+            locales = [("English", "en", None)]
+
+        return locales
+
+    def _show_amiga_locale_error(self): #vers 1
+        """Show Amiga Workbench 3.1 style error dialog"""
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtGui import QFont
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Workbench Request")
+        dialog.setFixedSize(450, 150)
+
+        # Amiga Workbench styling
+        dialog.setStyleSheet("""
+            QDialog {
+                background-color: #aaaaaa;
+                border: 2px solid #ffffff;
+            }
+            QLabel {
+                color: #000000;
+                background-color: #aaaaaa;
+            }
+            QPushButton {
+                background-color: #8899aa;
+                color: #000000;
+                border: 2px outset #ffffff;
+                padding: 5px 15px;
+                min-width: 80px;
+            }
+            QPushButton:pressed {
+                border: 2px inset #555555;
+            }
+        """)
+
+        layout = QVBoxLayout(dialog)
+        layout.setSpacing(15)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        # Amiga Topaz font style
+        amiga_font = QFont("Courier", 10, QFont.Weight.Normal)
+
+        # Error message
+        message = QLabel("Workbench 3.1 installer\n\nPlease insert Local disk in any drive")
+        message.setFont(amiga_font)
+        message.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(message)
+
+        layout.addStretch()
+
+        # Button layout
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+
+        # Retry and Cancel buttons (Amiga style)
+        retry_btn = QPushButton("Retry")
+        retry_btn.setFont(amiga_font)
+        retry_btn.clicked.connect(dialog.accept)
+        button_layout.addWidget(retry_btn)
+
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.setFont(amiga_font)
+        cancel_btn.clicked.connect(dialog.reject)
+        button_layout.addWidget(cancel_btn)
+
+        button_layout.addStretch()
         layout.addLayout(button_layout)
 
         dialog.exec()
@@ -391,10 +683,10 @@ class TXDWorkshop(QWidget): #vers 3
             ('props_btn', 'Properties'),
             ('info_btn', 'Info'),
             # Transform buttons
-            ('flip_vert_btn', 'Flip V'),
-            ('flip_horz_btn', 'Flip H'),
-            ('rotate_cw_btn', 'Rotate CW'),
-            ('rotate_ccw_btn', 'Rotate CCW'),
+            ('flip_vert_btn', 'Flip Vertical'),
+            ('flip_horz_btn', 'Flip Horizontal'),
+            ('rotate_cw_btn', 'Rotate 90° CW"'),
+            ('rotate_ccw_btn', 'Rotate 90° CCW"'),
             ('copy_btn', 'Copy'),
             ('paste_btn', 'Paste'),
             ('edit_btn', 'Edit'),
@@ -402,7 +694,7 @@ class TXDWorkshop(QWidget): #vers 3
             # Manage buttons
             ('create_texture_btn', 'Create'),
             ('delete_texture_btn', 'Delete'),
-            ('duplicate_texture_btn', 'Clone'),
+            ('duplicate_texture_btn', 'Duplicate'),
             # Effects buttons
             ('filters_btn', 'Filters'),
             ('paint_btn', 'Paint'),
@@ -442,13 +734,15 @@ class TXDWorkshop(QWidget): #vers 3
             button._original_icon = button.icon()
 
         if self.button_display_mode == 'icons':
-            # Icons only - hide text, compact size
+            # Icons only - hide text, COMPACT size
             button.setText("")
             if not button._original_icon.isNull():
                 button.setIcon(button._original_icon)
                 button.setIconSize(QSize(20, 20))
-            button.setMinimumWidth(32)
-            button.setMaximumWidth(32)
+
+            button.setMinimumWidth(28)  # Reduced from 32
+            button.setMaximumWidth(28)
+            button.setContentsMargins(2, 2, 2, 2)  # Tight margins
 
         elif self.button_display_mode == 'text':
             # Text only - show text, hide icon, auto-size
@@ -462,9 +756,184 @@ class TXDWorkshop(QWidget): #vers 3
             button.setText(text)
             if not button._original_icon.isNull():
                 button.setIcon(button._original_icon)
-                button.setIconSize(QSize(16, 16))
+                button.setIconSize(QSize(20, 20))
+
             button.setMinimumWidth(80)
             button.setMaximumWidth(16777215)
+
+
+    def _on_display_mode_changed(self, text): #vers 2
+        """Handle display mode combo box change"""
+        mode_map = {
+            "Icons Only": "icons",
+            "Text Only": "text",
+            "Both": "both"
+        }
+
+        old_mode = self.button_display_mode
+        self.button_display_mode = mode_map.get(text, "both")
+
+        # If switching to/from icon mode, rebuild the info panel
+        if (old_mode == 'icons' or self.button_display_mode == 'icons') and old_mode != self.button_display_mode:
+            self._rebuild_info_panel()
+        else:
+            self._update_all_buttons()
+
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            self.main_window.log_message(f"Button display: {text}")
+
+    def _rebuild_info_panel(self): #vers 1
+        """Rebuild texture info panel with new layout"""
+        # Find and remove old info group
+        for i in range(self.right_panel.layout().count()):
+            item = self.right_panel.layout().itemAt(i)
+            if item and item.widget():
+                widget = item.widget()
+                if isinstance(widget, QGroupBox) and widget.title() == "":
+                    widget.deleteLater()
+                    break
+
+        # Create new info group
+        info_group = QGroupBox("")
+        info_layout = QVBoxLayout(info_group)
+
+        # Lines 2 & 3: Adaptive
+        if self.button_display_mode == 'icons':
+            merged_line = self._create_merged_icons_line()
+            info_layout.addLayout(merged_line)
+        else:
+
+            # Add to right panel
+            self.right_panel.layout().addWidget(info_group)
+
+
+    def _create_merged_icons_line(self): #vers 1
+        """Create compact single-line layout for icon mode - merges Line 2 and Line 3"""
+        merged_layout = QHBoxLayout()
+        merged_layout.setSpacing(2)
+        merged_layout.setContentsMargins(0, 0, 0, 0)
+
+        # --- Format controls ---
+        self.format_combo = QComboBox()
+        self.format_combo.addItems(["DXT1", "DXT3", "DXT5", "ARGB8888", "ARGB1555", "ARGB4444", "RGB888", "RGB565"])
+        self.format_combo.currentTextChanged.connect(self._change_format)
+        self.format_combo.setEnabled(False)
+        self.format_combo.setMaximumWidth(100)
+        info_layout.addWidget(self.format_combo)
+
+        self.info_bitdepth = QLabel("[32bit]")
+        self.info_bitdepth.setStyleSheet("font-weight: bold; padding: 3px 8px; border: 1px solid #3a3a3a;")
+        self.info_bitdepth.setMinimumWidth(50)
+        info_layout.addWidget(self.info_bitdepth)
+
+        # --- Bit depth / resize / upscale / compress ---
+        self.bitdepth_btn = QPushButton("Bit Depth")
+        self.bitdepth_btn.setIcon(self._create_bitdepth_icon())
+        self.bitdepth_btn.setIconSize(QSize(20, 20))
+        self.bitdepth_btn.setToolTip("Change bit depth")
+        self.bitdepth_btn.clicked.connect(self._change_bit_depth)
+        self.bitdepth_btn.setEnabled(False)
+        info_layout.addWidget(self.bitdepth_btn)
+
+        self.resize_btn = QPushButton("Resize")
+        self.resize_btn.setIcon(self._create_resize_icon())
+        self.resize_btn.setIconSize(QSize(20, 20))
+        self.resize_btn.setToolTip("Resize texture")
+        self.resize_btn.clicked.connect(self._resize_texture)
+        self.resize_btn.setEnabled(False)
+        info_layout.addWidget(self.resize_btn)
+
+        self.upscale_btn = QPushButton("AI Upscale")
+        self.upscale_btn.setIcon(self._create_upscale_icon())
+        self.upscale_btn.setIconSize(QSize(20, 20))
+        self.upscale_btn.setToolTip("AI upscale texture")
+        self.upscale_btn.clicked.connect(self._upscale_texture)
+        self.upscale_btn.setEnabled(False)
+        info_layout.addWidget(self.upscale_btn)
+
+        self.compress_btn = QPushButton("Compress")
+        self.compress_btn.setIcon(self._create_compress_icon())
+        self.compress_btn.setIconSize(QSize(20, 20))
+        self.compress_btn.setToolTip("Compress texture")
+        self.compress_btn.clicked.connect(self._compress_texture)
+        self.compress_btn.setEnabled(False)
+        info_layout.addWidget(self.compress_btn)
+
+        self.uncompress_btn = QPushButton("Uncompress")
+        self.uncompress_btn.setIcon(self._create_uncompress_icon())
+        self.uncompress_btn.setIconSize(QSize(20, 20))
+        self.uncompress_btn.setToolTip("Uncompress texture")
+        self.uncompress_btn.clicked.connect(self._uncompress_texture)
+        self.uncompress_btn.setEnabled(False)
+        info_layout.addWidget(self.uncompress_btn)
+
+        info_layout.addSpacing(30)
+
+        # --- Mipmap section ---
+        self.info_format = QLabel("Mipmaps: None")
+        self.info_format.setMinimumWidth(100)
+        self.info_format.setStyleSheet("font-weight: bold;")
+        info_layout.addWidget(self.info_format)
+
+        self.show_mipmaps_btn = QPushButton("View")
+        self.show_mipmaps_btn.setIcon(self._create_view_icon())
+        self.show_mipmaps_btn.setIconSize(QSize(20, 20))
+        self.show_mipmaps_btn.setToolTip("View all mipmap levels")
+        self.show_mipmaps_btn.clicked.connect(self._open_mipmap_manager)
+        self.show_mipmaps_btn.setEnabled(False)
+        info_layout.addWidget(self.show_mipmaps_btn)
+
+        self.create_mipmaps_btn = QPushButton("Create")
+        self.create_mipmaps_btn.setIcon(self._create_add_icon())
+        self.create_mipmaps_btn.setIconSize(QSize(20, 20))
+        self.create_mipmaps_btn.setToolTip("Generate mipmaps")
+        self.create_mipmaps_btn.clicked.connect(self._create_mipmaps_dialog)
+        self.create_mipmaps_btn.setEnabled(False)
+        info_layout.addWidget(self.create_mipmaps_btn)
+
+        self.remove_mipmaps_btn = QPushButton("Remove")
+        self.remove_mipmaps_btn.setIcon(self._create_delete_icon())
+        self.remove_mipmaps_btn.setIconSize(QSize(20, 20))
+        self.remove_mipmaps_btn.setToolTip("Remove all mipmaps")
+        self.remove_mipmaps_btn.clicked.connect(self._remove_mipmaps)
+        self.remove_mipmaps_btn.setEnabled(False)
+        info_layout.addWidget(self.remove_mipmaps_btn)
+
+        info_layout.addSpacing(30)
+
+        # --- Bumpmap section ---
+        self.info_format_b = QLabel("Bumpmaps: No data")
+        self.info_format_b.setMinimumWidth(120)
+        self.info_format_b.setStyleSheet("font-weight: bold;")
+        info_layout.addWidget(self.info_format_b)
+
+        self.view_bumpmap_btn = QPushButton("View")
+        self.view_bumpmap_btn.setIcon(self._create_view_icon())
+        self.view_bumpmap_btn.setIconSize(QSize(20, 20))
+        self.view_bumpmap_btn.setToolTip("View bumpmap channel")
+        self.view_bumpmap_btn.clicked.connect(self._view_bumpmap)
+        self.view_bumpmap_btn.setEnabled(False)
+        info_layout.addWidget(self.view_bumpmap_btn)
+
+        self.export_bumpmap_btn = QPushButton("Export")
+        self.export_bumpmap_btn.setIcon(self._create_export_icon())
+        self.export_bumpmap_btn.setIconSize(QSize(20, 20))
+        self.export_bumpmap_btn.setToolTip("Export bumpmap as PNG")
+        self.export_bumpmap_btn.clicked.connect(self._export_bumpmap)
+        self.export_bumpmap_btn.setEnabled(False)
+        info_layout.addWidget(self.export_bumpmap_btn)
+
+        self.import_bumpmap_btn = QPushButton("Import")
+        self.import_bumpmap_btn.setIcon(self._create_import_icon())
+        self.import_bumpmap_btn.setIconSize(QSize(20, 20))
+        self.import_bumpmap_btn.setToolTip("Import bumpmap from image")
+        self.import_bumpmap_btn.clicked.connect(self._import_bumpmap)
+        self.import_bumpmap_btn.setEnabled(False)
+        info_layout.addWidget(self.import_bumpmap_btn)
+
+        merged_layout.addStretch()
+
+        return merged_layout
 
 
     def _initialize_features(self): #vers 1
@@ -488,6 +957,8 @@ class TXDWorkshop(QWidget): #vers 3
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"features init error: {str(e)}")
+
+
 
 
     def _detect_txd_info(self, txd_data: bytes) -> bool: #vers 1
@@ -878,9 +1349,8 @@ class TXDWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
-
-    def _setup_status_indicators(self): #vers 4
-        """Setup status indicators with visible resize button"""
+    def _setup_status_indicators(self): #vers 5
+        """Setup status indicators with texture info and visible resize button"""
         self.status_frame = QFrame()
         self.status_layout = QHBoxLayout(self.status_frame)
         self.status_layout.setContentsMargins(5, 2, 5, 2)
@@ -899,10 +1369,18 @@ class TXDWorkshop(QWidget): #vers 3
         self.status_modified = QLabel("")
         self.status_layout.addWidget(self.status_modified)
 
+        # NEW: Texture dimension info
+        self.info_size = QLabel("Size: -")
+        self.status_layout.addWidget(self.info_size)
+
+        # NEW: Texture format info
+        self.format_status_label = QLabel("Format: -")
+        self.status_layout.addWidget(self.format_status_label)
+
         # Add visible resize button with icon
         self.resize_grip_btn = QPushButton()
         self.resize_grip_btn.setIcon(self._create_resize_icon())
-        self.resize_grip_btn.setIconSize(QSize(16, 16))
+        self.resize_grip_btn.setIconSize(QSize(20, 20))
         self.resize_grip_btn.setFixedSize(20, 20)
         self.resize_grip_btn.setToolTip("Drag to resize window")
         self.resize_grip_btn.setStyleSheet("""
@@ -1056,7 +1534,7 @@ class TXDWorkshop(QWidget): #vers 3
         # Window controls
         self.minimize_btn = QPushButton()
         self.minimize_btn.setIcon(self._create_minimize_icon())
-        self.minimize_btn.setIconSize(QSize(16, 16))
+        self.minimize_btn.setIconSize(QSize(20, 20))
         self.minimize_btn.setMinimumWidth(40)
         self.minimize_btn.setMaximumWidth(40)
         self.minimize_btn.setMinimumHeight(30)
@@ -1066,7 +1544,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         self.maximize_btn = QPushButton()
         self.maximize_btn.setIcon(self._create_maximize_icon())
-        self.maximize_btn.setIconSize(QSize(16, 16))
+        self.maximize_btn.setIconSize(QSize(20, 20))
         self.maximize_btn.setMinimumWidth(40)
         self.maximize_btn.setMaximumWidth(40)
         self.maximize_btn.setMinimumHeight(30)
@@ -1076,7 +1554,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         self.close_btn = QPushButton()
         self.close_btn.setIcon(self._create_close_icon())
-        self.close_btn.setIconSize(QSize(16, 16))
+        self.close_btn.setIconSize(QSize(20, 20))
         self.close_btn.setMinimumWidth(40)
         self.close_btn.setMaximumWidth(40)
         self.close_btn.setMinimumHeight(30)
@@ -1280,8 +1758,8 @@ class TXDWorkshop(QWidget): #vers 3
                 self.main_window.log_message(f"Double-click error: {str(e)}")
 
 
-    def _create_right_panel(self): #vers 8
-        """Create right panel with editing controls - compact 3-line layout"""
+    def _create_right_panel(self): #vers 10
+        """Create right panel with editing controls - compact layout"""
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.StyledPanel)
         panel.setMinimumWidth(400)
@@ -1301,13 +1779,14 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Preview controls (right side, vertical)
         preview_controls = self._create_preview_controls()
-        top_layout.addWidget(preview_controls)
+        top_layout.addWidget(preview_controls, stretch=0)
+        main_layout.addLayout(top_layout, stretch=1)
 
-        main_layout.addLayout(top_layout)
 
-        # Information group below - COMPACT VERSION
+        # Information group below
         info_group = QGroupBox("")
         info_layout = QVBoxLayout(info_group)
+        info_group.setMaximumHeight(140)
 
         # === LINE 1: Texture name and alpha name ===
         name_layout = QHBoxLayout()
@@ -1342,156 +1821,141 @@ class TXDWorkshop(QWidget): #vers 3
 
         info_layout.addLayout(name_layout)
 
-        # === LINE 2: Size + Format + Bit Depth + Buttons (MERGED) ===
-        size_format_layout = QHBoxLayout()
-        size_format_layout.setSpacing(5)
+        # === LINES 2 & 3: Adaptive based on display mode ===
+        if self.button_display_mode == 'icons':
+            # MERGED: Single compact line for icon mode
+            merged_line = self._create_merged_icons_line()
+            info_layout.addLayout(merged_line)
+        else:
+            # SEPARATE: Original two-line layout for text/both modes
+            # Line 2: Format controls
+            format_layout = QHBoxLayout()
+            format_layout.setSpacing(5)
 
-        # Size label
-        self.info_size = QLabel("Size: -")
-        self.info_size.setMinimumWidth(100)
-        size_format_layout.addWidget(self.info_size)
+            self.format_combo = QComboBox()
+            self.format_combo.addItems(["DXT1", "DXT3", "DXT5", "ARGB8888", "ARGB1555", "ARGB4444", "RGB888", "RGB565"])
+            self.format_combo.currentTextChanged.connect(self._change_format)
+            self.format_combo.setEnabled(False)
+            self.format_combo.setMaximumWidth(100)
+            format_layout.addWidget(self.format_combo)
 
-        # Format label
-        self.format_status_label = QLabel("Format: -")
-        self.format_status_label.setMinimumWidth(90)
-        size_format_layout.addWidget(self.format_status_label)
+            self.info_bitdepth = QLabel("[32bit]")
+            self.info_bitdepth.setStyleSheet("font-weight: bold; padding: 3px 8px; border: 1px solid #3a3a3a;")
+            self.info_bitdepth.setMinimumWidth(50)
+            format_layout.addWidget(self.info_bitdepth)
+            format_layout.addStretch()
 
-        size_format_layout.addStretch()
+            # Line 3: Mipmaps + Bumpmaps
+            mipbump_layout = QHBoxLayout()
+            mipbump_layout.setSpacing(5)
 
-        # Format dropdown
-        self.format_combo = QComboBox()
-        self.format_combo.addItems(["DXT1", "DXT3", "DXT5", "ARGB8888", "ARGB1555", "ARGB4444", "RGB888", "RGB565"])
-        self.format_combo.currentTextChanged.connect(self._change_format)
-        self.format_combo.setEnabled(False)
-        self.format_combo.setMaximumWidth(100)
-        size_format_layout.addWidget(self.format_combo)
+            self.info_format = QLabel("Mipmaps: None")
+            self.info_format.setMinimumWidth(100)
+            self.info_format.setStyleSheet("font-weight: bold;")
+            mipbump_layout.addWidget(self.info_format)
 
-        # Bit depth indicator (read-only display)
-        self.info_bitdepth = QLabel("[32bit]")
-        self.info_bitdepth.setStyleSheet("font-weight: bold; padding: 3px 8px; border: 1px solid #3a3a3a;")
-        self.info_bitdepth.setMinimumWidth(50)
-        size_format_layout.addWidget(self.info_bitdepth)
+            self.show_mipmaps_btn = QPushButton("View")
+            self.show_mipmaps_btn.setIcon(self._create_view_icon())
+            self.show_mipmaps_btn.setIconSize(QSize(20, 20))
+            self.show_mipmaps_btn.setToolTip("View all mipmap levels")
+            self.show_mipmaps_btn.clicked.connect(self._open_mipmap_manager)
+            self.show_mipmaps_btn.setEnabled(False)
+            mipbump_layout.addWidget(self.show_mipmaps_btn)
 
-        # Buttons with TEXT AND ICONS (FIXED)
-        self.bitdepth_btn = QPushButton("Bit Depth")
-        self.bitdepth_btn.setIcon(self._create_bitdepth_icon())
-        self.bitdepth_btn.setIconSize(QSize(16, 16))
-        self.bitdepth_btn.setToolTip("Change bit depth")
-        self.bitdepth_btn.clicked.connect(self._change_bit_depth)
-        self.bitdepth_btn.setEnabled(False)
-        print(f"Created bitdepth icon: {not self.bitdepth_btn.icon().isNull()}")  # ADD THIS
+            self.create_mipmaps_btn = QPushButton("Create")
+            self.create_mipmaps_btn.setIcon(self._create_add_icon())
+            self.create_mipmaps_btn.setIconSize(QSize(20, 20))
+            self.create_mipmaps_btn.setToolTip("Generate mipmaps")
+            self.create_mipmaps_btn.clicked.connect(self._create_mipmaps_dialog)
+            self.create_mipmaps_btn.setEnabled(False)
+            mipbump_layout.addWidget(self.create_mipmaps_btn)
 
-        size_format_layout.addWidget(self.bitdepth_btn)
+            self.remove_mipmaps_btn = QPushButton("Remove")
+            self.remove_mipmaps_btn.setIcon(self._create_delete_icon())
+            self.remove_mipmaps_btn.setIconSize(QSize(20, 20))
+            self.remove_mipmaps_btn.setToolTip("Remove all mipmaps")
+            self.remove_mipmaps_btn.clicked.connect(self._remove_mipmaps)
+            self.remove_mipmaps_btn.setEnabled(False)
+            mipbump_layout.addWidget(self.remove_mipmaps_btn)
 
-        self.resize_btn = QPushButton("Resize")
-        self.resize_btn.setIcon(self._create_resize_icon())
-        self.resize_btn.setIconSize(QSize(16, 16))
-        self.resize_btn.setToolTip("Resize texture")
-        self.resize_btn.clicked.connect(self._resize_texture)
-        self.resize_btn.setEnabled(False)
-        print(f"Created resize icon: {not self.resize_btn.icon().isNull()}")  # ADD THIS
-        size_format_layout.addWidget(self.resize_btn)
+            mipbump_layout.addSpacing(30)
 
-        self.upscale_btn = QPushButton("AI Upscale")
-        self.upscale_btn.setIcon(self._create_upscale_icon())
-        self.upscale_btn.setIconSize(QSize(16, 16))
-        self.upscale_btn.setToolTip("AI upscale texture")
-        self.upscale_btn.clicked.connect(self._upscale_texture)
-        self.upscale_btn.setEnabled(False)
-        size_format_layout.addWidget(self.upscale_btn)
+            self.info_format_b = QLabel("Bumpmaps: No data")
+            self.info_format_b.setMinimumWidth(120)
+            self.info_format_b.setStyleSheet("font-weight: bold;")
+            mipbump_layout.addWidget(self.info_format_b)
 
-        self.compress_btn = QPushButton("Compress")
-        self.compress_btn.setIcon(self._create_compress_icon())
-        self.compress_btn.setIconSize(QSize(16, 16))
-        self.compress_btn.setToolTip("Compress texture")
-        self.compress_btn.clicked.connect(self._compress_texture)
-        self.compress_btn.setEnabled(False)
-        size_format_layout.addWidget(self.compress_btn)
+            view_layout = QHBoxLayout()
+            view_layout.setSpacing(5)
+            self.view_bumpmap_btn = QPushButton("View")
+            self.view_bumpmap_btn.setIcon(self._create_view_icon())
+            self.view_bumpmap_btn.setIconSize(QSize(20, 20))
+            self.view_bumpmap_btn.setToolTip("View bumpmap channel")
+            self.view_bumpmap_btn.clicked.connect(self._view_bumpmap)
+            self.view_bumpmap_btn.setEnabled(False)
+            mipbump_layout.addWidget(self.view_bumpmap_btn)
 
-        self.uncompress_btn = QPushButton("Uncompress")
-        self.uncompress_btn.setIcon(self._create_uncompress_icon())
-        self.uncompress_btn.setIconSize(QSize(16, 16))
-        self.uncompress_btn.setToolTip("Uncompress texture")
-        self.uncompress_btn.clicked.connect(self._uncompress_texture)
-        self.uncompress_btn.setEnabled(False)
-        size_format_layout.addWidget(self.uncompress_btn)
+            self.export_bumpmap_btn = QPushButton("Export")
+            self.export_bumpmap_btn.setIcon(self._create_export_icon())
+            self.export_bumpmap_btn.setIconSize(QSize(20, 20))
+            self.export_bumpmap_btn.setToolTip("Export bumpmap as PNG")
+            self.export_bumpmap_btn.clicked.connect(self._export_bumpmap)
+            self.export_bumpmap_btn.setEnabled(False)
+            mipbump_layout.addWidget(self.export_bumpmap_btn)
 
-        info_layout.addLayout(size_format_layout)
+            self.import_bumpmap_btn = QPushButton("Import")
+            self.import_bumpmap_btn.setIcon(self._create_import_icon())
+            self.import_bumpmap_btn.setIconSize(QSize(20, 20))
+            self.import_bumpmap_btn.setToolTip("Import bumpmap from image")
+            self.import_bumpmap_btn.clicked.connect(self._import_bumpmap)
+            self.import_bumpmap_btn.setEnabled(False)
+            mipbump_layout.addWidget(self.import_bumpmap_btn)
 
-        # === LINE 3: Mipmaps + Bumpmaps (MERGED) ===
+            self.bitdepth_btn = QPushButton("Bit Depth")
+            self.bitdepth_btn.setIcon(self._create_bitdepth_icon())
+            self.bitdepth_btn.setIconSize(QSize(20, 20))
+            self.bitdepth_btn.setToolTip("Change bit depth")
+            self.bitdepth_btn.clicked.connect(self._change_bit_depth)
+            self.bitdepth_btn.setEnabled(False)
+            format_layout.addWidget(self.bitdepth_btn)
 
-        mipbump_layout = QHBoxLayout()
-        mipbump_layout.setSpacing(5)  # Consistent spacing
+            self.resize_btn = QPushButton("Resize")
+            self.resize_btn.setIcon(self._create_resize_icon())
+            self.resize_btn.setIconSize(QSize(20, 20))
+            self.resize_btn.setToolTip("Resize texture")
+            self.resize_btn.clicked.connect(self._resize_texture)
+            self.resize_btn.setEnabled(False)
+            format_layout.addWidget(self.resize_btn)
 
-        # Mipmaps section
-        self.info_format = QLabel("Mipmaps: None")
-        self.info_format.setMinimumWidth(100)
-        self.info_format.setStyleSheet("font-weight: bold;")
-        mipbump_layout.addWidget(self.info_format)
+            self.upscale_btn = QPushButton("AI Upscale")
+            self.upscale_btn.setIcon(self._create_upscale_icon())
+            self.upscale_btn.setIconSize(QSize(20, 20))
+            self.upscale_btn.setToolTip("AI upscale texture")
+            self.upscale_btn.clicked.connect(self._upscale_texture)
+            self.upscale_btn.setEnabled(False)
+            format_layout.addWidget(self.upscale_btn)
 
-        # Mipmap buttons - ensure they have icons
-        self.show_mipmaps_btn = QPushButton("View")
-        self.show_mipmaps_btn.setIcon(self._create_view_icon())
-        self.show_mipmaps_btn.setIconSize(QSize(16, 16))
-        self.show_mipmaps_btn.setToolTip("View all mipmap levels")
-        self.show_mipmaps_btn.clicked.connect(self._open_mipmap_manager)
-        self.show_mipmaps_btn.setEnabled(False)
-        mipbump_layout.addWidget(self.show_mipmaps_btn)
+            self.compress_btn = QPushButton("Compress")
+            self.compress_btn.setIcon(self._create_compress_icon())
+            self.compress_btn.setIconSize(QSize(20, 20))
+            self.compress_btn.setToolTip("Compress texture")
+            self.compress_btn.clicked.connect(self._compress_texture)
+            self.compress_btn.setEnabled(False)
+            format_layout.addWidget(self.compress_btn)
 
-        self.create_mipmaps_btn = QPushButton("Create")
-        self.create_mipmaps_btn.setIcon(self._create_add_icon())
-        self.create_mipmaps_btn.setIconSize(QSize(16, 16))
-        self.create_mipmaps_btn.setToolTip("Generate mipmaps")
-        self.create_mipmaps_btn.clicked.connect(self._create_mipmaps_dialog)
-        self.create_mipmaps_btn.setEnabled(False)
-        mipbump_layout.addWidget(self.create_mipmaps_btn)
+            self.uncompress_btn = QPushButton("Uncompress")
+            self.uncompress_btn.setIcon(self._create_uncompress_icon())
+            self.uncompress_btn.setIconSize(QSize(20, 20))
+            self.uncompress_btn.setToolTip("Uncompress texture")
+            self.uncompress_btn.clicked.connect(self._uncompress_texture)
+            self.uncompress_btn.setEnabled(False)
+            format_layout.addWidget(self.uncompress_btn)
 
-        self.remove_mipmaps_btn = QPushButton("Remove")
-        self.remove_mipmaps_btn.setIcon(self._create_delete_icon())
-        self.remove_mipmaps_btn.setIconSize(QSize(16, 16))
-        self.remove_mipmaps_btn.setToolTip("Remove all mipmaps")
-        self.remove_mipmaps_btn.clicked.connect(self._remove_mipmaps)
-        self.remove_mipmaps_btn.setEnabled(False)
-        mipbump_layout.addWidget(self.remove_mipmaps_btn)
+            info_layout.addLayout(format_layout)
+            info_layout.addLayout(view_layout)
+            info_layout.addLayout(mipbump_layout)
 
-        mipbump_layout.addSpacing(30)  # Spacer between sections
-
-        # Bumpmaps section
-        self.info_format_b = QLabel("Bumpmaps: No data")
-        self.info_format_b.setMinimumWidth(120)
-        self.info_format_b.setStyleSheet("font-weight: bold; color: #757575;")
-        mipbump_layout.addWidget(self.info_format_b)
-
-        # Bumpmap buttons - ensure they have icons
-        self.view_bumpmap_btn = QPushButton("View")
-        self.view_bumpmap_btn.setIcon(self._create_view_icon())
-        self.view_bumpmap_btn.setIconSize(QSize(16, 16))
-        self.view_bumpmap_btn.setToolTip("View bumpmap channel")
-        self.view_bumpmap_btn.clicked.connect(self._view_bumpmap)
-        self.view_bumpmap_btn.setEnabled(False)
-        mipbump_layout.addWidget(self.view_bumpmap_btn)
-
-        self.export_bumpmap_btn = QPushButton("Export")
-        self.export_bumpmap_btn.setIcon(self._create_export_icon())
-        self.export_bumpmap_btn.setIconSize(QSize(16, 16))
-        self.export_bumpmap_btn.setToolTip("Export bumpmap as PNG")
-        self.export_bumpmap_btn.clicked.connect(self._export_bumpmap)
-        self.export_bumpmap_btn.setEnabled(False)
-        mipbump_layout.addWidget(self.export_bumpmap_btn)
-
-        self.import_bumpmap_btn = QPushButton("Import")
-        self.import_bumpmap_btn.setIcon(self._create_import_icon())
-        self.import_bumpmap_btn.setIconSize(QSize(16, 16))
-        self.import_bumpmap_btn.setToolTip("Import bumpmap from image")
-        self.import_bumpmap_btn.clicked.connect(self._import_bumpmap)
-        self.import_bumpmap_btn.setEnabled(False)
-        mipbump_layout.addWidget(self.import_bumpmap_btn)
-
-        mipbump_layout.addStretch()
-
-        info_layout.addLayout(mipbump_layout)
-
-        main_layout.addWidget(info_group)
+        main_layout.addWidget(info_group, stretch=0)
         return panel
 
 
@@ -2097,7 +2561,7 @@ class TXDWorkshop(QWidget): #vers 3
         # Pan Up
         pan_up_btn = QPushButton()
         pan_up_btn.setIcon(self._create_arrow_up_icon())
-        pan_up_btn.setIconSize(QSize(16, 16))
+        pan_up_btn.setIconSize(QSize(20, 20))
         pan_up_btn.setFixedSize(40, 40)
         pan_up_btn.setToolTip("Pan Up")
         pan_up_btn.clicked.connect(lambda: self._pan_preview(0, -20))
@@ -2106,7 +2570,7 @@ class TXDWorkshop(QWidget): #vers 3
         # Pan Down
         pan_down_btn = QPushButton()
         pan_down_btn.setIcon(self._create_arrow_down_icon())
-        pan_down_btn.setIconSize(QSize(16, 16))
+        pan_down_btn.setIconSize(QSize(20, 20))
         pan_down_btn.setFixedSize(40, 40)
         pan_down_btn.setToolTip("Pan Down")
         pan_down_btn.clicked.connect(lambda: self._pan_preview(0, 20))
@@ -2115,7 +2579,7 @@ class TXDWorkshop(QWidget): #vers 3
         # Pan Left
         pan_left_btn = QPushButton()
         pan_left_btn.setIcon(self._create_arrow_left_icon())
-        pan_left_btn.setIconSize(QSize(16, 16))
+        pan_left_btn.setIconSize(QSize(20, 20))
         pan_left_btn.setFixedSize(40, 40)
         pan_left_btn.setToolTip("Pan Left")
         pan_left_btn.clicked.connect(lambda: self._pan_preview(-20, 0))
@@ -2124,7 +2588,7 @@ class TXDWorkshop(QWidget): #vers 3
         # Pan Right
         pan_right_btn = QPushButton()
         pan_right_btn.setIcon(self._create_arrow_right_icon())
-        pan_right_btn.setIconSize(QSize(16, 16))
+        pan_right_btn.setIconSize(QSize(20, 20))
         pan_right_btn.setFixedSize(40, 40)
         pan_right_btn.setToolTip("Pan Right")
         pan_right_btn.clicked.connect(lambda: self._pan_preview(20, 0))
@@ -2198,6 +2662,136 @@ class TXDWorkshop(QWidget): #vers 3
             background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
         """)
 
+    def _show_settings_dialog(self): #vers 1
+        """Show settings dialog for UI customization"""
+        from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTabWidget,
+                                    QGroupBox, QFormLayout, QSpinBox, QFontComboBox,
+                                    QPushButton, QLabel)
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("TXD Workshop Settings")
+        dialog.setMinimumWidth(500)
+        dialog.setMinimumHeight(400)
+
+        layout = QVBoxLayout(dialog)
+
+        # Tab widget for different setting categories
+        tabs = QTabWidget()
+
+        # === APPEARANCE TAB ===
+        appearance_tab = QWidget()
+        appearance_layout = QVBoxLayout(appearance_tab)
+
+        # Font settings group
+        font_group = QGroupBox("Font Settings")
+        font_layout = QFormLayout()
+
+        # Font family
+        self.settings_font_combo = QFontComboBox()
+        current_font = self.font()
+        self.settings_font_combo.setCurrentFont(current_font)
+        font_layout.addRow("Font Family:", self.settings_font_combo)
+
+        # Font size
+        self.settings_font_size = QSpinBox()
+        self.settings_font_size.setRange(8, 24)
+        self.settings_font_size.setValue(current_font.pointSize())
+        font_layout.addRow("Font Size:", self.settings_font_size)
+
+        font_group.setLayout(font_layout)
+        appearance_layout.addWidget(font_group)
+
+        # Button display mode
+        display_group = QGroupBox("Button Display")
+        display_layout = QFormLayout()
+
+        self.settings_display_combo = QComboBox()
+        self.settings_display_combo.addItems(["Icons Only", "Text Only", "Both"])
+        current_mode = {"icons": 0, "text": 1, "both": 2}.get(self.button_display_mode, 2)
+        self.settings_display_combo.setCurrentIndex(current_mode)
+        display_layout.addRow("Button Mode:", self.settings_display_combo)
+
+        display_group.setLayout(display_layout)
+        appearance_layout.addWidget(display_group)
+
+        appearance_layout.addStretch()
+        tabs.addTab(appearance_tab, "Appearance")
+
+        # === LOCALIZATION TAB ===
+        locale_tab = QWidget()
+        locale_layout = QVBoxLayout(locale_tab)
+
+        locale_group = QGroupBox("Language Settings")
+        locale_form = QFormLayout()
+
+        self.settings_locale_combo = QComboBox()
+        self.settings_locale_combo.addItems([
+            "English",
+            "Spanish (Español)",
+            "French (Français)",
+            "German (Deutsch)",
+            "Italian (Italiano)",
+            "Portuguese (Português)",
+            "Russian (Русский)",
+            "Japanese (日本語)",
+            "Chinese Simplified (简体中文)",
+            "Chinese Traditional (繁體中文)"
+        ])
+        locale_form.addRow("Language:", self.settings_locale_combo)
+
+        locale_note = QLabel("Note: Language changes require restart")
+        locale_note.setStyleSheet("color: #888; font-style: italic;")
+        locale_form.addRow("", locale_note)
+
+        locale_group.setLayout(locale_form)
+        locale_layout.addWidget(locale_group)
+
+        locale_layout.addStretch()
+        tabs.addTab(locale_tab, "Localization")
+
+        # === ADVANCED TAB ===
+        advanced_tab = QWidget()
+        advanced_layout = QVBoxLayout(advanced_tab)
+
+        # Docking options (if available)
+        if self.main_window:
+            dock_group = QGroupBox("Docking")
+            dock_layout = QVBoxLayout()
+
+            dock_label = QLabel(f"Current State: {'Docked' if self.is_docked else 'Standalone'}")
+            dock_layout.addWidget(dock_label)
+
+            dock_btn = QPushButton("Toggle Dock Mode (D)")
+            dock_btn.clicked.connect(lambda: (self.toggle_dock_mode(), dialog.close()))
+            dock_layout.addWidget(dock_btn)
+
+            dock_group.setLayout(dock_layout)
+            advanced_layout.addWidget(dock_group)
+
+        advanced_layout.addStretch()
+        tabs.addTab(advanced_tab, "Advanced")
+
+        layout.addWidget(tabs)
+
+        # Dialog buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+
+        apply_btn = QPushButton("Apply")
+        apply_btn.clicked.connect(lambda: self._apply_settings(dialog))
+        button_layout.addWidget(apply_btn)
+
+        ok_btn = QPushButton("OK")
+        ok_btn.clicked.connect(lambda: (self._apply_settings(dialog), dialog.accept()))
+        button_layout.addWidget(ok_btn)
+
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(dialog.reject)
+        button_layout.addWidget(cancel_btn)
+
+        layout.addLayout(button_layout)
+
+        dialog.exec()
 
     def _apply_theme(self): #vers 1
         """Apply theme from main window"""
@@ -2215,6 +2809,57 @@ class TXDWorkshop(QWidget): #vers 3
                 QPushButton:hover { background-color: #4a4a4a; }
             """)
 
+    def _apply_settings(self, dialog): #vers 5
+        """Apply settings from dialog"""
+        from PyQt6.QtGui import QFont
+
+        # Apply font settings
+        font_family = self.settings_font_combo.currentFont().family()
+        font_size = self.settings_font_size.value()
+        new_font = QFont(font_family, font_size)
+        self.setFont(new_font)
+
+        # Apply to all child widgets
+        for widget in self.findChildren(QWidget):
+            widget.setFont(new_font)
+
+        # Apply button display mode
+        mode_map = ["icons", "text", "both"]
+        new_mode = mode_map[self.settings_display_combo.currentIndex()]
+        if new_mode != self.button_display_mode:
+            self.button_display_mode = new_mode
+            self._update_all_buttons()
+
+        # Locale setting (would need implementation)
+        locale_text = self.settings_locale_combo.currentText()
+
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            self.main_window.log_message(f"Settings applied: Font={font_family} {font_size}pt, Mode={new_mode}")
+
+        # Apply export game target
+        game_map = {
+            0: "auto",
+            1: "gta3",
+            2: "vc",
+            3: "sa",
+            4: "manhunt"
+        }
+        self.export_target_game = game_map.get(self.export_game_combo.currentIndex(), "auto")
+
+        # Apply export platform target
+        platform_map = {
+            0: "pc",
+            1: "xbox",
+            2: "ps2",
+            3: "android",
+            4: "multi"
+        }
+        self.export_target_platform = platform_map.get(self.export_platform_combo.currentIndex(), "pc")
+
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            self.main_window.log_message(
+                f"Export targets: Game={self.export_target_game}, Platform={self.export_target_platform}"
+            )
 
     def _create_left_panel(self): #vers 5
         """Create left panel - TXD file list (only in IMG Factory mode)"""
@@ -3617,30 +4262,50 @@ class TXDWorkshop(QWidget): #vers 3
         return estimated_size
 
 
-    def _rebuild_txd_data(self): #vers 2
+    def _rebuild_txd_data(self): #vers 3
         """Rebuild TXD data with modified texture names and properties"""
         try:
             if not self.current_txd_data:
                 return None
 
-            # NEW: Preserve original version header
+            # Preserve original version header
             if len(self.current_txd_data) < 28:
                 if self.main_window and hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message("Cannot rebuild: insufficient header data")
                 return None
 
             # Read original header to preserve version
-            original_header = self.current_txd_data[:28]
+            original_header = bytearray(self.current_txd_data[:28])
 
             # Extract version info if not already detected
             if self.txd_version_id == 0:
                 self._detect_txd_info(self.current_txd_data)
 
-            # Log rebuild info
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(
-                    f"Rebuilding TXD with version: {self.txd_version_str}"
-                )
+            # Check if we have a target version from save_txd_file
+            target_version = self.txd_version_id
+            target_device = self.txd_device_id
+
+            if hasattr(self, '_save_target_version') and hasattr(self, '_save_target_device'):
+                target_version = self._save_target_version
+                target_device = self._save_target_device
+
+            # Update header if converting to different version
+            if target_version != self.txd_version_id or target_device != self.txd_device_id:
+                import struct
+                # Update RenderWare version at offset 4
+                struct.pack_into('<I', original_header, 4, target_version)
+
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    from methods.txd_versions import get_version_string
+                    self.main_window.log_message(
+                        f"Converting to {get_version_string(target_version, target_device)}"
+                    )
+            else:
+                # Log rebuild info with original version
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(
+                        f"Rebuilding TXD with version: {self.txd_version_str}"
+                    )
 
             # Import struct for header manipulation
             import struct
@@ -3648,32 +4313,28 @@ class TXDWorkshop(QWidget): #vers 3
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"Rebuilding TXD...")
 
-            # If we have original data, update it in place
+            # If we have original data, update it in place with new header
             if self.current_txd_data and len(self.current_txd_data) > 100:
-                original_data = bytearray(self.current_txd_data)
+                rebuilt_data = bytes(original_header) + self.current_txd_data[28:]
 
                 if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"Rebuilt: {len(original_data)} bytes")
+                    self.main_window.log_message(f"Rebuilt: {len(rebuilt_data)} bytes")
 
-                return bytes(original_data)
+                return rebuilt_data
 
-            # No original data? Use serializer as fallback docked
+            # No original data? Use serializer as fallback
             if self.texture_list:
                 if self.main_window and hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message(f"Using serializer...")
 
-                from methods.txd_serializer import serialize_txd_file
-                return serialize_txd_file(self.texture_list)
-
-            return None
-
-            # No original data? Use serializer as fallback standalone
-            if self.texture_list:
-                if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"Using serializer...")
-
-                from depends.txd_serializer import serialize_txd_file
-                return serialize_txd_file(self.texture_list)
+                # Try methods folder first (docked/IMG Factory)
+                try:
+                    from methods.txd_serializer import serialize_txd_file
+                    return serialize_txd_file(self.texture_list, target_version, target_device)
+                except ImportError:
+                    # Fallback to depends folder (standalone)
+                    from depends.txd_serializer import serialize_txd_file
+                    return serialize_txd_file(self.texture_list, target_version, target_device)
 
             return None
 
@@ -3923,13 +4584,43 @@ class TXDWorkshop(QWidget): #vers 3
             return False
 
 
-    def save_txd_file(self): #vers 6
-        """Save TXD with preserved version information"""
+    def save_txd_file(self): #vers 7
+        """Save TXD with optional target game/platform conversion"""
         if not self.current_txd_data:
             QMessageBox.warning(self, "No Data", "No TXD file loaded")
             return
 
         try:
+            # Determine target version based on export settings
+            target_version = self.txd_version_id
+            target_device = self.txd_device_id
+
+            if hasattr(self, 'export_target_game') and self.export_target_game != "auto":
+                # Get target version for specified game/platform
+                target_version, target_device = self._get_target_version()
+
+                # Warn if conversion needed
+                if (target_version != self.txd_version_id or target_device != self.txd_device_id):
+                    from methods.txd_versions import get_version_string
+
+                    reply = QMessageBox.question(
+                        self, "Format Conversion",
+                        f"Current: {self.txd_version_str} ({self.txd_platform_name})\n"
+                        f"Target: {get_version_string(target_version, target_device)}\n\n"
+                        f"Convert format on save?",
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                        QMessageBox.StandardButton.Yes
+                    )
+
+                    if reply == QMessageBox.StandardButton.No:
+                        # Keep original version
+                        target_version = self.txd_version_id
+                        target_device = self.txd_device_id
+
+            # Store target for use in save methods
+            self._save_target_version = target_version
+            self._save_target_device = target_device
+
             # Check if loaded from IMG
             if self.current_img and self.current_txd_name:
                 reply = QMessageBox.question(
@@ -3938,7 +4629,6 @@ class TXDWorkshop(QWidget): #vers 3
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
                     QMessageBox.StandardButton.Yes
                 )
-
                 if reply == QMessageBox.StandardButton.Yes:
                     self._save_to_img()
                 elif reply == QMessageBox.StandardButton.No:
@@ -3990,6 +4680,32 @@ class TXDWorkshop(QWidget): #vers 3
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to save to IMG: {str(e)}")
+
+
+    def _get_target_version(self): #vers 1
+        """Get target RenderWare version based on export settings"""
+        from methods.txd_versions import get_recommended_version_for_game
+
+        # Map game setting to game name
+        game_map = {
+            "gta3": "GTA III",
+            "vc": "Vice City",
+            "sa": "San Andreas",
+            "manhunt": "Manhunt"
+        }
+
+        # Map platform setting to platform name
+        platform_map = {
+            "pc": "PC",
+            "xbox": "Xbox",
+            "ps2": "PS2",
+            "android": "Android"
+        }
+
+        game = game_map.get(self.export_target_game, "San Andreas")
+        platform = platform_map.get(self.export_target_platform, "PC")
+
+        return get_recommended_version_for_game(game, platform)
 
     def _save_as_txd_file(self): #vers 1
         """Save as standalone TXD file"""
@@ -4498,7 +5214,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         def update_info(index):
             if index == 7:  # PAL8
-                info_label.setText("⚠️ 8-bit indexed format (GTA III). Limited to 256 colors with palette.")
+                info_label.setText("8-bit indexed format (GTA III). Limited to 256 colors with palette.")
             else:
                 info_label.setText("Note: Converting between compressed formats may result in quality loss.")
 
@@ -4581,7 +5297,7 @@ class TXDWorkshop(QWidget): #vers 3
             self._reload_texture_table()
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"✅ Converted: {current_format} → {selected_format} ({bit_depth}bit)")
+                self.main_window.log_message(f"Converted: {current_format} → {selected_format} ({bit_depth}bit)")
 
             dialog.accept()
 
@@ -4612,18 +5328,25 @@ class TXDWorkshop(QWidget): #vers 3
         """Create transform panel with variable width - no headers"""
         self.transform_panel = QFrame()
         self.transform_panel.setFrameStyle(QFrame.Shape.StyledPanel)
-        self.transform_panel.setMinimumWidth(50)
+        self.transform_panel.setMinimumWidth(30)
         self.transform_panel.setMaximumWidth(200)
+        if self.button_display_mode == 'icons':
+            self.transform_panel.setMaximumWidth(40)
+            self.transform_panel.setMinimumWidth(40)
+            layout.addSpacing(5)
 
         layout = QVBoxLayout(self.transform_panel)
         layout.setContentsMargins(5, 5, 5, 5)
         layout.setSpacing(5)
+
 
         # Flip Vertical
         self.flip_vert_btn = QPushButton()
         self.flip_vert_btn.setIcon(self._create_flip_vert_icon())
         self.flip_vert_btn.setText("Flip Vertical")
         self.flip_vert_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.flip_vert_btn.setFixedSize(40, 40)
         self.flip_vert_btn.clicked.connect(self._flip_vertical)
         self.flip_vert_btn.setEnabled(False)
         self.flip_vert_btn.setToolTip("Flip texture vertically")
@@ -4634,6 +5357,8 @@ class TXDWorkshop(QWidget): #vers 3
         self.flip_horz_btn.setIcon(self._create_flip_horz_icon())
         self.flip_horz_btn.setText("Flip Horizontal")
         self.flip_horz_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.flip_horz_btn.setFixedSize(40, 40)
         self.flip_horz_btn.clicked.connect(self._flip_horizontal)
         self.flip_horz_btn.setEnabled(False)
         self.flip_horz_btn.setToolTip("Flip texture horizontally")
@@ -4646,6 +5371,8 @@ class TXDWorkshop(QWidget): #vers 3
         self.rotate_cw_btn.setIcon(self._create_rotate_cw_icon())
         self.rotate_cw_btn.setText("Rotate 90° CW")
         self.rotate_cw_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.rotate_cw_btn.setFixedSize(40, 40)
         self.rotate_cw_btn.clicked.connect(self._rotate_clockwise)
         self.rotate_cw_btn.setEnabled(False)
         self.rotate_cw_btn.setToolTip("Rotate 90 degrees clockwise")
@@ -4656,6 +5383,8 @@ class TXDWorkshop(QWidget): #vers 3
         self.rotate_ccw_btn.setIcon(self._create_rotate_ccw_icon())
         self.rotate_ccw_btn.setText("Rotate 90° CCW")
         self.rotate_ccw_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.rotate_ccw_btn.setFixedSize(40, 40)
         self.rotate_ccw_btn.clicked.connect(self._rotate_counterclockwise)
         self.rotate_ccw_btn.setEnabled(False)
         self.rotate_ccw_btn.setToolTip("Rotate 90 degrees counter-clockwise")
@@ -4668,6 +5397,8 @@ class TXDWorkshop(QWidget): #vers 3
         self.copy_btn.setIcon(self._create_copy_icon())
         self.copy_btn.setText("Copy")
         self.copy_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.copy_btn.setFixedSize(40, 40)
         self.copy_btn.clicked.connect(self._copy_texture)
         self.copy_btn.setEnabled(False)
         self.copy_btn.setToolTip("Copy texture to clipboard")
@@ -4678,6 +5409,8 @@ class TXDWorkshop(QWidget): #vers 3
         self.paste_btn.setIcon(self._create_paste_icon())
         self.paste_btn.setText("Paste")
         self.paste_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.paste_btn.setFixedSize(40, 40)
         self.paste_btn.clicked.connect(self._paste_texture)
         self.paste_btn.setEnabled(False)
         self.paste_btn.setToolTip("Paste texture from clipboard")
@@ -4688,6 +5421,8 @@ class TXDWorkshop(QWidget): #vers 3
         self.edit_btn.setIcon(self._create_edit_icon())
         self.edit_btn.setText("Edit")
         self.edit_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.edit_btn.setFixedSize(40, 40)
         self.edit_btn.clicked.connect(self._edit_texture)
         self.edit_btn.setEnabled(False)
         self.edit_btn.setToolTip("Edit texture in external editor")
@@ -4698,6 +5433,8 @@ class TXDWorkshop(QWidget): #vers 3
         self.convert_btn.setIcon(self._create_convert_icon())
         self.convert_btn.setText("Convert")
         self.convert_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.convert_btn.setFixedSize(40, 40)
         self.convert_btn.clicked.connect(self._convert_texture)
         self.convert_btn.setEnabled(False)
         self.convert_btn.setToolTip("Convert texture format")
@@ -4710,6 +5447,8 @@ class TXDWorkshop(QWidget): #vers 3
         self.create_texture_btn.setIcon(self._create_create_icon())
         self.create_texture_btn.setText("Create")
         self.create_texture_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.create_texture_btn.setFixedSize(40, 40)
         self.create_texture_btn.clicked.connect(self._create_new_texture_entry)
         self.create_texture_btn.setToolTip("Create new blank texture")
         layout.addWidget(self.create_texture_btn)
@@ -4719,6 +5458,8 @@ class TXDWorkshop(QWidget): #vers 3
         self.delete_texture_btn.setIcon(self._create_delete_icon())
         self.delete_texture_btn.setText("Delete")
         self.delete_texture_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.delete_texture_btn.setFixedSize(40, 40)
         self.delete_texture_btn.clicked.connect(self._delete_texture)
         self.delete_texture_btn.setEnabled(False)
         self.delete_texture_btn.setToolTip("Remove selected texture")
@@ -4729,6 +5470,8 @@ class TXDWorkshop(QWidget): #vers 3
         self.duplicate_texture_btn.setIcon(self._create_duplicate_icon())
         self.duplicate_texture_btn.setText("Duplicate")
         self.duplicate_texture_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.duplicate_texture_btn.setFixedSize(40, 40)
         self.duplicate_texture_btn.clicked.connect(self._duplicate_texture)
         self.duplicate_texture_btn.setEnabled(False)
         self.duplicate_texture_btn.setToolTip("Clone selected texture")
@@ -4741,6 +5484,8 @@ class TXDWorkshop(QWidget): #vers 3
         self.filters_btn.setIcon(self._create_filter_icon())
         self.filters_btn.setText("Filters")
         self.filters_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.filters_btn.setFixedSize(40, 40)
         self.filters_btn.clicked.connect(self._open_filters_dialog)
         self.filters_btn.setEnabled(False)
         self.filters_btn.setToolTip("Brightness, Contrast, Saturation")
@@ -6132,12 +6877,64 @@ class TXDWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
-    def _create_upscale_icon(self): #vers 2
-        """Create upscale icon"""
+
+    def _create_upscale_icon(self): #vers 3
+        """Create AI upscale icon - brain/intelligence style"""
         svg_data = b'''<svg viewBox="0 0 24 24">
-            <path fill="currentColor" d="M7,15L12,10L17,15H7Z"/>
+            <!-- Brain outline -->
+            <path d="M12 3 C8 3 5 6 5 9 C5 10 5.5 11 6 12 C5.5 13 5 14 5 15 C5 18 8 21 12 21 C16 21 19 18 19 15 C19 14 18.5 13 18 12 C18.5 11 19 10 19 9 C19 6 16 3 12 3 Z"
+                fill="none" stroke="currentColor" stroke-width="1.5"/>
+
+            <!-- Neural pathways inside -->
+            <path d="M9 8 L10 10 M14 8 L13 10 M10 12 L14 12 M9 14 L12 16 M15 14 L12 16"
+                stroke="currentColor" stroke-width="1" fill="none"/>
+
+            <!-- Upward indicator -->
+            <path d="M19 8 L19 4 M17 6 L19 4 L21 6"
+                stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
+
+    def _create_upscale_icon(self): #vers 3
+        """Create AI upscale icon - sparkle/magic AI style"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <!-- Large sparkle -->
+            <path d="M12 2 L13 8 L12 14 L11 8 Z M8 12 L2 11 L8 10 L14 11 Z"
+                fill="currentColor"/>
+
+            <!-- Small sparkles -->
+            <circle cx="18" cy="6" r="1.5" fill="currentColor"/>
+            <circle cx="6" cy="18" r="1.5" fill="currentColor"/>
+            <circle cx="19" cy="16" r="1" fill="currentColor"/>
+
+            <!-- Upward arrow -->
+            <path d="M16 20 L20 20 M18 18 L18 22"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+
+    def _create_upscale_icon(self): #vers 3
+        """Create AI upscale icon - neural network style"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <!-- Neural network nodes -->
+            <circle cx="6" cy="6" r="2" fill="currentColor"/>
+            <circle cx="18" cy="6" r="2" fill="currentColor"/>
+            <circle cx="6" cy="18" r="2" fill="currentColor"/>
+            <circle cx="18" cy="18" r="2" fill="currentColor"/>
+            <circle cx="12" cy="12" r="2.5" fill="currentColor"/>
+
+            <!-- Connecting lines -->
+            <path d="M7.5 7.5 L10.5 10.5 M13.5 10.5 L16.5 7.5 M7.5 16.5 L10.5 13.5 M13.5 13.5 L16.5 16.5"
+                stroke="currentColor" stroke-width="1.5" fill="none"/>
+
+            <!-- Upward arrow overlay -->
+            <path d="M12 3 L12 9 M9 6 L12 3 L15 6"
+                stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_compress_icon(self): #vers 2
         """Create compress icon"""
@@ -6645,8 +7442,8 @@ class MipmapManagerWindow(QWidget): #vers 2
         layout.addWidget(scroll)
 
         # Bottom status bar
-        bottom_bar = self._create_bottom_bar()
-        layout.addWidget(bottom_bar)
+        #bottom_bar = self._create_bottom_bar()
+        #layout.addWidget(bottom_bar)
 
 
     def _create_title_bar(self): #vers 1
