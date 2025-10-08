@@ -131,7 +131,14 @@ except ImportError:
 # __init__
 # closeEvent
 
-
+def _create_undo_icon(self): #vers 2
+    """Undo - Curved arrow icon"""
+    svg_data = b'''<svg viewBox="0 0 24 24">
+        <path d="M3 7v6h6M3 13a9 9 0 1018 0 9 9 0 00-18 0z"
+              stroke="currentColor" stroke-width="2" fill="none"
+              stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>'''
+    return self._svg_to_icon(svg_data, size=20)
 class TXDWorkshop(QWidget): #vers 3
     """TXD Workshop - Main texture editing window"""
 
@@ -140,6 +147,14 @@ class TXDWorkshop(QWidget): #vers 3
 
     def __init__(self, parent=None, main_window=None): #vers 7
         super().__init__(parent)
+        self.pixmap = None
+        self.scaled_pixmap = None
+        self.zoom_level = 1.0
+        self.bg_color = QColor(42, 42, 42)  # Default gray
+        self.background_mode = 'solid'  # 'solid' or 'checkerboard'
+        self.placeholder_text = "No texture"
+        self.setMinimumSize(200, 200)
+
         self.main_window = main_window
         self.current_img = None
         self.current_txd_data = None
@@ -999,6 +1014,8 @@ class TXDWorkshop(QWidget): #vers 3
                 self.main_window.log_message(f"features init error: {str(e)}")
 
 
+
+
     def _detect_txd_info(self, txd_data: bytes) -> bool: #vers 1
         """
         Detect and store TXD version and platform information
@@ -1039,50 +1056,44 @@ class TXDWorkshop(QWidget): #vers 3
             return False
 
 
-    def paintEvent(self, event): #vers 2
-        """Paint corner resize triangles"""
-        super().paintEvent(event)
+    def set_checkerboard_background(self): #vers 1
+        """Set checkerboard pattern background"""
+        self.background_mode = 'checkerboard'
+        self.bg_color = None
+        self.update()
 
-        from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QPainterPath
-
+    def paintEvent(self, event): #vers 3 (update existing)
+        """Paint the preview with proper background"""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
-        # Colors
-        normal_color = QColor(100, 100, 100, 150)
-        hover_color = QColor(150, 150, 255, 200)
+        # Draw background
+        if hasattr(self, 'background_mode') and self.background_mode == 'checkerboard':
+            # Draw checkerboard pattern
+            checker_size = 16
+            light_gray = QColor(200, 200, 200)
+            dark_gray = QColor(150, 150, 150)
 
-        w = self.width()
-        h = self.height()
-        size = self.corner_size
+            for y in range(0, self.height(), checker_size):
+                for x in range(0, self.width(), checker_size):
+                    if ((x // checker_size) + (y // checker_size)) % 2 == 0:
+                        painter.fillRect(x, y, checker_size, checker_size, light_gray)
+                    else:
+                        painter.fillRect(x, y, checker_size, checker_size, dark_gray)
+        elif self.bg_color:
+            painter.fillRect(self.rect(), self.bg_color)
+        else:
+            painter.fillRect(self.rect(), QColor(42, 42, 42))
 
-        # Define corner triangles
-        corners = {
-            'top-left': [(0, 0), (size, 0), (0, size)],
-            'top-right': [(w, 0), (w-size, 0), (w, size)],
-            'bottom-left': [(0, h), (size, h), (0, h-size)],
-            'bottom-right': [(w, h), (w-size, h), (w, h-size)]
-        }
-
-        for corner_name, points in corners.items():
-            # Choose color based on hover state
-            if self.hover_corner == corner_name:
-                painter.setBrush(QBrush(hover_color))
-                painter.setPen(QPen(hover_color.darker(120), 1))
-            else:
-                painter.setBrush(QBrush(normal_color))
-                painter.setPen(QPen(normal_color.darker(120), 1))
-
-            # Draw triangle
-            path = QPainterPath()
-            path.moveTo(points[0][0], points[0][1])
-            path.lineTo(points[1][0], points[1][1])
-            path.lineTo(points[2][0], points[2][1])
-            path.closeSubpath()
-
-            painter.drawPath(path)
-
-        painter.end()
+        if self.pixmap and not self.pixmap.isNull():
+            # Calculate position to center the image
+            x = (self.width() - self.scaled_pixmap.width()) // 2
+            y = (self.height() - self.scaled_pixmap.height()) // 2
+            painter.drawPixmap(x, y, self.scaled_pixmap)
+        elif self.placeholder_text:
+            painter.setPen(QColor(150, 150, 150))
+            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self.placeholder_text)
 
 
     def _get_resize_corner(self, pos): #vers 2
@@ -1113,7 +1124,7 @@ class TXDWorkshop(QWidget): #vers 3
     def mousePressEvent(self, event): #vers 2
         """Handle mouse press for dragging and resizing"""
         if event.button() == Qt.MouseButton.LeftButton:
-            # Check if clicking on corner
+            # Check if clicking on resize corner
             self.resize_corner = self._get_resize_corner(event.pos())
 
             if self.resize_corner:
@@ -1388,6 +1399,13 @@ class TXDWorkshop(QWidget): #vers 3
         return True  # On empty stretch area, draggable
 
 
+    def _create_resize_icon(self): #vers 1
+        """Resize grip icon - diagonal arrows"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 6l-8 8M10 6h4v4M6 14v-4h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
     def _setup_status_indicators(self): #vers 5
         """Setup status indicators with texture info and visible resize button"""
         self.status_frame = QFrame()
@@ -1528,7 +1546,7 @@ class TXDWorkshop(QWidget): #vers 3
         self.undo_btn.setText("Undo")
         self.undo_btn.setIconSize(QSize(20, 20))
         self.undo_btn.clicked.connect(self._undo_last_action)
-        #self.undo_btn.setEnabled(False)
+        self.undo_btn.setEnabled(False)
         self.undo_btn.setToolTip("Undo last action")
         layout.addWidget(self.undo_btn)
 
@@ -1983,13 +2001,13 @@ class TXDWorkshop(QWidget): #vers 3
             self.bitdepth_btn.setEnabled(False)
             format_layout.addWidget(self.bitdepth_btn)
 
-            #self.resize_btn = QPushButton("Resize")
-            #self.resize_btn.setIcon(self._create_resize_icon())
-            #self.resize_btn.setIconSize(QSize(20, 20))
-            #self.resize_btn.setToolTip("Resize texture")
-            #self.resize_btn.clicked.connect(self._resize_texture)
-            #self.resize_btn.setEnabled(False)
-            #format_layout.addWidget(self.resize_btn)
+            self.resize_btn = QPushButton("Resize")
+            self.resize_btn.setIcon(self._create_resize_icon())
+            self.resize_btn.setIconSize(QSize(20, 20))
+            self.resize_btn.setToolTip("Resize texture")
+            self.resize_btn.clicked.connect(self._resize_texture)
+            self.resize_btn.setEnabled(False)
+            format_layout.addWidget(self.resize_btn)
 
             self.upscale_btn = QPushButton("AI Upscale")
             self.upscale_btn.setIcon(self._create_upscale_icon())
@@ -3319,24 +3337,6 @@ class TXDWorkshop(QWidget): #vers 3
         pan_right_btn.clicked.connect(lambda: self._pan_preview(20, 0))
         controls_layout.addWidget(pan_right_btn)
 
-        bg_custom_btn = QPushButton()
-        bg_custom_btn.setIcon(self._create_color_picker_icon())
-        bg_custom_btn.setIconSize(QSize(20, 20))
-        bg_custom_btn.setFixedSize(40, 40)
-        bg_custom_btn.setToolTip("Pick Color")
-        bg_custom_btn.clicked.connect(self._pick_background_color)
-        controls_layout.addWidget(bg_custom_btn)
-
-        # Add resize button here
-        self.resize_texture_btn = QPushButton()
-        self.resize_texture_btn.setIcon(self._create_resize_icon())
-        self.resize_texture_btn.setIconSize(QSize(20, 20))
-        self.resize_texture_btn.setFixedSize(40, 40)
-        self.resize_texture_btn.setToolTip("Resize Texture")
-        self.resize_texture_btn.clicked.connect(self._resize_texture)
-        #self.resize_texture_btn.setEnabled(False)
-        controls_layout.addWidget(self.resize_texture_btn)
-
         controls_layout.addSpacing(10)
 
         # Background colors
@@ -3369,6 +3369,24 @@ class TXDWorkshop(QWidget): #vers 3
         bg_checker_btn.setToolTip("Checkerboard Pattern")
         bg_checker_btn.clicked.connect(lambda: self.preview_widget.set_checkerboard_background())
         controls_layout.addWidget(bg_checker_btn)
+
+        bg_custom_btn = QPushButton()
+        bg_custom_btn.setIcon(self._create_color_picker_icon())
+        bg_custom_btn.setIconSize(QSize(20, 20))
+        bg_custom_btn.setFixedSize(40, 40)
+        bg_custom_btn.setToolTip("Pick Color")
+        bg_custom_btn.clicked.connect(self._pick_background_color)
+        controls_layout.addWidget(bg_custom_btn)
+
+        # Add resize button here
+        self.resize_texture_btn = QPushButton()
+        self.resize_texture_btn.setIcon(self._create_resize_icon())
+        self.resize_texture_btn.setIconSize(QSize(20, 20))
+        self.resize_texture_btn.setFixedSize(40, 40)
+        self.resize_texture_btn.setToolTip("Resize Texture")
+        #self.resize_texture_btn.clicked.connect(self._resize_texture_dialog)
+        self.resize_texture_btn.setEnabled(False)
+        controls_layout.addWidget(self.resize_texture_btn)
 
         controls_layout.addStretch()
 
@@ -5518,7 +5536,10 @@ class TXDWorkshop(QWidget): #vers 3
         current_height = self.selected_texture.get('height', 256)
 
         # Get new dimensions from user
-        w, ok1 = QInputDialog.getInt(self, "Resize Texture", "New width:",value=current_width, min=1, max=4096)
+        w, ok1 = QInputDialog.getInt(
+            self, "Resize Texture", "New width:",
+            value=current_width, min=1, max=4096
+        )
         if not ok1:
             return
 
@@ -8070,13 +8091,6 @@ class TXDWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
-    def _create_resize_icon2(self): #vers 1
-        """Resize grip icon - diagonal arrows"""
-        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M14 6l-8 8M10 6h4v4M6 14v-4h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=20)
-
 
     def _create_upscale_icon(self): #vers 3
         """Create AI upscale icon - brain/intelligence style"""
@@ -8433,6 +8447,13 @@ class TXDWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data)
 
+    def _create_undo_icon(self): #vers 1
+        """Undo - Curved arrow icon"""
+        svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 7v6h6M3 13a9 9 0 1018 0 9 9 0 00-18 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data)
+
     def _create_filter_icon(self): #vers 1
         """Filter/sliders icon"""
         svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -8680,14 +8701,6 @@ class TXDWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
-    def _create_undo_icon(self): #vers 2
-        """Undo - Curved arrow icon"""
-        svg_data = b'''<svg viewBox="0 0 24 24">
-            <path d="M3 7v6h6M3 13a9 9 0 1018 0 9 9 0 00-18 0z"
-                stroke="currentColor" stroke-width="2" fill="none"
-                stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>'''
-        return self._svg_to_icon(svg_data, size=20)
 
     def _svg_to_icon(self, svg_data, size=24): #vers 2
         """Convert SVG data to QIcon with theme color support"""
@@ -11110,9 +11123,10 @@ class TexturePropertiesDialog(QDialog): #vers 1
         font_size_combo.setCurrentIndex(1)
         font_layout.addRow("Font Size:", font_size_combo)
 
-        layout.addWidget(font_group)
-
+        self.setStyleSheet(f"border: 1px solid #3a3a3a; background-color: {color.name()};")
         layout.addStretch()
+
+        layout.addWidget(font_group)
 
         # Note
         note = QLabel("Note: Some settings require restart to take full effect")
@@ -11120,6 +11134,12 @@ class TexturePropertiesDialog(QDialog): #vers 1
         layout.addWidget(note)
 
         return tab
+
+    def set_background_color(self, color): #vers 1
+        """Set background color"""
+        self.background_mode = 'solid'
+        self.bg_color = color
+        self.update()
 
 
     def _create_format_tab(self): #vers 1
@@ -11521,49 +11541,6 @@ class TexturePropertiesDialog(QDialog): #vers 1
         QMessageBox.information(self, "Export Complete", f"Exported {exported} mipmap levels")
 
 
-class TexturePreviewWidget(QLabel): #vers 1
-    """ Test preview widget  """
-
-    def set_checkerboard_background(self): #vers 1
-        """Set checkerboard pattern background"""
-        self.background_mode = 'checkerboard'
-        self.bg_color = None
-        self.update()
-
-    def paintEvent(self, event): #vers 3 (update existing)
-        """Paint the preview with proper background"""
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-
-        # Draw background
-        if hasattr(self, 'background_mode') and self.background_mode == 'checkerboard':
-            # Draw checkerboard pattern
-            checker_size = 16
-            light_gray = QColor(200, 200, 200)
-            dark_gray = QColor(150, 150, 150)
-
-            for y in range(0, self.height(), checker_size):
-                for x in range(0, self.width(), checker_size):
-                    if ((x // checker_size) + (y // checker_size)) % 2 == 0:
-                        painter.fillRect(x, y, checker_size, checker_size, light_gray)
-                    else:
-                        painter.fillRect(x, y, checker_size, checker_size, dark_gray)
-        elif self.bg_color:
-            painter.fillRect(self.rect(), self.bg_color)
-        else:
-            painter.fillRect(self.rect(), QColor(42, 42, 42))
-
-        if self.pixmap and not self.pixmap.isNull():
-            # Calculate position to center the image
-            x = (self.width() - self.scaled_pixmap.width()) // 2
-            y = (self.height() - self.scaled_pixmap.height()) // 2
-            painter.drawPixmap(x, y, self.scaled_pixmap)
-        elif self.placeholder_text:
-            painter.setPen(QColor(150, 150, 150))
-            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self.placeholder_text)
-
-
 class ZoomablePreview(QLabel): #vers 1
     """Custom preview widget with zoom and pan"""
 
@@ -11661,18 +11638,6 @@ class ZoomablePreview(QLabel): #vers 1
         self.update_display()
 
 
-    def set_checkerboard_background(self): #vers 1 #placeholder bugfix
-        """Set checkerboard pattern background"""
-        self.background_mode = 'checkerboard'
-        self.bg_color = None
-        self.update()
-
-    def set_background_color(self, color): #vers 1
-        """Set background color"""
-        self.bg_color = color
-        self.setStyleSheet(f"border: 1px solid #3a3a3a; background-color: {color.name()};")
-
-
     def mousePressEvent(self, event): #vers 1
         """Start pan drag"""
         if event.button() == Qt.MouseButton.LeftButton:
@@ -11703,6 +11668,19 @@ class ZoomablePreview(QLabel): #vers 1
             self.zoom_in()
         else:
             self.zoom_out()
+
+    def set_background_color(self, color): #vers 1
+        """Set background color"""
+        self.background_mode = 'solid'
+        self.bg_color = color
+        self.update()
+        self.setStyleSheet(f"border: 1px solid #3a3a3a; background-color: {color.name()};")
+
+    def set_checkerboard_background(self): #vers 1
+        """Set checkerboard pattern background"""
+        self.background_mode = 'checkerboard'
+        self.bg_color = None
+        self.update()
 
 
 
