@@ -19,6 +19,28 @@ Todo, Drag and Drop files/ folders onto the imgfactory app, to be imported.
 
 Todo, fix the highlighting function, 28/28 files, when I know 10 of them already existed.
 
+-------------------------------- >
+
+Add the ability to also import iff (Amiga) images for 8bit textures import
+
+and splash screen txd texture support gtaIII, vc and sa. (plus other platforms)
+
+dimension limiting to 2"x, because of importing splash screens, 1280x720, 720x576, 640x480.
+
+texture renaming limit set to 32 characters, but able to change these in settings.
+
+Txd RW ID, see images.
+
+Save game format.
+
+Bumpmap generator, add and del them as needed.
+
+Deluxe Paint / Paint Net style image editor. For manually editing images,
+
+check dff texture list.
+
+build txd, from texture list, or reading the txd information from the dff / mdl files.
+
 
 
 ------------ semi completed ---- >
@@ -33,7 +55,45 @@ Remove functions, both remove.py and remove_via,py work without error.
 Only issue is removing every entry from the img file, leaving 0 files?
 This needs a work around.
 
------------- completed ---- >
+----------- completed ---- >
+
+Added - Oct 8
+Author info and feature list.
+Import Texture functions
+
+Added - Oct 7
+Check model texture list.
+Build TXD from model texlist.
+
+Added and fixed - Oct 6
+Delete, duplicate, undo functions.
+
+Added - Oct 5
+Settings window, support, Font size and UI Layout, Text, Icons or show both.
+Pan, Zoom, backdrop preview window offsets.
+
+Added - Oct 4
+Bunpmap support - Todo
+Mipmap support - Raster structure.
+
+Added - Oct 2
+SVG Icons instead of Emoji character sets.
+
+Fixed - Oct 1
+UI resized gadgets, missing button functions, DXT, Bit Depth.
+
+Fixed - Sep28
+Bulk export, texture corruption.
+
+Added - Sep28
+Flip, Rotate and Resize functions.
+AI framework for image sharpen, upscaling.
+
+Added - Sep28
+Export. Export and other basic functions.
+
+Added - Sep27
+Begun work on txd workshop, the base and ui design.
 
 Fixed - Sep25
 Tab system is finally fixed, no more missing tab messages.

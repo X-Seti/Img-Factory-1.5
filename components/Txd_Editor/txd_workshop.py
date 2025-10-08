@@ -13,7 +13,7 @@ import subprocess
 import shutil
 import struct
 from typing import Optional, List, Dict
-from PyQt6.QtWidgets import (QApplication,
+from PyQt6.QtWidgets import (QApplication, QSlider, QCheckBox,
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QListWidget, QDialog, QFormLayout,
     QListWidgetItem, QLabel, QPushButton, QFrame, QFileDialog, QLineEdit, QTextEdit,
     QMessageBox, QScrollArea, QGroupBox, QTableWidget, QTableWidgetItem, QColorDialog,
@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (QApplication,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint, QRect
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QColor
+from PyQt6.QtSvg import QSvgRenderer
 
 try:
     # Try main app path first
@@ -41,10 +42,12 @@ except ImportError:
 
 
 ##Methods list -
+# _apply_gaussian_blur                  # NEW - Gaussian blur for bumpmap smoothing
 # _compress_to_dxt1
 # _compress_to_dxt3
 # _compress_to_dxt5
 # _create_blank_texture
+# _create_bumpmap_data                  # NEW - Create bumpmap using various methods
 # _create_empty_txd_data
 # _create_export_icon
 # _create_file_icon
@@ -68,25 +71,32 @@ except ImportError:
 # _decompress_dxt1
 # _decompress_dxt3
 # _decompress_dxt5
-# _decompress_uncompressed
+# _decompress_uncompress
+# _delete_bumpmap                       # NEW - Delete bumpmap from texture
 # _delete_texture
 # _detect_txd_info
+# _emboss_filter                        # NEW - Emboss filter for bumpmap
 # _encode_bumpmap
 # _export_bumpmap
 # _extract_alpha_channel
 # _extract_txd_from_img
 # _export_alpha_only
+# _generate_bumpmap_from_texture        # NEW - Main bumpmap generator dialog
 # _get_format_description
 # _get_resize_direction
 # _handle_resize
+# _has_bumpmap_data                     # NEW - Check if texture has bumpmap
+# _height_map                           # NEW - Height map bumpmap method
 # _import_bumpmap
 # _is_on_draggable_area
 # _load_img_txd_list
 # _load_txd_textures
 # _mark_as_modified
+# _normal_map                           # NEW - Normal map bumpmap method
 # _on_texture_selected
 # _on_txd_selected
 # _parse_single_texture
+# _preview_bumpmap_generation           # NEW - Preview bumpmap before applying
 # _rebuild_txd_data
 # _reload_texture_table
 # _save_as_new_txd
@@ -96,11 +106,12 @@ except ImportError:
 # _save_undo_state
 # _show_detailed_info
 # _show_texture_context_menu
+# _sobel_filter                         # NEW - Sobel edge detection for bumpmap
 # _toggle_maximize
 # _undo_last_action
 # _update_cursor
 # _update_texture_info
-# _view_bumpmap
+# _view_bumpmap                         # UPDATED - Now includes generate option
 # export_all_textures
 # export_selected_texture
 # flip_texture
@@ -2070,26 +2081,441 @@ class TXDWorkshop(QWidget): #vers 3
                     self.main_window.log_message(f"✅ Bit depth changed: {current_depth}bit → {new_depth}bit")
 
 
-    def _has_bumpmap_data(self, texture_data: dict) -> bool: #vers 1
-        """Check if texture has bumpmap data"""
+    def _generate_bumpmap_from_texture(self): #vers 1
+        """Generate bumpmap/normal map from current texture using edge detection"""
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture")
+            return
+
+        # Check version support
+        if not is_bumpmap_supported(self.txd_version_id, self.txd_device_id):
+            QMessageBox.warning(self, "Not Supported",
+                f"Bumpmaps not supported for {self.txd_game}\n"
+                f"Only San Andreas and Manhunt support bumpmaps")
+            return
+
         try:
-            # Check explicit flag
-            if texture_data.get('has_bumpmap', False):
-                return True
+            # Get texture data
+            rgba_data = self.selected_texture.get('rgba_data')
+            width = self.selected_texture.get('width', 0)
+            height = self.selected_texture.get('height', 0)
 
-            # Check for bumpmap data key
-            if 'bumpmap_data' in texture_data and texture_data['bumpmap_data']:
-                return True
+            if not rgba_data or width == 0 or height == 0:
+                QMessageBox.warning(self, "No Data", "No texture data available")
+                return
 
-            # Check raster format flags
-            flags = texture_data.get('raster_format_flags', 0)
-            if flags & 0x10:  # Environment map bit
-                return True
+            # Show generation options dialog
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Generate Bumpmap")
+            dialog.setMinimumWidth(400)
 
+            layout = QVBoxLayout(dialog)
+
+            # Method selection
+            method_group = QGroupBox("Generation Method")
+            method_layout = QVBoxLayout()
+
+            method_combo = QComboBox()
+            method_combo.addItems([
+                "Sobel Filter (Edge Detection)",
+                "Height Map (Grayscale)",
+                "Normal Map (RGB)",
+                "Emboss Filter"
+            ])
+            method_layout.addWidget(method_combo)
+
+            method_info = QLabel(
+                "Sobel: Detects edges for bump effect\n"
+                "Height: Uses brightness as height\n"
+                "Normal: Creates RGB normal map\n"
+                "Emboss: Creates raised/lowered effect"
+            )
+            method_info.setStyleSheet("color: #888; font-size: 9pt;")
+            method_layout.addWidget(method_info)
+
+            method_group.setLayout(method_layout)
+            layout.addWidget(method_group)
+
+            # Strength control
+            strength_group = QGroupBox("Strength")
+            strength_layout = QFormLayout()
+
+            strength_slider = QSlider(Qt.Orientation.Horizontal)
+            strength_slider.setRange(1, 100)
+            strength_slider.setValue(50)
+            strength_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+            strength_slider.setTickInterval(10)
+
+            strength_label = QLabel("50%")
+            strength_slider.valueChanged.connect(
+                lambda v: strength_label.setText(f"{v}%")
+            )
+
+            strength_layout.addRow("Intensity:", strength_slider)
+            strength_layout.addRow("", strength_label)
+
+            strength_group.setLayout(strength_layout)
+            layout.addWidget(strength_group)
+
+            # Blur/Smooth control
+            smooth_group = QGroupBox("Smoothing")
+            smooth_layout = QFormLayout()
+
+            smooth_slider = QSlider(Qt.Orientation.Horizontal)
+            smooth_slider.setRange(0, 10)
+            smooth_slider.setValue(2)
+            smooth_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+            smooth_slider.setTickInterval(1)
+
+            smooth_label = QLabel("2")
+            smooth_slider.valueChanged.connect(
+                lambda v: smooth_label.setText(str(v))
+            )
+
+            smooth_layout.addRow("Blur Radius:", smooth_slider)
+            smooth_layout.addRow("", smooth_label)
+
+            smooth_group.setLayout(smooth_layout)
+            layout.addWidget(smooth_group)
+
+            # Invert option
+            invert_check = QCheckBox("Invert bumpmap (swap raised/lowered)")
+            layout.addWidget(invert_check)
+
+            # Buttons
+            button_layout = QHBoxLayout()
+            button_layout.addStretch()
+
+            preview_btn = QPushButton("Preview")
+            preview_btn.clicked.connect(
+                lambda: self._preview_bumpmap_generation(
+                    rgba_data, width, height,
+                    method_combo.currentIndex(),
+                    strength_slider.value(),
+                    smooth_slider.value(),
+                    invert_check.isChecked()
+                )
+            )
+            button_layout.addWidget(preview_btn)
+
+            generate_btn = QPushButton("Generate")
+            generate_btn.setDefault(True)
+            generate_btn.clicked.connect(dialog.accept)
+            button_layout.addWidget(generate_btn)
+
+            cancel_btn = QPushButton("Cancel")
+            cancel_btn.clicked.connect(dialog.reject)
+            button_layout.addWidget(cancel_btn)
+
+            layout.addLayout(button_layout)
+
+            # Execute dialog
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                # Generate bumpmap with selected settings
+                method = method_combo.currentIndex()
+                strength = strength_slider.value() / 100.0
+                smooth = smooth_slider.value()
+                invert = invert_check.isChecked()
+
+                bumpmap_data = self._create_bumpmap_data(
+                    rgba_data, width, height, method, strength, smooth, invert
+                )
+
+                if bumpmap_data:
+                    # Save undo state
+                    self._save_undo_state("Generate bumpmap")
+
+                    # Add bumpmap to texture
+                    self.selected_texture['bumpmap_data'] = bumpmap_data
+                    self.selected_texture['has_bumpmap'] = True
+                    self.selected_texture['raster_format_flags'] = \
+                        self.selected_texture.get('raster_format_flags', 0) | 0x10
+
+                    # Mark modified
+                    self._mark_as_modified()
+
+                    # Update UI
+                    self._update_texture_info(self.selected_texture)
+
+                    QMessageBox.information(self, "Success",
+                        "Bumpmap generated successfully!")
+
+                    if self.main_window and hasattr(self.main_window, 'log_message'):
+                        self.main_window.log_message(
+                            f"✅ Generated bumpmap for: {self.selected_texture.get('name', 'texture')}"
+                        )
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to generate bumpmap:\n{str(e)}")
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Bumpmap generation error: {str(e)}")
+
+
+
+
+    def _create_bumpmap_data(self, rgba_data, width, height, method, strength, smooth, invert): #vers 1
+        """Create bumpmap data using various methods"""
+        import struct
+
+        try:
+            # Convert RGBA to grayscale first
+            grayscale = bytearray(width * height)
+            for i in range(0, len(rgba_data), 4):
+                r, g, b = rgba_data[i:i+3]
+                # Luminosity method
+                gray = int(0.299 * r + 0.587 * g + 0.114 * b)
+                grayscale[i // 4] = gray
+
+            # Apply smoothing if requested
+            if smooth > 0:
+                grayscale = self._apply_gaussian_blur(grayscale, width, height, smooth)
+
+            # Generate bumpmap based on method
+            if method == 0:  # Sobel Filter
+                bumpmap = self._sobel_filter(grayscale, width, height, strength)
+            elif method == 1:  # Height Map
+                bumpmap = self._height_map(grayscale, width, height, strength)
+            elif method == 2:  # Normal Map
+                bumpmap = self._normal_map(grayscale, width, height, strength)
+            elif method == 3:  # Emboss
+                bumpmap = self._emboss_filter(grayscale, width, height, strength)
+            else:
+                bumpmap = grayscale
+
+            # Invert if requested
+            if invert:
+                bumpmap = bytearray(255 - b for b in bumpmap)
+
+            return bytes(bumpmap)
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Bumpmap creation error: {str(e)}")
+            return None
+
+
+    def _sobel_filter(self, data, width, height, strength): #vers 1
+        """Apply Sobel edge detection filter"""
+        result = bytearray(width * height)
+
+        # Sobel kernels
+        gx = [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]]
+        gy = [[-1, -2, -1], [0, 0, 0], [1, 2, 1]]
+
+        for y in range(1, height - 1):
+            for x in range(1, width - 1):
+                px = 0
+                py = 0
+
+                # Apply kernels
+                for ky in range(-1, 2):
+                    for kx in range(-1, 2):
+                        pixel = data[(y + ky) * width + (x + kx)]
+                        px += pixel * gx[ky + 1][kx + 1]
+                        py += pixel * gy[ky + 1][kx + 1]
+
+                # Calculate magnitude
+                magnitude = int(((px * px + py * py) ** 0.5) * strength)
+                magnitude = max(0, min(255, magnitude))
+
+                result[y * width + x] = magnitude
+
+        return result
+
+
+    def _height_map(self, data, width, height, strength): #vers 1
+        """Convert grayscale to height map"""
+        result = bytearray(width * height)
+
+        for i in range(len(data)):
+            # Scale by strength
+            value = int(data[i] * strength)
+            result[i] = max(0, min(255, value))
+
+        return result
+
+
+    def _normal_map(self, data, width, height, strength): #vers 1
+        """Generate normal map from height data (returns RGB normal map)"""
+        # Normal maps are 3-channel RGB, but we'll store as grayscale for now
+        # Full RGB normal map support would require format changes
+        return self._sobel_filter(data, width, height, strength)
+
+
+    def _emboss_filter(self, data, width, height, strength): #vers 1
+        """Apply emboss filter"""
+        result = bytearray(width * height)
+
+        # Emboss kernel
+        kernel = [[-2, -1, 0], [-1, 1, 1], [0, 1, 2]]
+
+        for y in range(1, height - 1):
+            for x in range(1, width - 1):
+                value = 0
+
+                for ky in range(-1, 2):
+                    for kx in range(-1, 2):
+                        pixel = data[(y + ky) * width + (x + kx)]
+                        value += pixel * kernel[ky + 1][kx + 1]
+
+                value = int(128 + value * strength)
+                value = max(0, min(255, value))
+
+                result[y * width + x] = value
+
+        return result
+
+
+    def _apply_gaussian_blur(self, data, width, height, radius): #vers 1
+        """Apply Gaussian blur for smoothing"""
+        if radius == 0:
+            return data
+
+        result = bytearray(width * height)
+        kernel_size = radius * 2 + 1
+        sigma = radius / 3.0
+
+        # Generate Gaussian kernel
+        kernel = []
+        kernel_sum = 0
+        for y in range(-radius, radius + 1):
+            row = []
+            for x in range(-radius, radius + 1):
+                value = (1.0 / (2.0 * 3.14159 * sigma * sigma)) * \
+                        (2.71828 ** (-(x*x + y*y) / (2.0 * sigma * sigma)))
+                row.append(value)
+                kernel_sum += value
+            kernel.append(row)
+
+        # Normalize kernel
+        kernel = [[v / kernel_sum for v in row] for row in kernel]
+
+        # Apply kernel
+        for y in range(height):
+            for x in range(width):
+                value = 0
+
+                for ky in range(-radius, radius + 1):
+                    for kx in range(-radius, radius + 1):
+                        px = max(0, min(width - 1, x + kx))
+                        py = max(0, min(height - 1, y + ky))
+                        value += data[py * width + px] * kernel[ky + radius][kx + radius]
+
+                result[y * width + x] = int(value)
+
+        return result
+
+
+    def _preview_bumpmap_generation(self, rgba_data, width, height, method, strength, smooth, invert): #vers 1
+        """Preview bumpmap generation in separate window"""
+        try:
+            # Generate preview bumpmap
+            strength_val = strength / 100.0
+            bumpmap_data = self._create_bumpmap_data(
+                rgba_data, width, height, method, strength_val, smooth, invert
+            )
+
+            if not bumpmap_data:
+                return
+
+            # Create preview window
+            preview = QDialog(self)
+            preview.setWindowTitle("Bumpmap Preview")
+            preview.setMinimumSize(400, 400)
+
+            layout = QVBoxLayout(preview)
+
+            # Preview label
+            preview_label = QLabel()
+            preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            preview_label.setMinimumSize(350, 350)
+            preview_label.setStyleSheet("border: 1px solid #3a3a3a; background: #2a2a2a;")
+
+            # Convert bumpmap to displayable image (grayscale)
+            image = QImage(width, height, QImage.Format.Format_Grayscale8)
+            for y in range(height):
+                for x in range(width):
+                    value = bumpmap_data[y * width + x]
+                    image.setPixel(x, y, value)
+
+            pixmap = QPixmap.fromImage(image)
+            preview_label.setPixmap(
+                pixmap.scaled(350, 350,
+                            Qt.AspectRatioMode.KeepAspectRatio,
+                            Qt.TransformationMode.SmoothTransformation)
+            )
+
+            layout.addWidget(preview_label)
+
+            # Close button
+            close_btn = QPushButton("Close")
+            close_btn.clicked.connect(preview.accept)
+            layout.addWidget(close_btn)
+
+            preview.exec()
+
+        except Exception as e:
+            QMessageBox.warning(self, "Preview Error", f"Failed to preview:\n{str(e)}")
+
+
+    def _delete_bumpmap(self): #vers 1
+        """Delete bumpmap from selected texture"""
+        if not self.selected_texture:
+            return
+
+        if not self._has_bumpmap_data(self.selected_texture):
+            QMessageBox.information(self, "No Bumpmap", "This texture has no bumpmap")
+            return
+
+        reply = QMessageBox.question(
+            self, "Delete Bumpmap",
+            "Remove bumpmap from this texture?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            # Save undo state
+            self._save_undo_state("Delete bumpmap")
+
+            # Remove bumpmap data
+            if 'bumpmap_data' in self.selected_texture:
+                del self.selected_texture['bumpmap_data']
+            self.selected_texture['has_bumpmap'] = False
+
+            # Clear bumpmap flag
+            if 'raster_format_flags' in self.selected_texture:
+                self.selected_texture['raster_format_flags'] &= ~0x10
+
+            # Mark modified
+            self._mark_as_modified()
+
+            # Update UI
+            self._update_texture_info(self.selected_texture)
+
+            QMessageBox.information(self, "Success", "Bumpmap deleted")
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(
+                    f"🗑️ Deleted bumpmap from: {self.selected_texture.get('name', 'texture')}"
+                )
+
+
+    def _has_bumpmap_data(self, texture): #vers 1
+        """Check if texture has bumpmap data"""
+        if not texture:
             return False
 
-        except Exception:
-            return False
+        # Check explicit bumpmap data
+        if 'bumpmap_data' in texture or texture.get('has_bumpmap', False):
+            return True
+
+        # Check format flags
+        if 'raster_format_flags' in texture:
+            flags = texture.get('raster_format_flags', 0)
+            if flags & 0x10:  # Bit 4 = bumpmap/environment
+                return True
+
+        return False
 
 
     def _mipmap_io_menu(self): #vers 1
@@ -2317,72 +2743,6 @@ class TXDWorkshop(QWidget): #vers 3
         layout.addLayout(close_layout)
 
         dialog.exec()
-
-    def _view_bumpmap_in_manager(self, preview_label): #vers 1
-        """View bumpmap in manager preview"""
-        if not self.selected_texture:
-            return
-
-        try:
-            if 'bumpmap_data' in self.selected_texture:
-                bumpmap_image = self._decode_bumpmap(self.selected_texture['bumpmap_data'])
-                pixmap = QPixmap.fromImage(bumpmap_image)
-                preview_label.setPixmap(
-                    pixmap.scaled(preview_label.size(),
-                                Qt.AspectRatioMode.KeepAspectRatio,
-                                Qt.TransformationMode.SmoothTransformation)
-                )
-            else:
-                preview_label.setText("No bumpmap data found")
-
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to view bumpmap: {str(e)}")
-
-    def _generate_bumpmap_dialog(self, parent_dialog): #vers 1
-        """Generate bumpmap from texture (placeholder)"""
-        reply = QMessageBox.question(
-            parent_dialog, "Generate Bumpmap",
-            "Generate bumpmap from current texture?\n\n"
-            "This will create a normal map from the texture's height information.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-
-        if reply == QMessageBox.StandardButton.Yes:
-            # TODO: Implement bumpmap generation
-            QMessageBox.information(parent_dialog, "Generate",
-                "Bumpmap generation coming soon.\n\n"
-                "Will use Sobel filter to detect edges and create normal map.")
-
-    def _import_bumpmap_in_manager(self, parent_dialog): #vers 1
-        """Import bumpmap in manager dialog"""
-        self._import_bumpmap()
-        parent_dialog.accept()  # Close and refresh
-
-    def _delete_bumpmap_in_manager(self, parent_dialog): #vers 1
-        """Delete bumpmap from texture"""
-        if not self.selected_texture:
-            return
-
-        reply = QMessageBox.question(
-            parent_dialog, "Confirm Delete",
-            "Remove bumpmap data from this texture?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
-        )
-
-        if reply == QMessageBox.StandardButton.Yes:
-            # Remove bumpmap data
-            if 'bumpmap_data' in self.selected_texture:
-                del self.selected_texture['bumpmap_data']
-            if 'has_bumpmap' in self.selected_texture:
-                self.selected_texture['has_bumpmap'] = False
-
-            self._mark_as_modified()
-
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("Bumpmap removed")
-
-            parent_dialog.accept()  # Close manager
 
 
     def _update_editing_controls(self): #vers 2
@@ -3460,10 +3820,13 @@ class TXDWorkshop(QWidget): #vers 3
 
             # Bumpmap buttons
             if hasattr(self, 'view_bumpmap_btn'):
-                self.view_bumpmap_btn.setEnabled(has_bumpmap)
+                # ALWAYS enable Manage button so user can generate/import bumpmaps
+                self.view_bumpmap_btn.setEnabled(can_support_bumpmap)
             if hasattr(self, 'export_bumpmap_btn'):
+                # Only enable export if bumpmap exists
                 self.export_bumpmap_btn.setEnabled(has_bumpmap)
             if hasattr(self, 'import_bumpmap_btn'):
+                # Only enable import if version supports bumpmaps
                 self.import_bumpmap_btn.setEnabled(can_support_bumpmap)
 
             # Transform buttons
@@ -3755,36 +4118,95 @@ class TXDWorkshop(QWidget): #vers 3
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load IMG: {str(e)}")
 
-    def _show_txd_info(self): #vers 1
-        """Show TXD file information dialog"""
-        if not self.current_txd_name:
-            QMessageBox.information(self, "No TXD", "No TXD file loaded")
-            return
 
+    def _show_txd_info(self): #vers 2
+        """Show TXD Workshop information dialog - About and capabilities"""
         dialog = QDialog(self)
-        dialog.setWindowTitle("TXD Information")
-        dialog.setMinimumWidth(450)
+        dialog.setWindowTitle("About TXD Workshop")
+        dialog.setMinimumWidth(550)
+        dialog.setMinimumHeight(450)
 
-        layout = QFormLayout(dialog)
+        layout = QVBoxLayout(dialog)
+        layout.setSpacing(15)
 
-        # File info
-        layout.addRow("File Name:", QLabel(self.current_txd_name))
-        layout.addRow("Texture Count:", QLabel(str(len(self.texture_list))))
+        # Header
+        header = QLabel("TXD Workshop for IMG Factory 1.5")
+        header.setFont(QFont("Arial", 14, QFont.Weight.Bold))
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(header)
 
-        if self.current_txd_data:
-            size_kb = len(self.current_txd_data) / 1024
-            layout.addRow("File Size:", QLabel(f"{size_kb:.2f} KB"))
+        # Author info
+        author_label = QLabel("Author: X-Seti")
+        author_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(author_label)
 
         # Version info
-        layout.addRow("", QLabel(""))  # Spacer
-        layout.addRow("RW Version:", QLabel(self.txd_version_str))
-        layout.addRow("Platform:", QLabel(self.txd_platform_name))
-        layout.addRow("Game:", QLabel(self.txd_game))
+        version_label = QLabel("Version: 1.5 - October 2025")
+        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(version_label)
+
+        layout.addWidget(QLabel(""))  # Spacer
+
+        # Capabilities section
+        capabilities = QTextEdit()
+        capabilities.setReadOnly(True)
+        capabilities.setMaximumHeight(300)
+
+        info_text = """<b>TXD Workshop Capabilities:</b><br><br>
+
+    <b>✓ File Operations:</b><br>
+    - Open TXD files (standalone or from IMG archives)<br>
+    - Save TXD files back to IMG or as standalone<br>
+    - Create new TXD files from scratch<br>
+    - Multi-TXD management from IMG archives<br><br>
+
+    <b>✓ Texture Viewing & Editing:</b><br>
+    - View all textures with thumbnails<br>
+    - Preview textures with zoom controls<br>
+    - Flip textures (horizontal/vertical)<br>
+    - Rename textures and alpha channels<br>
+    - View texture properties (size, format, compression)<br><br>
+
+    <b>✓ Import & Export:</b><br>
+    - Export textures as PNG/BMP images<br>
+    - Export all textures in batch<br>
+    - Import textures from images<br>
+    - Replace existing textures<br><br>
+
+    <b>✓ Format Support:</b><br>
+    - DXT1, DXT3, DXT5 (compressed formats)<br>
+    - RGBA8888, RGB888 (uncompressed)<br>
+    - Platform detection (PC, Xbox, PS2, Android)<br>
+    - Game detection (GTA III, VC, SA, Manhunt)<br><br>
+
+    <b>✓ Advanced Features:</b><br>
+    - Texture filtering and search<br>
+    - Undo/Redo support<br>
+    - Bumpmap viewing and editing<br>
+    - Alpha channel extraction<br>
+    - Compression/decompression tools<br>
+    - Texture resize with quality control<br><br>
+
+    <b>✓ Interface:</b><br>
+    - Dockable window mode<br>
+    - Standalone window mode<br>
+    - Theme integration with IMG Factory<br>
+    - Customizable button display (icons/text/both)"""
+
+        capabilities.setHtml(info_text)
+        layout.addWidget(capabilities)
 
         # Close button
         close_btn = QPushButton("Close")
+        close_btn.setMinimumWidth(100)
         close_btn.clicked.connect(dialog.accept)
-        layout.addRow("", close_btn)
+
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        btn_layout.addWidget(close_btn)
+        btn_layout.addStretch()
+
+        layout.addLayout(btn_layout)
 
         dialog.exec()
 
@@ -6021,38 +6443,29 @@ class TXDWorkshop(QWidget): #vers 3
         elif hasattr(self, 'preview_widget'):
             self.preview_widget.setText("No preview available")
 
-
-    def _view_bumpmap(self): #vers 1
-        """Display bumpmap in preview window"""
+    def _view_bumpmap(self): #vers 4
+        """Open Bumpmap Manager window - ALWAYS opens manager regardless of bumpmap state"""
         if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture")
             return
 
-        try:
-            texture_data = self.selected_texture
+        # Check version support - show warning but context matters
+        if not is_bumpmap_supported(self.txd_version_id, self.txd_device_id):
+            QMessageBox.warning(self, "Not Supported",
+                f"Bumpmaps not supported for {self.txd_game}\n"
+                f"Only San Andreas and Manhunt support bumpmaps")
+            return
 
-            # Extract bumpmap channel
-            # Bumpmaps are typically stored as additional texture data
-            # This is a simplified implementation
+        # Open Bumpmap Manager window (works with or without existing bumpmap)
+        manager = BumpmapManagerWindow(self, self.selected_texture, self.main_window)
+        manager.show()
 
-            if 'bumpmap_data' in texture_data:
-                bumpmap_image = self._decode_bumpmap(texture_data['bumpmap_data'])
-
-                # Display in preview
-                pixmap = QPixmap.fromImage(bumpmap_image)
-                self.texture_preview.setPixmap(
-                    pixmap.scaled(self.texture_preview.size(),
-                                Qt.AspectRatioMode.KeepAspectRatio,
-                                Qt.TransformationMode.SmoothTransformation)
-                )
-
-                if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("Displaying bumpmap channel")
-            else:
-                QMessageBox.information(self, "No Bumpmap",
-                    "Bumpmap data not found in texture")
-
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to view bumpmap: {str(e)}")
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            has_bumpmap = self._has_bumpmap_data(self.selected_texture) if hasattr(self, '_has_bumpmap_data') else False
+            status = "with bumpmap" if has_bumpmap else "no bumpmap (can generate/import)"
+            self.main_window.log_message(
+                f"🗺️ Opened Bumpmap Manager: {self.selected_texture['name']} ({status})"
+            )
 
 
     def _export_bumpmap(self): #vers 1
@@ -6703,16 +7116,153 @@ class TXDWorkshop(QWidget): #vers 3
             QMessageBox.critical(self, "Error", f"Failed to open TXD: {str(e)}")
 
 
-    def import_texture(self): #vers 1
-        """Import texture to replace selected"""
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture to replace")
+    def import_texture(self): #vers 2
+        """Import new texture from image file"""
+        if not self.current_txd_data:
+            QMessageBox.warning(self, "No TXD", "Please open or create a TXD file first")
             return
 
-        file_path, _ = QFileDialog.getOpenFileName(self, "Import Texture", "",
-                                                "Image Files (*.png *.jpg *.bmp *.tga);;All Files (*)")
-        if file_path:
-            QMessageBox.information(self, "Coming Soon", "Import functionality will be added soon!")
+        try:
+            # File selection dialog
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "Import Texture", "",
+                "Image Files (*.png *.bmp *.jpg *.tga);;All Files (*)"
+            )
+
+            if not file_path:
+                return
+
+            from PyQt6.QtGui import QImage
+            import os
+
+            # Load image
+            img = QImage(file_path)
+            if img.isNull():
+                QMessageBox.critical(self, "Error", "Failed to load image file")
+                return
+
+            # Convert to RGBA8888
+            img = img.convertToFormat(QImage.Format.Format_RGBA8888)
+
+            # Get image data
+            width = img.width()
+            height = img.height()
+
+            # Validate dimensions (power of 2)
+            if not (width & (width - 1) == 0 and height & (height - 1) == 0):
+                reply = QMessageBox.question(
+                    self, "Invalid Dimensions",
+                    f"Texture dimensions ({width}x{height}) are not power of 2.\n"
+                    "TXD textures should be 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, etc.\n\n"
+                    "Import anyway?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                if reply == QMessageBox.StandardButton.No:
+                    return
+
+            # Get RGBA data
+            ptr = img.bits()
+            ptr.setsize(img.sizeInBytes())
+            rgba_data = bytes(ptr)
+
+            # Check if image has alpha channel
+            has_alpha = False
+            for i in range(3, len(rgba_data), 4):
+                if rgba_data[i] < 255:
+                    has_alpha = True
+                    break
+
+            # Ask for texture name
+            base_name = os.path.splitext(os.path.basename(file_path))[0]
+            texture_name, ok = QInputDialog.getText(
+                self, "Texture Name",
+                "Enter texture name:",
+                text=base_name
+            )
+
+            if not ok or not texture_name:
+                return
+
+            # Validate name (no spaces, max 24 chars)
+            texture_name = texture_name.replace(' ', '_')[:24]
+
+            # Check for duplicate names
+            for tex in self.texture_list:
+                if tex['name'].lower() == texture_name.lower():
+                    reply = QMessageBox.question(
+                        self, "Duplicate Name",
+                        f"Texture '{texture_name}' already exists.\n"
+                        "Replace existing texture?",
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                    )
+                    if reply == QMessageBox.StandardButton.Yes:
+                        # Replace existing
+                        tex['width'] = width
+                        tex['height'] = height
+                        tex['rgba_data'] = rgba_data
+                        tex['has_alpha'] = has_alpha
+                        tex['format'] = 'RGBA8888'
+                        if has_alpha:
+                            tex['alpha_name'] = texture_name + 'a'
+
+                        self._mark_as_modified()
+                        self._reload_texture_table()
+
+                        if self.main_window and hasattr(self.main_window, 'log_message'):
+                            self.main_window.log_message(f"✅ Replaced texture: {texture_name}")
+                        return
+                    else:
+                        return
+
+            # Create new texture entry
+            new_texture = {
+                'name': texture_name,
+                'width': width,
+                'height': height,
+                'rgba_data': rgba_data,
+                'has_alpha': has_alpha,
+                'format': 'RGBA8888',
+                'mipmaps': 1,
+                'compression': 'none'
+            }
+
+            # Add alpha name if needed
+            if has_alpha:
+                new_texture['alpha_name'] = texture_name + 'a'
+
+            # Add to texture list
+            self.texture_list.append(new_texture)
+
+            # Save undo state
+            self._save_undo_state(f"Import texture: {texture_name}")
+
+            # Mark as modified
+            self._mark_as_modified()
+
+            # Reload table
+            self._reload_texture_table()
+
+            # Select newly imported texture
+            for row in range(self.texture_table.rowCount()):
+                item = self.texture_table.item(row, 0)
+                if item and item.text() == texture_name:
+                    self.texture_table.selectRow(row)
+                    break
+
+            QMessageBox.information(self, "Success",
+                f"Imported texture: {texture_name}\n"
+                f"Size: {width}x{height}\n"
+                f"Alpha: {'Yes' if has_alpha else 'No'}")
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(
+                    f"✅ Imported texture: {texture_name} ({width}x{height})"
+                )
+
+        except Exception as e:
+            QMessageBox.critical(self, "Import Error", f"Failed to import texture:\n{str(e)}")
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Import error: {str(e)}")
 
 
     def show_properties(self): #vers 2
@@ -7219,6 +7769,7 @@ class TXDWorkshop(QWidget): #vers 3
         self.texture_table.setItem(row, 0, thumb_item)
         self.texture_table.setItem(row, 1, details_item)
         self.texture_table.setRowHeight(row, 80)
+
 
 
 #class SvgIcons: #vers 1 - Once functions are updated this class will be moved to the bottom
@@ -7753,6 +8304,90 @@ class TXDWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+    def _create_minimize_icon(self): #vers 1
+        """Minimize - Horizontal line icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <line x1="5" y1="12" x2="19" y2="12"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_maximize_icon(self): #vers 1
+        """Maximize - Square icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <rect x="5" y="5" width="14" height="14"
+                stroke="currentColor" stroke-width="2"
+                fill="none" rx="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_close_icon(self): #vers 1
+        """Close - X icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <line x1="6" y1="6" x2="18" y2="18"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+            <line x1="18" y1="6" x2="6" y2="18"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_add_icon(self): #vers 1
+        """Add - Plus icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <line x1="12" y1="5" x2="12" y2="19"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+            <line x1="5" y1="12" x2="19" y2="12"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_delete_icon(self): #vers 1
+        """Delete - Trash icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <polyline points="3 6 5 6 21 6"
+                    stroke="currentColor" stroke-width="2"
+                    fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                stroke="currentColor" stroke-width="2"
+                fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_import_icon(self): #vers 1
+        """Import - Download arrow icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"
+                stroke="currentColor" stroke-width="2"
+                fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="7 10 12 15 17 10"
+                    stroke="currentColor" stroke-width="2"
+                    fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="12" y1="15" x2="12" y2="3"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_export_icon(self): #vers 1
+        """Export - Upload arrow icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"
+                stroke="currentColor" stroke-width="2"
+                fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="17 8 12 3 7 8"
+                    stroke="currentColor" stroke-width="2"
+                    fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="12" y1="3" x2="12" y2="15"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
 
     def _svg_to_icon(self, svg_data, size=24): #vers 2
         """Convert SVG data to QIcon with theme color support"""
@@ -7781,6 +8416,750 @@ class TXDWorkshop(QWidget): #vers 3
         except:
             # Fallback to no icon if SVG fails
             return QIcon()
+
+
+class BumpmapManagerWindow(QWidget): #vers 1
+    """Bumpmap Manager - Modern design matching Mipmap Manager"""
+    def __init__(self, parent, texture_data, main_window=None):
+        super().__init__(parent)
+        self.parent_workshop = parent
+        self.texture_data = texture_data
+        self.main_window = main_window
+        self.modified = False
+
+        texture_name = texture_data.get('name', 'Unknown')
+        width = texture_data.get('width', 0)
+        height = texture_data.get('height', 0)
+
+        self.setWindowTitle(f"Bumpmap Manager - {texture_name}")
+        self.resize(900, 650)
+
+        # Frameless window with custom styling
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+
+        # Corner resize variables
+        self.dragging = False
+        self.drag_position = None
+        self.resizing = False
+        self.resize_corner = None
+        self.corner_size = 20
+        self.hover_corner = None
+
+        self.setup_ui()
+
+        # Enable mouse tracking for hover effects
+        self.setMouseTracking(True)
+
+
+    def setup_ui(self): #vers 2
+        """Setup modern UI matching mipmap manager - FIXED styling"""
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        # Create custom title bar
+        title_bar = self._create_title_bar()
+        main_layout.addWidget(title_bar)
+
+        # Create menu bar with Edit menu
+        menu_bar = self._create_menu_bar()
+        main_layout.addWidget(menu_bar)
+
+        # Main content area
+        content = QWidget()
+        content_layout = QHBoxLayout(content)
+        content_layout.setContentsMargins(10, 10, 10, 10)
+        content_layout.setSpacing(10)
+
+        # Left: Texture info and preview
+        left_panel = self._create_left_panel()
+        content_layout.addWidget(left_panel, stretch=1)
+
+        # Right: Bumpmap preview and info
+        right_panel = self._create_right_panel()
+        content_layout.addWidget(right_panel, stretch=1)
+
+        main_layout.addWidget(content)
+
+        # Bottom: Action buttons
+        button_panel = self._create_button_panel()
+        main_layout.addWidget(button_panel)
+
+        # Apply styling - FIXED: Added QWidget background
+        self.setStyleSheet("""
+            BumpmapManagerWindow {
+                background-color: #2b2b2b;
+                border: 1px solid #3a3a3a;
+            }
+            QWidget {
+                background-color: #2b2b2b;
+                color: #e0e0e0;
+            }
+            QGroupBox {
+                font-weight: bold;
+                border: 1px solid #3a3a3a;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 10px;
+                background-color: #2b2b2b;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+                color: #e0e0e0;
+            }
+            QLabel {
+                color: #e0e0e0;
+                background-color: transparent;
+            }
+            QFormLayout QLabel {
+                background-color: transparent;
+            }
+            QPushButton {
+                background-color: #3a3a3a;
+                color: #e0e0e0;
+                border: 1px solid #4a4a4a;
+                border-radius: 3px;
+                padding: 5px 15px;
+                min-height: 25px;
+            }
+            QPushButton:hover {
+                background-color: #4a4a4a;
+                border: 1px solid #5a5a5a;
+            }
+            QPushButton:pressed {
+                background-color: #2a2a2a;
+            }
+            QPushButton:disabled {
+                background-color: #2a2a2a;
+                color: #666666;
+                border: 1px solid #333333;
+            }
+            QMenuBar {
+                background-color: #2b2b2b;
+                color: #e0e0e0;
+                border-bottom: 1px solid #3a3a3a;
+            }
+            QMenuBar::item {
+                background-color: transparent;
+                padding: 5px 10px;
+            }
+            QMenuBar::item:selected {
+                background-color: #3a3a3a;
+            }
+            QMenu {
+                background-color: #2b2b2b;
+                color: #e0e0e0;
+                border: 1px solid #3a3a3a;
+            }
+            QMenu::item {
+                padding: 5px 25px 5px 10px;
+                background-color: transparent;
+            }
+            QMenu::item:selected {
+                background-color: #3a3a3a;
+            }
+        """)
+
+
+    def _create_title_bar(self): #vers 2
+        """Create custom title bar with window controls - FIXED with icons"""
+        title_bar = QFrame()
+        title_bar.setFixedHeight(35)
+        title_bar.setStyleSheet("""
+            QFrame {
+                background-color: #1e1e1e;
+                border-bottom: 1px solid #3a3a3a;
+            }
+        """)
+
+        layout = QHBoxLayout(title_bar)
+        layout.setContentsMargins(10, 0, 5, 0)
+
+        # Title
+        title_label = QLabel(f"🗺️ Bumpmap Manager - {self.texture_data.get('name', 'Unknown')}")
+        title_label.setStyleSheet("color: #e0e0e0; font-weight: bold; font-size: 11pt;")
+        layout.addWidget(title_label)
+
+        layout.addStretch()
+
+        # Window controls with icons
+        minimize_btn = QPushButton()
+        minimize_btn.setIcon(self._create_minimize_icon())
+        minimize_btn.setIconSize(QSize(20, 20))
+        minimize_btn.setFixedSize(30, 25)
+        minimize_btn.clicked.connect(self.showMinimized)
+        minimize_btn.setToolTip("Minimize")
+        layout.addWidget(minimize_btn)
+
+        maximize_btn = QPushButton()
+        maximize_btn.setIcon(self._create_maximize_icon())
+        maximize_btn.setIconSize(QSize(20, 20))
+        maximize_btn.setFixedSize(30, 25)
+        maximize_btn.clicked.connect(self._toggle_maximize)
+        maximize_btn.setToolTip("Maximize")
+        layout.addWidget(maximize_btn)
+
+        close_btn = QPushButton()
+        close_btn.setIcon(self._create_close_icon())
+        close_btn.setIconSize(QSize(20, 20))
+        close_btn.setFixedSize(30, 25)
+        close_btn.clicked.connect(self.close)
+        close_btn.setToolTip("Close")
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3a3a3a;
+            }
+            QPushButton:hover {
+                background-color: #c42b1c;
+            }
+        """)
+        layout.addWidget(close_btn)
+
+        return title_bar
+
+def _apply_changes(self): #vers 1
+    """Apply changes to parent workshop without closing window"""
+    if self.modified:
+        # Mark parent as modified
+        if hasattr(self.parent_workshop, '_mark_as_modified'):
+            self.parent_workshop._mark_as_modified()
+
+        # Update parent texture info
+        if hasattr(self.parent_workshop, '_update_texture_info'):
+            self.parent_workshop._update_texture_info(self.texture_data)
+
+        # Log message
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            self.main_window.log_message("✅ Bumpmap changes applied")
+
+        # Reset modified flag
+        self.modified = False
+
+        QMessageBox.information(self, "Success", "Changes applied to texture")
+
+
+    # UPDATE the Edit menu to remove Import/Export since they're in F10:
+
+    def _create_menu_bar(self): #vers 2
+        """Create menu bar with Edit menu - FIXED: Removed duplicate Import/Export"""
+        from PyQt6.QtWidgets import QMenuBar
+        from PyQt6.QtGui import QAction, QKeySequence
+
+        menu_bar = QMenuBar()
+        menu_bar.setStyleSheet("""
+            QMenuBar {
+                background-color: #2b2b2b;
+                color: #e0e0e0;
+                border-bottom: 1px solid #3a3a3a;
+                padding: 2px;
+            }
+            QMenuBar::item {
+                background-color: transparent;
+                padding: 5px 10px;
+            }
+            QMenuBar::item:selected {
+                background-color: #3a3a3a;
+            }
+            QMenu {
+                background-color: #2b2b2b;
+                color: #e0e0e0;
+                border: 1px solid #3a3a3a;
+            }
+            QMenu::item {
+                padding: 5px 25px 5px 10px;
+            }
+            QMenu::item:selected {
+                background-color: #3a3a3a;
+            }
+        """)
+
+        # Edit menu
+        edit_menu = menu_bar.addMenu("Edit")
+
+        # Add (New texture) - F9
+        add_action = QAction("Add (Generate Bumpmap)", self)
+        add_action.setShortcut(QKeySequence(Qt.Key.Key_F9))
+        add_action.triggered.connect(self._generate_bumpmap)
+        edit_menu.addAction(add_action)
+
+        # Change (Replace) - F10
+        change_action = QAction("Change (Import/Replace)", self)
+        change_action.setShortcut(QKeySequence(Qt.Key.Key_F10))
+        change_action.triggered.connect(self._import_bumpmap)
+        edit_menu.addAction(change_action)
+
+        # Delete - F11
+        delete_action = QAction("Delete", self)
+        delete_action.setShortcut(QKeySequence(Qt.Key.Key_F11))
+        delete_action.triggered.connect(self._delete_bumpmap)
+        edit_menu.addAction(delete_action)
+
+        edit_menu.addSeparator()
+
+        # Export
+        export_action = QAction("Export Bumpmap...", self)
+        export_action.triggered.connect(self._export_bumpmap)
+        edit_menu.addAction(export_action)
+
+        return menu_bar
+
+
+    def _create_left_panel(self): #vers 1
+        """Create left panel with main texture info and preview"""
+        panel = QGroupBox("Main Texture")
+        layout = QVBoxLayout(panel)
+
+        # Texture info
+        info_layout = QFormLayout()
+
+        name_label = QLabel(self.texture_data.get('name', 'Unknown'))
+        name_label.setStyleSheet("font-weight: bold; font-size: 11pt;")
+        info_layout.addRow("Name:", name_label)
+
+        width = self.texture_data.get('width', 0)
+        height = self.texture_data.get('height', 0)
+        size_label = QLabel(f"{width} × {height}")
+        info_layout.addRow("Size:", size_label)
+
+        fmt = self.texture_data.get('format', 'Unknown')
+        format_label = QLabel(fmt)
+        info_layout.addRow("Format:", format_label)
+
+        layout.addLayout(info_layout)
+
+        # Main texture preview
+        preview_label = QLabel()
+        preview_label.setMinimumHeight(300)
+        preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        preview_label.setStyleSheet("border: 1px solid #3a3a3a; background: #1e1e1e;")
+
+        # Load texture preview
+        rgba_data = self.texture_data.get('rgba_data')
+        if rgba_data and width > 0:
+            image = QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+            pixmap = QPixmap.fromImage(image)
+            preview_label.setPixmap(
+                pixmap.scaled(280, 280,
+                            Qt.AspectRatioMode.KeepAspectRatio,
+                            Qt.TransformationMode.SmoothTransformation)
+            )
+        else:
+            preview_label.setText("No texture data")
+
+        layout.addWidget(preview_label)
+
+        return panel
+
+    def _create_right_panel(self): #vers 1
+        """Create right panel with bumpmap preview and info"""
+        panel = QGroupBox("Bumpmap")
+        layout = QVBoxLayout(panel)
+
+        # Bumpmap status
+        has_bumpmap = self._has_bumpmap()
+        status_layout = QFormLayout()
+
+        status_label = QLabel("Present" if has_bumpmap else "Not present")
+        status_label.setStyleSheet(
+            "color: #4CAF50; font-weight: bold;" if has_bumpmap
+            else "color: #888; font-weight: bold;"
+        )
+        status_layout.addRow("Status:", status_label)
+
+        format_label = QLabel("Environment map (Normal map)")
+        status_layout.addRow("Type:", format_label)
+
+        layout.addLayout(status_layout)
+
+        # Bumpmap preview
+        self.mbumpmap_preview = QLabel()
+        self.bumpmap_preview.setMinimumHeight(300)
+        self.bumpmap_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.bumpmap_preview.setStyleSheet("border: 1px solid #3a3a3a; background: #1e1e1e;")
+
+        # Load bumpmap preview if available
+        if has_bumpmap:
+            self._update_bumpmap_preview()
+        else:
+            self.bumpmap_preview.setText("No bumpmap data\n\nPress F9 or use Edit → Generate Bumpmap")
+
+        layout.addWidget(self.bumpmap_preview)
+
+        return panel
+
+    def _create_button_panel(self): #vers 2
+        """Create bottom button panel - FIXED: No duplicate Import/Export"""
+        panel = QFrame()
+        panel.setStyleSheet("background-color: #1e1e1e; border-top: 1px solid #3a3a3a;")
+        panel.setFixedHeight(60)
+
+        layout = QHBoxLayout(panel)
+        layout.setContentsMargins(10, 10, 10, 10)
+
+        # Add (Generate) button
+        add_btn = QPushButton("Add (Generate)")
+        add_btn.setIcon(self._create_add_icon())
+        add_btn.clicked.connect(self._generate_bumpmap)
+        add_btn.setToolTip("Generate bumpmap from texture (F9)")
+        layout.addWidget(add_btn)
+
+        # Delete button
+        delete_btn = QPushButton("Delete")
+        delete_btn.setIcon(self._create_delete_icon())
+        delete_btn.clicked.connect(self._delete_bumpmap)
+        delete_btn.setEnabled(self._has_bumpmap())
+        delete_btn.setToolTip("Remove bumpmap (F11)")
+        delete_btn.setStyleSheet("""
+            QPushButton:enabled {
+                background-color: #c42b1c;
+            }
+            QPushButton:enabled:hover {
+                background-color: #d43b2c;
+            }
+        """)
+        layout.addWidget(delete_btn)
+
+        layout.addStretch()
+
+        # Apply button
+        apply_btn = QPushButton("Apply")
+        apply_btn.clicked.connect(self._apply_changes)
+        apply_btn.setToolTip("Apply changes and keep window open")
+        layout.addWidget(apply_btn)
+
+        # Close button
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(self.close)
+        close_btn.setMinimumWidth(100)
+        layout.addWidget(close_btn)
+
+        return panel
+
+
+    def _has_bumpmap(self): #vers 1
+        """Check if texture has bumpmap"""
+        if 'bumpmap_data' in self.texture_data or self.texture_data.get('has_bumpmap', False):
+            return True
+        if 'raster_format_flags' in self.texture_data:
+            return bool(self.texture_data.get('raster_format_flags', 0) & 0x10)
+        return False
+
+    def _update_bumpmap_preview(self): #vers 1
+        """Update bumpmap preview display"""
+        try:
+            if 'bumpmap_data' in self.texture_data:
+                # Decode bumpmap data
+                if hasattr(self.parent_workshop, '_decode_bumpmap'):
+                    bumpmap_image = self.parent_workshop._decode_bumpmap(
+                        self.texture_data['bumpmap_data']
+                    )
+                    pixmap = QPixmap.fromImage(bumpmap_image)
+                    self.bumpmap_preview.setPixmap(
+                        pixmap.scaled(280, 280,
+                                    Qt.AspectRatioMode.KeepAspectRatio,
+                                    Qt.TransformationMode.SmoothTransformation)
+                    )
+            else:
+                self.bumpmap_preview.setText("No bumpmap data")
+        except Exception as e:
+            self.bumpmap_preview.setText(f"Preview error:\n{str(e)}")
+
+    def _add_new_texture(self): #vers 2
+        """F9 - Generate bumpmap from texture"""
+        self._generate_bumpmap()
+
+    def _replace_bumpmap(self): #vers 2
+        """F10 - Import/Replace bumpmap"""
+        self._import_bumpmap()
+
+    def _generate_bumpmap(self): #vers 1
+        """Generate bumpmap from texture"""
+        if hasattr(self.parent_workshop, '_generate_bumpmap_from_texture'):
+            # Temporarily set selected texture
+            old_selection = self.parent_workshop.selected_texture
+            self.parent_workshop.selected_texture = self.texture_data
+
+            # Generate
+            self.parent_workshop._generate_bumpmap_from_texture()
+
+            # Restore selection
+            self.parent_workshop.selected_texture = old_selection
+
+            # Update preview
+            self._update_bumpmap_preview()
+            self.modified = True
+
+    def _import_bumpmap(self): #vers 1
+        """Import bumpmap from file"""
+        if hasattr(self.parent_workshop, '_import_bumpmap'):
+            old_selection = self.parent_workshop.selected_texture
+            self.parent_workshop.selected_texture = self.texture_data
+
+            self.parent_workshop._import_bumpmap()
+
+            self.parent_workshop.selected_texture = old_selection
+
+            self._update_bumpmap_preview()
+            self.modified = True
+
+    def _export_bumpmap(self): #vers 1
+        """Export bumpmap to file"""
+        if not self._has_bumpmap():
+            QMessageBox.warning(self, "No Bumpmap", "This texture has no bumpmap to export")
+            return
+
+        if hasattr(self.parent_workshop, '_export_bumpmap'):
+            old_selection = self.parent_workshop.selected_texture
+            self.parent_workshop.selected_texture = self.texture_data
+
+            self.parent_workshop._export_bumpmap()
+
+            self.parent_workshop.selected_texture = old_selection
+
+    def _delete_bumpmap(self): #vers 1
+        """F11 - Delete bumpmap"""
+        if not self._has_bumpmap():
+            QMessageBox.information(self, "No Bumpmap", "This texture has no bumpmap")
+            return
+
+        reply = QMessageBox.question(
+            self, "Delete Bumpmap",
+            "Remove bumpmap from this texture?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            # Remove bumpmap
+            if 'bumpmap_data' in self.texture_data:
+                del self.texture_data['bumpmap_data']
+            self.texture_data['has_bumpmap'] = False
+
+            if 'raster_format_flags' in self.texture_data:
+                self.texture_data['raster_format_flags'] &= ~0x10
+
+            # Update preview
+            self.bumpmap_preview.setText("No bumpmap data\n\nPress F9 or use Edit → Generate Bumpmap")
+            self.modified = True
+
+            # Mark parent as modified
+            if hasattr(self.parent_workshop, '_mark_as_modified'):
+                self.parent_workshop._mark_as_modified()
+
+            QMessageBox.information(self, "Success", "Bumpmap deleted")
+
+    def _toggle_maximize(self): #vers 1
+        """Toggle window maximize"""
+        if self.isMaximized():
+            self.showNormal()
+        else:
+            self.showMaximized()
+
+    def _create_add_icon(self): #vers 1
+        """Create add icon"""
+        if hasattr(self.parent_workshop, '_create_add_icon'):
+            return self.parent_workshop._create_add_icon()
+        return QIcon()
+
+    def _create_import_icon(self): #vers 1
+        """Create import icon"""
+        if hasattr(self.parent_workshop, '_create_import_icon'):
+            return self.parent_workshop._create_import_icon()
+        return QIcon()
+
+    def _create_export_icon(self): #vers 1
+        """Create export icon"""
+        if hasattr(self.parent_workshop, '_create_export_icon'):
+            return self.parent_workshop._create_export_icon()
+        return QIcon()
+
+    def _create_delete_icon(self): #vers 1
+        """Create delete icon"""
+        if hasattr(self.parent_workshop, '_create_delete_icon'):
+            return self.parent_workshop._create_delete_icon()
+        return QIcon()
+
+    # Window dragging and resizing (same as MipmapManagerWindow)
+
+    def mousePressEvent(self, event): #vers 2
+        """Handle mouse press for dragging/resizing - FIXED for PyQt6"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            if self.hover_corner:
+                self.resizing = True
+                self.resize_corner = self.hover_corner
+            elif event.position().y() < 35:  # Title bar area - FIXED: use position().y()
+                self.dragging = True
+                self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+
+    def mouseMoveEvent(self, event): #vers 2
+        """Handle mouse move for dragging/resizing - FIXED for PyQt6"""
+        # Check corner hover - FIXED: use position() instead of pos()
+        pos = event.position().toPoint()
+        width = self.width()
+        height = self.height()
+
+        corner = None
+        if pos.x() < self.corner_size and pos.y() < self.corner_size:
+            corner = 'top_left'
+        elif pos.x() > width - self.corner_size and pos.y() < self.corner_size:
+            corner = 'top_right'
+        elif pos.x() < self.corner_size and pos.y() > height - self.corner_size:
+            corner = 'bottom_left'
+        elif pos.x() > width - self.corner_size and pos.y() > height - self.corner_size:
+            corner = 'bottom_right'
+
+        self.hover_corner = corner
+
+        # Update cursor
+        if corner in ['top_left', 'bottom_right']:
+            self.setCursor(Qt.CursorShape.SizeFDiagCursor)
+        elif corner in ['top_right', 'bottom_left']:
+            self.setCursor(Qt.CursorShape.SizeBDiagCursor)
+        else:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+
+        # Handle dragging - FIXED: use position()
+        if self.dragging and self.drag_position:
+            self.move(event.globalPosition().toPoint() - self.drag_position)
+
+    def mouseReleaseEvent(self, event): #vers 2
+        """Handle mouse release - FIXED for PyQt6"""
+        self.dragging = False
+        self.resizing = False
+        self.resize_corner = None
+
+    def _create_minimize_icon(self): #vers 1
+        """Minimize - Horizontal line icon"""
+        if hasattr(self.parent_workshop, '_create_minimize_icon'):
+            return self.parent_workshop._create_minimize_icon()
+        return self._svg_to_icon(b'''<svg viewBox="0 0 24 24">
+            <line x1="5" y1="12" x2="19" y2="12"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+        </svg>''')
+
+    def _create_maximize_icon(self): #vers 1
+        """Maximize - Square icon"""
+        if hasattr(self.parent_workshop, '_create_maximize_icon'):
+            return self.parent_workshop._create_maximize_icon()
+        return self._svg_to_icon(b'''<svg viewBox="0 0 24 24">
+            <rect x="5" y="5" width="14" height="14"
+                stroke="currentColor" stroke-width="2"
+                fill="none" rx="2"/>
+        </svg>''')
+
+    def _create_close_icon(self): #vers 1
+        """Close - X icon"""
+        if hasattr(self.parent_workshop, '_create_close_icon'):
+            return self.parent_workshop._create_close_icon()
+        return self._svg_to_icon(b'''<svg viewBox="0 0 24 24">
+            <line x1="6" y1="6" x2="18" y2="18"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+            <line x1="18" y1="6" x2="6" y2="18"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+        </svg>''')
+
+    def _create_add_icon(self): #vers 1
+        """Add - Plus icon"""
+        if hasattr(self.parent_workshop, '_create_add_icon'):
+            return self.parent_workshop._create_add_icon()
+        return self._svg_to_icon(b'''<svg viewBox="0 0 24 24">
+            <line x1="12" y1="5" x2="12" y2="19"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+            <line x1="5" y1="12" x2="19" y2="12"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+        </svg>''')
+
+    def _create_delete_icon(self): #vers 1
+        """Delete - Trash icon"""
+        if hasattr(self.parent_workshop, '_create_delete_icon'):
+            return self.parent_workshop._create_delete_icon()
+        return self._svg_to_icon(b'''<svg viewBox="0 0 24 24">
+            <polyline points="3 6 5 6 21 6"
+                    stroke="currentColor" stroke-width="2"
+                    fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                stroke="currentColor" stroke-width="2"
+                fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>''')
+
+    def _create_import_icon(self): #vers 1
+        """Import - Download arrow icon"""
+        if hasattr(self.parent_workshop, '_create_import_icon'):
+            return self.parent_workshop._create_import_icon()
+        return self._svg_to_icon(b'''<svg viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"
+                stroke="currentColor" stroke-width="2"
+                fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="7 10 12 15 17 10"
+                    stroke="currentColor" stroke-width="2"
+                    fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="12" y1="15" x2="12" y2="3"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+        </svg>''')
+
+    def _create_export_icon(self): #vers 1
+        """Export - Upload arrow icon"""
+        if hasattr(self.parent_workshop, '_create_export_icon'):
+            return self.parent_workshop._create_export_icon()
+        return self._svg_to_icon(b'''<svg viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"
+                stroke="currentColor" stroke-width="2"
+                fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="17 8 12 3 7 8"
+                    stroke="currentColor" stroke-width="2"
+                    fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="12" y1="3" x2="12" y2="15"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+        </svg>''')
+
+    def _svg_to_icon(self, svg_data, size=24): #vers 1
+        """Convert SVG data to QIcon - Helper method for all icon creation"""
+        try:
+            from PyQt6.QtSvg import QSvgRenderer
+            from PyQt6.QtGui import QPixmap, QPainter, QIcon
+            from PyQt6.QtCore import Qt
+
+            pixmap = QPixmap(size, size)
+            pixmap.fill(Qt.GlobalColor.transparent)
+
+            renderer = QSvgRenderer(svg_data)
+            painter = QPainter(pixmap)
+            renderer.render(painter)
+            painter.end()
+
+            return QIcon(pixmap)
+        except Exception as e:
+            # Fallback to empty icon if SVG fails
+            return QIcon()
+
+
+    def _apply_changes(self): #vers 1
+        """Apply changes to parent workshop without closing window"""
+        if self.modified:
+            # Mark parent as modified
+            if hasattr(self.parent_workshop, '_mark_as_modified'):
+                self.parent_workshop._mark_as_modified()
+
+            # Update parent texture info
+            if hasattr(self.parent_workshop, '_update_texture_info'):
+                self.parent_workshop._update_texture_info(self.texture_data)
+
+            # Log message
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("✅ Bumpmap changes applied")
+
+            # Reset modified flag
+            self.modified = False
+
+            QMessageBox.information(self, "Success", "Changes applied to texture")
 
 
 
@@ -8458,10 +9837,6 @@ class MipmapManagerWindow(QWidget): #vers 2
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # Title bar
-        title_bar = self._create_title_bar()
-        layout.addWidget(title_bar)
-
         # Toolbar with Apply/Close buttons
         toolbar = self._create_toolbar()
         layout.addWidget(toolbar)
@@ -8495,6 +9870,9 @@ class MipmapManagerWindow(QWidget): #vers 2
         # Bottom status bar
         bottom_bar = self._create_bottom_bar()
         layout.addWidget(bottom_bar)
+        # Title bar
+        title_bar = self._create_title_bar()
+        layout.addWidget(title_bar)
 
 
     def _create_title_bar(self): #vers 1
