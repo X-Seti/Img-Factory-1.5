@@ -12,6 +12,8 @@ import tempfile
 import subprocess
 import shutil
 import struct
+import sys
+from pathlib import Path
 from typing import Optional, List, Dict
 from PyQt6.QtWidgets import (QApplication, QSlider, QCheckBox,
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QListWidget, QDialog, QFormLayout,
@@ -40,6 +42,7 @@ except ImportError:
         validate_txd_format, TXDPlatform, detect_platform_from_data
     )
 
+DEBUG_STANDALONE = False
 
 ##Methods list -
 # _apply_gaussian_blur                  # NEW - Gaussian blur for bumpmap smoothing
@@ -137,9 +140,13 @@ class TXDWorkshop(QWidget): #vers 3
 
     workshop_closed = pyqtSignal()
 
+    def __init__(self, parent=None, main_window=None): #vers 9
+        """Initialize TXD Workshop"""
+        if DEBUG_STANDALONE and main_window is None:
+            print("   → Initializing TXD Workshop...")
 
-    def __init__(self, parent=None, main_window=None): #vers 7
         super().__init__(parent)
+
         self.main_window = main_window
         self.current_img = None
         self.current_txd_data = None
@@ -149,6 +156,27 @@ class TXDWorkshop(QWidget): #vers 3
         self.selected_texture = None
         self.undo_stack = []
         self.button_display_mode = 'both'
+
+        # Preview settings
+        self.zoom_level = 1.0
+        self.pan_offset = QPoint(0, 0)
+        self.background_color = QColor(42, 42, 42)
+        self.background_mode = 'solid'
+        self.placeholder_text = "No texture"
+        self.setMinimumSize(200, 200)
+
+        # Texture import/export settings
+        self.dimension_limiting_enabled = False  # Power of 2 enforcement
+        self.splash_screen_mode = False  # Allow non-power-of-2 for splash screens
+        self.custom_max_dimension = 4096  # Max texture size
+
+        # Texture naming settings
+        self.name_limit_enabled = True  # Enable 32-char limit by default
+        self.max_texture_name_length = 32  # Default RenderWare limit
+
+        # Format support flags
+        self.iff_import_enabled = True  # Amiga IFF support
+        self.splash_formats_enabled = True  # Non-standard dimensions
 
         # Export preferences
         self.export_target_game = "auto"  # auto, gta3, vc, sa, manhunt
@@ -166,12 +194,28 @@ class TXDWorkshop(QWidget): #vers 3
         self.standalone_mode = (main_window is None)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
 
-        # NEW: Docking state
+
+        # Set window flags based on mode
+        """
+        if self.standalone_mode:
+            self.setWindowFlags(Qt.WindowType.Window)
+        else:
+            self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+        """
+
+        # Docking state
         self.is_docked = False
         self.dock_widget = None
 
         self.setWindowTitle("TXD Workshop: No File")
         self.resize(1400, 800)
+        self.use_system_titlebar = False
+        self.window_always_on_top = False
+
+        # Set default font size to 12pt
+        default_font = QFont("Fira Sans Condensed", 14)
+        self.setFont(default_font)
+
         self._initialize_features()
 
         # Corner resize variables
@@ -186,6 +230,9 @@ class TXDWorkshop(QWidget): #vers 3
             parent_pos = parent.pos()
             self.move(parent_pos.x() + 50, parent_pos.y() + 80)
 
+        if self.standalone_mode:
+            self._ensure_depends_structure()
+
         self.txd_tabs = []  # List of open TXD data
         self.current_tab_index = 0
 
@@ -195,6 +242,8 @@ class TXDWorkshop(QWidget): #vers 3
         # Enable mouse tracking for hover effects
         self.setMouseTracking(True)
 
+        if DEBUG_STANDALONE and self.standalone_mode:
+            print("   ✓ TXD Workshop initialized")
 
     def setup_ui(self): #vers 7
         """Setup the main UI layout"""
@@ -303,18 +352,17 @@ class TXDWorkshop(QWidget): #vers 3
         return status_bar
 
 
-    def _show_workshop_settings(self): #vers 3
-        """Show workshop settings dialog with dynamic locale list"""
+    def _show_workshop_settings(self): #vers 5
+        """Show workshop settings dialog with window options"""
         from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTabWidget,
                                     QGroupBox, QFormLayout, QSpinBox, QFontComboBox,
-                                    QPushButton, QLabel, QComboBox, QWidget)
+                                    QPushButton, QLabel, QComboBox, QWidget, QCheckBox)
 
         dialog = QDialog(self)
         dialog.setWindowTitle("TXD Workshop Settings")
-        dialog.setMinimumWidth(500)
-        dialog.setMinimumHeight(400)
+        dialog.setMinimumWidth(550)
+        dialog.setMinimumHeight(550)
 
-        palette = self.palette()
         layout = QVBoxLayout(dialog)
         tabs = QTabWidget()
 
@@ -326,15 +374,15 @@ class TXDWorkshop(QWidget): #vers 3
         font_group = QGroupBox("Font Settings")
         font_layout = QFormLayout()
 
-        self.settings_font_combo = QFontComboBox()
+        settings_font_combo = QFontComboBox()
         current_font = self.font()
-        self.settings_font_combo.setCurrentFont(current_font)
-        font_layout.addRow("Font Family:", self.settings_font_combo)
+        settings_font_combo.setCurrentFont(current_font)
+        font_layout.addRow("Font Family:", settings_font_combo)
 
-        self.settings_font_size = QSpinBox()
-        self.settings_font_size.setRange(8, 24)
-        self.settings_font_size.setValue(current_font.pointSize())
-        font_layout.addRow("Font Size:", self.settings_font_size)
+        settings_font_size = QSpinBox()
+        settings_font_size.setRange(8, 24)
+        settings_font_size.setValue(current_font.pointSize())
+        font_layout.addRow("Font Size:", settings_font_size)
 
         font_group.setLayout(font_layout)
         appearance_layout.addWidget(font_group)
@@ -343,11 +391,11 @@ class TXDWorkshop(QWidget): #vers 3
         display_group = QGroupBox("Button Display")
         display_layout = QFormLayout()
 
-        self.settings_display_combo = QComboBox()
-        self.settings_display_combo.addItems(["Icons Only", "Text Only", "Both"])
+        settings_display_combo = QComboBox()
+        settings_display_combo.addItems(["Icons Only", "Text Only", "Both"])
         current_mode = {"icons": 0, "text": 1, "both": 2}.get(self.button_display_mode, 2)
-        self.settings_display_combo.setCurrentIndex(current_mode)
-        display_layout.addRow("Button Mode:", self.settings_display_combo)
+        settings_display_combo.setCurrentIndex(current_mode)
+        display_layout.addRow("Button Style:", settings_display_combo)
 
         display_group.setLayout(display_layout)
         appearance_layout.addWidget(display_group)
@@ -355,78 +403,203 @@ class TXDWorkshop(QWidget): #vers 3
         appearance_layout.addStretch()
         tabs.addTab(appearance_tab, "Appearance")
 
-        # === LOCALIZATION TAB ===
-        locale_tab = QWidget()
-        locale_layout = QVBoxLayout(locale_tab)
+        # === WINDOW TAB === (NEW)
+        window_tab = QWidget()
+        window_layout = QVBoxLayout(window_tab)
 
-        locale_group = QGroupBox("Language Settings")
-        locale_form = QFormLayout()
+        # Window frame group
+        frame_group = QGroupBox("Window Frame")
+        frame_layout = QVBoxLayout()
 
-        # Scan available locales dynamically
-        available_locales = self._scan_available_locales()
+        # System title bar toggle
+        titlebar_check = QCheckBox("Use system title bar")
+        titlebar_check.setChecked(self.use_system_titlebar)
+        titlebar_check.setToolTip(
+            "Enable: Use OS native title bar with minimize/maximize/close buttons\n"
+            "Disable: Use custom frameless window (default)"
+        )
+        frame_layout.addWidget(titlebar_check)
 
-        self.settings_locale_combo = QComboBox()
-        self.locale_data = {}  # Store locale info
+        # Info label
+        info_label = QLabel(
+            "Note: Changing title bar requires restart to take full effect.\n"
+            "Custom frameless window provides drag-to-move and corner resize."
+        )
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("color: #888888; font-size: 9pt;")
+        frame_layout.addWidget(info_label)
 
-        for lang_name, lang_code, filepath in available_locales:
-            display_text = lang_name
-            if lang_code != "en":
-                display_text = f"{lang_name} ({lang_code})"
-            self.settings_locale_combo.addItem(display_text)
-            self.locale_data[display_text] = (lang_code, filepath)
+        frame_group.setLayout(frame_layout)
+        window_layout.addWidget(frame_group)
 
-        # Show current locale count
-        locale_count = QLabel(f"{len(available_locales)} language(s) installed")
-        locale_count.setStyleSheet(f"font-style: italic;")
-        locale_form.addRow("Available:", locale_count)
+        # Window behavior group
+        behavior_group = QGroupBox("Window Behavior")
+        behavior_layout = QVBoxLayout()
 
-        locale_form.addRow("Language:", self.settings_locale_combo)
+        # Always on top toggle
+        ontop_check = QCheckBox("Always on top")
+        ontop_check.setChecked(self.window_always_on_top)
+        ontop_check.setToolTip("Keep TXD Workshop window above other windows")
+        behavior_layout.addWidget(ontop_check)
 
-        # Note about restart
-        note_color = palette.color(palette.ColorRole.PlaceholderText)
-        locale_note = QLabel("Note: Language changes require restart")
-        locale_note.setStyleSheet(f"color: {note_color.name()}; font-style: italic;")
-        locale_form.addRow("", locale_note)
+        behavior_group.setLayout(behavior_layout)
+        window_layout.addWidget(behavior_group)
 
-        locale_group.setLayout(locale_form)
-        locale_layout.addWidget(locale_group)
+        window_layout.addStretch()
+        tabs.addTab(window_tab, "Window")
 
-        locale_layout.addStretch()
-        tabs.addTab(locale_tab, "Localization")
+        # === TEXTURE CONSTRAINTS TAB ===
+        constraints_tab = QWidget()
+        constraints_layout = QVBoxLayout(constraints_tab)
 
-        # === ADVANCED TAB ===
-        advanced_tab = QWidget()
-        advanced_layout = QVBoxLayout(advanced_tab)
+        # Dimension limiting group
+        dimension_group = QGroupBox("Dimension Limiting")
+        dimension_layout = QVBoxLayout()
 
-        if self.main_window:
-            dock_group = QGroupBox("Docking")
-            dock_layout = QVBoxLayout()
+        dimension_check = QCheckBox("Enable dimension limiting (Power of 2)")
+        dimension_check.setChecked(self.dimension_limiting_enabled)
+        dimension_check.setToolTip("Enforce power-of-2 dimensions (64, 128, 256, 512, etc.)")
+        dimension_layout.addWidget(dimension_check)
 
-            dock_label = QLabel(f"Current State: {'Docked' if self.is_docked else 'Standalone'}")
-            dock_layout.addWidget(dock_label)
+        splash_check = QCheckBox("Allow splash screen dimensions")
+        splash_check.setChecked(self.splash_screen_mode)
+        splash_check.setToolTip("Allow non-power-of-2 sizes like 1280x720, 720x576, 640x480")
+        dimension_layout.addWidget(splash_check)
 
-            dock_btn = QPushButton("Toggle Dock Mode (D)")
-            dock_btn.clicked.connect(lambda: (self.toggle_dock_mode(), dialog.close()))
-            dock_layout.addWidget(dock_btn)
+        max_dim_layout = QHBoxLayout()
+        max_dim_layout.addWidget(QLabel("Maximum dimension:"))
+        max_dim_spin = QSpinBox()
+        max_dim_spin.setRange(256, 8192)
+        max_dim_spin.setValue(self.custom_max_dimension)
+        max_dim_spin.setSingleStep(256)
+        max_dim_spin.setToolTip("Maximum width/height for imported textures")
+        max_dim_layout.addWidget(max_dim_spin)
+        max_dim_layout.addStretch()
+        dimension_layout.addLayout(max_dim_layout)
 
-            dock_group.setLayout(dock_layout)
-            advanced_layout.addWidget(dock_group)
+        dimension_group.setLayout(dimension_layout)
+        constraints_layout.addWidget(dimension_group)
 
-        advanced_layout.addStretch()
-        tabs.addTab(advanced_tab, "Advanced")
+        # Texture naming group
+        naming_group = QGroupBox("Texture Naming")
+        naming_layout = QVBoxLayout()
+
+        name_limit_check = QCheckBox("Enable name length limit")
+        name_limit_check.setChecked(self.name_limit_enabled)
+        name_limit_check.setToolTip("Enforce maximum texture name length")
+        naming_layout.addWidget(name_limit_check)
+
+        char_limit_layout = QHBoxLayout()
+        char_limit_layout.addWidget(QLabel("Maximum characters:"))
+        char_limit_spin = QSpinBox()
+        char_limit_spin.setRange(8, 64)
+        char_limit_spin.setValue(self.max_texture_name_length)
+        char_limit_spin.setToolTip("RenderWare default is 32 characters")
+        char_limit_layout.addWidget(char_limit_spin)
+        char_limit_layout.addStretch()
+        naming_layout.addLayout(char_limit_layout)
+
+        naming_group.setLayout(naming_layout)
+        constraints_layout.addWidget(naming_group)
+
+        # Format support group
+        format_group = QGroupBox("Import Format Support")
+        format_layout = QVBoxLayout()
+
+        iff_check = QCheckBox("Enable IFF (Amiga) format import")
+        iff_check.setChecked(self.iff_import_enabled)
+        iff_check.setToolTip("Import 8-bit indexed color images from Amiga IFF format")
+        format_layout.addWidget(iff_check)
+
+        splash_format_check = QCheckBox("Enable splash screen TXD support")
+        splash_format_check.setChecked(self.splash_formats_enabled)
+        splash_format_check.setToolTip("Support GTA III/VC/SA splash screen formats")
+        format_layout.addWidget(splash_format_check)
+
+        format_group.setLayout(format_layout)
+        constraints_layout.addWidget(format_group)
+
+        constraints_layout.addStretch()
+        tabs.addTab(constraints_tab, "Texture Constraints")
+
+        # === PREVIEW TAB ===
+        preview_tab = QWidget()
+        preview_layout = QVBoxLayout(preview_tab)
+
+        preview_group = QGroupBox("Preview Settings")
+        preview_form = QFormLayout()
+
+        pan_x_spin = QSpinBox()
+        pan_x_spin.setRange(-1000, 1000)
+        pan_x_spin.setValue(0)
+        preview_form.addRow("Pan X Offset:", pan_x_spin)
+
+        pan_y_spin = QSpinBox()
+        pan_y_spin.setRange(-1000, 1000)
+        pan_y_spin.setValue(0)
+        preview_form.addRow("Pan Y Offset:", pan_y_spin)
+
+        zoom_spin = QSpinBox()
+        zoom_spin.setRange(10, 500)
+        zoom_spin.setValue(100)
+        zoom_spin.setSuffix("%")
+        preview_form.addRow("Zoom Level:", zoom_spin)
+
+        preview_group.setLayout(preview_form)
+        preview_layout.addWidget(preview_group)
+        preview_layout.addStretch()
+
+        tabs.addTab(preview_tab, "Preview")
 
         layout.addWidget(tabs)
 
-        # Dialog buttons
+        # Buttons
         button_layout = QHBoxLayout()
         button_layout.addStretch()
 
         apply_btn = QPushButton("Apply")
-        apply_btn.clicked.connect(lambda: self._apply_settings(dialog))
+        def apply_settings():
+            # Appearance
+            new_font = settings_font_combo.currentFont()
+            new_font.setPointSize(settings_font_size.value())
+            self.setFont(new_font)
+
+            mode_map = {0: "icons", 1: "text", 2: "both"}
+            self.button_display_mode = mode_map[settings_display_combo.currentIndex()]
+            self._update_all_buttons()
+
+            # Window settings
+            old_titlebar = self.use_system_titlebar
+            self.use_system_titlebar = titlebar_check.isChecked()
+            self.window_always_on_top = ontop_check.isChecked()
+
+            # Apply window flags changes
+            if old_titlebar != self.use_system_titlebar:
+                self._apply_window_flags()
+
+            # Apply always on top
+            self._apply_always_on_top()
+
+            # Texture constraints
+            self.dimension_limiting_enabled = dimension_check.isChecked()
+            self.splash_screen_mode = splash_check.isChecked()
+            self.custom_max_dimension = max_dim_spin.value()
+            self.name_limit_enabled = name_limit_check.isChecked()
+            self.max_texture_name_length = char_limit_spin.value()
+            self.iff_import_enabled = iff_check.isChecked()
+            self.splash_formats_enabled = splash_format_check.isChecked()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("✅ Settings applied")
+
+        apply_btn.clicked.connect(apply_settings)
         button_layout.addWidget(apply_btn)
 
         ok_btn = QPushButton("OK")
-        ok_btn.clicked.connect(lambda: (self._apply_settings(dialog), dialog.accept()))
+        def ok_clicked():
+            apply_settings()
+            dialog.accept()
+        ok_btn.clicked.connect(ok_clicked)
         button_layout.addWidget(ok_btn)
 
         cancel_btn = QPushButton("Cancel")
@@ -435,64 +608,61 @@ class TXDWorkshop(QWidget): #vers 3
 
         layout.addLayout(button_layout)
 
-        # === EXPORT TAB ===
-        export_tab = QWidget()
-        export_layout = QVBoxLayout(export_tab)
-
-        # Game version targeting
-        game_group = QGroupBox("Game Version Targeting")
-        game_layout = QVBoxLayout()
-
-        game_label = QLabel("Save TXD files optimized for specific game versions:")
-        game_layout.addWidget(game_label)
-
-        self.export_game_combo = QComboBox()
-        self.export_game_combo.addItems([
-            "Auto-detect from source",
-            "GTA III (PC)",
-            "GTA Vice City (PC)",
-            "GTA San Andreas (PC)",
-            "Manhunt (PC)"
-        ])
-        game_layout.addWidget(self.export_game_combo)
-
-        game_group.setLayout(game_layout)
-        export_layout.addWidget(game_group)
-
-        # Platform targeting
-        platform_group = QGroupBox("Platform Targeting")
-        platform_layout = QVBoxLayout()
-
-        platform_label = QLabel("Enable multi-platform format conversion:")
-        platform_layout.addWidget(platform_label)
-
-        self.export_platform_combo = QComboBox()
-        self.export_platform_combo.addItems([
-            "PC Only",
-            "Xbox (Original)",
-            "PlayStation 2",
-            "Android/Mobile",
-            "Multi-platform (Convert on save)"
-        ])
-        platform_layout.addWidget(self.export_platform_combo)
-
-        # Warning label
-        platform_note = QLabel(
-            "Note: Platform conversion may alter texture format, compression, "
-            "and swizzling. Always test on target platform."
-        )
-        note_color = palette.color(palette.ColorRole.PlaceholderText)
-        platform_note.setStyleSheet(f"color: {note_color.name()}; font-style: italic;")
-        platform_note.setWordWrap(True)
-        platform_layout.addWidget(platform_note)
-
-        platform_group.setLayout(platform_layout)
-        export_layout.addWidget(platform_group)
-
-        export_layout.addStretch()
-        tabs.addTab(export_tab, "Export Options")
-
         dialog.exec()
+
+
+    def _apply_window_flags(self): #vers 1
+        """Apply window flags based on settings"""
+        # Save current geometry
+        current_geometry = self.geometry()
+        was_visible = self.isVisible()
+
+        if self.use_system_titlebar:
+            # Use system window with title bar
+            self.setWindowFlags(
+                Qt.WindowType.Window |
+                Qt.WindowType.WindowMinimizeButtonHint |
+                Qt.WindowType.WindowMaximizeButtonHint |
+                Qt.WindowType.WindowCloseButtonHint
+            )
+        else:
+            # Use custom frameless window
+            self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+
+        # Restore geometry and visibility
+        self.setGeometry(current_geometry)
+
+        if was_visible:
+            self.show()
+
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            mode = "System title bar" if self.use_system_titlebar else "Custom frameless"
+            self.main_window.log_message(f"Window mode: {mode}")
+
+
+    def _apply_always_on_top(self): #vers 1
+        """Apply always on top window flag"""
+        current_flags = self.windowFlags()
+
+        if self.window_always_on_top:
+            new_flags = current_flags | Qt.WindowType.WindowStaysOnTopHint
+        else:
+            new_flags = current_flags & ~Qt.WindowType.WindowStaysOnTopHint
+
+        if new_flags != current_flags:
+            # Save state
+            current_geometry = self.geometry()
+            was_visible = self.isVisible()
+
+            # Apply new flags
+            self.setWindowFlags(new_flags)
+
+            # Restore state
+            self.setGeometry(current_geometry)
+            if was_visible:
+                self.show()
+
+
 
     def _scan_available_locales(self): #vers 2
         """Scan locale folder and return list of available languages"""
@@ -862,7 +1032,6 @@ class TXDWorkshop(QWidget): #vers 3
         info_layout.addWidget(self.format_combo)
 
         self.info_bitdepth = QLabel("[32bit]")
-        self.info_bitdepth.setStyleSheet("font-weight: bold; padding: 3px 8px; border: 1px solid #3a3a3a;")
         self.info_bitdepth.setMinimumWidth(50)
         info_layout.addWidget(self.info_bitdepth)
 
@@ -912,7 +1081,6 @@ class TXDWorkshop(QWidget): #vers 3
         # --- Mipmap section ---
         self.info_format = QLabel("Mipmaps: None")
         self.info_format.setMinimumWidth(100)
-        self.info_format.setStyleSheet("font-weight: bold;")
         info_layout.addWidget(self.info_format)
 
         self.show_mipmaps_btn = QPushButton("View")
@@ -942,9 +1110,34 @@ class TXDWorkshop(QWidget): #vers 3
         info_layout.addSpacing(30)
 
         # --- Bumpmap section ---
-        self.info_format_b = QLabel("Bumpmaps: No data")
+        self.info_format_b = QLabel("Bumpmaps:")
+        has_bumpmap = False
+
+        # Check if this version supports bumpmaps
+        if is_bumpmap_supported(self.txd_version_id, self.txd_device_id):
+            # Check for bumpmap format bits
+            if 'raster_format_flags' in texture:
+                flags = texture.get('raster_format_flags', 0)
+                if flags & 0x10:  # Bit 4 indicates environment/bumpmap
+                    has_bumpmap = True
+
+            # Also check for explicit bumpmap data
+            if 'bumpmap_data' in texture or texture.get('has_bumpmap', False):
+                has_bumpmap = True
+
+        # Update bumpmap UI - show status with color
+        if hasattr(self, 'info_format_b'):
+            if has_bumpmap:
+                self.info_format_b = QLabel("Bumpmaps: Present")
+                self.info_format_b.setText("Bumpmaps: Present")
+                self.info_format_b.setStyleSheet("color: #4CAF50;")  # Green
+            else:
+                self.info_format_b = QLabel("Bumpmaps: None")
+                self.info_format_b.setText("Bumpmaps: None")
+                self.info_format_b.setStyleSheet("color: #757575;")  # Gray
+
+
         self.info_format_b.setMinimumWidth(120)
-        self.info_format_b.setStyleSheet("font-weight: bold;")
         info_layout.addWidget(self.info_format_b)
 
         self.view_bumpmap_btn = QPushButton("Manage")
@@ -976,7 +1169,7 @@ class TXDWorkshop(QWidget): #vers 3
         return merged_layout
 
 
-    def _initialize_features(self): #vers 1
+    def _initialize_features(self): #vers 3
         """Initialize all features after UI setup"""
         try:
             self._apply_theme()
@@ -996,7 +1189,8 @@ class TXDWorkshop(QWidget): #vers 3
 
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"features init error: {str(e)}")
+                self.main_window.log_message(f"Feature init error: {str(e)}")
+
 
 
     def _detect_txd_info(self, txd_data: bytes) -> bool: #vers 1
@@ -1462,19 +1656,19 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Only show "Open IMG" button if NOT standalone
         if not self.standalone_mode:
-            self.open_img_btn = QPushButton("Open IMG")
+            self.open_img_btn = QPushButton("OpenIMG")
             self.open_img_btn.setIcon(self._create_folder_icon())
             self.open_img_btn.setIconSize(QSize(20, 20))
             self.open_img_btn.clicked.connect(self.open_img_archive)
             layout.addWidget(self.open_img_btn)
 
-        self.open_txd_btn = QPushButton("Open TXD")
+        self.open_txd_btn = QPushButton("OpenTXD")
         self.open_txd_btn.setIcon(self._create_file_icon())
         self.open_txd_btn.setIconSize(QSize(20, 20))
         self.open_txd_btn.clicked.connect(self.open_txd_file)
         layout.addWidget(self.open_txd_btn)
 
-        self.save_txd_btn = QPushButton("Save TXD")
+        self.save_txd_btn = QPushButton("SaveTXD")
         self.save_txd_btn.setIcon(self._create_save_icon())
         self.save_txd_btn.setIconSize(QSize(20, 20))
         self.save_txd_btn.clicked.connect(self.save_txd_file)
@@ -1486,7 +1680,7 @@ class TXDWorkshop(QWidget): #vers 3
         self.import_btn = QPushButton("Import")
         self.import_btn.setIcon(self._create_import_icon())
         self.import_btn.setIconSize(QSize(20, 20))
-        self.import_btn.clicked.connect(self.import_texture)
+        self.import_btn.clicked.connect(self._import_textures)
         self.import_btn.setEnabled(False)
         layout.addWidget(self.import_btn)
 
@@ -1894,7 +2088,6 @@ class TXDWorkshop(QWidget): #vers 3
             format_layout.addWidget(self.format_combo)
 
             self.info_bitdepth = QLabel("[32bit]")
-            self.info_bitdepth.setStyleSheet("font-weight: bold; padding: 3px 8px; border: 1px solid #3a3a3a;")
             self.info_bitdepth.setMinimumWidth(50)
             format_layout.addWidget(self.info_bitdepth)
 
@@ -1915,7 +2108,6 @@ class TXDWorkshop(QWidget): #vers 3
 
             self.info_format = QLabel("Mipmaps: None")
             self.info_format.setMinimumWidth(100)
-            self.info_format.setStyleSheet("font-weight: bold;")
             mipbump_layout.addWidget(self.info_format)
 
             self.show_mipmaps_btn = QPushButton("View")
@@ -1944,9 +2136,34 @@ class TXDWorkshop(QWidget): #vers 3
 
             mipbump_layout.addSpacing(30)
 
-            self.info_format_b = QLabel("Bumpmaps: No data")
+            # Bumpmap detection
+            self.info_format_b = QLabel("Bumpmaps:")
+            has_bumpmap = False
+
+            # Check if this version supports bumpmaps
+            if is_bumpmap_supported(self.txd_version_id, self.txd_device_id):
+                # Check for bumpmap format bits
+                if 'raster_format_flags' in texture:
+                    flags = texture.get('raster_format_flags', 0)
+                    if flags & 0x10:  # Bit 4 indicates environment/bumpmap
+                        has_bumpmap = True
+
+                # Also check for explicit bumpmap data
+                if 'bumpmap_data' in texture or texture.get('has_bumpmap', False):
+                    has_bumpmap = True
+
+            # Update bumpmap UI - show status with color
+        if hasattr(self, 'info_format_b'):
+            if has_bumpmap:
+                self.info_format_b = QLabel("Bumpmaps: Present")
+                self.info_format_b.setText("Bumpmaps: Present")
+                self.info_format_b.setStyleSheet("color: #4CAF50;")  # Green
+            else:
+                self.info_format_b = QLabel("Bumpmaps: None")
+                self.info_format_b.setText("Bumpmaps: None")
+                self.info_format_b.setStyleSheet("color: #757575;")  # Gray
+
             self.info_format_b.setMinimumWidth(120)
-            self.info_format_b.setStyleSheet("font-weight: bold;")
             mipbump_layout.addWidget(self.info_format_b)
 
             view_layout = QHBoxLayout()
@@ -1982,14 +2199,6 @@ class TXDWorkshop(QWidget): #vers 3
             self.bitdepth_btn.clicked.connect(self._change_bit_depth)
             self.bitdepth_btn.setEnabled(False)
             format_layout.addWidget(self.bitdepth_btn)
-
-            #self.resize_btn = QPushButton("Resize")
-            #self.resize_btn.setIcon(self._create_resize_icon())
-            #self.resize_btn.setIconSize(QSize(20, 20))
-            #self.resize_btn.setToolTip("Resize texture")
-            #self.resize_btn.clicked.connect(self._resize_texture)
-            #self.resize_btn.setEnabled(False)
-            #format_layout.addWidget(self.resize_btn)
 
             self.upscale_btn = QPushButton("AI Upscale")
             self.upscale_btn.setIcon(self._create_upscale_icon())
@@ -2359,7 +2568,7 @@ class TXDWorkshop(QWidget): #vers 3
             return None
 
 
-    def _generate_rgb_normal_map(self, grayscale, width, height, strength): #vers 1
+    def _generate_rgb_normal_map(self, grayscale, width, height, strength): #vers 2
         """Generate proper RGB normal map from height data"""
         normal_map = bytearray(width * height * 3)
 
@@ -2371,12 +2580,12 @@ class TXDWorkshop(QWidget): #vers 3
                 up = grayscale[(y - 1) * width + x]
                 down = grayscale[(y + 1) * width + x]
 
-                # Calculate normal vector
-                dx = (left - right) * strength
-                dy = (up - down) * strength
-                dz = 255.0
+                # Calculate normal vector using height differences
+                dx = (left - right) * strength * 2.0  # Increased multiplier
+                dy = (up - down) * strength * 2.0     # Increased multiplier
+                dz = 128.0  # Base Z strength
 
-                # Normalize
+                # Normalize vector
                 length = (dx*dx + dy*dy + dz*dz) ** 0.5
                 if length > 0:
                     dx /= length
@@ -2384,6 +2593,7 @@ class TXDWorkshop(QWidget): #vers 3
                     dz /= length
 
                 # Map to RGB range [0-255]
+                # Normal maps: flat surface = (128, 128, 255) in RGB = (0.5, 0.5, 1.0) in normalized
                 r = int((dx * 0.5 + 0.5) * 255)
                 g = int((dy * 0.5 + 0.5) * 255)
                 b = int((dz * 0.5 + 0.5) * 255)
@@ -2392,6 +2602,15 @@ class TXDWorkshop(QWidget): #vers 3
                 normal_map[idx] = max(0, min(255, r))
                 normal_map[idx + 1] = max(0, min(255, g))
                 normal_map[idx + 2] = max(0, min(255, b))
+
+        # Fill edges with flat normal (128, 128, 255)
+        for y in range(height):
+            for x in range(width):
+                if y == 0 or y == height - 1 or x == 0 or x == width - 1:
+                    idx = (y * width + x) * 3
+                    normal_map[idx] = 128      # R = 0.5 (no X tilt)
+                    normal_map[idx + 1] = 128  # G = 0.5 (no Y tilt)
+                    normal_map[idx + 2] = 255  # B = 1.0 (pointing up)
 
         return normal_map
 
@@ -3549,7 +3768,7 @@ class TXDWorkshop(QWidget): #vers 3
                 QWidget { background-color: #2b2b2b; color: #e0e0e0; }
                 QListWidget { background-color: #1e1e1e; border: 1px solid #3a3a3a; }
                 QListWidget::item:selected { background-color: #0d47a1; }
-                QPushButton { background-color: #3a3a3a; border: 1px solid #4a4a4a; padding: 5px 15px; border-radius: 3px; }
+                QPushButton { background-color: #3a3a3a; border: 1px solid #4a4a4a; padding: 5px 14px; border-radius: 3px; }
                 QPushButton:hover { background-color: #4a4a4a; }
             """)
 
@@ -4333,7 +4552,7 @@ class TXDWorkshop(QWidget): #vers 3
                 }
                 self.selected_texture['mipmap_levels'].append(mipmap_level)
 
-                # Next level
+                # Next levelhas_bumpmap
                 current_width = max(1, current_width // 2)
                 current_height = max(1, current_height // 2)
                 level_num += 1
@@ -4414,12 +4633,12 @@ class TXDWorkshop(QWidget): #vers 3
             QMessageBox.critical(self, "Error", f"Failed to load IMG: {str(e)}")
 
 
-    def _show_txd_info(self): #vers 2
+    def _show_txd_info(self): #vers 4
         """Show TXD Workshop information dialog - About and capabilities"""
         dialog = QDialog(self)
         dialog.setWindowTitle("About TXD Workshop")
-        dialog.setMinimumWidth(550)
-        dialog.setMinimumHeight(450)
+        dialog.setMinimumWidth(600)
+        dialog.setMinimumHeight(500)
 
         layout = QVBoxLayout(dialog)
         layout.setSpacing(15)
@@ -4445,63 +4664,107 @@ class TXDWorkshop(QWidget): #vers 3
         # Capabilities section
         capabilities = QTextEdit()
         capabilities.setReadOnly(True)
-        capabilities.setMaximumHeight(300)
+        capabilities.setMaximumHeight(350)
 
         info_text = """<b>TXD Workshop Capabilities:</b><br><br>
 
-    <b>✓ File Operations:</b><br>
-    - Open TXD files (standalone or from IMG archives)<br>
-    - Save TXD files back to IMG or as standalone<br>
-    - Create new TXD files from scratch<br>
-    - Multi-TXD management from IMG archives<br><br>
+<b>✓ File Operations:</b><br>
+- Open TXD files (standalone or from IMG archives)<br>
+- Save TXD files back to IMG or as standalone<br>
+- Create new TXD files from scratch<br>
+- Multi-TXD management from IMG archives<br><br>
 
-    <b>✓ Texture Viewing & Editing:</b><br>
-    - View all textures with thumbnails<br>
-    - Preview textures with zoom controls<br>
-    - Flip textures (horizontal/vertical)<br>
-    - Rename textures and alpha channels<br>
-    - View texture properties (size, format, compression)<br><br>
+<b>✓ Texture Viewing & Editing:</b><br>
+- View all textures with thumbnails<br>
+- Preview textures with zoom and pan controls<br>
+- Flip textures (horizontal/vertical)<br>
+- Rotate textures (90°, 180°, 270°)<br>
+- Resize textures with interpolation<br>
+- Rename textures and alpha channels<br>
+- View texture properties (size, format, compression)<br><br>
 
-    <b>✓ Import & Export:</b><br>
-    - Export textures as PNG/BMP images<br>
-    - Export all textures in batch<br>
-    - Import textures from images<br>
-    - Replace existing textures<br><br>
+<b>✓ Texture Management:</b><br>
+- Import textures (PNG, JPG, BMP, TGA, DDS)<br>
+- Import 8-bit indexed formats (PCX, GIF, IFF/Amiga)<br>
+- Export single or multiple textures<br>
+- Duplicate textures<br>
+- Delete textures<br>
+- Undo/Redo operations<br><br>
 
-    <b>✓ Format Support:</b><br>
-    - DXT1, DXT3, DXT5 (compressed formats)<br>
-    - RGBA8888, RGB888 (uncompressed)<br>
-    - Platform detection (PC, Xbox, PS2, Android)<br>
-    - Game detection (GTA III, VC, SA, Manhunt)<br><br>
+<b>✓ Format Support:</b><br>
+- DXT1/DXT3/DXT5 compression<br>
+- Uncompressed ARGB8888, RGB888<br>
+- 16-bit and 32-bit formats<br>
+- Palette-based textures<br>
+- Platform-specific formats (PC, Xbox, PS2)<br><br>
 
-    <b>✓ Advanced Features:</b><br>
-    - Texture filtering and search<br>
-    - Undo/Redo support<br>
-    - Bumpmap viewing and editing<br>
-    - Alpha channel extraction<br>
-    - Compression/decompression tools<br>
-    - Texture resize with quality control<br><br>
+<b>✓ Advanced Features:</b><br>
+- Mipmap generation and editing<br>
+- Bumpmap support (generate from height/normal maps)<br>
+- Alpha channel extraction and editing<br>
+- Batch export operations<br>
+- Texture filtering and search<br>
+- External editor integration<br>
+- AI upscaling support (if configured)<br><br>
 
-    <b>✓ Interface:</b><br>
-    - Dockable window mode<br>
-    - Standalone window mode<br>
-    - Theme integration with IMG Factory<br>
-    - Customizable button display (icons/text/both)"""
+<b>✓ Platform Detection:</b><br>
+- Automatic RenderWare version detection<br>
+- Platform identification (PC, Xbox, PS2, Android)<br>
+- Game detection (GTA III, VC, SA, Manhunt)<br>
+- Format capability validation<br><br>
+
+<b>✓ Import Format Support:</b><br>"""
+
+        # Add format support dynamically
+        formats_available = []
+
+        # Standard formats (always via PIL)
+        formats_available.append("- PNG, JPG, JPEG (all variants)")
+        formats_available.append("- BMP (8/16/24/32-bit)")
+        formats_available.append("- TGA/Targa (all variants)")
+        formats_available.append("- DDS (DirectDraw Surface)")
+
+        # Check indexed format support
+        try:
+            if self.iff_import_enabled:
+                formats_available.append("- IFF/ILBM (Amiga 8-bit)")
+        except:
+            pass
+
+        # Always available via indexed_color_import
+        formats_available.append("- PCX (ZSoft Paintbrush)")
+        formats_available.append("- GIF (with transparency)")
+        formats_available.append("- PNG (8-bit indexed mode)")
+
+        info_text += "<br>".join(formats_available)
+        info_text += "<br><br>"
+
+        # Settings info
+        info_text += """<b>✓ Customization:</b><br>
+- Configurable dimension limiting<br>
+- Adjustable texture name length (8-64 chars)<br>
+- Splash screen dimension support<br>
+- Button display modes (Icons/Text/Both)<br>
+- Font customization<br>
+- Preview zoom and pan offsets<br><br>
+
+<b>Keyboard Shortcuts:</b><br>
+- Ctrl+O: Open TXD<br>
+- Ctrl+S: Save TXD<br>
+- Ctrl+I: Import Texture<br>
+- Ctrl+E: Export Selected<br>
+- Ctrl+Z: Undo<br>
+- Delete: Remove Texture<br>
+- Ctrl+D: Duplicate Texture<br>"""
 
         capabilities.setHtml(info_text)
         layout.addWidget(capabilities)
 
         # Close button
         close_btn = QPushButton("Close")
-        close_btn.setMinimumWidth(100)
         close_btn.clicked.connect(dialog.accept)
-
-        btn_layout = QHBoxLayout()
-        btn_layout.addStretch()
-        btn_layout.addWidget(close_btn)
-        btn_layout.addStretch()
-
-        layout.addLayout(btn_layout)
+        close_btn.setDefault(True)
+        layout.addWidget(close_btn)
 
         dialog.exec()
 
@@ -6518,20 +6781,6 @@ class TXDWorkshop(QWidget): #vers 3
         return self.transform_panel
 
 
-    def _add_new_texture(self): #vers 1
-        """Import new texture to TXD"""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Import Texture", "",
-            "Image Files (*.png *.jpg *.bmp *.tga);;All Files (*)"
-        )
-
-        if file_path:
-            QMessageBox.information(self, "Import Texture",
-                f"Import texture functionality:\n{os.path.basename(file_path)}\n\n"
-                "Will create new texture entry in TXD")
-
-
-
     def _edit_texture(self): #vers 1
         """Edit texture in external editor"""
         if not self.selected_texture:
@@ -6712,11 +6961,9 @@ class TXDWorkshop(QWidget): #vers 3
 
         if hasattr(self, 'info_format_b'):
             if has_bumpmap:
-                self.info_format_b.setStyleSheet("font-weight: bold; color: #4CAF50;")  # Green
+                self.info_format_b.setStyleSheet("color: #4CAF50;")  # Green
             else:
-                self.info_format_b.setStyleSheet("font-weight: bold; color: #757575;")  # Gray
-
-        # Bumpmap buttons handled in _on_texture_selected()
+                self.info_format_b.setStyleSheet("color: #757575;")  # Gray
 
         # Update preview with new widget
         rgba_data = texture.get('rgba_data')
@@ -7394,153 +7641,253 @@ class TXDWorkshop(QWidget): #vers 3
             QMessageBox.critical(self, "Error", f"Failed to open TXD: {str(e)}")
 
 
-    def import_texture(self): #vers 2
-        """Import new texture from image file"""
-        if not self.current_txd_data:
+    def _import_textures(self): #vers 6
+        """Import textures with 8-bit indexed format support"""
+        if not self.current_img and not self.current_txd_data:
             QMessageBox.warning(self, "No TXD", "Please open or create a TXD file first")
             return
 
+        # File dialog for texture selection
+        file_paths, _ = QFileDialog.getOpenFileNames(
+            self,
+            "Import Textures",
+            "",
+            "Image Files (*.png *.jpg *.jpeg *.bmp *.tga *.dds *.iff *.ilbm *.lbm *.pcx *.gif);;All Files (*.*)"
+        )
+
+        if not file_paths:
+            return
+
+        # Check for disabled formats
+        iff_files = []
         try:
-            # File selection dialog
-            file_path, _ = QFileDialog.getOpenFileName(
-                self, "Import Texture", "",
-                "Image Files (*.png *.bmp *.jpg *.tga);;All Files (*)"
+            iff_files = [f for f in file_paths if is_iff_file(f)]
+        except:
+            pass
+
+        if iff_files and hasattr(self, 'iff_import_enabled') and not self.iff_import_enabled:
+            reply = QMessageBox.question(
+                self,
+                "IFF Import Disabled",
+                f"Found {len(iff_files)} IFF files, but IFF import is disabled.\n"
+                "Enable IFF support in Settings?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                self._show_workshop_settings()
+                return
+
+        # Import each texture
+        imported_count = 0
+        failed_count = 0
+
+        for file_path in file_paths:
+            try:
+                success = self._import_single_texture(file_path)
+                if success:
+                    imported_count += 1
+                else:
+                    failed_count += 1
+            except Exception as e:
+                failed_count += 1
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"❌ Import failed: {os.path.basename(file_path)} - {str(e)}")
+
+        # Reload display
+        if imported_count > 0:
+            self._reload_texture_table()
+            self._mark_as_modified()
+
+        # Report results
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            if imported_count > 0:
+                self.main_window.log_message(f"✅ Imported {imported_count} texture(s)")
+            if failed_count > 0:
+                self.main_window.log_message(f"⚠️ Failed to import {failed_count} texture(s)")
+
+
+    def _import_single_texture(self, file_path): #vers 3
+        """Import single texture with format detection and validation"""
+        filename = os.path.basename(file_path)
+        name_only = os.path.splitext(filename)[0]
+
+        # Validate texture name
+        if self.name_limit_enabled:
+            if len(name_only) > self.max_texture_name_length:
+                name_only = name_only[:self.max_texture_name_length]
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"⚠️ Texture name truncated to {self.max_texture_name_length} chars")
+
+        valid, msg = self._validate_texture_name(name_only)
+        if not valid:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Invalid name: {msg}")
+            return False
+
+        # Try indexed color formats first
+        texture_data = None
+
+        if is_indexed_format(file_path):
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"📥 Loading indexed format: {filename}")
+
+            texture_data = load_indexed_image(file_path)
+
+        elif is_iff_file(file_path):
+            if not self.iff_import_enabled:
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"⚠️ IFF import disabled: {filename}")
+                return False
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"📥 Loading IFF format: {filename}")
+
+            texture_data = load_iff_image(file_path)
+
+        # Fallback to PIL for standard formats
+        if not texture_data:
+            texture_data = self._load_texture_with_pil(file_path)
+
+        if not texture_data:
+            return False
+
+        # Validate dimensions
+        width = texture_data['width']
+        height = texture_data['height']
+
+        valid, msg = self._validate_texture_dimensions(width, height)
+        if not valid:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ {filename}: {msg}")
+            return False
+
+        # Add to texture list
+        new_texture = {
+            'name': name_only,
+            'width': width,
+            'height': height,
+            'rgba_data': texture_data['rgba_data'],
+            'has_alpha': texture_data.get('has_alpha', False),
+            'format': texture_data.get('format', 'ARGB8888'),
+            'alpha_name': name_only + 'a' if texture_data.get('has_alpha') else '',
+            'mipmaps': 1,
+            'original_format': texture_data.get('original_format', 'Unknown')
+        }
+
+        self.texture_list.append(new_texture)
+
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            format_str = texture_data.get('original_format', 'Unknown')
+            self.main_window.log_message(
+                f"✅ Imported: {name_only} ({width}x{height}, {format_str})"
             )
 
-            if not file_path:
-                return
+        return True
 
-            from PyQt6.QtGui import QImage
-            import os
 
-            # Load image
-            img = QImage(file_path)
-            if img.isNull():
-                QMessageBox.critical(self, "Error", "Failed to load image file")
-                return
+    def _load_texture_with_pil(self, file_path): #vers 2
+        """Load texture using PIL as fallback"""
+        try:
+            from PIL import Image
 
-            # Convert to RGBA8888
-            img = img.convertToFormat(QImage.Format.Format_RGBA8888)
+            img = Image.open(file_path)
 
-            # Get image data
-            width = img.width()
-            height = img.height()
+            # Convert to RGBA
+            if img.mode in ('RGBA', 'LA'):
+                has_alpha = True
+                img = img.convert('RGBA')
+            else:
+                has_alpha = False
+                img = img.convert('RGB')
 
-            # Validate dimensions (power of 2)
-            if not (width & (width - 1) == 0 and height & (height - 1) == 0):
-                reply = QMessageBox.question(
-                    self, "Invalid Dimensions",
-                    f"Texture dimensions ({width}x{height}) are not power of 2.\n"
-                    "TXD textures should be 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, etc.\n\n"
-                    "Import anyway?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-                )
-                if reply == QMessageBox.StandardButton.No:
-                    return
+            width, height = img.size
 
-            # Get RGBA data
-            ptr = img.bits()
-            ptr.setsize(img.sizeInBytes())
-            rgba_data = bytes(ptr)
+            # Get raw pixel data
+            if has_alpha:
+                rgba_data = img.tobytes('raw', 'RGBA')
+            else:
+                rgb_data = img.tobytes('raw', 'RGB')
+                # Add alpha channel
+                rgba_data = bytearray()
+                for i in range(0, len(rgb_data), 3):
+                    rgba_data.extend(rgb_data[i:i+3])
+                    rgba_data.append(255)
+                rgba_data = bytes(rgba_data)
 
-            # Check if image has alpha channel
-            has_alpha = False
-            for i in range(3, len(rgba_data), 4):
-                if rgba_data[i] < 255:
-                    has_alpha = True
-                    break
-
-            # Ask for texture name
-            base_name = os.path.splitext(os.path.basename(file_path))[0]
-            texture_name, ok = QInputDialog.getText(
-                self, "Texture Name",
-                "Enter texture name:",
-                text=base_name
-            )
-
-            if not ok or not texture_name:
-                return
-
-            # Validate name (no spaces, max 24 chars)
-            texture_name = texture_name.replace(' ', '_')[:24]
-
-            # Check for duplicate names
-            for tex in self.texture_list:
-                if tex['name'].lower() == texture_name.lower():
-                    reply = QMessageBox.question(
-                        self, "Duplicate Name",
-                        f"Texture '{texture_name}' already exists.\n"
-                        "Replace existing texture?",
-                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-                    )
-                    if reply == QMessageBox.StandardButton.Yes:
-                        # Replace existing
-                        tex['width'] = width
-                        tex['height'] = height
-                        tex['rgba_data'] = rgba_data
-                        tex['has_alpha'] = has_alpha
-                        tex['format'] = 'RGBA8888'
-                        if has_alpha:
-                            tex['alpha_name'] = texture_name + 'a'
-
-                        self._mark_as_modified()
-                        self._reload_texture_table()
-
-                        if self.main_window and hasattr(self.main_window, 'log_message'):
-                            self.main_window.log_message(f"✅ Replaced texture: {texture_name}")
-                        return
-                    else:
-                        return
-
-            # Create new texture entry
-            new_texture = {
-                'name': texture_name,
+            return {
                 'width': width,
                 'height': height,
                 'rgba_data': rgba_data,
                 'has_alpha': has_alpha,
-                'format': 'RGBA8888',
-                'mipmaps': 1,
-                'compression': 'none'
+                'format': 'ARGB8888' if has_alpha else 'RGB888',
+                'original_format': 'PIL-Standard'
             }
 
-            # Add alpha name if needed
-            if has_alpha:
-                new_texture['alpha_name'] = texture_name + 'a'
-
-            # Add to texture list
-            self.texture_list.append(new_texture)
-
-            # Save undo state
-            self._save_undo_state(f"Import texture: {texture_name}")
-
-            # Mark as modified
-            self._mark_as_modified()
-
-            # Reload table
-            self._reload_texture_table()
-
-            # Select newly imported texture
-            for row in range(self.texture_table.rowCount()):
-                item = self.texture_table.item(row, 0)
-                if item and item.text() == texture_name:
-                    self.texture_table.selectRow(row)
-                    break
-
-            QMessageBox.information(self, "Success",
-                f"Imported texture: {texture_name}\n"
-                f"Size: {width}x{height}\n"
-                f"Alpha: {'Yes' if has_alpha else 'No'}")
-
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(
-                    f"✅ Imported texture: {texture_name} ({width}x{height})"
-                )
-
         except Exception as e:
-            QMessageBox.critical(self, "Import Error", f"Failed to import texture:\n{str(e)}")
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Import error: {str(e)}")
+                self.main_window.log_message(f"PIL import error: {str(e)}")
+            return None
+
+
+    def _ensure_depends_structure(self): #vers 1
+        """Ensure depends/ folder exists in standalone mode with required files"""
+        if not self.standalone_mode:
+            return
+
+        script_dir = Path(__file__).parent.resolve()
+        depends_dir = script_dir / "depends"
+
+        # Create depends folder if it doesn't exist
+        if not depends_dir.exists():
+            depends_dir.mkdir(parents=True, exist_ok=True)
+            print(f"Created depends directory: {depends_dir}")
+
+        # Check for required import modules
+        required_modules = [
+            'iff_import.py',
+            'indexed_color_import.py',
+            'txd_versions.py'
+        ]
+
+        missing = []
+        for module in required_modules:
+            module_path = depends_dir / module
+            if not module_path.exists():
+                missing.append(module)
+
+        if missing:
+            print(f"Warning: Missing modules in depends/: {', '.join(missing)}")
+            print(f"Copy these from methods/ to: {depends_dir}")
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"⚠️ Missing import modules: {', '.join(missing)}")
+
+
+    def _get_import_format_info(self): #vers 1
+        """Get supported import formats as formatted string"""
+        formats = []
+
+        # Standard formats (always available via PIL)
+        formats.append("✓ PNG, JPG, BMP, TGA (standard)")
+
+        # Check indexed format support
+        try:
+            from methods.indexed_color_import import is_indexed_format
+            formats.append("✓ 8-bit BMP, PCX, GIF")
+        except ImportError:
+            formats.append("✗ 8-bit indexed formats (missing module)")
+
+        # Check IFF support
+        if self.iff_import_enabled:
+            try:
+                from methods.iff_import import is_iff_file
+                formats.append("✓ IFF/ILBM (Amiga)")
+            except ImportError:
+                formats.append("✗ IFF format (missing module)")
+        else:
+            formats.append("○ IFF format (disabled)")
+
+        return "\n".join(formats)
 
 
     def show_properties(self): #vers 2
@@ -8720,7 +9067,9 @@ class TXDWorkshop(QWidget): #vers 3
 
 class BumpmapManagerWindow(QWidget): #vers 1
     """Bumpmap Manager - Modern design matching Mipmap Manager"""
-    def __init__(self, parent, texture_data, main_window=None):
+
+    def __init__(self, parent, texture_data, main_window=None): #vers 2
+        """Initialize with 30% smaller height"""
         super().__init__(parent)
         self.parent_workshop = parent
         self.texture_data = texture_data
@@ -8732,7 +9081,7 @@ class BumpmapManagerWindow(QWidget): #vers 1
         height = texture_data.get('height', 0)
 
         self.setWindowTitle(f"Bumpmap Manager - {texture_name}")
-        self.resize(900, 650)
+        self.resize(900, 455)  # Changed from 650 to 455 (30% smaller)
 
         # Frameless window with custom styling
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
@@ -8750,9 +9099,8 @@ class BumpmapManagerWindow(QWidget): #vers 1
         # Enable mouse tracking for hover effects
         self.setMouseTracking(True)
 
-
-    def setup_ui(self): #vers 2
-        """Setup modern UI matching mipmap manager - FIXED styling"""
+    def setup_ui(self): #vers 5
+        """Setup modern UI - Compact layout"""
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
@@ -8761,15 +9109,11 @@ class BumpmapManagerWindow(QWidget): #vers 1
         title_bar = self._create_title_bar()
         main_layout.addWidget(title_bar)
 
-        # Create menu bar with Edit menu
-        menu_bar = self._create_menu_bar()
-        main_layout.addWidget(menu_bar)
-
-        # Main content area
+        # Main content area - COMPACT
         content = QWidget()
         content_layout = QHBoxLayout(content)
-        content_layout.setContentsMargins(10, 10, 10, 10)
-        content_layout.setSpacing(10)
+        content_layout.setContentsMargins(5, 5, 5, 5)
+        content_layout.setSpacing(5)
 
         # Left: Texture info and preview
         left_panel = self._create_left_panel()
@@ -8781,11 +9125,7 @@ class BumpmapManagerWindow(QWidget): #vers 1
 
         main_layout.addWidget(content)
 
-        # Bottom: Action buttons
-        button_panel = self._create_button_panel()
-        main_layout.addWidget(button_panel)
-
-        # Apply styling - FIXED: Added QWidget background
+        # Apply styling
         self.setStyleSheet("""
             BumpmapManagerWindow {
                 background-color: #2b2b2b;
@@ -8798,9 +9138,9 @@ class BumpmapManagerWindow(QWidget): #vers 1
             QGroupBox {
                 font-weight: bold;
                 border: 1px solid #3a3a3a;
-                border-radius: 5px;
-                margin-top: 10px;
-                padding-top: 10px;
+                border-radius: 3px;
+                margin-top: 3px;
+                padding-top: 3px;
                 background-color: #2b2b2b;
             }
             QGroupBox::title {
@@ -8831,15 +9171,17 @@ class BumpmapManagerWindow(QWidget): #vers 1
             QPushButton:pressed {
                 background-color: #2a2a2a;
             }
-            QPushButton:disabled {
+            QPushButton:disabled {o
                 background-color: #2a2a2a;
                 color: #666666;
                 border: 1px solid #333333;
             }
             QMenuBar {
-                background-color: #2b2b2b;
+                background-color: transparent;
                 color: #e0e0e0;
-                border-bottom: 1px solid #3a3a3a;
+                border: none;
+                padding: 0px;
+                margin: 0px;
             }
             QMenuBar::item {
                 background-color: transparent;
@@ -8863,10 +9205,158 @@ class BumpmapManagerWindow(QWidget): #vers 1
         """)
 
 
-    def _create_title_bar(self): #vers 2
-        """Create custom title bar with window controls - FIXED with icons"""
+    def _create_left_panel(self): #vers 6
+        """Create left panel - title on far right"""
+        panel = QGroupBox("Main Texture    .")
+        # Style to move title to the right
+        panel.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                font-size: 14px;
+                border: 1px solid #3a3a3a;
+                border-radius: 1px;
+                margin-top: 10px;
+                padding-top: 10px;
+                background-color: #2b2b2b;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top right;
+                right: 20px;
+                padding: 0 5px;
+                color: #e0e0e0;
+            }
+        """)
+
+        layout = QVBoxLayout(panel)
+        layout.setSpacing(10)
+
+        # Info container with proper spacing
+        info_container = QWidget()
+        info_container.setFixedHeight(85)
+        info_layout = QVBoxLayout(info_container)
+        info_layout.setContentsMargins(5, 5, 5, 5)
+        info_layout.setSpacing(5)
+
+        # Name
+        name_label = QLabel(f"Name: {self.texture_data.get('name', 'Unknown')}")
+        name_label.setStyleSheet("font-size: 14pt; line-height: 1.4;")
+        name_label.setWordWrap(False)
+        info_layout.addWidget(name_label)
+
+        # Size
+        width = self.texture_data.get('width', 0)
+        height = self.texture_data.get('height', 0)
+        size_label = QLabel(f"Size: {width} × {height}")
+        size_label.setStyleSheet("font-size: 14pt; line-height: 1.4;")
+        info_layout.addWidget(size_label)
+
+        # Format
+        fmt = self.texture_data.get('format', 'Unknown')
+        format_label = QLabel(f"Format: {fmt}")
+        format_label.setStyleSheet("font-size: 14pt; line-height: 1.4;")
+        info_layout.addWidget(format_label)
+
+        info_layout.addStretch()
+
+        layout.addWidget(info_container)
+
+        # Main texture preview
+        preview_label = QLabel()
+        preview_label.setMinimumHeight(250)
+        preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        preview_label.setStyleSheet("border: 1px solid #3a3a3a; background: #1e1e1e;")
+
+        # Load texture preview
+        rgba_data = self.texture_data.get('rgba_data')
+        if rgba_data and width > 0:
+            image = QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+            pixmap = QPixmap.fromImage(image)
+            preview_label.setPixmap(
+                pixmap.scaled(250, 250,
+                            Qt.AspectRatioMode.KeepAspectRatio,
+                            Qt.TransformationMode.SmoothTransformation)
+            )
+        else:
+            preview_label.setText("No texture data")
+
+        layout.addWidget(preview_label)
+
+        return panel
+
+
+    def _create_right_panel(self): #vers 6
+        """Create right panel - title on far right"""
+        panel = QGroupBox("Bumpmap    .")
+        # Style to move title to the right
+        panel.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                font-size: 14px;
+                border: 1px solid #3a3a3a;
+                border-radius: 1px;
+                margin-top: 10px;
+                padding-top: 10px;
+                background-color: #2b2b2b;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top right;
+                right: 20px;
+                padding: 0 5px;
+                color: #e0e0e0;
+            }
+        """)
+
+        layout = QVBoxLayout(panel)
+        layout.setSpacing(10)
+
+        # Info container with same height as left
+        info_container = QWidget()
+        info_container.setFixedHeight(85)
+        info_layout = QVBoxLayout(info_container)
+        info_layout.setContentsMargins(1, 1, 1, 1)
+        info_layout.setSpacing(5)
+
+        # Status
+        has_bumpmap = self._has_bumpmap()
+        status_label = QLabel(f"Status: {'Present' if has_bumpmap else 'Not present'}")
+        status_label.setStyleSheet(
+            "font-size: 14pt; line-height: 1.4; color: #4CAF50;" if has_bumpmap
+            else "font-size: 14pt; line-height: 1.4; color: #888;"
+        )
+        info_layout.addWidget(status_label)
+
+        # Type
+        type_label = QLabel("Type: Environment map (Normal map)")
+        type_label.setStyleSheet("font-size: 14pt; line-height: 1.4;")
+        info_layout.addWidget(type_label)
+
+        info_layout.addStretch()
+
+        layout.addWidget(info_container)
+
+        # Bumpmap preview
+        self.bumpmap_preview = QLabel()
+        self.bumpmap_preview.setMinimumHeight(250)
+        self.bumpmap_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.bumpmap_preview.setStyleSheet("border: 1px solid #3a3a3a; font-size: 14px; background: #1e1e1e;")
+
+        # Load bumpmap preview if available
+        if has_bumpmap:
+            self._update_bumpmap_preview()
+        else:
+            self.bumpmap_preview.setText("No bumpmap data\n\nPress F9 or use Edit → Generate Bumpmap")
+
+        layout.addWidget(self.bumpmap_preview)
+
+        return panel
+
+
+    def _create_title_bar(self): #vers 8
+        """Create title bar with 14px button text"""
         title_bar = QFrame()
-        title_bar.setFixedHeight(35)
+        title_bar.setFixedHeight(40)
         title_bar.setStyleSheet("""
             QFrame {
                 background-color: #1e1e1e;
@@ -8875,89 +9365,125 @@ class BumpmapManagerWindow(QWidget): #vers 1
         """)
 
         layout = QHBoxLayout(title_bar)
-        layout.setContentsMargins(10, 0, 5, 0)
+        layout.setContentsMargins(10, 5, 10, 5)
+        layout.setSpacing(10)
 
-        # Title
-        title_label = QLabel(f"🗺️ Bumpmap Manager - {self.texture_data.get('name', 'Unknown')}")
-        title_label.setStyleSheet("color: #e0e0e0; font-weight: bold; font-size: 11pt;")
-        layout.addWidget(title_label)
+        # Menu on far left
+        menu_bar = self._create_menu_bar()
+        menu_bar.setFixedWidth(50)
+        layout.addWidget(menu_bar)
 
-        layout.addStretch()
+        # Title in center
+        title_label = QLabel(f"🗺️ {self.texture_data.get('name', 'Unknown')}")
+        title_label.setStyleSheet("color: #e0e0e0; font-weight: bold; font-size: 14pt;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title_label, stretch=1)
 
-        # Window controls with icons
-        minimize_btn = QPushButton()
-        minimize_btn.setIcon(self._create_minimize_icon())
-        minimize_btn.setIconSize(QSize(20, 20))
-        minimize_btn.setFixedSize(30, 25)
-        minimize_btn.clicked.connect(self.showMinimized)
-        minimize_btn.setToolTip("Minimize")
-        layout.addWidget(minimize_btn)
+        # Right side buttons
+        button_width = 90
+        button_height = 30
 
-        maximize_btn = QPushButton()
-        maximize_btn.setIcon(self._create_maximize_icon())
-        maximize_btn.setIconSize(QSize(20, 20))
-        maximize_btn.setFixedSize(30, 25)
-        maximize_btn.clicked.connect(self._toggle_maximize)
-        maximize_btn.setToolTip("Maximize")
-        layout.addWidget(maximize_btn)
+        # Add button
+        add_btn = QPushButton("+ Add")
+        add_btn.setFixedSize(button_width, button_height)
+        add_btn.clicked.connect(self._generate_bumpmap)
+        add_btn.setToolTip("Generate bumpmap (F9)")
+        add_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3a3a3a;
+                color: #e0e0e0;
+                border: 1px solid #4a4a4a;
+                border-radius: 1px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #4a4a4a;
+            }
+        """)
+        layout.addWidget(add_btn)
 
-        close_btn = QPushButton()
-        close_btn.setIcon(self._create_close_icon())
-        close_btn.setIconSize(QSize(20, 20))
-        close_btn.setFixedSize(30, 25)
+        # Delete button
+        delete_btn = QPushButton("Delete")
+        delete_btn.setFixedSize(button_width, button_height)
+        delete_btn.clicked.connect(self._delete_bumpmap)
+        delete_btn.setEnabled(self._has_bumpmap())
+        delete_btn.setToolTip("Remove bumpmap (F11)")
+        delete_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #c42b1c;
+                color: #e0e0e0;
+                border: 1px solid #d43b2c;
+                border-radius: 1px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #d43b2c;
+            }
+            QPushButton:disabled {
+                background-color: #3a3a3a;
+                color: #666;
+                border: 1px solid #4a4a4a;
+            }
+        """)
+        layout.addWidget(delete_btn)
+
+        # Apply button
+        apply_btn = QPushButton("Apply")
+        apply_btn.setFixedSize(button_width, button_height)
+        apply_btn.clicked.connect(self._apply_changes)
+        apply_btn.setToolTip("Apply changes")
+        apply_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #0078d4;
+                color: white;
+                border: 1px solid #106ebe;
+                border-radius: 1px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #1984d8;
+            }
+        """)
+        layout.addWidget(apply_btn)
+
+        # Close button
+        close_btn = QPushButton("Close")
+        close_btn.setFixedSize(button_width, button_height)
         close_btn.clicked.connect(self.close)
-        close_btn.setToolTip("Close")
+        close_btn.setToolTip("Close window")
         close_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3a3a3a;
+                color: #e0e0e0;
+                border: 1px solid #4a4a4a;
+                border-radius: 1px;
+                font-size: 14px;
             }
             QPushButton:hover {
                 background-color: #c42b1c;
+                color: white;
             }
         """)
         layout.addWidget(close_btn)
 
         return title_bar
 
-    def _apply_changes(self): #vers 1
-        """Apply changes to parent workshop without closing window"""
-        if self.modified:
-            # Mark parent as modified
-            if hasattr(self.parent_workshop, '_mark_as_modified'):
-                self.parent_workshop._mark_as_modified()
 
-            # Update parent texture info
-            if hasattr(self.parent_workshop, '_update_texture_info'):
-                self.parent_workshop._update_texture_info(self.texture_data)
-
-            # Log message
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("✅ Bumpmap changes applied")
-
-            # Reset modified flag
-            self.modified = False
-
-            QMessageBox.information(self, "Success", "Changes applied to texture")
-
-
-    # UPDATE the Edit menu to remove Import/Export since they're in F10:
-
-    def _create_menu_bar(self): #vers 2
-        """Create menu bar with Edit menu - FIXED: Removed duplicate Import/Export"""
+    def _create_menu_bar(self): #vers 3
+        """Create compact menu bar for embedding in title bar"""
         from PyQt6.QtWidgets import QMenuBar
         from PyQt6.QtGui import QAction, QKeySequence
 
         menu_bar = QMenuBar()
         menu_bar.setStyleSheet("""
             QMenuBar {
-                background-color: #2b2b2b;
+                background-color: transparent;
                 color: #e0e0e0;
-                border-bottom: 1px solid #3a3a3a;
-                padding: 2px;
+                border: none;
             }
             QMenuBar::item {
                 background-color: transparent;
-                padding: 5px 10px;
+                padding: 5px 14px;
             }
             QMenuBar::item:selected {
                 background-color: #3a3a3a;
@@ -8968,7 +9494,7 @@ class BumpmapManagerWindow(QWidget): #vers 1
                 border: 1px solid #3a3a3a;
             }
             QMenu::item {
-                padding: 5px 25px 5px 10px;
+                padding: 5px 25px 5px 14px;
             }
             QMenu::item:selected {
                 background-color: #3a3a3a;
@@ -8978,13 +9504,13 @@ class BumpmapManagerWindow(QWidget): #vers 1
         # Edit menu
         edit_menu = menu_bar.addMenu("Edit")
 
-        # Add (New texture) - F9
+        # Add (Generate) - F9
         add_action = QAction("Add (Generate Bumpmap)", self)
         add_action.setShortcut(QKeySequence(Qt.Key.Key_F9))
         add_action.triggered.connect(self._generate_bumpmap)
         edit_menu.addAction(add_action)
 
-        # Change (Replace) - F10
+        # Change (Import/Replace) - F10
         change_action = QAction("Change (Import/Replace)", self)
         change_action.setShortcut(QKeySequence(Qt.Key.Key_F10))
         change_action.triggered.connect(self._import_bumpmap)
@@ -9006,136 +9532,70 @@ class BumpmapManagerWindow(QWidget): #vers 1
         return menu_bar
 
 
-    def _create_left_panel(self): #vers 1
-        """Create left panel with main texture info and preview"""
-        panel = QGroupBox("Main Texture")
-        layout = QVBoxLayout(panel)
+    def _apply_changes(self): #vers 3
+        """Apply changes and ensure parent workshop is fully updated"""
+        if not self.modified:
+            self.close()
+            return
 
-        # Texture info
-        info_layout = QFormLayout()
+        try:
+            # Mark parent as modified
+            if hasattr(self.parent_workshop, '_mark_as_modified'):
+                self.parent_workshop._mark_as_modified()
 
-        name_label = QLabel(self.texture_data.get('name', 'Unknown'))
-        name_label.setStyleSheet("font-weight: bold; font-size: 11pt;")
-        info_layout.addRow("Name:", name_label)
+            # Find and update the texture in parent's texture list
+            if hasattr(self.parent_workshop, 'texture_list'):
+                texture_name = self.texture_data.get('name', '')
+                for i, tex in enumerate(self.parent_workshop.texture_list):
+                    if tex.get('name') == texture_name:
+                        # Copy all bumpmap-related data back
+                        if 'bumpmap_data' in self.texture_data:
+                            tex['bumpmap_data'] = self.texture_data['bumpmap_data']
+                            tex['has_bumpmap'] = True
+                            tex['bumpmap_type'] = self.texture_data.get('bumpmap_type', 0)
+                            tex['raster_format_flags'] = self.texture_data.get('raster_format_flags', 0) | 0x10
+                        else:
+                            # Remove bumpmap if deleted
+                            if 'bumpmap_data' in tex:
+                                del tex['bumpmap_data']
+                            tex['has_bumpmap'] = False
+                            tex['raster_format_flags'] = self.texture_data.get('raster_format_flags', 0) & ~0x10
+                        break
 
-        width = self.texture_data.get('width', 0)
-        height = self.texture_data.get('height', 0)
-        size_label = QLabel(f"{width} × {height}")
-        info_layout.addRow("Size:", size_label)
+            # Update selected texture if it's the current one
+            if hasattr(self.parent_workshop, 'selected_texture'):
+                if self.parent_workshop.selected_texture and \
+                self.parent_workshop.selected_texture.get('name') == self.texture_data.get('name'):
 
-        fmt = self.texture_data.get('format', 'Unknown')
-        format_label = QLabel(fmt)
-        info_layout.addRow("Format:", format_label)
+                    # Copy bumpmap data to selected texture
+                    if 'bumpmap_data' in self.texture_data:
+                        self.parent_workshop.selected_texture['bumpmap_data'] = self.texture_data['bumpmap_data']
+                        self.parent_workshop.selected_texture['has_bumpmap'] = True
+                        self.parent_workshop.selected_texture['bumpmap_type'] = self.texture_data.get('bumpmap_type', 0)
+                        self.parent_workshop.selected_texture['raster_format_flags'] = \
+                            self.texture_data.get('raster_format_flags', 0) | 0x10
+                    else:
+                        if 'bumpmap_data' in self.parent_workshop.selected_texture:
+                            del self.parent_workshop.selected_texture['bumpmap_data']
+                        self.parent_workshop.selected_texture['has_bumpmap'] = False
+                        self.parent_workshop.selected_texture['raster_format_flags'] = \
+                            self.texture_data.get('raster_format_flags', 0) & ~0x10
 
-        layout.addLayout(info_layout)
+                    # Force UI update
+                    if hasattr(self.parent_workshop, '_update_texture_info'):
+                        self.parent_workshop._update_texture_info(self.parent_workshop.selected_texture)
 
-        # Main texture preview
-        preview_label = QLabel()
-        preview_label.setMinimumHeight(300)
-        preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        preview_label.setStyleSheet("border: 1px solid #3a3a3a; background: #1e1e1e;")
+            # Log message
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("✅ Bumpmap changes applied")
 
-        # Load texture preview
-        rgba_data = self.texture_data.get('rgba_data')
-        if rgba_data and width > 0:
-            image = QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
-            pixmap = QPixmap.fromImage(image)
-            preview_label.setPixmap(
-                pixmap.scaled(280, 280,
-                            Qt.AspectRatioMode.KeepAspectRatio,
-                            Qt.TransformationMode.SmoothTransformation)
-            )
-        else:
-            preview_label.setText("No texture data")
+            # Reset modified flag
+            self.modified = False
 
-        layout.addWidget(preview_label)
+            QMessageBox.information(self, "Success", "Changes applied to texture")
 
-        return panel
-
-    def _create_right_panel(self): #vers 1
-        """Create right panel with bumpmap preview and info"""
-        panel = QGroupBox("Bumpmap")
-        layout = QVBoxLayout(panel)
-
-        # Bumpmap status
-        has_bumpmap = self._has_bumpmap()
-        status_layout = QFormLayout()
-
-        status_label = QLabel("Present" if has_bumpmap else "Not present")
-        status_label.setStyleSheet(
-            "color: #4CAF50; font-weight: bold;" if has_bumpmap
-            else "color: #888; font-weight: bold;"
-        )
-        status_layout.addRow("Status:", status_label)
-
-        format_label = QLabel("Environment map (Normal map)")
-        status_layout.addRow("Type:", format_label)
-
-        layout.addLayout(status_layout)
-
-        # Bumpmap preview
-        self.bumpmap_preview = QLabel()
-        self.bumpmap_preview.setMinimumHeight(300)
-        self.bumpmap_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.bumpmap_preview.setStyleSheet("border: 1px solid #3a3a3a; background: #1e1e1e;")
-
-        # Load bumpmap preview if available
-        if has_bumpmap:
-            self._update_bumpmap_preview()
-        else:
-            self.bumpmap_preview.setText("No bumpmap data\n\nPress F9 or use Edit → Generate Bumpmap")
-
-        layout.addWidget(self.bumpmap_preview)
-
-        return panel
-
-    def _create_button_panel(self): #vers 2
-        """Create bottom button panel - FIXED: No duplicate Import/Export"""
-        panel = QFrame()
-        panel.setStyleSheet("background-color: #1e1e1e; border-top: 1px solid #3a3a3a;")
-        panel.setFixedHeight(60)
-
-        layout = QHBoxLayout(panel)
-        layout.setContentsMargins(10, 10, 10, 10)
-
-        # Add (Generate) button
-        add_btn = QPushButton("Add (Generate)")
-        add_btn.setIcon(self._create_add_icon())
-        add_btn.clicked.connect(self._generate_bumpmap)
-        add_btn.setToolTip("Generate bumpmap from texture (F9)")
-        layout.addWidget(add_btn)
-
-        # Delete button
-        delete_btn = QPushButton("Delete")
-        delete_btn.setIcon(self._create_delete_icon())
-        delete_btn.clicked.connect(self._delete_bumpmap)
-        delete_btn.setEnabled(self._has_bumpmap())
-        delete_btn.setToolTip("Remove bumpmap (F11)")
-        delete_btn.setStyleSheet("""
-            QPushButton:enabled {
-                background-color: #c42b1c;
-            }
-            QPushButton:enabled:hover {
-                background-color: #d43b2c;
-            }
-        """)
-        layout.addWidget(delete_btn)
-
-        layout.addStretch()
-
-        # Apply button
-        apply_btn = QPushButton("Apply")
-        apply_btn.clicked.connect(self._apply_changes)
-        apply_btn.setToolTip("Apply changes and keep window open")
-        layout.addWidget(apply_btn)
-
-        # Close button
-        close_btn = QPushButton("Close")
-        close_btn.clicked.connect(self.close)
-        close_btn.setMinimumWidth(100)
-        layout.addWidget(close_btn)
-
-        return panel
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to apply changes:\n{str(e)}")
 
 
     def _has_bumpmap(self): #vers 1
@@ -11969,6 +12429,8 @@ def open_txd_workshop(main_window, img_path=None): #vers 3
         QMessageBox.critical(main_window, "Error", f"Failed to open TXD Workshop: {str(e)}")
         return None
 
+
+
 if __name__ == "__main__":
     import sys
     import traceback
@@ -11995,3 +12457,4 @@ if __name__ == "__main__":
         print(f"ERROR: {e}")
         traceback.print_exc()
         sys.exit(1)
+
