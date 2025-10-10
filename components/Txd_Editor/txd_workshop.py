@@ -157,6 +157,14 @@ class TXDWorkshop(QWidget): #vers 3
         self.undo_stack = []
         self.button_display_mode = 'both'
 
+        # Set default font size to 12pt
+        default_font = QFont("Fira Sans Condensed", 14)
+        self.setFont(default_font)
+        self.title_font = QFont("Arial", 14)
+        self.panel_font = QFont("Arial", 10)
+        self.button_font = QFont("Arial", 10)
+        self.infobar_font = QFont("Courier New", 9)
+
         # Preview settings
         self.zoom_level = 1.0
         self.pan_offset = QPoint(0, 0)
@@ -164,6 +172,7 @@ class TXDWorkshop(QWidget): #vers 3
         self.background_mode = 'solid'
         self.placeholder_text = "No texture"
         self.setMinimumSize(200, 200)
+        self.info_bitdepth = QLabel("[32bit]")
 
         # Texture import/export settings
         self.dimension_limiting_enabled = False  # Power of 2 enforcement
@@ -211,10 +220,6 @@ class TXDWorkshop(QWidget): #vers 3
         self.resize(1400, 800)
         self.use_system_titlebar = False
         self.window_always_on_top = False
-
-        # Set default font size to 12pt
-        default_font = QFont("Fira Sans Condensed", 14)
-        self.setFont(default_font)
 
         self._initialize_features()
 
@@ -1075,11 +1080,11 @@ class TXDWorkshop(QWidget): #vers 3
         self.uncompress_btn.clicked.connect(self._uncompress_texture)
         self.uncompress_btn.setEnabled(False)
         info_layout.addWidget(self.uncompress_btn)
-
         info_layout.addSpacing(30)
 
         # --- Mipmap section ---
-        self.info_format = QLabel("Mipmaps: None")
+        self.info_format = QLabel("Mipmaps: ")
+        self.info_format.setFont(self.panel_font)
         self.info_format.setMinimumWidth(100)
         info_layout.addWidget(self.info_format)
 
@@ -1107,40 +1112,13 @@ class TXDWorkshop(QWidget): #vers 3
         self.remove_mipmaps_btn.setEnabled(False)
         info_layout.addWidget(self.remove_mipmaps_btn)
 
-        info_layout.addSpacing(30)
-
-        # --- Bumpmap section ---
-        self.info_format_b = QLabel("Bumpmaps:")
-        has_bumpmap = False
-
-        # Check if this version supports bumpmaps
-        if is_bumpmap_supported(self.txd_version_id, self.txd_device_id):
-            # Check for bumpmap format bits
-            if 'raster_format_flags' in texture:
-                flags = texture.get('raster_format_flags', 0)
-                if flags & 0x10:  # Bit 4 indicates environment/bumpmap
-                    has_bumpmap = True
-
-            # Also check for explicit bumpmap data
-            if 'bumpmap_data' in texture or texture.get('has_bumpmap', False):
-                has_bumpmap = True
-
-        # Update bumpmap UI - show status with color
-        if hasattr(self, 'info_format_b'):
-            if has_bumpmap:
-                self.info_format_b = QLabel("Bumpmaps: Present")
-                self.info_format_b.setText("Bumpmaps: Present")
-                self.info_format_b.setStyleSheet("color: #4CAF50;")  # Green
-            else:
-                self.info_format_b = QLabel("Bumpmaps: None")
-                self.info_format_b.setText("Bumpmaps: None")
-                self.info_format_b.setStyleSheet("color: #757575;")  # Gray
-
-
+        self.info_format_b = QLabel("Bumpmaps: ")
+        self.info_format_b.setFont(self.panel_font)
         self.info_format_b.setMinimumWidth(120)
         info_layout.addWidget(self.info_format_b)
 
         self.view_bumpmap_btn = QPushButton("Manage")
+        self.view_bumpmap_btn.setFont(self.button_font)
         self.view_bumpmap_btn.setIcon(self.create_manage_icon())
         self.view_bumpmap_btn.setIconSize(QSize(20, 20))
         self.view_bumpmap_btn.setToolTip("View and Manage bumpmaps")
@@ -1149,6 +1127,7 @@ class TXDWorkshop(QWidget): #vers 3
         info_layout.addWidget(self.view_bumpmap_btn)
 
         self.export_bumpmap_btn = QPushButton("Export")
+        self.export_bumpmap_btn.setFont(self.button_font)
         self.export_bumpmap_btn.setIcon(self._create_export_icon())
         self.export_bumpmap_btn.setIconSize(QSize(20, 20))
         self.export_bumpmap_btn.setToolTip("Export bumpmap as PNG")
@@ -1157,6 +1136,7 @@ class TXDWorkshop(QWidget): #vers 3
         info_layout.addWidget(self.export_bumpmap_btn)
 
         self.import_bumpmap_btn = QPushButton("Import")
+        self.import_bumpmap_btn.setFont(self.button_font)
         self.import_bumpmap_btn.setIcon(self._create_import_icon())
         self.import_bumpmap_btn.setIconSize(QSize(20, 20))
         self.import_bumpmap_btn.setToolTip("Import bumpmap from image")
@@ -1645,6 +1625,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Settings button
         self.settings_btn = QPushButton()
+        self.settings_btn.setFont(self.button_font)
         self.settings_btn.setIcon(self._create_settings_icon())
         self.settings_btn.setText("Settings")
         self.settings_btn.setIconSize(QSize(20, 20))
@@ -1657,18 +1638,21 @@ class TXDWorkshop(QWidget): #vers 3
         # Only show "Open IMG" button if NOT standalone
         if not self.standalone_mode:
             self.open_img_btn = QPushButton("OpenIMG")
+            self.open_img_btn.setFont(self.button_font)
             self.open_img_btn.setIcon(self._create_folder_icon())
             self.open_img_btn.setIconSize(QSize(20, 20))
             self.open_img_btn.clicked.connect(self.open_img_archive)
             layout.addWidget(self.open_img_btn)
 
         self.open_txd_btn = QPushButton("OpenTXD")
+        self.open_txd_btn.setFont(self.button_font)
         self.open_txd_btn.setIcon(self._create_file_icon())
         self.open_txd_btn.setIconSize(QSize(20, 20))
         self.open_txd_btn.clicked.connect(self.open_txd_file)
         layout.addWidget(self.open_txd_btn)
 
         self.save_txd_btn = QPushButton("SaveTXD")
+        self.save_txd_btn.setFont(self.button_font)
         self.save_txd_btn.setIcon(self._create_save_icon())
         self.save_txd_btn.setIconSize(QSize(20, 20))
         self.save_txd_btn.clicked.connect(self.save_txd_file)
@@ -1678,6 +1662,7 @@ class TXDWorkshop(QWidget): #vers 3
         layout.addSpacing(10)
 
         self.import_btn = QPushButton("Import")
+        self.import_btn.setFont(self.button_font)
         self.import_btn.setIcon(self._create_import_icon())
         self.import_btn.setIconSize(QSize(20, 20))
         self.import_btn.clicked.connect(self._import_textures)
@@ -1685,6 +1670,7 @@ class TXDWorkshop(QWidget): #vers 3
         layout.addWidget(self.import_btn)
 
         self.export_btn = QPushButton("Export")
+        self.export_btn.setFont(self.button_font)
         self.export_btn.setIcon(self._create_export_icon())
         self.export_btn.setIconSize(QSize(20, 20))
         self.export_btn.clicked.connect(self.export_selected_texture)
@@ -1692,6 +1678,7 @@ class TXDWorkshop(QWidget): #vers 3
         layout.addWidget(self.export_btn)
 
         self.export_all_btn = QPushButton("Export All")
+        self.export_all_btn.setFont(self.button_font)
         self.export_all_btn.setIcon(self._create_package_icon())
         self.export_all_btn.setIconSize(QSize(20, 20))
         self.export_all_btn.clicked.connect(self.export_all_textures)
@@ -1701,6 +1688,7 @@ class TXDWorkshop(QWidget): #vers 3
         layout.addSpacing(10)
 
         self.flip_btn = QPushButton("Switch")
+        self.flip_btn.setFont(self.button_font)
         self.flip_btn.setIcon(self._create_flip_vert_icon())
         self.flip_btn.setIconSize(QSize(20, 20))
         self.flip_btn.clicked.connect(self.flip_texture)
@@ -1709,6 +1697,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Properties button
         self.props_btn = QPushButton()
+        self.props_btn.setFont(self.button_font)
         self.props_btn.setIcon(self._create_properties_icon())
         self.props_btn.setText("Properties")
         self.props_btn.setIconSize(QSize(20, 20))
@@ -1718,6 +1707,7 @@ class TXDWorkshop(QWidget): #vers 3
         layout.addWidget(self.props_btn)
 
         self.undo_btn = QPushButton()
+        self.undo_btn.setFont(self.button_font)
         self.undo_btn.setIcon(self._create_undo_icon())
         self.undo_btn.setText("Undo")
         self.undo_btn.setIconSize(QSize(20, 20))
@@ -1728,6 +1718,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Info button
         self.info_btn = QPushButton()
+        self.info_btn.setFont(self.button_font)
         self.info_btn.setIcon(self._create_info_icon())
         self.info_btn.setText("Info")
         self.info_btn.setIconSize(QSize(20, 20))
@@ -1740,6 +1731,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Drag button [D]
         self.dock_btn = QPushButton("D")
+        #self.dock_btn.setFont(self.button_font)
         self.dock_btn.setMinimumWidth(40)
         self.dock_btn.setMaximumWidth(40)
         self.dock_btn.setMinimumHeight(30)
@@ -1761,6 +1753,7 @@ class TXDWorkshop(QWidget): #vers 3
         # Tear-off button [T] - only in IMG Factory mode
         if not self.standalone_mode:
             self.tearoff_btn = QPushButton("T")
+            #self.tearoff_btn.setFont(self.button_font)
             self.tearoff_btn.setMinimumWidth(40)
             self.tearoff_btn.setMaximumWidth(40)
             self.tearoff_btn.setMinimumHeight(30)
@@ -2011,6 +2004,7 @@ class TXDWorkshop(QWidget): #vers 3
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.StyledPanel)
         panel.setMinimumWidth(400)
+        has_bumpmap = False
 
         main_layout = QVBoxLayout(panel)
         main_layout.setContentsMargins(5, 5, 5, 5)
@@ -2033,6 +2027,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Information group below
         info_group = QGroupBox("")
+        info_group.setFont(self.title_font)
         info_layout = QVBoxLayout(info_group)
         info_group.setMaximumHeight(140)
 
@@ -2040,23 +2035,28 @@ class TXDWorkshop(QWidget): #vers 3
         name_layout = QHBoxLayout()
 
         name_label = QLabel("Name:")
+        name_label.setFont(self.panel_font)
         name_layout.addWidget(name_label)
 
         self.info_name = QLineEdit()
+
         self.info_name.setPlaceholderText("Click to edit...")
+        self.info_name.setFont(self.panel_font)
         self.info_name.setReadOnly(True)
-        self.info_name.setStyleSheet("padding: 5px; border: 1px solid #3a3a3a;")
+        self.info_name.setStyleSheet("padding: px; border: 1px solid #3a3a3a;")
         self.info_name.returnPressed.connect(self._save_texture_name)
         self.info_name.editingFinished.connect(self._save_texture_name)
         self.info_name.mousePressEvent = lambda e: self._enable_name_edit(e, False)
         name_layout.addWidget(self.info_name, stretch=1)
 
         self.alpha_label = QLabel("Alpha:")
-        self.alpha_label.setStyleSheet("color: red; margin-left: 10px;")
+        self.alpha_label.setFont(self.panel_font)
+        self.alpha_label.setStyleSheet("color: red;")
         self.alpha_label.setVisible(False)
         name_layout.addWidget(self.alpha_label)
 
         self.info_alpha_name = QLineEdit()
+        self.info_alpha_name.setFont(self.panel_font)
         self.info_alpha_name.setPlaceholderText("Click to edit...")
         self.info_alpha_name.setReadOnly(True)
         self.info_alpha_name.setStyleSheet("color: red; padding: 5px; border: 1px solid #3a3a3a;")
@@ -2080,12 +2080,14 @@ class TXDWorkshop(QWidget): #vers 3
             format_layout.setSpacing(5)
 
             self.format_combo = QComboBox()
+            self.format_combo.setFont(self.panel_font)
             self.format_combo.addItems(["DXT1", "DXT3", "DXT5", "ARGB8888", "ARGB1555", "ARGB4444", "RGB888", "RGB565"])
             self.format_combo.currentTextChanged.connect(self._change_format)
             self.format_combo.setEnabled(False)
             self.format_combo.setMaximumWidth(100)
             format_layout.addWidget(self.format_combo)
 
+            self.info_bitdepth.setFont(self.panel_font)
             self.info_bitdepth = QLabel("[32bit]")
             self.info_bitdepth.setMinimumWidth(50)
             format_layout.addWidget(self.info_bitdepth)
@@ -2094,6 +2096,7 @@ class TXDWorkshop(QWidget): #vers 3
 
             # Convert
             self.convert_btn = QPushButton("Convert")
+            self.convert_btn.setFont(self.button_font)
             self.convert_btn.setIcon(self._create_convert_icon())
             self.convert_btn.setIconSize(QSize(20, 20))
             self.convert_btn.setToolTip("Convert texture format")
@@ -2105,11 +2108,13 @@ class TXDWorkshop(QWidget): #vers 3
             mipbump_layout = QHBoxLayout()
             mipbump_layout.setSpacing(5)
 
-            self.info_format = QLabel("Mipmaps: None")
+            self.info_format = QLabel("Mipmaps: ")
+            self.info_format.setFont(self.panel_font)
             self.info_format.setMinimumWidth(100)
             mipbump_layout.addWidget(self.info_format)
 
             self.show_mipmaps_btn = QPushButton("View")
+            self.show_mipmaps_btn.setFont(self.button_font)
             self.show_mipmaps_btn.setIcon(self._create_view_icon())
             self.show_mipmaps_btn.setIconSize(QSize(20, 20))
             self.show_mipmaps_btn.setToolTip("View all mipmap levels")
@@ -2118,6 +2123,7 @@ class TXDWorkshop(QWidget): #vers 3
             mipbump_layout.addWidget(self.show_mipmaps_btn)
 
             self.create_mipmaps_btn = QPushButton("Create")
+            self.create_mipmaps_btn.setFont(self.button_font)
             self.create_mipmaps_btn.setIcon(self._create_add_icon())
             self.create_mipmaps_btn.setIconSize(QSize(20, 20))
             self.create_mipmaps_btn.setToolTip("Generate mipmaps")
@@ -2126,6 +2132,7 @@ class TXDWorkshop(QWidget): #vers 3
             mipbump_layout.addWidget(self.create_mipmaps_btn)
 
             self.remove_mipmaps_btn = QPushButton("Remove")
+            self.remove_mipmaps_btn.setFont(self.button_font)
             self.remove_mipmaps_btn.setIcon(self._create_delete_icon())
             self.remove_mipmaps_btn.setIconSize(QSize(20, 20))
             self.remove_mipmaps_btn.setToolTip("Remove all mipmaps")
@@ -2137,7 +2144,10 @@ class TXDWorkshop(QWidget): #vers 3
 
             # Bumpmap detection
             self.info_format_b = QLabel("Bumpmaps:")
-            has_bumpmap = False
+            self.info_format_b.setFont(self.panel_font)
+            self.info_format_b.setMinimumWidth(120)
+            mipbump_layout.addWidget(self.info_format_b)
+
 
             # Check if this version supports bumpmaps
             if is_bumpmap_supported(self.txd_version_id, self.txd_device_id):
@@ -2162,12 +2172,10 @@ class TXDWorkshop(QWidget): #vers 3
                 self.info_format_b.setText("Bumpmaps: None")
                 self.info_format_b.setStyleSheet("color: #757575;")  # Gray
 
-            self.info_format_b.setMinimumWidth(120)
-            mipbump_layout.addWidget(self.info_format_b)
-
             view_layout = QHBoxLayout()
             view_layout.setSpacing(5)
             self.view_bumpmap_btn = QPushButton("Manage")
+            self.view_bumpmap_btn.setFont(self.button_font)
             self.view_bumpmap_btn.setIcon(self._create_manage_icon())
             self.view_bumpmap_btn.setIconSize(QSize(20, 20))
             self.view_bumpmap_btn.setToolTip("View and Manage Bumpmaps")
@@ -2176,6 +2184,7 @@ class TXDWorkshop(QWidget): #vers 3
             mipbump_layout.addWidget(self.view_bumpmap_btn)
 
             self.export_bumpmap_btn = QPushButton("Export")
+            self.export_bumpmap_btn.setFont(self.button_font)
             self.export_bumpmap_btn.setIcon(self._create_export_icon())
             self.export_bumpmap_btn.setIconSize(QSize(20, 20))
             self.export_bumpmap_btn.setToolTip("Export bumpmap as PNG")
@@ -2184,6 +2193,7 @@ class TXDWorkshop(QWidget): #vers 3
             mipbump_layout.addWidget(self.export_bumpmap_btn)
 
             self.import_bumpmap_btn = QPushButton("Import")
+            self.import_bumpmap_btn.setFont(self.button_font)
             self.import_bumpmap_btn.setIcon(self._create_import_icon())
             self.import_bumpmap_btn.setIconSize(QSize(20, 20))
             self.import_bumpmap_btn.setToolTip("Import bumpmap from image")
@@ -2192,6 +2202,7 @@ class TXDWorkshop(QWidget): #vers 3
             mipbump_layout.addWidget(self.import_bumpmap_btn)
 
             self.bitdepth_btn = QPushButton("Bit Depth")
+            self.bitdepth_btn.setFont(self.button_font)
             self.bitdepth_btn.setIcon(self._create_bitdepth_icon())
             self.bitdepth_btn.setIconSize(QSize(20, 20))
             self.bitdepth_btn.setToolTip("Change bit depth")
@@ -2200,6 +2211,7 @@ class TXDWorkshop(QWidget): #vers 3
             format_layout.addWidget(self.bitdepth_btn)
 
             self.upscale_btn = QPushButton("AI Upscale")
+            self.upscale_btn.setFont(self.button_font)
             self.upscale_btn.setIcon(self._create_upscale_icon())
             self.upscale_btn.setIconSize(QSize(20, 20))
             self.upscale_btn.setToolTip("AI upscale texture")
@@ -2208,6 +2220,7 @@ class TXDWorkshop(QWidget): #vers 3
             format_layout.addWidget(self.upscale_btn)
 
             self.compress_btn = QPushButton("Compress")
+            self.compress_btn.setFont(self.button_font)
             self.compress_btn.setIcon(self._create_compress_icon())
             self.compress_btn.setIconSize(QSize(20, 20))
             self.compress_btn.setToolTip("Compress texture")
@@ -2216,6 +2229,7 @@ class TXDWorkshop(QWidget): #vers 3
             format_layout.addWidget(self.compress_btn)
 
             self.uncompress_btn = QPushButton("Uncompress")
+            self.uncompress_btn.setFont(self.button_font)
             self.uncompress_btn.setIcon(self._create_uncompress_icon())
             self.uncompress_btn.setIconSize(QSize(20, 20))
             self.uncompress_btn.setToolTip("Uncompress texture")
@@ -3648,17 +3662,46 @@ class TXDWorkshop(QWidget): #vers 3
         font_group = QGroupBox("Font Settings")
         font_layout = QFormLayout()
 
-        # Font family
-        self.settings_font_combo = QFontComboBox()
-        current_font = self.font()
-        self.settings_font_combo.setCurrentFont(current_font)
-        font_layout.addRow("Font Family:", self.settings_font_combo)
+        # Title bar font
+        self.title_font_combo = QFontComboBox()
+        self.title_font_combo.setCurrentFont(self.font())
+        font_layout.addRow("Title Bar Font:", self.title_font_combo)
 
-        # Font size
-        self.settings_font_size = QSpinBox()
-        self.settings_font_size.setRange(8, 24)
-        self.settings_font_size.setValue(current_font.pointSize())
-        font_layout.addRow("Font Size:", self.settings_font_size)
+        self.title_font_size = QSpinBox()
+        self.title_font_size.setRange(8, 24)
+        self.title_font_size.setValue(14)
+        font_layout.addRow("Title Size:", self.title_font_size)
+
+        # Panel labels font
+        self.panel_font_combo = QFontComboBox()
+        self.panel_font_combo.setCurrentFont(self.font())
+        font_layout.addRow("Panel Font:", self.panel_font_combo)
+
+        self.panel_font_size = QSpinBox()
+        self.panel_font_size.setRange(8, 24)
+        self.panel_font_size.setValue(10)
+        font_layout.addRow("Panel Size:", self.panel_font_size)
+
+        # Button font
+        self.button_font_combo = QFontComboBox()
+        self.button_font_combo.setCurrentFont(self.font())
+        font_layout.addRow("Button Font:", self.button_font_combo)
+
+        self.button_font_size = QSpinBox()
+        self.button_font_size.setRange(8, 24)
+        self.button_font_size.setValue(10)
+        font_layout.addRow("Button Size:", self.button_font_size)
+
+        # Info bar font (fixed-width)
+        self.infobar_font_combo = QFontComboBox()
+        self.infobar_font_combo.setFontFilters(QFontComboBox.FontFilter.MonospacedFonts)
+        self.infobar_font_combo.setCurrentFont(QFont("Courier New"))
+        font_layout.addRow("Info Bar Font:", self.infobar_font_combo)
+
+        self.infobar_font_size = QSpinBox()
+        self.infobar_font_size.setRange(8, 16)
+        self.infobar_font_size.setValue(9)
+        font_layout.addRow("Info Bar Size:", self.infobar_font_size)
 
         font_group.setLayout(font_layout)
         appearance_layout.addWidget(font_group)
@@ -3775,15 +3818,17 @@ class TXDWorkshop(QWidget): #vers 3
         """Apply settings from dialog"""
         from PyQt6.QtGui import QFont
 
-        # Apply font settings
-        font_family = self.settings_font_combo.currentFont().family()
-        font_size = self.settings_font_size.value()
-        new_font = QFont(font_family, font_size)
-        self.setFont(new_font)
+        # Store font settings
+        self.title_font = QFont(self.title_font_combo.currentFont().family(), self.title_font_size.value())
+        self.panel_font = QFont(self.panel_font_combo.currentFont().family(), self.panel_font_size.value())
+        self.button_font = QFont(self.button_font_combo.currentFont().family(), self.button_font_size.value())
+        self.infobar_font = QFont(self.infobar_font_combo.currentFont().family(), self.infobar_font_size.value())
 
-        # Apply to all child widgets
-        for widget in self.findChildren(QWidget):
-            widget.setFont(new_font)
+        # Apply fonts to specific elements
+        self._apply_title_font()
+        self._apply_panel_font()
+        self._apply_button_font()
+        self._apply_infobar_font()
 
         # Apply button display mode
         mode_map = ["icons", "text", "both"]
@@ -3850,6 +3895,37 @@ class TXDWorkshop(QWidget): #vers 3
 
         return panel
 
+
+    def _apply_title_font(self): #vers 1
+        """Apply title font to title bar labels"""
+        if hasattr(self, 'title_font'):
+            # Find all title labels
+            for label in self.findChildren(QLabel):
+                if label.objectName() == "title_label" or "🗺️" in label.text():
+                    label.setFont(self.title_font)
+
+
+    def _apply_panel_font(self): #vers 1
+        """Apply panel font to info panels and labels"""
+        if hasattr(self, 'panel_font'):
+            # Apply to info labels (Mipmaps, Bumpmaps, status labels)
+            for label in self.findChildren(QLabel):
+                if any(x in label.text() for x in ["Mipmaps:", "Bumpmaps:", "Status:", "Type:", "Format:"]):
+                    label.setFont(self.panel_font)
+
+
+    def _apply_button_font(self): #vers 1
+        """Apply button font to all buttons"""
+        if hasattr(self, 'button_font'):
+            for button in self.findChildren(QPushButton):
+                button.setFont(self.button_font)
+
+
+    def _apply_infobar_font(self): #vers 1
+        """Apply fixed-width font to info bar at bottom"""
+        if hasattr(self, 'infobar_font'):
+            if hasattr(self, 'info_bar'):
+                self.info_bar.setFont(self.infobar_font)
 
     def _load_img_txd_list(self): #vers 2
         """Load TXD files from IMG archive"""
@@ -6635,6 +6711,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Flip Vertical
         self.flip_vert_btn = QPushButton()
+        self.flip_vert_btn.setFont(self.button_font)
         self.flip_vert_btn.setIcon(self._create_flip_vert_icon())
         self.flip_vert_btn.setText("Flip Vertical")
         self.flip_vert_btn.setIconSize(QSize(20, 20))
@@ -6647,6 +6724,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Flip Horizontal
         self.flip_horz_btn = QPushButton()
+        self.flip_horz_btn.setFont(self.button_font)
         self.flip_horz_btn.setIcon(self._create_flip_horz_icon())
         self.flip_horz_btn.setText("Flip Horizontal")
         self.flip_horz_btn.setIconSize(QSize(20, 20))
@@ -6661,6 +6739,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Rotate Clockwise
         self.rotate_cw_btn = QPushButton()
+        self.rotate_cw_btn.setFont(self.button_font)
         self.rotate_cw_btn.setIcon(self._create_rotate_cw_icon())
         self.rotate_cw_btn.setText("Rotate 90° CW")
         self.rotate_cw_btn.setIconSize(QSize(20, 20))
@@ -6673,6 +6752,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Rotate Counter-Clockwise
         self.rotate_ccw_btn = QPushButton()
+        self.rotate_ccw_btn.setFont(self.button_font)
         self.rotate_ccw_btn.setIcon(self._create_rotate_ccw_icon())
         self.rotate_ccw_btn.setText("Rotate 90° CCW")
         self.rotate_ccw_btn.setIconSize(QSize(20, 20))
@@ -6687,6 +6767,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Copy
         self.copy_btn = QPushButton()
+        self.copy_btn.setFont(self.button_font)
         self.copy_btn.setIcon(self._create_copy_icon())
         self.copy_btn.setText("Copy")
         self.copy_btn.setIconSize(QSize(20, 20))
@@ -6699,6 +6780,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Paste
         self.paste_btn = QPushButton()
+        self.paste_btn.setFont(self.button_font)
         self.paste_btn.setIcon(self._create_paste_icon())
         self.paste_btn.setText("Paste")
         self.paste_btn.setIconSize(QSize(20, 20))
@@ -6710,6 +6792,7 @@ class TXDWorkshop(QWidget): #vers 3
         layout.addWidget(self.paste_btn)
 
         self.paint_btn = QPushButton()
+        self.paint_btn.setFont(self.button_font)
         self.paint_btn.setIcon(self._create_paint_icon())
         self.paint_btn.setText("Paint")
         self.paint_btn.setIconSize(QSize(20, 20))
@@ -6724,6 +6807,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Check TXD vs DFF
         self.check_dff_btn = QPushButton()
+        self.check_dff_btn.setFont(self.button_font)
         self.check_dff_btn.setIcon(self._create_check_icon())
         self.check_dff_btn.setText("Check DFF")
         self.check_dff_btn.setIconSize(QSize(20, 20))
@@ -6734,6 +6818,7 @@ class TXDWorkshop(QWidget): #vers 3
         layout.addWidget(self.check_dff_btn)
 
         self.build_from_dff_btn = QPushButton()
+        self.build_from_dff_btn.setFont(self.button_font)
         self.build_from_dff_btn.setIcon(self._create_build_icon())
         self.build_from_dff_btn.setText("Build TXD via")
         self.build_from_dff_btn.setIconSize(QSize(20, 20))
@@ -6745,6 +6830,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Create Texture
         self.create_texture_btn = QPushButton()
+        self.create_texture_btn.setFont(self.button_font)
         self.create_texture_btn.setIcon(self._create_create_icon())
         self.create_texture_btn.setText("Create")
         self.create_texture_btn.setIconSize(QSize(20, 20))
@@ -6756,6 +6842,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Delete Texture
         self.delete_texture_btn = QPushButton()
+        self.delete_texture_btn.setFont(self.button_font)
         self.delete_texture_btn.setIcon(self._create_delete_icon())
         self.delete_texture_btn.setText("Delete")
         self.delete_texture_btn.setIconSize(QSize(20, 20))
@@ -6768,6 +6855,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Duplicate Texture
         self.duplicate_texture_btn = QPushButton()
+        self.duplicate_texture_btn.setFont(self.button_font)
         self.duplicate_texture_btn.setIcon(self._create_duplicate_icon())
         self.duplicate_texture_btn.setText("Duplicate")
         self.duplicate_texture_btn.setIconSize(QSize(20, 20))
@@ -6782,6 +6870,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Filters
         self.filters_btn = QPushButton()
+        self.filters_btn.setFont(self.button_font)
         self.filters_btn.setIcon(self._create_filter_icon())
         self.filters_btn.setText("Filters")
         self.filters_btn.setIconSize(QSize(20, 20))
@@ -7304,7 +7393,7 @@ class TXDWorkshop(QWidget): #vers 3
             self._mark_as_modified()
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"✅ Rotated 90° CCW: now {rotated.width()}x{rotated.height()}")
+                self.main_window.log_message(f"Rotated 90° CCW: now {rotated.width()}x{rotated.height()}")
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to rotate: {str(e)}")
@@ -9336,15 +9425,17 @@ class BumpmapManagerWindow(QWidget): #vers 1
         # Status
         has_bumpmap = self._has_bumpmap()
         status_label = QLabel(f"Status: {'Present' if has_bumpmap else 'Not present'}")
+        status_label.setFont(self.panel_font)
         status_label.setStyleSheet(
-            "font-size: 14pt; line-height: 1.4; color: #4CAF50;" if has_bumpmap
-            else "font-size: 14pt; line-height: 1.4; color: #888;"
+        "line-height: 1.4; color: #4CAF50;" if has_bumpmap
+        else "line-height: 1.4; color: #888;"
         )
         info_layout.addWidget(status_label)
 
         # Type
         type_label = QLabel("Type: Environment map (Normal map)")
-        type_label.setStyleSheet("font-size: 14pt; line-height: 1.4;")
+        type_label.setFont(self.panel_font)
+        type_label.setStyleSheet("line-height: 1.4;")
         info_layout.addWidget(type_label)
 
         info_layout.addStretch()
@@ -9355,7 +9446,8 @@ class BumpmapManagerWindow(QWidget): #vers 1
         self.bumpmap_preview = QLabel()
         self.bumpmap_preview.setMinimumHeight(250)
         self.bumpmap_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.bumpmap_preview.setStyleSheet("border: 1px solid #3a3a3a; font-size: 14px; background: #1e1e1e;")
+        self.bumpmap_preview.setFont(self.panel_font)
+        self.bumpmap_preview.setStyleSheet("border: 1px solid #3a3a3a; background: #1e1e1e;")
 
         # Load bumpmap preview if available
         if has_bumpmap:
@@ -9390,7 +9482,9 @@ class BumpmapManagerWindow(QWidget): #vers 1
 
         # Title in center
         title_label = QLabel(f"🗺️ {self.texture_data.get('name', 'Unknown')}")
-        title_label.setStyleSheet("color: #e0e0e0; font-weight: bold; font-size: 14pt;")
+        title_label.setObjectName("title_label")
+        title_label.setFont(self.panel_font)
+        title_label.setStyleSheet("color: #e0e0e0; font-weight: bold;")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label, stretch=1)
 
@@ -9403,18 +9497,19 @@ class BumpmapManagerWindow(QWidget): #vers 1
         add_btn.setFixedSize(button_width, button_height)
         add_btn.clicked.connect(self._generate_bumpmap)
         add_btn.setToolTip("Generate bumpmap (F9)")
+        add_btn.setFont(self.button_font)
         add_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3a3a3a;
                 color: #e0e0e0;
                 border: 1px solid #4a4a4a;
                 border-radius: 1px;
-                font-size: 14px;
             }
             QPushButton:hover {
                 background-color: #4a4a4a;
             }
         """)
+
         layout.addWidget(add_btn)
 
         # Delete button
@@ -9423,21 +9518,13 @@ class BumpmapManagerWindow(QWidget): #vers 1
         delete_btn.clicked.connect(self._delete_bumpmap)
         delete_btn.setEnabled(self._has_bumpmap())
         delete_btn.setToolTip("Remove bumpmap (F11)")
+        delete_btn.setFont(self.button_font)
         delete_btn.setStyleSheet("""
             QPushButton {
                 background-color: #c42b1c;
                 color: #e0e0e0;
                 border: 1px solid #d43b2c;
                 border-radius: 1px;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #d43b2c;
-            }
-            QPushButton:disabled {
-                background-color: #3a3a3a;
-                color: #666;
-                border: 1px solid #4a4a4a;
             }
         """)
         layout.addWidget(delete_btn)
