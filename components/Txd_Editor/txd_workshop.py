@@ -2040,7 +2040,6 @@ class TXDWorkshop(QWidget): #vers 3
         name_layout = QHBoxLayout()
 
         name_label = QLabel("Name:")
-        name_label.setStyleSheet("font-weight: bold;")
         name_layout.addWidget(name_label)
 
         self.info_name = QLineEdit()
@@ -2053,7 +2052,7 @@ class TXDWorkshop(QWidget): #vers 3
         name_layout.addWidget(self.info_name, stretch=1)
 
         self.alpha_label = QLabel("Alpha:")
-        self.alpha_label.setStyleSheet("font-weight: bold; color: red; margin-left: 10px;")
+        self.alpha_label.setStyleSheet("color: red; margin-left: 10px;")
         self.alpha_label.setVisible(False)
         name_layout.addWidget(self.alpha_label)
 
@@ -2152,7 +2151,7 @@ class TXDWorkshop(QWidget): #vers 3
                 if 'bumpmap_data' in texture or texture.get('has_bumpmap', False):
                     has_bumpmap = True
 
-            # Update bumpmap UI - show status with color
+        # Update bumpmap UI - show status with color
         if hasattr(self, 'info_format_b'):
             if has_bumpmap:
                 self.info_format_b = QLabel("Bumpmaps: Present")
@@ -2484,7 +2483,7 @@ class TXDWorkshop(QWidget): #vers 3
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to generate bumpmap:\n{str(e)}")
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Bumpmap generation error: {str(e)}")
+                self.main_window.log_message(f"Bumpmap generation error: {str(e)}")
 
 
     def _create_bumpmap_data(self, rgba_data, width, height, bumpmap_type, method, strength, smooth, invert): #vers 2
@@ -2841,7 +2840,7 @@ class TXDWorkshop(QWidget): #vers 3
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(
-                    f"🗑️ Deleted bumpmap from: {self.selected_texture.get('name', 'texture')}"
+                    f"Deleted bumpmap from: {self.selected_texture.get('name', 'texture')}"
                 )
 
 
@@ -2869,10 +2868,10 @@ class TXDWorkshop(QWidget): #vers 3
             return
 
         menu = QMenu(self)
-        export_action = menu.addAction("📤 Export All Levels")
+        export_action = menu.addAction("Export All Levels")
         export_action.triggered.connect(self._export_all_levels)
 
-        import_action = menu.addAction("📥 Import All Levels")
+        import_action = menu.addAction("Import All Levels")
         import_action.triggered.connect(self._import_all_levels)
 
         menu.exec(self.mipmap_io_btn.mapToGlobal(self.mipmap_io_btn.rect().bottomLeft()))
@@ -3056,7 +3055,7 @@ class TXDWorkshop(QWidget): #vers 3
         generate_btn.setToolTip("Generate bumpmap from texture")
         button_layout.addWidget(generate_btn)
 
-        # Import button
+        # Import buttonraster_format_flags
         import_btn = QPushButton("Import")
         import_btn.setIcon(self._create_import_icon())
         import_btn.clicked.connect(lambda: self._import_bumpmap_in_manager(dialog))
@@ -3387,7 +3386,7 @@ class TXDWorkshop(QWidget): #vers 3
                 self.selected_texture['rgba_data'] = bytes(blank_rgba)
 
                 if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"ℹ️ Created blank texture {tex_width}x{tex_height} for alpha import")
+                    self.main_window.log_message(f"Created blank texture {tex_width}x{tex_height} for alpha import")
 
             # Check dimensions match
             if img.width() != tex_width or img.height() != tex_height:
@@ -3556,6 +3555,15 @@ class TXDWorkshop(QWidget): #vers 3
         #self.resize_texture_btn.setEnabled(False)
         controls_layout.addWidget(self.resize_texture_btn)
 
+        # Checkerboard pattern button
+        bg_checker_btn = QPushButton()
+        bg_checker_btn.setIcon(self._create_checkerboard_icon())
+        bg_checker_btn.setIconSize(QSize(20, 20))
+        bg_checker_btn.setFixedSize(40, 40)
+        bg_checker_btn.setToolTip("Checkerboard Pattern")
+        bg_checker_btn.clicked.connect(lambda: self.preview_widget.set_checkerboard_background())
+        controls_layout.addWidget(bg_checker_btn)
+
         controls_layout.addSpacing(10)
 
         # Background colors
@@ -3579,15 +3587,6 @@ class TXDWorkshop(QWidget): #vers 3
         bg_white_btn.setToolTip("White Background")
         bg_white_btn.clicked.connect(lambda: self.preview_widget.set_background_color(QColor(255, 255, 255)))
         controls_layout.addWidget(bg_white_btn)
-
-        # Checkerboard pattern button
-        bg_checker_btn = QPushButton()
-        bg_checker_btn.setIcon(self._create_checkerboard_icon())
-        bg_checker_btn.setIconSize(QSize(20, 20))
-        bg_checker_btn.setFixedSize(40, 40)
-        bg_checker_btn.setToolTip("Checkerboard Pattern")
-        bg_checker_btn.clicked.connect(lambda: self.preview_widget.set_checkerboard_background())
-        controls_layout.addWidget(bg_checker_btn)
 
         controls_layout.addStretch()
 
@@ -3841,7 +3840,7 @@ class TXDWorkshop(QWidget): #vers 3
         layout.setContentsMargins(5, 5, 5, 5)
 
         header = QLabel("TXD Files")
-        header.setFont(QFont("Arial", 10, QFont.Weight.Bold))
+        lheader.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         layout.addWidget(header)
 
         self.txd_list_widget = QListWidget()
@@ -3918,7 +3917,24 @@ class TXDWorkshop(QWidget): #vers 3
         else:
             # Gray with full opaque alpha (255)
             return bytes([128, 128, 128, 255] * (width * height))
-
+        panel.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                font-size: 14px;
+                border: 1px solid #3a3a3a;
+                border-radius: 1px;
+                margin-top: 10px;
+                padding-top: 10px;
+                background-color: #2b2b2b;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top right;
+                right: 20px;
+                padding: 0 5px;
+                color: #e0e0e0;
+            }
+        """)
 
     def _create_empty_txd_data(self): #vers 1
         """Create minimal empty TXD structure"""
@@ -7691,7 +7707,7 @@ class TXDWorkshop(QWidget): #vers 3
             except Exception as e:
                 failed_count += 1
                 if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"❌ Import failed: {os.path.basename(file_path)} - {str(e)}")
+                    self.main_window.log_message(f"Import failed: {os.path.basename(file_path)} - {str(e)}")
 
         # Reload display
         if imported_count > 0:
@@ -7701,9 +7717,9 @@ class TXDWorkshop(QWidget): #vers 3
         # Report results
         if self.main_window and hasattr(self.main_window, 'log_message'):
             if imported_count > 0:
-                self.main_window.log_message(f"✅ Imported {imported_count} texture(s)")
+                self.main_window.log_message(f"Imported {imported_count} texture(s)")
             if failed_count > 0:
-                self.main_window.log_message(f"⚠️ Failed to import {failed_count} texture(s)")
+                self.main_window.log_message(f"Failed to import {failed_count} texture(s)")
 
 
     def _import_single_texture(self, file_path): #vers 3
@@ -7716,12 +7732,12 @@ class TXDWorkshop(QWidget): #vers 3
             if len(name_only) > self.max_texture_name_length:
                 name_only = name_only[:self.max_texture_name_length]
                 if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"⚠️ Texture name truncated to {self.max_texture_name_length} chars")
+                    self.main_window.log_message(f"Texture name truncated to {self.max_texture_name_length} chars")
 
         valid, msg = self._validate_texture_name(name_only)
         if not valid:
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Invalid name: {msg}")
+                self.main_window.log_message(f"Invalid name: {msg}")
             return False
 
         # Try indexed color formats first
@@ -7729,18 +7745,18 @@ class TXDWorkshop(QWidget): #vers 3
 
         if is_indexed_format(file_path):
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"📥 Loading indexed format: {filename}")
+                self.main_window.log_message(f"Loading indexed format: {filename}")
 
             texture_data = load_indexed_image(file_path)
 
         elif is_iff_file(file_path):
             if not self.iff_import_enabled:
                 if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"⚠️ IFF import disabled: {filename}")
+                    self.main_window.log_message(f"IFF import disabled: {filename}")
                 return False
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"📥 Loading IFF format: {filename}")
+                self.main_window.log_message(f"Loading IFF format: {filename}")
 
             texture_data = load_iff_image(file_path)
 
@@ -7779,7 +7795,7 @@ class TXDWorkshop(QWidget): #vers 3
         if self.main_window and hasattr(self.main_window, 'log_message'):
             format_str = texture_data.get('original_format', 'Unknown')
             self.main_window.log_message(
-                f"✅ Imported: {name_only} ({width}x{height}, {format_str})"
+                f"Imported: {name_only} ({width}x{height}, {format_str})"
             )
 
         return True
@@ -7860,7 +7876,7 @@ class TXDWorkshop(QWidget): #vers 3
             print(f"Copy these from methods/ to: {depends_dir}")
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"⚠️ Missing import modules: {', '.join(missing)}")
+                self.main_window.log_message(f" Missing import modules: {', '.join(missing)}")
 
 
     def _get_import_format_info(self): #vers 1
@@ -9211,7 +9227,6 @@ class BumpmapManagerWindow(QWidget): #vers 1
         # Style to move title to the right
         panel.setStyleSheet("""
             QGroupBox {
-                font-weight: bold;
                 font-size: 14px;
                 border: 1px solid #3a3a3a;
                 border-radius: 1px;
