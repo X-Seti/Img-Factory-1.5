@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-#this belongs in components/Txd_Editor/ txd_serializer.py - Version: 1
-# X-Seti - October04 2025 - Img Factory 1.5 - TXD Serializer
+#this belongs in components/Txd_Editor/depends/ txd_serializer.py - Version: 2
+#this belongs in methods/ txd_serializer.py - Version: 2
+# X-Seti - October10 2025 - Img Factory 1.5 - TXD Serializer
 
 """
 RenderWare TXD Binary Serializer
 Writes texture dictionary files in RenderWare binary format
-Supports: DXT1/DXT3/DXT5, ARGB8888, RGB888, mipmaps
+Supports: DXT1/DXT3/DXT5, ARGB8888, RGB888, mipmaps, bumpmaps, reflection maps
 """
 
 import struct
@@ -31,8 +32,16 @@ class TXDSerializer:
     def __init__(self):
         self.output = bytearray()
     
-    def serialize_txd(self, textures: List[Dict]) -> bytes:
-        """Serialize texture list to TXD binary data"""
+    def serialize_txd(self, textures: List[Dict], target_version: int = None, 
+                     target_device: int = None) -> bytes:
+        """
+        Serialize texture list to TXD binary data
+        
+        Args:
+            textures: List of texture dictionaries
+            target_version: Target RenderWare version (optional)
+            target_device: Target platform device (optional)
+        """
         if not textures:
             return b''
         
@@ -88,8 +97,8 @@ class TXDSerializer:
         
         return result
     
-    def _build_texture_native(self, texture: Dict) -> bytearray:
-        """Build texture native section"""
+    def _build_texture_native(self, texture: Dict) -> bytearray: #vers 2
+        """Build texture native section with bumpmap and reflection support"""
         result = bytearray()
         
         # Get texture properties
@@ -102,6 +111,13 @@ class TXDSerializer:
         mipmap_levels = texture.get('mipmap_levels', [])
         name = texture.get('name', 'texture')
         alpha_name = texture.get('alpha_name', name + 'a') if has_alpha else ''
+        
+        # NEW: Get bumpmap and reflection data
+        bumpmap_data = texture.get('bumpmap_data', b'')
+        has_bumpmap = texture.get('has_bumpmap', False) or bool(bumpmap_data)
+        reflection_map = texture.get('reflection_map', b'')
+        fresnel_map = texture.get('fresnel_map', b'')
+        has_reflection = texture.get('has_reflection', False) or bool(reflection_map)
         
         # Determine format code
         format_code = self._get_format_code(format_str, has_alpha)
@@ -116,7 +132,7 @@ class TXDSerializer:
         struct_data.extend(struct.pack('<I', self.PLATFORM_D3D8))
         
         # Filter flags (4 bytes)
-        filter_flags = 0x1102  # Linear filtering
+        filter_flags = texture.get('filter_flags', 0x1102)  # Linear filtering
         struct_data.extend(struct.pack('<I', filter_flags))
         
         # Texture name (32 bytes, null-terminated)
@@ -132,10 +148,18 @@ class TXDSerializer:
             alpha_bytes = b'\x00' * 32
         struct_data.extend(alpha_bytes)
         
-        # Raster format (4 bytes)
-        raster_format = format_code | 0x0400  # 0x0400 = has mipmaps flag if mipmaps > 1
-        if num_mipmaps == 1:
-            raster_format = format_code
+        # Raster format (4 bytes) - NEW: Set bumpmap flag if present
+        raster_format = format_code
+        if num_mipmaps > 1:
+            raster_format |= 0x0400  # Has mipmaps flag
+        
+        # Get raster_format_flags from texture (may have bumpmap bit set)
+        raster_format_flags = texture.get('raster_format_flags', 0)
+        if has_bumpmap:
+            raster_format_flags |= 0x10  # Bit 4 = bumpmap/environment map
+        
+        raster_format |= (raster_format_flags & 0xFF0)  # Preserve other flags
+        
         struct_data.extend(struct.pack('<I', raster_format))
         
         # D3D format (4 bytes) - only for D3D platform
@@ -159,21 +183,32 @@ class TXDSerializer:
         compression = 0x08 if 'DXT' in format_str else 0x00
         struct_data.extend(struct.pack('<B', compression))
         
-        # Texture data size (4 bytes)
+        # Calculate total texture data size (mipmaps + bumpmap + reflection)
+        total_data_size = 0
+        
+        # Mipmap data size
         if mipmap_levels:
-            # Use actual mipmap data sizes
             total_data_size = sum(level.get('compressed_size', 0) for level in mipmap_levels)
         else:
-            # Estimate based on format
             total_data_size = self._calculate_texture_size(width, height, format_str, num_mipmaps)
+        
+        # Add bumpmap size (if present)
+        if bumpmap_data:
+            total_data_size += len(bumpmap_data)
+        
+        # Add reflection map sizes (if present)
+        if reflection_map:
+            total_data_size += len(reflection_map)
+        if fresnel_map:
+            total_data_size += len(fresnel_map)
         
         struct_data.extend(struct.pack('<I', total_data_size))
         
-        # Texture data (mipmap levels)
+        # Build texture data section
         texture_data = bytearray()
         
+        # Write mipmap levels
         if mipmap_levels:
-            # Write each mipmap level
             for level in sorted(mipmap_levels, key=lambda x: x.get('level', 0)):
                 level_data = level.get('compressed_data') or level.get('rgba_data', b'')
                 if level_data:
@@ -181,11 +216,35 @@ class TXDSerializer:
         else:
             # Use main rgba_data
             if 'DXT' in format_str:
-                # Need to compress - for now use placeholder
                 compressed = self._compress_to_dxt(rgba_data, width, height, format_str)
                 texture_data.extend(compressed)
             else:
                 texture_data.extend(rgba_data)
+        
+        # NEW: Write bumpmap data (after mipmaps)
+        if bumpmap_data:
+            # Write bumpmap header: [size:4 bytes][type:1 byte][data]
+            bumpmap_header = struct.pack('<I', len(bumpmap_data))
+            texture_data.extend(bumpmap_header)
+            
+            bumpmap_type = texture.get('bumpmap_type', 0)
+            texture_data.extend(struct.pack('<B', bumpmap_type))
+            
+            texture_data.extend(bumpmap_data)
+        
+        # NEW: Write reflection maps (after bumpmap)
+        if has_reflection:
+            # Write reflection map header: [size:4 bytes][data]
+            if reflection_map:
+                reflection_header = struct.pack('<I', len(reflection_map))
+                texture_data.extend(reflection_header)
+                texture_data.extend(reflection_map)
+            
+            # Write Fresnel map header: [size:4 bytes][data]
+            if fresnel_map:
+                fresnel_header = struct.pack('<I', len(fresnel_map))
+                texture_data.extend(fresnel_header)
+                texture_data.extend(fresnel_map)
         
         # Pad struct_data to align
         while len(struct_data) % 4 != 0:
@@ -293,11 +352,94 @@ class TXDSerializer:
 
 
 # Integration with TXD Workshop
-def serialize_txd_file(textures: List[Dict]) -> Optional[bytes]:
-    """Serialize texture list to TXD binary format"""
+def serialize_txd_file(textures: List[Dict], target_version: int = None, 
+                      target_device: int = None) -> Optional[bytes]:
+    """
+    Serialize texture list to TXD binary format
+    
+    Args:
+        textures: List of texture dictionaries
+        target_version: Target RenderWare version (optional)
+        target_device: Target platform device (optional)
+    
+    Returns:
+        TXD binary data or None on error
+    """
     try:
         serializer = TXDSerializer()
-        return serializer.serialize_txd(textures)
+        return serializer.serialize_txd(textures, target_version, target_device)
     except Exception as e:
         print(f"Serialization error: {e}")
         return None
+
+
+# ============================================================================
+# DOCUMENTATION
+# ============================================================================
+
+"""
+TXD FILE STRUCTURE WITH BUMPMAPS AND REFLECTION:
+
+TextureNative {
+    Struct {
+        Platform ID (4 bytes)
+        Filter flags (4 bytes)
+        Texture name (32 bytes)
+        Alpha name (32 bytes)
+        Raster format (4 bytes) <- Bit 0x10 set if has bumpmap
+        D3D format (4 bytes)
+        Width (2 bytes)
+        Height (2 bytes)
+        Depth (1 byte)
+        Mipmap count (1 byte)
+        Raster type (1 byte)
+        Compression (1 byte)
+        Total data size (4 bytes) <- Includes mipmaps + bumpmap + reflection
+        
+        === TEXTURE DATA ===
+        Mipmap Level 0 (main texture)
+        Mipmap Level 1
+        ...
+        Mipmap Level N
+        
+        === BUMPMAP DATA (if present) ===
+        Bumpmap size (4 bytes)
+        Bumpmap type (1 byte): 0=height, 1=normal, 2=both
+        Bumpmap data (variable size)
+        
+        === REFLECTION DATA (if present) ===
+        Reflection map size (4 bytes)
+        Reflection map RGB data (width*height*3 bytes)
+        
+        Fresnel map size (4 bytes)
+        Fresnel map grayscale data (width*height bytes)
+    }
+    Extension {}
+}
+
+CHANGES FROM VERSION 1:
+- Added bumpmap_data writing after mipmaps
+- Added reflection_map and fresnel_map writing after bumpmap
+- Set raster_format_flags bit 0x10 when has_bumpmap is true
+- Updated total_data_size calculation to include all map sizes
+- Added support for target_version and target_device parameters
+
+USAGE:
+texture_dict = {
+    'name': 'my_texture',
+    'width': 512,
+    'height': 512,
+    'format': 'DXT1',
+    'rgba_data': <bytes>,
+    'mipmap_levels': [...],
+    'bumpmap_data': <bytes>,        # NEW
+    'bumpmap_type': 1,              # NEW
+    'has_bumpmap': True,            # NEW
+    'reflection_map': <bytes>,      # NEW
+    'fresnel_map': <bytes>,         # NEW
+    'has_reflection': True,         # NEW
+    'raster_format_flags': 0x10     # Bumpmap flag
+}
+
+txd_data = serialize_txd_file([texture_dict])
+"""

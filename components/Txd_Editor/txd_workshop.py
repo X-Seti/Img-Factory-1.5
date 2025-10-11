@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-#this belongs in components/Txd_Editor/ txd_workshop.py - Version: 3
-# X-Seti - September26 2025 - Img Factory 1.5 - TXD Workshop
+#this belongs in components/Txd_Editor/ txd_workshop.py - Version: 8
+# X-Seti - October10 2025 - Img Factory 1.5 - TXD Workshop Header Update
 
 """
-TXD Workshop - Main texture editing window for IMG Factory
-Displays TXD files from IMG archives with texture preview and editing capabilities
+Updated imports and method list for txd_workshop.py
+Replace the existing imports and ##Methods list section
 """
+
+# ============================================================================
+# IMPORTS - Add these to the existing imports
+# ============================================================================
 
 import os
 import tempfile
@@ -13,6 +17,7 @@ import subprocess
 import shutil
 import struct
 import sys
+import numpy as np
 from pathlib import Path
 from typing import Optional, List, Dict
 from PyQt6.QtWidgets import (QApplication, QSlider, QCheckBox,
@@ -24,6 +29,11 @@ from PyQt6.QtWidgets import (QApplication, QSlider, QCheckBox,
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint, QRect
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QColor
 from PyQt6.QtSvg import QSvgRenderer
+
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 
 try:
     # Try main app path first
@@ -45,12 +55,13 @@ except ImportError:
 DEBUG_STANDALONE = False
 
 ##Methods list -
-# _apply_gaussian_blur                  # NEW - Gaussian blur for bumpmap smoothing
+# _apply_gaussian_blur                  # Gaussian blur for bumpmap smoothing
 # _compress_to_dxt1
 # _compress_to_dxt3
 # _compress_to_dxt5
+# _convert_numpy_to_qimage              # NEW - Convert numpy to QImage
 # _create_blank_texture
-# _create_bumpmap_data                  # NEW - Create bumpmap using various methods
+# _create_bumpmap_data                  # Create bumpmap using various methods
 # _create_empty_txd_data
 # _create_export_icon
 # _create_file_icon
@@ -65,6 +76,7 @@ DEBUG_STANDALONE = False
 # _create_new_txd
 # _create_package_icon
 # _create_properties_icon
+# _create_reflection_panel               # NEW - Create reflection map panel
 # _create_right_panel
 # _create_save_icon
 # _create_thumbnail
@@ -75,31 +87,40 @@ DEBUG_STANDALONE = False
 # _decompress_dxt3
 # _decompress_dxt5
 # _decompress_uncompress
-# _delete_bumpmap                       # NEW - Delete bumpmap from texture
+# _delete_bumpmap                        # Delete bumpmap from texture
 # _delete_texture
 # _detect_txd_info
-# _emboss_filter                        # NEW - Emboss filter for bumpmap
+# _detect_y_flip                         # NEW - Detect normal map Y-flip
+# _emboss_filter                         # Emboss filter for bumpmap
 # _encode_bumpmap
 # _export_bumpmap
+# _export_reflection_maps                # NEW - Export reflection/Fresnel maps
 # _extract_alpha_channel
 # _extract_txd_from_img
 # _export_alpha_only
-# _generate_bumpmap_from_texture        # NEW - Main bumpmap generator dialog
+# _generate_all_maps_from_texture        # NEW - Generate complete map set
+# _generate_bumpmap_from_texture         # Main bumpmap generator dialog
+# _generate_reflection_from_normal       # NEW - Generate reflection from normal
+# _generate_reflection_maps              # NEW - Generate reflection/Fresnel
+# _generate_rgb_normal_map               # Generate proper RGB normal map
 # _get_format_description
 # _get_resize_direction
 # _handle_resize
-# _has_bumpmap_data                     # NEW - Check if texture has bumpmap
-# _height_map                           # NEW - Height map bumpmap method
+# _has_bumpmap_data                      # Check if texture has bumpmap
+# _height_map                            # Height map bumpmap method
 # _import_bumpmap
 # _is_on_draggable_area
 # _load_img_txd_list
 # _load_txd_textures
 # _mark_as_modified
-# _normal_map                           # NEW - Normal map bumpmap method
+# _normal_map                            # Normal map bumpmap method
+# _normal_to_bump                        # NEW - Normal to bump conversion
+# _normal_to_reflection                  # NEW - Normal to reflection/Fresnel
+# _normalize_vector                      # NEW - Normalize vector arrays
 # _on_texture_selected
 # _on_txd_selected
 # _parse_single_texture
-# _preview_bumpmap_generation           # NEW - Preview bumpmap before applying
+# _preview_bumpmap_generation            # Preview bumpmap before applying
 # _rebuild_txd_data
 # _reload_texture_table
 # _save_as_new_txd
@@ -109,12 +130,13 @@ DEBUG_STANDALONE = False
 # _save_undo_state
 # _show_detailed_info
 # _show_texture_context_menu
-# _sobel_filter                         # NEW - Sobel edge detection for bumpmap
+# _sobel_filter                          # Sobel edge detection for bumpmap
 # _toggle_maximize
 # _undo_last_action
 # _update_cursor
+# _update_reflection_previews            # NEW - Update reflection previews
 # _update_texture_info
-# _view_bumpmap                         # UPDATED - Now includes generate option
+# _view_bumpmap                          # Opens bumpmap manager
 # export_all_textures
 # export_selected_texture
 # flip_texture
@@ -134,6 +156,101 @@ DEBUG_STANDALONE = False
 # __init__
 # closeEvent
 
+##class BumpmapManagerWindow: -
+# __init__
+# setup_ui                               # UPDATED - Now includes reflection panel
+# _apply_changes
+# _create_button_bar
+# _create_left_panel
+# _create_middle_panel
+# _create_reflection_panel               # NEW
+# _create_title_bar
+# _delete_bumpmap
+# _export_bumpmap
+# _generate_bumpmap
+# _generate_reflection_maps              # NEW
+# _get_resize_corner
+# _has_bumpmap
+# _import_bumpmap
+# _update_bumpmap_preview
+# _update_reflection_previews            # NEW
+# closeEvent
+# mouseMoveEvent
+# mousePressEvent
+# mouseReleaseEvent
+
+##class MipmapManagerWindow: -
+# __init__
+# setup_ui
+# _apply_changes
+# _create_button_bar
+# _create_level_card
+# _create_title_bar
+# _delete_level
+# _edit_level
+# _edit_main_texture
+# _export_level
+# _get_resize_corner
+# _recompress_modified_levels
+# closeEvent
+# mouseMoveEvent
+# mousePressEvent
+# mouseReleaseEvent
+
+##class TexturePropertiesDialog: -
+# __init__
+# _apply_properties
+# _export_mipmaps
+# _generate_mipmaps
+# _view_mipmaps
+
+"""
+Complete texture dictionary structure:
+
+texture_dict = {
+    # Basic properties
+    'name': str,                    # Texture name
+    'alpha_name': str,              # Alpha channel name (if has_alpha)
+    'width': int,                   # Texture width
+    'height': int,                  # Texture height
+    'depth': int,                   # Bit depth (8, 16, 24, 32)
+    'format': str,                  # Format string (DXT1, DXT3, DXT5, ARGB8888, etc)
+    'has_alpha': bool,              # Has alpha channel
+
+    # Main texture data
+    'rgba_data': bytes,             # Main texture RGBA data
+    'compressed_data': bytes,       # DXT compressed data (if applicable)
+
+    # Mipmaps
+    'mipmaps': int,                 # Number of mipmap levels
+    'mipmap_levels': [              # List of mipmap level dicts
+        {
+            'level': int,           # Mipmap level (0 = main)
+            'width': int,           # Level width
+            'height': int,          # Level height
+            'rgba_data': bytes,     # Level RGBA data
+            'compressed_data': bytes,  # Level compressed data
+            'compressed_size': int  # Size of compressed data
+        }
+    ],
+
+    # Bumpmaps
+    'bumpmap_data': bytes,          # Bumpmap data (grayscale or RGB)
+    'bumpmap_type': int,            # 0=height, 1=normal, 2=both
+    'has_bumpmap': bool,            # Has bumpmap data
+
+    # Reflection maps
+    'reflection_map': bytes,        # RGB reflection vectors
+    'fresnel_map': bytes,           # Grayscale Fresnel reflectivity
+    'has_reflection': bool,         # Has reflection data
+
+    # RenderWare properties
+    'raster_format_flags': int,     # RW raster format flags (bit 0x10 = bumpmap)
+    'filter_flags': int,            # Texture filtering flags
+    'address_u': int,               # U-axis addressing mode
+    'address_v': int,               # V-axis addressing mode
+}
+"""
 
 class TXDWorkshop(QWidget): #vers 3
     """TXD Workshop - Main texture editing window"""
@@ -156,8 +273,12 @@ class TXDWorkshop(QWidget): #vers 3
         self.selected_texture = None
         self.undo_stack = []
         self.button_display_mode = 'both'
+        self.current_txd_path = None
+        self.save_to_source_location = True  # Save in same dir as loaded file
+        self.last_save_directory = None
 
         # Set default font size to 12pt
+        from PyQt6.QtGui import QFont
         default_font = QFont("Fira Sans Condensed", 14)
         self.setFont(default_font)
         self.title_font = QFont("Arial", 14)
@@ -2628,6 +2749,58 @@ class TXDWorkshop(QWidget): #vers 3
         return normal_map
 
 
+    def _normalize_vector(self, v): #vers 1
+        """Normalize vector array"""
+        norm = np.linalg.norm(v, axis=2, keepdims=True)
+        norm[norm == 0] = 1.0
+        return v / norm
+
+
+    def _detect_y_flip(self, normal): #vers 1
+        """Heuristic to detect if Y channel is flipped (DirectX vs OpenGL)"""
+        pos_y_ratio = np.mean(normal[:, :, 1] > 0.5)
+        return pos_y_ratio < 0.4
+
+
+    def _normal_to_bump(self, normal_map): #vers 1
+        """Convert normal map to bump map using Z channel"""
+        n = normal_map.astype(np.float32) / 255.0
+        n = n * 2.0 - 1.0
+        bump = n[:, :, 2]
+        bump = (bump - bump.min()) / (bump.max() - bump.min() + 1e-6)
+        return (bump * 255).astype(np.uint8)
+
+
+    def _normal_to_reflection(self, normal_map, view=(0, 0, 1), F0=0.04): #vers 1
+        """
+        Generate reflection vector map and Fresnel reflectivity from normal map
+        """
+        n = normal_map.astype(np.float32) / 255.0
+        n = n * 2.0 - 1.0
+        n = self._normalize_vector(n)
+
+        V = np.array(view, dtype=np.float32)
+        V = V / np.linalg.norm(V)
+
+        # Calculate dot product V·N
+        VdotN = np.sum(V * n, axis=2, keepdims=True)
+
+        # Calculate reflection vector: R = V - 2(V·N)N
+        R = V - 2.0 * VdotN * n
+        R = self._normalize_vector(R)
+
+        # Encode reflection vector to RGB (map from [-1,1] to [0,255])
+        R_enc = ((R + 1.0) * 0.5 * 255.0).astype(np.uint8)
+
+        # Calculate Fresnel reflectivity using Schlick's approximation
+        VdotN_scalar = np.clip(VdotN.squeeze(), -1.0, 1.0)
+        one_minus = 1.0 - np.clip(VdotN_scalar, 0.0, 1.0)
+        F = F0 + (1.0 - F0) * (one_minus ** 5)
+        F_img = (F * 255.0).astype(np.uint8)
+
+        return R_enc, F_img
+
+
     def _sobel_filter(self, data, width, height, strength): #vers 2
         """Apply Sobel edge detection filter"""
         result = bytearray(width * height)
@@ -3638,11 +3811,10 @@ class TXDWorkshop(QWidget): #vers 3
             background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
         """)
 
-    def _show_settings_dialog(self): #vers 1
+    def _show_settings_dialog(self): #vers 2
         """Show settings dialog for UI customization"""
         from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTabWidget,
-                                    QGroupBox, QFormLayout, QSpinBox, QFontComboBox,
-                                    QPushButton, QLabel)
+                                    QGroupBox, QFormLayout, QSpinBox, QFontComboBox, QPushButton, QLabel)
 
         dialog = QDialog(self)
         dialog.setWindowTitle("TXD Workshop Settings")
@@ -3651,12 +3823,35 @@ class TXDWorkshop(QWidget): #vers 3
 
         layout = QVBoxLayout(dialog)
 
+        # Save Location Settings
+        save_group = QGroupBox("Save Location")
+        save_layout = QVBoxLayout()
+
+        source_check = QCheckBox("Always save in same location as loaded file")
+        source_check.setChecked(self.save_to_source_location)
+        source_check.setToolTip(
+            "When enabled, Save As will default to the directory where\n"
+            "the TXD was originally loaded from (IMG or standalone)"
+        )
+        save_layout.addWidget(source_check)
+
+        info_label = QLabel(
+            "When disabled, Save As will remember the last directory\n"
+            "you saved to and use that as the default."
+        )
+        info_label.setStyleSheet("color: #888; font-size: 9pt;")
+        save_layout.addWidget(info_label)
+
+        save_group.setLayout(save_layout)
+        layout.addWidget(save_group)
+
         # Tab widget for different setting categories
         tabs = QTabWidget()
 
         # === APPEARANCE TAB ===
         appearance_tab = QWidget()
         appearance_layout = QVBoxLayout(appearance_tab)
+
 
         # Font settings group
         font_group = QGroupBox("Font Settings")
@@ -5772,11 +5967,11 @@ class TXDWorkshop(QWidget): #vers 3
         return ' | '.join(desc_parts) if desc_parts else "Standard format"
 
 
-    def _update_img_with_txd(self, modified_txd_data): #vers 3
+    def _update_img_with_txd(self, modified_txd_data): #vers 4
         """Update IMG archive using IMG Factory's save system"""
         try:
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("Starting IMG update via IMG Factory save system...")
+                self.main_window.log_message("Starting IMG update...")
 
             # Check prerequisites
             if not self.current_img:
@@ -5795,7 +5990,7 @@ class TXDWorkshop(QWidget): #vers 3
             if not txd_entry:
                 raise Exception(f"TXD entry '{self.current_txd_name}' not found in IMG")
 
-            # Update the entry data
+            # Update the entry data IN MEMORY
             old_size = txd_entry.size
             txd_entry.data = modified_txd_data
             txd_entry.size = len(modified_txd_data)
@@ -5805,60 +6000,45 @@ class TXDWorkshop(QWidget): #vers 3
                 self.current_img.modified = True
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"TXD entry updated in memory: {old_size} -> {len(modified_txd_data)} bytes")
+                self.main_window.log_message(
+                    f"TXD entry updated in memory: {old_size} -> {len(modified_txd_data)} bytes"
+                )
 
-            # Use IMG Factory's save system - try multiple methods in order of preference
+            # CRITICAL: Now write to disk
             save_successful = False
 
-            # Method 1: save_img_entry (most likely to work)
-            if hasattr(self.main_window, 'save_img_entry'):
+            # Method 1: Use IMG's save method directly
+            if hasattr(self.current_img, 'save') and hasattr(self.current_img, 'file_path'):
+                try:
+                    self.current_img.save(self.current_img.file_path)
+                    save_successful = True
+                    if self.main_window and hasattr(self.main_window, 'log_message'):
+                        self.main_window.log_message(
+                            f"✅ Saved directly to: {self.current_img.file_path}"
+                        )
+                except Exception as e:
+                    if self.main_window and hasattr(self.main_window, 'log_message'):
+                        self.main_window.log_message(f"Direct save failed: {str(e)}")
+
+            # Method 2: Use main window's save_img_entry
+            if not save_successful and hasattr(self.main_window, 'save_img_entry'):
                 try:
                     self.main_window.save_img_entry()
                     save_successful = True
                     if self.main_window and hasattr(self.main_window, 'log_message'):
-                        self.main_window.log_message("Successfully used main_window.save_img_entry()")
+                        self.main_window.log_message("✅ Saved via main_window.save_img_entry()")
                 except Exception as e:
                     if self.main_window and hasattr(self.main_window, 'log_message'):
                         self.main_window.log_message(f"save_img_entry failed: {str(e)}")
 
-            # Method 2: save_entry (alias)
-            if not save_successful and hasattr(self.main_window, 'save_entry'):
-                try:
-                    self.main_window.save_entry()
-                    save_successful = True
-                    if self.main_window and hasattr(self.main_window, 'log_message'):
-                        self.main_window.log_message("Successfully used main_window.save_entry()")
-                except Exception as e:
-                    if self.main_window and hasattr(self.main_window, 'log_message'):
-                        self.main_window.log_message(f"save_entry failed: {str(e)}")
-
-            # Method 3: Direct core save_entry import
             if not save_successful:
-                try:
-                    from core.save_entry import save_img_entry
-                    save_img_entry(self.main_window)
-                    save_successful = True
-                    if self.main_window and hasattr(self.main_window, 'log_message'):
-                        self.main_window.log_message("Successfully used core.save_entry.save_img_entry()")
-                except ImportError:
-                    if self.main_window and hasattr(self.main_window, 'log_message'):
-                        self.main_window.log_message("core.save_entry module not available")
-                except Exception as e:
-                    if self.main_window and hasattr(self.main_window, 'log_message'):
-                        self.main_window.log_message(f"core.save_entry failed: {str(e)}")
+                raise Exception("All save methods failed - changes only in memory!")
 
-            if save_successful:
-                if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("IMG saved successfully using IMG Factory save system")
-                return True
-            else:
-                if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("Warning: All save methods failed - changes remain in memory only")
-                return False
+            return True
 
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"IMG update error: {str(e)}")
+                self.main_window.log_message(f"❌ IMG update error: {str(e)}")
             return False
 
 
@@ -5952,63 +6132,461 @@ class TXDWorkshop(QWidget): #vers 3
             return False
 
 
-    def save_txd_file(self): #vers 7
-        """Save TXD with optional target game/platform conversion"""
-        if not self.current_txd_data:
-            QMessageBox.warning(self, "No Data", "No TXD file loaded")
+    def _save_as_txd_file(self): #vers 4
+        """Save as standalone TXD file - respects save location setting"""
+        import os
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+
+        # Determine default filename
+        if self.current_txd_name:
+            default_name = self.current_txd_name
+        else:
+            default_name = "untitled.txd"
+
+        # Determine initial directory based on setting
+        if self.save_to_source_location:
+            # Option 1: Save to source location (default)
+            if hasattr(self, 'current_txd_path') and self.current_txd_path:
+                # Use the original TXD file's directory
+                initial_path = self.current_txd_path
+            elif hasattr(self, 'current_img') and self.current_img and hasattr(self.current_img, 'file_path'):
+                # Use IMG file's directory
+                img_dir = os.path.dirname(self.current_img.file_path)
+                initial_path = os.path.join(img_dir, default_name)
+            elif self.last_save_directory:
+                # Use last saved directory
+                initial_path = os.path.join(self.last_save_directory, default_name)
+            else:
+                # Fallback to just filename
+                initial_path = default_name
+        else:
+            # Option 2: Use last saved directory or current directory
+            if self.last_save_directory:
+                initial_path = os.path.join(self.last_save_directory, default_name)
+            else:
+                initial_path = default_name
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save TXD File",
+            initial_path,
+            "TXD Files (*.txd);;All Files (*)"
+        )
+
+        if not file_path:
             return
 
         try:
-            # Determine target version based on export settings
-            target_version = self.txd_version_id
-            target_device = self.txd_device_id
+            # Rebuild TXD data
+            modified_txd_data = self._rebuild_txd_data()
 
-            if hasattr(self, 'export_target_game') and self.export_target_game != "auto":
-                # Get target version for specified game/platform
-                target_version, target_device = self._get_target_version()
+            if not modified_txd_data:
+                QMessageBox.critical(self, "Error", "Failed to rebuild TXD data")
+                return
 
-                # Warn if conversion needed
-                if (target_version != self.txd_version_id or target_device != self.txd_device_id):
-                    from methods.txd_versions import get_version_string
+            # Write to file
+            with open(file_path, 'wb') as f:
+                f.write(modified_txd_data)
 
-                    reply = QMessageBox.question(
-                        self, "Format Conversion",
-                        f"Current: {self.txd_version_str} ({self.txd_platform_name})\n"
-                        f"Target: {get_version_string(target_version, target_device)}\n\n"
-                        f"Convert format on save?",
-                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                        QMessageBox.StandardButton.Yes
-                    )
+            # Store paths for next time
+            self.current_txd_path = file_path
+            self.current_txd_name = os.path.basename(file_path)
+            self.last_save_directory = os.path.dirname(file_path)
 
-                    if reply == QMessageBox.StandardButton.No:
-                        # Keep original version
-                        target_version = self.txd_version_id
-                        target_device = self.txd_device_id
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✅ Saved TXD file: {file_path}")
 
-            # Store target for use in save methods
-            self._save_target_version = target_version
-            self._save_target_device = target_device
+            QMessageBox.information(self, "Success",
+                f"TXD saved successfully!\n\n{file_path}")
 
-            # Check if loaded from IMG
-            if self.current_img and self.current_txd_name:
-                reply = QMessageBox.question(
-                    self, "Save Location",
-                    "Save back to IMG archive or as new TXD file?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
-                    QMessageBox.StandardButton.Yes
-                )
-                if reply == QMessageBox.StandardButton.Yes:
-                    self._save_to_img()
-                elif reply == QMessageBox.StandardButton.No:
-                    self._save_as_txd_file()
-            else:
-                # Save as standalone TXD file
-                self._save_as_txd_file()
+            # Clear modified state
+            self.save_txd_btn.setEnabled(False)
+            self.save_txd_btn.setStyleSheet("")
+            title = self.windowTitle().replace("*", "")
+            self.setWindowTitle(title)
 
         except Exception as e:
-            QMessageBox.critical(self, "Save Error", f"Failed to save: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to save TXD:\n\n{str(e)}")
+
+
+    def save_txd_file(self): #vers 5
+        """Save TXD file with progress indicator"""
+        from PyQt6.QtWidgets import QMessageBox
+
+        if not self.current_img:
+            # Standalone TXD save
+            #return self._save_as_txd_file()
+            return self._save_as_txd_file_with_progress()
+
+        # IMG-based TXD save with progress
+        return self._save_txd_with_progress()
+
+
+    def _save_as_txd_file_with_progress(self): #vers 1
+        """Save standalone TXD with progress indicator"""
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QApplication
+        from PyQt6.QtCore import Qt
+        import os
+
+        # Determine default filename
+        if self.current_txd_name:
+            default_name = self.current_txd_name
+        else:
+            default_name = "untitled.txd"
+
+        # Determine initial directory based on setting
+        if self.save_to_source_location:
+            if hasattr(self, 'current_txd_path') and self.current_txd_path:
+                initial_path = self.current_txd_path
+            elif hasattr(self, 'current_img') and self.current_img and hasattr(self.current_img, 'file_path'):
+                img_dir = os.path.dirname(self.current_img.file_path)
+                initial_path = os.path.join(img_dir, default_name)
+            elif hasattr(self, 'last_save_directory') and self.last_save_directory:
+                initial_path = os.path.join(self.last_save_directory, default_name)
+            else:
+                initial_path = default_name
+        else:
+            if hasattr(self, 'last_save_directory') and self.last_save_directory:
+                initial_path = os.path.join(self.last_save_directory, default_name)
+            else:
+                initial_path = default_name
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save TXD File",
+            initial_path,
+            "TXD Files (*.txd);;All Files (*)"
+        )
+
+        if not file_path:
+            return False
+
+        # Create progress dialog
+        total_textures = len(self.texture_list)
+        total_steps = total_textures * 3 + 2
+        current_step = [0]  # Use list to allow modification in nested function
+
+        progress = QProgressDialog("Saving TXD...", "Cancel", 0, 100, self)
+        progress.setWindowTitle("Saving TXD File")
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+
+        def update_progress(message):
+            current_step[0] += 1
+            progress.setValue(int((current_step[0] / total_steps) * 100))
+            progress.setLabelText(message)
+            QApplication.processEvents()
+            if progress.wasCanceled():
+                raise InterruptedError("Save cancelled by user")
+
+        try:
+            update_progress("📋 Building TXD structure...")
+
+            # Rebuild with progress
+            modified_txd_data = self._rebuild_txd_data_with_texture_progress(update_progress)
+
+            if not modified_txd_data:
+                progress.close()
+                QMessageBox.critical(self, "Error", "Failed to rebuild TXD data")
+                return False
+
+            update_progress("💾 Writing to file...")
+
+            # Write to file
+            with open(file_path, 'wb') as f:
+                f.write(modified_txd_data)
+
+            # Store paths
+            self.current_txd_path = file_path
+            self.current_txd_name = os.path.basename(file_path)
+            if hasattr(self, 'last_save_directory'):
+                self.last_save_directory = os.path.dirname(file_path)
+
+            progress.setValue(100)
+            progress.setLabelText("✅ Save complete!")
+
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Save error: {str(e)}")
+                self.main_window.log_message(
+                    f"✅ Saved TXD file: {file_path} ({len(modified_txd_data)} bytes)"
+                )
+
+            # Clear modified state
+            self.save_txd_btn.setEnabled(False)
+            self.save_txd_btn.setStyleSheet("")
+            title = self.windowTitle().replace("*", "")
+            self.setWindowTitle(title)
+
+            progress.close()
+            QMessageBox.information(self, "Success", f"TXD saved successfully!\n\n{file_path}")
+            return True
+
+        except InterruptedError:
+            progress.close()
+            QMessageBox.information(self, "Cancelled", "Save cancelled by user")
+            return False
+        except Exception as e:
+            progress.close()
+            QMessageBox.critical(self, "Error", f"Failed to save TXD:\n\n{str(e)}")
+            return False
+
+
+    def _rebuild_txd_data_with_texture_progress(self, update_progress): #vers 1
+        """Rebuild TXD data with per-texture progress updates"""
+        try:
+            if not self.texture_list:
+                return None
+
+            # Try to use serializer
+            try:
+                from methods.txd_serializer import TXDSerializer
+            except ImportError:
+                from depends.txd_serializer import TXDSerializer
+
+            serializer = TXDSerializer()
+
+            # Build each texture with progress
+            texture_sections = []
+            for i, texture in enumerate(self.texture_list):
+                texture_name = texture.get('name', f'texture_{i}')
+
+                # Update for mipmaps
+                num_mipmaps = len(texture.get('mipmap_levels', []))
+                if num_mipmaps > 0:
+                    update_progress(f"🗺️  {texture_name}: {num_mipmaps} mipmaps")
+
+                # Update for bumpmap
+                if texture.get('has_bumpmap'):
+                    type_names = ['Height', 'Normal', 'Both']
+                    bumpmap_type = texture.get('bumpmap_type', 0)
+                    update_progress(f"📐 {texture_name}: {type_names[bumpmap_type]} bumpmap")
+
+                # Update for reflection
+                if texture.get('has_reflection'):
+                    update_progress(f"🌈 {texture_name}: Reflection maps")
+
+                # Build texture section
+                tex_data = serializer._build_texture_native(texture)
+                texture_sections.append(tex_data)
+
+            # Build final TXD
+            update_progress("📦 Finalizing TXD structure...")
+
+            # Use the serializer's method to build dictionary
+            result = serializer._build_texture_dictionary_from_sections(
+                texture_sections,
+                len(self.texture_list)
+            )
+
+            return result
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Rebuild error: {str(e)}")
+            return None
+
+
+    def _save_txd_with_progress(self): #vers 1
+        """Save TXD with progress indicator"""
+        from PyQt6.QtWidgets import QMessageBox
+
+        if not self.current_img or not self.current_txd_name:
+            QMessageBox.warning(self, "No TXD", "No TXD file is currently loaded")
+            return
+
+        if not self.texture_list:
+            QMessageBox.warning(self, "Empty TXD", "No textures to save")
+            return
+
+        # Create progress dialog
+        progress = QProgressDialog(
+            "Saving TXD...",
+            "Cancel",
+            0,
+            100,
+            self
+        )
+        progress.setWindowTitle("Saving TXD")
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setAutoClose(True)
+        progress.setAutoReset(True)
+
+        try:
+            # Step 1: Calculate total work
+            total_textures = len(self.texture_list)
+            total_steps = total_textures * 4 + 3  # Per texture: mipmaps, bumpmap, reflection, compression + header/footer/write
+            current_step = 0
+
+            def update_progress(message, step_increment=1):
+                nonlocal current_step
+                current_step += step_increment
+                progress.setValue(int((current_step / total_steps) * 100))
+                progress.setLabelText(message)
+                QApplication.processEvents()
+                if progress.wasCanceled():
+                    raise InterruptedError("Save cancelled by user")
+
+            # Step 2: Build TXD header
+            update_progress("📋 Building TXD header...")
+            modified_txd_data = self._rebuild_txd_data_with_progress(update_progress)
+
+            if not modified_txd_data:
+                progress.close()
+                QMessageBox.critical(self, "Error", "Failed to rebuild TXD data")
+                return False
+
+            # Step 3: Update IMG
+            update_progress("💾 Writing to IMG archive...")
+            success = self._update_img_with_txd(modified_txd_data)
+
+            if success:
+                progress.setValue(100)
+                progress.setLabelText("✅ Save complete!")
+
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(
+                        f"✅ Saved TXD: {self.current_txd_name} "
+                        f"({len(modified_txd_data)} bytes, {total_textures} textures)"
+                    )
+
+                # Clear modified state
+                self.save_txd_btn.setEnabled(False)
+                self.save_txd_btn.setStyleSheet("")
+                title = self.windowTitle().replace("*", "")
+                self.setWindowTitle(title)
+
+                progress.close()
+                return True
+            else:
+                progress.close()
+                QMessageBox.critical(self, "Error", "Failed to save TXD to IMG")
+                return False
+
+        except InterruptedError as e:
+            progress.close()
+            QMessageBox.information(self, "Cancelled", str(e))
+            return False
+        except Exception as e:
+            progress.close()
+            QMessageBox.critical(self, "Error", f"Save failed: {str(e)}")
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Save error: {str(e)}")
+            return False
+
+
+    def _rebuild_txd_data(self): #vers 4
+        """Rebuild TXD data - DEBUG VERSION"""
+        print("DEBUG: _rebuild_txd_data() called")
+
+        try:
+            if not self.current_txd_data:
+                print("DEBUG: WARNING - current_txd_data is None, creating new TXD")
+                # If no original data, we need to create from scratch
+                # This is normal for new TXDs
+            else:
+                print(f"DEBUG: Have original TXD data: {len(self.current_txd_data)} bytes")
+
+            if not self.texture_list:
+                print("DEBUG: ERROR - texture_list is empty in _rebuild_txd_data!")
+                return None
+
+            print(f"DEBUG: Rebuilding with {len(self.texture_list)} textures")
+
+            # Try to use serializer
+            print("DEBUG: Attempting to use serializer...")
+
+            try:
+                from methods.txd_serializer import serialize_txd_file
+                print("DEBUG: Using methods/txd_serializer")
+            except ImportError:
+                print("DEBUG: methods/txd_serializer not found, trying depends/")
+                try:
+                    from depends.txd_serializer import serialize_txd_file
+                    print("DEBUG: Using depends/txd_serializer")
+                except ImportError:
+                    print("DEBUG: ERROR - No serializer found!")
+                    if self.main_window and hasattr(self.main_window, 'log_message'):
+                        self.main_window.log_message("ERROR: txd_serializer not found!")
+                    return None
+
+            # Get version info
+            target_version = self.txd_version_id if self.txd_version_id else 0x1803FFFF
+            target_device = self.txd_device_id if self.txd_device_id else 0x08
+
+            print(f"DEBUG: Target version: 0x{target_version:08X}, device: 0x{target_device:02X}")
+
+            # Serialize
+            print("DEBUG: Calling serialize_txd_file()...")
+            result = serialize_txd_file(self.texture_list, target_version, target_device)
+
+            if result:
+                print(f"DEBUG: Serializer returned {len(result)} bytes")
+
+                # Verify result has TXD header
+                if len(result) >= 12:
+                    import struct
+                    section_type, section_size, version = struct.unpack('<III', result[:12])
+                    print(f"DEBUG: TXD header - type: 0x{section_type:02X}, size: {section_size}, version: 0x{version:08X}")
+
+                    if section_type != 0x16:
+                        print(f"DEBUG: WARNING - Expected section type 0x16, got 0x{section_type:02X}")
+                else:
+                    print("DEBUG: WARNING - Result too small to have valid header")
+
+                return result
+            else:
+                print("DEBUG: ERROR - Serializer returned None!")
+                return None
+
+        except Exception as e:
+            print(f"DEBUG: EXCEPTION in _rebuild_txd_data: {type(e).__name__}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Rebuild error: {str(e)}")
+            return None
+
+
+    def _build_texture_dictionary_manual(self, texture_sections, texture_count): #vers 1
+        """Manual TXD dictionary builder for serializer - add to TXDSerializer class"""
+        import struct
+
+        # Calculate struct size
+        struct_size = 4  # texture count (u32)
+        struct_data = struct.pack('<I', texture_count)
+
+        # Build complete dictionary
+        result = bytearray()
+
+        # Texture Dictionary header
+        total_size = 12 + struct_size + 12  # struct section header + data + extension
+        for tex_section in texture_sections:
+            total_size += len(tex_section)
+
+        result.extend(self._write_section_header(
+            self.SECTION_TEXTURE_DICTIONARY,
+            total_size - 12,
+            self.RW_VERSION
+        ))
+
+        # Struct section (texture count)
+        result.extend(self._write_section_header(
+            self.SECTION_STRUCT,
+            struct_size,
+            self.RW_VERSION
+        ))
+        result.extend(struct_data)
+
+        # Texture sections
+        for tex_section in texture_sections:
+            result.extend(tex_section)
+
+        # Extension section (empty)
+        result.extend(self._write_section_header(
+            self.SECTION_EXTENSION,
+            0,
+            self.RW_VERSION
+        ))
+
+        return result
 
 
     def _save_to_img(self): #vers 1
@@ -6075,16 +6653,31 @@ class TXDWorkshop(QWidget): #vers 3
 
         return get_recommended_version_for_game(game, platform)
 
-    def _save_as_txd_file(self): #vers 1
-        """Save as standalone TXD file"""
-        # Get save path
+
+    def _save_as_txd_file(self): #vers 3
+        """Save as standalone TXD file - with correct directory"""
+        import os
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+
+        # Determine default path
         if self.current_txd_name:
             default_name = self.current_txd_name
         else:
             default_name = "untitled.txd"
 
+        # Get the directory from the original file path if available
+        initial_path = default_name
+        if hasattr(self, 'current_txd_path') and self.current_txd_path:
+            # Use the original file's directory
+            initial_path = self.current_txd_path
+        elif hasattr(self.current_img, 'file_path') and self.current_img.file_path:
+            # Use IMG file's directory
+            img_dir = os.path.dirname(self.current_img.file_path)
+            initial_path = os.path.join(img_dir, default_name)
+
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Save TXD File", default_name,
+            self, "Save TXD File",
+            initial_path,  # Use full path instead of just filename
             "TXD Files (*.txd);;All Files (*)"
         )
 
@@ -6103,6 +6696,8 @@ class TXDWorkshop(QWidget): #vers 3
             with open(file_path, 'wb') as f:
                 f.write(modified_txd_data)
 
+            # Store the path for next time
+            self.current_txd_path = file_path
             self.current_txd_name = os.path.basename(file_path)
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
@@ -6113,10 +6708,11 @@ class TXDWorkshop(QWidget): #vers 3
             # Clear modified state
             self.save_txd_btn.setEnabled(False)
             self.save_txd_btn.setStyleSheet("")
-            self.setWindowTitle(f"TXD Workshop: {self.current_txd_name}")
+            title = self.windowTitle().replace("*", "")
+            self.setWindowTitle(title)
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to save TXD: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to save TXD:\n\n{str(e)}")
 
 
     def _create_new_txd_data(self): #vers 2
@@ -6176,19 +6772,37 @@ class TXDWorkshop(QWidget): #vers 3
             details_item.setText(details)
 
 
-    def _parse_single_texture(self, txd_data, offset, index): #vers 16
-        """Parse single texture with ALL mipmap levels"""
+    def _parse_single_texture(self, txd_data, offset, index): #vers 4
+        """
+        Parse single texture from TXD with bumpmap and reflection support
+
+        Args:
+            txd_data: TXD binary data
+            offset: Current offset in data
+            index: Texture index
+
+        Returns:
+            dict: Texture dictionary with all map data
+        """
         import struct
 
         tex = {
             'name': f'texture_{index}',
             'width': 0,
             'height': 0,
+            'depth': 32,
+            'format': 'DXT1',
             'has_alpha': False,
-            'format': 'Unknown',
             'mipmaps': 1,
-            'rgba_data': None,
-            'mipmap_levels': []  # Store all mipmap levels
+            'rgba_data': b'',
+            'mipmap_levels': [],
+            'bumpmap_data': b'',
+            'bumpmap_type': 0,
+            'has_bumpmap': False,
+            'reflection_map': b'',
+            'fresnel_map': b'',
+            'has_reflection': False,
+            'raster_format_flags': 0
         }
 
         try:
@@ -6219,7 +6833,7 @@ class TXDWorkshop(QWidget): #vers 3
             alpha_name = mask_bytes.rstrip(b'\x00').decode('ascii', errors='ignore')
             if alpha_name:
                 tex['alpha_name'] = alpha_name
-                tex['has_alpha'] = True  # If alpha_name exists, has_alpha is True
+                tex['has_alpha'] = True
             pos += 32
 
             raster_format_flags, d3d_format, width, height, depth, num_levels, raster_type = struct.unpack('<IIHHBBB', txd_data[pos:pos+15])
@@ -6227,12 +6841,18 @@ class TXDWorkshop(QWidget): #vers 3
             tex['height'] = height
             tex['depth'] = depth
             tex['mipmaps'] = num_levels
+            tex['raster_format_flags'] = raster_format_flags  # Store format flags
+
+            # NEW: Check for bumpmap flag (bit 0x10)
+            if raster_format_flags & 0x10:
+                tex['has_bumpmap'] = True
+
             pos += 15
 
             platform_prop = struct.unpack('<B', txd_data[pos:pos+1])[0]
             pos += 1
 
-            # Format detection - only set has_alpha if not already set by alpha_name
+            # Format detection
             if platform_id == 8:  # D3D8
                 if platform_prop == 1:
                     tex['format'] = 'DXT1'
@@ -6248,88 +6868,154 @@ class TXDWorkshop(QWidget): #vers 3
                     tex['format'] = 'ARGB8888'
                     if not tex.get('has_alpha'):
                         tex['has_alpha'] = True
-                elif d3d_format == 22:  # RGB888
+                elif d3d_format == 20:  # RGB888
                     tex['format'] = 'RGB888'
-                    # RGB888 can still have alpha channel if alpha_name exists
-                elif d3d_format == 25:  # ARGB1555
-                    tex['format'] = 'ARGB1555'
-                    if not tex.get('has_alpha'):
-                        tex['has_alpha'] = True
-                elif d3d_format == 26:  # ARGB4444
-                    tex['format'] = 'ARGB4444'
-                    if not tex.get('has_alpha'):
-                        tex['has_alpha'] = True
-                elif d3d_format == 23:  # RGB565
-                    tex['format'] = 'RGB565'
-                    # RGB565 can still have alpha channel if alpha_name exists
 
-            # Skip palette if present
-            palette_type = (raster_format_flags >> 13) & 0b11
-            if palette_type == 1:  # 8-bit palette
-                pos += 1024
-            elif palette_type > 1:  # 4-bit palette
-                if depth == 4:
-                    pos += 64
-                else:
-                    pos += 128
+            # Read total data size
+            data_size = struct.unpack('<I', txd_data[pos:pos+4])[0]
+            pos += 4
 
-            # Parse ALL mipmap levels
-            current_width = width
-            current_height = height
-
-            for level in range(num_levels):
-                if pos + 4 >= len(txd_data):
-                    break
-
-                # Read size-prefixed pixel data for this level
-                pixels_len = struct.unpack('<I', txd_data[pos:pos+4])[0]
-                pos += 4
-
-                if pos + pixels_len > len(txd_data):
-                    break
-
-                dxt_data = txd_data[pos:pos + pixels_len]
-                pos += pixels_len
-
-                # Decompress this mipmap level
-                rgba_data = None
+            # Calculate individual mipmap sizes
+            mipmap_sizes = []
+            w, h = width, height
+            for i in range(num_levels):
                 if 'DXT1' in tex['format']:
-                    rgba_data = self._decompress_dxt1(dxt_data, current_width, current_height)
-                elif 'DXT3' in tex['format']:
-                    rgba_data = self._decompress_dxt3(dxt_data, current_width, current_height)
-                elif 'DXT5' in tex['format']:
-                    rgba_data = self._decompress_dxt5(dxt_data, current_width, current_height)
+                    size = max(1, (w + 3) // 4) * max(1, (h + 3) // 4) * 8
+                elif 'DXT' in tex['format']:
+                    size = max(1, (w + 3) // 4) * max(1, (h + 3) // 4) * 16
+                elif 'ARGB8888' in tex['format']:
+                    size = w * h * 4
+                elif 'RGB888' in tex['format']:
+                    size = w * h * 3
+                else:
+                    size = w * h * 2
 
-                # Store this mipmap level
+                mipmap_sizes.append(size)
+                w = max(1, w // 2)
+                h = max(1, h // 2)
+
+            # Read mipmap data
+            for level, size in enumerate(mipmap_sizes):
+                if pos + size > len(txd_data):
+                    break
+
+                level_data = txd_data[pos:pos+size]
+                pos += size
+
+                # Decompress if needed
+                if 'DXT' in tex['format']:
+                    rgba_data = self._decompress_texture(
+                        level_data,
+                        max(1, width >> level),
+                        max(1, height >> level),
+                        tex['format']
+                    )
+                else:
+                    rgba_data = level_data
+
                 mipmap_level = {
                     'level': level,
-                    'width': current_width,
-                    'height': current_height,
+                    'width': max(1, width >> level),
+                    'height': max(1, height >> level),
                     'rgba_data': rgba_data,
-                    'compressed_data': dxt_data,
-                    'compressed_size': pixels_len
+                    'compressed_data': level_data if 'DXT' in tex['format'] else None,
+                    'compressed_size': len(level_data)
                 }
                 tex['mipmap_levels'].append(mipmap_level)
 
-                # Set main texture data to level 0
+                # Store main texture data
                 if level == 0:
                     tex['rgba_data'] = rgba_data
 
-                # Calculate next mipmap dimensions (half size, minimum 1)
-                current_width = max(1, current_width // 2)
-                current_height = max(1, current_height // 2)
+            # NEW: Read bumpmap data (if present)
+            if tex['has_bumpmap'] and pos + 5 <= len(txd_data):
+                try:
+                    # Read bumpmap header
+                    bumpmap_size = struct.unpack('<I', txd_data[pos:pos+4])[0]
+                    pos += 4
 
-                if self.main_window and hasattr(self.main_window, 'log_message'):
-                    status = "✅" if rgba_data else "❌"
-                    self.main_window.log_message(
-                        f"{status} Level {level}: {mipmap_level['width']}x{mipmap_level['height']} ({pixels_len} bytes)"
-                    )
+                    bumpmap_type = struct.unpack('<B', txd_data[pos:pos+1])[0]
+                    pos += 1
+
+                    # Read bumpmap data
+                    if pos + bumpmap_size <= len(txd_data):
+                        tex['bumpmap_data'] = txd_data[pos:pos+bumpmap_size]
+                        tex['bumpmap_type'] = bumpmap_type
+                        pos += bumpmap_size
+
+                        if self.main_window and hasattr(self.main_window, 'log_message'):
+                            type_names = ['Height Map', 'Normal Map', 'Both']
+                            type_name = type_names[bumpmap_type] if bumpmap_type < 3 else 'Unknown'
+                            self.main_window.log_message(
+                                f"  📐 Bumpmap: {type_name} ({bumpmap_size} bytes)"
+                            )
+                except Exception as e:
+                    if self.main_window and hasattr(self.main_window, 'log_message'):
+                        self.main_window.log_message(f"  ⚠️ Bumpmap read error: {str(e)}")
+
+            # NEW: Read reflection map data (if present and space available)
+            # Check if there's more data after mipmaps/bumpmap
+            if pos + 8 <= len(txd_data):
+                try:
+                    # Read reflection map header
+                    reflection_size = struct.unpack('<I', txd_data[pos:pos+4])[0]
+                    pos += 4
+
+                    # Validate size is reasonable (should be width*height*3 for RGB)
+                    expected_reflection_size = width * height * 3
+                    if reflection_size == expected_reflection_size and pos + reflection_size <= len(txd_data):
+                        tex['reflection_map'] = txd_data[pos:pos+reflection_size]
+                        tex['has_reflection'] = True
+                        pos += reflection_size
+
+                        # Read Fresnel map
+                        if pos + 4 <= len(txd_data):
+                            fresnel_size = struct.unpack('<I', txd_data[pos:pos+4])[0]
+                            pos += 4
+
+                            # Validate Fresnel size (should be width*height for grayscale)
+                            expected_fresnel_size = width * height
+                            if fresnel_size == expected_fresnel_size and pos + fresnel_size <= len(txd_data):
+                                tex['fresnel_map'] = txd_data[pos:pos+fresnel_size]
+                                pos += fresnel_size
+
+                                if self.main_window and hasattr(self.main_window, 'log_message'):
+                                    self.main_window.log_message(
+                                        f"  🌈 Reflection maps: "
+                                        f"Vector ({reflection_size}B) + Fresnel ({fresnel_size}B)"
+                                    )
+                except Exception as e:
+                    # Silently ignore reflection read errors (optional data)
+                    pass
 
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"ERROR parsing texture: {str(e)}")
+                self.main_window.log_message(f"Texture parse error: {str(e)}")
 
         return tex
+
+
+    def _decompress_texture(self, compressed_data, width, height, format_str): #vers 2
+        """
+        Decompress DXT texture data to RGBA
+
+        Args:
+            compressed_data: Compressed texture bytes
+            width: Texture width
+            height: Texture height
+            format_str: Format string (DXT1, DXT3, DXT5)
+
+        Returns:
+            bytes: Decompressed RGBA data
+        """
+        if 'DXT1' in format_str:
+            return self._decompress_dxt1(compressed_data, width, height)
+        elif 'DXT3' in format_str:
+            return self._decompress_dxt3(compressed_data, width, height)
+        elif 'DXT5' in format_str:
+            return self._decompress_dxt5(compressed_data, width, height)
+        else:
+            return compressed_data
 
 
     def _decompress_dxt1(self, dxt_data, width, height): #vers 1
@@ -7722,6 +8408,10 @@ class TXDWorkshop(QWidget): #vers 3
                     self, "Open TXD File", "",
                     "TXD Files (*.txd);;All Files (*)"
                 )
+            if file_path:
+                self.current_txd_path = file_path  # Store the full path
+                self.current_txd_name = os.path.basename(file_path)
+
 
             if file_path:
                 with open(file_path, 'rb') as f:
@@ -8501,6 +9191,45 @@ class TXDWorkshop(QWidget): #vers 3
         self.texture_table.setRowHeight(row, 80)
 
 
+    def _load_settings(self): #vers 1
+        """Load settings from config file"""
+        import json
+
+        settings_file = os.path.join(
+            os.path.dirname(__file__),
+            'txd_workshop_settings.json'
+        )
+
+        try:
+            if os.path.exists(settings_file):
+                with open(settings_file, 'r') as f:
+                    settings = json.load(f)
+                    self.save_to_source_location = settings.get('save_to_source_location', True)
+                    self.last_save_directory = settings.get('last_save_directory', None)
+        except Exception as e:
+            print(f"Failed to load settings: {e}")
+
+
+    def _save_settings(self): #vers 1
+        """Save settings to config file"""
+        import json
+
+        settings_file = os.path.join(
+            os.path.dirname(__file__),
+            'txd_workshop_settings.json'
+        )
+
+        try:
+            settings = {
+                'save_to_source_location': self.save_to_source_location,
+                'last_save_directory': self.last_save_directory
+            }
+
+            with open(settings_file, 'w') as f:
+                json.dump(settings, indent=2, fp=f)
+        except Exception as e:
+            print(f"Failed to save settings: {e}")
+
 
 #class SvgIcons: #vers 1 - Once functions are updated this class will be moved to the bottom
     """SVG icon data to QIcon with theme color support"""
@@ -9014,7 +9743,7 @@ class TXDWorkshop(QWidget): #vers 3
     def _create_maximize_icon(self): #vers 1
         """Maximize - Square"""
         svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokea-width="2"/>
         </svg>'''
         return self._svg_to_icon(svg_data)
 
@@ -9181,12 +9910,17 @@ class BumpmapManagerWindow(QWidget): #vers 1
         self.main_window = main_window
         self.modified = False
 
+        from PyQt6.QtGui import QFont
+        self.panel_font = QFont('Segoe UI', 10)
+        self.button_font = QFont('Segoe UI', 9)
+        self.title_font = QFont('Segoe UI', 10)
+
         texture_name = texture_data.get('name', 'Unknown')
         width = texture_data.get('width', 0)
         height = texture_data.get('height', 0)
 
         self.setWindowTitle(f"Bumpmap Manager - {texture_name}")
-        self.resize(900, 455)  # Changed from 650 to 455 (30% smaller)
+        self.resize(900, 600)  # Changed from 650 to 455 (30% smaller)
 
         # Frameless window with custom styling
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
@@ -9198,14 +9932,20 @@ class BumpmapManagerWindow(QWidget): #vers 1
         self.resize_corner = None
         self.corner_size = 20
         self.hover_corner = None
+        self.current_txd_path = None
 
         self.setup_ui()
 
         # Enable mouse tracking for hover effects
         self.setMouseTracking(True)
 
-    def setup_ui(self): #vers 5
-        """Setup modern UI - Compact layout"""
+
+    def setup_ui(self): #vers 7
+        """Setup modern UI - Now includes reflection maps"""
+        from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+                                    QPushButton, QGroupBox, QSplitter, QFrame)
+        from PyQt6.QtCore import Qt
+
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
@@ -9214,56 +9954,62 @@ class BumpmapManagerWindow(QWidget): #vers 1
         title_bar = self._create_title_bar()
         main_layout.addWidget(title_bar)
 
-        # Main content area - COMPACT
+        # Main content area - Use splitter for resizable panels
         content = QWidget()
         content_layout = QHBoxLayout(content)
         content_layout.setContentsMargins(5, 5, 5, 5)
         content_layout.setSpacing(5)
 
+        # Create splitter for panels
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+
         # Left: Texture info and preview
         left_panel = self._create_left_panel()
-        content_layout.addWidget(left_panel, stretch=1)
+        splitter.addWidget(left_panel)
 
-        # Right: Bumpmap preview and info
+        # Middle: Bumpmap controls
+        middle_panel = self._create_middle_panel()
+        splitter.addWidget(middle_panel)
+
+        # Right: Bumpmap preview
         right_panel = self._create_right_panel()
-        content_layout.addWidget(right_panel, stretch=1)
+        splitter.addWidget(right_panel)
 
+        # Fourth: Reflection maps panel
+        reflection_panel = self._create_reflection_panel()
+        splitter.addWidget(reflection_panel)
+
+        # Set splitter sizes (25% each for 4 panels)
+        splitter.setSizes([250, 250, 250, 250])
+
+        content_layout.addWidget(splitter)
         main_layout.addWidget(content)
 
-        # Apply styling
+        # REMOVE THIS SECTION - No bottom button bar needed
+        # button_bar = self._create_button_bar()
+        # main_layout.addWidget(button_bar)
+
+        # Set dark theme
         self.setStyleSheet("""
-            BumpmapManagerWindow {
-                background-color: #2b2b2b;
-                border: 1px solid #3a3a3a;
-            }
             QWidget {
                 background-color: #2b2b2b;
                 color: #e0e0e0;
+                font-family: 'Segoe UI', sans-serif;
             }
             QGroupBox {
-                font-weight: bold;
                 border: 1px solid #3a3a3a;
-                border-radius: 3px;
-                margin-top: 3px;
-                padding-top: 3px;
-                background-color: #2b2b2b;
+                border-radius: 4px;
+                margin-top: 8px;
+                padding-top: 8px;
+                font-weight: bold;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px;
-                color: #e0e0e0;
-            }
-            QLabel {
-                color: #e0e0e0;
-                background-color: transparent;
-            }
-            QFormLayout QLabel {
-                background-color: transparent;
+                left: 8px;
+                padding: 0 4px;
             }
             QPushButton {
                 background-color: #3a3a3a;
-                color: #e0e0e0;
                 border: 1px solid #4a4a4a;
                 border-radius: 3px;
                 padding: 5px 15px;
@@ -9276,38 +10022,56 @@ class BumpmapManagerWindow(QWidget): #vers 1
             QPushButton:pressed {
                 background-color: #2a2a2a;
             }
-            QPushButton:disabled {o
-                background-color: #2a2a2a;
-                color: #666666;
-                border: 1px solid #333333;
-            }
-            QMenuBar {
-                background-color: transparent;
-                color: #e0e0e0;
+            QLabel {
                 border: none;
-                padding: 0px;
-                margin: 0px;
             }
-            QMenuBar::item {
-                background-color: transparent;
-                padding: 5px 10px;
-            }
-            QMenuBar::item:selected {
-                background-color: #3a3a3a;
-            }
-            QMenu {
-                background-color: #2b2b2b;
-                color: #e0e0e0;
+            QFrame {
                 border: 1px solid #3a3a3a;
             }
-            QMenu::item {
-                padding: 5px 25px 5px 10px;
-                background-color: transparent;
+        """)
+
+        # Update previews AFTER all widgets are created
+        if hasattr(self, 'bumpmap_preview'):
+            self._update_bumpmap_preview()
+        if 'reflection_map' in self.texture_data and hasattr(self, 'reflection_preview'):
+            self._update_reflection_previews()
+
+
+    def _create_button_bar(self): #vers 1
+        """Create bottom button bar"""
+        from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton
+
+        button_bar = QWidget()
+        button_bar.setFixedHeight(50)
+        button_bar.setStyleSheet("border-top: 1px solid #3a3a3a;")
+
+        layout = QHBoxLayout(button_bar)
+        layout.setContentsMargins(10, 10, 10, 10)
+
+        layout.addStretch()
+
+        # Apply button
+        apply_btn = QPushButton("Apply Changes")
+        apply_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #0e639c;
+                border: 1px solid #1177bb;
+                padding: 8px 20px;
+                font-weight: bold;
             }
-            QMenu::item:selected {
-                background-color: #3a3a3a;
+            QPushButton:hover {
+                background-color: #1177bb;
             }
         """)
+        apply_btn.clicked.connect(self._apply_changes)
+        layout.addWidget(apply_btn)
+
+        # Close button
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(self.close)
+        layout.addWidget(close_btn)
+
+        return button_bar
 
 
     def _create_left_panel(self): #vers 6
@@ -9385,6 +10149,87 @@ class BumpmapManagerWindow(QWidget): #vers 1
             preview_label.setText("No texture data")
 
         layout.addWidget(preview_label)
+
+        return panel
+
+
+    def _create_middle_panel(self): #vers 1
+        """Create middle panel with bumpmap controls"""
+        from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QGroupBox, QLabel
+
+        panel = QGroupBox("Controls    .")
+        # Match your styling
+        panel.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                font-size: 14px;
+                border: 1px solid #3a3a3a;
+                border-radius: 1px;
+                margin-top: 10px;
+                padding-top: 10px;
+                background-color: #2b2b2b;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top right;
+                right: 20px;
+                padding: 0 5px;
+                color: #e0e0e0;
+            }
+        """)
+
+        layout = QVBoxLayout(panel)
+        layout.setSpacing(10)
+
+        # Info text
+        info_label = QLabel(
+            "Bumpmaps add surface detail.\n"
+            "Generate from texture or import."
+        )
+        info_label.setFont(self.panel_font)
+        info_label.setStyleSheet("color: #888; line-height: 1.4;")
+        info_label.setWordWrap(True)
+        layout.addWidget(info_label)
+
+        # Generate button (F9)
+        generate_btn = QPushButton("Generate from Texture (F9)")
+        generate_btn.setFont(self.button_font)
+        generate_btn.clicked.connect(self._generate_bumpmap)
+        layout.addWidget(generate_btn)
+
+        # Import button (F10)
+        import_btn = QPushButton("Import from File (F10)")
+        import_btn.setFont(self.button_font)
+        import_btn.clicked.connect(self._import_bumpmap)
+        layout.addWidget(import_btn)
+
+        # Export button
+        export_btn = QPushButton("Export to File")
+        export_btn.setFont(self.button_font)
+        export_btn.clicked.connect(self._export_bumpmap)
+        export_btn.setEnabled(self._has_bumpmap())
+        layout.addWidget(export_btn)
+
+        # Delete button (F11)
+        delete_btn = QPushButton("Delete Bumpmap (F11)")
+        delete_btn.setFont(self.button_font)
+        delete_btn.clicked.connect(self._delete_bumpmap)
+        delete_btn.setEnabled(self._has_bumpmap())
+        layout.addWidget(delete_btn)
+
+        layout.addStretch()
+
+        # Type info
+        type_info = QLabel(
+            "Types:\n"
+            "• Grayscale Height Map\n"
+            "• RGB Normal Map\n"
+            "• Both (Height + Normal)"
+        )
+        type_info.setFont(self.panel_font)
+        type_info.setStyleSheet("color: #aaa; font-size: 9pt;")
+        type_info.setWordWrap(True)
+        layout.addWidget(type_info)
 
         return panel
 
@@ -9708,8 +10553,13 @@ class BumpmapManagerWindow(QWidget): #vers 1
             return bool(self.texture_data.get('raster_format_flags', 0) & 0x10)
         return False
 
+
     def _update_bumpmap_preview(self): #vers 2
         """Update bumpmap preview display"""
+        # Safety check - make sure widget exists
+        if not hasattr(self, 'bumpmap_preview'):
+            return
+
         try:
             if 'bumpmap_data' in self.texture_data:
                 # Decode bumpmap data
@@ -9732,6 +10582,7 @@ class BumpmapManagerWindow(QWidget): #vers 1
                 self.bumpmap_preview.setText("No bumpmap data")
         except Exception as e:
             self.bumpmap_preview.setText(f"Preview error:\n{str(e)}")
+
 
     def _add_new_texture(self): #vers 2
         """F9 - Generate bumpmap from texture"""
@@ -9855,54 +10706,622 @@ class BumpmapManagerWindow(QWidget): #vers 1
             return self.parent_workshop._create_delete_icon()
         return QIcon()
 
-    # Window dragging and resizing (same as MipmapManagerWindow)
 
-    def mousePressEvent(self, event): #vers 2
-        """Handle mouse press for dragging/resizing - FIXED for PyQt6"""
+    def _create_reflection_panel(self): #vers 2
+        """Create panel for reflection map display and generation - WITH IMPORT"""
+        from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QGroupBox
+        from PyQt6.QtCore import Qt
+
+        panel = QGroupBox("Reflection Maps    .")
+        panel.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                font-size: 14px;
+                border: 1px solid #3a3a3a;
+                border-radius: 1px;
+                margin-top: 10px;
+                padding-top: 10px;
+                background-color: #2b2b2b;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top right;
+                right: 20px;
+                padding: 0 5px;
+                color: #e0e0e0;
+            }
+        """)
+
+        layout = QVBoxLayout(panel)
+        layout.setSpacing(10)
+
+        # Info label
+        info = QLabel("Generate from normal map\nor import existing maps")
+        info.setFont(self.panel_font)
+        info.setStyleSheet("color: #888; line-height: 1.4;")
+        info.setWordWrap(True)
+        layout.addWidget(info)
+
+        # Reflection preview
+        reflection_label = QLabel("Reflection Vector Map")
+        reflection_label.setFont(self.panel_font)
+        reflection_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(reflection_label)
+
+        self.reflection_preview = QLabel()
+        self.reflection_preview.setMinimumSize(150, 150)
+        self.reflection_preview.setMaximumSize(150, 150)
+        self.reflection_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.reflection_preview.setStyleSheet(
+            "border: 1px solid #3a3a3a; background: #1e1e1e;"
+        )
+        self.reflection_preview.setText("No data")
+        self.reflection_preview.setFont(self.panel_font)
+        layout.addWidget(self.reflection_preview)
+
+        # Fresnel preview
+        fresnel_label = QLabel("Fresnel Reflectivity")
+        fresnel_label.setFont(self.panel_font)
+        fresnel_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(fresnel_label)
+
+        self.fresnel_preview = QLabel()
+        self.fresnel_preview.setMinimumSize(150, 150)
+        self.fresnel_preview.setMaximumSize(150, 150)
+        self.fresnel_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.fresnel_preview.setStyleSheet(
+            "border: 1px solid #3a3a3a; background: #1e1e1e;"
+        )
+        self.fresnel_preview.setText("No data")
+        self.fresnel_preview.setFont(self.panel_font)
+        layout.addWidget(self.fresnel_preview)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+
+        generate_btn = QPushButton("Generate")
+        generate_btn.setFont(self.button_font)
+        generate_btn.setToolTip("Generate from RGB normal map")
+        generate_btn.clicked.connect(self._generate_reflection_maps)
+        button_layout.addWidget(generate_btn)
+
+        layout.addLayout(button_layout) #moved and fixed
+
+        # ADD IMPORT BUTTON
+        import_btn = QPushButton("Import")
+        import_btn.setFont(self.button_font)
+        import_btn.setToolTip("Import reflection maps from files")
+        import_btn.clicked.connect(self._import_reflection_maps)
+        button_layout.addWidget(import_btn)
+
+        # Export button (separate row)
+        export_btn = QPushButton("Export")
+        export_btn.setFont(self.button_font)
+        export_btn.setToolTip("Export reflection maps to PNG files")
+        export_btn.clicked.connect(self._export_reflection_maps)
+        layout.addWidget(export_btn)
+
+        layout.addStretch()
+
+        return panel
+
+
+    def _load_settings(self): #vers 1
+        """Load settings from config file"""
+        import json
+
+        settings_file = os.path.join(
+            os.path.dirname(__file__),
+            'txd_workshop_settings.json'
+        )
+
+        try:
+            if os.path.exists(settings_file):
+                with open(settings_file, 'r') as f:
+                    settings = json.load(f)
+                    self.save_to_source_location = settings.get('save_to_source_location', True)
+                    self.last_save_directory = settings.get('last_save_directory', None)
+        except Exception as e:
+            print(f"Failed to load settings: {e}")
+
+
+    def _save_settings(self): #vers 1
+        """Save settings to config file"""
+        import json
+
+        settings_file = os.path.join(
+            os.path.dirname(__file__),
+            'txd_workshop_settings.json'
+        )
+
+        try:
+            settings = {
+                'save_to_source_location': self.save_to_source_location,
+                'last_save_directory': self.last_save_directory
+            }
+
+            with open(settings_file, 'w') as f:
+                json.dump(settings, indent=2, fp=f)
+        except Exception as e:
+            print(f"Failed to save settings: {e}")
+
+
+    def _import_reflection_maps(self): #vers 1
+        """Import reflection and Fresnel maps from files"""
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+        from PyQt6.QtGui import QImage
+
+        try:
+            # Get reflection map file
+            reflection_path, _ = QFileDialog.getOpenFileName(
+                self, "Import Reflection Vector Map",
+                "",
+                "Image Files (*.png *.jpg *.bmp);;All Files (*)"
+            )
+
+            if not reflection_path:
+                return
+
+            # Get Fresnel map file
+            fresnel_path, _ = QFileDialog.getOpenFileName(
+                self, "Import Fresnel Reflectivity Map",
+                "",
+                "Image Files (*.png *.jpg *.bmp);;All Files (*)"
+            )
+
+            if not fresnel_path:
+                return
+
+            width = self.texture_data.get('width', 0)
+            height = self.texture_data.get('height', 0)
+
+            # Load reflection map (RGB)
+            reflection_img = QImage(reflection_path)
+            if reflection_img.isNull():
+                QMessageBox.warning(self, "Error", "Failed to load reflection map")
+                return
+
+            # Scale to texture size if needed
+            if reflection_img.width() != width or reflection_img.height() != height:
+                reflection_img = reflection_img.scaled(
+                    width, height,
+                    Qt.AspectRatioMode.IgnoreAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+
+            # Convert to RGB888
+            reflection_img = reflection_img.convertToFormat(QImage.Format.Format_RGB888)
+            reflection_data = reflection_img.bits().asstring(reflection_img.sizeInBytes())
+
+            # Load Fresnel map (Grayscale)
+            fresnel_img = QImage(fresnel_path)
+            if fresnel_img.isNull():
+                QMessageBox.warning(self, "Error", "Failed to load Fresnel map")
+                return
+
+            # Scale to texture size if needed
+            if fresnel_img.width() != width or fresnel_img.height() != height:
+                fresnel_img = fresnel_img.scaled(
+                    width, height,
+                    Qt.AspectRatioMode.IgnoreAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+
+            # Convert to grayscale
+            fresnel_img = fresnel_img.convertToFormat(QImage.Format.Format_Grayscale8)
+            fresnel_data = fresnel_img.bits().asstring(fresnel_img.sizeInBytes())
+
+            # Store in texture data
+            self.texture_data['reflection_map'] = reflection_data
+            self.texture_data['fresnel_map'] = fresnel_data
+            self.texture_data['has_reflection'] = True
+
+            # Update previews
+            self._update_reflection_previews()
+
+            self.modified = True
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("✅ Imported reflection maps")
+
+            QMessageBox.information(self, "Success", "Reflection maps imported successfully")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to import:\n{str(e)}")
+
+
+    def _update_reflection_previews(self): #vers 1
+        """Update reflection and Fresnel map previews"""
+        from PyQt6.QtGui import QPixmap
+        from PyQt6.QtCore import Qt
+
+        try:
+            width = self.texture_data.get('width', 0)
+            height = self.texture_data.get('height', 0)
+
+            # Update reflection map preview
+            if 'reflection_map' in self.texture_data:
+                reflection_data = self.texture_data['reflection_map']
+
+                # Convert to numpy for QImage
+                reflection_arr = np.frombuffer(reflection_data, dtype=np.uint8)
+                reflection_arr = reflection_arr.reshape((height, width, 3))
+
+                img = self._convert_numpy_to_qimage(
+                    reflection_arr, width, height, is_grayscale=False
+                )
+
+                if img:
+                    pixmap = QPixmap.fromImage(img)
+                    self.reflection_preview.setPixmap(
+                        pixmap.scaled(200, 200,
+                                    Qt.AspectRatioMode.KeepAspectRatio,
+                                    Qt.TransformationMode.SmoothTransformation)
+                    )
+
+            # Update Fresnel map preview
+            if 'fresnel_map' in self.texture_data:
+                fresnel_data = self.texture_data['fresnel_map']
+
+                # Convert to numpy for QImage
+                fresnel_arr = np.frombuffer(fresnel_data, dtype=np.uint8)
+                fresnel_arr = fresnel_arr.reshape((height, width))
+
+                img = self._convert_numpy_to_qimage(
+                    fresnel_arr, width, height, is_grayscale=True
+                )
+
+                if img:
+                    pixmap = QPixmap.fromImage(img)
+                    self.fresnel_preview.setPixmap(
+                        pixmap.scaled(200, 200,
+                                    Qt.AspectRatioMode.KeepAspectRatio,
+                                    Qt.TransformationMode.SmoothTransformation)
+                    )
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Preview update error: {str(e)}")
+
+
+    def _generate_reflection_maps(self): #vers 1
+        """Generate reflection and Fresnel maps from normal map data"""
+        from PyQt6.QtWidgets import QMessageBox, QInputDialog
+        from PyQt6.QtGui import QPixmap
+        from PyQt6.QtCore import Qt
+
+        try:
+            # Check if we have normal map data
+            bumpmap_data = self.texture_data.get('bumpmap_data')
+            if not bumpmap_data:
+                QMessageBox.warning(self, "No Normal Map",
+                    "Generate or import a normal map first")
+                return
+
+            # Check if it's RGB normal map
+            bumpmap_type = self.texture_data.get('bumpmap_type', 0)
+            if bumpmap_type == 0:  # Grayscale height map
+                QMessageBox.information(self, "Info",
+                    "Reflection maps require RGB normal map.\n"
+                    "Current bumpmap is grayscale height map.")
+                return
+
+            # Check if numpy is available
+            try:
+                import numpy as np
+            except ImportError:
+                QMessageBox.warning(self, "Missing Dependency",
+                    "Reflection map generation requires numpy.\n\n"
+                    "Install with: pip install numpy")
+                return
+
+            # Get F0 value from user
+            F0, ok = QInputDialog.getDouble(
+                self, "Fresnel Reflectivity",
+                "Base reflectivity (F0):\n"
+                "0.04 = Dielectric (glass, plastic)\n"
+                "0.5-1.0 = Metal",
+                0.04, 0.01, 1.0, 2
+            )
+            if not ok:
+                return
+
+            width = self.texture_data.get('width', 0)
+            height = self.texture_data.get('height', 0)
+
+            # Extract normal map data
+            if bumpmap_type == 1:  # RGB normal map
+                normal_data = bumpmap_data
+            elif bumpmap_type == 2:  # Both
+                # Skip first byte (type identifier) and grayscale data
+                normal_data = bumpmap_data[1 + width * height:]
+            else:
+                QMessageBox.warning(self, "Error", "Unknown bumpmap type")
+                return
+
+            # Generate reflection maps using parent workshop methods
+            if hasattr(self.parent_workshop, '_generate_reflection_from_normal'):
+                result = self.parent_workshop._generate_reflection_from_normal(
+                    normal_data, width, height, auto_flip=True, F0=F0
+                )
+
+                if result:
+                    # Store in texture data
+                    self.texture_data['reflection_map'] = result['reflection_map']
+                    self.texture_data['fresnel_map'] = result['fresnel_map']
+                    self.texture_data['has_reflection'] = True
+
+                    # Update previews
+                    self._update_reflection_previews()
+
+                    self.modified = True
+
+                    if self.main_window and hasattr(self.main_window, 'log_message'):
+                        flip_msg = " (Y-axis corrected)" if result['y_flipped'] else ""
+                        self.main_window.log_message(
+                            f"✅ Generated reflection maps{flip_msg}"
+                        )
+
+                    QMessageBox.information(self, "Success",
+                        f"Generated reflection maps\nF0: {F0}")
+            else:
+                QMessageBox.warning(self, "Error",
+                    "Reflection generation method not available.\n"
+                    "Make sure TXDWorkshop has reflection methods.")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to generate:\n{str(e)}")
+
+
+    def _export_reflection_maps(self): #vers 1
+        """Export reflection and Fresnel maps as PNG files"""
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+        from PIL import Image
+        import os
+
+        try:
+            if 'reflection_map' not in self.texture_data:
+                QMessageBox.warning(self, "No Data", "No reflection maps to export")
+                return
+
+            # Get output directory
+            output_dir = QFileDialog.getExistingDirectory(
+                self, "Select Output Directory"
+            )
+            if not output_dir:
+                return
+
+            texture_name = self.texture_data.get('name', 'texture')
+            width = self.texture_data.get('width', 0)
+            height = self.texture_data.get('height', 0)
+
+            exported = []
+
+            # Export reflection map
+            if 'reflection_map' in self.texture_data:
+                reflection_arr = np.frombuffer(
+                    self.texture_data['reflection_map'], dtype=np.uint8
+                )
+                reflection_arr = reflection_arr.reshape((height, width, 3))
+
+                img = Image.fromarray(reflection_arr, mode='RGB')
+                path = os.path.join(output_dir, f"{texture_name}_reflection.png")
+                img.save(path)
+                exported.append("reflection_vector_map.png")
+
+            # Export Fresnel map
+            if 'fresnel_map' in self.texture_data:
+                fresnel_arr = np.frombuffer(
+                    self.texture_data['fresnel_map'], dtype=np.uint8
+                )
+                fresnel_arr = fresnel_arr.reshape((height, width))
+
+                img = Image.fromarray(fresnel_arr, mode='L')
+                path = os.path.join(output_dir, f"{texture_name}_fresnel.png")
+                img.save(path)
+                exported.append("fresnel_reflectivity.png")
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(
+                    f"✅ Exported {len(exported)} maps to: {output_dir}"
+                )
+
+            QMessageBox.information(self, "Success",
+                f"Exported {len(exported)} maps:\n" + "\n".join(exported))
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Export failed:\n{str(e)}")
+
+
+    def _generate_reflection_from_normal(self, normal_data, width, height, auto_flip=True, F0=0.04): #vers 1
+        """
+        Generate reflection and Fresnel maps from normal map data
+
+        """
+        try:
+            # Convert bytes to numpy array
+            normal_arr = np.frombuffer(normal_data, dtype=np.uint8)
+            normal_arr = normal_arr.reshape((height, width, 3))
+
+            # Convert to float [0, 1]
+            normal_float = normal_arr.astype(np.float32) / 255.0
+
+            # Auto-detect Y flip if requested
+            y_flipped = False
+            if auto_flip and self._detect_y_flip(normal_float):
+                normal_float[:, :, 1] = 1.0 - normal_float[:, :, 1]
+                y_flipped = True
+
+            # Convert back to uint8
+            normal_arr = (normal_float * 255.0).astype(np.uint8)
+
+            # Generate reflection and Fresnel maps
+            reflection, fresnel = self._normal_to_reflection(normal_arr, F0=F0)
+
+            return {
+                'reflection_map': reflection.tobytes(),
+                'fresnel_map': fresnel.tobytes(),
+                'y_flipped': y_flipped
+            }
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Reflection generation error: {str(e)}")
+            return None
+
+
+    def _generate_all_maps_from_texture(self, rgba_data, width, height, F0=0.04): #vers 1
+        """
+        Generate complete set of maps from texture:
+        """
+        try:
+            # Convert RGBA to grayscale for height map
+            grayscale = bytearray(width * height)
+            for i in range(0, len(rgba_data), 4):
+                r, g, b = rgba_data[i:i+3]
+                gray = int(0.299 * r + 0.587 * g + 0.114 * b)
+                grayscale[i // 4] = gray
+
+            # Generate normal map from grayscale
+            normal_map = self._generate_rgb_normal_map(grayscale, width, height, strength=1.0)
+
+            # Generate bump map (height map)
+            bump_map = self._sobel_filter(grayscale, width, height, strength=1.0)
+
+            # Generate reflection and Fresnel from normal map
+            reflection_fresnel = self._generate_reflection_from_normal(
+                normal_map, width, height, auto_flip=True, F0=F0
+            )
+
+            if reflection_fresnel:
+                return {
+                    'bump_map': bytes(bump_map),
+                    'normal_map': normal_map,
+                    'reflection_map': reflection_fresnel['reflection_map'],
+                    'fresnel_map': reflection_fresnel['fresnel_map']
+                }
+            else:
+                return None
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Map generation error: {str(e)}")
+            return None
+
+
+    def _convert_numpy_to_qimage(self, numpy_array, width, height, is_grayscale=False): #vers 1
+        """Convert numpy array to QImage for preview"""
+        try:
+            if is_grayscale:
+                # Grayscale image
+                img = QImage(numpy_array.tobytes(), width, height, width,
+                            QImage.Format.Format_Grayscale8)
+            else:
+                # RGB image
+                img = QImage(numpy_array.tobytes(), width, height, width * 3,
+                            QImage.Format.Format_RGB888)
+            return img
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Image conversion error: {str(e)}")
+            return None
+
+
+    def mousePressEvent(self, event): #vers 1
+        """Handle mouse press for window dragging"""
+        from PyQt6.QtCore import Qt
+
         if event.button() == Qt.MouseButton.LeftButton:
-            if self.hover_corner:
+            # Check if clicking on resize corner
+            corner = self._get_resize_corner(event.pos())
+            if corner:
                 self.resizing = True
-                self.resize_corner = self.hover_corner
-            elif event.position().y() < 35:  # Title bar area - FIXED: use position().y()
+                self.resize_corner = corner
+                self.drag_position = event.globalPosition().toPoint()
+            # Check if clicking on title bar for dragging
+            elif event.pos().y() < 35:
                 self.dragging = True
                 self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
 
-    def mouseMoveEvent(self, event): #vers 2
-        """Handle mouse move for dragging/resizing - FIXED for PyQt6"""
-        # Check corner hover - FIXED: use position() instead of pos()
-        pos = event.position().toPoint()
-        width = self.width()
-        height = self.height()
 
-        corner = None
-        if pos.x() < self.corner_size and pos.y() < self.corner_size:
-            corner = 'top_left'
-        elif pos.x() > width - self.corner_size and pos.y() < self.corner_size:
-            corner = 'top_right'
-        elif pos.x() < self.corner_size and pos.y() > height - self.corner_size:
-            corner = 'bottom_left'
-        elif pos.x() > width - self.corner_size and pos.y() > height - self.corner_size:
-            corner = 'bottom_right'
+    def mouseMoveEvent(self, event): #vers 1
+        """Handle mouse move for window dragging/resizing"""
+        from PyQt6.QtCore import Qt, QRect
+        from PyQt6.QtGui import QCursor
 
-        self.hover_corner = corner
+        if self.resizing and self.resize_corner:
+            # Handle resizing
+            delta = event.globalPosition().toPoint() - self.drag_position
+            self.drag_position = event.globalPosition().toPoint()
 
-        # Update cursor
-        if corner in ['top_left', 'bottom_right']:
-            self.setCursor(Qt.CursorShape.SizeFDiagCursor)
-        elif corner in ['top_right', 'bottom_left']:
-            self.setCursor(Qt.CursorShape.SizeBDiagCursor)
-        else:
-            self.setCursor(Qt.CursorShape.ArrowCursor)
+            rect = self.geometry()
 
-        # Handle dragging - FIXED: use position()
-        if self.dragging and self.drag_position:
+            if self.resize_corner == 'bottom_right':
+                rect.setBottomRight(rect.bottomRight() + delta)
+            elif self.resize_corner == 'bottom_left':
+                rect.setBottomLeft(rect.bottomLeft() + delta)
+            elif self.resize_corner == 'top_right':
+                rect.setTopRight(rect.topRight() + delta)
+            elif self.resize_corner == 'top_left':
+                rect.setTopLeft(rect.topLeft() + delta)
+
+            # Enforce minimum size
+            if rect.width() >= 900 and rect.height() >= 400:
+                self.setGeometry(rect)
+
+        elif self.dragging:
+            # Handle window dragging
             self.move(event.globalPosition().toPoint() - self.drag_position)
 
-    def mouseReleaseEvent(self, event): #vers 2
-        """Handle mouse release - FIXED for PyQt6"""
-        self.dragging = False
-        self.resizing = False
-        self.resize_corner = None
+        else:
+            # Update cursor based on corner hover
+            corner = self._get_resize_corner(event.pos())
+            if corner:
+                if corner in ['top_left', 'bottom_right']:
+                    self.setCursor(QCursor(Qt.CursorShape.SizeFDiagCursor))
+                else:
+                    self.setCursor(QCursor(Qt.CursorShape.SizeBDiagCursor))
+            else:
+                self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
+
+
+    def mouseReleaseEvent(self, event): #vers 1
+        """Handle mouse release"""
+        from PyQt6.QtCore import Qt
+
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.dragging = False
+            self.resizing = False
+            self.resize_corner = None
+
+
+    def _get_resize_corner(self, pos): #vers 1
+        """Determine which corner (if any) the mouse is over"""
+        rect = self.rect()
+        corner_size = self.corner_size
+
+        # Bottom right
+        if (rect.width() - corner_size <= pos.x() <= rect.width() and
+            rect.height() - corner_size <= pos.y() <= rect.height()):
+            return 'bottom_right'
+
+        # Bottom left
+        if (0 <= pos.x() <= corner_size and
+            rect.height() - corner_size <= pos.y() <= rect.height()):
+            return 'bottom_left'
+
+        # Top right
+        if (rect.width() - corner_size <= pos.x() <= rect.width() and
+            0 <= pos.y() <= corner_size):
+            return 'top_right'
+
+        # Top left
+        if (0 <= pos.x() <= corner_size and
+            0 <= pos.y() <= corner_size):
+            return 'top_left'
+
+        return None
+
 
     def _create_minimize_icon(self): #vers 1
         """Minimize - Horizontal line icon"""
@@ -10035,6 +11454,34 @@ class BumpmapManagerWindow(QWidget): #vers 1
             self.modified = False
 
             QMessageBox.information(self, "Success", "Changes applied to texture")
+
+
+    def closeEvent(self, event): #vers 1
+        """Handle window close event"""
+
+        # Save settings before closing
+        self._save_settings()
+
+        if self.modified:
+            from PyQt6.QtWidgets import QMessageBox
+            reply = QMessageBox.question(
+                self, "Unsaved Changes",
+                "Apply changes before closing?",
+                QMessageBox.StandardButton.Yes |
+                QMessageBox.StandardButton.No |
+                QMessageBox.StandardButton.Cancel
+            )
+
+            if reply == QMessageBox.StandardButton.Yes:
+                self._apply_changes()
+                event.accept()
+            elif reply == QMessageBox.StandardButton.No:
+                event.accept()
+            else:
+                event.ignore()
+        else:
+            event.accept()
+
 
 
 class MipmapManagerWindow(QWidget): #vers 2
@@ -10422,7 +11869,7 @@ class MipmapManagerWindow(QWidget): #vers 2
         level_num = level_data.get('level', 0)
 
         # Export button
-        export_btn = QPushButton("📤 Export")
+        export_btn = QPushButton("Export")
         export_btn.setStyleSheet("""
             QPushButton {
                 background: #2e5d2e;
@@ -10440,7 +11887,7 @@ class MipmapManagerWindow(QWidget): #vers 2
         layout.addWidget(export_btn)
 
         # Import button
-        import_btn = QPushButton("📥 Import")
+        import_btn = QPushButton("Import")
         import_btn.setStyleSheet("""
             QPushButton {
                 background: #5d3d2e;
@@ -10459,7 +11906,7 @@ class MipmapManagerWindow(QWidget): #vers 2
 
         # Delete button (not for level 0) or Edit button (for level 0)
         if level_num == 0:
-            edit_btn = QPushButton("✏️ Edit")
+            edit_btn = QPushButton("Edit")
             edit_btn.setStyleSheet("""
                 QPushButton {
                     background: #3a3a3a;
@@ -10476,7 +11923,7 @@ class MipmapManagerWindow(QWidget): #vers 2
             edit_btn.clicked.connect(self._edit_main_texture)
             layout.addWidget(edit_btn)
         else:
-            delete_btn = QPushButton("🗑️ Delete")
+            delete_btn = QPushButton("Delete")
             delete_btn.setStyleSheet("""
                 QPushButton {
                     background: #5d2e2e;
