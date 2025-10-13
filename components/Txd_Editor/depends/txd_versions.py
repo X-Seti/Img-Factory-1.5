@@ -1,4 +1,4 @@
-#this belongs in Components/Txd_Editor/depends/txd_versions.py - Version: 3
+#this belongs in Components/Txd_Editor/depends/txd_versions.py - Version: 10
 # X-Seti - October13 2025 - IMG Factory 1.5 - TXD Version Detection and Format Utilities
 
 """
