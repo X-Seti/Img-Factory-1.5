@@ -478,113 +478,175 @@ class TXDWorkshop(QWidget): #vers 3
         return status_bar
 
 
-    def _show_workshop_settings(self): #vers 5
-        """Show workshop settings dialog with window options"""
+    def _show_workshop_settings(self): #vers 6
+        """Show comprehensive workshop settings dialog"""
         from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTabWidget,
-                                    QGroupBox, QFormLayout, QSpinBox, QFontComboBox,
-                                    QPushButton, QLabel, QComboBox, QWidget, QCheckBox)
+                                    QLabel, QComboBox, QPushButton, QGroupBox,
+                                    QCheckBox, QSpinBox, QFormLayout, QFontComboBox,
+                                    QWidget)
+        from PyQt6.QtGui import QFont
 
         dialog = QDialog(self)
         dialog.setWindowTitle("TXD Workshop Settings")
-        dialog.setMinimumWidth(550)
-        dialog.setMinimumHeight(550)
+        dialog.setMinimumSize(600, 500)
 
         layout = QVBoxLayout(dialog)
+
         tabs = QTabWidget()
 
         # === APPEARANCE TAB ===
         appearance_tab = QWidget()
         appearance_layout = QVBoxLayout(appearance_tab)
 
-        # Font settings group
+        # Font Settings Group
         font_group = QGroupBox("Font Settings")
         font_layout = QFormLayout()
 
-        settings_font_combo = QFontComboBox()
-        current_font = self.font()
-        settings_font_combo.setCurrentFont(current_font)
-        font_layout.addRow("Font Family:", settings_font_combo)
+        # Main/Default Font
+        default_font_layout = QHBoxLayout()
+        self.default_font_combo = QFontComboBox()
+        self.default_font_combo.setCurrentFont(self.font())
+        default_font_layout.addWidget(self.default_font_combo)
+        self.default_font_size = QSpinBox()
+        self.default_font_size.setRange(8, 24)
+        self.default_font_size.setValue(self.font().pointSize())
+        self.default_font_size.setSuffix(" pt")
+        default_font_layout.addWidget(self.default_font_size)
+        font_layout.addRow("Default Font:", default_font_layout)
 
-        settings_font_size = QSpinBox()
-        settings_font_size.setRange(8, 24)
-        settings_font_size.setValue(current_font.pointSize())
-        font_layout.addRow("Font Size:", settings_font_size)
+        # Title Font
+        title_font_layout = QHBoxLayout()
+        self.title_font_combo = QFontComboBox()
+        if hasattr(self, 'title_font'):
+            self.title_font_combo.setCurrentFont(self.title_font)
+        title_font_layout.addWidget(self.title_font_combo)
+        self.title_font_size = QSpinBox()
+        self.title_font_size.setRange(10, 32)
+        self.title_font_size.setValue(getattr(self, 'title_font', QFont("Arial", 14)).pointSize())
+        self.title_font_size.setSuffix(" pt")
+        title_font_layout.addWidget(self.title_font_size)
+        font_layout.addRow("Title Font:", title_font_layout)
+
+        # Panel Font
+        panel_font_layout = QHBoxLayout()
+        self.panel_font_combo = QFontComboBox()
+        if hasattr(self, 'panel_font'):
+            self.panel_font_combo.setCurrentFont(self.panel_font)
+        panel_font_layout.addWidget(self.panel_font_combo)
+        self.panel_font_size = QSpinBox()
+        self.panel_font_size.setRange(8, 18)
+        self.panel_font_size.setValue(getattr(self, 'panel_font', QFont("Arial", 10)).pointSize())
+        self.panel_font_size.setSuffix(" pt")
+        panel_font_layout.addWidget(self.panel_font_size)
+        font_layout.addRow("Panel Font:", panel_font_layout)
+
+        # Button Font
+        button_font_layout = QHBoxLayout()
+        self.button_font_combo = QFontComboBox()
+        if hasattr(self, 'button_font'):
+            self.button_font_combo.setCurrentFont(self.button_font)
+        button_font_layout.addWidget(self.button_font_combo)
+        self.button_font_size = QSpinBox()
+        self.button_font_size.setRange(8, 16)
+        self.button_font_size.setValue(getattr(self, 'button_font', QFont("Arial", 10)).pointSize())
+        self.button_font_size.setSuffix(" pt")
+        button_font_layout.addWidget(self.button_font_size)
+        font_layout.addRow("Button Font:", button_font_layout)
+
+        # Info Bar Font
+        infobar_font_layout = QHBoxLayout()
+        self.infobar_font_combo = QFontComboBox()
+        if hasattr(self, 'infobar_font'):
+            self.infobar_font_combo.setCurrentFont(self.infobar_font)
+        infobar_font_layout.addWidget(self.infobar_font_combo)
+        self.infobar_font_size = QSpinBox()
+        self.infobar_font_size.setRange(7, 14)
+        self.infobar_font_size.setValue(getattr(self, 'infobar_font', QFont("Courier New", 9)).pointSize())
+        self.infobar_font_size.setSuffix(" pt")
+        infobar_font_layout.addWidget(self.infobar_font_size)
+        font_layout.addRow("Info Bar Font:", infobar_font_layout)
 
         font_group.setLayout(font_layout)
         appearance_layout.addWidget(font_group)
 
-        # Button display mode
-        display_group = QGroupBox("Button Display")
-        display_layout = QFormLayout()
+        # UI Display Group
+        ui_group = QGroupBox("User Interface")
+        ui_layout = QVBoxLayout()
 
-        settings_display_combo = QComboBox()
-        settings_display_combo.addItems(["Icons Only", "Text Only", "Both"])
-        current_mode = {"icons": 0, "text": 1, "both": 2}.get(self.button_display_mode, 2)
-        settings_display_combo.setCurrentIndex(current_mode)
-        display_layout.addRow("Button Style:", settings_display_combo)
+        display_layout = QHBoxLayout()
+        display_layout.addWidget(QLabel("Button Display:"))
+        self.settings_display_combo = QComboBox()
+        self.settings_display_combo.addItems(["Icons Only", "Text Only", "Icons + Text"])
+        mode_map = {"icons": 0, "text": 1, "both": 2}
+        self.settings_display_combo.setCurrentIndex(mode_map.get(self.button_display_mode, 2))
+        display_layout.addWidget(self.settings_display_combo)
+        display_layout.addStretch()
+        ui_layout.addLayout(display_layout)
 
-        display_group.setLayout(display_layout)
-        appearance_layout.addWidget(display_group)
+        titlebar_check = QCheckBox("Use system title bar")
+        titlebar_check.setChecked(self.use_system_titlebar)
+        ui_layout.addWidget(titlebar_check)
+
+        ontop_check = QCheckBox("Always on top")
+        ontop_check.setChecked(self.window_always_on_top)
+        ui_layout.addWidget(ontop_check)
+
+        ui_group.setLayout(ui_layout)
+        appearance_layout.addWidget(ui_group)
 
         appearance_layout.addStretch()
         tabs.addTab(appearance_tab, "Appearance")
 
-        # === WINDOW TAB === (NEW)
-        window_tab = QWidget()
-        window_layout = QVBoxLayout(window_tab)
+        # === EXPORT TAB ===
+        export_tab = QWidget()
+        export_layout = QVBoxLayout(export_tab)
 
-        # Window frame group
-        frame_group = QGroupBox("Window Frame")
-        frame_layout = QVBoxLayout()
+        # Default Export Settings
+        export_group = QGroupBox("Default Export Version")
+        export_form = QFormLayout()
 
-        # System title bar toggle
-        titlebar_check = QCheckBox("Use system title bar")
-        titlebar_check.setChecked(self.use_system_titlebar)
-        titlebar_check.setToolTip(
-            "Enable: Use OS native title bar with minimize/maximize/close buttons\n"
-            "Disable: Use custom frameless window (default)"
+        self.export_game_combo = QComboBox()
+        self.export_game_combo.addItems([
+            "Auto-detect", "GTA III", "Vice City", "San Andreas", "Manhunt"
+        ])
+        game_map = {"auto": 0, "gta3": 1, "vc": 2, "sa": 3, "manhunt": 4}
+        self.export_game_combo.setCurrentIndex(game_map.get(self.export_target_game, 0))
+        export_form.addRow("Target Game:", self.export_game_combo)
+
+        self.export_platform_combo = QComboBox()
+        self.export_platform_combo.addItems([
+            "PC", "Xbox", "PS2", "Android", "Multi-platform"
+        ])
+        platform_map = {"pc": 0, "xbox": 1, "ps2": 2, "android": 3, "multi": 4}
+        self.export_platform_combo.setCurrentIndex(platform_map.get(self.export_target_platform, 0))
+        export_form.addRow("Target Platform:", self.export_platform_combo)
+
+        export_group.setLayout(export_form)
+        export_layout.addWidget(export_group)
+
+        # Version Compatibility Warning
+        compat_label = QLabel(
+            "<b>Note:</b> Exporting to GTA III will automatically remove mipmaps and bumpmaps.\n"
+            "Vice City PS2 also has limited support for these features."
         )
-        frame_layout.addWidget(titlebar_check)
+        compat_label.setWordWrap(True)
+        compat_label.setStyleSheet("padding: 10px; background-color: #3a3a3a; border-radius: 4px;")
+        export_layout.addWidget(compat_label)
 
-        # Info label
-        info_label = QLabel(
-            "Note: Changing title bar requires restart to take full effect.\n"
-            "Custom frameless window provides drag-to-move and corner resize."
-        )
-        info_label.setWordWrap(True)
-        info_label.setStyleSheet("color: #888888; font-size: 9pt;")
-        frame_layout.addWidget(info_label)
-
-        frame_group.setLayout(frame_layout)
-        window_layout.addWidget(frame_group)
-
-        # Window behavior group
-        behavior_group = QGroupBox("Window Behavior")
-        behavior_layout = QVBoxLayout()
-
-        # Always on top toggle
-        ontop_check = QCheckBox("Always on top")
-        ontop_check.setChecked(self.window_always_on_top)
-        ontop_check.setToolTip("Keep TXD Workshop window above other windows")
-        behavior_layout.addWidget(ontop_check)
-
-        behavior_group.setLayout(behavior_layout)
-        window_layout.addWidget(behavior_group)
-
-        window_layout.addStretch()
-        tabs.addTab(window_tab, "Window")
+        export_layout.addStretch()
+        tabs.addTab(export_tab, "Export")
 
         # === TEXTURE CONSTRAINTS TAB ===
         constraints_tab = QWidget()
         constraints_layout = QVBoxLayout(constraints_tab)
 
-        # Dimension limiting group
-        dimension_group = QGroupBox("Dimension Limiting")
+        # Dimension constraints
+        dimension_group = QGroupBox("Dimension Constraints")
         dimension_layout = QVBoxLayout()
 
-        dimension_check = QCheckBox("Enable dimension limiting (Power of 2)")
+        dimension_check = QCheckBox("Enforce power-of-2 dimensions")
         dimension_check.setChecked(self.dimension_limiting_enabled)
-        dimension_check.setToolTip("Enforce power-of-2 dimensions (64, 128, 256, 512, etc.)")
+        dimension_check.setToolTip("Enforce sizes like 256, 512, 1024, 2048")
         dimension_layout.addWidget(dimension_check)
 
         splash_check = QCheckBox("Allow splash screen dimensions")
@@ -606,7 +668,7 @@ class TXDWorkshop(QWidget): #vers 3
         dimension_group.setLayout(dimension_layout)
         constraints_layout.addWidget(dimension_group)
 
-        # Texture naming group
+        # Texture naming
         naming_group = QGroupBox("Texture Naming")
         naming_layout = QVBoxLayout()
 
@@ -628,7 +690,7 @@ class TXDWorkshop(QWidget): #vers 3
         naming_group.setLayout(naming_layout)
         constraints_layout.addWidget(naming_group)
 
-        # Format support group
+        # Format support
         format_group = QGroupBox("Import Format Support")
         format_layout = QVBoxLayout()
 
@@ -655,21 +717,17 @@ class TXDWorkshop(QWidget): #vers 3
         preview_group = QGroupBox("Preview Settings")
         preview_form = QFormLayout()
 
-        pan_x_spin = QSpinBox()
-        pan_x_spin.setRange(-1000, 1000)
-        pan_x_spin.setValue(0)
-        preview_form.addRow("Pan X Offset:", pan_x_spin)
-
-        pan_y_spin = QSpinBox()
-        pan_y_spin.setRange(-1000, 1000)
-        pan_y_spin.setValue(0)
-        preview_form.addRow("Pan Y Offset:", pan_y_spin)
-
         zoom_spin = QSpinBox()
         zoom_spin.setRange(10, 500)
-        zoom_spin.setValue(100)
+        zoom_spin.setValue(int(self.zoom_level * 100))
         zoom_spin.setSuffix("%")
-        preview_form.addRow("Zoom Level:", zoom_spin)
+        preview_form.addRow("Default Zoom:", zoom_spin)
+
+        bg_mode_combo = QComboBox()
+        bg_mode_combo.addItems(["Solid Color", "Checkerboard", "Grid"])
+        mode_idx = {"solid": 0, "checker": 1, "grid": 2}.get(self.background_mode, 0)
+        bg_mode_combo.setCurrentIndex(mode_idx)
+        preview_form.addRow("Background Mode:", bg_mode_combo)
 
         preview_group.setLayout(preview_form)
         preview_layout.addWidget(preview_group)
@@ -683,30 +741,48 @@ class TXDWorkshop(QWidget): #vers 3
         button_layout = QHBoxLayout()
         button_layout.addStretch()
 
+        # Apply button
         apply_btn = QPushButton("Apply")
         def apply_settings():
-            # Appearance
-            new_font = settings_font_combo.currentFont()
-            new_font.setPointSize(settings_font_size.value())
-            self.setFont(new_font)
+            # Fonts
+            self.setFont(QFont(self.default_font_combo.currentFont().family(),
+                            self.default_font_size.value()))
+            self.title_font = QFont(self.title_font_combo.currentFont().family(),
+                                self.title_font_size.value())
+            self.panel_font = QFont(self.panel_font_combo.currentFont().family(),
+                                self.panel_font_size.value())
+            self.button_font = QFont(self.button_font_combo.currentFont().family(),
+                                    self.button_font_size.value())
+            self.infobar_font = QFont(self.infobar_font_combo.currentFont().family(),
+                                    self.infobar_font_size.value())
 
+            # Apply fonts to UI elements
+            self._apply_title_font()
+            self._apply_panel_font()
+            self._apply_button_font()
+            self._apply_infobar_font()
+
+            # UI settings
             mode_map = {0: "icons", 1: "text", 2: "both"}
-            self.button_display_mode = mode_map[settings_display_combo.currentIndex()]
+            self.button_display_mode = mode_map[self.settings_display_combo.currentIndex()]
             self._update_all_buttons()
 
-            # Window settings
             old_titlebar = self.use_system_titlebar
             self.use_system_titlebar = titlebar_check.isChecked()
             self.window_always_on_top = ontop_check.isChecked()
 
-            # Apply window flags changes
             if old_titlebar != self.use_system_titlebar:
                 self._apply_window_flags()
-
-            # Apply always on top
             self._apply_always_on_top()
 
-            # Texture constraints
+            # Export settings
+            game_map = {0: "auto", 1: "gta3", 2: "vc", 3: "sa", 4: "manhunt"}
+            self.export_target_game = game_map[self.export_game_combo.currentIndex()]
+
+            platform_map = {0: "pc", 1: "xbox", 2: "ps2", 3: "android", 4: "multi"}
+            self.export_target_platform = platform_map[self.export_platform_combo.currentIndex()]
+
+            # Constraints
             self.dimension_limiting_enabled = dimension_check.isChecked()
             self.splash_screen_mode = splash_check.isChecked()
             self.custom_max_dimension = max_dim_spin.value()
@@ -715,12 +791,18 @@ class TXDWorkshop(QWidget): #vers 3
             self.iff_import_enabled = iff_check.isChecked()
             self.splash_formats_enabled = splash_format_check.isChecked()
 
+            # Preview
+            self.zoom_level = zoom_spin.value() / 100.0
+            bg_mode_map = {0: "solid", 1: "checker", 2: "grid"}
+            self.background_mode = bg_mode_map[bg_mode_combo.currentIndex()]
+
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message("✅ Settings applied")
 
         apply_btn.clicked.connect(apply_settings)
         button_layout.addWidget(apply_btn)
 
+        # OK button
         ok_btn = QPushButton("OK")
         def ok_clicked():
             apply_settings()
@@ -728,6 +810,7 @@ class TXDWorkshop(QWidget): #vers 3
         ok_btn.clicked.connect(ok_clicked)
         button_layout.addWidget(ok_btn)
 
+        # Cancel button
         cancel_btn = QPushButton("Cancel")
         cancel_btn.clicked.connect(dialog.reject)
         button_layout.addWidget(cancel_btn)
@@ -6132,6 +6215,205 @@ class TXDWorkshop(QWidget): #vers 3
             return False
 
 
+    def _show_version_selector_dialog(self): #vers 1
+        """Show RW version selector dialog for export"""
+        from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
+                                    QComboBox, QPushButton, QGroupBox, QCheckBox)
+        from PyQt6.QtCore import Qt
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Select Export Version")
+        dialog.setMinimumWidth(400)
+
+        layout = QVBoxLayout(dialog)
+
+        # Info label
+        info_label = QLabel("Select target game and platform for TXD export:")
+        layout.addWidget(info_label)
+
+        # Game selection
+        game_group = QGroupBox("Target Game")
+        game_layout = QVBoxLayout()
+
+        game_combo = QComboBox()
+        game_combo.addItems([
+            "Auto-detect from current",
+            "GTA III",
+            "GTA Vice City",
+            "GTA San Andreas"
+        ])
+
+        # Set current based on detected or settings
+        if hasattr(self, 'txd_game') and self.txd_game:
+            if "III" in self.txd_game:
+                game_combo.setCurrentIndex(1)
+            elif "Vice" in self.txd_game or "VC" in self.txd_game:
+                game_combo.setCurrentIndex(2)
+            elif "San" in self.txd_game or "SA" in self.txd_game:
+                game_combo.setCurrentIndex(3)
+        elif hasattr(self, 'export_target_game'):
+            game_map = {"auto": 0, "gta3": 1, "vc": 2, "sa": 3}
+            game_combo.setCurrentIndex(game_map.get(self.export_target_game, 0))
+
+        game_layout.addWidget(game_combo)
+        game_group.setLayout(game_layout)
+        layout.addWidget(game_group)
+
+        # Platform selection
+        platform_group = QGroupBox("Target Platform")
+        platform_layout = QVBoxLayout()
+
+        platform_combo = QComboBox()
+        platform_combo.addItems([
+            "PC",
+            "Xbox",
+            "PS2"
+        ])
+
+        if hasattr(self, 'export_target_platform'):
+            platform_map = {"pc": 0, "xbox": 1, "ps2": 2}
+            platform_combo.setCurrentIndex(platform_map.get(self.export_target_platform, 0))
+
+        platform_layout.addWidget(platform_combo)
+        platform_group.setLayout(platform_layout)
+        layout.addWidget(platform_group)
+
+        # Version info display
+        version_info_label = QLabel()
+        version_info_label.setWordWrap(True)
+        version_info_label.setStyleSheet("padding: 10px; background-color: #2a2a2a; border-radius: 4px;")
+        layout.addWidget(version_info_label)
+
+        # Capability warnings
+        warning_label = QLabel()
+        warning_label.setWordWrap(True)
+        warning_label.setStyleSheet("color: #ff9800; padding: 5px;")
+        layout.addWidget(warning_label)
+
+        # Update info when selection changes
+        def update_version_info():
+            game_idx = game_combo.currentIndex()
+            platform_idx = platform_combo.currentIndex()
+
+            # Map to version IDs
+            version_map = {
+                (1, 0): (0x0C02FFFF, 0x01, "3.3.0.2 (GTA III PC)"),      # GTA III PC
+                (1, 1): (0x35000, 0x08, "3.5.0.0 (GTA III Xbox)"),       # GTA III Xbox
+                (1, 2): (0x00000310, 0x06, "3.1.0.0 (GTA III PS2)"),     # GTA III PS2
+                (2, 0): (0x1003FFFF, 0x01, "3.4.0.3 (Vice City PC)"),    # VC PC
+                (2, 1): (0x35000, 0x08, "3.5.0.0 (Vice City Xbox)"),     # VC Xbox
+                (2, 2): (0x0C02FFFF, 0x06, "3.3.0.2 (Vice City PS2)"),   # VC PS2
+                (3, 0): (0x1803FFFF, 0x08, "3.6.0.3 (San Andreas PC)"),  # SA PC
+                (3, 1): (0x1803FFFF, 0x08, "3.6.0.3 (San Andreas Xbox)"),# SA Xbox
+                (3, 2): (0x1803FFFF, 0x06, "3.6.0.3 (San Andreas PS2)"), # SA PS2
+            }
+
+            if game_idx == 0:  # Auto-detect
+                version_id = self.txd_version_id if self.txd_version_id else 0x1803FFFF
+                device_id = self.txd_device_id if self.txd_device_id else 0x08
+                version_str = f"Current: 0x{version_id:08X} (device: 0x{device_id:02X})"
+            else:
+                version_id, device_id, version_str = version_map.get((game_idx, platform_idx),
+                                                                    (0x1803FFFF, 0x08, "3.6.0.3 (SA PC)"))
+
+            version_info_label.setText(f"<b>RW Version:</b> {version_str}")
+
+            # Check capabilities and show warnings
+            warnings = []
+
+            # GTA III limitations
+            if game_idx == 1:
+                warnings.append("⚠️ GTA III: Mipmaps and bumpmaps not supported - will be removed")
+                warnings.append("⚠️ Limited texture formats supported")
+
+            # VC limitations
+            if game_idx == 2 and platform_idx == 2:  # VC PS2
+                warnings.append("⚠️ VC PS2: Mipmaps and bumpmaps not supported - will be removed")
+
+            if warnings:
+                warning_label.setText("\n".join(warnings))
+                warning_label.setVisible(True)
+            else:
+                warning_label.setVisible(False)
+
+            # Store selection
+            dialog.selected_version = version_id
+            dialog.selected_device = device_id
+            dialog.selected_game_idx = game_idx
+
+        game_combo.currentIndexChanged.connect(update_version_info)
+        platform_combo.currentIndexChanged.connect(update_version_info)
+        update_version_info()  # Initial update
+
+        # Remember choice checkbox
+        remember_cb = QCheckBox("Remember this choice for future exports")
+        layout.addWidget(remember_cb)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        ok_btn = QPushButton("Export")
+        cancel_btn = QPushButton("Cancel")
+
+        ok_btn.clicked.connect(dialog.accept)
+        cancel_btn.clicked.connect(dialog.reject)
+
+        button_layout.addStretch()
+        button_layout.addWidget(ok_btn)
+        button_layout.addWidget(cancel_btn)
+        layout.addLayout(button_layout)
+
+        # Execute dialog
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            # Update settings if remember is checked
+            if remember_cb.isChecked():
+                game_map = {0: "auto", 1: "gta3", 2: "vc", 3: "sa"}
+                platform_map = {0: "pc", 1: "xbox", 2: "ps2"}
+                self.export_target_game = game_map.get(dialog.selected_game_idx, "auto")
+                self.export_target_platform = platform_map.get(platform_combo.currentIndex(), "pc")
+
+            return (dialog.selected_version, dialog.selected_device, dialog.selected_game_idx)
+
+        return None
+
+
+    def _strip_unsupported_features_for_version(self, game_idx): #vers 1
+        """Remove unsupported features based on target game version"""
+        if game_idx == 1:  # GTA III
+            # Remove mipmaps and bumpmaps from all textures
+            removed_mipmaps = 0
+            removed_bumpmaps = 0
+
+            for texture in self.texture_list:
+                # Remove mipmaps
+                if texture.get('mipmap_levels'):
+                    removed_mipmaps += len(texture['mipmap_levels'])
+                    texture['mipmap_levels'] = []
+                    texture['mipmaps'] = 1
+
+                # Remove bumpmaps
+                if texture.get('has_bumpmap') or texture.get('bumpmap_data'):
+                    removed_bumpmaps += 1
+                    texture['has_bumpmap'] = False
+                    texture['bumpmap_data'] = b''
+                    texture['bumpmap_type'] = 0
+
+                    # Clear bumpmap flag
+                    if 'raster_format_flags' in texture:
+                        texture['raster_format_flags'] &= ~0x10
+
+                # Remove reflection maps
+                if texture.get('has_reflection'):
+                    texture['has_reflection'] = False
+                    texture['reflection_map'] = b''
+                    texture['fresnel_map'] = b''
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                if removed_mipmaps > 0:
+                    self.main_window.log_message(f"Removed {removed_mipmaps} mipmap levels (GTA III doesn't support mipmaps)")
+                if removed_bumpmaps > 0:
+                    self.main_window.log_message(f"Removed {removed_bumpmaps} bumpmaps (GTA III doesn't support bumpmaps)")
+
+
     def _save_as_txd_file(self): #vers 4
         """Save as standalone TXD file - respects save location setting"""
         import os
@@ -6208,17 +6490,187 @@ class TXDWorkshop(QWidget): #vers 3
             QMessageBox.critical(self, "Error", f"Failed to save TXD:\n\n{str(e)}")
 
 
-    def save_txd_file(self): #vers 5
-        """Save TXD file with progress indicator"""
+    # Update the main save_txd_file method to use version selector:
+    def save_txd_file(self): #vers 6
+        """Save TXD file with version selector"""
         from PyQt6.QtWidgets import QMessageBox
 
         if not self.current_img:
-            # Standalone TXD save
-            #return self._save_as_txd_file()
-            return self._save_as_txd_file_with_progress()
+            # Standalone TXD save with version selector
+            return self._save_as_txd_file_with_version_selector()
+        else:
+            # IMG-based TXD save with version selector
+            return self._save_txd_to_img_with_version_selector()
 
-        # IMG-based TXD save with progress
-        return self._save_txd_with_progress()
+
+    def _save_as_txd_file_with_version_selector(self): #vers 1
+        """Save standalone TXD with version selector"""
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+        import os
+
+        # Show version selector
+        version_info = self._show_version_selector_dialog()
+        if not version_info:
+            return  # User cancelled
+
+        target_version, target_device, game_idx = version_info
+
+        # Strip unsupported features based on game version
+        self._strip_unsupported_features_for_version(game_idx)
+
+        # Determine default filename
+        if self.current_txd_name:
+            default_name = self.current_txd_name
+        else:
+            default_name = "untitled.txd"
+
+        # Determine initial directory
+        if self.save_to_source_location:
+            if hasattr(self, 'current_txd_path') and self.current_txd_path:
+                initial_path = self.current_txd_path
+            elif hasattr(self, 'current_img') and self.current_img and hasattr(self.current_img, 'file_path'):
+                img_dir = os.path.dirname(self.current_img.file_path)
+                initial_path = os.path.join(img_dir, default_name)
+            elif hasattr(self, 'last_save_directory') and self.last_save_directory:
+                initial_path = os.path.join(self.last_save_directory, default_name)
+            else:
+                initial_path = default_name
+        else:
+            if hasattr(self, 'last_save_directory') and self.last_save_directory:
+                initial_path = os.path.join(self.last_save_directory, default_name)
+            else:
+                initial_path = default_name
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save TXD File",
+            initial_path,
+            "TXD Files (*.txd);;All Files (*)"
+        )
+
+        if not file_path:
+            return
+
+        try:
+            # Store target version for rebuild
+            self._save_target_version = target_version
+            self._save_target_device = target_device
+
+            # Rebuild TXD data with target version
+            modified_txd_data = self._rebuild_txd_data()
+
+            if not modified_txd_data:
+                QMessageBox.critical(self, "Error", "Failed to rebuild TXD data")
+                return
+
+            # Write to file
+            with open(file_path, 'wb') as f:
+                f.write(modified_txd_data)
+
+            # Store paths
+            self.current_txd_path = file_path
+            self.current_txd_name = os.path.basename(file_path)
+            self.last_save_directory = os.path.dirname(file_path)
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✅ Saved TXD: {file_path}")
+                self.main_window.log_message(f"   Version: 0x{target_version:08X}, Device: 0x{target_device:02X}")
+
+            QMessageBox.information(self, "Success",
+                f"TXD saved successfully!\n\n{file_path}\n\nVersion: 0x{target_version:08X}")
+
+            # Clear modified state
+            if hasattr(self, 'save_txd_btn'):
+                self.save_txd_btn.setEnabled(False)
+                self.save_txd_btn.setStyleSheet("")
+            title = self.windowTitle().replace("*", "")
+            self.setWindowTitle(title)
+
+            # Clean up
+            if hasattr(self, '_save_target_version'):
+                delattr(self, '_save_target_version')
+            if hasattr(self, '_save_target_device'):
+                delattr(self, '_save_target_device')
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save TXD:\n\n{str(e)}")
+
+
+    def _save_txd_to_img_with_version_selector(self): #vers 1
+        """Save TXD back to IMG with version selector"""
+        from PyQt6.QtWidgets import QMessageBox
+
+        if not self.current_img or not self.current_txd_name:
+            QMessageBox.warning(self, "Cannot Save", "No IMG archive or TXD loaded")
+            return
+
+        # Show version selector
+        version_info = self._show_version_selector_dialog()
+        if not version_info:
+            return  # User cancelled
+
+        target_version, target_device, game_idx = version_info
+
+        # Strip unsupported features
+        self._strip_unsupported_features_for_version(game_idx)
+
+        try:
+            # Store target version for rebuild
+            self._save_target_version = target_version
+            self._save_target_device = target_device
+
+            # Rebuild TXD data
+            modified_txd_data = self._rebuild_txd_data()
+
+            if not modified_txd_data:
+                QMessageBox.critical(self, "Error", "Failed to rebuild TXD data")
+                return
+
+            # Find entry in IMG
+            entry = None
+            for e in self.current_img.entries:
+                if e.name.lower() == self.current_txd_name.lower():
+                    entry = e
+                    break
+
+            if not entry:
+                QMessageBox.critical(self, "Error", f"Entry '{self.current_txd_name}' not found in IMG")
+                return
+
+            # Update entry data
+            entry.data = modified_txd_data
+            entry.size = len(modified_txd_data)
+
+            # Mark IMG as modified
+            self.current_img.modified = True
+
+            if self.main_window:
+                # Refresh table
+                if hasattr(self.main_window, '_refresh_table'):
+                    self.main_window._refresh_table()
+
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"✅ Updated {self.current_txd_name} in IMG")
+                    self.main_window.log_message(f"   Version: 0x{target_version:08X}, Device: 0x{target_device:02X}")
+                    self.main_window.log_message(f"   Size: {len(modified_txd_data)} bytes")
+
+            QMessageBox.information(self, "Success",
+                f"TXD updated in IMG archive!\n\n{self.current_txd_name}\nVersion: 0x{target_version:08X}")
+
+            # Clear modified state
+            if hasattr(self, 'save_txd_btn'):
+                self.save_txd_btn.setEnabled(False)
+                self.save_txd_btn.setStyleSheet("")
+            title = self.windowTitle().replace("*", "")
+            self.setWindowTitle(title)
+
+            # Clean up
+            if hasattr(self, '_save_target_version'):
+                delattr(self, '_save_target_version')
+            if hasattr(self, '_save_target_device'):
+                delattr(self, '_save_target_device')
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save to IMG:\n\n{str(e)}")
 
 
     def _save_as_txd_file_with_progress(self): #vers 1
@@ -7154,17 +7606,48 @@ class TXDWorkshop(QWidget): #vers 3
             return None
 
 
-    def _decompress_uncompressed(self, data, width, height, format_type): #vers 1
-        """Decompress uncompressed formats"""
+    def _convert_rgba_to_bgra(self, rgba_data): #vers 1
+        """Convert RGBA to BGRA byte order for RenderWare"""
+        bgra_data = bytearray(len(rgba_data))
+        for i in range(0, len(rgba_data), 4):
+            bgra_data[i] = rgba_data[i+2]    # B
+            bgra_data[i+1] = rgba_data[i+1]  # G
+            bgra_data[i+2] = rgba_data[i]    # R
+            bgra_data[i+3] = rgba_data[i+3]  # A
+        return bytes(bgra_data)
+
+
+    def _convert_bgra_to_rgba(self, bgra_data): #vers 1
+        """Convert BGRA to RGBA byte order from RenderWare"""
+        rgba_data = bytearray(len(bgra_data))
+        for i in range(0, len(bgra_data), 4):
+            rgba_data[i] = bgra_data[i+2]    # R
+            rgba_data[i+1] = bgra_data[i+1]  # G
+            rgba_data[i+2] = bgra_data[i]    # B
+            rgba_data[i+3] = bgra_data[i+3]  # A
+        return bytes(rgba_data)
+
+
+    # Update _decompress_uncompressed method:
+    def _decompress_uncompressed(self, data, width, height, format_type): #vers 2
+        """Decompress uncompressed formats - FIXED: Proper BGRA handling"""
         try:
             import struct
             rgba = bytearray(width * height * 4)
 
             if 'ARGB8888' in format_type or 'ARGB32' in format_type:
+                # RenderWare stores as BGRA, not RGBA
                 for i in range(width * height):
                     if i*4+4 <= len(data):
-                        b,g,r,a = struct.unpack('BBBB', data[i*4:i*4+4])
-                        rgba[i*4:i*4+4] = [r,g,b,a]
+                        b, g, r, a = struct.unpack('BBBB', data[i*4:i*4+4])
+                        rgba[i*4:i*4+4] = [r, g, b, a]  # Convert to RGBA
+
+            elif 'RGB888' in format_type:
+                # RGB888 is stored as BGR
+                for i in range(width * height):
+                    if i*3+3 <= len(data):
+                        b, g, r = struct.unpack('BBB', data[i*3:i*3+3])
+                        rgba[i*4:i*4+4] = [r, g, b, 255]
 
             elif 'RGB565' in format_type:
                 for i in range(width * height):
@@ -7173,7 +7656,7 @@ class TXDWorkshop(QWidget): #vers 3
                         r = ((pixel >> 11) & 0x1F) << 3
                         g = ((pixel >> 5) & 0x3F) << 2
                         b = (pixel & 0x1F) << 3
-                        rgba[i*4:i*4+4] = [r,g,b,255]
+                        rgba[i*4:i*4+4] = [r, g, b, 255]
 
             elif 'ARGB1555' in format_type:
                 for i in range(width * height):
@@ -7183,7 +7666,7 @@ class TXDWorkshop(QWidget): #vers 3
                         r = ((pixel >> 10) & 0x1F) << 3
                         g = ((pixel >> 5) & 0x1F) << 3
                         b = (pixel & 0x1F) << 3
-                        rgba[i*4:i*4+4] = [r,g,b,a]
+                        rgba[i*4:i*4+4] = [r, g, b, a]
 
             elif 'ARGB4444' in format_type:
                 for i in range(width * height):
@@ -7193,16 +7676,16 @@ class TXDWorkshop(QWidget): #vers 3
                         r = ((pixel >> 8) & 0x0F) * 17
                         g = ((pixel >> 4) & 0x0F) * 17
                         b = (pixel & 0x0F) * 17
-                        rgba[i*4:i*4+4] = [r,g,b,a]
+                        rgba[i*4:i*4+4] = [r, g, b, a]
 
             elif 'LUM8' in format_type or 'L8' in format_type:
                 for i in range(width * height):
                     if i < len(data):
                         lum = data[i]
-                        rgba[i*4:i*4+4] = [lum,lum,lum,255]
+                        rgba[i*4:i*4+4] = [lum, lum, lum, 255]
 
             return bytes(rgba)
-        except:
+        except Exception as e:
             return None
 
 
