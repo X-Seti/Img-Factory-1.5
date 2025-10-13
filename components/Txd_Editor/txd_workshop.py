@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
-#this belongs in components/Txd_Editor/ txd_workshop.py - Version: 8
+#this belongs in components/Txd_Editor/ txd_workshop.py - Version: 10
 # X-Seti - October10 2025 - Img Factory 1.5 - TXD Workshop Header Update
 
 """
 Updated imports and method list for txd_workshop.py
 Replace the existing imports and ##Methods list section
 """
-
-# ============================================================================
-# IMPORTS - Add these to the existing imports
-# ============================================================================
 
 import os
 import tempfile
