@@ -7,10 +7,6 @@ Updated imports and method list for txd_workshop.py
 Replace the existing imports and ##Methods list section
 """
 
-# ============================================================================
-# IMPORTS - Add these to the existing imports
-# ============================================================================
-
 import os
 import tempfile
 import subprocess
@@ -3579,8 +3575,7 @@ class TXDWorkshop(QWidget): #vers 3
             self.info_name.setFocus()
 
 
-    def _save_texture_name(self): #vers 1
-        """Save edited texture name"""
+    def _save_texture_name(self): #vers 2
         if not self.selected_texture:
             return
 
@@ -3588,6 +3583,15 @@ class TXDWorkshop(QWidget): #vers 3
         if new_name and new_name != self.selected_texture.get('name', ''):
             old_name = self.selected_texture.get('name', '')
             self.selected_texture['name'] = new_name
+
+            # DEBUG - Check if binary data is still there
+            has_compressed = len(self.selected_texture.get('compressed_data', b''))
+            has_bgra = len(self.selected_texture.get('original_bgra_data', b''))
+            print(f"DEBUG RENAME: {old_name} -> {new_name}")
+            print(f"  compressed_data: {has_compressed} bytes")
+            print(f"  original_bgra_data: {has_bgra} bytes")
+            print(f"  format: {self.selected_texture.get('format')}")
+
             self._save_undo_state(f"Rename texture: {old_name} → {new_name}")
             self._reload_texture_table()
             self._mark_as_modified()
@@ -3658,7 +3662,7 @@ class TXDWorkshop(QWidget): #vers 3
                 if self.main_window and hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message(f"Created blank texture {tex_width}x{tex_height} for alpha import")
 
-            # Check dimensions match
+            # Check dimensions matcho
             if img.width() != tex_width or img.height() != tex_height:
                 reply = QMessageBox.question(
                     self, "Size Mismatch",
@@ -4800,13 +4804,66 @@ class TXDWorkshop(QWidget): #vers 3
         self.texture_table.setColumnWidth(0, 80)
 
 
-    def _save_undo_state(self, action_name): #vers 1
-        """Save current state to undo stack"""
-        import copy
+    def _save_undo_state(self, action_name): #vers 2
+        """
+        Save current state to undo stack - FIXED: Properly preserves binary data
+
+        The issue was that copy.deepcopy was losing binary data fields like
+        compressed_data and original_bgra_data, causing corruption on undo.
+
+        Args:
+            action_name: Description of the action being saved
+        """
+        texture_list_copy = []
+
+        for texture in self.texture_list:
+            tex_copy = texture.copy()
+
+            # CRITICAL: Explicitly preserve all binary data fields
+            if 'compressed_data' in texture:
+                tex_copy['compressed_data'] = texture['compressed_data']
+
+            if 'original_bgra_data' in texture:
+                tex_copy['original_bgra_data'] = texture['original_bgra_data']
+
+            if 'rgba_data' in texture:
+                tex_copy['rgba_data'] = texture['rgba_data']
+
+            if 'bumpmap_data' in texture:
+                tex_copy['bumpmap_data'] = texture['bumpmap_data']
+
+            if 'reflection_map' in texture:
+                tex_copy['reflection_map'] = texture['reflection_map']
+
+            if 'fresnel_map' in texture:
+                tex_copy['fresnel_map'] = texture['fresnel_map']
+
+            # Copy mipmap levels with binary data
+            if 'mipmap_levels' in texture:
+                mipmap_copy = []
+                for level in texture['mipmap_levels']:
+                    level_copy = level.copy()
+
+                    if 'compressed_data' in level:
+                        level_copy['compressed_data'] = level['compressed_data']
+
+                    if 'original_bgra_data' in level:
+                        level_copy['original_bgra_data'] = level['original_bgra_data']
+
+                    if 'rgba_data' in level:
+                        level_copy['rgba_data'] = level['rgba_data']
+
+                    mipmap_copy.append(level_copy)
+
+                tex_copy['mipmap_levels'] = mipmap_copy
+
+            texture_list_copy.append(tex_copy)
+
         state = {
             'action': action_name,
-            'texture_list': copy.deepcopy(self.texture_list)
+            'texture_list': texture_list_copy
         }
+
         self.undo_stack.append(state)
 
         # Limit undo stack to 10 items
@@ -7228,13 +7285,6 @@ class TXDWorkshop(QWidget): #vers 3
         """
         Parse single texture from TXD with bumpmap and reflection support
 
-        Args:
-            txd_data: TXD binary data
-            offset: Current offset in data
-            index: Texture index
-
-        Returns:
-            dict: Texture dictionary with all map data
         """
         import struct
 
