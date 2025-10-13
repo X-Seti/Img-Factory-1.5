@@ -1,11 +1,14 @@
-# X-Seti - October05 2025 - IMG Factory 1.5 - TXD Version Detection and Format Utilities
-"""
-goes in root /methods/txd_versions.py - Version: 2
+#this belongs in Components/Txd_Editor/depends/txd_versions.py - Version: 3
+# X-Seti - October13 2025 - IMG Factory 1.5 - TXD Version Detection and Format Utilities
 
-TXD Version Detection and Format Utilities - Provides version detection, 
-platform identification, and capability checking for TXD texture files across 
-all platforms (PC, PS2, Xbox, GameCube, PSP) for GTA III, Vice City, San Andreas, 
-and State of Liberty.
+"""
+TXD Version Detection and Format Utilities - MASTER VERSION
+
+Provides version detection, platform identification, and capability checking 
+for TXD texture files across all platforms (PC, PS2, Xbox, GameCube, PSP) 
+for GTA III, Vice City, San Andreas, and State of Liberty.
+
+This is the authoritative version used by both ImgFactory and standalone components.
 """
 
 import struct
@@ -13,21 +16,26 @@ from typing import Dict, Tuple, Optional, List
 from enum import IntEnum
 
 ## Methods list -
-# detect_txd_version
 # detect_platform_from_data
-# get_version_string
-# get_platform_name
+# detect_txd_version
+# get_all_platform_versions
+# get_d3d_format_info
+# get_d3d_format_name
 # get_device_id_name
 # get_game_from_version
-# get_version_capabilities
 # get_platform_capabilities
-# is_mipmap_supported
+# get_platform_name
+# get_recommended_version_for_game
+# get_version_capabilities
+# get_version_string
+# is_bump_map_format
 # is_bumpmap_supported
+# is_compressed_format
+# is_mipmap_supported
+# is_palettized_format
 # pack_version_id
 # unpack_version_id
 # validate_txd_format
-# get_recommended_version_for_game
-# get_all_platform_versions
 
 class TXDPlatform(IntEnum):
     """TXD Platform/Device IDs"""
@@ -57,11 +65,59 @@ class TXDVersion(IntEnum):
     # State of Liberty
     GTASOL = 0x1003FFFF        # 3.4.0.3
     
+    # GameCube (Unknown game)
+    GAMECUBE = 0x35000         # 3.5.0.0
+    
     # Android ports
     GTA3_ANDROID = 0x34005     # 3.4.0.5
     GTAVC_ANDROID = 0x34005    # 3.4.0.5
 
-def detect_txd_version(data: bytes) -> Tuple[int, int, str]: #vers 2
+class D3DFormat(IntEnum):
+    """Direct3D Texture Format Constants"""
+    # Standard RGBA formats
+    D3DFMT_R8G8B8 = 20          # 24-bit RGB
+    D3DFMT_A8R8G8B8 = 21        # 32-bit ARGB
+    D3DFMT_X8R8G8B8 = 22        # 32-bit RGB (no alpha)
+    D3DFMT_R5G6B5 = 23          # 16-bit RGB
+    D3DFMT_X1R5G5B5 = 24        # 16-bit RGB
+    D3DFMT_A1R5G5B5 = 25        # 16-bit ARGB
+    D3DFMT_A4R4G4B4 = 26        # 16-bit ARGB
+    D3DFMT_A8 = 28              # 8-bit alpha only
+    D3DFMT_R3G3B2 = 27          # 8-bit RGB
+    D3DFMT_A8R3G3B2 = 29        # 16-bit ARGB
+    D3DFMT_X4R4G4B4 = 30        # 16-bit RGB
+    D3DFMT_A2B10G10R10 = 31     # 32-bit ARGB
+    D3DFMT_A8B8G8R8 = 32        # 32-bit ARGB
+    D3DFMT_X8B8G8R8 = 33        # 32-bit RGB
+    D3DFMT_G16R16 = 34          # 32-bit RG
+    D3DFMT_A2R10G10B10 = 35     # 32-bit ARGB
+    
+    # Palette formats
+    D3DFMT_A8P8 = 40            # 8-bit palettized with alpha
+    D3DFMT_P8 = 41              # 8-bit palettized
+    
+    # Luminance formats
+    D3DFMT_L8 = 50              # 8-bit luminance
+    D3DFMT_A8L8 = 51            # 16-bit alpha + luminance
+    D3DFMT_A4L4 = 52            # 8-bit alpha + luminance
+    D3DFMT_L16 = 81             # 16-bit luminance
+    
+    # Bump map formats
+    D3DFMT_V8U8 = 60            # 16-bit signed bump map
+    D3DFMT_L6V5U5 = 61          # 16-bit bump map with luminance
+    D3DFMT_X8L8V8U8 = 62        # 32-bit bump map with luminance
+    D3DFMT_Q8W8V8U8 = 63        # 32-bit signed bump map
+    D3DFMT_V16U16 = 64          # 32-bit signed bump map
+    D3DFMT_A2W10V10U10 = 67     # 32-bit signed bump map with alpha
+    
+    # DXT compressed formats
+    D3DFMT_DXT1 = 0x31545844    # DXT1 compression (BC1)
+    D3DFMT_DXT2 = 0x32545844    # DXT2 compression (BC2 premultiplied)
+    D3DFMT_DXT3 = 0x33545844    # DXT3 compression (BC2)
+    D3DFMT_DXT4 = 0x34545844    # DXT4 compression (BC3 premultiplied)
+    D3DFMT_DXT5 = 0x35545844    # DXT5 compression (BC3)
+
+def detect_txd_version(data: bytes) -> Tuple[int, int, str]: #vers 3
     """
     Detect TXD version from file data
     
@@ -97,7 +153,7 @@ def detect_txd_version(data: bytes) -> Tuple[int, int, str]: #vers 2
     except struct.error:
         return (0, 0, "Invalid - Read error")
 
-def detect_platform_from_data(data: bytes, offset: int = 12) -> int: #vers 1
+def detect_platform_from_data(data: bytes, offset: int = 12) -> int: #vers 2
     """
     Detect platform ID from native texture data
     Used when reading Texture Native sections
@@ -128,7 +184,7 @@ def detect_platform_from_data(data: bytes, offset: int = 12) -> int: #vers 1
     except struct.error:
         return 0
 
-def get_version_string(version_id: int, device_id: int = 0) -> str: #vers 2
+def get_version_string(version_id: int, device_id: int = 0) -> str: #vers 3
     """Convert version ID to readable string with platform info"""
     # Check known versions first
     version_map = {
@@ -144,6 +200,7 @@ def get_version_string(version_id: int, device_id: int = 0) -> str: #vers 2
         (0x1803FFFF, 8): "3.6.0.3 (San Andreas Xbox)",
         (0x1803FFFF, 9): "3.6.0.3 (San Andreas PSP)",
         (0x0800FFFF, 0): "3.0.0.3",
+        (0x35000, 3): "3.5.0.0 (Unknown GameCube)",
         (0x35000, 8): "3.5.0.0 (GTA III/VC Xbox)",
         (0x35000, 9): "3.5.0.0 (LCS PSP)",
         (0x35002, 9): "3.5.0.2 (VCS PSP)",
@@ -174,7 +231,7 @@ def get_version_string(version_id: int, device_id: int = 0) -> str: #vers 2
         # Old format
         return f"Unknown (0x{version_id:08X})"
 
-def get_platform_name(device_id: int) -> str: #vers 2
+def get_platform_name(device_id: int) -> str: #vers 3
     """Get platform name from device ID"""
     platforms = {
         0: "PC",
@@ -187,11 +244,11 @@ def get_platform_name(device_id: int) -> str: #vers 2
     }
     return platforms.get(device_id, f"Unknown ({device_id})")
 
-def get_device_id_name(device_id: int) -> str: #vers 1
+def get_device_id_name(device_id: int) -> str: #vers 2
     """Alias for get_platform_name for consistency"""
     return get_platform_name(device_id)
 
-def get_game_from_version(version_id: int, device_id: int = 0) -> str: #vers 2
+def get_game_from_version(version_id: int, device_id: int = 0) -> str: #vers 3
     """
     Determine which GTA game a TXD is from based on version
     
@@ -220,7 +277,9 @@ def get_game_from_version(version_id: int, device_id: int = 0) -> str: #vers 2
             return "San Andreas (PSP)"
         return "San Andreas (PC)"
     elif version_id == 0x35000:
-        if device_id == 8:
+        if device_id == 3:
+            return "Unknown (GameCube)"
+        elif device_id == 8:
             return "GTA III or Vice City (Xbox)"
         elif device_id == 9:
             return "Liberty City Stories (PSP)"
@@ -232,7 +291,7 @@ def get_game_from_version(version_id: int, device_id: int = 0) -> str: #vers 2
     else:
         return "Unknown GTA version"
 
-def get_version_capabilities(version_id: int) -> Dict[str, any]: #vers 2
+def get_version_capabilities(version_id: int) -> Dict[str, any]: #vers 3
     """
     Get format capabilities for a given version
     
@@ -296,7 +355,7 @@ def get_version_capabilities(version_id: int) -> Dict[str, any]: #vers 2
     
     return caps
 
-def get_platform_capabilities(device_id: int) -> Dict[str, any]: #vers 1
+def get_platform_capabilities(device_id: int) -> Dict[str, any]: #vers 2
     """
     Get platform-specific texture capabilities
     
@@ -310,14 +369,16 @@ def get_platform_capabilities(device_id: int) -> Dict[str, any]: #vers 1
         TXDPlatform.DEVICE_D3D8: {
             'name': 'Direct3D 8',
             'compression': ['DXT1', 'DXT2', 'DXT3', 'DXT4', 'DXT5'],
-            'formats': ['8888', '888', '565', '555', '1555', '4444'],
+            'formats': ['8888', '888', '565', '555', '1555', '4444', 'L8', 'A8L8', 'A8', 'A4L4', 'V8U8'],
+            'supports_bump': True,
             'swizzled': False,
             'paletted': True
         },
         TXDPlatform.DEVICE_D3D9: {
             'name': 'Direct3D 9',
             'compression': ['DXT1', 'DXT2', 'DXT3', 'DXT4', 'DXT5'],
-            'formats': ['8888', '888', '565', '555', '1555', '4444', 'L8', 'A8L8'],
+            'formats': ['8888', '888', '565', '555', '1555', '4444', 'L8', 'L16', 'A8L8', 'A4L4', 'A8', 'V8U8', 'V16U16', 'Q8W8V8U8'],
+            'supports_bump': True,
             'swizzled': False,
             'paletted': True
         },
@@ -325,20 +386,23 @@ def get_platform_capabilities(device_id: int) -> Dict[str, any]: #vers 1
             'name': 'PlayStation 2',
             'compression': [],
             'formats': ['8888', '4444', 'Palette8', 'Palette4'],
+            'supports_bump': False,
             'swizzled': True,
             'paletted': True
         },
         TXDPlatform.DEVICE_XBOX: {
             'name': 'Xbox',
             'compression': ['DXT1', 'DXT2', 'DXT3', 'DXT5'],
-            'formats': ['8888', '565', '1555', '4444', 'Palette8', 'Palette4'],
+            'formats': ['8888', '565', '1555', '4444', 'Palette8', 'Palette4', 'V8U8'],
+            'supports_bump': True,
             'swizzled': True,
             'paletted': True
         },
         TXDPlatform.DEVICE_GC: {
             'name': 'GameCube',
-            'compression': ['CMPR'],  # GameCube S3TC variant
+            'compression': ['CMPR'],
             'formats': ['RGB565', 'RGB5A3', 'RGBA8888', 'I4', 'I8', 'IA4', 'IA8', 'Palette4', 'Palette8'],
+            'supports_bump': False,
             'swizzled': True,
             'paletted': True
         },
@@ -346,6 +410,7 @@ def get_platform_capabilities(device_id: int) -> Dict[str, any]: #vers 1
             'name': 'PSP',
             'compression': [],
             'formats': ['8888', '5650', '5551', '4444', 'Palette8', 'Palette4'],
+            'supports_bump': False,
             'swizzled': True,
             'paletted': True
         }
@@ -355,11 +420,12 @@ def get_platform_capabilities(device_id: int) -> Dict[str, any]: #vers 1
         'name': 'Unknown',
         'compression': [],
         'formats': [],
+        'supports_bump': False,
         'swizzled': False,
         'paletted': False
     })
 
-def is_mipmap_supported(version_id: int, device_id: int = 0) -> bool: #vers 2
+def is_mipmap_supported(version_id: int, device_id: int = 0) -> bool: #vers 3
     """Check if version/platform supports mipmaps"""
     # Most platforms support mipmaps from VC onwards
     if version_id >= 0x1003FFFF:
@@ -371,7 +437,7 @@ def is_mipmap_supported(version_id: int, device_id: int = 0) -> bool: #vers 2
     
     return False
 
-def is_bumpmap_supported(version_id: int, device_id: int = 0) -> bool: #vers 2
+def is_bumpmap_supported(version_id: int, device_id: int = 0) -> bool: #vers 3
     """Check if version/platform supports bumpmaps"""
     # Only San Andreas PC with D3D9 had limited bumpmap support
     if version_id == 0x1803FFFF and device_id in [0, TXDPlatform.DEVICE_D3D9]:
@@ -383,7 +449,7 @@ def is_bumpmap_supported(version_id: int, device_id: int = 0) -> bool: #vers 2
     
     return False
 
-def pack_version_id(major: int, minor: int, patch: int, binary: int = 3) -> int: #vers 1
+def pack_version_id(major: int, minor: int, patch: int, binary: int = 3) -> int: #vers 2
     """
     Pack version numbers into RenderWare version ID
     
@@ -409,7 +475,7 @@ def pack_version_id(major: int, minor: int, patch: int, binary: int = 3) -> int:
     
     return packed
 
-def unpack_version_id(version_id: int) -> Tuple[int, int, int, int]: #vers 1
+def unpack_version_id(version_id: int) -> Tuple[int, int, int, int]: #vers 2
     """
     Unpack RenderWare version ID into components
     
@@ -436,7 +502,7 @@ def unpack_version_id(version_id: int) -> Tuple[int, int, int, int]: #vers 1
         
         return (major, minor, patch, 0)
 
-def validate_txd_format(data: bytes, expected_version: Optional[int] = None) -> Tuple[bool, str]: #vers 1
+def validate_txd_format(data: bytes, expected_version: Optional[int] = None) -> Tuple[bool, str]: #vers 2
     """
     Validate TXD file format
     
@@ -476,7 +542,7 @@ def validate_txd_format(data: bytes, expected_version: Optional[int] = None) -> 
     except Exception as e:
         return (False, f"Validation error: {str(e)}")
 
-def get_recommended_version_for_game(game: str, platform: str = 'pc') -> int: #vers 2
+def get_recommended_version_for_game(game: str, platform: str = 'pc') -> int: #vers 3
     """
     Get recommended TXD version for target game and platform
     
@@ -508,7 +574,7 @@ def get_recommended_version_for_game(game: str, platform: str = 'pc') -> int: #v
     key = (game.lower(), platform.lower())
     return versions.get(key, TXDVersion.GTASA_ALL)
 
-def get_all_platform_versions() -> List[Dict[str, any]]: #vers 1
+def get_all_platform_versions() -> List[Dict[str, any]]: #vers 2
     """
     Get list of all known TXD platform/version combinations
     
@@ -528,4 +594,119 @@ def get_all_platform_versions() -> List[Dict[str, any]]: #vers 1
         {'game': 'State of Liberty', 'platform': 'PC', 'version': 0x1003FFFF, 'device': 0},
         {'game': 'Liberty City Stories', 'platform': 'PSP', 'version': 0x35000, 'device': 9},
         {'game': 'Vice City Stories', 'platform': 'PSP', 'version': 0x35002, 'device': 9},
+        {'game': 'Unknown', 'platform': 'GameCube', 'version': 0x35000, 'device': 3},
     ]
+
+def get_d3d_format_name(d3d_format: int) -> str: #vers 1
+    """
+    Get readable name for D3D format code
+    
+    Args:
+        d3d_format: D3D format constant
+    
+    Returns:
+        Format name string
+    """
+    format_names = {
+        # Standard RGBA
+        20: "R8G8B8",
+        21: "A8R8G8B8",
+        22: "X8R8G8B8",
+        23: "R5G6B5",
+        24: "X1R5G5B5",
+        25: "A1R5G5B5",
+        26: "A4R4G4B4",
+        28: "A8",
+        # Luminance
+        50: "L8",
+        51: "A8L8",
+        52: "A4L4",
+        81: "L16",
+        # Bump maps
+        60: "V8U8",
+        61: "L6V5U5",
+        62: "X8L8V8U8",
+        63: "Q8W8V8U8",
+        64: "V16U16",
+        67: "A2W10V10U10",
+        # Palette
+        40: "A8P8",
+        41: "P8",
+        # DXT
+        0x31545844: "DXT1",
+        0x32545844: "DXT2",
+        0x33545844: "DXT3",
+        0x34545844: "DXT4",
+        0x35545844: "DXT5",
+    }
+    
+    return format_names.get(d3d_format, f"Unknown (0x{d3d_format:08X})")
+
+def get_d3d_format_info(d3d_format: int) -> Dict[str, any]: #vers 1
+    """
+    Get detailed information about a D3D format
+    
+    Args:
+        d3d_format: D3D format constant
+    
+    Returns:
+        Dict with format information
+    """
+    info = {
+        'name': get_d3d_format_name(d3d_format),
+        'bits_per_pixel': 0,
+        'compressed': False,
+        'has_alpha': False,
+        'is_bump': False,
+        'is_luminance': False,
+        'is_palette': False
+    }
+    
+    # Set properties based on format
+    if d3d_format in [20]:  # R8G8B8
+        info['bits_per_pixel'] = 24
+    elif d3d_format in [21, 22, 32, 33, 34, 35, 62, 63]:  # 32-bit formats
+        info['bits_per_pixel'] = 32
+        info['has_alpha'] = d3d_format in [21, 32, 35]
+    elif d3d_format in [23, 24, 25, 26, 51, 60, 61]:  # 16-bit formats
+        info['bits_per_pixel'] = 16
+        info['has_alpha'] = d3d_format in [25, 26, 51]
+    elif d3d_format in [28, 41, 50, 52]:  # 8-bit formats
+        info['bits_per_pixel'] = 8
+        info['has_alpha'] = d3d_format in [28, 52]
+    elif d3d_format == 64:  # V16U16
+        info['bits_per_pixel'] = 32
+    elif d3d_format == 81:  # L16
+        info['bits_per_pixel'] = 16
+    
+    # Bump map formats
+    if d3d_format in [60, 61, 62, 63, 64, 67]:
+        info['is_bump'] = True
+    
+    # Luminance formats
+    if d3d_format in [50, 51, 52, 81, 61, 62]:
+        info['is_luminance'] = True
+    
+    # Palette formats
+    if d3d_format in [40, 41]:
+        info['is_palette'] = True
+    
+    # Compressed formats (DXT)
+    if d3d_format in [0x31545844, 0x32545844, 0x33545844, 0x34545844, 0x35545844]:
+        info['compressed'] = True
+        info['bits_per_pixel'] = 4 if d3d_format == 0x31545844 else 8
+        info['has_alpha'] = d3d_format != 0x31545844
+    
+    return info
+
+def is_compressed_format(d3d_format: int) -> bool: #vers 1
+    """Check if D3D format is compressed (DXT)"""
+    return d3d_format in [0x31545844, 0x32545844, 0x33545844, 0x34545844, 0x35545844]
+
+def is_bump_map_format(d3d_format: int) -> bool: #vers 1
+    """Check if D3D format is a bump map format"""
+    return d3d_format in [60, 61, 62, 63, 64, 67]
+
+def is_palettized_format(d3d_format: int) -> bool: #vers 1
+    """Check if D3D format uses a palette"""
+    return d3d_format in [40, 41]

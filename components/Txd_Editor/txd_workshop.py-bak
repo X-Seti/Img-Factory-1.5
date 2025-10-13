@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#this belongs in components/Txd_Editor/ txd_workshop.py - Version: 8
+#this belongs in components/Txd_Editor/ txd_workshop.py - Version 10
 # X-Seti - October10 2025 - Img Factory 1.5 - TXD Workshop Header Update
 
 """
@@ -7,20 +7,54 @@ Updated imports and method list for txd_workshop.py
 Replace the existing imports and ##Methods list section
 """
 
-# ============================================================================
-# IMPORTS - Add these to the existing imports
-# ============================================================================
-
 import os
 import tempfile
 import subprocess
 import shutil
 import struct
 import sys
-import io
 import numpy as np
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple
+
+try:
+    # Try integrated mode imports (when run from ImgFactory)
+    from components.Txd_Editor.depends.txd_versions import (
+        detect_txd_version,
+        get_version_string,
+        get_platform_name,
+        get_platform_capabilities,
+        get_d3d_format_name,
+        get_d3d_format_info,
+        is_compressed_format,
+        is_bump_map_format,
+        TXDPlatform,
+        TXDVersion,
+        D3DFormat
+    )
+except ModuleNotFoundError:
+    # Standalone mode - add parent directories to path
+    current_dir = Path(__file__).parent
+    project_root = current_dir.parent.parent  # Go up to Img Factory 1.5/
+
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+
+    # Try again with adjusted path
+    from components.Txd_Editor.depends.txd_versions import (
+        detect_txd_version,
+        get_version_string,
+        get_platform_name,
+        get_platform_capabilities,
+        get_d3d_format_name,
+        get_d3d_format_info,
+        is_compressed_format,
+        is_bump_map_format,
+        TXDPlatform,
+        TXDVersion,
+        D3DFormat
+    )
+
 from PyQt6.QtWidgets import (QApplication, QSlider, QCheckBox,
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QListWidget, QDialog, QFormLayout, QListWidgetItem, QLabel, QPushButton, QFrame, QFileDialog, QLineEdit, QTextEdit, QMessageBox, QScrollArea, QGroupBox, QTableWidget, QTableWidgetItem, QColorDialog, QHeaderView, QAbstractItemView, QMenu, QComboBox, QInputDialog, QTabWidget, QDoubleSpinBox
 )
@@ -33,44 +67,7 @@ try:
 except ImportError:
     Image = None
 
-try:
-    # Try main app path first
-    from methods.txd_versions import (
-        detect_txd_version, get_platform_name, get_game_from_version,
-        get_version_capabilities, get_platform_capabilities,
-        is_mipmap_supported, is_bumpmap_supported,
-        validate_txd_format, TXDPlatform, detect_platform_from_data
-    )
-except ImportError:
-    # Fallback to standalone depends folder
-    from depends.txd_versions import (
-        detect_txd_version, get_platform_name, get_game_from_version,
-        get_version_capabilities, get_platform_capabilities,
-        is_mipmap_supported, is_bumpmap_supported,
-        validate_txd_format, TXDPlatform, detect_platform_from_data
-    )
-
-try:
-    from components.Txd_Editor.depends.txd_versions import (
-        detect_txd_version,
-        get_version_string,
-        get_platform_name,
-        get_platform_capabilities,
-        TXDPlatform,
-        TXDVersion
-    )
-except ModuleNotFoundError:
-    from depends.txd_versions import (
-        detect_txd_version,
-        get_version_string,
-        get_platform_name,
-        get_platform_capabilities,
-        TXDPlatform,
-        TXDVersion
-    )
-
 DEBUG_STANDALONE = False
-
 
 ##Methods list -
 # _apply_gaussian_blur                  # Gaussian blur for bumpmap smoothing
@@ -138,7 +135,6 @@ DEBUG_STANDALONE = False
 # _on_texture_selected
 # _on_txd_selected
 # _parse_single_texture
-# _preserve_original_data
 # _preview_bumpmap_generation            # Preview bumpmap before applying
 # _rebuild_txd_data
 # _reload_texture_table
@@ -271,6 +267,7 @@ texture_dict = {
 }
 """
 
+
 class TXDConversionConfig: #vers 1
     """Configuration for TXD platform conversion"""
 
@@ -331,6 +328,8 @@ class PlatformConversionDialog(QDialog): #vers 1
 
     def _setup_ui(self): #vers 1
         """Setup conversion dialog UI"""
+        from PyQt6.QtWidgets import QVBoxLayout, QPushButton
+
         layout = QVBoxLayout()
         form = QFormLayout()
 
@@ -372,6 +371,7 @@ class PlatformConversionDialog(QDialog): #vers 1
         layout.addLayout(form)
 
         # Buttons
+        from PyQt6.QtWidgets import QHBoxLayout
         button_layout = QHBoxLayout()
 
         convert_btn = QPushButton("Convert")
@@ -390,6 +390,7 @@ class PlatformConversionDialog(QDialog): #vers 1
 
     def _on_platform_changed(self, platform_text: str): #vers 1
         """Update UI when platform changes"""
+        # Map platform text to device ID
         platform_map = {
             "PC": TXDPlatform.DEVICE_D3D9,
             "PS2": TXDPlatform.DEVICE_PS2,
@@ -519,53 +520,6 @@ class TXDWorkshop(QWidget): #vers 3
         # Detect standalone mode
         self.standalone_mode = (main_window is None)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
-
-
-        # Set window flags based on mode
-        """
-        if self.standalone_mode:
-            self.setWindowFlags(Qt.WindowType.Window)
-        else:
-            self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
-        """
-
-        # Docking state
-        self.is_docked = False
-        self.dock_widget = None
-
-        self.setWindowTitle("TXD Workshop: No File")
-        self.resize(1400, 800)
-        self.use_system_titlebar = False
-        self.window_always_on_top = False
-
-        self._initialize_features()
-
-        # Corner resize variables
-        self.dragging = False
-        self.drag_position = None
-        self.resizing = False
-        self.resize_corner = None  # Changed from resize_direction
-        self.corner_size = 20  # Size of corner resize areas
-        self.hover_corner = None  # Track which corner is hovered
-
-        if parent:
-            parent_pos = parent.pos()
-            self.move(parent_pos.x() + 50, parent_pos.y() + 80)
-
-        if self.standalone_mode:
-            self._ensure_depends_structure()
-
-        self.txd_tabs = []  # List of open TXD data
-        self.current_tab_index = 0
-
-        self.setup_ui()
-        self._apply_theme()
-
-        # Enable mouse tracking for hover effects
-        self.setMouseTracking(True)
-
-        if DEBUG_STANDALONE and self.standalone_mode:
-            print("   ✓ TXD Workshop initialized")
 
     def setup_ui(self): #vers 7
         """Setup the main UI layout"""
@@ -1179,62 +1133,24 @@ class TXDWorkshop(QWidget): #vers 3
 
         dialog.exec()
 
+    def keyPressEvent(self, event): #vers 1
+        """Handle keyboard shortcuts"""
+        from PyQt6.QtCore import Qt
 
-    def _preserve_original_data(self, texture: Dict, texture_data: bytes, offset: int): #vers 1
-        """
-        Preserve original binary data to prevent corruption
-        """
-        try:
-            # Store the ORIGINAL compressed/raw data
-            # This prevents RGB corruption from channel swapping
+        # D key - Dock/Undock toggle
+        if event.key() == Qt.Key.Key_D and not event.modifiers():
+            self.toggle_dock_mode()
+            event.accept()
+            return
 
-            # Read texture native header (88 bytes)
-            if len(texture_data) < offset + 88:
-                return
+        # T key - Tear out (same as undock)
+        if event.key() == Qt.Key.Key_T and not event.modifiers():
+            if self.is_docked:
+                self._undock_from_main()
+            event.accept()
+            return
 
-            header_data = texture_data[offset:offset + 88]
-
-            # Parse header to get data size
-            platform_id = struct.unpack('<I', header_data[0:4])[0]
-            filter_flags = struct.unpack('<I', header_data[4:8])[0]
-
-            # Texture name at 8-40
-            # Alpha name at 40-72
-
-            raster_format = struct.unpack('<I', header_data[72:76])[0]
-            d3d_format = struct.unpack('<I', header_data[76:80])[0]
-            width = struct.unpack('<H', header_data[80:82])[0]
-            height = struct.unpack('<H', header_data[82:84])[0]
-            depth = struct.unpack('<B', header_data[84:85])[0]
-            mipmap_count = struct.unpack('<B', header_data[85:86])[0]
-            raster_type = struct.unpack('<B', header_data[86:87])[0]
-            compression = struct.unpack('<B', header_data[87:88])[0]
-
-            # Read total data size (comes after 88-byte header)
-            if len(texture_data) >= offset + 92:
-                total_data_size = struct.unpack('<I', texture_data[offset + 88:offset + 92])[0]
-
-                # Store ORIGINAL compressed/raw texture data
-                data_start = offset + 92
-                data_end = data_start + total_data_size
-
-                if len(texture_data) >= data_end:
-                    original_data = texture_data[data_start:data_end]
-
-                    # Store in texture dict - this is the KEY to preventing corruption
-                    texture['original_binary_data'] = original_data
-                    texture['original_header'] = header_data
-                    texture['d3d_format'] = d3d_format
-                    texture['raster_format'] = raster_format
-                    texture['platform_id'] = platform_id
-
-                    if self.main_window and hasattr(self.main_window, 'log_message'):
-                        self.main_window.log_message(f"Preserved original data for: {texture['name']}")
-
-        except Exception as e:
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Warning: Could not preserve original data: {e}")
-
+        super().keyPressEvent(event)
 
     def toggle_dock_mode(self): #vers 1
         """Toggle between docked and standalone mode"""
@@ -1611,44 +1527,247 @@ class TXDWorkshop(QWidget): #vers 3
 
 
 
-    def _detect_txd_info(self, txd_data: bytes) -> bool: #vers 1
+    def _detect_txd_info(self, txd_data: bytes) -> bool: #vers
         """
         Detect and store TXD version and platform information
         Called when loading any TXD file
         """
+        if not txd_data or len(txd_data) < 28:
+            return
+
         try:
-            # Validate format first
-            is_valid, message = validate_txd_format(txd_data)
+            # Use enhanced detection
+            version_id, device_id, version_str = detect_txd_version(txd_data)
 
-            if not is_valid:
-                if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"TXD Validation: {message}")
-                return False
+            self.txd_version_id = version_id
+            self.txd_device_id = device_id
+            self.txd_version_str = version_str
 
-            # Detect version info
-            self.txd_version_id, self.txd_device_id, self.txd_version_str = detect_txd_version(txd_data)
-
-            # Get platform and game info
-            self.txd_platform_name = get_platform_name(self.txd_device_id)
-            self.txd_game = get_game_from_version(self.txd_version_id, self.txd_device_id)
-
-            # Get capabilities
-            self.txd_capabilities = get_version_capabilities(self.txd_version_id)
-
-            # Log detection
+            # Log detailed info
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(
-                    f"TXD: {self.txd_version_str} | "
-                    f"Platform: {self.txd_platform_name} | "
-                    f"Game: {self.txd_game}"
-                )
+                self.main_window.log_message(f"TXD Version: {version_str}")
+                self.main_window.log_message(f"Platform: {get_platform_name(device_id)}")
 
-            return True
+                # Get platform capabilities
+                caps = get_platform_capabilities(device_id)
+                if caps['compression']:
+                    self.main_window.log_message(f"Supports: {', '.join(caps['compression'])}")
 
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Version detection error: {str(e)}")
-            return False
+                self.main_window.log_message(f"Version detection error: {e}")
+
+
+    def _get_texture_format_info(self, texture: Dict) -> Dict: #vers 1
+        """
+        Get detailed format information for a texture
+        """
+        format_info = {
+            'name': 'Unknown',
+            'is_compressed': False,
+            'is_bump': False,
+            'bits_per_pixel': 0,
+            'has_alpha': False
+        }
+
+        try:
+            # Try to detect D3D format from texture data
+            if 'd3d_format' in texture:
+                d3d_format = texture['d3d_format']
+
+                format_info['name'] = get_d3d_format_name(d3d_format)
+
+                detailed_info = get_d3d_format_info(d3d_format)
+                format_info.update(detailed_info)
+
+                format_info['is_compressed'] = is_compressed_format(d3d_format)
+                format_info['is_bump'] = is_bump_map_format(d3d_format)
+
+        except Exception as e:
+            print(f"Format detection error: {e}")
+
+        return format_info
+
+
+    def _validate_platform_capabilities(self, texture: Dict, target_device: int) -> Tuple[bool, str]: #vers 1
+        """
+        Validate if texture is compatible with target platform
+        """
+        caps = get_platform_capabilities(target_device)
+
+        # Check compression compatibility
+        texture_format = texture.get('format', '')
+
+        if 'DXT' in texture_format:
+            if not caps['compression']:
+                return False, f"Target platform doesn't support DXT compression"
+
+            if texture_format not in caps['compression']:
+                return False, f"Target platform doesn't support {texture_format}"
+
+        # Check bump map compatibility
+        format_info = self._get_texture_format_info(texture)
+        if format_info.get('is_bump', False) and not caps.get('supports_bump', False):
+            return False, "Target platform doesn't support bump mapping"
+
+        return True, "Compatible"
+
+
+    def convert_txd_platform(self, target_config: TXDConversionConfig) -> Optional[bytes]: #vers 1
+        """
+        Convert TXD to target platform/game
+        """
+        if not self.current_txd_data:
+            return None
+
+        try:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Converting TXD to {target_config.target_game} ({target_config.target_platform})")
+
+            # Validate textures against target platform
+            incompatible = []
+            for texture in self.texture_list:
+                compatible, reason = self._validate_platform_capabilities(texture, target_config.target_device)
+                if not compatible:
+                    incompatible.append((texture['name'], reason))
+
+            if incompatible and self.main_window:
+                self.main_window.log_message(f"Warning: {len(incompatible)} incompatible textures")
+                for tex_name, reason in incompatible:
+                    self.main_window.log_message(f"  - {tex_name}: {reason}")
+
+            # Use serializer with new target version/device
+            from methods.txd_serializer import serialize_txd_file
+
+            converted_data = serialize_txd_file(
+                self.texture_list,
+                target_config.target_version,
+                target_config.target_device
+            )
+
+            if converted_data:
+                # Update internal version info
+                self.txd_version_id = target_config.target_version
+                self.txd_device_id = target_config.target_device
+                self.txd_version_str = get_version_string(
+                    target_config.target_version,
+                    target_config.target_device
+                )
+
+                if self.main_window:
+                    self.main_window.log_message(f"✅ Conversion successful: {len(converted_data)} bytes")
+
+            return converted_data
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Conversion error: {e}")
+            return None
+
+
+    def create_platform_conversion_dialog(self) -> Optional[PlatformConversionDialog]: #vers 1
+        """
+        Create and show platform conversion dialog
+        """
+        dialog = PlatformConversionDialog(
+            self,
+            self.txd_version_id,
+            self.txd_device_id
+        )
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            return dialog
+
+        return None
+
+
+    def _show_format_details(self, texture: Dict): #vers 1
+        """
+        Show detailed format information for texture
+        """
+        format_info = self._get_texture_format_info(texture)
+
+        details = f"Format: {format_info['name']}\n"
+        details += f"Bits per pixel: {format_info['bits_per_pixel']}\n"
+        details += f"Has alpha: {'Yes' if format_info['has_alpha'] else 'No'}\n"
+        details += f"Compressed: {'Yes' if format_info['is_compressed'] else 'No'}\n"
+        details += f"Bump map: {'Yes' if format_info['is_bump'] else 'No'}\n"
+
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            self.main_window.log_message(f"Texture '{texture['name']}' details:")
+            self.main_window.log_message(details)
+
+
+    def get_conversion_config(self) -> Optional[TXDConversionConfig]: #vers 1
+        """
+        Get conversion configuration from dialog
+        """
+        dialog = self.create_platform_conversion_dialog()
+
+        if dialog:
+            return dialog.get_config()
+
+        return None
+
+
+    # Example integration method for TXD Workshop menu
+    def _add_conversion_menu_action(self): #vers 1
+        """
+        Add conversion menu action to TXD Workshop
+        """
+        from PyQt6.QtWidgets import QMenu
+        from PyQt6.QtGui import QAction
+
+        # Assuming you have a menu bar or tools menu
+        if hasattr(self, 'menuBar'):
+            tools_menu = None
+
+            # Find or create Tools menu
+            for action in self.menuBar().actions():
+                if action.text() == "Tools":
+                    tools_menu = action.menu()
+                    break
+
+            if not tools_menu:
+                tools_menu = QMenu("Tools", self)
+                self.menuBar().addMenu(tools_menu)
+
+            # Add conversion action
+            convert_action = QAction("Convert Platform...", self)
+            convert_action.triggered.connect(self._on_convert_platform)
+            tools_menu.addAction(convert_action)
+
+
+    def _on_convert_platform(self): #vers 1
+        """
+        Handle platform conversion menu action
+        """
+        config = self.get_conversion_config()
+
+        if config:
+            converted_data = self.convert_txd_platform(config)
+
+            if converted_data:
+                # Update current TXD data
+                self.current_txd_data = converted_data
+
+                # Mark as modified
+                if hasattr(self, 'save_txd_btn'):
+                    self.save_txd_btn.setEnabled(True)
+                    self.save_txd_btn.setStyleSheet("background-color: #ff6b6b;")
+
+                # Update window title
+                title = self.windowTitle()
+                if "*" not in title:
+                    self.setWindowTitle(f"*{title}")
+
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.information(
+                    self,
+                    "Conversion Complete",
+                    f"TXD converted to {config.target_game} ({config.target_platform})\n\n"
+                    f"Don't forget to save the changes!"
+                )
 
 
     def paintEvent(self, event): #vers 2
@@ -2489,7 +2608,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         self.alpha_label = QLabel("Alpha:")
         self.alpha_label.setFont(self.panel_font)
-        self.alpha_label.setStyleSheet("color: red;")
+        self.alpha_label.setStyleSheet("color:TXDConversionConfig red;")
         self.alpha_label.setVisible(False)
         name_layout.addWidget(self.alpha_label)
 
@@ -3813,8 +3932,7 @@ class TXDWorkshop(QWidget): #vers 3
             self.info_name.setFocus()
 
 
-    def _save_texture_name(self): #vers 1
-        """Save edited texture name"""
+    def _save_texture_name(self): #vers 2
         if not self.selected_texture:
             return
 
@@ -3822,6 +3940,15 @@ class TXDWorkshop(QWidget): #vers 3
         if new_name and new_name != self.selected_texture.get('name', ''):
             old_name = self.selected_texture.get('name', '')
             self.selected_texture['name'] = new_name
+
+            # DEBUG - Check if binary data is still there
+            has_compressed = len(self.selected_texture.get('compressed_data', b''))
+            has_bgra = len(self.selected_texture.get('original_bgra_data', b''))
+            print(f"DEBUG RENAME: {old_name} -> {new_name}")
+            print(f"  compressed_data: {has_compressed} bytes")
+            print(f"  original_bgra_data: {has_bgra} bytes")
+            print(f"  format: {self.selected_texture.get('format')}")
+
             self._save_undo_state(f"Rename texture: {old_name} → {new_name}")
             self._reload_texture_table()
             self._mark_as_modified()
@@ -3892,7 +4019,7 @@ class TXDWorkshop(QWidget): #vers 3
                 if self.main_window and hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message(f"Created blank texture {tex_width}x{tex_height} for alpha import")
 
-            # Check dimensions match
+            # Check dimensions matcho
             if img.width() != tex_width or img.height() != tex_height:
                 reply = QMessageBox.question(
                     self, "Size Mismatch",
@@ -5034,13 +5161,66 @@ class TXDWorkshop(QWidget): #vers 3
         self.texture_table.setColumnWidth(0, 80)
 
 
-    def _save_undo_state(self, action_name): #vers 1
-        """Save current state to undo stack"""
-        import copy
+    def _save_undo_state(self, action_name): #vers 2
+        """
+        Save current state to undo stack - FIXED: Properly preserves binary data
+
+        The issue was that copy.deepcopy was losing binary data fields like
+        compressed_data and original_bgra_data, causing corruption on undo.
+
+        Args:
+            action_name: Description of the action being saved
+        """
+        texture_list_copy = []
+
+        for texture in self.texture_list:
+            tex_copy = texture.copy()
+
+            # CRITICAL: Explicitly preserve all binary data fields
+            if 'compressed_data' in texture:
+                tex_copy['compressed_data'] = texture['compressed_data']
+
+            if 'original_bgra_data' in texture:
+                tex_copy['original_bgra_data'] = texture['original_bgra_data']
+
+            if 'rgba_data' in texture:
+                tex_copy['rgba_data'] = texture['rgba_data']
+
+            if 'bumpmap_data' in texture:
+                tex_copy['bumpmap_data'] = texture['bumpmap_data']
+
+            if 'reflection_map' in texture:
+                tex_copy['reflection_map'] = texture['reflection_map']
+
+            if 'fresnel_map' in texture:
+                tex_copy['fresnel_map'] = texture['fresnel_map']
+
+            # Copy mipmap levels with binary data
+            if 'mipmap_levels' in texture:
+                mipmap_copy = []
+                for level in texture['mipmap_levels']:
+                    level_copy = level.copy()
+
+                    if 'compressed_data' in level:
+                        level_copy['compressed_data'] = level['compressed_data']
+
+                    if 'original_bgra_data' in level:
+                        level_copy['original_bgra_data'] = level['original_bgra_data']
+
+                    if 'rgba_data' in level:
+                        level_copy['rgba_data'] = level['rgba_data']
+
+                    mipmap_copy.append(level_copy)
+
+                tex_copy['mipmap_levels'] = mipmap_copy
+
+            texture_list_copy.append(tex_copy)
+
         state = {
             'action': action_name,
-            'texture_list': copy.deepcopy(self.texture_list)
+            'texture_list': texture_list_copy
         }
+
         self.undo_stack.append(state)
 
         # Limit undo stack to 10 items
@@ -7461,6 +7641,7 @@ class TXDWorkshop(QWidget): #vers 3
     def _parse_single_texture(self, txd_data, offset, index): #vers 4
         """
         Parse single texture from TXD with bumpmap and reflection support
+
         """
         import struct
 
@@ -9939,25 +10120,6 @@ class TXDWorkshop(QWidget): #vers 3
         except Exception as e:
             print(f"Failed to save settings: {e}")
 
-
-    def keyPressEvent(self, event): #vers 1
-        """Handle keyboard shortcuts"""
-        from PyQt6.QtCore import Qt
-
-        # D key - Dock/Undock toggle
-        if event.key() == Qt.Key.Key_D and not event.modifiers():
-            self.toggle_dock_mode()
-            event.accept()
-            return
-
-        # T key - Tear out (same as undock)
-        if event.key() == Qt.Key.Key_T and not event.modifiers():
-            if self.is_docked:
-                self._undock_from_main()
-            event.accept()
-            return
-
-        super().keyPressEvent(event)
 
 #class SvgIcons: #vers 1 - Once functions are updated this class will be moved to the bottom
     """SVG icon data to QIcon with theme color support"""
