@@ -544,6 +544,9 @@ class TXDWorkshop(QWidget): #vers 3
         self.corner_size = 20  # Size of corner resize areas
         self.hover_corner = None  # Track which corner is hovered
 
+        # Setup hotkeys (add after UI creation)
+        self._setup_hotkeys()
+
         if parent:
             parent_pos = parent.pos()
             self.move(parent_pos.x() + 50, parent_pos.y() + 80)
@@ -3809,44 +3812,6 @@ class TXDWorkshop(QWidget): #vers 3
             self.info_name.setFocus()
 
 
-    def _save_texture_name(self): #vers 1
-        """Save edited texture name"""
-        if not self.selected_texture:
-            return
-
-        new_name = self.info_name.text().strip()
-        if new_name and new_name != self.selected_texture.get('name', ''):
-            old_name = self.selected_texture.get('name', '')
-            self.selected_texture['name'] = new_name
-            self._save_undo_state(f"Rename texture: {old_name} → {new_name}")
-            self._reload_texture_table()
-            self._mark_as_modified()
-
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"✏️ Renamed: {old_name} → {new_name}")
-
-        self.info_name.setReadOnly(True)
-
-
-    def _save_alpha_name(self): #vers 1
-        """Save edited alpha name"""
-        if not self.selected_texture or not self.selected_texture.get('has_alpha'):
-            return
-
-        new_alpha_name = self.info_alpha_name.text().strip()
-        if new_alpha_name and new_alpha_name != self.selected_texture.get('alpha_name', ''):
-            old_name = self.selected_texture.get('alpha_name', '')
-            self.selected_texture['alpha_name'] = new_alpha_name
-            self._save_undo_state(f"Rename alpha: {old_name} → {new_alpha_name}")
-            self._reload_texture_table()
-            self._mark_as_modified()
-
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"✏️ Alpha renamed: {old_name} → {new_alpha_name}")
-
-        self.info_alpha_name.setReadOnly(True)
-
-
     def _import_alpha_texture(self): #vers 2
         """Import alpha channel - creates alpha if doesn't exist"""
         file_path, _ = QFileDialog.getOpenFileName(
@@ -4124,187 +4089,565 @@ class TXDWorkshop(QWidget): #vers 3
             background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
         """)
 
-    def _show_settings_dialog(self): #vers 2
-        """Show settings dialog for UI customization"""
+
+    def _show_settings_dialog(self): #vers 5
+        """Show comprehensive settings dialog with all tabs including hotkeys"""
         from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTabWidget,
-                                    QGroupBox, QFormLayout, QSpinBox, QFontComboBox, QPushButton, QLabel)
+                                    QWidget, QLabel, QPushButton, QGroupBox,
+                                    QCheckBox, QSpinBox, QFormLayout, QScrollArea,
+                                    QKeySequenceEdit, QComboBox, QMessageBox)
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtGui import QKeySequence
 
         dialog = QDialog(self)
         dialog.setWindowTitle("TXD Workshop Settings")
-        dialog.setMinimumWidth(500)
-        dialog.setMinimumHeight(400)
+        dialog.setMinimumWidth(700)
+        dialog.setMinimumHeight(600)
 
         layout = QVBoxLayout(dialog)
 
-        # Save Location Settings
-        save_group = QGroupBox("Save Location")
-        save_layout = QVBoxLayout()
-
-        source_check = QCheckBox("Always save in same location as loaded file")
-        source_check.setChecked(self.save_to_source_location)
-        source_check.setToolTip(
-            "When enabled, Save As will default to the directory where\n"
-            "the TXD was originally loaded from (IMG or standalone)"
-        )
-        save_layout.addWidget(source_check)
-
-        info_label = QLabel(
-            "When disabled, Save As will remember the last directory\n"
-            "you saved to and use that as the default."
-        )
-        info_label.setStyleSheet("color: #888; font-size: 9pt;")
-        save_layout.addWidget(info_label)
-
-        save_group.setLayout(save_layout)
-        layout.addWidget(save_group)
-
-        # Tab widget for different setting categories
+        # Create tabs
         tabs = QTabWidget()
 
-        # === APPEARANCE TAB ===
-        appearance_tab = QWidget()
-        appearance_layout = QVBoxLayout(appearance_tab)
+        # === DISPLAY TAB ===
+        display_tab = QWidget()
+        display_layout = QVBoxLayout(display_tab)
 
+        # Thumbnail settings
+        thumb_group = QGroupBox("Thumbnail Display")
+        thumb_layout = QVBoxLayout()
 
-        # Font settings group
-        font_group = QGroupBox("Font Settings")
-        font_layout = QFormLayout()
+        thumb_size_layout = QHBoxLayout()
+        thumb_size_layout.addWidget(QLabel("Thumbnail size:"))
+        thumb_size_spin = QSpinBox()
+        thumb_size_spin.setRange(32, 256)
+        thumb_size_spin.setValue(self.thumbnail_size if hasattr(self, 'thumbnail_size') else 64)
+        thumb_size_spin.setSuffix(" px")
+        thumb_size_layout.addWidget(thumb_size_spin)
+        thumb_size_layout.addStretch()
+        thumb_layout.addLayout(thumb_size_layout)
 
-        # Title bar font
-        self.title_font_combo = QFontComboBox()
-        self.title_font_combo.setCurrentFont(self.font())
-        font_layout.addRow("Title Bar Font:", self.title_font_combo)
+        thumb_group.setLayout(thumb_layout)
+        display_layout.addWidget(thumb_group)
 
-        self.title_font_size = QSpinBox()
-        self.title_font_size.setRange(8, 24)
-        self.title_font_size.setValue(14)
-        font_layout.addRow("Title Size:", self.title_font_size)
+        # Table display settings
+        table_group = QGroupBox("Table Display")
+        table_layout = QVBoxLayout()
 
-        # Panel labels font
-        self.panel_font_combo = QFontComboBox()
-        self.panel_font_combo.setCurrentFont(self.font())
-        font_layout.addRow("Panel Font:", self.panel_font_combo)
+        row_height_layout = QHBoxLayout()
+        row_height_layout.addWidget(QLabel("Row height:"))
+        row_height_spin = QSpinBox()
+        row_height_spin.setRange(50, 200)
+        row_height_spin.setValue(getattr(self, 'table_row_height', 100))
+        row_height_spin.setSuffix(" px")
+        row_height_layout.addWidget(row_height_spin)
+        row_height_layout.addStretch()
+        table_layout.addLayout(row_height_layout)
 
-        self.panel_font_size = QSpinBox()
-        self.panel_font_size.setRange(8, 24)
-        self.panel_font_size.setValue(10)
-        font_layout.addRow("Panel Size:", self.panel_font_size)
+        show_grid_check = QCheckBox("Show grid lines")
+        show_grid_check.setChecked(getattr(self, 'show_grid_lines', True))
+        table_layout.addWidget(show_grid_check)
 
-        # Button font
-        self.button_font_combo = QFontComboBox()
-        self.button_font_combo.setCurrentFont(self.font())
-        font_layout.addRow("Button Font:", self.button_font_combo)
+        table_group.setLayout(table_layout)
+        display_layout.addWidget(table_group)
 
-        self.button_font_size = QSpinBox()
-        self.button_font_size.setRange(8, 24)
-        self.button_font_size.setValue(10)
-        font_layout.addRow("Button Size:", self.button_font_size)
+        display_layout.addStretch()
+        tabs.addTab(display_tab, "Display")
 
-        # Info bar font (fixed-width)
-        self.infobar_font_combo = QFontComboBox()
-        self.infobar_font_combo.setFontFilters(QFontComboBox.FontFilter.MonospacedFonts)
-        self.infobar_font_combo.setCurrentFont(QFont("Courier New"))
-        font_layout.addRow("Info Bar Font:", self.infobar_font_combo)
+        # === PREVIEW TAB ===
+        preview_tab = QWidget()
+        preview_layout = QVBoxLayout(preview_tab)
 
-        self.infobar_font_size = QSpinBox()
-        self.infobar_font_size.setRange(8, 16)
-        self.infobar_font_size.setValue(9)
-        font_layout.addRow("Info Bar Size:", self.infobar_font_size)
+        # Preview window settings
+        preview_window_group = QGroupBox("Preview Window")
+        preview_window_layout = QVBoxLayout()
 
-        font_group.setLayout(font_layout)
-        appearance_layout.addWidget(font_group)
+        show_preview_check = QCheckBox("Show preview window by default")
+        show_preview_check.setChecked(getattr(self, 'show_preview_default', True))
+        show_preview_check.setToolTip("Automatically open preview when selecting textures")
+        preview_window_layout.addWidget(show_preview_check)
 
-        # Button display mode
-        display_group = QGroupBox("Button Display")
-        display_layout = QFormLayout()
+        auto_refresh_check = QCheckBox("Auto-refresh preview on selection")
+        auto_refresh_check.setChecked(getattr(self, 'auto_refresh_preview', True))
+        auto_refresh_check.setToolTip("Update preview immediately when clicking textures")
+        preview_window_layout.addWidget(auto_refresh_check)
 
-        self.settings_display_combo = QComboBox()
-        self.settings_display_combo.addItems(["Icons Only", "Text Only", "Both"])
-        current_mode = {"icons": 0, "text": 1, "both": 2}.get(self.button_display_mode, 2)
-        self.settings_display_combo.setCurrentIndex(current_mode)
-        display_layout.addRow("Button Mode:", self.settings_display_combo)
+        preview_window_group.setLayout(preview_window_layout)
+        preview_layout.addWidget(preview_window_group)
 
-        display_group.setLayout(display_layout)
-        appearance_layout.addWidget(display_group)
+        # Preview size settings
+        preview_size_group = QGroupBox("Preview Size")
+        preview_size_layout = QVBoxLayout()
 
-        appearance_layout.addStretch()
-        tabs.addTab(appearance_tab, "Appearance")
+        preview_width_layout = QHBoxLayout()
+        preview_width_layout.addWidget(QLabel("Default width:"))
+        preview_width_spin = QSpinBox()
+        preview_width_spin.setRange(200, 1920)
+        preview_width_spin.setValue(getattr(self, 'preview_width', 512))
+        preview_width_spin.setSuffix(" px")
+        preview_width_layout.addWidget(preview_width_spin)
+        preview_width_layout.addStretch()
+        preview_size_layout.addLayout(preview_width_layout)
 
-        # === LOCALIZATION TAB ===
-        locale_tab = QWidget()
-        locale_layout = QVBoxLayout(locale_tab)
+        preview_height_layout = QHBoxLayout()
+        preview_height_layout.addWidget(QLabel("Default height:"))
+        preview_height_spin = QSpinBox()
+        preview_height_spin.setRange(200, 1080)
+        preview_height_spin.setValue(getattr(self, 'preview_height', 512))
+        preview_height_spin.setSuffix(" px")
+        preview_height_layout.addWidget(preview_height_spin)
+        preview_height_layout.addStretch()
+        preview_size_layout.addLayout(preview_height_layout)
 
-        locale_group = QGroupBox("Language Settings")
-        locale_form = QFormLayout()
+        preview_size_group.setLayout(preview_size_layout)
+        preview_layout.addWidget(preview_size_group)
 
-        self.settings_locale_combo = QComboBox()
-        self.settings_locale_combo.addItems([
-            "English",
-            "Spanish (Español)",
-            "French (Français)",
-            "German (Deutsch)",
-            "Italian (Italiano)",
-            "Portuguese (Português)",
-            "Russian (Русский)",
-            "Japanese (日本語)",
-            "Chinese Simplified (简体中文)",
-            "Chinese Traditional (繁體中文)"
-        ])
-        locale_form.addRow("Language:", self.settings_locale_combo)
+        # Preview background
+        preview_bg_group = QGroupBox("Preview Background")
+        preview_bg_layout = QVBoxLayout()
 
-        locale_note = QLabel("Note: Language changes require restart")
-        locale_note.setStyleSheet("color: #888; font-style: italic;")
-        locale_form.addRow("", locale_note)
+        bg_combo = QComboBox()
+        bg_combo.addItems(["Checkerboard", "Black", "White", "Gray", "Custom Color"])
+        bg_combo.setCurrentText(getattr(self, 'preview_background', 'Checkerboard'))
+        preview_bg_layout.addWidget(bg_combo)
 
-        locale_group.setLayout(locale_form)
-        locale_layout.addWidget(locale_group)
+        bg_hint = QLabel("Checkerboard helps visualize alpha transparency")
+        bg_hint.setStyleSheet("color: #888; font-style: italic;")
+        preview_bg_layout.addWidget(bg_hint)
 
-        locale_layout.addStretch()
-        tabs.addTab(locale_tab, "Localization")
+        preview_bg_group.setLayout(preview_bg_layout)
+        preview_layout.addWidget(preview_bg_group)
 
-        # === ADVANCED TAB ===
-        advanced_tab = QWidget()
-        advanced_layout = QVBoxLayout(advanced_tab)
+        # Preview zoom
+        preview_zoom_group = QGroupBox("Preview Zoom")
+        preview_zoom_layout = QVBoxLayout()
 
-        # Docking options (if available)
-        if self.main_window:
-            dock_group = QGroupBox("Docking")
-            dock_layout = QVBoxLayout()
+        fit_to_window_check = QCheckBox("Fit to window by default")
+        fit_to_window_check.setChecked(getattr(self, 'preview_fit_to_window', True))
+        preview_zoom_layout.addWidget(fit_to_window_check)
 
-            dock_label = QLabel(f"Current State: {'Docked' if self.is_docked else 'Standalone'}")
-            dock_layout.addWidget(dock_label)
+        smooth_zoom_check = QCheckBox("Use smooth scaling")
+        smooth_zoom_check.setChecked(getattr(self, 'preview_smooth_scaling', True))
+        smooth_zoom_check.setToolTip("Better quality but slower for large textures")
+        preview_zoom_layout.addWidget(smooth_zoom_check)
 
-            dock_btn = QPushButton("Toggle Dock Mode (D)")
-            dock_btn.clicked.connect(lambda: (self.toggle_dock_mode(), dialog.close()))
-            dock_layout.addWidget(dock_btn)
+        preview_zoom_group.setLayout(preview_zoom_layout)
+        preview_layout.addWidget(preview_zoom_group)
 
-            dock_group.setLayout(dock_layout)
-            advanced_layout.addWidget(dock_group)
+        preview_layout.addStretch()
+        tabs.addTab(preview_tab, "Preview")
 
-        advanced_layout.addStretch()
-        tabs.addTab(advanced_tab, "Advanced")
+        # === EXPORT TAB ===
+        export_tab = QWidget()
+        export_layout = QVBoxLayout(export_tab)
 
+        # Export format
+        format_group = QGroupBox("Default Export Format")
+        format_layout = QVBoxLayout()
+
+        format_combo = QComboBox()
+        format_combo.addItems(["PNG", "TGA", "BMP", "DDS"])
+        format_combo.setCurrentText(getattr(self, 'default_export_format', 'PNG'))
+        format_layout.addWidget(format_combo)
+
+        format_hint = QLabel("PNG recommended for best quality and compatibility")
+        format_hint.setStyleSheet("color: #888; font-style: italic;")
+        format_layout.addWidget(format_hint)
+
+        format_group.setLayout(format_layout)
+        export_layout.addWidget(format_group)
+
+        # Export options
+        export_options_group = QGroupBox("Export Options")
+        export_options_layout = QVBoxLayout()
+
+        preserve_alpha_check = QCheckBox("Preserve alpha channel when exporting")
+        preserve_alpha_check.setChecked(getattr(self, 'export_preserve_alpha', True))
+        export_options_layout.addWidget(preserve_alpha_check)
+
+        export_mipmaps_check = QCheckBox("Export mipmaps as separate files")
+        export_mipmaps_check.setChecked(getattr(self, 'export_mipmaps_separate', False))
+        export_mipmaps_check.setToolTip("Save each mipmap level as texture_name_mip0.png, etc.")
+        export_options_layout.addWidget(export_mipmaps_check)
+
+        create_subfolders_check = QCheckBox("Create subfolders when exporting all")
+        create_subfolders_check.setChecked(getattr(self, 'export_create_subfolders', False))
+        create_subfolders_check.setToolTip("Organize exports into folders by TXD name")
+        export_options_layout.addWidget(create_subfolders_check)
+
+        export_options_group.setLayout(export_options_layout)
+        export_layout.addWidget(export_options_group)
+
+        # Compatibility note
+        compat_label = QLabel(
+            "Note: TXD files use RenderWare format. Exported textures are converted to standard image formats."
+        )
+        compat_label.setWordWrap(True)
+        compat_label.setStyleSheet("padding: 10px; background-color: #3a3a3a; border-radius: 4px;")
+        export_layout.addWidget(compat_label)
+
+        export_layout.addStretch()
+        tabs.addTab(export_tab, "Export")
+
+        # === IMPORT TAB ===
+        import_tab = QWidget()
+        import_layout = QVBoxLayout(import_tab)
+
+        # Import behavior
+        import_behavior_group = QGroupBox("Import Behavior")
+        import_behavior_layout = QVBoxLayout()
+
+        auto_name_check = QCheckBox("Auto-name textures from filename")
+        auto_name_check.setChecked(getattr(self, 'import_auto_name', True))
+        auto_name_check.setToolTip("Use image filename as texture name")
+        import_behavior_layout.addWidget(auto_name_check)
+
+        replace_check = QCheckBox("Replace existing textures with same name")
+        replace_check.setChecked(getattr(self, 'import_replace_existing', False))
+        import_behavior_layout.addWidget(replace_check)
+
+        auto_format_check = QCheckBox("Automatically select best format")
+        auto_format_check.setChecked(getattr(self, 'import_auto_format', True))
+        auto_format_check.setToolTip("Choose DXT1/DXT5 based on alpha channel")
+        import_behavior_layout.addWidget(auto_format_check)
+
+        import_behavior_group.setLayout(import_behavior_layout)
+        import_layout.addWidget(import_behavior_group)
+
+        # Import format
+        import_format_group = QGroupBox("Default Import Format")
+        import_format_layout = QVBoxLayout()
+
+        import_format_combo = QComboBox()
+        import_format_combo.addItems(["DXT1", "DXT3", "DXT5", "ARGB8888", "RGB888"])
+        import_format_combo.setCurrentText(getattr(self, 'default_import_format', 'DXT1'))
+        import_format_layout.addWidget(import_format_combo)
+
+        format_note = QLabel("DXT1: No alpha, best compression\nDXT5: With alpha, good compression\nARGB8888: Uncompressed, best quality")
+        format_note.setStyleSheet("color: #888; font-style: italic;")
+        import_format_layout.addWidget(format_note)
+
+        import_format_group.setLayout(import_format_layout)
+        import_layout.addWidget(import_format_group)
+
+        import_layout.addStretch()
+        tabs.addTab(import_tab, "Import")
+
+        # === TEXTURE CONSTRAINTS TAB ===
+        constraints_tab = QWidget()
+        constraints_layout = QVBoxLayout(constraints_tab)
+
+        # Dimension constraints
+        dimension_group = QGroupBox("Dimension Constraints")
+        dimension_layout = QVBoxLayout()
+
+        dimension_check = QCheckBox("Enforce power-of-2 dimensions")
+        dimension_check.setChecked(getattr(self, 'dimension_limiting_enabled', True))
+        dimension_check.setToolTip("Enforce sizes like 256, 512, 1024, 2048")
+        dimension_layout.addWidget(dimension_check)
+
+        splash_check = QCheckBox("Allow splash screen dimensions")
+        splash_check.setChecked(getattr(self, 'splash_screen_mode', False))
+        splash_check.setToolTip("Allow non-power-of-2 sizes like 1280x720, 720x576, 640x480")
+        dimension_layout.addWidget(splash_check)
+
+        max_dim_layout = QHBoxLayout()
+        max_dim_layout.addWidget(QLabel("Maximum dimension:"))
+        max_dim_spin = QSpinBox()
+        max_dim_spin.setRange(256, 8192)
+        max_dim_spin.setValue(getattr(self, 'custom_max_dimension', 2048))
+        max_dim_spin.setSingleStep(256)
+        max_dim_spin.setToolTip("Maximum width/height for imported textures")
+        max_dim_layout.addWidget(max_dim_spin)
+        max_dim_layout.addStretch()
+        dimension_layout.addLayout(max_dim_layout)
+
+        dimension_group.setLayout(dimension_layout)
+        constraints_layout.addWidget(dimension_group)
+
+        # Texture naming
+        naming_group = QGroupBox("Texture Naming")
+        naming_layout = QVBoxLayout()
+
+        name_limit_check = QCheckBox("Enable name length limit")
+        name_limit_check.setChecked(getattr(self, 'name_limit_enabled', True))
+        name_limit_check.setToolTip("Enforce maximum texture name length")
+        naming_layout.addWidget(name_limit_check)
+
+        char_limit_layout = QHBoxLayout()
+        char_limit_layout.addWidget(QLabel("Maximum characters:"))
+        char_limit_spin = QSpinBox()
+        char_limit_spin.setRange(8, 64)
+        char_limit_spin.setValue(getattr(self, 'max_texture_name_length', 32))
+        char_limit_spin.setToolTip("RenderWare default is 32 characters")
+        char_limit_layout.addWidget(char_limit_spin)
+        char_limit_layout.addStretch()
+        naming_layout.addLayout(char_limit_layout)
+
+        naming_group.setLayout(naming_layout)
+        constraints_layout.addWidget(naming_group)
+
+        # Format support
+        format_support_group = QGroupBox("Format Support")
+        format_support_layout = QVBoxLayout()
+
+        iff_check = QCheckBox("Enable IFF (Amiga) format import")
+        iff_check.setChecked(getattr(self, 'iff_import_enabled', False))
+        iff_check.setToolTip("Support for Amiga IFF/ILBM image format")
+        format_support_layout.addWidget(iff_check)
+
+        format_support_group.setLayout(format_support_layout)
+        constraints_layout.addWidget(format_support_group)
+
+        constraints_layout.addStretch()
+        tabs.addTab(constraints_tab, "Constraints")
+
+        # === KEYBOARD SHORTCUTS TAB ===
+        hotkeys_tab = QWidget()
+        hotkeys_layout = QVBoxLayout(hotkeys_tab)
+
+        # Add scroll area for hotkeys
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+
+        # File Operations Group
+        file_group = QGroupBox("File Operations")
+        file_form = QFormLayout()
+
+        hotkey_edit_open = QKeySequenceEdit(self.hotkey_open.key() if hasattr(self, 'hotkey_open') else QKeySequence.StandardKey.Open)
+        file_form.addRow("Open TXD:", hotkey_edit_open)
+
+        hotkey_edit_save = QKeySequenceEdit(self.hotkey_save.key() if hasattr(self, 'hotkey_save') else QKeySequence.StandardKey.Save)
+        file_form.addRow("Save TXD:", hotkey_edit_save)
+
+        hotkey_edit_force_save = QKeySequenceEdit(self.hotkey_force_save.key() if hasattr(self, 'hotkey_force_save') else QKeySequence("Alt+Shift+S"))
+        force_save_layout = QHBoxLayout()
+        force_save_layout.addWidget(hotkey_edit_force_save)
+        force_save_hint = QLabel("(Force save even if unmodified)")
+        force_save_hint.setStyleSheet("color: #888; font-style: italic;")
+        force_save_layout.addWidget(force_save_hint)
+        file_form.addRow("Force Save:", force_save_layout)
+
+        hotkey_edit_save_as = QKeySequenceEdit(self.hotkey_save_as.key() if hasattr(self, 'hotkey_save_as') else QKeySequence.StandardKey.SaveAs)
+        file_form.addRow("Save As:", hotkey_edit_save_as)
+
+        hotkey_edit_close = QKeySequenceEdit(self.hotkey_close.key() if hasattr(self, 'hotkey_close') else QKeySequence.StandardKey.Close)
+        file_form.addRow("Close:", hotkey_edit_close)
+
+        file_group.setLayout(file_form)
+        scroll_layout.addWidget(file_group)
+
+        # Edit Operations Group
+        edit_group = QGroupBox("Edit Operations")
+        edit_form = QFormLayout()
+
+        hotkey_edit_undo = QKeySequenceEdit(self.hotkey_undo.key() if hasattr(self, 'hotkey_undo') else QKeySequence.StandardKey.Undo)
+        edit_form.addRow("Undo:", hotkey_edit_undo)
+
+        hotkey_edit_copy = QKeySequenceEdit(self.hotkey_copy.key() if hasattr(self, 'hotkey_copy') else QKeySequence.StandardKey.Copy)
+        edit_form.addRow("Copy Texture:", hotkey_edit_copy)
+
+        hotkey_edit_paste = QKeySequenceEdit(self.hotkey_paste.key() if hasattr(self, 'hotkey_paste') else QKeySequence.StandardKey.Paste)
+        edit_form.addRow("Paste Texture:", hotkey_edit_paste)
+
+        hotkey_edit_delete = QKeySequenceEdit(self.hotkey_delete.key() if hasattr(self, 'hotkey_delete') else QKeySequence.StandardKey.Delete)
+        edit_form.addRow("Delete:", hotkey_edit_delete)
+
+        hotkey_edit_duplicate = QKeySequenceEdit(self.hotkey_duplicate.key() if hasattr(self, 'hotkey_duplicate') else QKeySequence("Ctrl+D"))
+        edit_form.addRow("Duplicate:", hotkey_edit_duplicate)
+
+        hotkey_edit_rename = QKeySequenceEdit(self.hotkey_rename.key() if hasattr(self, 'hotkey_rename') else QKeySequence("F2"))
+        edit_form.addRow("Rename:", hotkey_edit_rename)
+
+        edit_group.setLayout(edit_form)
+        scroll_layout.addWidget(edit_group)
+
+        # Texture Operations Group
+        texture_group = QGroupBox("Texture Operations")
+        texture_form = QFormLayout()
+
+        hotkey_edit_import = QKeySequenceEdit(self.hotkey_import.key() if hasattr(self, 'hotkey_import') else QKeySequence("Ctrl+I"))
+        texture_form.addRow("Import Texture:", hotkey_edit_import)
+
+        hotkey_edit_export = QKeySequenceEdit(self.hotkey_export.key() if hasattr(self, 'hotkey_export') else QKeySequence("Ctrl+E"))
+        texture_form.addRow("Export Texture:", hotkey_edit_export)
+
+        hotkey_edit_export_all = QKeySequenceEdit(self.hotkey_export_all.key() if hasattr(self, 'hotkey_export_all') else QKeySequence("Ctrl+Shift+E"))
+        texture_form.addRow("Export All:", hotkey_edit_export_all)
+
+        texture_group.setLayout(texture_form)
+        scroll_layout.addWidget(texture_group)
+
+        # View Operations Group
+        view_group = QGroupBox("View Operations")
+        view_form = QFormLayout()
+
+        hotkey_edit_refresh = QKeySequenceEdit(self.hotkey_refresh.key() if hasattr(self, 'hotkey_refresh') else QKeySequence.StandardKey.Refresh)
+        view_form.addRow("Refresh:", hotkey_edit_refresh)
+
+        hotkey_edit_properties = QKeySequenceEdit(self.hotkey_properties.key() if hasattr(self, 'hotkey_properties') else QKeySequence("Alt+Return"))
+        view_form.addRow("Properties:", hotkey_edit_properties)
+
+        hotkey_edit_find = QKeySequenceEdit(self.hotkey_find.key() if hasattr(self, 'hotkey_find') else QKeySequence.StandardKey.Find)
+        view_form.addRow("Find/Search:", hotkey_edit_find)
+
+        hotkey_edit_help = QKeySequenceEdit(self.hotkey_help.key() if hasattr(self, 'hotkey_help') else QKeySequence.StandardKey.HelpContents)
+        view_form.addRow("Help:", hotkey_edit_help)
+
+        view_group.setLayout(view_form)
+        scroll_layout.addWidget(view_group)
+
+        scroll_layout.addStretch()
+
+        scroll.setWidget(scroll_widget)
+        hotkeys_layout.addWidget(scroll)
+
+        # Reset to defaults button
+        reset_layout = QHBoxLayout()
+        reset_layout.addStretch()
+        reset_hotkeys_btn = QPushButton("Reset to Plasma6 Defaults")
+
+        def reset_hotkeys():
+            reply = QMessageBox.question(dialog, "Reset Hotkeys",
+                "Reset all keyboard shortcuts to Plasma6 defaults?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+
+            if reply == QMessageBox.StandardButton.Yes:
+                hotkey_edit_open.setKeySequence(QKeySequence.StandardKey.Open)
+                hotkey_edit_save.setKeySequence(QKeySequence.StandardKey.Save)
+                hotkey_edit_force_save.setKeySequence(QKeySequence("Alt+Shift+S"))
+                hotkey_edit_save_as.setKeySequence(QKeySequence.StandardKey.SaveAs)
+                hotkey_edit_close.setKeySequence(QKeySequence.StandardKey.Close)
+                hotkey_edit_undo.setKeySequence(QKeySequence.StandardKey.Undo)
+                hotkey_edit_copy.setKeySequence(QKeySequence.StandardKey.Copy)
+                hotkey_edit_paste.setKeySequence(QKeySequence.StandardKey.Paste)
+                hotkey_edit_delete.setKeySequence(QKeySequence.StandardKey.Delete)
+                hotkey_edit_duplicate.setKeySequence(QKeySequence("Ctrl+D"))
+                hotkey_edit_rename.setKeySequence(QKeySequence("F2"))
+                hotkey_edit_import.setKeySequence(QKeySequence("Ctrl+I"))
+                hotkey_edit_export.setKeySequence(QKeySequence("Ctrl+E"))
+                hotkey_edit_export_all.setKeySequence(QKeySequence("Ctrl+Shift+E"))
+                hotkey_edit_refresh.setKeySequence(QKeySequence.StandardKey.Refresh)
+                hotkey_edit_properties.setKeySequence(QKeySequence("Alt+Return"))
+                hotkey_edit_find.setKeySequence(QKeySequence.StandardKey.Find)
+                hotkey_edit_help.setKeySequence(QKeySequence.StandardKey.HelpContents)
+
+        reset_hotkeys_btn.clicked.connect(reset_hotkeys)
+        reset_layout.addWidget(reset_hotkeys_btn)
+        hotkeys_layout.addLayout(reset_layout)
+
+        tabs.addTab(hotkeys_tab, "Keyboard Shortcuts")
+
+        # Add tabs widget to main layout
         layout.addWidget(tabs)
 
         # Dialog buttons
         button_layout = QHBoxLayout()
         button_layout.addStretch()
 
-        apply_btn = QPushButton("Apply")
-        apply_btn.clicked.connect(lambda: self._apply_settings(dialog))
-        button_layout.addWidget(apply_btn)
-
-        ok_btn = QPushButton("OK")
-        ok_btn.clicked.connect(lambda: (self._apply_settings(dialog), dialog.accept()))
-        button_layout.addWidget(ok_btn)
-
         cancel_btn = QPushButton("Cancel")
         cancel_btn.clicked.connect(dialog.reject)
         button_layout.addWidget(cancel_btn)
 
+        def apply_settings(close_dialog=False):
+            """Apply all settings"""
+            # Apply display settings
+            self.thumbnail_size = thumb_size_spin.value()
+            self.table_row_height = row_height_spin.value()
+            self.show_grid_lines = show_grid_check.isChecked()
+
+            # Apply preview settings
+            self.show_preview_default = show_preview_check.isChecked()
+            self.auto_refresh_preview = auto_refresh_check.isChecked()
+            self.preview_width = preview_width_spin.value()
+            self.preview_height = preview_height_spin.value()
+            self.preview_background = bg_combo.currentText()
+            self.preview_fit_to_window = fit_to_window_check.isChecked()
+            self.preview_smooth_scaling = smooth_zoom_check.isChecked()
+
+            # Apply export settings
+            self.default_export_format = format_combo.currentText()
+            self.export_preserve_alpha = preserve_alpha_check.isChecked()
+            self.export_mipmaps_separate = export_mipmaps_check.isChecked()
+            self.export_create_subfolders = create_subfolders_check.isChecked()
+
+            # Apply import settings
+            self.import_auto_name = auto_name_check.isChecked()
+            self.import_replace_existing = replace_check.isChecked()
+            self.import_auto_format = auto_format_check.isChecked()
+            self.default_import_format = import_format_combo.currentText()
+
+            # Apply constraint settings
+            self.dimension_limiting_enabled = dimension_check.isChecked()
+            self.splash_screen_mode = splash_check.isChecked()
+            self.custom_max_dimension = max_dim_spin.value()
+            self.name_limit_enabled = name_limit_check.isChecked()
+            self.max_texture_name_length = char_limit_spin.value()
+            self.iff_import_enabled = iff_check.isChecked()
+
+            # Apply hotkeys
+            if hasattr(self, 'hotkey_open'):
+                self.hotkey_open.setKey(hotkey_edit_open.keySequence())
+            if hasattr(self, 'hotkey_save'):
+                self.hotkey_save.setKey(hotkey_edit_save.keySequence())
+            if hasattr(self, 'hotkey_force_save'):
+                self.hotkey_force_save.setKey(hotkey_edit_force_save.keySequence())
+            if hasattr(self, 'hotkey_save_as'):
+                self.hotkey_save_as.setKey(hotkey_edit_save_as.keySequence())
+            if hasattr(self, 'hotkey_close'):
+                self.hotkey_close.setKey(hotkey_edit_close.keySequence())
+            if hasattr(self, 'hotkey_undo'):
+                self.hotkey_undo.setKey(hotkey_edit_undo.keySequence())
+            if hasattr(self, 'hotkey_copy'):
+                self.hotkey_copy.setKey(hotkey_edit_copy.keySequence())
+            if hasattr(self, 'hotkey_paste'):
+                self.hotkey_paste.setKey(hotkey_edit_paste.keySequence())
+            if hasattr(self, 'hotkey_delete'):
+                self.hotkey_delete.setKey(hotkey_edit_delete.keySequence())
+            if hasattr(self, 'hotkey_duplicate'):
+                self.hotkey_duplicate.setKey(hotkey_edit_duplicate.keySequence())
+            if hasattr(self, 'hotkey_rename'):
+                self.hotkey_rename.setKey(hotkey_edit_rename.keySequence())
+            if hasattr(self, 'hotkey_import'):
+                self.hotkey_import.setKey(hotkey_edit_import.keySequence())
+            if hasattr(self, 'hotkey_export'):
+                self.hotkey_export.setKey(hotkey_edit_export.keySequence())
+            if hasattr(self, 'hotkey_export_all'):
+                self.hotkey_export_all.setKey(hotkey_edit_export_all.keySequence())
+            if hasattr(self, 'hotkey_refresh'):
+                self.hotkey_refresh.setKey(hotkey_edit_refresh.keySequence())
+            if hasattr(self, 'hotkey_properties'):
+                self.hotkey_properties.setKey(hotkey_edit_properties.keySequence())
+            if hasattr(self, 'hotkey_find'):
+                self.hotkey_find.setKey(hotkey_edit_find.keySequence())
+            if hasattr(self, 'hotkey_help'):
+                self.hotkey_help.setKey(hotkey_edit_help.keySequence())
+
+            # Refresh UI with new settings
+            if hasattr(self, '_reload_texture_table'):
+                self._reload_texture_table()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("Settings applied")
+
+            if close_dialog:
+                dialog.accept()
+
+        apply_btn = QPushButton("Apply")
+        apply_btn.clicked.connect(lambda: apply_settings(close_dialog=False))
+        button_layout.addWidget(apply_btn)
+
+        ok_btn = QPushButton("OK")
+        ok_btn.setDefault(True)
+        ok_btn.clicked.connect(lambda: apply_settings(close_dialog=True))
+        button_layout.addWidget(ok_btn)
+
         layout.addLayout(button_layout)
 
         dialog.exec()
+
 
     def _apply_theme(self): #vers 1
         """Apply theme from main window"""
@@ -7321,6 +7664,9 @@ class TXDWorkshop(QWidget): #vers 3
                     self.main_window.log_message(f"Removed {removed_bumpmaps} bumpmaps (GTA III doesn't support bumpmaps)")
 
 
+#------ Save functions
+
+
     def _save_as_txd_file(self): #vers 4
         """Save as standalone TXD file - respects save location setting"""
         import os
@@ -7397,7 +7743,6 @@ class TXDWorkshop(QWidget): #vers 3
             QMessageBox.critical(self, "Error", f"Failed to save TXD:\n\n{str(e)}")
 
 
-    # Update the main save_txd_file method to use version selector:
     def save_txd_file(self): #vers 6
         """Save TXD file with version selector"""
         from PyQt6.QtWidgets import QMessageBox
@@ -7408,6 +7753,366 @@ class TXDWorkshop(QWidget): #vers 3
         else:
             # IMG-based TXD save with version selector
             return self._save_txd_to_img_with_version_selector()
+
+
+    # Update the main save_txd_file method to use version selector:
+    def _save_txd_file(self): #vers 2
+        """Save TXD file with detailed structural logging"""
+        if not self.current_txd_path and not self.current_txd_name:
+            QMessageBox.warning(self, "No TXD", "No TXD file loaded")
+            return
+
+        try:
+            from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout,
+                                        QTextEdit, QPushButton, QLabel, QProgressBar)
+            from PyQt6.QtCore import Qt
+            import struct
+
+            # Ask for save location
+            if self.current_txd_path:
+                default_path = self.current_txd_path
+            else:
+                default_path = self.current_txd_name
+
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, "Save TXD File", default_path,
+                "TXD Files (*.txd);;All Files (*)"
+            )
+
+            if not file_path:
+                return
+
+            # Create detailed progress dialog with log
+            dialog = QDialog(self)
+            dialog.setWindowTitle("TXD Structural Builder")
+            dialog.setMinimumWidth(800)
+            dialog.setMinimumHeight(600)
+            dialog.setModal(True)
+
+            layout = QVBoxLayout(dialog)
+
+            # Header
+            header = QLabel(f"Building TXD: {os.path.basename(file_path)}")
+            header.setStyleSheet("font-size: 14px; font-weight: bold; padding: 5px;")
+            layout.addWidget(header)
+
+            # Progress bar
+            progress_bar = QProgressBar()
+            progress_bar.setRange(0, 100)
+            progress_bar.setValue(0)
+            layout.addWidget(progress_bar)
+
+            # Log output
+            log_output = QTextEdit()
+            log_output.setReadOnly(True)
+            log_output.setStyleSheet("font-family: 'Courier New', monospace; font-size: 10px;")
+            layout.addWidget(log_output)
+
+            # Button layout
+            button_layout = QHBoxLayout()
+
+            cancel_btn = QPushButton("Cancel")
+            cancel_btn.setStyleSheet("background-color: #d32f2f; color: white;")
+            button_layout.addWidget(cancel_btn)
+
+            button_layout.addStretch()
+            layout.addLayout(button_layout)
+
+            # Show dialog
+            dialog.show()
+            dialog.raise_()
+            dialog.activateWindow()
+
+            user_cancelled = False
+
+            def log(message):
+                """Add message to log output"""
+                log_output.append(message)
+                log_output.verticalScrollBar().setValue(log_output.verticalScrollBar().maximum())
+                dialog.repaint()
+
+            def update_progress(value, message=None):
+                """Update progress bar and optionally log"""
+                progress_bar.setValue(value)
+                if message:
+                    log(message)
+                if user_cancelled:
+                    raise Exception("Save cancelled by user")
+
+            def handle_cancel():
+                nonlocal user_cancelled
+                user_cancelled = True
+
+            cancel_btn.clicked.connect(handle_cancel)
+
+            # Start building
+            update_progress(1, "=" * 80)
+            update_progress(1, "TXD STRUCTURAL BUILDER - INITIALIZING")
+            update_progress(1, "=" * 80)
+
+            log("")
+            log("PHASE 1: PRE-BUILD VALIDATION")
+            log("-" * 80)
+            update_progress(5)
+
+            if not self.texture_list:
+                raise Exception("No textures to save")
+
+            log(f"Output File    : {file_path}")
+            log(f"Texture Count  : {len(self.texture_list)}")
+            log(f"RW Version     : 0x{self.txd_version_id:08X}")
+            log(f"Device ID      : 0x{self.txd_device_id:08X}")
+
+            # Validate textures
+            log("")
+            log("Validating textures...")
+            for idx, tex in enumerate(self.texture_list):
+                tex_name = tex.get('name', f'texture_{idx}')
+                has_data = bool(tex.get('rgba_data') or tex.get('compressed_data') or tex.get('original_bgra_data'))
+                log(f"  [{idx+1}] {tex_name}: {'OK' if has_data else 'MISSING DATA'}")
+
+                if not has_data:
+                    raise Exception(f"Texture {tex_name} has no image data")
+
+            # Initialize serializer
+            log("")
+            log("PHASE 2: INITIALIZING SERIALIZER")
+            log("-" * 80)
+            update_progress(10)
+
+            try:
+                from methods.txd_serializer import TXDSerializer
+                log("Loaded serializer from methods/txd_serializer.py")
+            except ImportError:
+                from depends.txd_serializer import TXDSerializer
+                log("Loaded serializer from depends/txd_serializer.py (fallback)")
+
+            serializer = TXDSerializer()
+            log("Serializer initialized")
+
+            # Build texture sections
+            log("")
+            log(f"PHASE 3: BUILDING {len(self.texture_list)} TEXTURE NATIVE SECTIONS")
+            log("=" * 80)
+            update_progress(15)
+
+            texture_sections = []
+
+            for idx, texture in enumerate(self.texture_list):
+                texture_progress = 15 + int((idx / len(self.texture_list)) * 50)
+
+                tex_name = texture.get('name', f'texture_{idx}')
+                tex_width = texture.get('width', 0)
+                tex_height = texture.get('height', 0)
+                tex_format = texture.get('format', 'Unknown')
+                has_alpha = texture.get('has_alpha', False)
+                alpha_name = texture.get('alpha_name', '')
+
+                log("")
+                log(f"[TEXTURE {idx+1}/{len(self.texture_list)}]")
+                log("-" * 80)
+                log(f"  Name         : {tex_name}")
+                log(f"  Dimensions   : {tex_width}x{tex_height}")
+                log(f"  Format       : {tex_format}")
+                log(f"  Depth        : {texture.get('depth', 32)}-bit")
+                log(f"  Alpha        : {has_alpha}")
+                if has_alpha:
+                    log(f"  Alpha Name   : {alpha_name}")
+
+                # Check data preservation
+                has_compressed = bool(texture.get('compressed_data'))
+                has_original_bgra = bool(texture.get('original_bgra_data'))
+                has_rgba = bool(texture.get('rgba_data'))
+
+                log(f"  Data Sources :")
+                log(f"    Compressed     : {'YES' if has_compressed else 'NO'} ({len(texture.get('compressed_data', b'')):,} bytes)")
+                log(f"    Original BGRA  : {'YES' if has_original_bgra else 'NO'} ({len(texture.get('original_bgra_data', b'')):,} bytes)")
+                log(f"    RGBA (display) : {'YES' if has_rgba else 'NO'} ({len(texture.get('rgba_data', b'')):,} bytes)")
+
+                # Mipmaps
+                mipmap_levels = texture.get('mipmap_levels', [])
+                if mipmap_levels:
+                    log(f"  Mipmaps      : {len(mipmap_levels)} levels")
+                    for level_idx, level in enumerate(mipmap_levels):
+                        level_width = level.get('width', 0)
+                        level_height = level.get('height', 0)
+                        level_has_compressed = bool(level.get('compressed_data'))
+                        level_has_bgra = bool(level.get('original_bgra_data'))
+                        log(f"    Level {level_idx}: {level_width}x{level_height} | Compressed: {level_has_compressed} | BGRA: {level_has_bgra}")
+
+                # Bumpmap
+                if texture.get('has_bumpmap', False):
+                    bumpmap_size = len(texture.get('bumpmap_data', b''))
+                    bumpmap_type = texture.get('bumpmap_type', 0)
+                    type_names = ['Height', 'Normal', 'Combined']
+                    log(f"  Bumpmap      : {type_names[bumpmap_type]} ({bumpmap_size:,} bytes)")
+
+                # Reflection
+                if texture.get('has_reflection', False):
+                    reflection_size = len(texture.get('reflection_map', b''))
+                    fresnel_size = len(texture.get('fresnel_map', b''))
+                    log(f"  Reflection   : {reflection_size:,} bytes")
+                    if fresnel_size:
+                        log(f"  Fresnel      : {fresnel_size:,} bytes")
+
+                update_progress(texture_progress, f"  Building texture native section...")
+
+                # Build texture native
+                try:
+                    tex_section = serializer._build_texture_native(texture)
+                    texture_sections.append(tex_section)
+
+                    log(f"  Section Size : {len(tex_section):,} bytes")
+                    log(f"  Result       : SUCCESS")
+
+                except Exception as e:
+                    log(f"  Result       : FAILED - {str(e)}")
+                    raise Exception(f"Failed to build texture {tex_name}: {str(e)}")
+
+            # Build TXD dictionary
+            log("")
+            log("PHASE 4: BUILDING TXD DICTIONARY STRUCTURE")
+            log("=" * 80)
+            update_progress(65)
+
+            log("")
+            log("Building main TXD dictionary header...")
+
+            # Calculate sizes
+            struct_size = 4  # texture count (u32)
+            struct_data = struct.pack('<I', len(self.texture_list))
+
+            log(f"  Struct Section:")
+            log(f"    Type         : 0x01 (Struct)")
+            log(f"    Size         : {struct_size} bytes")
+            log(f"    Data         : Texture count = {len(self.texture_list)}")
+
+            total_size = 12 + struct_size + 12  # struct header + data + extension header
+            for tex_section in texture_sections:
+                total_size += len(tex_section)
+
+            log(f"  Main Dictionary:")
+            log(f"    Type         : 0x16 (Texture Dictionary)")
+            log(f"    Total Size   : {total_size:,} bytes")
+            log(f"    Version      : 0x{serializer.RW_VERSION:08X}")
+
+            update_progress(70, "Assembling TXD structure...")
+
+            # Build complete TXD
+            result = bytearray()
+
+            # Write Texture Dictionary header
+            log("")
+            log("Writing TXD sections:")
+            log(f"  [Offset 0] Main TXD Dictionary header (12 bytes)")
+            result.extend(serializer._write_section_header(
+                serializer.SECTION_TEXTURE_DICTIONARY,
+                total_size - 12,
+                serializer.RW_VERSION
+            ))
+
+            # Write Struct section
+            log(f"  [Offset {len(result)}] Struct section header (12 bytes)")
+            result.extend(serializer._write_section_header(
+                serializer.SECTION_STRUCT,
+                struct_size,
+                serializer.RW_VERSION
+            ))
+
+            log(f"  [Offset {len(result)}] Struct data ({struct_size} bytes)")
+            result.extend(struct_data)
+
+            # Write texture sections
+            for idx, tex_section in enumerate(texture_sections):
+                update_progress(70 + int((idx / len(texture_sections)) * 20))
+                tex_name = self.texture_list[idx].get('name', f'texture_{idx}')
+                log(f"  [Offset {len(result)}] Texture {idx+1} ({tex_name}): {len(tex_section):,} bytes")
+                result.extend(tex_section)
+
+            # Write Extension section
+            log(f"  [Offset {len(result)}] Extension section (12 bytes)")
+            result.extend(serializer._write_section_header(
+                serializer.SECTION_EXTENSION,
+                0,
+                serializer.RW_VERSION
+            ))
+
+            # Write to file
+            log("")
+            log("PHASE 5: WRITING TO DISK")
+            log("=" * 80)
+            update_progress(90)
+
+            log(f"Final TXD size: {len(result):,} bytes ({len(result)/1024:.2f} KB)")
+            log(f"Writing to: {file_path}")
+
+            with open(file_path, 'wb') as f:
+                f.write(result)
+
+            update_progress(95)
+            log("File written successfully")
+
+            # Verify file
+            log("")
+            log("PHASE 6: VERIFICATION")
+            log("-" * 80)
+
+            if os.path.exists(file_path):
+                file_size = os.path.getsize(file_path)
+                log(f"File exists: YES")
+                log(f"File size: {file_size:,} bytes")
+
+                if file_size == len(result):
+                    log("Size verification: PASSED")
+                else:
+                    log(f"Size verification: FAILED (expected {len(result):,}, got {file_size:,})")
+
+            # Complete
+            log("")
+            log("=" * 80)
+            log("TXD BUILD COMPLETE")
+            log("=" * 80)
+            log(f"Textures saved: {len(self.texture_list)}")
+            log(f"Output file: {file_path}")
+            log(f"Total size: {len(result):,} bytes ({len(result)/1024:.2f} KB)")
+
+            update_progress(100)
+
+            # Change button to close
+            cancel_btn.setText("Close")
+            cancel_btn.setStyleSheet("background-color: #4CAF50; color: white;")
+            cancel_btn.disconnect()
+            cancel_btn.clicked.connect(dialog.accept)
+
+            dialog.exec()
+
+            # Update internal state
+            self.current_txd_path = file_path
+            self.current_txd_name = os.path.basename(file_path)
+
+            # Clear modified flag
+            self.save_txd_btn.setEnabled(False)
+            self.save_txd_btn.setStyleSheet("")
+            title = self.windowTitle().replace("*", "")
+            self.setWindowTitle(title)
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Saved TXD: {file_path} ({len(self.texture_list)} textures)")
+
+            QMessageBox.information(self, "Save Complete",
+                f"TXD file saved successfully:\n\n{file_path}\n\n"
+                f"Textures: {len(self.texture_list)}\n"
+                f"Size: {len(result):,} bytes ({len(result)/1024:.2f} KB)")
+
+        except Exception as e:
+            if 'dialog' in locals():
+                dialog.close()
+
+            if "cancelled" not in str(e).lower():
+                QMessageBox.critical(self, "Save Error", f"Failed to save TXD:\n\n{str(e)}")
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"TXD save error: {str(e)}")
 
 
     def _save_as_txd_file_with_version_selector(self): #vers 1
@@ -7580,6 +8285,95 @@ class TXDWorkshop(QWidget): #vers 3
             QMessageBox.critical(self, "Error", f"Failed to save to IMG:\n\n{str(e)}")
 
 
+    def _save_txd_with_progress(self): #vers 1
+        """Save TXD with progress indicator"""
+        from PyQt6.QtWidgets import QMessageBox
+
+        if not self.current_img or not self.current_txd_name:
+            QMessageBox.warning(self, "No TXD", "No TXD file is currently loaded")
+            return
+
+        if not self.texture_list:
+            QMessageBox.warning(self, "Empty TXD", "No textures to save")
+            return
+
+        # Create progress dialog
+        progress = QProgressDialog(
+            "Saving TXD...",
+            "Cancel",
+            0,
+            100,
+            self
+        )
+        progress.setWindowTitle("Saving TXD")
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setAutoClose(True)
+        progress.setAutoReset(True)
+
+        try:
+            # Step 1: Calculate total work
+            total_textures = len(self.texture_list)
+            total_steps = total_textures * 4 + 3  # Per texture: mipmaps, bumpmap, reflection, compression + header/footer/write
+            current_step = 0
+
+            def update_progress(message, step_increment=1):
+                nonlocal current_step
+                current_step += step_increment
+                progress.setValue(int((current_step / total_steps) * 100))
+                progress.setLabelText(message)
+                QApplication.processEvents()
+                if progress.wasCanceled():
+                    raise InterruptedError("Save cancelled by user")
+
+            # Step 2: Build TXD header
+            update_progress("📋 Building TXD header...")
+            modified_txd_data = self._rebuild_txd_data_with_progress(update_progress)
+
+            if not modified_txd_data:
+                progress.close()
+                QMessageBox.critical(self, "Error", "Failed to rebuild TXD data")
+                return False
+
+            # Step 3: Update IMG
+            update_progress("💾 Writing to IMG archive...")
+            success = self._update_img_with_txd(modified_txd_data)
+
+            if success:
+                progress.setValue(100)
+                progress.setLabelText("✅ Save complete!")
+
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(
+                        f"✅ Saved TXD: {self.current_txd_name} "
+                        f"({len(modified_txd_data)} bytes, {total_textures} textures)"
+                    )
+
+                # Clear modified state
+                self.save_txd_btn.setEnabled(False)
+                self.save_txd_btn.setStyleSheet("")
+                title = self.windowTitle().replace("*", "")
+                self.setWindowTitle(title)
+
+                progress.close()
+                return True
+            else:
+                progress.close()
+                QMessageBox.critical(self, "Error", "Failed to save TXD to IMG")
+                return False
+
+        except InterruptedError as e:
+            progress.close()
+            QMessageBox.information(self, "Cancelled", str(e))
+            return False
+        except Exception as e:
+            progress.close()
+            QMessageBox.critical(self, "Error", f"Save failed: {str(e)}")
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Save error: {str(e)}")
+            return False
+
+
     def _save_as_txd_file_with_progress(self): #vers 1
         """Save standalone TXD with progress indicator"""
         from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QApplication
@@ -7687,6 +8481,65 @@ class TXDWorkshop(QWidget): #vers 3
             return False
 
 
+    def _save_texture_name(self): #vers 1
+        """Save edited texture name"""
+        if not self.selected_texture:
+            return
+
+        new_name = self.info_name.text().strip()
+        if new_name and new_name != self.selected_texture.get('name', ''):
+            old_name = self.selected_texture.get('name', '')
+            self.selected_texture['name'] = new_name
+            self._save_undo_state(f"Rename texture: {old_name} → {new_name}")
+            self._reload_texture_table()
+            self._mark_as_modified()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✏️ Renamed: {old_name} → {new_name}")
+
+        self.info_name.setReadOnly(True)
+
+
+    def _save_alpha_name(self): #vers 1
+        """Save edited alpha name"""
+        if not self.selected_texture or not self.selected_texture.get('has_alpha'):
+            return
+
+        new_alpha_name = self.info_alpha_name.text().strip()
+        if new_alpha_name and new_alpha_name != self.selected_texture.get('alpha_name', ''):
+            old_name = self.selected_texture.get('alpha_name', '')
+            self.selected_texture['alpha_name'] = new_alpha_name
+            self._save_undo_state(f"Rename alpha: {old_name} → {new_alpha_name}")
+            self._reload_texture_table()
+            self._mark_as_modified()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✏️ Alpha renamed: {old_name} → {new_alpha_name}")
+
+        self.info_alpha_name.setReadOnly(True)
+
+
+    def _force_save_txd(self): #vers 1
+        """Force save TXD regardless of modified state (Alt+Shift+S)"""
+        if not self.texture_list:
+            QMessageBox.warning(self, "No Textures", "No textures to save")
+            return
+
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            self.main_window.log_message("Force save triggered (Alt+Shift+S)")
+
+        # Temporarily mark as modified to enable save
+        original_title = self.windowTitle()
+        if not original_title.endswith("*"):
+            self.setWindowTitle(original_title + "*")
+
+        # Call save function
+        self._save_txd_file()
+
+
+#------ Rebuild functions
+
+
     def _rebuild_txd_data_with_texture_progress(self, update_progress): #vers 1
         """Rebuild TXD data with per-texture progress updates"""
         try:
@@ -7740,95 +8593,6 @@ class TXDWorkshop(QWidget): #vers 3
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"Rebuild error: {str(e)}")
             return None
-
-
-    def _save_txd_with_progress(self): #vers 1
-        """Save TXD with progress indicator"""
-        from PyQt6.QtWidgets import QMessageBox
-
-        if not self.current_img or not self.current_txd_name:
-            QMessageBox.warning(self, "No TXD", "No TXD file is currently loaded")
-            return
-
-        if not self.texture_list:
-            QMessageBox.warning(self, "Empty TXD", "No textures to save")
-            return
-
-        # Create progress dialog
-        progress = QProgressDialog(
-            "Saving TXD...",
-            "Cancel",
-            0,
-            100,
-            self
-        )
-        progress.setWindowTitle("Saving TXD")
-        progress.setWindowModality(Qt.WindowModality.WindowModal)
-        progress.setMinimumDuration(0)
-        progress.setAutoClose(True)
-        progress.setAutoReset(True)
-
-        try:
-            # Step 1: Calculate total work
-            total_textures = len(self.texture_list)
-            total_steps = total_textures * 4 + 3  # Per texture: mipmaps, bumpmap, reflection, compression + header/footer/write
-            current_step = 0
-
-            def update_progress(message, step_increment=1):
-                nonlocal current_step
-                current_step += step_increment
-                progress.setValue(int((current_step / total_steps) * 100))
-                progress.setLabelText(message)
-                QApplication.processEvents()
-                if progress.wasCanceled():
-                    raise InterruptedError("Save cancelled by user")
-
-            # Step 2: Build TXD header
-            update_progress("📋 Building TXD header...")
-            modified_txd_data = self._rebuild_txd_data_with_progress(update_progress)
-
-            if not modified_txd_data:
-                progress.close()
-                QMessageBox.critical(self, "Error", "Failed to rebuild TXD data")
-                return False
-
-            # Step 3: Update IMG
-            update_progress("💾 Writing to IMG archive...")
-            success = self._update_img_with_txd(modified_txd_data)
-
-            if success:
-                progress.setValue(100)
-                progress.setLabelText("✅ Save complete!")
-
-                if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(
-                        f"✅ Saved TXD: {self.current_txd_name} "
-                        f"({len(modified_txd_data)} bytes, {total_textures} textures)"
-                    )
-
-                # Clear modified state
-                self.save_txd_btn.setEnabled(False)
-                self.save_txd_btn.setStyleSheet("")
-                title = self.windowTitle().replace("*", "")
-                self.setWindowTitle(title)
-
-                progress.close()
-                return True
-            else:
-                progress.close()
-                QMessageBox.critical(self, "Error", "Failed to save TXD to IMG")
-                return False
-
-        except InterruptedError as e:
-            progress.close()
-            QMessageBox.information(self, "Cancelled", str(e))
-            return False
-        except Exception as e:
-            progress.close()
-            QMessageBox.critical(self, "Error", f"Save failed: {str(e)}")
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Save error: {str(e)}")
-            return False
 
 
     def _rebuild_txd_data(self): #vers 4
@@ -8131,9 +8895,10 @@ class TXDWorkshop(QWidget): #vers 3
             details_item.setText(details)
 
 
-    def _parse_single_texture(self, txd_data, offset, index): #vers 4
+    def _parse_single_texture(self, txd_data, offset, index): #vers 5
         """
         Parse single texture from TXD with bumpmap and reflection support
+        ADDED: Extract separate alpha mask for display switching
         """
         import struct
 
@@ -8146,6 +8911,7 @@ class TXDWorkshop(QWidget): #vers 3
             'has_alpha': False,
             'mipmaps': 1,
             'rgba_data': b'',
+            'alpha_mask': b'',              # NEW: Separate grayscale alpha channel
             'compressed_data': b'',
             'original_bgra_data': b'',
             'mipmap_levels': [],
@@ -8194,9 +8960,9 @@ class TXDWorkshop(QWidget): #vers 3
             tex['height'] = height
             tex['depth'] = depth
             tex['mipmaps'] = num_levels
-            tex['raster_format_flags'] = raster_format_flags  # Store format flags
+            tex['raster_format_flags'] = raster_format_flags
 
-            # NEW: Check for bumpmap flag (bit 0x10)
+            # Check for bumpmap flag (bit 0x10)
             if raster_format_flags & 0x10:
                 tex['has_bumpmap'] = True
 
@@ -8280,17 +9046,22 @@ class TXDWorkshop(QWidget): #vers 3
                 if level == 0:
                     tex['rgba_data'] = rgba_data
 
-            # NEW: Read bumpmap data (if present)
+                    # NEW: Extract alpha channel as separate grayscale mask
+                    if tex['has_alpha'] and rgba_data and len(rgba_data) == width * height * 4:
+                        alpha_mask = bytearray(width * height)
+                        for i in range(width * height):
+                            alpha_mask[i] = rgba_data[i * 4 + 3]  # Extract alpha byte
+                        tex['alpha_mask'] = bytes(alpha_mask)
+
+            # Read bumpmap data (if present)
             if tex['has_bumpmap'] and pos + 5 <= len(txd_data):
                 try:
-                    # Read bumpmap header
                     bumpmap_size = struct.unpack('<I', txd_data[pos:pos+4])[0]
                     pos += 4
 
                     bumpmap_type = struct.unpack('<B', txd_data[pos:pos+1])[0]
                     pos += 1
 
-                    # Read bumpmap data
                     if pos + bumpmap_size <= len(txd_data):
                         tex['bumpmap_data'] = txd_data[pos:pos+bumpmap_size]
                         tex['bumpmap_type'] = bumpmap_type
@@ -8300,33 +9071,28 @@ class TXDWorkshop(QWidget): #vers 3
                             type_names = ['Height Map', 'Normal Map', 'Both']
                             type_name = type_names[bumpmap_type] if bumpmap_type < 3 else 'Unknown'
                             self.main_window.log_message(
-                                f"  📐 Bumpmap: {type_name} ({bumpmap_size} bytes)"
+                                f"  Bumpmap: {type_name} ({bumpmap_size} bytes)"
                             )
                 except Exception as e:
                     if self.main_window and hasattr(self.main_window, 'log_message'):
-                        self.main_window.log_message(f"  ⚠️ Bumpmap read error: {str(e)}")
+                        self.main_window.log_message(f"  Bumpmap read error: {str(e)}")
 
-            # NEW: Read reflection map data (if present and space available)
-            # Check if there's more data after mipmaps/bumpmap
+            # Read reflection map data (if present)
             if pos + 8 <= len(txd_data):
                 try:
-                    # Read reflection map header
                     reflection_size = struct.unpack('<I', txd_data[pos:pos+4])[0]
                     pos += 4
 
-                    # Validate size is reasonable (should be width*height*3 for RGB)
                     expected_reflection_size = width * height * 3
                     if reflection_size == expected_reflection_size and pos + reflection_size <= len(txd_data):
                         tex['reflection_map'] = txd_data[pos:pos+reflection_size]
                         tex['has_reflection'] = True
                         pos += reflection_size
 
-                        # Read Fresnel map
                         if pos + 4 <= len(txd_data):
                             fresnel_size = struct.unpack('<I', txd_data[pos:pos+4])[0]
                             pos += 4
 
-                            # Validate Fresnel size (should be width*height for grayscale)
                             expected_fresnel_size = width * height
                             if fresnel_size == expected_fresnel_size and pos + fresnel_size <= len(txd_data):
                                 tex['fresnel_map'] = txd_data[pos:pos+fresnel_size]
@@ -8334,11 +9100,10 @@ class TXDWorkshop(QWidget): #vers 3
 
                                 if self.main_window and hasattr(self.main_window, 'log_message'):
                                     self.main_window.log_message(
-                                        f"  🌈 Reflection maps: "
+                                        f"  Reflection maps: "
                                         f"Vector ({reflection_size}B) + Fresnel ({fresnel_size}B)"
                                     )
                 except Exception as e:
-                    # Silently ignore reflection read errors (optional data)
                     pass
 
         except Exception as e:
@@ -9536,6 +10301,18 @@ class TXDWorkshop(QWidget): #vers 3
                 self.main_window.log_message(f"Refresh error: {str(e)}")
 
 
+    def _rename_texture_shortcut(self): #vers 1
+        """Rename selected texture via F2 shortcut"""
+        if not self.selected_texture:
+            return
+
+        # Focus the name input field and enable editing
+        if hasattr(self, 'info_name'):
+            self.info_name.setReadOnly(False)
+            self.info_name.selectAll()
+            self.info_name.setFocus()
+
+
     def _rename_texture(self, alpha=False): #vers 2
         """Rename texture or alpha name and mark as modified"""
         from PyQt6.QtWidgets import QInputDialog
@@ -10152,6 +10929,16 @@ class TXDWorkshop(QWidget): #vers 3
                 self.texture_table.setRowHidden(row, not show_row)
 
 
+#------ Search functions
+
+
+    def _focus_search(self): #vers 1
+        """Focus search input via Ctrl+F"""
+        if hasattr(self, 'search_input'):
+            self.search_input.setFocus()
+            self.search_input.selectAll()
+
+
     def _create_texture_search(self): #vers 1
         """Create texture search functionality"""
         search_layout = QHBoxLayout()
@@ -10197,6 +10984,9 @@ class TXDWorkshop(QWidget): #vers 3
         if hasattr(self, 'texture_table'):
             for row in range(self.texture_table.rowCount()):
                 self.texture_table.setRowHidden(row, False)
+
+
+#------ Tramsform functions
 
 
     def _duplicate_texture(self): #vers 4
@@ -10260,7 +11050,6 @@ class TXDWorkshop(QWidget): #vers 3
 
         except Exception as e:
             QMessageBox.critical(self, "Duplicate Error", f"Failed to duplicate texture: {str(e)}")
-
 
 
     def _copy_texture(self): #vers 2
@@ -10446,6 +11235,10 @@ class TXDWorkshop(QWidget): #vers 3
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to create texture: {str(e)}")
 
+
+#------ Tabbing Functions
+
+
     def _close_txd_tab(self, index): #vers 1
         """Close TXD tab"""
         if self.txd_tabs.count() <= 1:
@@ -10457,6 +11250,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         self.txd_tabs.removeTab(index)
 
+
     def _switch_txd_tab(self, index): #vers 1
         """Switch to different TXD tab"""
         if index < 0:
@@ -10467,6 +11261,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         if self.main_window and hasattr(self.main_window, 'log_message'):
             self.main_window.log_message(f"Switched to tab: {tab_name}")
+
 
     def _add_new_txd_tab(self, txd_name, txd_data): #vers 1
         """Add new TXD as a tab"""
@@ -10481,6 +11276,7 @@ class TXDWorkshop(QWidget): #vers 3
         # Add tab
         tab_index = self.txd_tabs.addTab(new_tab, txd_name)
         self.txd_tabs.setCurrentIndex(tab_index)
+
 
     def _texture_statistics(self): #vers 1
         """Show texture statistics"""
@@ -10535,6 +11331,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         QMessageBox.information(self, "TXD Statistics", stats)
 
+
     def _check_txd_vs_dff(self): #vers 2
         """Check TXD texture names against DFF model"""
         if not self.texture_list:
@@ -10564,6 +11361,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         except Exception as e:
             QMessageBox.critical(self, "Check Error", f"Failed to check DFF: {str(e)}")
+
 
     def _build_txd_from_dff(self): #vers 1
         """Build TXD structure from DFF material names"""
@@ -10701,6 +11499,419 @@ class TXDWorkshop(QWidget): #vers 3
             return
 
         super().keyPressEvent(event)
+
+
+    def _setup_hotkeys(self): #vers 3
+        """Setup Plasma6-style keyboard shortcuts for TXD Workshop - checks for existing methods"""
+        from PyQt6.QtGui import QShortcut, QKeySequence
+        from PyQt6.QtCore import Qt
+
+        # === FILE OPERATIONS ===
+
+        # Open TXD (Ctrl+O)
+        self.hotkey_open = QShortcut(QKeySequence.StandardKey.Open, self)
+        if hasattr(self, 'open_txd_file'):
+            self.hotkey_open.activated.connect(self.open_txd_file)
+        elif hasattr(self, '_open_txd_file'):
+            self.hotkey_open.activated.connect(self._open_txd_file)
+
+        # Save TXD (Ctrl+S)
+        self.hotkey_save = QShortcut(QKeySequence.StandardKey.Save, self)
+        if hasattr(self, '_save_txd_file'):
+            self.hotkey_save.activated.connect(self._save_txd_file)
+        elif hasattr(self, 'save_txd_file'):
+            self.hotkey_save.activated.connect(self.save_txd_file)
+
+        # Force Save TXD (Alt+Shift+S)
+        self.hotkey_force_save = QShortcut(QKeySequence("Alt+Shift+S"), self)
+        if not hasattr(self, '_force_save_txd'):
+            # Create force save method inline if it doesn't exist
+            def force_save():
+                if not self.texture_list:
+                    from PyQt6.QtWidgets import QMessageBox
+                    QMessageBox.warning(self, "No Textures", "No textures to save")
+                    return
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("Force save triggered (Alt+Shift+S)")
+                # Call save regardless of modified state
+                if hasattr(self, '_save_txd_file'):
+                    self._save_txd_file()
+                elif hasattr(self, 'save_txd_file'):
+                    self.save_txd_file()
+            self.hotkey_force_save.activated.connect(force_save)
+        else:
+            self.hotkey_force_save.activated.connect(self._force_save_txd)
+
+        # Save As (Ctrl+Shift+S)
+        self.hotkey_save_as = QShortcut(QKeySequence.StandardKey.SaveAs, self)
+        if hasattr(self, '_save_as_txd_file'):
+            self.hotkey_save_as.activated.connect(self._save_as_txd_file)
+        elif hasattr(self, 'save_as_txd_file'):
+            self.hotkey_save_as.activated.connect(self.save_as_txd_file)
+        elif hasattr(self, '_save_txd_file'):
+            self.hotkey_save_as.activated.connect(self._save_txd_file)
+
+        # Close (Ctrl+W)
+        self.hotkey_close = QShortcut(QKeySequence.StandardKey.Close, self)
+        self.hotkey_close.activated.connect(self.close)
+
+        # === EDIT OPERATIONS ===
+
+        # Undo (Ctrl+Z)
+        self.hotkey_undo = QShortcut(QKeySequence.StandardKey.Undo, self)
+        if hasattr(self, '_undo_last_action'):
+            self.hotkey_undo.activated.connect(self._undo_last_action)
+        elif hasattr(self, 'undo_last_action'):
+            self.hotkey_undo.activated.connect(self.undo_last_action)
+        # else: not implemented yet, no connection
+
+        # Copy (Ctrl+C)
+        self.hotkey_copy = QShortcut(QKeySequence.StandardKey.Copy, self)
+        if hasattr(self, '_copy_texture'):
+            self.hotkey_copy.activated.connect(self._copy_texture)
+        elif hasattr(self, 'copy_texture'):
+            self.hotkey_copy.activated.connect(self.copy_texture)
+
+        # Paste (Ctrl+V)
+        self.hotkey_paste = QShortcut(QKeySequence.StandardKey.Paste, self)
+        if hasattr(self, '_paste_texture'):
+            self.hotkey_paste.activated.connect(self._paste_texture)
+        elif hasattr(self, 'paste_texture'):
+            self.hotkey_paste.activated.connect(self.paste_texture)
+
+        # Delete (Delete)
+        self.hotkey_delete = QShortcut(QKeySequence.StandardKey.Delete, self)
+        if hasattr(self, '_delete_texture'):
+            self.hotkey_delete.activated.connect(self._delete_texture)
+        elif hasattr(self, 'delete_texture'):
+            self.hotkey_delete.activated.connect(self.delete_texture)
+
+        # Duplicate (Ctrl+D)
+        self.hotkey_duplicate = QShortcut(QKeySequence("Ctrl+D"), self)
+        if hasattr(self, '_duplicate_texture'):
+            self.hotkey_duplicate.activated.connect(self._duplicate_texture)
+        elif hasattr(self, 'duplicate_texture'):
+            self.hotkey_duplicate.activated.connect(self.duplicate_texture)
+
+        # Rename (F2)
+        self.hotkey_rename = QShortcut(QKeySequence("F2"), self)
+        if not hasattr(self, '_rename_texture_shortcut'):
+            # Create rename shortcut method inline
+            def rename_shortcut():
+                if not self.selected_texture:
+                    return
+                # Focus the name input field if it exists
+                if hasattr(self, 'info_name'):
+                    self.info_name.setReadOnly(False)
+                    self.info_name.selectAll()
+                    self.info_name.setFocus()
+            self.hotkey_rename.activated.connect(rename_shortcut)
+        else:
+            self.hotkey_rename.activated.connect(self._rename_texture_shortcut)
+
+        # === TEXTURE OPERATIONS ===
+
+        # Import Texture (Ctrl+I)
+        self.hotkey_import = QShortcut(QKeySequence("Ctrl+I"), self)
+        if hasattr(self, '_import_normal_texture'):
+            self.hotkey_import.activated.connect(self._import_normal_texture)
+        elif hasattr(self, 'import_normal_texture'):
+            self.hotkey_import.activated.connect(self.import_normal_texture)
+        elif hasattr(self, 'import_texture'):
+            self.hotkey_import.activated.connect(self.import_texture)
+
+        # Export Texture (Ctrl+E)
+        self.hotkey_export = QShortcut(QKeySequence("Ctrl+E"), self)
+        if hasattr(self, 'export_selected_texture'):
+            self.hotkey_export.activated.connect(self.export_selected_texture)
+        elif hasattr(self, '_export_selected_texture'):
+            self.hotkey_export.activated.connect(self._export_selected_texture)
+        elif hasattr(self, 'export_texture'):
+            self.hotkey_export.activated.connect(self.export_texture)
+
+        # Export All (Ctrl+Shift+E)
+        self.hotkey_export_all = QShortcut(QKeySequence("Ctrl+Shift+E"), self)
+        if hasattr(self, 'export_all_textures'):
+            self.hotkey_export_all.activated.connect(self.export_all_textures)
+        elif hasattr(self, '_export_all_textures'):
+            self.hotkey_export_all.activated.connect(self._export_all_textures)
+
+        # === VIEW OPERATIONS ===
+
+        # Refresh (F5)
+        self.hotkey_refresh = QShortcut(QKeySequence.StandardKey.Refresh, self)
+        if hasattr(self, '_reload_texture_table'):
+            self.hotkey_refresh.activated.connect(self._reload_texture_table)
+        elif hasattr(self, 'reload_texture_table'):
+            self.hotkey_refresh.activated.connect(self.reload_texture_table)
+        elif hasattr(self, 'refresh'):
+            self.hotkey_refresh.activated.connect(self.refresh)
+
+        # Properties (Alt+Enter)
+        self.hotkey_properties = QShortcut(QKeySequence("Alt+Return"), self)
+        if hasattr(self, '_show_detailed_info'):
+            self.hotkey_properties.activated.connect(self._show_detailed_info)
+        elif hasattr(self, 'show_detailed_info'):
+            self.hotkey_properties.activated.connect(self.show_detailed_info)
+        elif hasattr(self, '_show_texture_info'):
+            self.hotkey_properties.activated.connect(self._show_texture_info)
+
+        # Settings (Ctrl+,)
+        self.hotkey_settings = QShortcut(QKeySequence.StandardKey.Preferences, self)
+        if hasattr(self, '_show_settings_dialog'):
+            self.hotkey_settings.activated.connect(self._show_settings_dialog)
+        elif hasattr(self, 'show_settings_dialog'):
+            self.hotkey_settings.activated.connect(self.show_settings_dialog)
+        elif hasattr(self, '_show_settings_hotkeys'):
+            self.hotkey_settings.activated.connect(self._show_settings_hotkeys)
+
+        # === NAVIGATION ===
+
+        # Select All (Ctrl+A) - reserved for future
+        self.hotkey_select_all = QShortcut(QKeySequence.StandardKey.SelectAll, self)
+        # Not connected - reserved for future multi-select
+
+        # Find (Ctrl+F)
+        self.hotkey_find = QShortcut(QKeySequence.StandardKey.Find, self)
+        if not hasattr(self, '_focus_search'):
+            # Create focus search method inline
+            def focus_search():
+                if hasattr(self, 'search_input'):
+                    self.search_input.setFocus()
+                    self.search_input.selectAll()
+            self.hotkey_find.activated.connect(focus_search)
+        else:
+            self.hotkey_find.activated.connect(self._focus_search)
+
+        # === HELP ===
+
+        # Help (F1)
+        self.hotkey_help = QShortcut(QKeySequence.StandardKey.HelpContents, self)
+        if hasattr(self, '_show_txd_info'):
+            self.hotkey_help.activated.connect(self._show_txd_info)
+        elif hasattr(self, 'show_txd_info'):
+            self.hotkey_help.activated.connect(self.show_txd_info)
+        elif hasattr(self, 'show_help'):
+            self.hotkey_help.activated.connect(self.show_help)
+
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            self.main_window.log_message("Hotkeys initialized (Plasma6 standard)")
+
+
+    def _reset_hotkeys_to_defaults(self, parent_dialog): #vers 1
+        """Reset all hotkeys to Plasma6 defaults"""
+        from PyQt6.QtWidgets import QMessageBox
+        from PyQt6.QtGui import QKeySequence
+
+        reply = QMessageBox.question(parent_dialog, "Reset Hotkeys",
+            "Reset all keyboard shortcuts to Plasma6 defaults?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+
+        if reply == QMessageBox.StandardButton.Yes:
+            # Reset to defaults
+            self.hotkey_edit_open.setKeySequence(QKeySequence.StandardKey.Open)
+            self.hotkey_edit_save.setKeySequence(QKeySequence.StandardKey.Save)
+            self.hotkey_edit_force_save.setKeySequence(QKeySequence("Alt+Shift+S"))
+            self.hotkey_edit_save_as.setKeySequence(QKeySequence.StandardKey.SaveAs)
+            self.hotkey_edit_close.setKeySequence(QKeySequence.StandardKey.Close)
+            self.hotkey_edit_undo.setKeySequence(QKeySequence.StandardKey.Undo)
+            self.hotkey_edit_copy.setKeySequence(QKeySequence.StandardKey.Copy)
+            self.hotkey_edit_paste.setKeySequence(QKeySequence.StandardKey.Paste)
+            self.hotkey_edit_delete.setKeySequence(QKeySequence.StandardKey.Delete)
+            self.hotkey_edit_duplicate.setKeySequence(QKeySequence("Ctrl+D"))
+            self.hotkey_edit_rename.setKeySequence(QKeySequence("F2"))
+            self.hotkey_edit_import.setKeySequence(QKeySequence("Ctrl+I"))
+            self.hotkey_edit_export.setKeySequence(QKeySequence("Ctrl+E"))
+            self.hotkey_edit_export_all.setKeySequence(QKeySequence("Ctrl+Shift+E"))
+            self.hotkey_edit_refresh.setKeySequence(QKeySequence.StandardKey.Refresh)
+            self.hotkey_edit_properties.setKeySequence(QKeySequence("Alt+Return"))
+            self.hotkey_edit_find.setKeySequence(QKeySequence.StandardKey.Find)
+            self.hotkey_edit_help.setKeySequence(QKeySequence.StandardKey.HelpContents)
+
+
+    def _apply_hotkey_settings(self, dialog, close=False): #vers 1
+        """Apply hotkey changes"""
+        # Update all hotkeys with new sequences
+        self.hotkey_open.setKey(self.hotkey_edit_open.keySequence())
+        self.hotkey_save.setKey(self.hotkey_edit_save.keySequence())
+        self.hotkey_force_save.setKey(self.hotkey_edit_force_save.keySequence())
+        self.hotkey_save_as.setKey(self.hotkey_edit_save_as.keySequence())
+        self.hotkey_close.setKey(self.hotkey_edit_close.keySequence())
+        self.hotkey_undo.setKey(self.hotkey_edit_undo.keySequence())
+        self.hotkey_copy.setKey(self.hotkey_edit_copy.keySequence())
+        self.hotkey_paste.setKey(self.hotkey_edit_paste.keySequence())
+        self.hotkey_delete.setKey(self.hotkey_edit_delete.keySequence())
+        self.hotkey_duplicate.setKey(self.hotkey_edit_duplicate.keySequence())
+        self.hotkey_rename.setKey(self.hotkey_edit_rename.keySequence())
+        self.hotkey_import.setKey(self.hotkey_edit_import.keySequence())
+        self.hotkey_export.setKey(self.hotkey_edit_export.keySequence())
+        self.hotkey_export_all.setKey(self.hotkey_edit_export_all.keySequence())
+        self.hotkey_refresh.setKey(self.hotkey_edit_refresh.keySequence())
+        self.hotkey_properties.setKey(self.hotkey_edit_properties.keySequence())
+        self.hotkey_find.setKey(self.hotkey_edit_find.keySequence())
+        self.hotkey_help.setKey(self.hotkey_edit_help.keySequence())
+
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            self.main_window.log_message("Hotkeys updated")
+
+        # TODO: Save to config file for persistence
+
+        if close:
+            dialog.accept()
+
+
+    def _show_settings_hotkeys(self): #vers 1
+        """Show settings dialog with hotkey customization"""
+        from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTabWidget,
+                                    QWidget, QLabel, QLineEdit, QPushButton,
+                                    QGroupBox, QFormLayout, QKeySequenceEdit)
+        from PyQt6.QtCore import Qt
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("TXD Workshop Settings")
+        dialog.setMinimumWidth(600)
+        dialog.setMinimumHeight(500)
+
+        layout = QVBoxLayout(dialog)
+
+        # Create tabs
+        tabs = QTabWidget()
+
+        # === HOTKEYS TAB ===
+        hotkeys_tab = QWidget()
+        hotkeys_layout = QVBoxLayout(hotkeys_tab)
+
+        # File Operations Group
+        file_group = QGroupBox("File Operations")
+        file_form = QFormLayout()
+
+        self.hotkey_edit_open = QKeySequenceEdit(self.hotkey_open.key())
+        file_form.addRow("Open TXD:", self.hotkey_edit_open)
+
+        self.hotkey_edit_save = QKeySequenceEdit(self.hotkey_save.key())
+        file_form.addRow("Save TXD:", self.hotkey_edit_save)
+
+        self.hotkey_edit_force_save = QKeySequenceEdit(self.hotkey_force_save.key())
+        force_save_layout = QHBoxLayout()
+        force_save_layout.addWidget(self.hotkey_edit_force_save)
+        force_save_hint = QLabel("(Force save even if unmodified)")
+        force_save_hint.setStyleSheet("color: #888; font-style: italic;")
+        force_save_layout.addWidget(force_save_hint)
+        file_form.addRow("Force Save:", force_save_layout)
+
+        self.hotkey_edit_save_as = QKeySequenceEdit(self.hotkey_save_as.key())
+        file_form.addRow("Save As:", self.hotkey_edit_save_as)
+
+        self.hotkey_edit_close = QKeySequenceEdit(self.hotkey_close.key())
+        file_form.addRow("Close:", self.hotkey_edit_close)
+
+        file_group.setLayout(file_form)
+        hotkeys_layout.addWidget(file_group)
+
+        # Edit Operations Group
+        edit_group = QGroupBox("Edit Operations")
+        edit_form = QFormLayout()
+
+        self.hotkey_edit_undo = QKeySequenceEdit(self.hotkey_undo.key())
+        edit_form.addRow("Undo:", self.hotkey_edit_undo)
+
+        self.hotkey_edit_copy = QKeySequenceEdit(self.hotkey_copy.key())
+        edit_form.addRow("Copy Texture:", self.hotkey_edit_copy)
+
+        self.hotkey_edit_paste = QKeySequenceEdit(self.hotkey_paste.key())
+        edit_form.addRow("Paste Texture:", self.hotkey_edit_paste)
+
+        self.hotkey_edit_delete = QKeySequenceEdit(self.hotkey_delete.key())
+        edit_form.addRow("Delete:", self.hotkey_edit_delete)
+
+        self.hotkey_edit_duplicate = QKeySequenceEdit(self.hotkey_duplicate.key())
+        edit_form.addRow("Duplicate:", self.hotkey_edit_duplicate)
+
+        self.hotkey_edit_rename = QKeySequenceEdit(self.hotkey_rename.key())
+        edit_form.addRow("Rename:", self.hotkey_edit_rename)
+
+        edit_group.setLayout(edit_form)
+        hotkeys_layout.addWidget(edit_group)
+
+        # Texture Operations Group
+        texture_group = QGroupBox("Texture Operations")
+        texture_form = QFormLayout()
+
+        self.hotkey_edit_import = QKeySequenceEdit(self.hotkey_import.key())
+        texture_form.addRow("Import Texture:", self.hotkey_edit_import)
+
+        self.hotkey_edit_export = QKeySequenceEdit(self.hotkey_export.key())
+        texture_form.addRow("Export Texture:", self.hotkey_edit_export)
+
+        self.hotkey_edit_export_all = QKeySequenceEdit(self.hotkey_export_all.key())
+        texture_form.addRow("Export All:", self.hotkey_edit_export_all)
+
+        texture_group.setLayout(texture_form)
+        hotkeys_layout.addWidget(texture_group)
+
+        # View Operations Group
+        view_group = QGroupBox("View Operations")
+        view_form = QFormLayout()
+
+        self.hotkey_edit_refresh = QKeySequenceEdit(self.hotkey_refresh.key())
+        view_form.addRow("Refresh:", self.hotkey_edit_refresh)
+
+        self.hotkey_edit_properties = QKeySequenceEdit(self.hotkey_properties.key())
+        view_form.addRow("Properties:", self.hotkey_edit_properties)
+
+        self.hotkey_edit_find = QKeySequenceEdit(self.hotkey_find.key())
+        view_form.addRow("Find/Search:", self.hotkey_edit_find)
+
+        self.hotkey_edit_help = QKeySequenceEdit(self.hotkey_help.key())
+        view_form.addRow("Help:", self.hotkey_edit_help)
+
+        view_group.setLayout(view_form)
+        hotkeys_layout.addWidget(view_group)
+
+        hotkeys_layout.addStretch()
+
+        # Reset to defaults button
+        reset_hotkeys_btn = QPushButton("Reset to Plasma6 Defaults")
+        reset_hotkeys_btn.clicked.connect(lambda: self._reset_hotkeys_to_defaults(dialog))
+        hotkeys_layout.addWidget(reset_hotkeys_btn)
+
+        tabs.addTab(hotkeys_tab, "Keyboard Shortcuts")
+
+        # === GENERAL TAB (for future settings) ===
+        general_tab = QWidget()
+        general_layout = QVBoxLayout(general_tab)
+
+        placeholder_label = QLabel("Additional settings will appear here in future versions.")
+        placeholder_label.setStyleSheet("color: #888; font-style: italic; padding: 20px;")
+        placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        general_layout.addWidget(placeholder_label)
+        general_layout.addStretch()
+
+        tabs.addTab(general_tab, "General")
+
+        layout.addWidget(tabs)
+
+        # Dialog buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(dialog.reject)
+        button_layout.addWidget(cancel_btn)
+
+        apply_btn = QPushButton("Apply")
+        apply_btn.clicked.connect(lambda: self._apply_hotkey_settings(dialog))
+        button_layout.addWidget(apply_btn)
+
+        ok_btn = QPushButton("OK")
+        ok_btn.setDefault(True)
+        ok_btn.clicked.connect(lambda: self._apply_hotkey_settings(dialog, close=True))
+        button_layout.addWidget(ok_btn)
+
+        layout.addLayout(button_layout)
+
+        dialog.exec()
+
 
 #class SvgIcons: #vers 1 - Once functions are updated this class will be moved to the bottom
     """SVG icon data to QIcon with theme color support"""
@@ -11368,6 +12579,9 @@ class TXDWorkshop(QWidget): #vers 3
         except:
             # Fallback to no icon if SVG fails
             return QIcon()
+
+
+
 
 
 class BumpmapManagerWindow(QWidget): #vers 1
