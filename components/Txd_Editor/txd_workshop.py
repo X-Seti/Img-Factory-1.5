@@ -20,9 +20,13 @@ from typing import Optional, List, Dict, Tuple
 from PyQt6.QtWidgets import (QApplication, QSlider, QCheckBox,
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QListWidget, QDialog, QFormLayout, QSpinBox,  QListWidgetItem, QLabel, QPushButton, QFrame, QFileDialog, QLineEdit, QTextEdit, QMessageBox, QScrollArea, QGroupBox, QTableWidget, QTableWidgetItem, QColorDialog, QHeaderView, QAbstractItemView, QMenu, QComboBox, QInputDialog, QTabWidget, QDoubleSpinBox, QRadioButton
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint, QRect
-from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QColor
+from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint, QRect, QByteArray
+from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QBrush, QColor, QCursor
 from PyQt6.QtSvg import QSvgRenderer
+
+# Add root directory to path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+from gui.txd_context_menu import setup_txd_context_menu
 
 try:
     from PIL import Image
@@ -31,7 +35,7 @@ except ImportError:
 
 try:
     # Try main app path first
-    from methods.txd_versions import (
+    from components.Txd_Editor.depends.txd_versions import (
         detect_txd_version, get_platform_name, get_game_from_version,
         get_version_capabilities, get_platform_capabilities,
         is_mipmap_supported, is_bumpmap_supported,
@@ -449,8 +453,8 @@ class TXDWorkshop(QWidget): #vers 3
 
     workshop_closed = pyqtSignal()
 
-    def __init__(self, parent=None, main_window=None): #vers 9
-        """Initialize TXD Workshop"""
+    def __init__(self, parent=None, main_window=None): #vers 10
+        """Initialize TXD Workshop - FIXED: Remove duplicate theme calls"""
         if DEBUG_STANDALONE and main_window is None:
             print("   → Initializing TXD Workshop...")
 
@@ -466,10 +470,12 @@ class TXDWorkshop(QWidget): #vers 3
         self.undo_stack = []
         self.button_display_mode = 'both'
         self.current_txd_path = None
-        self.save_to_source_location = True  # Save in same dir as loaded file
+        self.save_to_source_location = True
         self.last_save_directory = None
+        self.texture_view_states = {}
+        self._current_view_state = 0
 
-        # Set default font size to 12pt
+        # Set default fonts
         from PyQt6.QtGui import QFont
         default_font = QFont("Fira Sans Condensed", 14)
         self.setFont(default_font)
@@ -479,6 +485,10 @@ class TXDWorkshop(QWidget): #vers 3
         self.infobar_font = QFont("Courier New", 9)
 
         # Preview settings
+        self._show_checkerboard = True
+        self._checkerboard_size = 16
+        self._overlay_opacity = 50
+        self._invert_alpha = False
         self.zoom_level = 1.0
         self.pan_offset = QPoint(0, 0)
         self.background_color = QColor(42, 42, 42)
@@ -488,23 +498,23 @@ class TXDWorkshop(QWidget): #vers 3
         self.info_bitdepth = QLabel("[32bit]")
 
         # Texture import/export settings
-        self.dimension_limiting_enabled = False  # Power of 2 enforcement
-        self.splash_screen_mode = False  # Allow non-power-of-2 for splash screens
-        self.custom_max_dimension = 4096  # Max texture size
+        self.dimension_limiting_enabled = False
+        self.splash_screen_mode = False
+        self.custom_max_dimension = 4096
 
         # Texture naming settings
-        self.name_limit_enabled = True  # Enable 32-char limit by default
-        self.max_texture_name_length = 32  # Default RenderWare limit
+        self.name_limit_enabled = True
+        self.max_texture_name_length = 32
 
         # Format support flags
-        self.iff_import_enabled = True  # Amiga IFF support
-        self.splash_formats_enabled = True  # Non-standard dimensions
+        self.iff_import_enabled = True
+        self.splash_formats_enabled = True
 
         # Export preferences
-        self.export_target_game = "auto"  # auto, gta3, vc, sa, manhunt
-        self.export_target_platform = "pc"  # pc, xbox, ps2, android, multi
+        self.export_target_game = "auto"
+        self.export_target_platform = "pc"
 
-        # TXD version tracking variables
+        # TXD version tracking
         self.txd_version_id = 0
         self.txd_device_id = 0
         self.txd_version_str = "Unknown"
@@ -512,18 +522,8 @@ class TXDWorkshop(QWidget): #vers 3
         self.txd_game = "Unknown"
         self.txd_capabilities = {}
 
-        # Detect standalone mode
+        # Detect standalone mode FIRST
         self.standalone_mode = (main_window is None)
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
-
-
-        # Set window flags based on mode
-        """
-        if self.standalone_mode:
-            self.setWindowFlags(Qt.WindowType.Window)
-        else:
-            self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
-        """
 
         # Docking state
         self.is_docked = False
@@ -534,18 +534,18 @@ class TXDWorkshop(QWidget): #vers 3
         self.use_system_titlebar = False
         self.window_always_on_top = False
 
+        # Window flags
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+
         self._initialize_features()
 
         # Corner resize variables
         self.dragging = False
         self.drag_position = None
         self.resizing = False
-        self.resize_corner = None  # Changed from resize_direction
-        self.corner_size = 20  # Size of corner resize areas
-        self.hover_corner = None  # Track which corner is hovered
-
-        # Setup hotkeys (add after UI creation)
-        self._setup_hotkeys()
+        self.resize_corner = None
+        self.corner_size = 20
+        self.hover_corner = None
 
         if parent:
             parent_pos = parent.pos()
@@ -554,13 +554,22 @@ class TXDWorkshop(QWidget): #vers 3
         if self.standalone_mode:
             self._ensure_depends_structure()
 
-        self.txd_tabs = []  # List of open TXD data
+        self.txd_tabs = []
         self.current_tab_index = 0
 
+        # Setup UI FIRST
         self.setup_ui()
+
+        # THEN setup context menu
+        setup_txd_context_menu(self)
+
+        # Setup hotkeys
+        self._setup_hotkeys()
+
+        # Apply theme ONCE at the end
         self._apply_theme()
 
-        # Enable mouse tracking for hover effects
+        # Enable mouse tracking
         self.setMouseTracking(True)
 
         if DEBUG_STANDALONE and self.standalone_mode:
@@ -673,346 +682,484 @@ class TXDWorkshop(QWidget): #vers 3
         return status_bar
 
 
-    def _show_workshop_settings(self): #vers 6
-        """Show comprehensive workshop settings dialog"""
-        from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTabWidget,
-                                    QLabel, QComboBox, QPushButton, QGroupBox,
-                                    QCheckBox, QSpinBox, QFormLayout, QFontComboBox,
-                                    QWidget)
+    def _show_workshop_settings(self): #vers 5
+        """Show complete workshop settings dialog"""
+        from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
+                                    QTabWidget, QWidget, QGroupBox, QFormLayout,
+                                    QSpinBox, QComboBox, QSlider, QLabel, QCheckBox,
+                                    QFontComboBox)
+        from PyQt6.QtCore import Qt
         from PyQt6.QtGui import QFont
 
         dialog = QDialog(self)
         dialog.setWindowTitle("TXD Workshop Settings")
-        dialog.setMinimumSize(600, 500)
+        dialog.setMinimumWidth(650)
+        dialog.setMinimumHeight(550)
 
         layout = QVBoxLayout(dialog)
 
+        # Create tabs
         tabs = QTabWidget()
 
-        # === APPEARANCE TAB ===
-        appearance_tab = QWidget()
-        appearance_layout = QVBoxLayout(appearance_tab)
 
-        # Font Settings Group
-        font_group = QGroupBox("Font Settings")
-        font_layout = QFormLayout()
+        # TAB 1: FONTS (FIRST TAB)
 
-        # Main/Default Font
+        fonts_tab = QWidget()
+        fonts_layout = QVBoxLayout(fonts_tab)
+
+        # Default Font
+        default_font_group = QGroupBox("📝 Default Font")
         default_font_layout = QHBoxLayout()
-        self.default_font_combo = QFontComboBox()
-        self.default_font_combo.setCurrentFont(self.font())
-        default_font_layout.addWidget(self.default_font_combo)
-        self.default_font_size = QSpinBox()
-        self.default_font_size.setRange(8, 24)
-        self.default_font_size.setValue(self.font().pointSize())
-        self.default_font_size.setSuffix(" pt")
-        default_font_layout.addWidget(self.default_font_size)
-        font_layout.addRow("Default Font:", default_font_layout)
+
+        default_font_combo = QFontComboBox()
+        default_font_combo.setCurrentFont(self.font())
+        default_font_layout.addWidget(default_font_combo)
+
+        default_font_size = QSpinBox()
+        default_font_size.setRange(8, 24)
+        default_font_size.setValue(self.font().pointSize())
+        default_font_size.setSuffix(" pt")
+        default_font_size.setFixedWidth(80)
+        default_font_layout.addWidget(default_font_size)
+
+        default_font_group.setLayout(default_font_layout)
+        fonts_layout.addWidget(default_font_group)
 
         # Title Font
+        title_font_group = QGroupBox("🎯 Title Font")
         title_font_layout = QHBoxLayout()
-        self.title_font_combo = QFontComboBox()
+
+        title_font_combo = QFontComboBox()
         if hasattr(self, 'title_font'):
-            self.title_font_combo.setCurrentFont(self.title_font)
-        title_font_layout.addWidget(self.title_font_combo)
-        self.title_font_size = QSpinBox()
-        self.title_font_size.setRange(10, 32)
-        self.title_font_size.setValue(getattr(self, 'title_font', QFont("Arial", 14)).pointSize())
-        self.title_font_size.setSuffix(" pt")
-        title_font_layout.addWidget(self.title_font_size)
-        font_layout.addRow("Title Font:", title_font_layout)
+            title_font_combo.setCurrentFont(self.title_font)
+        else:
+            title_font_combo.setCurrentFont(QFont("Arial", 14))
+        title_font_layout.addWidget(title_font_combo)
+
+        title_font_size = QSpinBox()
+        title_font_size.setRange(10, 32)
+        title_font_size.setValue(getattr(self, 'title_font', QFont("Arial", 14)).pointSize())
+        title_font_size.setSuffix(" pt")
+        title_font_size.setFixedWidth(80)
+        title_font_layout.addWidget(title_font_size)
+
+        title_font_group.setLayout(title_font_layout)
+        fonts_layout.addWidget(title_font_group)
 
         # Panel Font
+        panel_font_group = QGroupBox("🖼️ Panel Headers Font")
         panel_font_layout = QHBoxLayout()
-        self.panel_font_combo = QFontComboBox()
+
+        panel_font_combo = QFontComboBox()
         if hasattr(self, 'panel_font'):
-            self.panel_font_combo.setCurrentFont(self.panel_font)
-        panel_font_layout.addWidget(self.panel_font_combo)
-        self.panel_font_size = QSpinBox()
-        self.panel_font_size.setRange(8, 18)
-        self.panel_font_size.setValue(getattr(self, 'panel_font', QFont("Arial", 10)).pointSize())
-        self.panel_font_size.setSuffix(" pt")
-        panel_font_layout.addWidget(self.panel_font_size)
-        font_layout.addRow("Panel Font:", panel_font_layout)
+            panel_font_combo.setCurrentFont(self.panel_font)
+        else:
+            panel_font_combo.setCurrentFont(QFont("Arial", 10))
+        panel_font_layout.addWidget(panel_font_combo)
+
+        panel_font_size = QSpinBox()
+        panel_font_size.setRange(8, 18)
+        panel_font_size.setValue(getattr(self, 'panel_font', QFont("Arial", 10)).pointSize())
+        panel_font_size.setSuffix(" pt")
+        panel_font_size.setFixedWidth(80)
+        panel_font_layout.addWidget(panel_font_size)
+
+        panel_font_group.setLayout(panel_font_layout)
+        fonts_layout.addWidget(panel_font_group)
 
         # Button Font
+        button_font_group = QGroupBox("🔘 Button Font")
         button_font_layout = QHBoxLayout()
-        self.button_font_combo = QFontComboBox()
+
+        button_font_combo = QFontComboBox()
         if hasattr(self, 'button_font'):
-            self.button_font_combo.setCurrentFont(self.button_font)
-        button_font_layout.addWidget(self.button_font_combo)
-        self.button_font_size = QSpinBox()
-        self.button_font_size.setRange(8, 16)
-        self.button_font_size.setValue(getattr(self, 'button_font', QFont("Arial", 10)).pointSize())
-        self.button_font_size.setSuffix(" pt")
-        button_font_layout.addWidget(self.button_font_size)
-        font_layout.addRow("Button Font:", button_font_layout)
+            button_font_combo.setCurrentFont(self.button_font)
+        else:
+            button_font_combo.setCurrentFont(QFont("Arial", 10))
+        button_font_layout.addWidget(button_font_combo)
+
+        button_font_size = QSpinBox()
+        button_font_size.setRange(8, 16)
+        button_font_size.setValue(getattr(self, 'button_font', QFont("Arial", 10)).pointSize())
+        button_font_size.setSuffix(" pt")
+        button_font_size.setFixedWidth(80)
+        button_font_layout.addWidget(button_font_size)
+
+        button_font_group.setLayout(button_font_layout)
+        fonts_layout.addWidget(button_font_group)
 
         # Info Bar Font
+        infobar_font_group = QGroupBox("📊 Info Bar Font")
         infobar_font_layout = QHBoxLayout()
-        self.infobar_font_combo = QFontComboBox()
+
+        infobar_font_combo = QFontComboBox()
         if hasattr(self, 'infobar_font'):
-            self.infobar_font_combo.setCurrentFont(self.infobar_font)
-        infobar_font_layout.addWidget(self.infobar_font_combo)
-        self.infobar_font_size = QSpinBox()
-        self.infobar_font_size.setRange(7, 14)
-        self.infobar_font_size.setValue(getattr(self, 'infobar_font', QFont("Courier New", 9)).pointSize())
-        self.infobar_font_size.setSuffix(" pt")
-        infobar_font_layout.addWidget(self.infobar_font_size)
-        font_layout.addRow("Info Bar Font:", infobar_font_layout)
+            infobar_font_combo.setCurrentFont(self.infobar_font)
+        else:
+            infobar_font_combo.setCurrentFont(QFont("Courier New", 9))
+        infobar_font_layout.addWidget(infobar_font_combo)
 
-        font_group.setLayout(font_layout)
-        appearance_layout.addWidget(font_group)
+        infobar_font_size = QSpinBox()
+        infobar_font_size.setRange(7, 14)
+        infobar_font_size.setValue(getattr(self, 'infobar_font', QFont("Courier New", 9)).pointSize())
+        infobar_font_size.setSuffix(" pt")
+        infobar_font_size.setFixedWidth(80)
+        infobar_font_layout.addWidget(infobar_font_size)
 
-        # UI Display Group
-        ui_group = QGroupBox("User Interface")
-        ui_layout = QVBoxLayout()
+        infobar_font_group.setLayout(infobar_font_layout)
+        fonts_layout.addWidget(infobar_font_group)
 
-        display_layout = QHBoxLayout()
-        display_layout.addWidget(QLabel("Button Display:"))
-        self.settings_display_combo = QComboBox()
-        self.settings_display_combo.addItems(["Icons Only", "Text Only", "Icons + Text"])
-        mode_map = {"icons": 0, "text": 1, "both": 2}
-        self.settings_display_combo.setCurrentIndex(mode_map.get(self.button_display_mode, 2))
-        display_layout.addWidget(self.settings_display_combo)
+        fonts_layout.addStretch()
+        tabs.addTab(fonts_tab, "Fonts")
+
+
+        # TAB 2: DISPLAY SETTINGS
+
+        display_tab = QWidget()
+        display_layout = QVBoxLayout(display_tab)
+
+        # Button display mode
+        button_group = QGroupBox("🔘 Button Display Mode")
+        button_layout = QVBoxLayout()
+
+        button_mode_combo = QComboBox()
+        button_mode_combo.addItems(["Icons + Text", "Icons Only", "Text Only"])
+        current_mode = getattr(self, 'button_display_mode', 'both')
+        mode_map = {'both': 0, 'icons': 1, 'text': 2}
+        button_mode_combo.setCurrentIndex(mode_map.get(current_mode, 0))
+        button_layout.addWidget(button_mode_combo)
+
+        button_hint = QLabel("Changes how toolbar buttons are displayed")
+        button_hint.setStyleSheet("color: #888; font-style: italic;")
+        button_layout.addWidget(button_hint)
+
+        button_group.setLayout(button_layout)
+        display_layout.addWidget(button_group)
+
+        # Table display
+        table_group = QGroupBox("📋 Texture List Display")
+        table_layout = QVBoxLayout()
+
+        show_thumbnails = QCheckBox("Show texture thumbnails")
+        show_thumbnails.setChecked(True)
+        table_layout.addWidget(show_thumbnails)
+
+        show_warnings = QCheckBox("Show warning icons for suspicious textures")
+        show_warnings.setChecked(True)
+        show_warnings.setToolTip("Shows ⚠️ icon if normal and alpha appear identical")
+        table_layout.addWidget(show_warnings)
+
+        table_group.setLayout(table_layout)
+        display_layout.addWidget(table_group)
+
         display_layout.addStretch()
-        ui_layout.addLayout(display_layout)
+        tabs.addTab(display_tab, "Display")
 
-        titlebar_check = QCheckBox("Use system title bar")
-        titlebar_check.setChecked(self.use_system_titlebar)
-        ui_layout.addWidget(titlebar_check)
 
-        ontop_check = QCheckBox("Always on top")
-        ontop_check.setChecked(self.window_always_on_top)
-        ui_layout.addWidget(ontop_check)
+        # TAB 3: EXPORT SETTINGS
 
-        ui_group.setLayout(ui_layout)
-        appearance_layout.addWidget(ui_group)
-
-        appearance_layout.addStretch()
-        tabs.addTab(appearance_tab, "Appearance")
-
-        # === EXPORT TAB ===
         export_tab = QWidget()
         export_layout = QVBoxLayout(export_tab)
 
-        # Default Export Settings
-        export_group = QGroupBox("Default Export Version")
-        export_form = QFormLayout()
+        # Default export format
+        export_format_group = QGroupBox("💾 Default Export Format")
+        export_format_layout = QVBoxLayout()
 
-        self.export_game_combo = QComboBox()
-        self.export_game_combo.addItems([
-            "Auto-detect", "GTA III", "Vice City", "San Andreas", "Manhunt"
-        ])
-        game_map = {"auto": 0, "gta3": 1, "vc": 2, "sa": 3, "manhunt": 4}
-        self.export_game_combo.setCurrentIndex(game_map.get(self.export_target_game, 0))
-        export_form.addRow("Target Game:", self.export_game_combo)
+        format_combo = QComboBox()
+        format_combo.addItems(["PNG", "TGA", "BMP", "DDS"])
+        format_combo.setCurrentText(getattr(self, 'default_export_format', 'PNG'))
+        export_format_layout.addWidget(format_combo)
 
-        self.export_platform_combo = QComboBox()
-        self.export_platform_combo.addItems([
-            "PC", "Xbox", "PS2", "Android", "Multi-platform"
-        ])
-        platform_map = {"pc": 0, "xbox": 1, "ps2": 2, "android": 3, "multi": 4}
-        self.export_platform_combo.setCurrentIndex(platform_map.get(self.export_target_platform, 0))
-        export_form.addRow("Target Platform:", self.export_platform_combo)
+        format_hint = QLabel("PNG recommended for best quality and compatibility")
+        format_hint.setStyleSheet("color: #888; font-style: italic;")
+        export_format_layout.addWidget(format_hint)
 
-        export_group.setLayout(export_form)
-        export_layout.addWidget(export_group)
+        export_format_group.setLayout(export_format_layout)
+        export_layout.addWidget(export_format_group)
 
-        # Version Compatibility Warning
-        compat_label = QLabel(
-            "<b>Note:</b> Exporting to GTA III will automatically remove mipmaps and bumpmaps.\n"
-            "Vice City PS2 also has limited support for these features."
-        )
-        compat_label.setWordWrap(True)
-        compat_label.setStyleSheet("padding: 10px; background-color: #3a3a3a; border-radius: 4px;")
-        export_layout.addWidget(compat_label)
+        # Export options
+        export_options_group = QGroupBox("⚙️ Export Options")
+        export_options_layout = QVBoxLayout()
+
+        preserve_alpha = QCheckBox("Preserve alpha channel when exporting")
+        preserve_alpha.setChecked(True)
+        export_options_layout.addWidget(preserve_alpha)
+
+        export_mipmaps = QCheckBox("Export mipmaps as separate files")
+        export_mipmaps.setChecked(False)
+        export_mipmaps.setToolTip("Saves each mipmap level as texture_mip0.png, texture_mip1.png, etc.")
+        export_options_layout.addWidget(export_mipmaps)
+
+        auto_folder = QCheckBox("Auto-create subfolders by texture name")
+        auto_folder.setChecked(False)
+        export_options_layout.addWidget(auto_folder)
+
+        export_options_group.setLayout(export_options_layout)
+        export_layout.addWidget(export_options_group)
+
+        # Target game/platform
+        target_group = QGroupBox("🎮 Export Target")
+        target_layout = QFormLayout()
+
+        game_combo = QComboBox()
+        game_combo.addItems(["Auto Detect", "GTA III", "GTA Vice City", "GTA San Andreas", "Manhunt"])
+        target_layout.addRow("Target Game:", game_combo)
+
+        platform_combo = QComboBox()
+        platform_combo.addItems(["PC", "Xbox", "PS2", "Android", "Multi-platform"])
+        target_layout.addRow("Target Platform:", platform_combo)
+
+        target_group.setLayout(target_layout)
+        export_layout.addWidget(target_group)
 
         export_layout.addStretch()
         tabs.addTab(export_tab, "Export")
 
-        # === TEXTURE CONSTRAINTS TAB ===
-        constraints_tab = QWidget()
-        constraints_layout = QVBoxLayout(constraints_tab)
 
-        # Dimension constraints
-        dimension_group = QGroupBox("Dimension Constraints")
-        dimension_layout = QVBoxLayout()
+        # TAB 4: PERFORMANCE
 
-        dimension_check = QCheckBox("Enforce power-of-2 dimensions")
-        dimension_check.setChecked(self.dimension_limiting_enabled)
-        dimension_check.setToolTip("Enforce sizes like 256, 512, 1024, 2048")
-        dimension_layout.addWidget(dimension_check)
+        perf_tab = QWidget()
+        perf_layout = QVBoxLayout(perf_tab)
 
-        splash_check = QCheckBox("Allow splash screen dimensions")
-        splash_check.setChecked(self.splash_screen_mode)
-        splash_check.setToolTip("Allow non-power-of-2 sizes like 1280x720, 720x576, 640x480")
-        dimension_layout.addWidget(splash_check)
+        perf_group = QGroupBox("⚡ Performance Settings")
+        perf_form = QFormLayout()
 
-        max_dim_layout = QHBoxLayout()
-        max_dim_layout.addWidget(QLabel("Maximum dimension:"))
-        max_dim_spin = QSpinBox()
-        max_dim_spin.setRange(256, 8192)
-        max_dim_spin.setValue(self.custom_max_dimension)
-        max_dim_spin.setSingleStep(256)
-        max_dim_spin.setToolTip("Maximum width/height for imported textures")
-        max_dim_layout.addWidget(max_dim_spin)
-        max_dim_layout.addStretch()
-        dimension_layout.addLayout(max_dim_layout)
+        preview_quality = QComboBox()
+        preview_quality.addItems(["Low (Fast)", "Medium", "High (Slow)"])
+        preview_quality.setCurrentIndex(1)
+        perf_form.addRow("Preview Quality:", preview_quality)
 
-        dimension_group.setLayout(dimension_layout)
-        constraints_layout.addWidget(dimension_group)
+        thumb_size = QSpinBox()
+        thumb_size.setRange(32, 128)
+        thumb_size.setValue(64)
+        thumb_size.setSuffix(" px")
+        perf_form.addRow("Thumbnail Size:", thumb_size)
 
-        # Texture naming
-        naming_group = QGroupBox("Texture Naming")
-        naming_layout = QVBoxLayout()
+        perf_group.setLayout(perf_form)
+        perf_layout.addWidget(perf_group)
 
-        name_limit_check = QCheckBox("Enable name length limit")
-        name_limit_check.setChecked(self.name_limit_enabled)
-        name_limit_check.setToolTip("Enforce maximum texture name length")
-        naming_layout.addWidget(name_limit_check)
+        # Caching
+        cache_group = QGroupBox("💾 Caching")
+        cache_layout = QVBoxLayout()
 
-        char_limit_layout = QHBoxLayout()
-        char_limit_layout.addWidget(QLabel("Maximum characters:"))
-        char_limit_spin = QSpinBox()
-        char_limit_spin.setRange(8, 64)
-        char_limit_spin.setValue(self.max_texture_name_length)
-        char_limit_spin.setToolTip("RenderWare default is 32 characters")
-        char_limit_layout.addWidget(char_limit_spin)
-        char_limit_layout.addStretch()
-        naming_layout.addLayout(char_limit_layout)
+        enable_cache = QCheckBox("Enable texture preview caching")
+        enable_cache.setChecked(True)
+        cache_layout.addWidget(enable_cache)
 
-        naming_group.setLayout(naming_layout)
-        constraints_layout.addWidget(naming_group)
+        cache_hint = QLabel("Caching improves performance but uses more memory")
+        cache_hint.setStyleSheet("color: #888; font-style: italic;")
+        cache_layout.addWidget(cache_hint)
 
-        # Format support
-        format_group = QGroupBox("Import Format Support")
-        format_layout = QVBoxLayout()
+        cache_group.setLayout(cache_layout)
+        perf_layout.addWidget(cache_group)
 
-        iff_check = QCheckBox("Enable IFF (Amiga) format import")
-        iff_check.setChecked(self.iff_import_enabled)
-        iff_check.setToolTip("Import 8-bit indexed color images from Amiga IFF format")
-        format_layout.addWidget(iff_check)
+        perf_layout.addStretch()
+        tabs.addTab(perf_tab, "Performance")
 
-        splash_format_check = QCheckBox("Enable splash screen TXD support")
-        splash_format_check.setChecked(self.splash_formats_enabled)
-        splash_format_check.setToolTip("Support GTA III/VC/SA splash screen formats")
-        format_layout.addWidget(splash_format_check)
 
-        format_group.setLayout(format_layout)
-        constraints_layout.addWidget(format_group)
+        # TAB 5: PREVIEW SETTINGS (LAST TAB)
 
-        constraints_layout.addStretch()
-        tabs.addTab(constraints_tab, "Texture Constraints")
-
-        # === PREVIEW TAB ===
         preview_tab = QWidget()
         preview_layout = QVBoxLayout(preview_tab)
 
-        preview_group = QGroupBox("Preview Settings")
-        preview_form = QFormLayout()
+        # Zoom Settings
+        zoom_group = QGroupBox("🔍 Zoom Settings")
+        zoom_form = QFormLayout()
 
         zoom_spin = QSpinBox()
         zoom_spin.setRange(10, 500)
-        zoom_spin.setValue(int(self.zoom_level * 100))
+        zoom_spin.setValue(int(getattr(self, 'zoom_level', 1.0) * 100))
         zoom_spin.setSuffix("%")
-        preview_form.addRow("Default Zoom:", zoom_spin)
+        zoom_form.addRow("Default Zoom:", zoom_spin)
 
+        zoom_group.setLayout(zoom_form)
+        preview_layout.addWidget(zoom_group)
+
+        # Background Settings
+        bg_group = QGroupBox("🎨 Background Settings")
+        bg_layout = QVBoxLayout()
+
+        # Background mode
+        bg_mode_layout = QFormLayout()
         bg_mode_combo = QComboBox()
         bg_mode_combo.addItems(["Solid Color", "Checkerboard", "Grid"])
-        mode_idx = {"solid": 0, "checker": 1, "grid": 2}.get(self.background_mode, 0)
+        current_bg_mode = getattr(self, 'background_mode', 'solid')
+        mode_idx = {"solid": 0, "checkerboard": 1, "checker": 1, "grid": 2}.get(current_bg_mode, 0)
         bg_mode_combo.setCurrentIndex(mode_idx)
-        preview_form.addRow("Background Mode:", bg_mode_combo)
+        bg_mode_layout.addRow("Background Mode:", bg_mode_combo)
+        bg_layout.addLayout(bg_mode_layout)
 
-        preview_group.setLayout(preview_form)
-        preview_layout.addWidget(preview_group)
+        bg_layout.addSpacing(10)
+
+        # Checkerboard size
+        cb_label = QLabel("Checkerboard Size:")
+        bg_layout.addWidget(cb_label)
+
+        cb_layout = QHBoxLayout()
+        cb_slider = QSlider(Qt.Orientation.Horizontal)
+        cb_slider.setMinimum(4)
+        cb_slider.setMaximum(64)
+        cb_slider.setValue(getattr(self, '_checkerboard_size', 16))
+        cb_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        cb_slider.setTickInterval(8)
+        cb_layout.addWidget(cb_slider)
+
+        cb_spin = QSpinBox()
+        cb_spin.setMinimum(4)
+        cb_spin.setMaximum(64)
+        cb_spin.setValue(getattr(self, '_checkerboard_size', 16))
+        cb_spin.setSuffix(" px")
+        cb_spin.setFixedWidth(80)
+        cb_layout.addWidget(cb_spin)
+
+        bg_layout.addLayout(cb_layout)
+
+        # Connect checkerboard controls
+        cb_slider.valueChanged.connect(cb_spin.setValue)
+        cb_spin.valueChanged.connect(cb_slider.setValue)
+
+        # Hint
+        cb_hint = QLabel("Smaller = tighter pattern, larger = bigger squares")
+        cb_hint.setStyleSheet("color: #888; font-style: italic; font-size: 10px;")
+        bg_layout.addWidget(cb_hint)
+
+        bg_group.setLayout(bg_layout)
+        preview_layout.addWidget(bg_group)
+
+        # Overlay Settings
+        overlay_group = QGroupBox("🔲 Overlay View Settings")
+        overlay_layout = QVBoxLayout()
+
+        overlay_label = QLabel("Overlay Opacity (Normal over Alpha):")
+        overlay_layout.addWidget(overlay_label)
+
+        opacity_layout = QHBoxLayout()
+        opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        opacity_slider.setMinimum(0)
+        opacity_slider.setMaximum(100)
+        opacity_slider.setValue(getattr(self, '_overlay_opacity', 50))
+        opacity_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        opacity_slider.setTickInterval(10)
+        opacity_layout.addWidget(opacity_slider)
+
+        opacity_spin = QSpinBox()
+        opacity_spin.setMinimum(0)
+        opacity_spin.setMaximum(100)
+        opacity_spin.setValue(getattr(self, '_overlay_opacity', 50))
+        opacity_spin.setSuffix(" %")
+        opacity_spin.setFixedWidth(80)
+        opacity_layout.addWidget(opacity_spin)
+
+        overlay_layout.addLayout(opacity_layout)
+
+        # Connect opacity controls
+        opacity_slider.valueChanged.connect(opacity_spin.setValue)
+        opacity_spin.valueChanged.connect(opacity_slider.setValue)
+
+        # Hint
+        opacity_hint = QLabel("0% = Only alpha visible, 100% = Only normal visible")
+        opacity_hint.setStyleSheet("color: #888; font-style: italic; font-size: 10px;")
+        overlay_layout.addWidget(opacity_hint)
+
+        overlay_group.setLayout(overlay_layout)
+        preview_layout.addWidget(overlay_group)
+
         preview_layout.addStretch()
-
         tabs.addTab(preview_tab, "Preview")
 
+        # Add tabs to dialog
         layout.addWidget(tabs)
 
-        # Buttons
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
+
+        # BUTTONS
+
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
 
         # Apply button
-        apply_btn = QPushButton("Apply")
-        def apply_settings():
-            # Fonts
-            self.setFont(QFont(self.default_font_combo.currentFont().family(),
-                            self.default_font_size.value()))
-            self.title_font = QFont(self.title_font_combo.currentFont().family(),
-                                self.title_font_size.value())
-            self.panel_font = QFont(self.panel_font_combo.currentFont().family(),
-                                self.panel_font_size.value())
-            self.button_font = QFont(self.button_font_combo.currentFont().family(),
-                                    self.button_font_size.value())
-            self.infobar_font = QFont(self.infobar_font_combo.currentFont().family(),
-                                    self.infobar_font_size.value())
+        apply_btn = QPushButton("✅ Apply Settings")
+        apply_btn.setStyleSheet("""
+            QPushButton {
+                background: #0078d4;
+                color: white;
+                padding: 10px 24px;
+                font-weight: bold;
+                border-radius: 4px;
+                font-size: 13px;
+            }
+            QPushButton:hover {
+                background: #1984d8;
+            }
+        """)
 
-            # Apply fonts to UI elements
+        def apply_settings():
+            # FONTS
+            self.setFont(QFont(default_font_combo.currentFont().family(),
+                            default_font_size.value()))
+            self.title_font = QFont(title_font_combo.currentFont().family(),
+                                title_font_size.value())
+            self.panel_font = QFont(panel_font_combo.currentFont().family(),
+                                panel_font_size.value())
+            self.button_font = QFont(button_font_combo.currentFont().family(),
+                                    button_font_size.value())
+            self.infobar_font = QFont(infobar_font_combo.currentFont().family(),
+                                    infobar_font_size.value())
+
+            # Apply fonts to UI
             self._apply_title_font()
             self._apply_panel_font()
             self._apply_button_font()
             self._apply_infobar_font()
 
-            # UI settings
-            mode_map = {0: "icons", 1: "text", 2: "both"}
-            self.button_display_mode = mode_map[self.settings_display_combo.currentIndex()]
-            self._update_all_buttons()
+            # DISPLAY
+            mode_map = {0: 'both', 1: 'icons', 2: 'text'}
+            self.button_display_mode = mode_map[button_mode_combo.currentIndex()]
 
-            old_titlebar = self.use_system_titlebar
-            self.use_system_titlebar = titlebar_check.isChecked()
-            self.window_always_on_top = ontop_check.isChecked()
+            # EXPORT
+            self.default_export_format = format_combo.currentText()
 
-            if old_titlebar != self.use_system_titlebar:
-                self._apply_window_flags()
-            self._apply_always_on_top()
-
-            # Export settings
-            game_map = {0: "auto", 1: "gta3", 2: "vc", 3: "sa", 4: "manhunt"}
-            self.export_target_game = game_map[self.export_game_combo.currentIndex()]
-
-            platform_map = {0: "pc", 1: "xbox", 2: "ps2", 3: "android", 4: "multi"}
-            self.export_target_platform = platform_map[self.export_platform_combo.currentIndex()]
-
-            # Constraints
-            self.dimension_limiting_enabled = dimension_check.isChecked()
-            self.splash_screen_mode = splash_check.isChecked()
-            self.custom_max_dimension = max_dim_spin.value()
-            self.name_limit_enabled = name_limit_check.isChecked()
-            self.max_texture_name_length = char_limit_spin.value()
-            self.iff_import_enabled = iff_check.isChecked()
-            self.splash_formats_enabled = splash_format_check.isChecked()
-
-            # Preview
+            # PREVIEW
             self.zoom_level = zoom_spin.value() / 100.0
-            bg_mode_map = {0: "solid", 1: "checker", 2: "grid"}
-            self.background_mode = bg_mode_map[bg_mode_combo.currentIndex()]
+
+            bg_modes = ['solid', 'checkerboard', 'grid']
+            self.background_mode = bg_modes[bg_mode_combo.currentIndex()]
+
+            self._checkerboard_size = cb_spin.value()
+            self._overlay_opacity = opacity_spin.value()
+
+            # Update preview widget
+            if hasattr(self, 'preview_widget'):
+                if self.background_mode == 'checkerboard':
+                    self.preview_widget.set_checkerboard_background()
+                    self.preview_widget._checkerboard_size = self._checkerboard_size
+                else:
+                    self.preview_widget.set_background_color(self.preview_widget.bg_color)
+
+            # Apply button display mode
+            if hasattr(self, '_update_all_buttons'):
+                self._update_all_buttons()
+
+            # Refresh display
+            if self.selected_texture:
+                self._update_texture_info(self.selected_texture)
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("✅ Settings applied")
+                self.main_window.log_message("✅ Workshop settings updated successfully")
 
         apply_btn.clicked.connect(apply_settings)
-        button_layout.addWidget(apply_btn)
+        btn_layout.addWidget(apply_btn)
 
-        # OK button
-        ok_btn = QPushButton("OK")
-        def ok_clicked():
-            apply_settings()
-            dialog.accept()
-        ok_btn.clicked.connect(ok_clicked)
-        button_layout.addWidget(ok_btn)
+        # Close button
+        close_btn = QPushButton("Close")
+        close_btn.setStyleSheet("padding: 10px 24px; font-size: 13px;")
+        close_btn.clicked.connect(dialog.close)
+        btn_layout.addWidget(close_btn)
 
-        # Cancel button
-        cancel_btn = QPushButton("Cancel")
-        cancel_btn.clicked.connect(dialog.reject)
-        button_layout.addWidget(cancel_btn)
+        layout.addLayout(btn_layout)
 
-        layout.addLayout(button_layout)
-
+        # Show dialog
         dialog.exec()
+
 
 
     def _apply_window_flags(self): #vers 1
@@ -1242,39 +1389,36 @@ class TXDWorkshop(QWidget): #vers 3
         else:
             self._dock_to_main()
 
-    def _dock_to_main(self): #vers 1
-        """Dock TXD Workshop into IMG Factory as a tab"""
-        if not self.main_window:
-            print("No main window available for docking")
+
+    def _dock_to_main(self): #vers 2
+        """Dock TXD Workshop into main window - FIXED: Update toolbar"""
+        if not self.main_window or self.is_docked:
             return
 
-        # Check if main window has tab system
-        if not hasattr(self.main_window, 'content_tabs'):
-            print("Main window does not support tabs")
-            return
+        # Remove from standalone
+        self.setParent(None)
 
-        # Create dock widget if it doesn't exist
-        if not self.dock_widget:
-            from PyQt6.QtWidgets import QWidget, QVBoxLayout
-            self.dock_widget = QWidget()
-            layout = QVBoxLayout(self.dock_widget)
-            layout.setContentsMargins(0, 0, 0, 0)
-            layout.addWidget(self)
+        # Create dock widget
+        from PyQt6.QtWidgets import QDockWidget
+        self.dock_widget = QDockWidget("TXD Workshop", self.main_window)
+        self.dock_widget.setWidget(self)
 
-        # Add as new tab
-        tab_index = self.main_window.content_tabs.addTab(
-            self.dock_widget,
-            "TXD Workshop"
-        )
-        self.main_window.content_tabs.setCurrentIndex(tab_index)
+        # Add to main window's tab system
+        if hasattr(self.main_window, 'content_tabs'):
+            tab_index = self.main_window.content_tabs.addTab(self.dock_widget, "🖼️ TXD Workshop")
+            self.main_window.content_tabs.setCurrentIndex(tab_index)
 
         self.is_docked = True
+
+        # MODIFIED: Update toolbar for docked state
+        self._update_toolbar_for_docking_state()
 
         if hasattr(self.main_window, 'log_message'):
             self.main_window.log_message("TXD Workshop docked")
 
-    def _undock_from_main(self): #vers 1
-        """Undock TXD Workshop into standalone window"""
+
+    def _undock_from_main(self): #vers 2
+        """Undock TXD Workshop into standalone window - FIXED: Update toolbar"""
         if not self.main_window or not self.dock_widget:
             return
 
@@ -1295,8 +1439,12 @@ class TXDWorkshop(QWidget): #vers 3
 
         self.is_docked = False
 
+        # MODIFIED: Update toolbar for undocked state
+        self._update_toolbar_for_docking_state()
+
         if hasattr(self.main_window, 'log_message'):
             self.main_window.log_message("TXD Workshop undocked")
+
 
 
     def _apply_button_mode(self, dialog): #vers 1
@@ -1317,7 +1465,7 @@ class TXDWorkshop(QWidget): #vers 3
         dialog.close()
 
 
-    def _update_all_buttons(self): #vers 2
+    def _update_all_buttons(self): #vers
         """Update all buttons to match display mode"""
         buttons_to_update = [
             # Toolbar buttons
@@ -1328,8 +1476,8 @@ class TXDWorkshop(QWidget): #vers 3
             ('export_btn', 'Export'),
             ('export_all_btn', 'Export All'),
             ('switch_btn', 'Switch'),
-            ('props_btn', 'Properties'),
-            ('info_btn', 'Info'),
+            ('props_btn', 'Prop'),
+            ('info_btn', 'I'),
             ('undo_btn', 'Undo'),
             ('paint_btn', 'Paint'),
             ('build_from_dff_btn', 'Build from DFF'),
@@ -2050,8 +2198,8 @@ class TXDWorkshop(QWidget): #vers 3
         return self.status_frame
 
 
-    def _create_toolbar(self): #vers 9
-        """Create toolbar with drag and tear-off buttons"""
+    def _create_toolbar(self): #vers 12
+        """Create toolbar - FIXED: Hide drag button when docked, ensure buttons visible"""
         self.toolbar = QFrame()
         self.toolbar.setFrameStyle(QFrame.Shape.StyledPanel)
         self.toolbar.setMaximumHeight(50)
@@ -2124,21 +2272,40 @@ class TXDWorkshop(QWidget): #vers 3
 
         layout.addSpacing(10)
 
-        # MODIFIED: Switch button for 3-state view cycle
-        self.switch_btn = QPushButton("Show Normal")
+        # Switch button
+        self.switch_btn = QPushButton("Normal")
         self.switch_btn.setFont(self.button_font)
         self.switch_btn.setIcon(self._create_flip_vert_icon())
         self.switch_btn.setIconSize(QSize(20, 20))
-        self.switch_btn.clicked.connect(self.switch_texture_view)  # CHANGED from flip_texture
+        self.switch_btn.clicked.connect(self.switch_texture_view)
         self.switch_btn.setEnabled(False)
-        self.switch_btn.setToolTip("Cycle view: Normal → Alpha → Both")
+        self.switch_btn.setToolTip("Cycle: Normal → Alpha → Both → Overlay")
         layout.addWidget(self.switch_btn)
 
-        # NEW: Generate alpha mask button
+        # [Inv] button - FIXED: Smaller fixed width to ensure visibility
+        self.invert_btn = QPushButton("Inv")
+        self.invert_btn.setFont(self.button_font)
+        self.invert_btn.setFixedSize(45, 30)  # INCREASED from 40x30
+        self.invert_btn.clicked.connect(self._toggle_alpha_invert)
+        self.invert_btn.setEnabled(False)
+        self.invert_btn.setToolTip("Invert alpha channel colors")
+        self.invert_btn.setStyleSheet("""
+            QPushButton {
+                background: #3a3a3a;
+                color: #e0e0e0;
+            }
+            QPushButton:checked {
+                background: #0078d4;
+                color: white;
+            }
+        """)
+        self.invert_btn.setCheckable(True)
+        layout.addWidget(self.invert_btn)
+
+        # [+] button - FIXED: Ensure minimum size
         self.gen_alpha_btn = QPushButton("+")
         self.gen_alpha_btn.setFont(self.button_font)
-        self.gen_alpha_btn.setIconSize(QSize(16, 16))
-        self.gen_alpha_btn.setFixedSize(30, 30)
+        self.gen_alpha_btn.setFixedSize(35, 30)  # INCREASED from 30x30
         self.gen_alpha_btn.clicked.connect(self._generate_alpha_mask)
         self.gen_alpha_btn.setEnabled(False)
         self.gen_alpha_btn.setToolTip("Generate alpha mask from luminosity")
@@ -2148,12 +2315,24 @@ class TXDWorkshop(QWidget): #vers 3
         self.props_btn = QPushButton()
         self.props_btn.setFont(self.button_font)
         self.props_btn.setIcon(self._create_properties_icon())
-        self.props_btn.setText("Properties")
+        self.props_btn.setText("Prop")
         self.props_btn.setIconSize(QSize(20, 20))
         self.props_btn.clicked.connect(self.show_properties)
         self.props_btn.setEnabled(False)
         self.props_btn.setToolTip("Show texture properties")
         layout.addWidget(self.props_btn)
+
+        # Info button - Bold "I"
+        self.info_btn = QPushButton()
+        self.info_btn.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        self.info_btn.setIcon(self._create_info_icon())
+        self.info_btn.setText("I")
+        self.info_btn.setIconSize(QSize(20, 20))
+        self.info_btn.setFixedWidth(35)
+        self.info_btn.clicked.connect(self._show_detailed_info)
+        self.info_btn.setEnabled(False)
+        self.info_btn.setToolTip("Show detailed information")
+        layout.addWidget(self.info_btn)
 
         self.undo_btn = QPushButton()
         self.undo_btn.setFont(self.button_font)
@@ -2161,98 +2340,44 @@ class TXDWorkshop(QWidget): #vers 3
         self.undo_btn.setText("Undo")
         self.undo_btn.setIconSize(QSize(20, 20))
         self.undo_btn.clicked.connect(self._undo_last_action)
-        #self.undo_btn.setEnabled(False)
-        self.undo_btn.setToolTip("Undo last action")
+        self.undo_btn.setEnabled(False)
+        self.undo_btn.setToolTip("Undo last change")
         layout.addWidget(self.undo_btn)
-
-        # Info button
-        self.info_btn = QPushButton()
-        self.info_btn.setFont(self.button_font)
-        self.info_btn.setIcon(self._create_info_icon())
-        self.info_btn.setText("Info")
-        self.info_btn.setIconSize(QSize(20, 20))
-        self.info_btn.clicked.connect(self._show_txd_info)
-        self.info_btn.setToolTip("Show TXD file information")
-        layout.addWidget(self.info_btn)
-
 
         layout.addStretch()
 
-        # Drag button [D]
-        self.dock_btn = QPushButton("D")
-        #self.dock_btn.setFont(self.button_font)
-        self.dock_btn.setMinimumWidth(40)
-        self.dock_btn.setMaximumWidth(40)
-        self.dock_btn.setMinimumHeight(30)
-        self.dock_btn.setToolTip("Dock")
-        self.dock_btn.setStyleSheet("""
-            QPushButton {
-                font-weight: bold;
-                background-color: #4a4a4a;
-                border: 1px solid #5a5a5a;
-                border-radius: 3px;
-            }
-            QPushButton:hover {
-                background-color: #5a5a5a;
-            }
-        """)
-        self.dock_btn.clicked.connect(self.toggle_dock_mode)
-        layout.addWidget(self.dock_btn)
-
-        # Tear-off button [T] - only in IMG Factory mode
-        if not self.standalone_mode:
-            self.tearoff_btn = QPushButton("T")
-            #self.tearoff_btn.setFont(self.button_font)
-            self.tearoff_btn.setMinimumWidth(40)
-            self.tearoff_btn.setMaximumWidth(40)
-            self.tearoff_btn.setMinimumHeight(30)
-            self.tearoff_btn.clicked.connect(self._toggle_tearoff)
-            self.tearoff_btn.setToolTip("Merge back to IMG Factory window")
-            self.tearoff_btn.setStyleSheet("""
+        # MODIFIED: Only show drag button when NOT docked
+        if not self.is_docked:
+            self.drag_btn = QPushButton("☰")
+            self.drag_btn.setFont(QFont("Arial", 14))
+            self.drag_btn.setFixedSize(30, 30)
+            self.drag_btn.setToolTip("Drag to move window")
+            self.drag_btn.setCursor(Qt.CursorShape.SizeAllCursor)
+            self.drag_btn.setStyleSheet("""
                 QPushButton {
-                    font-weight: bold;
-                    background-color: #4a4a4a;
-                    border: 1px solid #5a5a5a;
-                    border-radius: 3px;
+                    background: transparent;
+                    border: none;
+                    color: #888;
                 }
                 QPushButton:hover {
-                    background-color: #5a5a5a;
+                    color: #e0e0e0;
                 }
             """)
-            layout.addWidget(self.tearoff_btn)
-
-        # Window controls
-        self.minimize_btn = QPushButton()
-        self.minimize_btn.setIcon(self._create_minimize_icon())
-        self.minimize_btn.setIconSize(QSize(20, 20))
-        self.minimize_btn.setMinimumWidth(40)
-        self.minimize_btn.setMaximumWidth(40)
-        self.minimize_btn.setMinimumHeight(30)
-        self.minimize_btn.clicked.connect(self.showMinimized)
-        self.minimize_btn.setToolTip("Minimize Window")
-        layout.addWidget(self.minimize_btn)
-
-        self.maximize_btn = QPushButton()
-        self.maximize_btn.setIcon(self._create_maximize_icon())
-        self.maximize_btn.setIconSize(QSize(20, 20))
-        self.maximize_btn.setMinimumWidth(40)
-        self.maximize_btn.setMaximumWidth(40)
-        self.maximize_btn.setMinimumHeight(30)
-        self.maximize_btn.clicked.connect(self._toggle_maximize)
-        self.maximize_btn.setToolTip("Maximize/Restore Window")
-        layout.addWidget(self.maximize_btn)
-
-        self.close_btn = QPushButton()
-        self.close_btn.setIcon(self._create_close_icon())
-        self.close_btn.setIconSize(QSize(20, 20))
-        self.close_btn.setMinimumWidth(40)
-        self.close_btn.setMaximumWidth(40)
-        self.close_btn.setMinimumHeight(30)
-        self.close_btn.clicked.connect(self.close)
-        self.close_btn.setToolTip("Close Window")
-        layout.addWidget(self.close_btn)
+            layout.addWidget(self.drag_btn)
 
         return self.toolbar
+
+    def _update_toolbar_for_docking_state(self): #vers 1
+        """Update toolbar visibility based on docking state"""
+        # Hide/show drag button based on docking state
+        if hasattr(self, 'drag_btn'):
+            self.drag_btn.setVisible(not self.is_docked)
+
+        # Ensure [Inv] and [+] buttons remain visible
+        if hasattr(self, 'invert_btn'):
+            self.invert_btn.setVisible(True)
+        if hasattr(self, 'gen_alpha_btn'):
+            self.gen_alpha_btn.setVisible(True)
 
 
     def _create_mipmaps_dialog(self): #vers 1
@@ -4041,10 +4166,11 @@ class TXDWorkshop(QWidget): #vers 3
         bg_checker_btn.clicked.connect(lambda: self.preview_widget.set_checkerboard_background())
         controls_layout.addWidget(bg_checker_btn)
 
-        controls_layout.addSpacing(10)
+        controls_layout.addSpacing(5)
 
         # Background colors
         bg_black_btn = QPushButton()
+        bg_black_btn.setIconSize(QSize(20, 20))
         bg_black_btn.setFixedSize(40, 40)
         bg_black_btn.setStyleSheet("background-color: black; border: 1px solid #555;")
         bg_black_btn.setToolTip("Black Background")
@@ -4052,6 +4178,7 @@ class TXDWorkshop(QWidget): #vers 3
         controls_layout.addWidget(bg_black_btn)
 
         bg_gray_btn = QPushButton()
+        bg_gray_btn.setIconSize(QSize(20, 20))
         bg_gray_btn.setFixedSize(40, 40)
         bg_gray_btn.setStyleSheet("background-color: #2a2a2a; border: 1px solid #555;")
         bg_gray_btn.setToolTip("Gray Background")
@@ -4059,6 +4186,7 @@ class TXDWorkshop(QWidget): #vers 3
         controls_layout.addWidget(bg_gray_btn)
 
         bg_white_btn = QPushButton()
+        bg_white_btn.setIconSize(QSize(20, 20))
         bg_white_btn.setFixedSize(40, 40)
         bg_white_btn.setStyleSheet("background-color: white; border: 1px solid #555;")
         bg_white_btn.setToolTip("White Background")
@@ -4071,13 +4199,9 @@ class TXDWorkshop(QWidget): #vers 3
 
 
     def _pan_preview(self, dx, dy): #vers 2
-        """Pan preview by delta"""
-        if hasattr(self, 'preview_widget'):
-            self.preview_widget.pan_offset = QPoint(
-                self.preview_widget.pan_offset.x() + dx,
-                self.preview_widget.pan_offset.y() + dy
-            )
-            self.preview_widget.update_display()
+        """Pan preview by dx, dy pixels - FIXED"""
+        if hasattr(self, 'preview_widget') and self.preview_widget:
+            self.preview_widget.pan(dx, dy)
 
 
     def _pick_background_color(self): #vers 1
@@ -4748,7 +4872,7 @@ class TXDWorkshop(QWidget): #vers 3
         layout.setContentsMargins(5, 5, 5, 5)
 
         header = QLabel("TXD Files")
-        lheader.setFont(QFont("Arial", 10, QFont.Weight.Bold))
+        header.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         layout.addWidget(header)
 
         self.txd_list_widget = QListWidget()
@@ -5406,6 +5530,9 @@ class TXDWorkshop(QWidget): #vers 3
             if row < 0 or row >= len(self.texture_list):
                 self.selected_texture = None
                 self.export_btn.setEnabled(False)
+                self.switch_btn.setEnabled(False)
+                self.invert_btn.setEnabled(False)
+                self.gen_alpha_btn.setEnabled(False)
 
                 # Disable all optional buttons
                 if hasattr(self, 'switch_btn'):
@@ -5462,6 +5589,26 @@ class TXDWorkshop(QWidget): #vers 3
             # Valid selection - get texture data
             self.selected_texture = self.texture_list[row]
 
+            tex_name = self.selected_texture.get('name', '')
+            has_alpha = self.selected_texture.get('has_alpha', False)
+
+            # Restore saved view state for this texture, or default to Normal
+            saved_state = self.texture_view_states.get(tex_name, 0)
+            self._current_view_state = saved_state
+
+            # Update switch button text
+            state_labels = ["Normal", "Alpha", "Both", "Overlay"]
+            self.switch_btn.setText(state_labels[saved_state])
+            self.switch_btn.setEnabled(True)
+
+            # Enable [Inv] only if in Alpha view and has alpha
+            #self.invert_btn.setEnabled(saved_state == 1 and has_alpha)
+            self.invert_btn.setEnabled((saved_state == 1 or saved_state == 3) and has_alpha)
+
+
+            # Enable [+] button
+            self.gen_alpha_btn.setEnabled(True)
+
             # Check mipmap state
             mipmap_levels = self.selected_texture.get('mipmap_levels', [])
             num_levels = len(mipmap_levels)
@@ -5486,6 +5633,8 @@ class TXDWorkshop(QWidget): #vers 3
 
             if hasattr(self, 'props_btn'):
                 self.props_btn.setEnabled(True)
+            if hasattr(self, 'info_btn'):
+                self.info_btn.setEnabled(True)
             if hasattr(self, 'duplicate_texture_btn'):
                 self.duplicate_texture_btn.setEnabled(True)
             if hasattr(self, 'delete_texture_btn'):
@@ -5553,6 +5702,9 @@ class TXDWorkshop(QWidget): #vers 3
                 self.paint_btn.setEnabled(True)
             if hasattr(self, 'filters_btn'):
                 self.filters_btn.setEnabled(True)
+
+            # Update display
+            self._update_texture_info(self.selected_texture)
 
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
@@ -5815,55 +5967,56 @@ class TXDWorkshop(QWidget): #vers 3
             QMessageBox.critical(self, "Error", f"Failed to generate mipmaps: {str(e)}")
 
 
-    def switch_texture_view(self): #vers 3
-        """Cycle between Normal → Alpha Mask → Show Both views"""
+    def switch_texture_view(self): #vers 5
+        """Cycle through view modes with [Inv] enabled for Alpha AND Overlay"""
         if not self.selected_texture:
             QMessageBox.warning(self, "No Selection", "Please select a texture first")
             return
 
-        # Initialize view state if doesn't exist
-        if not hasattr(self, '_texture_view_state'):
-            self._texture_view_state = 0  # 0=Normal, 1=Alpha, 2=Both
-
-        # Check if texture has alpha for alpha/both views
+        tex_name = self.selected_texture.get('name', '')
         has_alpha = self.selected_texture.get('has_alpha', False)
 
-        # Cycle through states
-        self._texture_view_state = (self._texture_view_state + 1) % 3
+        # Get current state for this texture
+        current_state = self.texture_view_states.get(tex_name, 0)
 
-        # Skip alpha/both states if no alpha channel exists
-        if not has_alpha and self._texture_view_state > 0:
+        # Cycle to next state
+        next_state = (current_state + 1) % 4
+
+        # Skip alpha/both/overlay states if no alpha
+        if not has_alpha and next_state > 0:
             QMessageBox.information(self, "No Alpha Channel",
                 "This texture has no alpha channel.\n\n"
-                "Use the [+] button to generate an alpha mask from luminosity,\n"
+                "Use the [+] button to generate an alpha mask,\n"
                 "or Import → Import Alpha Channel to add one.")
-            self._texture_view_state = 0  # Reset to normal
-            return
+            next_state = 0
+
+        # Save state for this texture
+        self.texture_view_states[tex_name] = next_state
+        self._current_view_state = next_state
 
         # Update display
         self._update_texture_info(self.selected_texture)
 
-        # Update button text based on state
-        state_labels = {
-            0: "Show Normal",
-            1: "Show Alpha",
-            2: "Show Both"
-        }
+        # Update button text
+        state_labels = ["Normal", "Alpha", "Both", "Overlay"]
+        self.switch_btn.setText(state_labels[next_state])
 
+        # MODIFIED: Enable [Inv] for Alpha (1) OR Overlay (3)
+        self.invert_btn.setEnabled((next_state == 1 or next_state == 3) and has_alpha)
+
+        # Log message
         view_names = {
             0: "Normal View",
             1: "Alpha Mask View",
-            2: "Split View (Normal | Alpha)"
+            2: "Split View (Normal | Alpha)",
+            3: "Overlay View (Normal over Alpha)"
         }
 
-        if hasattr(self, 'switch_btn'):
-            self.switch_btn.setText(state_labels[self._texture_view_state])
-
         if self.main_window and hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"Switched to {view_names[self._texture_view_state]}")
+            self.main_window.log_message(f"Switched to {view_names[next_state]}")
 
 
-    def _generate_alpha_mask(self): #vers 1
+    def _generate_alpha_mask(self): #vers 2
         """Generate alpha mask from texture luminosity"""
         if not self.selected_texture:
             QMessageBox.warning(self, "No Selection", "Please select a texture first")
@@ -5895,7 +6048,7 @@ class TXDWorkshop(QWidget): #vers 3
             # Save undo state
             self._save_undo_state("Generate alpha mask from luminosity")
 
-            # Generate alpha from luminosity (standard formula)
+            # Generate alpha from luminosity
             new_rgba = bytearray(rgba_data)
 
             for i in range(0, len(new_rgba), 4):
@@ -5905,8 +6058,6 @@ class TXDWorkshop(QWidget): #vers 3
 
                 # Calculate luminosity: 0.299*R + 0.587*G + 0.114*B
                 luminosity = int(0.299 * r + 0.587 * g + 0.114 * b)
-
-                # Set alpha channel to luminosity value
                 new_rgba[i + 3] = luminosity
 
             # Update texture
@@ -5917,11 +6068,11 @@ class TXDWorkshop(QWidget): #vers 3
             if 'alpha_name' not in self.selected_texture:
                 self.selected_texture['alpha_name'] = self.selected_texture['name'] + 'a'
 
-            # Update format to support alpha if currently non-alpha format
+            # Update format to support alpha
             current_format = self.selected_texture.get('format', 'DXT1')
             if current_format in ['DXT1', 'RGB888', 'RGB565']:
                 if 'DXT' in current_format:
-                    seswitch_texture_viewlf.selected_texture['format'] = 'DXT5'
+                    self.selected_texture['format'] = 'DXT5'
                     format_msg = " (format changed to DXT5)"
                 else:
                     self.selected_texture['format'] = 'ARGB8888'
@@ -5941,7 +6092,25 @@ class TXDWorkshop(QWidget): #vers 3
             QMessageBox.critical(self, "Generation Error", f"Failed to generate alpha mask:\n{str(e)}")
 
 
+    def _toggle_alpha_invert(self): #vers 2
+        """Toggle alpha channel color inversion - WORKS FOR ALPHA AND OVERLAY"""
+        if not self.selected_texture:
+            return
 
+        # Allow invert in Alpha view (1) OR Overlay view (3)
+        if self._current_view_state not in [1, 3]:
+            return
+
+        self._invert_alpha = not self._invert_alpha
+        self.invert_btn.setChecked(self._invert_alpha)
+
+        # Refresh display
+        self._update_texture_info(self.selected_texture)
+
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            status = "enabled" if self._invert_alpha else "disabled"
+            view_name = "Alpha" if self._current_view_state == 1 else "Overlay"
+            self.main_window.log_message(f"Alpha invert {status} ({view_name} view)")
 
 
     def _show_texture_context_menu(self, position): #vers 2
@@ -7889,6 +8058,39 @@ class TXDWorkshop(QWidget): #vers 3
             QMessageBox.critical(self, "Error", f"Failed to save TXD:\n\n{str(e)}")
 
 
+    def _save_as_new_img(self, new_txd_data): #vers 1
+        """Save as new IMG file when rebuild is needed"""
+        try:
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, "Save IMG with Large Textures",
+                self.current_img.file_path.replace('.img', '_hd.img'),
+                "IMG Files (*.img);;All Files (*)"
+            )
+
+            if file_path:
+                # Update TXD data
+                for entry in self.current_img.entries:
+                    if entry.name == self.current_txd_name:
+                        entry.data = new_txd_data
+                        entry.size = len(new_txd_data)
+                        break
+
+                # Save as new file
+                self.current_img.save_as(file_path)
+
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"Saved as new IMG: {file_path}")
+
+                return True
+
+            return False
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Save as new error: {str(e)}")
+            return False
+
+
     def save_txd_file(self): #vers 6
         """Save TXD file with version selector"""
         from PyQt6.QtWidgets import QMessageBox
@@ -8681,6 +8883,72 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Call save function
         self._save_txd_file()
+
+
+    def _check_alpha_validity(self, texture): #vers 1
+        """Check if normal and alpha channels contain the same image"""
+        if not texture or not texture.get('has_alpha', False):
+            QMessageBox.information(self, "No Alpha", "This texture has no alpha channel")
+            return
+
+        rgba_data = texture.get('rgba_data', b'')
+        if not rgba_data:
+            return
+
+        width = texture.get('width', 0)
+        height = texture.get('height', 0)
+
+        # Check by comparing dimensions first (fast)
+        # Then check if RGB matches alpha (slower)
+
+        matches_found = 0
+        total_pixels = width * height
+
+        for i in range(0, len(rgba_data), 4):
+            r = rgba_data[i]
+            g = rgba_data[i + 1]
+            b = rgba_data[i + 2]
+            a = rgba_data[i + 3]
+
+            # Calculate luminosity of RGB
+            luminosity = int(0.299 * r + 0.587 * g + 0.114 * b)
+
+            # Check if alpha matches luminosity (within tolerance)
+            if abs(luminosity - a) < 10:
+                matches_found += 1
+
+        match_percentage = (matches_found / total_pixels) * 100
+
+        result_text = f"Alpha Validity Check Results:\n\n"
+        result_text += f"Texture: {texture.get('name')}\n"
+        result_text += f"Dimensions: {width}x{height}\n"
+        result_text += f"Total Pixels: {total_pixels:,}\n\n"
+        result_text += f"Alpha-RGB Match: {match_percentage:.1f}%\n\n"
+
+        if match_percentage > 90:
+            result_text += "⚠️ WARNING: Normal and alpha appear to contain\n"
+            result_text += "the same image data. This may indicate an error.\n"
+            result_text += "Consider regenerating the alpha channel."
+        elif match_percentage > 50:
+            result_text += "⚠️ CAUTION: Significant similarity between\n"
+            result_text += "normal and alpha channels detected."
+        else:
+            result_text += "✅ Normal and alpha channels appear distinct."
+
+        QMessageBox.information(self, "Alpha Validity Check", result_text)
+
+
+    def _create_warning_icon_svg(self): #vers 1
+        """Create SVG warning icon for table display"""
+        svg_data = b"""
+        <svg width="16" height="16" viewBox="0 0 16 16">
+            <path fill="#FFA500" d="M8 1l7 13H1z"/>
+            <text x="8" y="12" font-size="10" fill="black" text-anchor="middle">!</text>
+        </svg>
+        """
+        return QIcon(QPixmap.fromImage(
+            QImage.fromData(QByteArray(svg_data))
+        ))
 
 
 #------ Rebuild functions
@@ -9966,8 +10234,8 @@ class TXDWorkshop(QWidget): #vers 3
         dialog.exec()
 
 
-    def _update_texture_info(self, texture): #vers 7
-        """Update texture information display - MODIFIED: Support for split view"""
+    def _update_texture_info(self, texture): #vers 8
+        """Update texture display with 4-state view support and checkerboard"""
         if not texture:
             self.info_name.setText("")
             self.info_alpha_name.setText("")
@@ -9978,7 +10246,7 @@ class TXDWorkshop(QWidget): #vers 3
                 self.preview_widget.setText("No texture selected")
             return
 
-        # Set ONLY the name - no extra formatting
+        # Set name
         name = texture.get('name', 'Unknown')
         self.info_name.setText(name)
 
@@ -9996,11 +10264,14 @@ class TXDWorkshop(QWidget): #vers 3
             if hasattr(self, 'alpha_label'):
                 self.alpha_label.setVisible(False)
 
-        # Update size info
+        # Update size info WITH FILE SIZE
         width = texture.get('width', 0)
         height = texture.get('height', 0)
+        rgba_data = texture.get('rgba_data', b'')
+        file_size_kb = len(rgba_data) / 1024 if rgba_data else 0
+
         if hasattr(self, 'info_size'):
-            self.info_size.setText(f"Size: {width}x{height}")
+            self.info_size.setText(f"Size: {width}x{height}, {file_size_kb:.1f}KB")
 
         # Update format
         fmt = texture.get('format', 'Unknown')
@@ -10012,53 +10283,160 @@ class TXDWorkshop(QWidget): #vers 3
         if hasattr(self, 'info_bitdepth'):
             self.info_bitdepth.setText(f"[{depth}bit]")
 
-        # Get view state
-        view_state = getattr(self, '_texture_view_state', 0)
+        # Get current view state
+        tex_name = texture.get('name', '')
+        view_state = self.texture_view_states.get(tex_name, 0)
+        self._current_view_state = view_state
 
         # Update preview based on view state
-        if hasattr(self, 'preview_widget') and texture.get('rgba_data'):
-            rgba_data = texture['rgba_data']
+        if hasattr(self, 'preview_widget') and rgba_data:
 
             if view_state == 0:  # Normal view
-                pixmap = QPixmap.fromImage(
-                    QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
-                )
-                self.preview_widget.setPixmap(pixmap)
+                self._show_normal_view(rgba_data, width, height)
 
             elif view_state == 1:  # Alpha mask view
                 if has_alpha:
-                    alpha_data = self._extract_alpha_channel(rgba_data)
-                    pixmap = QPixmap.fromImage(
-                        QImage(alpha_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
-                    )
-                    self.preview_widget.setPixmap(pixmap)
+                    self._show_alpha_view(rgba_data, width, height)
                 else:
                     self.preview_widget.setText("No alpha channel")
 
-            elif view_state == 2:  # Split view (both)
+            elif view_state == 2:  # Split view (side-by-side)
                 if has_alpha:
-                    # Create side-by-side image
-                    combined_width = width * 2
-                    combined_image = QImage(combined_width, height, QImage.Format.Format_RGBA8888)
-                    combined_image.fill(Qt.GlobalColor.black)
-
-                    painter = QPainter(combined_image)
-
-                    # Left side: Normal
-                    normal_img = QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
-                    painter.drawImage(0, 0, normal_img)
-
-                    # Right side: Alpha mask
-                    alpha_data = self._extract_alpha_channel(rgba_data)
-                    alpha_img = QImage(alpha_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
-                    painter.drawImage(width, 0, alpha_img)
-
-                    painter.end()
-
-                    pixmap = QPixmap.fromImage(combined_image)
-                    self.preview_widget.setPixmap(pixmap)
+                    self._show_split_view(rgba_data, width, height)
                 else:
-                    self.preview_widget.setText("No alpha channel for split view")
+                    self.preview_widget.setText("No alpha channel")
+
+            elif view_state == 3:  # Overlay view
+                if has_alpha:
+                    self._show_overlay_view(rgba_data, width, height)
+                else:
+                    self.preview_widget.setText("No alpha channel")
+
+
+    def _show_normal_view(self, rgba_data, width, height): #vers 1
+        """Display normal texture with optional checkerboard"""
+        image = QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+
+        if self._show_checkerboard:
+            image = self._add_checkerboard_background(image)
+
+        pixmap = QPixmap.fromImage(image)
+        self.preview_widget.setPixmap(pixmap)
+
+
+    def _show_alpha_view(self, rgba_data, width, height): #vers 1
+        """Display alpha channel as grayscale with optional invert"""
+        alpha_data = self._extract_alpha_channel(rgba_data)
+
+        # Apply invert if enabled
+        if self._invert_alpha:
+            alpha_data = self._invert_grayscale(alpha_data)
+
+        image = QImage(alpha_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+        pixmap = QPixmap.fromImage(image)
+        self.preview_widget.setPixmap(pixmap)
+
+
+    def _show_split_view(self, rgba_data, width, height): #vers 1
+        """Display normal and alpha side-by-side"""
+        combined_width = width * 2
+        combined_image = QImage(combined_width, height, QImage.Format.Format_RGBA8888)
+        combined_image.fill(Qt.GlobalColor.black)
+
+        painter = QPainter(combined_image)
+
+        # Left: Normal
+        normal_img = QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+        if self._show_checkerboard:
+            normal_img = self._add_checkerboard_background(normal_img)
+        painter.drawImage(0, 0, normal_img)
+
+        # Right: Alpha mask
+        alpha_data = self._extract_alpha_channel(rgba_data)
+        alpha_img = QImage(alpha_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+        painter.drawImage(width, 0, alpha_img)
+
+        painter.end()
+
+        pixmap = QPixmap.fromImage(combined_image)
+        self.preview_widget.setPixmap(pixmap)
+
+
+    def _show_overlay_view(self, rgba_data, width, height): #vers 2
+        """Display normal over alpha with adjustable opacity - SUPPORTS INVERT"""
+        # Create base alpha visualization
+        alpha_data = self._extract_alpha_channel(rgba_data)
+
+        # MODIFIED: Apply invert if enabled
+        if self._invert_alpha:
+            alpha_data = self._invert_grayscale(alpha_data)
+
+        base_img = QImage(alpha_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+
+        # Create normal image with adjusted opacity
+        normal_img = QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+
+        # Composite images
+        result = QImage(width, height, QImage.Format.Format_ARGB32)
+        result.fill(Qt.GlobalColor.transparent)
+
+        painter = QPainter(result)
+        painter.drawImage(0, 0, base_img)
+        painter.setOpacity(self._overlay_opacity / 100.0)
+        painter.drawImage(0, 0, normal_img)
+        painter.end()
+
+        if self._show_checkerboard:
+            result = self._add_checkerboard_background(result)
+
+        pixmap = QPixmap.fromImage(result)
+        self.preview_widget.setPixmap(pixmap)
+
+
+    def _add_checkerboard_background(self, image): #vers 1
+        """Add checkerboard pattern behind transparent areas"""
+        result = QImage(image.size(), QImage.Format.Format_ARGB32)
+
+        painter = QPainter(result)
+
+        # Draw checkerboard
+        size = self._checkerboard_size
+        color1 = QColor(200, 200, 200)
+        color2 = QColor(150, 150, 150)
+
+        for y in range(0, image.height(), size):
+            for x in range(0, image.width(), size):
+                color = color1 if ((x // size) + (y // size)) % 2 == 0 else color2
+                painter.fillRect(x, y, size, size, color)
+
+        # Draw image on top
+        painter.drawImage(0, 0, image)
+        painter.end()
+
+        return result
+
+
+    def _invert_grayscale(self, grayscale_data): #vers 1
+        """Invert grayscale RGBA data"""
+        inverted = bytearray(grayscale_data)
+        for i in range(0, len(inverted), 4):
+            inverted[i] = 255 - inverted[i]
+            inverted[i + 1] = 255 - inverted[i + 1]
+            inverted[i + 2] = 255 - inverted[i + 2]
+        return bytes(inverted)
+
+
+    def _toggle_checkerboard(self): #vers 1
+        """Toggle checkerboard background display"""
+        self._show_checkerboard = not self._show_checkerboard
+
+        # Refresh current texture
+        if self.selected_texture:
+            self._update_texture_info(self.selected_texture)
+
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            status = "enabled" if self._show_checkerboard else "disabled"
+            self.main_window.log_message(f"Checkerboard background {status}")
 
 
     def _view_bumpmap(self): #vers 4
@@ -10599,39 +10977,6 @@ class TXDWorkshop(QWidget): #vers 3
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"IMG rebuild error: {str(e)}")
-            return False
-
-
-    def _save_as_new_img(self, new_txd_data): #vers 1
-        """Save as new IMG file when rebuild is needed"""
-        try:
-            file_path, _ = QFileDialog.getSaveFileName(
-                self, "Save IMG with Large Textures",
-                self.current_img.file_path.replace('.img', '_hd.img'),
-                "IMG Files (*.img);;All Files (*)"
-            )
-
-            if file_path:
-                # Update TXD data
-                for entry in self.current_img.entries:
-                    if entry.name == self.current_txd_name:
-                        entry.data = new_txd_data
-                        entry.size = len(new_txd_data)
-                        break
-
-                # Save as new file
-                self.current_img.save_as(file_path)
-
-                if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"Saved as new IMG: {file_path}")
-
-                return True
-
-            return False
-
-        except Exception as e:
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Save as new error: {str(e)}")
             return False
 
 
@@ -11471,8 +11816,8 @@ class TXDWorkshop(QWidget): #vers 3
         QMessageBox.information(self, "TXD Statistics", stats)
 
 
-    def _check_txd_vs_dff(self): #vers 2
-        """Check TXD texture names against DFF model"""
+    def _check_txd_vs_dff(self): #vers 3
+        """Check TXD texture names against DFF model - ENHANCED"""
         if not self.texture_list:
             QMessageBox.warning(self, "No Textures", "No textures loaded in TXD")
             return
@@ -11487,23 +11832,108 @@ class TXDWorkshop(QWidget): #vers 3
             return
 
         try:
-            # TODO: Parse DFF file and extract material/texture names
-            # For now, show placeholder
-            # Show the dff/ mdl model texture list.
+            # Parse DFF and extract material names
+            dff_textures = self._parse_dff_materials(dff_path)
 
-            result_text = "DFF Texture Check Results:\n\n"
-            result_text += f"TXD has {len(self.texture_list)} textures\n"
-            result_text += f"DFF file: {os.path.basename(dff_path)}\n\n"
-            result_text += "Full implementation requires DFF parser"
+            if not dff_textures:
+                QMessageBox.warning(self, "Parse Error",
+                    "Could not extract material names from DFF.\n"
+                    "File may be corrupted or unsupported format.")
+                return
 
-            QMessageBox.information(self, "Check Complete", result_text)
+            # Get TXD texture names
+            txd_textures = set(tex['name'].lower() for tex in self.texture_list)
+            dff_textures_lower = set(name.lower() for name in dff_textures)
+
+            # Find missing textures
+            missing_in_txd = dff_textures_lower - txd_textures
+            extra_in_txd = txd_textures - dff_textures_lower
+
+            # Build report
+            result_text = "=== DFF Texture Check Results ===\n\n"
+            result_text += f"DFF File: {os.path.basename(dff_path)}\n"
+            result_text += f"TXD Textures: {len(self.texture_list)}\n"
+            result_text += f"DFF Materials: {len(dff_textures)}\n\n"
+
+            result_text += "=== Textures in DFF ===\n"
+            for tex_name in sorted(dff_textures):
+                result_text += f"  • {tex_name}\n"
+
+            if missing_in_txd:
+                result_text += f"\n⚠️ Missing in TXD ({len(missing_in_txd)}):\n"
+                for tex_name in sorted(missing_in_txd):
+                    result_text += f"  ❌ {tex_name}\n"
+            else:
+                result_text += "\n✅ All DFF materials found in TXD\n"
+
+            if extra_in_txd:
+                result_text += f"\n📋 Extra in TXD ({len(extra_in_txd)}):\n"
+                for tex_name in sorted(extra_in_txd):
+                    result_text += f"  • {tex_name}\n"
+
+            # Show results
+            QMessageBox.information(self, "DFF Check Complete", result_text)
 
         except Exception as e:
-            QMessageBox.critical(self, "Check Error", f"Failed to check DFF: {str(e)}")
+            QMessageBox.critical(self, "Check Error", f"Failed to check DFF:\n\n{str(e)}")
 
 
-    def _build_txd_from_dff(self): #vers 1
-        """Build TXD structure from DFF material names"""
+    def _parse_dff_materials(self, dff_path): #vers 1
+        """Parse DFF file and extract material/texture names"""
+        import struct
+
+        try:
+            with open(dff_path, 'rb') as f:
+                dff_data = f.read()
+
+            materials = []
+            offset = 0
+
+            # Simple RenderWare parser - look for material sections
+            while offset < len(dff_data) - 12:
+                try:
+                    section_type = struct.unpack('<I', dff_data[offset:offset+4])[0]
+                    section_size = struct.unpack('<I', dff_data[offset+4:offset+8])[0]
+
+                    # Material section (0x07) or Texture section (0x06)
+                    if section_type == 0x07:  # Material
+                        # Look for string data in material section
+                        mat_end = min(offset + section_size + 12, len(dff_data))
+                        mat_data = dff_data[offset:mat_end]
+
+                        # Find null-terminated strings (potential texture names)
+                        for i in range(len(mat_data) - 32):
+                            if mat_data[i:i+1].isalpha():
+                                # Try to extract string
+                                end = i
+                                while end < len(mat_data) and mat_data[end] != 0 and end < i + 32:
+                                    end += 1
+
+                                if end > i + 3:  # At least 4 chars
+                                    try:
+                                        name = mat_data[i:end].decode('ascii', errors='ignore')
+                                        if name and len(name) > 3 and name.replace('_', '').replace('.', '').isalnum():
+                                            if name not in materials:
+                                                materials.append(name)
+                                    except:
+                                        pass
+
+                    offset += 12 + section_size
+
+                except:
+                    offset += 1
+
+            return materials
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"DFF parse error: {str(e)}")
+            return []
+
+
+    def _build_txd_from_dff(self): #vers 2
+        """Build TXD structure from DFF material names with version/platform selection"""
+        # Select DFF file
         dff_path, _ = QFileDialog.getOpenFileName(
             self, "Select DFF File", "",
             "DFF Files (*.dff);;All Files (*)"
@@ -11513,16 +11943,172 @@ class TXDWorkshop(QWidget): #vers 3
             return
 
         try:
-            # TODO: Parse DFF, extract material names, create blank textures
-            QMessageBox.information(self, "Build from DFF",
-                "Build from DFF functionality coming soon.\n\n"
-                "This will:\n"
-                "- Parse DFF material names\n"
-                "- Create blank textures for each\n"
-                "- Set up proper TXD structure"
-                "- import texture files from bmp/png assists")
+            # Parse DFF materials
+            materials = self._parse_dff_materials(dff_path)
+
+            if not materials:
+                QMessageBox.warning(self, "No Materials",
+                    "Could not extract material names from DFF.\n"
+                    "File may be corrupted or unsupported.")
+                return
+
+            # Show build dialog
+            from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QComboBox, QPushButton, QCheckBox
+
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Build TXD from DFF")
+            dialog.setMinimumWidth(400)
+
+            layout = QVBoxLayout(dialog)
+
+            # Info
+            info_label = QLabel(f"Found {len(materials)} materials in DFF:\n" +
+                            "\n".join(f"  • {m}" for m in materials[:10]) +
+                            (f"\n  ... and {len(materials)-10} more" if len(materials) > 10 else ""))
+            layout.addWidget(info_label)
+
+            # Game selection
+            layout.addWidget(QLabel("\nTarget Game:"))
+            game_combo = QComboBox()
+            game_combo.addItems(["GTA III", "GTA Vice City", "GTA San Andreas"])
+            game_combo.setCurrentIndex(2)  # Default to SA
+            layout.addWidget(game_combo)
+
+            # Platform selection
+            layout.addWidget(QLabel("\nPlatform:"))
+            platform_combo = QComboBox()
+            platform_combo.addItems(["PC", "PS2", "Xbox"])
+            layout.addWidget(platform_combo)
+
+            # Options
+            import_textures_cb = QCheckBox("Auto-import texture files from folder")
+            import_textures_cb.setChecked(True)
+            layout.addWidget(import_textures_cb)
+
+            # Buttons
+            from PyQt6.QtWidgets import QHBoxLayout
+            btn_layout = QHBoxLayout()
+
+            build_btn = QPushButton("Build TXD")
+            build_btn.clicked.connect(dialog.accept)
+            btn_layout.addWidget(build_btn)
+
+            cancel_btn = QPushButton("Cancel")
+            cancel_btn.clicked.connect(dialog.reject)
+            btn_layout.addWidget(cancel_btn)
+
+            layout.addLayout(btn_layout)
+
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return
+
+            # Get selections
+            game = game_combo.currentText()
+            platform = platform_combo.currentText()
+            auto_import = import_textures_cb.isChecked()
+
+            # Create new TXD with blank textures
+            self._create_new_txd()
+            self.texture_list.clear()
+
+            # Add blank texture for each material
+            for mat_name in materials:
+                tex = {
+                    'name': mat_name,
+                    'width': 256,
+                    'height': 256,
+                    'depth': 32,
+                    'format': 'DXT1',
+                    'has_alpha': False,
+                    'mipmaps': 1,
+                    'rgba_data': self._create_blank_texture(256, 256, False),
+                    'mipmap_levels': []
+                }
+                self.texture_list.append(tex)
+
+            # Update display
+            self._reload_texture_table()
+
+            # Auto-import if requested
+            if auto_import:
+                reply = QMessageBox.question(self, "Import Textures",
+                    "Select folder containing texture files?\n\n"
+                    "Files should be named to match material names.",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+
+                if reply == QMessageBox.StandardButton.Yes:
+                    folder = QFileDialog.getExistingDirectory(self, "Select Texture Folder")
+                    if folder:
+                        self._batch_import_from_folder(folder)
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(
+                    f"✅ Built TXD with {len(materials)} textures "
+                    f"({game}, {platform})"
+                )
+
         except Exception as e:
-            QMessageBox.critical(self, "Build Error", f"Failed: {str(e)}")
+            QMessageBox.critical(self, "Build Error", f"Failed to build TXD:\n\n{str(e)}")
+
+
+    def _batch_import_from_folder(self, folder): #vers 1
+        """Batch import textures from folder matching material names"""
+        import os
+
+        imported = 0
+
+        for texture in self.texture_list:
+            tex_name = texture['name']
+
+            # Try different extensions
+            for ext in ['.png', '.bmp', '.tga', '.jpg', '.jpeg']:
+                file_path = os.path.join(folder, tex_name + ext)
+
+                if os.path.exists(file_path):
+                    try:
+                        # Import texture
+                        from PyQt6.QtGui import QImage
+
+                        img = QImage(file_path)
+                        if img.isNull():
+                            continue
+
+                        # Convert to RGBA
+                        img = img.convertToFormat(QImage.Format.Format_RGBA8888)
+
+                        width = img.width()
+                        height = img.height()
+
+                        ptr = img.bits()
+                        ptr.setsize(img.sizeInBytes())
+                        rgba_data = bytes(ptr)
+
+                        # Check for alpha
+                        has_alpha = any(rgba_data[i] < 255 for i in range(3, len(rgba_data), 4))
+
+                        # Update texture
+                        texture['width'] = width
+                        texture['height'] = height
+                        texture['rgba_data'] = rgba_data
+                        texture['has_alpha'] = has_alpha
+
+                        if has_alpha:
+                            texture['format'] = 'DXT5'
+                            texture['alpha_name'] = tex_name + 'a'
+
+                        imported += 1
+                        break
+
+                    except Exception as e:
+                        if self.main_window and hasattr(self.main_window, 'log_message'):
+                            self.main_window.log_message(f"Failed to import {file_path}: {str(e)}")
+
+        # Update display
+        self._reload_texture_table()
+
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            self.main_window.log_message(f"✅ Imported {imported}/{len(self.texture_list)} textures")
+
 
     def _open_paint_editor(self): #vers 1
         """Open paint editor for texture"""
@@ -11532,8 +12118,9 @@ class TXDWorkshop(QWidget): #vers 3
         QMessageBox.information(self, "Paint Editor",
             "Paint editor functionality coming soon")
 
-    def _add_texture_to_table(self, texture): #vers 2
-        """Add a texture to the table with compression status"""
+
+    def _add_texture_to_table(self, texture): #vers 3
+        """Add texture to table with file size and warning icon"""
         row = self.texture_table.rowCount()
         self.texture_table.insertRow(row)
 
@@ -11552,32 +12139,63 @@ class TXDWorkshop(QWidget): #vers 3
         else:
             thumb_item.setText("🖼️")
 
-        # Create details with compression status
-        details = f"Name: {texture['name']}\n"
+        # Check alpha validity and add warning icon if needed
         if texture.get('has_alpha', False):
-            alpha_name = texture.get('alpha_name', texture['name'] + 'a')
-            details += f"Alpha: {alpha_name}\n"
-        if width > 0:
-            details += f"Size: {width}x{height}\n"
-
-        # Show format with compression status
-        fmt = texture['format']
-        if 'DXT' in fmt:
-            details += f"Format: {fmt} (Compressed)\n"
-        else:
-            details += f"Format: {fmt} (Uncompressed)\n"
-
-        details += f"Alpha: {'Yes' if texture.get('has_alpha', False) else 'No'}"
-
-        details_item = QTableWidgetItem(details)
-
-        # Make items non-editable
-        thumb_item.setFlags(thumb_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        details_item.setFlags(details_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            # Quick check if alpha might be same as RGB
+            if self._quick_alpha_check(texture):
+                warning_icon = self._create_warning_icon_svg()
+                thumb_item.setIcon(warning_icon)
 
         self.texture_table.setItem(row, 0, thumb_item)
+
+        # Create details with FILE SIZE
+        name = texture['name']
+        file_size_kb = len(rgba_data) / 1024 if rgba_data else 0
+        depth = texture.get('depth', 32)
+        fmt = texture.get('format', 'Unknown')
+        has_alpha = texture.get('has_alpha', False)
+
+        # NEW FORMAT: texname, 10kb, 16bit, format, alpha
+        details = f"{name}, {file_size_kb:.1f}KB, {depth}bit\n"
+        details += f"Size: {width}x{height}\n"
+        details += f"Format: {fmt}\n"
+
+        if has_alpha:
+            alpha_name = texture.get('alpha_name', '')
+            details += f"Alpha: {alpha_name}"
+        else:
+            details += "Alpha: No"
+
+        details_item = QTableWidgetItem(details)
         self.texture_table.setItem(row, 1, details_item)
-        self.texture_table.setRowHeight(row, 80)
+
+
+    def _quick_alpha_check(self, texture): #vers 1
+        """Quick check if alpha might be same as RGB (for warning icon)"""
+        if not texture.get('has_alpha', False):
+            return False
+
+        rgba_data = texture.get('rgba_data', b'')
+        if not rgba_data or len(rgba_data) < 400:  # Need at least 100 pixels
+            return False
+
+        # Sample first 100 pixels
+        matches = 0
+        samples = min(100, len(rgba_data) // 4)
+
+        for i in range(0, samples * 4, 4):
+            r = rgba_data[i]
+            g = rgba_data[i + 1]
+            b = rgba_data[i + 2]
+            a = rgba_data[i + 3]
+
+            luminosity = int(0.299 * r + 0.587 * g + 0.114 * b)
+
+            if abs(luminosity - a) < 10:
+                matches += 1
+
+        # If more than 90% match, flag as suspicious
+        return (matches / samples) > 0.9
 
 
     def _load_settings(self): #vers 1
@@ -16397,137 +17015,173 @@ class TexturePreviewWidget(QLabel): #vers 1
             painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self.placeholder_text)
 
 
-class ZoomablePreview(QLabel): #vers 1
-    """Custom preview widget with zoom and pan"""
+class ZoomablePreview(QLabel): #vers 2
+    """Fixed preview widget with zoom and pan"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.main_window = parent
         self.original_pixmap = None
+        self.scaled_pixmap = None
         self.zoom_level = 1.0
         self.pan_offset = QPoint(0, 0)
         self.dragging = False
         self.drag_start = QPoint(0, 0)
-        self.bg_color = QColor(42, 42, 42)  # Default dark gray
+        self.bg_color = QColor(42, 42, 42)
+        self.background_mode = 'solid'
+        self._checkerboard_size = 16
+        self.placeholder_text = "No texture loaded"
 
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setMinimumSize(400, 400)
         self.setStyleSheet("border: 1px solid #3a3a3a;")
-
-        # Enable mouse tracking for pan
         self.setMouseTracking(True)
 
 
-    def set_image(self, pixmap): #vers 1
-        """Set image and reset view"""
-        self.original_pixmap = pixmap
-        self.zoom_level = 1.0
-        self.pan_offset = QPoint(0, 0)
-        self.update_display()
+    def setPixmap(self, pixmap): #vers 2
+        """Set pixmap and update display"""
+        if pixmap and not pixmap.isNull():
+            self.original_pixmap = pixmap
+            self.placeholder_text = None
+            self._update_scaled_pixmap()
+        else:
+            self.original_pixmap = None
+            self.scaled_pixmap = None
+            self.placeholder_text = "No texture loaded"
+
+        self.update()  # Trigger repaint
 
 
-    def update_display(self): #vers 2
-        """Update displayed image with zoom and pan"""
+    def _update_scaled_pixmap(self): #vers 1
+        """Update the scaled pixmap based on zoom level"""
         if not self.original_pixmap:
-            self.clear()
+            self.scaled_pixmap = None
             return
 
-        # Calculate zoomed size
         scaled_size = self.original_pixmap.size() * self.zoom_level
-        zoomed_pixmap = self.original_pixmap.scaled(
+        self.scaled_pixmap = self.original_pixmap.scaled(
             scaled_size,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation
         )
 
-        # Apply pan offset
-        if self.pan_offset.x() != 0 or self.pan_offset.y() != 0:
-            # Create a new pixmap with offset applied
-            result = QPixmap(self.size())
-            result.fill(self.bg_color)
 
-            painter = QPainter(result)
-            # Center the image and apply offset
-            x = (self.width() - zoomed_pixmap.width()) // 2 + self.pan_offset.x()
-            y = (self.height() - zoomed_pixmap.height()) // 2 + self.pan_offset.y()
-            painter.drawPixmap(x, y, zoomed_pixmap)
-            painter.end()
+    def paintEvent(self, event): #vers 2
+        """Paint the preview with background and image"""
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
-            self.setPixmap(result)
+        # Draw background
+        if self.background_mode == 'checkerboard':
+            self._draw_checkerboard(painter)
         else:
-            self.setPixmap(zoomed_pixmap)
+            painter.fillRect(self.rect(), self.bg_color)
+
+        # Draw image if available
+        if self.scaled_pixmap and not self.scaled_pixmap.isNull():
+            # Calculate centered position with pan offset
+            x = (self.width() - self.scaled_pixmap.width()) // 2 + self.pan_offset.x()
+            y = (self.height() - self.scaled_pixmap.height()) // 2 + self.pan_offset.y()
+            painter.drawPixmap(x, y, self.scaled_pixmap)
+        elif self.placeholder_text:
+            # Draw placeholder text
+            painter.setPen(QColor(150, 150, 150))
+            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self.placeholder_text)
 
 
-    def zoom_in(self): #vers 1
-        """Zoom in"""
-        self.zoom_level = min(self.zoom_level * 1.2, 10.0)  # Max 10x zoom
-        self.update_display()
+    def _draw_checkerboard(self, painter): #vers 1
+        """Draw checkerboard background pattern"""
+        size = self._checkerboard_size
+        color1 = QColor(200, 200, 200)
+        color2 = QColor(150, 150, 150)
+
+        for y in range(0, self.height(), size):
+            for x in range(0, self.width(), size):
+                color = color1 if ((x // size) + (y // size)) % 2 == 0 else color2
+                painter.fillRect(x, y, size, size, color)
 
 
-    def zoom_out(self): #vers 1
-        """Zoom out"""
-        self.zoom_level = max(self.zoom_level / 1.2, 0.1)  # Min 0.1x zoom
-        self.update_display()
+    def zoom_in(self): #vers 2
+        """Zoom in by 20%"""
+        self.zoom_level = min(self.zoom_level * 1.2, 10.0)
+        self._update_scaled_pixmap()
+        self.update()
 
 
-    def reset_view(self): #vers 1
-        """Reset zoom and pan"""
+    def zoom_out(self): #vers 2
+        """Zoom out by 20%"""
+        self.zoom_level = max(self.zoom_level / 1.2, 0.1)
+        self._update_scaled_pixmap()
+        self.update()
+
+
+    def reset_view(self): #vers 2
+        """Reset zoom and pan to defaults"""
         self.zoom_level = 1.0
         self.pan_offset = QPoint(0, 0)
-        self.update_display()
+        self._update_scaled_pixmap()
+        self.update()
 
 
-    def fit_to_window(self): #vers 1
-        """Fit image to window"""
+    def fit_to_window(self): #vers 2
+        """Fit image to window size"""
         if not self.original_pixmap:
             return
 
-        # Calculate zoom to fit
         img_size = self.original_pixmap.size()
         widget_size = self.size()
 
         zoom_w = widget_size.width() / img_size.width()
         zoom_h = widget_size.height() / img_size.height()
 
-        self.zoom_level = min(zoom_w, zoom_h) * 0.95  # 95% to add padding
+        self.zoom_level = min(zoom_w, zoom_h) * 0.95
         self.pan_offset = QPoint(0, 0)
-        self.update_display()
-
-
-    def set_checkerboard_background(self): #vers 1 #placeholder bugfix
-        """Set checkerboard pattern background"""
-        self.background_mode = 'checkerboard'
-        self.bg_color = None
+        self._update_scaled_pixmap()
         self.update()
 
+
+    def pan(self, dx, dy): #vers 1
+        """Pan the view by dx, dy pixels"""
+        self.pan_offset += QPoint(dx, dy)
+        self.update()
+
+
+    def set_checkerboard_background(self): #vers 1
+        """Enable checkerboard background"""
+        self.background_mode = 'checkerboard'
+        self.update()
+
+
     def set_background_color(self, color): #vers 1
-        """Set background color"""
+        """Set solid background color"""
+        self.background_mode = 'solid'
         self.bg_color = color
-        self.setStyleSheet(f"border: 1px solid #3a3a3a; background-color: {color.name()};")
+        self.update()
 
 
     def mousePressEvent(self, event): #vers 1
-        """Start pan drag"""
+        """Start pan drag on left button"""
         if event.button() == Qt.MouseButton.LeftButton:
             self.dragging = True
             self.drag_start = event.pos()
-            self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            self.setCursor(QCursor(Qt.CursorShape.ClosedHandCursor))
 
 
     def mouseMoveEvent(self, event): #vers 1
-        """Handle pan drag"""
+        """Handle pan dragging"""
         if self.dragging:
             delta = event.pos() - self.drag_start
             self.pan_offset += delta
             self.drag_start = event.pos()
-            # Pan handled by offset, update if needed
+            self.update()
 
 
     def mouseReleaseEvent(self, event): #vers 1
         """End pan drag"""
         if event.button() == Qt.MouseButton.LeftButton:
             self.dragging = False
-            self.setCursor(Qt.CursorShape.ArrowCursor)
+            self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
 
     def wheelEvent(self, event): #vers 1
@@ -16536,7 +17190,6 @@ class ZoomablePreview(QLabel): #vers 1
             self.zoom_in()
         else:
             self.zoom_out()
-
 
 
 # Footer functions
