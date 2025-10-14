@@ -1327,7 +1327,7 @@ class TXDWorkshop(QWidget): #vers 3
             ('import_btn', 'Import'),
             ('export_btn', 'Export'),
             ('export_all_btn', 'Export All'),
-            ('flip_btn', 'Switch'),
+            ('switch_btn', 'Switch'),
             ('props_btn', 'Properties'),
             ('info_btn', 'Info'),
             ('undo_btn', 'Undo'),
@@ -1959,8 +1959,8 @@ class TXDWorkshop(QWidget): #vers 3
             buttons_to_check.append(self.export_btn)
         if hasattr(self, 'export_all_btn'):
             buttons_to_check.append(self.export_all_btn)
-        if hasattr(self, 'flip_btn'):
-            buttons_to_check.append(self.flip_btn)
+        if hasattr(self, 'switch_btn'):
+            buttons_to_check.append(self.switch_btn)
         if hasattr(self, 'props_btn'):
             buttons_to_check.append(self.props_btn)
         if hasattr(self, 'info_btn'):
@@ -2124,13 +2124,25 @@ class TXDWorkshop(QWidget): #vers 3
 
         layout.addSpacing(10)
 
-        self.flip_btn = QPushButton("Switch")
-        self.flip_btn.setFont(self.button_font)
-        self.flip_btn.setIcon(self._create_flip_vert_icon())
-        self.flip_btn.setIconSize(QSize(20, 20))
-        self.flip_btn.clicked.connect(self.flip_texture)
-        self.flip_btn.setEnabled(False)
-        layout.addWidget(self.flip_btn)
+        # MODIFIED: Switch button for 3-state view cycle
+        self.switch_btn = QPushButton("Show Normal")
+        self.switch_btn.setFont(self.button_font)
+        self.switch_btn.setIcon(self._create_flip_vert_icon())
+        self.switch_btn.setIconSize(QSize(20, 20))
+        self.switch_btn.clicked.connect(self.switch_texture_view)  # CHANGED from flip_texture
+        self.switch_btn.setEnabled(False)
+        self.switch_btn.setToolTip("Cycle view: Normal → Alpha → Both")
+        layout.addWidget(self.switch_btn)
+
+        # NEW: Generate alpha mask button
+        self.gen_alpha_btn = QPushButton("+")
+        self.gen_alpha_btn.setFont(self.button_font)
+        self.gen_alpha_btn.setIconSize(QSize(16, 16))
+        self.gen_alpha_btn.setFixedSize(30, 30)
+        self.gen_alpha_btn.clicked.connect(self._generate_alpha_mask)
+        self.gen_alpha_btn.setEnabled(False)
+        self.gen_alpha_btn.setToolTip("Generate alpha mask from luminosity")
+        layout.addWidget(self.gen_alpha_btn)
 
         # Properties button
         self.props_btn = QPushButton()
@@ -5396,8 +5408,10 @@ class TXDWorkshop(QWidget): #vers 3
                 self.export_btn.setEnabled(False)
 
                 # Disable all optional buttons
-                if hasattr(self, 'flip_btn'):
-                    self.flip_btn.setEnabled(False)
+                if hasattr(self, 'switch_btn'):
+                    self.switch_btn.setEnabled(False)
+                if hasattr(self, 'gen_alpha_btn'):
+                    self.gen_alpha_btn.setEnabled(False)
                 if hasattr(self, 'props_btn'):
                     self.props_btn.setEnabled(False)
                 if hasattr(self, 'duplicate_texture_btn'):
@@ -5489,10 +5503,13 @@ class TXDWorkshop(QWidget): #vers 3
             if hasattr(self, 'bitdepth_btn'):
                 self.bitdepth_btn.setEnabled(True)
 
-            # Flip button - enable only if has alpha
-            if hasattr(self, 'flip_btn'):
+            if hasattr(self, 'switch_btn'):
                 has_alpha = self.selected_texture.get('has_alpha', False)
-                self.flip_btn.setEnabled(has_alpha)
+                self.switch_btn.setEnabled(True)  # Always enabled now
+
+            # NEW: Always enable gen_alpha_btn when texture selected
+            if hasattr(self, 'gen_alpha_btn'):
+                self.gen_alpha_btn.setEnabled(True)
 
             # Mipmap buttons
             if hasattr(self, 'create_mipmaps_btn'):
@@ -5796,6 +5813,135 @@ class TXDWorkshop(QWidget): #vers 3
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to generate mipmaps: {str(e)}")
+
+
+    def switch_texture_view(self): #vers 3
+        """Cycle between Normal → Alpha Mask → Show Both views"""
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+            return
+
+        # Initialize view state if doesn't exist
+        if not hasattr(self, '_texture_view_state'):
+            self._texture_view_state = 0  # 0=Normal, 1=Alpha, 2=Both
+
+        # Check if texture has alpha for alpha/both views
+        has_alpha = self.selected_texture.get('has_alpha', False)
+
+        # Cycle through states
+        self._texture_view_state = (self._texture_view_state + 1) % 3
+
+        # Skip alpha/both states if no alpha channel exists
+        if not has_alpha and self._texture_view_state > 0:
+            QMessageBox.information(self, "No Alpha Channel",
+                "This texture has no alpha channel.\n\n"
+                "Use the [+] button to generate an alpha mask from luminosity,\n"
+                "or Import → Import Alpha Channel to add one.")
+            self._texture_view_state = 0  # Reset to normal
+            return
+
+        # Update display
+        self._update_texture_info(self.selected_texture)
+
+        # Update button text based on state
+        state_labels = {
+            0: "Show Normal",
+            1: "Show Alpha",
+            2: "Show Both"
+        }
+
+        view_names = {
+            0: "Normal View",
+            1: "Alpha Mask View",
+            2: "Split View (Normal | Alpha)"
+        }
+
+        if hasattr(self, 'switch_btn'):
+            self.switch_btn.setText(state_labels[self._texture_view_state])
+
+        if self.main_window and hasattr(self.main_window, 'log_message'):
+            self.main_window.log_message(f"Switched to {view_names[self._texture_view_state]}")
+
+
+    def _generate_alpha_mask(self): #vers 1
+        """Generate alpha mask from texture luminosity"""
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+            return
+
+        # Check if already has alpha
+        if self.selected_texture.get('has_alpha', False):
+            reply = QMessageBox.question(self, "Replace Alpha?",
+                "This texture already has an alpha channel.\n\n"
+                "Replace existing alpha with luminosity-based mask?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
+        try:
+            rgba_data = self.selected_texture.get('rgba_data')
+            if not rgba_data:
+                QMessageBox.warning(self, "No Data", "Texture has no image data")
+                return
+
+            width = self.selected_texture.get('width', 0)
+            height = self.selected_texture.get('height', 0)
+
+            if width == 0 or height == 0:
+                QMessageBox.warning(self, "Invalid Size", "Texture has invalid dimensions")
+                return
+
+            # Save undo state
+            self._save_undo_state("Generate alpha mask from luminosity")
+
+            # Generate alpha from luminosity (standard formula)
+            new_rgba = bytearray(rgba_data)
+
+            for i in range(0, len(new_rgba), 4):
+                r = new_rgba[i]
+                g = new_rgba[i + 1]
+                b = new_rgba[i + 2]
+
+                # Calculate luminosity: 0.299*R + 0.587*G + 0.114*B
+                luminosity = int(0.299 * r + 0.587 * g + 0.114 * b)
+
+                # Set alpha channel to luminosity value
+                new_rgba[i + 3] = luminosity
+
+            # Update texture
+            self.selected_texture['rgba_data'] = bytes(new_rgba)
+            self.selected_texture['has_alpha'] = True
+
+            # Add alpha name if not present
+            if 'alpha_name' not in self.selected_texture:
+                self.selected_texture['alpha_name'] = self.selected_texture['name'] + 'a'
+
+            # Update format to support alpha if currently non-alpha format
+            current_format = self.selected_texture.get('format', 'DXT1')
+            if current_format in ['DXT1', 'RGB888', 'RGB565']:
+                if 'DXT' in current_format:
+                    seswitch_texture_viewlf.selected_texture['format'] = 'DXT5'
+                    format_msg = " (format changed to DXT5)"
+                else:
+                    self.selected_texture['format'] = 'ARGB8888'
+                    format_msg = " (format changed to ARGB8888)"
+            else:
+                format_msg = ""
+
+            # Update display
+            self._update_texture_info(self.selected_texture)
+            self._update_table_display()
+            self._mark_as_modified()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✅ Generated alpha mask from luminosity{format_msg}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Generation Error", f"Failed to generate alpha mask:\n{str(e)}")
+
+
+
 
 
     def _show_texture_context_menu(self, position): #vers 2
@@ -9820,8 +9966,8 @@ class TXDWorkshop(QWidget): #vers 3
         dialog.exec()
 
 
-    def _update_texture_info(self, texture): #vers 6
-        """Update texture information display"""
+    def _update_texture_info(self, texture): #vers 7
+        """Update texture information display - MODIFIED: Support for split view"""
         if not texture:
             self.info_name.setText("")
             self.info_alpha_name.setText("")
@@ -9866,61 +10012,54 @@ class TXDWorkshop(QWidget): #vers 3
         if hasattr(self, 'info_bitdepth'):
             self.info_bitdepth.setText(f"[{depth}bit]")
 
-        # Update mipmap info
-        mipmap_levels = texture.get('mipmap_levels', [])
-        num_mipmaps = len(mipmap_levels)
-        if hasattr(self, 'info_format'):
-            if num_mipmaps > 1:
-                self.info_format.setText(f"Mipmaps: {num_mipmaps} levels")
-            else:
-                self.info_format.setText("Mipmaps: None")
+        # Get view state
+        view_state = getattr(self, '_texture_view_state', 0)
 
-        # Bumpmap detection (FIXED - using 'texture' not 'texture_data')
-        has_bumpmap = False
-        bumpmap_info = "No data"
+        # Update preview based on view state
+        if hasattr(self, 'preview_widget') and texture.get('rgba_data'):
+            rgba_data = texture['rgba_data']
 
-        # Check if this version supports bumpmaps
-        if is_bumpmap_supported(self.txd_version_id, self.txd_device_id):
-            # Check for bumpmap format bits
-            if 'raster_format_flags' in texture:
-                flags = texture.get('raster_format_flags', 0)
-                if flags & 0x10:  # Bit 4 indicates environment/bumpmap
-                    has_bumpmap = True
-                    bumpmap_info = "Bumpmap present"
+            if view_state == 0:  # Normal view
+                pixmap = QPixmap.fromImage(
+                    QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+                )
+                self.preview_widget.setPixmap(pixmap)
 
-            # Also check for explicit bumpmap data
-            if 'bumpmap_data' in texture or texture.get('has_bumpmap', False):
-                has_bumpmap = True
-                bumpmap_info = "Bumpmap present"
-        else:
-            bumpmap_info = f"Not supported ({self.txd_game})"
-
-        # Update bumpmap UI
-        if hasattr(self, 'bumpmap_label'):
-            self.bumpmap_label.setText(bumpmap_info)
-
-        if hasattr(self, 'info_format_b'):
-            if has_bumpmap:
-                self.info_format_b.setStyleSheet("color: #4CAF50;")  # Green
-            else:
-                self.info_format_b.setStyleSheet("color: #757575;")  # Gray
-
-        # Update preview with new widget
-        rgba_data = texture.get('rgba_data')
-        if rgba_data and width > 0 and hasattr(self, 'preview_widget'):
-            try:
-                image = QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
-                if not image.isNull():
-                    pixmap = QPixmap.fromImage(image)
-                    self.preview_widget.set_image(pixmap)
+            elif view_state == 1:  # Alpha mask view
+                if has_alpha:
+                    alpha_data = self._extract_alpha_channel(rgba_data)
+                    pixmap = QPixmap.fromImage(
+                        QImage(alpha_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+                    )
+                    self.preview_widget.setPixmap(pixmap)
                 else:
-                    self.preview_widget.setText("Invalid image data")
-            except Exception as e:
-                self.preview_widget.setText(f"Preview error: {str(e)}")
-                if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"Preview error: {str(e)}")
-        elif hasattr(self, 'preview_widget'):
-            self.preview_widget.setText("No preview available")
+                    self.preview_widget.setText("No alpha channel")
+
+            elif view_state == 2:  # Split view (both)
+                if has_alpha:
+                    # Create side-by-side image
+                    combined_width = width * 2
+                    combined_image = QImage(combined_width, height, QImage.Format.Format_RGBA8888)
+                    combined_image.fill(Qt.GlobalColor.black)
+
+                    painter = QPainter(combined_image)
+
+                    # Left side: Normal
+                    normal_img = QImage(rgba_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+                    painter.drawImage(0, 0, normal_img)
+
+                    # Right side: Alpha mask
+                    alpha_data = self._extract_alpha_channel(rgba_data)
+                    alpha_img = QImage(alpha_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+                    painter.drawImage(width, 0, alpha_img)
+
+                    painter.end()
+
+                    pixmap = QPixmap.fromImage(combined_image)
+                    self.preview_widget.setPixmap(pixmap)
+                else:
+                    self.preview_widget.setText("No alpha channel for split view")
+
 
     def _view_bumpmap(self): #vers 4
         """Open Bumpmap Manager window - ALWAYS opens manager regardless of bumpmap state"""
@@ -10254,7 +10393,7 @@ class TXDWorkshop(QWidget): #vers 3
             "• Palette generation")
 
 
-    def flip_texture(self): #vers 2
+    def flip_texture(self): #vers 2 - TODO - to be rmeoved.
         """Flip between normal and alpha channel view (only if alpha exists)"""
         if not self.selected_texture:
             QMessageBox.warning(self, "No Selection", "Please select a texture first")
@@ -10277,8 +10416,8 @@ class TXDWorkshop(QWidget): #vers 3
         mode = "Alpha Channel" if self._show_alpha else "Normal View"
 
         # Update flip button text if it exists
-        if hasattr(self, 'flip_btn'):
-            self.flip_btn.setText("🔄 Normal" if self._show_alpha else "🔄 Alpha")
+        if hasattr(self, 'switch_btn'):
+            self.switch_btn.setText("🔄 Normal" if self._show_alpha else "🔄 Alpha")
 
         if self.main_window and hasattr(self.main_window, 'log_message'):
             self.main_window.log_message(f"Switched to {mode}")
