@@ -972,16 +972,21 @@ ch export textures"""
         """Show texture properties dialog"""
         QMessageBox.information(self.main_window, "Texture Properties", "Texture properties coming soon!")
 
-    def _open_txd_editor(self): #vers 3
-        """Open TXD Workshop"""
-        try:
-            from components.Txd_Editor.txd_workshop import open_txd_workshop
 
+    def _open_txd_editor(self): #vers 4
+        """Open TXD Workshop in docked mode"""
+        try:
+            # Get IMG path if available
             img_path = None
             if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
                 img_path = self.main_window.current_img.file_path
 
-            workshop = open_txd_workshop(self.main_window, img_path)
+            # Open docked workshop
+            workshop = self.main_window.open_txd_workshop_docked()
+
+            # Load IMG if available
+            if workshop and img_path:
+                workshop.load_from_img_archive(img_path)
 
             # Track workshop instance
             if workshop:
@@ -989,11 +994,11 @@ ch export textures"""
                     self.main_window.txd_workshops = []
                 self.main_window.txd_workshops.append(workshop)
 
-        except ImportError:
-            QMessageBox.warning(self.main_window, "TXD Workshop",
-                "TXD Workshop not found in components/Txd_Editor/")
+                self.main_window.log_message("✅ TXD Workshop opened (docked)")
+
         except Exception as e:
-            QMessageBox.critical(self.main_window, "Error", f"Failed to open TXD Workshop: {str(e)}")
+            QMessageBox.critical(self.main_window, "Error",
+                f"Failed to open TXD Workshop: {str(e)}")
 
 
     def _open_dff_editor(self):

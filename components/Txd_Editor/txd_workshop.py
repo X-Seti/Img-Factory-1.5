@@ -526,7 +526,7 @@ class TXDWorkshop(QWidget): #vers 3
         self.standalone_mode = (main_window is None)
 
         # Docking state
-        self.is_docked = False
+        self.is_docked = (main_window is not None)
         self.dock_widget = None
 
         self.setWindowTitle("TXD Workshop: No File")
@@ -568,6 +568,13 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Apply theme ONCE at the end
         self._apply_theme()
+
+        if hasattr(self, '_update_dock_button_visibility'):
+            self._update_dock_button_visibility()
+
+        if self.main_window and hasattr(self.main_window, 'app_settings'):
+            self.update()  # Force widget repaint
+
 
         # Enable mouse tracking
         self.setMouseTracking(True)
@@ -1397,31 +1404,42 @@ class TXDWorkshop(QWidget): #vers 3
         self._update_dock_button_visibility()
 
 
-    def _dock_to_main(self): #vers 2
-        """Dock TXD Workshop into main window - FIXED: Update toolbar"""
-        if not self.main_window or self.is_docked:
+    def _dock_to_main(self): #vers 4
+        """Dock TXD Workshop into current IMG tab's content area"""
+        if not self.main_window:
+            print("No main window available for docking")
             return
 
-        # Remove from standalone
-        self.setParent(None)
+        # Get current active tab
+        current_tab_index = self.main_window.main_tab_widget.currentIndex()
+        if current_tab_index < 0:
+            print("No active tab found")
+            return
 
-        # Create dock widget
-        from PyQt6.QtWidgets import QDockWidget
-        self.dock_widget = QDockWidget("TXD Workshop", self.main_window)
-        self.dock_widget.setWidget(self)
+        current_tab = self.main_window.main_tab_widget.widget(current_tab_index)
+        if not current_tab:
+            print("Cannot get current tab widget")
+            return
 
-        # Add to main window's tab system
-        if hasattr(self.main_window, 'content_tabs'):
-            tab_index = self.main_window.content_tabs.addTab(self.dock_widget, "🖼️ TXD Workshop")
-            self.main_window.content_tabs.setCurrentIndex(tab_index)
+        # Hide standalone window
+        self.hide()
+
+        # Find the layout in the current tab
+        tab_layout = current_tab.layout()
+        if not tab_layout:
+            print("Current tab has no layout")
+            return
+
+        # Add TXD Workshop to the current tab's layout
+        tab_layout.addWidget(self)
 
         self.is_docked = True
 
-        # MODIFIED: Update toolbar for docked state
-        self._update_toolbar_for_docking_state()
+        # Update button visibility
+        self._update_dock_button_visibility()
 
         if hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message("TXD Workshop docked")
+            self.main_window.log_message("✅ TXD Workshop docked into current tab")
 
 
     def _undock_from_main(self): #vers 2
@@ -4825,21 +4843,37 @@ class TXDWorkshop(QWidget): #vers 3
         dialog.exec()
 
 
-    def _apply_theme(self): #vers 1
+    def _apply_theme(self): #vers 2
         """Apply theme from main window"""
         try:
             if self.main_window and hasattr(self.main_window, 'app_settings'):
-                from depends.txd_workshop_theme import apply_theme_to_workshop, connect_workshop_to_theme_system
-                apply_theme_to_workshop(self, self.main_window)
-                connect_workshop_to_theme_system(self, self.main_window)
-        except:
-            self.setStyleSheet("""
-                QWidget { background-color: #2b2b2b; color: #e0e0e0; }
-                QListWidget { background-color: #1e1e1e; border: 1px solid #3a3a3a; }
-                QListWidget::item:selected { background-color: #0d47a1; }
-                QPushButton { background-color: #3a3a3a; border: 1px solid #4a4a4a; padding: 5px 14px; border-radius: 3px; }
-                QPushButton:hover { background-color: #4a4a4a; }
-            """)
+                # Get current theme
+                theme_name = self.main_window.app_settings.current_settings.get('theme', 'IMG_Factory')
+                stylesheet = self.main_window.app_settings.get_stylesheet()
+
+                # Apply to TXD Workshop
+                self.setStyleSheet(stylesheet)
+
+                # Force update
+                self.update()
+
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"🎨 TXD Workshop theme applied: {theme_name}")
+            else:
+                # Fallback dark theme
+                self.setStyleSheet("""
+                    QWidget {
+                        background-color: #2b2b2b;
+                        color: #e0e0e0;
+                    }
+                    QListWidget, QTableWidget, QTextEdit {
+                        background-color: #1e1e1e;
+                        border: 1px solid #3a3a3a;
+                    }
+                """)
+        except Exception as e:
+            print(f"Theme application error: {e}")
+
 
     def _apply_settings(self, dialog): #vers 5
         """Apply settings from dialog"""
