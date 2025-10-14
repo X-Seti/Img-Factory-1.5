@@ -55,12 +55,9 @@ class TXDSerializer: #vers 1
         return bytes(txd_data)
     
 
-    def _build_texture_native(self, texture: Dict) -> bytearray: #vers 5
+    def _build_texture_native(self, texture: Dict) -> bytearray: #vers 6
         """
-        Build texture native section - FIXED: Uses preserved original binary data
-
-        This prevents RGB corruption by using the original compressed_data or original_bgra_data
-        instead of converting rgba_data which causes channel swapping.
+        Build texture native section - FIXED: Alpha preservation
 
         Args:
             texture: Texture dictionary with all properties and data
@@ -171,9 +168,10 @@ class TXDSerializer: #vers 1
         # Build texture data section
         texture_data = bytearray()
 
-        # CRITICAL FIX - Use preserved original data
+        # CRITICAL FIX - Use preserved original data FIRST
         if mipmap_levels:
             for level in sorted(mipmap_levels, key=lambda x: x.get('level', 0)):
+                # Priority: compressed_data > original_bgra_data > rgba_data
                 level_data = (level.get('compressed_data') or
                             level.get('original_bgra_data') or
                             level.get('rgba_data', b''))
@@ -182,83 +180,62 @@ class TXDSerializer: #vers 1
                     texture_data.extend(level_data)
         else:
             if 'DXT' in format_str:
-                # DXT compressed textures
+                # DXT compressed textures - USE ORIGINAL COMPRESSED DATA
                 compressed = texture.get('compressed_data', b'')
                 if compressed:
+                    # ✅ Use original - preserves alpha perfectly
                     texture_data.extend(compressed)
                 else:
+                    # Only re-compress if no original exists
                     compressed = self._compress_to_dxt(rgba_data, width, height, format_str)
-                    texture_data.extend(compressed)
+                    if compressed:
+                        texture_data.extend(compressed)
             else:
-                # Uncompressed textures
+                # Uncompressed textures - USE ORIGINAL BGRA DATA
                 original_bgra = texture.get('original_bgra_data', b'')
 
                 if original_bgra:
+                    # ✅ Use original - preserves alpha perfectly
                     texture_data.extend(original_bgra)
-                elif rgba_data:
-                    # Convert RGBA to BGRA
-                    bgra_data = bytearray(len(rgba_data))
-                    for i in range(0, len(rgba_data), 4):
-                        bgra_data[i] = rgba_data[i+2]
-                        bgra_data[i+1] = rgba_data[i+1]
-                        bgra_data[i+2] = rgba_data[i]
-                        bgra_data[i+3] = rgba_data[i+3]
-                    texture_data.extend(bytes(bgra_data))
                 else:
-                    if 'ARGB8888' in format_str:
-                        size = width * height * 4
-                    elif 'RGB888' in format_str:
-                        size = width * height * 3
-                    else:
-                        size = width * height * 4
-                    texture_data.extend(b'\x00' * size)
+                    # Convert RGBA back to BGRA if no original
+                    bgra_data = self._rgba_to_bgra(rgba_data)
+                    texture_data.extend(bgra_data)
 
-        # Write bumpmap data
-        if bumpmap_data:
-            bumpmap_header = struct.pack('<I', len(bumpmap_data))
-            texture_data.extend(bumpmap_header)
-
-            bumpmap_type = texture.get('bumpmap_type', 0)
-            texture_data.extend(struct.pack('<B', bumpmap_type))
-
+        # Add bumpmap if present
+        if has_bumpmap and bumpmap_data:
+            struct_data.extend(struct.pack('<I', len(bumpmap_data)))
+            struct_data.extend(struct.pack('<B', 0x01))
             texture_data.extend(bumpmap_data)
 
-        # Write reflection data
-        if reflection_map:
-            reflection_header = struct.pack('<I', len(reflection_map))
-            texture_data.extend(reflection_header)
+        # Add reflection map if present
+        if has_reflection and reflection_map:
+            texture_data.extend(struct.pack('<I', len(reflection_map)))
             texture_data.extend(reflection_map)
 
         if fresnel_map:
-            fresnel_header = struct.pack('<I', len(fresnel_map))
-            texture_data.extend(fresnel_header)
+            texture_data.extend(struct.pack('<I', len(fresnel_map)))
             texture_data.extend(fresnel_map)
 
-        # Pad struct data to 4-byte alignment
-        while len(struct_data) % 4 != 0:
-            struct_data.append(0)
+        # Combine struct + texture data
+        combined_data = bytes(struct_data) + bytes(texture_data)
 
-        # Calculate section sizes
-        struct_section_size = len(struct_data) + len(texture_data)
-        total_size = 12 + struct_section_size + 12
-
-        # Write TextureNative header
+        # Build texture native header
         result.extend(self._write_section_header(
             self.SECTION_TEXTURE_NATIVE,
-            total_size - 12,
+            len(combined_data) + 12,  # +12 for extension
             self.RW_VERSION
         ))
 
-        # Write Struct section
+        # Write struct section
         result.extend(self._write_section_header(
             self.SECTION_STRUCT,
-            struct_section_size,
+            len(combined_data),
             self.RW_VERSION
         ))
-        result.extend(struct_data)
-        result.extend(texture_data)
+        result.extend(combined_data)
 
-        # Write Extension section
+        # Write extension section
         result.extend(self._write_section_header(
             self.SECTION_EXTENSION,
             0,
@@ -266,6 +243,22 @@ class TXDSerializer: #vers 1
         ))
 
         return result
+
+
+    def _rgba_to_bgra(self, rgba_data: bytes) -> bytes: #vers 1
+        """Convert RGBA to BGRA for RenderWare - preserves alpha channel"""
+        bgra_data = bytearray()
+
+        for i in range(0, len(rgba_data), 4):
+            r = rgba_data[i]
+            g = rgba_data[i + 1]
+            b = rgba_data[i + 2]
+            a = rgba_data[i + 3]  # ✅ Keep alpha intact
+
+            # Swap R and B, keep G and A
+            bgra_data.extend([b, g, r, a])
+
+        return bytes(bgra_data)
 
 
     def _build_texture_dictionary(self, textures: List[Dict]) -> bytearray: #vers 1
@@ -308,6 +301,7 @@ class TXDSerializer: #vers 1
         
         return result
     
+
 
     def _parse_single_texture(self, txd_data, offset, index): #vers 5
         """

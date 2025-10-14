@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#this belongs in components/Txd_Editor/ txd_workshop.py - Version: 10
+#this belongs in components/Txd_Editor/ txd_workshop.py - Version: 12
 # X-Seti - October10 2025 - Img Factory 1.5 - TXD Workshop Header Update
 
 """
@@ -18,7 +18,7 @@ import numpy as np
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple
 from PyQt6.QtWidgets import (QApplication, QSlider, QCheckBox,
-    QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QListWidget, QDialog, QFormLayout, QListWidgetItem, QLabel, QPushButton, QFrame, QFileDialog, QLineEdit, QTextEdit, QMessageBox, QScrollArea, QGroupBox, QTableWidget, QTableWidgetItem, QColorDialog, QHeaderView, QAbstractItemView, QMenu, QComboBox, QInputDialog, QTabWidget, QDoubleSpinBox
+    QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QListWidget, QDialog, QFormLayout, QSpinBox,  QListWidgetItem, QLabel, QPushButton, QFrame, QFileDialog, QLineEdit, QTextEdit, QMessageBox, QScrollArea, QGroupBox, QTableWidget, QTableWidgetItem, QColorDialog, QHeaderView, QAbstractItemView, QMenu, QComboBox, QInputDialog, QTabWidget, QDoubleSpinBox, QRadioButton
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint, QRect
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QColor
@@ -4742,17 +4742,250 @@ class TXDWorkshop(QWidget): #vers 3
                 self.main_window.log_message(f"✅ Created new TXD: {name}")
 
 
-    def _delete_texture(self): #vers 2
-        """Delete selected texture from TXD"""
+    def _delete_texture(self): #vers 3
+        """Delete texture with granular component selection"""
         if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture to delete")
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
             return
 
-        # Confirm deletion
-        texture_name = self.selected_texture.get('name', 'Unknown')
-        reply = QMessageBox.question(
-            self, "Confirm Delete",
-            f"Delete texture '{texture_name}'?",
+        texture_name = self.selected_texture.get('name', 'texture')
+
+        # Check what components exist
+        has_alpha = self.selected_texture.get('has_alpha', False)
+        has_mipmaps = len(self.selected_texture.get('mipmap_levels', [])) > 1  # More than 1 level
+        has_bumpmap = self.selected_texture.get('has_bumpmap', False)
+        has_reflection = self.selected_texture.get('has_reflection', False) or bool(self.selected_texture.get('reflection_map', b''))
+
+        # Check if texture has any deletable components
+        has_components = any([has_alpha, has_mipmaps, has_bumpmap, has_reflection])
+
+        # Create dialog
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Delete Options: {texture_name}")
+        dialog.setMinimumWidth(450)
+
+        layout = QVBoxLayout(dialog)
+
+        # Header
+        header = QLabel(f"Select what to delete from:\n{texture_name}")
+        header.setFont(QFont("Arial", 11, QFont.Weight.Bold))
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(header)
+
+        layout.addSpacing(10)
+
+        # Main texture option
+        main_group = QGroupBox("Main Texture")
+        main_layout = QVBoxLayout()
+
+        delete_all_radio = QRadioButton("Delete entire texture (all components)")
+        delete_all_radio.setChecked(True)
+        delete_all_radio.setToolTip("Remove this texture completely from the TXD")
+        main_layout.addWidget(delete_all_radio)
+
+        keep_main_radio = QRadioButton("Keep main texture, delete selected components only")
+        keep_main_radio.setEnabled(has_components)
+        if not has_components:
+            keep_main_radio.setToolTip("No deletable components available")
+        else:
+            keep_main_radio.setToolTip("Keep the base texture but remove selected extra data")
+        main_layout.addWidget(keep_main_radio)
+
+        main_group.setLayout(main_layout)
+        layout.addWidget(main_group)
+
+        # Components group (only show if has components)
+        components_group = QGroupBox("Components to Delete")
+        components_layout = QVBoxLayout()
+
+        # Alpha channel
+        alpha_check = None
+        if has_alpha:
+            alpha_name = self.selected_texture.get('alpha_name', texture_name + 'a')
+            alpha_check = QCheckBox(f"Delete Alpha Channel: {alpha_name}")
+            alpha_check.setChecked(True)
+            alpha_check.setEnabled(False)  # Disabled until "Keep main" is selected
+            alpha_check.setToolTip("Remove alpha channel transparency data")
+            components_layout.addWidget(alpha_check)
+
+        # Mipmaps
+        mipmap_check = None
+        if has_mipmaps:
+            num_levels = len(self.selected_texture.get('mipmap_levels', []))
+            mipmap_check = QCheckBox(f"Delete Mipmaps ({num_levels} levels)")
+            mipmap_check.setChecked(True)
+            mipmap_check.setEnabled(False)
+            mipmap_check.setToolTip("Remove all mipmap LOD levels")
+            components_layout.addWidget(mipmap_check)
+
+        # Bumpmap
+        bumpmap_check = None
+        if has_bumpmap:
+            bumpmap_type = self.selected_texture.get('bumpmap_type', 0)
+            type_names = ['Height Map', 'Normal Map', 'Combined']
+            bumpmap_check = QCheckBox(f"Delete Bumpmap ({type_names[bumpmap_type]})")
+            bumpmap_check.setChecked(True)
+            bumpmap_check.setEnabled(False)
+            bumpmap_check.setToolTip("Remove bumpmap data")
+            components_layout.addWidget(bumpmap_check)
+
+        # Reflection maps
+        reflection_check = None
+        if has_reflection:
+            reflection_check = QCheckBox("Delete Reflection Maps")
+            reflection_check.setChecked(True)
+            reflection_check.setEnabled(False)
+            reflection_check.setToolTip("Remove reflection and Fresnel maps")
+            components_layout.addWidget(reflection_check)
+
+        # Show message if no components
+        if not has_components:
+            no_components_label = QLabel("This texture has no extra components to delete.")
+            no_components_label.setStyleSheet("color: #888; font-style: italic; padding: 10px;")
+            components_layout.addWidget(no_components_label)
+
+        components_group.setLayout(components_layout)
+        layout.addWidget(components_group)
+
+        # Enable/disable component checkboxes based on radio selection
+        def update_component_state():
+            enabled = keep_main_radio.isChecked() and has_components
+            if alpha_check:
+                alpha_check.setEnabled(enabled)
+            if mipmap_check:
+                mipmap_check.setEnabled(enabled)
+            if bumpmap_check:
+                bumpmap_check.setEnabled(enabled)
+            if reflection_check:
+                reflection_check.setEnabled(enabled)
+
+        delete_all_radio.toggled.connect(update_component_state)
+        keep_main_radio.toggled.connect(update_component_state)
+
+        layout.addSpacing(10)
+
+        # Info label
+        info_label = QLabel()
+        info_label.setStyleSheet("color: #888; font-style: italic; padding: 5px;")
+        info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        info_label.setWordWrap(True)
+
+        def update_info_text():
+            if delete_all_radio.isChecked():
+                info_label.setText("The entire texture will be removed from the TXD.")
+            else:
+                info_label.setText("The main texture will be kept. Uncheck components to preserve them.")
+
+        delete_all_radio.toggled.connect(update_info_text)
+        keep_main_radio.toggled.connect(update_info_text)
+        update_info_text()
+
+        layout.addWidget(info_label)
+
+        layout.addSpacing(10)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(dialog.reject)
+        button_layout.addWidget(cancel_btn)
+
+        delete_btn = QPushButton("Delete")
+        delete_btn.setStyleSheet("background-color: #d32f2f; color: white; font-weight: bold;")
+        delete_btn.clicked.connect(dialog.accept)
+        button_layout.addWidget(delete_btn)
+
+        layout.addLayout(button_layout)
+
+        # Show dialog
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        # Process deletion
+        try:
+            if delete_all_radio.isChecked():
+                # Delete entire texture
+                if self.selected_texture in self.texture_list:
+                    self.texture_list.remove(self.selected_texture)
+
+                self.selected_texture = None
+                self._reload_texture_table()
+                self._mark_as_modified()
+
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"Deleted entire texture: {texture_name}")
+
+                QMessageBox.information(self, "Deleted",
+                    f"Texture '{texture_name}' has been completely removed.")
+
+            else:
+                # Keep main texture, delete selected components
+                components_deleted = []
+
+                # Delete alpha
+                if alpha_check and alpha_check.isChecked() and has_alpha:
+                    self.selected_texture['has_alpha'] = False
+                    if 'alpha_name' in self.selected_texture:
+                        del self.selected_texture['alpha_name']
+                    components_deleted.append("alpha channel")
+
+                # Delete mipmaps
+                if mipmap_check and mipmap_check.isChecked() and has_mipmaps:
+                    # Keep only the main level (level 0) if it exists
+                    mipmap_levels = self.selected_texture.get('mipmap_levels', [])
+                    if mipmap_levels:
+                        # Keep first level only
+                        self.selected_texture['mipmap_levels'] = [mipmap_levels[0]] if mipmap_levels else []
+                    else:
+                        self.selected_texture['mipmap_levels'] = []
+                    components_deleted.append(f"mipmap levels")
+
+                # Delete bumpmap
+                if bumpmap_check and bumpmap_check.isChecked() and has_bumpmap:
+                    self.selected_texture['has_bumpmap'] = False
+                    self.selected_texture['bumpmap_data'] = b''
+                    self.selected_texture['bumpmap_type'] = 0
+                    components_deleted.append("bumpmap")
+
+                # Delete reflection
+                if reflection_check and reflection_check.isChecked() and has_reflection:
+                    self.selected_texture['has_reflection'] = False
+                    self.selected_texture['reflection_map'] = b''
+                    if 'fresnel_map' in self.selected_texture:
+                        self.selected_texture['fresnel_map'] = b''
+                    components_deleted.append("reflection maps")
+
+                if components_deleted:
+                    # Update texture info display
+                    self._update_texture_info(self.selected_texture)
+
+                    # Reload table to show changes
+                    self._reload_texture_table()
+
+                    # Mark as modified
+                    self._mark_as_modified()
+
+                    # Log
+                    components_str = ", ".join(components_deleted)
+                    if self.main_window and hasattr(self.main_window, 'log_message'):
+                        self.main_window.log_message(f"Deleted from {texture_name}: {components_str}")
+
+                    QMessageBox.information(self, "Components Deleted",
+                        f"Deleted from '{texture_name}':\n\n{components_str}\n\nMain texture preserved.")
+                else:
+                    QMessageBox.information(self, "No Changes",
+                        "No components were selected for deletion.")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Delete Error", f"Failed to delete: {str(e)}")
+
+
+    def _delete_texture_simple(self, texture_name): #vers 1
+        """Simple texture deletion without component selection"""
+        reply = QMessageBox.question(self, "Delete Texture",
+            f"Delete texture '{texture_name}'?\n\nThis cannot be undone.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
@@ -4761,24 +4994,18 @@ class TXDWorkshop(QWidget): #vers 3
             return
 
         try:
-            # Find and remove from list
             if self.selected_texture in self.texture_list:
                 self.texture_list.remove(self.selected_texture)
 
-            # Clear selection
             self.selected_texture = None
-
-            # Reload table
             self._reload_texture_table()
-
-            # Mark as modified
             self._mark_as_modified()
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"Deleted: {texture_name}")
 
         except Exception as e:
-            QMessageBox.critical(self, "Delete Error", f"Failed to delete texture: {str(e)}")
+            QMessageBox.critical(self, "Delete Error", f"Failed to delete: {str(e)}")
 
 
     def _mark_as_modified(self): #vers 1
@@ -4815,8 +5042,8 @@ class TXDWorkshop(QWidget): #vers 3
         self.texture_table.itemDoubleClicked.connect(self._on_texture_table_double_click)
 
 
-    def _on_texture_selected(self): #vers 6
-        """Handle texture selection - UNIFIED VERSION"""
+    def _on_texture_selected(self): #vers 7
+        """Handle texture selection"""
         try:
             row = self.texture_table.currentRow()
 
@@ -4830,10 +5057,10 @@ class TXDWorkshop(QWidget): #vers 3
                     self.flip_btn.setEnabled(False)
                 if hasattr(self, 'props_btn'):
                     self.props_btn.setEnabled(False)
-                if hasattr(self, 'duplicate_btn'):
-                    self.duplicate_btn.setEnabled(False)
-                if hasattr(self, 'remove_btn'):
-                    self.remove_btn.setEnabled(False)
+                if hasattr(self, 'duplicate_texture_btn'):
+                    self.duplicate_texture_btn.setEnabled(False)
+                if hasattr(self, 'delete_texture_btn'):
+                    self.delete_texture_btn.setEnabled(False)
                 if hasattr(self, 'resize_btn'):
                     self.resize_btn.setEnabled(False)
                 if hasattr(self, 'upscale_btn'):
@@ -4902,10 +5129,10 @@ class TXDWorkshop(QWidget): #vers 3
 
             if hasattr(self, 'props_btn'):
                 self.props_btn.setEnabled(True)
-            if hasattr(self, 'duplicate_btn'):
-                self.duplicate_btn.setEnabled(True)
-            if hasattr(self, 'remove_btn'):
-                self.remove_btn.setEnabled(True)
+            if hasattr(self, 'duplicate_texture_btn'):
+                self.duplicate_texture_btn.setEnabled(True)
+            if hasattr(self, 'delete_texture_btn'):
+                self.delete_texture_btn.setEnabled(True)
             if hasattr(self, 'resize_btn'):
                 self.resize_btn.setEnabled(True)
             if hasattr(self, 'upscale_btn'):
@@ -5030,13 +5257,66 @@ class TXDWorkshop(QWidget): #vers 3
         self.texture_table.setColumnWidth(0, 80)
 
 
-    def _save_undo_state(self, action_name): #vers 1
-        """Save current state to undo stack"""
-        import copy
+    def _save_undo_state(self, action_name): #vers 2
+        """
+        Save current state to undo stack - FIXED: Properly preserves binary data
+
+        The issue was that copy.deepcopy was losing binary data fields like
+        compressed_data and original_bgra_data, causing corruption on undo.
+
+        Args:
+            action_name: Description of the action being saved
+        """
+        texture_list_copy = []
+
+        for texture in self.texture_list:
+            tex_copy = texture.copy()
+
+            # CRITICAL: Explicitly preserve all binary data fields
+            if 'compressed_data' in texture:
+                tex_copy['compressed_data'] = texture['compressed_data']
+
+            if 'original_bgra_data' in texture:
+                tex_copy['original_bgra_data'] = texture['original_bgra_data']
+
+            if 'rgba_data' in texture:
+                tex_copy['rgba_data'] = texture['rgba_data']
+
+            if 'bumpmap_data' in texture:
+                tex_copy['bumpmap_data'] = texture['bumpmap_data']
+
+            if 'reflection_map' in texture:
+                tex_copy['reflection_map'] = texture['reflection_map']
+
+            if 'fresnel_map' in texture:
+                tex_copy['fresnel_map'] = texture['fresnel_map']
+
+            # Copy mipmap levels with binary data
+            if 'mipmap_levels' in texture:
+                mipmap_copy = []
+                for level in texture['mipmap_levels']:
+                    level_copy = level.copy()
+
+                    if 'compressed_data' in level:
+                        level_copy['compressed_data'] = level['compressed_data']
+
+                    if 'original_bgra_data' in level:
+                        level_copy['original_bgra_data'] = level['original_bgra_data']
+
+                    if 'rgba_data' in level:
+                        level_copy['rgba_data'] = level['rgba_data']
+
+                    mipmap_copy.append(level_copy)
+
+                tex_copy['mipmap_levels'] = mipmap_copy
+
+            texture_list_copy.append(tex_copy)
+
         state = {
             'action': action_name,
-            'texture_list': copy.deepcopy(self.texture_list)
+            'texture_list': texture_list_copy
         }
+
         self.undo_stack.append(state)
 
         # Limit undo stack to 10 items
@@ -5420,100 +5700,439 @@ class TXDWorkshop(QWidget): #vers 3
                 self.main_window.log_message(f"❌ Extract error: {str(e)}")
             return None
 
-
-    def _load_txd_textures(self, txd_data, txd_name): #vers 12
-        """Load textures from TXD data - display with mipmap info"""
+    def _load_txd_textures(self, txd_data, txd_name): #vers 15
+        """Load textures from TXD data with detailed structural parsing, log output, and granular control"""
         try:
+            from PyQt6.QtWidgets import (QProgressDialog, QMessageBox, QDialog,
+                                        QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QLabel)
+            from PyQt6.QtCore import Qt
             import struct
+
+            # Create custom progress dialog with log output
+            dialog = QDialog(self)
+            dialog.setWindowTitle("TXD Structural Parser")
+            dialog.setMinimumWidth(800)
+            dialog.setMinimumHeight(600)
+            dialog.setModal(True)
+
+            layout = QVBoxLayout(dialog)
+
+            # Header
+            header = QLabel(f"Loading: {txd_name}")
+            header.setStyleSheet("font-size: 14px; font-weight: bold; padding: 5px;")
+            layout.addWidget(header)
+
+            # Progress bar
+            from PyQt6.QtWidgets import QProgressBar
+            progress_bar = QProgressBar()
+            progress_bar.setRange(0, 100)
+            progress_bar.setValue(0)
+            layout.addWidget(progress_bar)
+
+            # Log output
+            log_output = QTextEdit()
+            log_output.setReadOnly(True)
+            log_output.setStyleSheet("font-family: 'Courier New', monospace; font-size: 10px;")
+            layout.addWidget(log_output)
+
+            # Button layout
+            button_layout = QHBoxLayout()
+
+            cancel_btn = QPushButton("Cancel Loading")
+            cancel_btn.setStyleSheet("background-color: #d32f2f; color: white;")
+            button_layout.addWidget(cancel_btn)
+
+            button_layout.addStretch()
+            layout.addLayout(button_layout)
+
+            # Show dialog
+            dialog.show()
+            dialog.raise_()
+            dialog.activateWindow()
+
+            # Tracking
+            alpha_errors = []
+            skip_alpha_textures = False
+            ignore_all_errors = False
+            skip_all_entries = False
+            user_cancelled = False
+
+            def log(message):
+                """Add message to log output"""
+                log_output.append(message)
+                log_output.verticalScrollBar().setValue(log_output.verticalScrollBar().maximum())
+                dialog.repaint()
+
+            def update_progress(value, message=None):
+                """Update progress bar and optionally log"""
+                progress_bar.setValue(value)
+                if message:
+                    log(message)
+                if user_cancelled:
+                    raise Exception("Loading cancelled by user")
+
+            # Connect cancel button
+            def handle_cancel():
+                nonlocal user_cancelled
+                user_cancelled = True
+
+            cancel_btn.clicked.connect(handle_cancel)
+
+            # Reset state
+            update_progress(1, "=" * 80)
+            update_progress(1, "TXD STRUCTURAL PARSER - INITIALIZING")
+            update_progress(1, "=" * 80)
 
             self.texture_table.setRowCount(0)
             self.texture_list = []
             textures = []
-            offset = 12
+
+            # Detect TXD info
+            log("")
+            log("PHASE 1: FORMAT DETECTION")
+            log("-" * 80)
             if self.txd_version_id == 0:
                 self._detect_txd_info(txd_data)
 
             self.current_txd_data = txd_data
             self.current_txd_name = txd_name
 
-            # Get texture count
-            texture_count = 0
-            if offset + 12 < len(txd_data):
-                try:
-                    st, ss, sv = struct.unpack('<III', txd_data[offset:offset+12])
-                    offset += 12
-                    if ss >= 4:
-                        texture_count = struct.unpack('<I', txd_data[offset:offset+4])[0]
-                        offset += ss
-                except:
-                    pass
+            update_progress(5)
+            log(f"File Name      : {txd_name}")
+            log(f"File Size      : {len(txd_data):,} bytes ({len(txd_data)/1024:.2f} KB)")
+            log(f"RW Version     : 0x{self.txd_version_id:08X}")
+            log(f"Device ID      : 0x{self.txd_device_id:08X}")
 
-            # Parse each texture
-            if 0 < texture_count < 500:
-                for i in range(texture_count):
-                    if offset + 12 > len(txd_data):
-                        break
-                    try:
-                        stype, ssize, sver = struct.unpack('<III', txd_data[offset:offset+12])
-                        if stype == 0x15:  # Texture Native
-                            tex = self._parse_single_texture(txd_data, offset, i)
-                            if tex:
-                                textures.append(tex)
-                        offset += 12 + ssize
-                    except:
-                        offset += 1000
+            # === PARSE TXD HEADER STRUCTURE ===
+            log("")
+            log("PHASE 2: TXD HEADER STRUCTURE")
+            log("-" * 80)
+            update_progress(10)
+
+            if len(txd_data) < 12:
+                raise Exception("File too small - missing TXD header")
+
+            # Read main TXD dictionary header
+            main_type, main_size, main_version = struct.unpack('<III', txd_data[0:12])
+            log(f"Main TXD Dictionary Section:")
+            log(f"  Offset       : 0")
+            log(f"  Type         : 0x{main_type:02X} (Texture Dictionary)")
+            log(f"  Size         : {main_size:,} bytes")
+            log(f"  Version      : 0x{main_version:08X}")
+
+            if main_type != 0x16:
+                raise Exception(f"Invalid TXD header - expected 0x16, got 0x{main_type:02X}")
+
+            # === PARSE STRUCT SECTION (Texture Count) ===
+            log("")
+            log("PHASE 3: STRUCT SECTION (Texture Count)")
+            log("-" * 80)
+            update_progress(15)
+
+            offset = 12
+            texture_count = 0
+
+            if offset + 12 < len(txd_data):
+                struct_type, struct_size, struct_version = struct.unpack('<III', txd_data[offset:offset+12])
+                log(f"Struct Section:")
+                log(f"  Offset       : {offset}")
+                log(f"  Type         : 0x{struct_type:02X} (Struct)")
+                log(f"  Size         : {struct_size} bytes")
+                log(f"  Version      : 0x{struct_version:08X}")
+                offset += 12
+
+                if struct_type != 0x01:
+                    raise Exception(f"Invalid struct section - expected 0x01, got 0x{struct_type:02X}")
+
+                if struct_size >= 4:
+                    texture_count = struct.unpack('<I', txd_data[offset:offset+4])[0]
+                    log(f"  Texture Count: {texture_count}")
+                    offset += struct_size
+                else:
+                    raise Exception(f"Struct section too small: {struct_size} bytes")
+
+            # Validate texture count
+            update_progress(20)
+            log("")
+            log(f"Validation: {texture_count} textures declared")
+
+            if texture_count <= 0:
+                raise Exception("No textures found in TXD file")
+
+            if texture_count > 500:
+                raise Exception(f"Invalid texture count: {texture_count} (maximum 500)")
+
+            # === PARSE TEXTURE NATIVE SECTIONS ===
+            log("")
+            log(f"PHASE 4: PARSING {texture_count} TEXTURE NATIVE SECTIONS")
+            log("=" * 80)
+            update_progress(25)
+
+            for i in range(texture_count):
+                # Check bounds
+                if offset + 12 > len(txd_data):
+                    log("")
+                    log(f"[TEXTURE {i+1}] ERROR: Premature end of data at offset {offset:,}")
+                    log(f"            Remaining textures cannot be read")
+                    break
+
+                try:
+                    # Progress calculation
+                    texture_progress = 25 + int((i / texture_count) * 60)
+
+                    log("")
+                    log(f"[TEXTURE {i+1}/{texture_count}]")
+                    log("-" * 80)
+
+                    # Read Texture Native section header
+                    log(f"Reading Texture Native header at offset {offset:,}...")
+
+                    tex_type, tex_size, tex_version = struct.unpack('<III', txd_data[offset:offset+12])
+
+                    log(f"  Section Type : 0x{tex_type:02X}")
+                    log(f"  Section Size : {tex_size:,} bytes")
+                    log(f"  Version      : 0x{tex_version:08X}")
+
+                    update_progress(texture_progress)
+
+                    # Verify texture native type
+                    if tex_type != 0x15:
+                        log(f"  ERROR        : Expected Texture Native (0x15), got 0x{tex_type:02X}")
+                        log(f"  Action       : Skipping to next section")
+                        offset += 12 + tex_size
                         continue
 
-            if not textures:
-                textures = [{'name': 'No textures', 'width': 0, 'height': 0, 'has_alpha': False,
-                            'format': 'Unknown', 'mipmaps': 0, 'rgba_data': None, 'mipmap_levels': []}]
+                    # Parse texture structure (88-byte header + data)
+                    log(f"  Status       : Parsing 88-byte texture structure...")
 
-            # Populate table with mipmap info
-            for tex in textures:
+                    tex = self._parse_single_texture(txd_data, offset, i)
+
+                    if tex:
+                        tex_name = tex.get('name', f'texture_{i}')
+                        tex_width = tex.get('width', 0)
+                        tex_height = tex.get('height', 0)
+                        tex_format = tex.get('format', 'Unknown')
+                        has_alpha = tex.get('has_alpha', False)
+                        alpha_name = tex.get('alpha_name', '')
+
+                        log(f"  Name         : {tex_name}")
+                        log(f"  Dimensions   : {tex_width}x{tex_height}")
+                        log(f"  Format       : {tex_format}")
+                        log(f"  Depth        : {tex.get('depth', 32)}-bit")
+                        log(f"  Alpha        : {has_alpha}")
+                        if has_alpha:
+                            log(f"  Alpha Name   : {alpha_name}")
+
+                        # === ALPHA CHANNEL VALIDATION ===
+                        if has_alpha and not skip_alpha_textures and not skip_all_entries:
+                            log(f"  Validating alpha channel...")
+
+                            rgba_data = tex.get('rgba_data', b'')
+                            if rgba_data and len(rgba_data) >= 4:
+                                has_transparency = False
+                                all_opaque = True
+                                identical_to_rgb = True
+
+                                sample_size = min(1000, len(rgba_data) // 4)
+
+                                for pixel_idx in range(sample_size):
+                                    byte_offset = pixel_idx * 4
+                                    if byte_offset + 3 < len(rgba_data):
+                                        r = rgba_data[byte_offset]
+                                        g = rgba_data[byte_offset + 1]
+                                        b = rgba_data[byte_offset + 2]
+                                        a = rgba_data[byte_offset + 3]
+
+                                        if a < 255:
+                                            all_opaque = False
+                                            has_transparency = True
+
+                                        if a != r and a != g and a != b:
+                                            identical_to_rgb = False
+
+                                # Detect problematic alpha
+                                alpha_error = None
+                                if all_opaque:
+                                    alpha_error = f"Alpha channel is all opaque (255) - no transparency"
+                                    log(f"  ALPHA ERROR  : {alpha_error}")
+                                elif identical_to_rgb:
+                                    alpha_error = f"Alpha channel identical to RGB data - corrupted"
+                                    log(f"  ALPHA ERROR  : {alpha_error}")
+
+                                # Handle alpha errors
+                                if alpha_error and not ignore_all_errors:
+                                    alpha_errors.append((i+1, tex_name, alpha_error))
+
+                                    # Show error dialog with options
+                                    error_dialog = QDialog(dialog)
+                                    error_dialog.setWindowTitle("Alpha Channel Error")
+                                    error_dialog.setModal(True)
+                                    error_dialog.setMinimumWidth(500)
+
+                                    error_layout = QVBoxLayout(error_dialog)
+
+                                    error_label = QLabel(
+                                        f"Corrupted alpha channel detected:\n\n"
+                                        f"Texture {i+1}: {tex_name}\n"
+                                        f"Error: {alpha_error}\n\n"
+                                        f"How would you like to proceed?"
+                                    )
+                                    error_label.setWordWrap(True)
+                                    error_layout.addWidget(error_label)
+
+                                    btn_layout = QHBoxLayout()
+
+                                    ignore_entry_btn = QPushButton("Ignore Entry")
+                                    ignore_entry_btn.setToolTip("Load this texture with alpha as-is")
+
+                                    ignore_all_btn = QPushButton("Ignore All")
+                                    ignore_all_btn.setToolTip("Ignore all alpha errors and continue")
+
+                                    skip_alpha_btn = QPushButton("Strip Alpha")
+                                    skip_alpha_btn.setToolTip("Remove alpha from this texture only")
+
+                                    skip_all_btn = QPushButton("Strip All Alpha")
+                                    skip_all_btn.setToolTip("Remove alpha from all remaining textures")
+                                    skip_all_btn.setStyleSheet("background-color: #ff9800; color: white;")
+
+                                    cancel_load_btn = QPushButton("Cancel Loading")
+                                    cancel_load_btn.setStyleSheet("background-color: #d32f2f; color: white;")
+
+                                    btn_layout.addWidget(ignore_entry_btn)
+                                    btn_layout.addWidget(ignore_all_btn)
+                                    btn_layout.addWidget(skip_alpha_btn)
+                                    btn_layout.addWidget(skip_all_btn)
+                                    btn_layout.addWidget(cancel_load_btn)
+
+                                    error_layout.addLayout(btn_layout)
+
+                                    user_choice = [None]
+
+                                    def set_choice(choice):
+                                        user_choice[0] = choice
+                                        error_dialog.accept()
+
+                                    ignore_entry_btn.clicked.connect(lambda: set_choice('ignore_entry'))
+                                    ignore_all_btn.clicked.connect(lambda: set_choice('ignore_all'))
+                                    skip_alpha_btn.clicked.connect(lambda: set_choice('skip_alpha'))
+                                    skip_all_btn.clicked.connect(lambda: set_choice('skip_all'))
+                                    cancel_load_btn.clicked.connect(lambda: set_choice('cancel'))
+
+                                    error_dialog.exec()
+
+                                    choice = user_choice[0]
+
+                                    if choice == 'cancel':
+                                        log(f"  User Action  : CANCELLED LOADING")
+                                        raise Exception("Loading cancelled due to alpha errors")
+                                    elif choice == 'ignore_entry':
+                                        log(f"  User Action  : Ignored this entry, loading with alpha")
+                                    elif choice == 'ignore_all':
+                                        ignore_all_errors = True
+                                        log(f"  User Action  : Ignoring all future alpha errors")
+                                    elif choice == 'skip_alpha':
+                                        tex['has_alpha'] = False
+                                        if 'alpha_name' in tex:
+                                            del tex['alpha_name']
+                                        log(f"  User Action  : Stripped alpha from this texture")
+                                    elif choice == 'skip_all':
+                                        skip_alpha_textures = True
+                                        tex['has_alpha'] = False
+                                        if 'alpha_name' in tex:
+                                            del tex['alpha_name']
+                                        log(f"  User Action  : Stripping alpha from all remaining textures")
+
+                            else:
+                                log(f"  Alpha Valid  : Channel validated successfully")
+
+                        elif skip_alpha_textures and has_alpha:
+                            tex['has_alpha'] = False
+                            if 'alpha_name' in tex:
+                                del tex['alpha_name']
+                            log(f"  Alpha Action : Stripped (skip all active)")
+
+                        textures.append(tex)
+                        log(f"  Result       : SUCCESS - Added to texture list")
+                    else:
+                        log(f"  Result       : FAILED - Parse returned no data")
+
+                    # Advance offset by section size
+                    offset += 12 + tex_size
+
+                except struct.error as e:
+                    log(f"[TEXTURE {i+1}] STRUCT ERROR at offset {offset:,}: {str(e)}")
+                    break
+                except Exception as e:
+                    log(f"[TEXTURE {i+1}] ERROR: {str(e)}")
+                    offset += 1000
+                    continue
+
+            # === POPULATE TABLE ===
+            log("")
+            log("=" * 80)
+            log(f"PHASE 5: POPULATING TABLE WITH {len(textures)} TEXTURES")
+            log("=" * 80)
+            update_progress(85)
+
+            if not textures:
+                raise Exception("No valid textures loaded from TXD")
+
+            for idx, tex in enumerate(textures):
+                table_progress = 85 + int((idx / len(textures)) * 14)
+                tex_name = tex.get('name', f'texture_{idx}')
+
+                log(f"Adding to table: {tex_name} ({idx+1}/{len(textures)})")
+                update_progress(table_progress)
+
                 self.texture_list.append(tex)
                 row = self.texture_table.rowCount()
                 self.texture_table.insertRow(row)
 
+                # Create thumbnail
                 thumb_item = QTableWidgetItem()
-                if tex.get('rgba_data') and tex['width'] > 0:
-                    pixmap = self._create_thumbnail(tex['rgba_data'], tex['width'], tex['height'])
-                    if pixmap:
-                        thumb_item.setData(Qt.ItemDataRole.DecorationRole, pixmap)
-                    else:
-                        thumb_item.setText("🖼️")
-                else:
-                    thumb_item.setText("🖼️")
+                try:
+                    if tex.get('rgba_data') and tex['width'] > 0:
+                        expected_size = tex['width'] * tex['height'] * 4
+                        rgba_data = tex.get('rgba_data', b'')
 
-                # Build details text with mipmap info
+                        if len(rgba_data) == expected_size:
+                            pixmap = self._create_thumbnail(rgba_data, tex['width'], tex['height'])
+                            if pixmap:
+                                thumb_item.setData(Qt.ItemDataRole.DecorationRole, pixmap)
+                            else:
+                                thumb_item.setText("[IMG]")
+                        else:
+                            thumb_item.setText("[!]")
+                    else:
+                        thumb_item.setText("[IMG]")
+                except:
+                    thumb_item.setText("[ERR]")
+
+                # Build details
                 depth = tex.get('depth', 32)
                 details = f"Name: {tex['name']} - {depth}bit\n"
 
-                # Alpha name line
                 if tex.get('has_alpha', False):
                     alpha_name = tex.get('alpha_name', tex['name'] + 'a')
                     details += f"Alpha: {alpha_name}\n"
                 else:
-                    details += "\n"  # Empty line for spacing
+                    details += "\n"
 
-                # Size and format line
                 if tex['width'] > 0:
                     details += f"Size: {tex['width']}x{tex['height']} | Format: {tex['format']}\n"
                 else:
                     details += f"Format: {tex['format']}\n"
 
-                # Mipmap info line - CLICKABLE
                 mipmap_levels = tex.get('mipmap_levels', [])
                 num_mipmaps = len(mipmap_levels)
 
                 if num_mipmaps > 0:
-                    # Check if compressed
                     is_compressed = 'DXT' in tex['format']
                     compress_status = "compressed" if is_compressed else "uncompressed"
-                    details += f"📊 {num_mipmaps} mipmap levels ({compress_status}) - Click to view"
+                    details += f"Mipmaps: {num_mipmaps} levels ({compress_status})"
                 else:
-                    details += "📊 No mipmaps"
+                    details += "Mipmaps: None"
 
-                # Make items non-editable
                 thumb_item.setFlags(thumb_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 details_item = QTableWidgetItem(details)
                 details_item.setFlags(details_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
@@ -5522,20 +6141,78 @@ class TXDWorkshop(QWidget): #vers 3
                 self.texture_table.setItem(row, 1, details_item)
 
             for row in range(self.texture_table.rowCount()):
-                self.texture_table.setRowHeight(row, 100)  # Increased height for mipmap line
+                self.texture_table.setRowHeight(row, 100)
             self.texture_table.setColumnWidth(0, 80)
 
-            self.save_txd_btn.setEnabled(False)
-            self.import_btn.setEnabled(True)
-            self.export_all_btn.setEnabled(True)
-            self._initialize_features()
-            self._enable_txd_features_after_load()
+            # === COMPLETE ===
+            log("")
+            log("=" * 80)
+            log("LOADING COMPLETE")
+            log("=" * 80)
+            log(f"Total Textures Loaded: {len(textures)}")
+
+            if alpha_errors:
+                log(f"Alpha Warnings: {len(alpha_errors)}")
+                for tex_num, tex_name, error in alpha_errors:
+                    log(f"  - Texture {tex_num} ({tex_name}): {error}")
+
+            if skip_alpha_textures:
+                log("Alpha channels were stripped from textures")
+
+            update_progress(100)
+
+            # Change button to close
+            cancel_btn.setText("Close")
+            cancel_btn.setStyleSheet("background-color: #4CAF50; color: white;")
+            cancel_btn.disconnect()
+            cancel_btn.clicked.connect(dialog.accept)
+
+            dialog.exec()
+
+            # Update window title
+            self.setWindowTitle(f"TXD Workshop: {txd_name} ({len(textures)} textures)")
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"✅ Loaded {len(textures)} textures from {txd_name}")
+                self.main_window.log_message(f"Loaded {len(textures)} textures from {txd_name}")
+
         except Exception as e:
+            if 'dialog' in locals():
+                dialog.close()
+
+            if "cancelled" not in str(e).lower():
+                QMessageBox.critical(self, "Load Error", f"Failed to load TXD:\n\n{str(e)}")
+
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Error: {str(e)}")
+                self.main_window.log_message(f"TXD load error: {str(e)}")
+
+
+    def _verify_alpha_exists(self, texture): #vers 1
+        """Verify texture actually has alpha data, not just alpha_name field"""
+        if not texture.get('has_alpha', False):
+            return False
+
+        # Check if alpha_name exists
+        alpha_name = texture.get('alpha_name', '')
+        if not alpha_name:
+            return False
+
+        # Check actual alpha channel in RGBA data
+        rgba_data = texture.get('rgba_data', b'')
+        if not rgba_data or len(rgba_data) < 4:
+            return False
+
+        # Sample alpha values - if all 255 (opaque), there's no real alpha
+        has_transparency = False
+        sample_size = min(1000, len(rgba_data) // 4)  # Sample first 1000 pixels
+
+        for i in range(0, sample_size * 4, 4):
+            if i + 3 < len(rgba_data):
+                alpha_val = rgba_data[i + 3]
+                if alpha_val < 255:  # Found non-opaque pixel
+                    has_transparency = True
+                    break
+
+        return has_transparency
 
 
     def _upscale_texture_advanced(self): #vers 1
@@ -7469,6 +8146,8 @@ class TXDWorkshop(QWidget): #vers 3
             'has_alpha': False,
             'mipmaps': 1,
             'rgba_data': b'',
+            'compressed_data': b'',
+            'original_bgra_data': b'',
             'mipmap_levels': [],
             'bumpmap_data': b'',
             'bumpmap_type': 0,
@@ -8790,61 +9469,6 @@ class TXDWorkshop(QWidget): #vers 3
             QMessageBox.critical(self, "Error", f"Failed to rotate: {str(e)}")
 
 
-    def _copy_texture(self): #vers 2
-        """Copy selected texture data to clipboard"""
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture to copy")
-            return
-
-        try:
-            # Store full texture data
-            self.clipboard_texture = {
-                'name': self.selected_texture.get('name', 'texture'),
-                'width': self.selected_texture.get('width', 0),
-                'height': self.selected_texture.get('height', 0),
-                'format': self.selected_texture.get('format', 'Unknown'),
-                'depth': self.selected_texture.get('depth', 32),
-                'rgba_data': self.selected_texture.get('rgba_data'),
-                'has_alpha': self.selected_texture.get('has_alpha', False),
-                'alpha_name': self.selected_texture.get('alpha_name', ''),
-                'mipmap_levels': self.selected_texture.get('mipmap_levels', []),
-            }
-
-            self.paste_btn.setEnabled(True)
-
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Copied: {self.selected_texture.get('name')}")
-
-        except Exception as e:
-            QMessageBox.critical(self, "Copy Error", f"Failed to copy texture: {str(e)}")
-
-    def _paste_texture(self): #vers 2
-        """Paste copied texture data"""
-        if not hasattr(self, 'clipboard_texture') or not self.clipboard_texture:
-            QMessageBox.warning(self, "Nothing to Paste", "Clipboard is empty")
-            return
-
-        try:
-            # Create new texture entry with clipboard data
-            new_texture = self.clipboard_texture.copy()
-            new_texture['name'] = new_texture['name'] + "_copy"
-
-            # Add to texture list
-            self.texture_list.append(new_texture)
-
-            # Reload table
-            self._reload_texture_table()
-
-            # Mark as modified
-            self._mark_as_modified()
-
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Pasted: {new_texture['name']}")
-
-        except Exception as e:
-            QMessageBox.critical(self, "Paste Error", f"Failed to paste texture: {str(e)}")
-
-
     def _edit_texture_external(self): #vers 1
         """Edit texture in external editor (placeholder)"""
         QMessageBox.information(self, "Coming Soon",
@@ -9574,14 +10198,17 @@ class TXDWorkshop(QWidget): #vers 3
             for row in range(self.texture_table.rowCount()):
                 self.texture_table.setRowHidden(row, False)
 
-    def _duplicate_texture(self): #vers 2
-        """Duplicate selected texture"""
+
+    def _duplicate_texture(self): #vers 4
+        """Duplicate selected texture - FIXED: Only copy alpha if it exists"""
         if not self.selected_texture:
             QMessageBox.warning(self, "No Selection", "Please select a texture to duplicate")
             return
 
         try:
-            # Create deep copy of texture
+            has_alpha = self.selected_texture.get('has_alpha', False)
+
+            # Create copy preserving ALL binary data
             new_texture = {
                 'name': self.selected_texture.get('name', 'texture') + "_copy",
                 'width': self.selected_texture.get('width', 0),
@@ -9589,10 +10216,34 @@ class TXDWorkshop(QWidget): #vers 3
                 'format': self.selected_texture.get('format', 'Unknown'),
                 'depth': self.selected_texture.get('depth', 32),
                 'rgba_data': self.selected_texture.get('rgba_data'),
-                'has_alpha': self.selected_texture.get('has_alpha', False),
-                'alpha_name': self.selected_texture.get('alpha_name', '') + "_copy" if self.selected_texture.get('alpha_name') else '',
+                'has_alpha': has_alpha,  #  Use the actual has_alpha value
                 'mipmap_levels': self.selected_texture.get('mipmap_levels', []).copy(),
+                'filter_flags': self.selected_texture.get('filter_flags', 0x1102),
+                'platform_id': self.selected_texture.get('platform_id', 8),
+                'raster_format_flags': self.selected_texture.get('raster_format_flags', 0),
             }
+
+            #  ONLY add alpha_name if texture actually has alpha
+            if has_alpha and 'alpha_name' in self.selected_texture:
+                alpha_name = self.selected_texture.get('alpha_name', '')
+                if alpha_name:
+                    new_texture['alpha_name'] = alpha_name + "_copy"
+
+            #  CRITICAL: Preserve original binary data
+            if 'compressed_data' in self.selected_texture:
+                new_texture['compressed_data'] = self.selected_texture['compressed_data']
+
+            if 'original_bgra_data' in self.selected_texture:
+                new_texture['original_bgra_data'] = self.selected_texture['original_bgra_data']
+
+            if 'bumpmap_data' in self.selected_texture:
+                new_texture['bumpmap_data'] = self.selected_texture['bumpmap_data']
+
+            if 'reflection_map' in self.selected_texture:
+                new_texture['reflection_map'] = self.selected_texture['reflection_map']
+
+            if 'fresnel_map' in self.selected_texture:
+                new_texture['fresnel_map'] = self.selected_texture['fresnel_map']
 
             # Add to texture list
             self.texture_list.append(new_texture)
@@ -9604,10 +10255,106 @@ class TXDWorkshop(QWidget): #vers 3
             self._mark_as_modified()
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Duplicated: {new_texture['name']}")
+                alpha_status = "with alpha" if has_alpha else "no alpha"
+                self.main_window.log_message(f"✅ Duplicated: {new_texture['name']} ({alpha_status})")
 
         except Exception as e:
             QMessageBox.critical(self, "Duplicate Error", f"Failed to duplicate texture: {str(e)}")
+
+
+
+    def _copy_texture(self): #vers 2
+        """Copy texture to clipboard - FIXED: Preserves binary data"""
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture to copy")
+            return
+
+        try:
+            # Copy preserving ALL binary data
+            self.clipboard_texture = {
+                'name': self.selected_texture.get('name', 'texture'),
+                'width': self.selected_texture.get('width', 0),
+                'height': self.selected_texture.get('height', 0),
+                'format': self.selected_texture.get('format', 'Unknown'),
+                'depth': self.selected_texture.get('depth', 32),
+                'rgba_data': self.selected_texture.get('rgba_data'),
+                'has_alpha': self.selected_texture.get('has_alpha', False),
+                'alpha_name': self.selected_texture.get('alpha_name', ''),
+                'mipmap_levels': self.selected_texture.get('mipmap_levels', []),
+                'filter_flags': self.selected_texture.get('filter_flags', 0x1102),
+                'platform_id': self.selected_texture.get('platform_id', 8),
+                'raster_format_flags': self.selected_texture.get('raster_format_flags', 0),
+            }
+
+            # 🔴 CRITICAL: Preserve original binary data
+            if 'compressed_data' in self.selected_texture:
+                self.clipboard_texture['compressed_data'] = self.selected_texture['compressed_data']
+
+            if 'original_bgra_data' in self.selected_texture:
+                self.clipboard_texture['original_bgra_data'] = self.selected_texture['original_bgra_data']
+
+            if 'bumpmap_data' in self.selected_texture:
+                self.clipboard_texture['bumpmap_data'] = self.selected_texture['bumpmap_data']
+
+            if 'reflection_map' in self.selected_texture:
+                self.clipboard_texture['reflection_map'] = self.selected_texture['reflection_map']
+
+            if 'fresnel_map' in self.selected_texture:
+                self.clipboard_texture['fresnel_map'] = self.selected_texture['fresnel_map']
+
+            self.paste_btn.setEnabled(True)
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"📋 Copied: {self.selected_texture.get('name')}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Copy Error", f"Failed to copy texture: {str(e)}")
+
+
+    def _paste_texture(self): #vers 3
+        """Paste copied texture data - FIXED: Preserves binary data"""
+        if not hasattr(self, 'clipboard_texture') or not self.clipboard_texture:
+            QMessageBox.warning(self, "Nothing to Paste", "Clipboard is empty")
+            return
+
+        try:
+            # Create new texture entry with ALL clipboard data
+            new_texture = self.clipboard_texture.copy()
+            new_texture['name'] = new_texture['name'] + "_copy"
+            if new_texture.get('alpha_name'):
+                new_texture['alpha_name'] = new_texture['alpha_name'] + "_copy"
+
+            # 🔴 CRITICAL: Explicitly preserve binary data from clipboard
+            if 'compressed_data' in self.clipboard_texture:
+                new_texture['compressed_data'] = self.clipboard_texture['compressed_data']
+
+            if 'original_bgra_data' in self.clipboard_texture:
+                new_texture['original_bgra_data'] = self.clipboard_texture['original_bgra_data']
+
+            if 'bumpmap_data' in self.clipboard_texture:
+                new_texture['bumpmap_data'] = self.clipboard_texture['bumpmap_data']
+
+            if 'reflection_map' in self.clipboard_texture:
+                new_texture['reflection_map'] = self.clipboard_texture['reflection_map']
+
+            if 'fresnel_map' in self.clipboard_texture:
+                new_texture['fresnel_map'] = self.clipboard_texture['fresnel_map']
+
+            # Add to texture list
+            self.texture_list.append(new_texture)
+
+            # Reload table
+            self._reload_texture_table()
+
+            # Mark as modified
+            self._mark_as_modified()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"📌 Pasted: {new_texture['name']}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Paste Error", f"Failed to paste texture: {str(e)}")
+
 
     def _remove_texture(self): #vers 1
         """Remove selected texture"""

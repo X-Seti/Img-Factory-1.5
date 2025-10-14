@@ -27,7 +27,9 @@
 │   │   │   └── txd_workshop_theme.py
 │   │   ├── locale
 │   │   │   └── Txd_Workshop_English_Local.lang
-│   │   └── txd_workshop.py
+│   │   ├── methodlist_script.py
+│   │   ├── txd_workshop.py
+│   │   └── txd_workshop_standalone.py
 │   └── unified_signal_handler.py
 ├── core
 │   ├── clean.py
@@ -79,7 +81,6 @@
 │   ├── enh_debug_system.py
 │   ├── img_debug_functions.py
 │   └── unified_debug_functions.py
-├── generics.txd
 ├── gui
 │   ├── autosave_menu.py
 │   ├── col_dialogs.py
@@ -107,7 +108,6 @@
 │   ├── tear_off.py
 │   └── unified_button_theme.py
 ├── Img Factory1.3 -> /home/x2/code base/Img Factory1.3
-├── img_factory_debug.log
 ├── imgfactory.py
 ├── imgfactory.settings.json
 ├── launch_imgfactory.py
