@@ -701,7 +701,6 @@ class TXDWorkshop(QWidget): #vers 3
         # Create tabs
         tabs = QTabWidget()
 
-
         # TAB 1: FONTS (FIRST TAB)
 
         fonts_tab = QWidget()
@@ -726,7 +725,7 @@ class TXDWorkshop(QWidget): #vers 3
         fonts_layout.addWidget(default_font_group)
 
         # Title Font
-        title_font_group = QGroupBox("🎯 Title Font")
+        title_font_group = QGroupBox("Title Font")
         title_font_layout = QHBoxLayout()
 
         title_font_combo = QFontComboBox()
@@ -747,7 +746,7 @@ class TXDWorkshop(QWidget): #vers 3
         fonts_layout.addWidget(title_font_group)
 
         # Panel Font
-        panel_font_group = QGroupBox("🖼️ Panel Headers Font")
+        panel_font_group = QGroupBox("Panel Headers Font")
         panel_font_layout = QHBoxLayout()
 
         panel_font_combo = QFontComboBox()
@@ -768,7 +767,7 @@ class TXDWorkshop(QWidget): #vers 3
         fonts_layout.addWidget(panel_font_group)
 
         # Button Font
-        button_font_group = QGroupBox("🔘 Button Font")
+        button_font_group = QGroupBox("Button Font")
         button_font_layout = QHBoxLayout()
 
         button_font_combo = QFontComboBox()
@@ -789,7 +788,7 @@ class TXDWorkshop(QWidget): #vers 3
         fonts_layout.addWidget(button_font_group)
 
         # Info Bar Font
-        infobar_font_group = QGroupBox("📊 Info Bar Font")
+        infobar_font_group = QGroupBox("Info Bar Font")
         infobar_font_layout = QHBoxLayout()
 
         infobar_font_combo = QFontComboBox()
@@ -812,14 +811,13 @@ class TXDWorkshop(QWidget): #vers 3
         fonts_layout.addStretch()
         tabs.addTab(fonts_tab, "Fonts")
 
-
         # TAB 2: DISPLAY SETTINGS
 
         display_tab = QWidget()
         display_layout = QVBoxLayout(display_tab)
 
         # Button display mode
-        button_group = QGroupBox("🔘 Button Display Mode")
+        button_group = QGroupBox("Button Display Mode")
         button_layout = QVBoxLayout()
 
         button_mode_combo = QComboBox()
@@ -855,14 +853,13 @@ class TXDWorkshop(QWidget): #vers 3
         display_layout.addStretch()
         tabs.addTab(display_tab, "Display")
 
-
         # TAB 3: EXPORT SETTINGS
 
         export_tab = QWidget()
         export_layout = QVBoxLayout(export_tab)
 
         # Default export format
-        export_format_group = QGroupBox("💾 Default Export Format")
+        export_format_group = QGroupBox("Default Export Format")
         export_format_layout = QVBoxLayout()
 
         format_combo = QComboBox()
@@ -878,7 +875,7 @@ class TXDWorkshop(QWidget): #vers 3
         export_layout.addWidget(export_format_group)
 
         # Export options
-        export_options_group = QGroupBox("⚙️ Export Options")
+        export_options_group = QGroupBox("Export Options")
         export_options_layout = QVBoxLayout()
 
         preserve_alpha = QCheckBox("Preserve alpha channel when exporting")
@@ -915,13 +912,12 @@ class TXDWorkshop(QWidget): #vers 3
         export_layout.addStretch()
         tabs.addTab(export_tab, "Export")
 
-
         # TAB 4: PERFORMANCE
 
         perf_tab = QWidget()
         perf_layout = QVBoxLayout(perf_tab)
 
-        perf_group = QGroupBox("⚡ Performance Settings")
+        perf_group = QGroupBox("Performance Settings")
         perf_form = QFormLayout()
 
         preview_quality = QComboBox()
@@ -939,7 +935,7 @@ class TXDWorkshop(QWidget): #vers 3
         perf_layout.addWidget(perf_group)
 
         # Caching
-        cache_group = QGroupBox("💾 Caching")
+        cache_group = QGroupBox("Caching")
         cache_layout = QVBoxLayout()
 
         enable_cache = QCheckBox("Enable texture preview caching")
@@ -956,14 +952,13 @@ class TXDWorkshop(QWidget): #vers 3
         perf_layout.addStretch()
         tabs.addTab(perf_tab, "Performance")
 
-
         # TAB 5: PREVIEW SETTINGS (LAST TAB)
 
         preview_tab = QWidget()
         preview_layout = QVBoxLayout(preview_tab)
 
         # Zoom Settings
-        zoom_group = QGroupBox("🔍 Zoom Settings")
+        zoom_group = QGroupBox("Zoom Settings")
         zoom_form = QFormLayout()
 
         zoom_spin = QSpinBox()
@@ -976,7 +971,7 @@ class TXDWorkshop(QWidget): #vers 3
         preview_layout.addWidget(zoom_group)
 
         # Background Settings
-        bg_group = QGroupBox("🎨 Background Settings")
+        bg_group = QGroupBox("Background Settings")
         bg_layout = QVBoxLayout()
 
         # Background mode
@@ -1027,7 +1022,7 @@ class TXDWorkshop(QWidget): #vers 3
         preview_layout.addWidget(bg_group)
 
         # Overlay Settings
-        overlay_group = QGroupBox("🔲 Overlay View Settings")
+        overlay_group = QGroupBox("Overlay View Settings")
         overlay_layout = QVBoxLayout()
 
         overlay_label = QLabel("Overlay Opacity (Normal over Alpha):")
@@ -1070,14 +1065,13 @@ class TXDWorkshop(QWidget): #vers 3
         # Add tabs to dialog
         layout.addWidget(tabs)
 
-
         # BUTTONS
 
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
 
         # Apply button
-        apply_btn = QPushButton("✅ Apply Settings")
+        apply_btn = QPushButton("Apply Settings")
         apply_btn.setStyleSheet("""
             QPushButton {
                 background: #0078d4;
@@ -1382,12 +1376,25 @@ class TXDWorkshop(QWidget): #vers 3
                 self.main_window.log_message(f"Warning: Could not preserve original data: {e}")
 
 
+    def _update_dock_button_visibility(self): #vers 1
+        """Show/hide dock and tearoff buttons based on docked state"""
+        if hasattr(self, 'dock_btn'):
+            # Hide D button when docked, show when standalone
+            self.dock_btn.setVisible(not self.is_docked)
+
+        if hasattr(self, 'tearoff_btn'):
+            # T button only visible when docked and not in standalone mode
+            self.tearoff_btn.setVisible(self.is_docked and not self.standalone_mode)
+
+
     def toggle_dock_mode(self): #vers 1
         """Toggle between docked and standalone mode"""
         if self.is_docked:
             self._undock_from_main()
         else:
             self._dock_to_main()
+
+        self._update_dock_button_visibility()
 
 
     def _dock_to_main(self): #vers 2
@@ -1438,6 +1445,7 @@ class TXDWorkshop(QWidget): #vers 3
         self.show()
 
         self.is_docked = False
+        self._update_dock_button_visibility()
 
         # MODIFIED: Update toolbar for undocked state
         self._update_toolbar_for_docking_state()
@@ -1465,7 +1473,7 @@ class TXDWorkshop(QWidget): #vers 3
         dialog.close()
 
 
-    def _update_all_buttons(self): #vers
+    def _update_all_buttons(self): #vers 4
         """Update all buttons to match display mode"""
         buttons_to_update = [
             # Toolbar buttons
@@ -1525,6 +1533,7 @@ class TXDWorkshop(QWidget): #vers 3
             if hasattr(self, btn_name):
                 button = getattr(self, btn_name)
                 self._apply_button_mode_to_button(button, btn_text)
+        self._update_dock_button_visibility()
 
 
     def _apply_button_mode_to_button(self, button, text): #vers 5
@@ -2322,18 +2331,6 @@ class TXDWorkshop(QWidget): #vers 3
         self.props_btn.setToolTip("Show texture properties")
         layout.addWidget(self.props_btn)
 
-        # Info button - Bold "I"
-        self.info_btn = QPushButton()
-        self.info_btn.setFont(QFont("Arial", 12, QFont.Weight.Bold))
-        self.info_btn.setIcon(self._create_info_icon())
-        self.info_btn.setText("I")
-        self.info_btn.setIconSize(QSize(20, 20))
-        self.info_btn.setFixedWidth(35)
-        self.info_btn.clicked.connect(self._show_detailed_info)
-        self.info_btn.setEnabled(False)
-        self.info_btn.setToolTip("Show detailed information")
-        layout.addWidget(self.info_btn)
-
         self.undo_btn = QPushButton()
         self.undo_btn.setFont(self.button_font)
         self.undo_btn.setIcon(self._create_undo_icon())
@@ -2346,24 +2343,105 @@ class TXDWorkshop(QWidget): #vers 3
 
         layout.addStretch()
 
-        # MODIFIED: Only show drag button when NOT docked
-        if not self.is_docked:
-            self.drag_btn = QPushButton("☰")
-            self.drag_btn.setFont(QFont("Arial", 14))
-            self.drag_btn.setFixedSize(30, 30)
-            self.drag_btn.setToolTip("Drag to move window")
-            self.drag_btn.setCursor(Qt.CursorShape.SizeAllCursor)
-            self.drag_btn.setStyleSheet("""
+        # Info button
+        self.info_btn = QPushButton("")
+        self.info_btn.setText("")  # CHANGED from "Info"
+        self.info_btn.setIcon(self._create_info_icon())
+        self.info_btn.setMinimumWidth(40)
+        self.info_btn.setMaximumWidth(40)
+        self.info_btn.setMinimumHeight(30)
+        self.info_btn.setToolTip("Information")
+        self.info_btn.setStyleSheet("""
+            QPushButton {
+                font-weight: bold;
+                background-color: #4a4a4a;
+                border: 1px solid #5a5a5a;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #5a5a5a;
+            }
+        """)
+        self.info_btn.setIconSize(QSize(20, 20))
+        self.info_btn.setFixedWidth(35)
+        self.info_btn.clicked.connect(self._show_txd_info)
+        layout.addWidget(self.info_btn)
+
+        layout.addStretch()
+
+        # Dock button [D]
+        self.dock_btn = QPushButton("D")
+        #self.dock_btn.setFont(self.button_font)
+        self.dock_btn.setMinimumWidth(40)
+        self.dock_btn.setMaximumWidth(40)
+        self.dock_btn.setMinimumHeight(30)
+        self.dock_btn.setToolTip("Dock")
+        self.dock_btn.setStyleSheet("""
+            QPushButton {
+                font-weight: bold;
+                background-color: #4a4a4a;
+                border: 1px solid #5a5a5a;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #5a5a5a;
+            }
+        """)
+        self.dock_btn.clicked.connect(self.toggle_dock_mode)
+        layout.addWidget(self.dock_btn)
+
+        # Tear-off button [T] - only in IMG Factory mode
+        if not self.standalone_mode:
+            self.tearoff_btn = QPushButton("T")
+            #self.tearoff_btn.setFont(self.button_font)
+            self.tearoff_btn.setMinimumWidth(40)
+            self.tearoff_btn.setMaximumWidth(40)
+            self.tearoff_btn.setMinimumHeight(30)
+            self.tearoff_btn.clicked.connect(self._toggle_tearoff)
+            self.tearoff_btn.setToolTip("Merge back to IMG Factory window")
+            self.tearoff_btn.setStyleSheet("""
                 QPushButton {
-                    background: transparent;
-                    border: none;
-                    color: #888;
+                    font-weight: bold;
+                    background-color: #4a4a4a;
+                    border: 1px solid #5a5a5a;
+                    border-radius: 3px;
                 }
                 QPushButton:hover {
-                    color: #e0e0e0;
+                    background-color: #5a5a5a;
                 }
             """)
-            layout.addWidget(self.drag_btn)
+            layout.addWidget(self.tearoff_btn)
+
+        # Window controls
+        self.minimize_btn = QPushButton()
+        self.minimize_btn.setIcon(self._create_minimize_icon())
+        self.minimize_btn.setIconSize(QSize(20, 20))
+        self.minimize_btn.setMinimumWidth(40)
+        self.minimize_btn.setMaximumWidth(40)
+        self.minimize_btn.setMinimumHeight(30)
+        self.minimize_btn.clicked.connect(self.showMinimized)
+        self.minimize_btn.setToolTip("Minimize Window")
+        layout.addWidget(self.minimize_btn)
+
+        self.maximize_btn = QPushButton()
+        self.maximize_btn.setIcon(self._create_maximize_icon())
+        self.maximize_btn.setIconSize(QSize(20, 20))
+        self.maximize_btn.setMinimumWidth(40)
+        self.maximize_btn.setMaximumWidth(40)
+        self.maximize_btn.setMinimumHeight(30)
+        self.maximize_btn.clicked.connect(self._toggle_maximize)
+        self.maximize_btn.setToolTip("Maximize/Restore Window")
+        layout.addWidget(self.maximize_btn)
+
+        self.close_btn = QPushButton()
+        self.close_btn.setIcon(self._create_close_icon())
+        self.close_btn.setIconSize(QSize(20, 20))
+        self.close_btn.setMinimumWidth(40)
+        self.close_btn.setMaximumWidth(40)
+        self.close_btn.setMinimumHeight(30)
+        self.close_btn.clicked.connect(self.close)
+        self.close_btn.setToolTip("Close Window")
+        layout.addWidget(self.close_btn)
 
         return self.toolbar
 
@@ -2378,6 +2456,7 @@ class TXDWorkshop(QWidget): #vers 3
             self.invert_btn.setVisible(True)
         if hasattr(self, 'gen_alpha_btn'):
             self.gen_alpha_btn.setVisible(True)
+
 
 
     def _create_mipmaps_dialog(self): #vers 1
@@ -3810,45 +3889,6 @@ class TXDWorkshop(QWidget): #vers 3
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Batch export failed: {str(e)}")
-
-
-    def _show_detailed_info(self): #vers 1
-        """Show detailed texture information"""
-        if not self.selected_texture:
-            QMessageBox.warning(self, "No Selection", "Please select a texture first")
-            return
-
-        tex = self.selected_texture
-
-        # Build detailed info
-        info = f"=== Texture Details ===\n"
-        info += f"Name: {tex.get('name', 'Unknown')}\n"
-        info += f"Dimensions: {tex.get('width', 0)}x{tex.get('height', 0)}\n"
-        info += f"Format: {tex.get('format', 'Unknown')}\n"
-        info += f"Has Alpha: {'Yes' if tex.get('has_alpha', False) else 'No'}\n"
-
-        if tex.get('alpha_name'):
-            info += f"Alpha Name: {tex.get('alpha_name')}\n"
-
-        if tex.get('rgba_data'):
-            data_size = len(tex['rgba_data'])
-            info += f"Raw Data Size: {data_size:,} bytes ({data_size/1024:.1f} KB)\n"
-
-            # Calculate memory usage
-            pixels = tex.get('width', 0) * tex.get('height', 0)
-            if pixels > 0:
-                info += f"Pixel Count: {pixels:,}\n"
-                info += f"Bytes per Pixel: {data_size/pixels:.1f}\n"
-
-        # Estimated compressed size
-        est_dxt1 = (tex.get('width', 0) * tex.get('height', 0)) // 2
-        est_dxt5 = tex.get('width', 0) * tex.get('height', 0)
-        info += f"\n=== Estimated Compressed Sizes ===\n"
-        info += f"DXT1: {est_dxt1:,} bytes\n"
-        info += f"DXT5: {est_dxt5:,} bytes\n"
-
-        QMessageBox.information(self, "Detailed Texture Information", info)
-
 
     def _update_status_indicators(self): #vers 1
         """Update status indicators"""
@@ -7941,6 +7981,40 @@ class TXDWorkshop(QWidget): #vers 3
         return None
 
 
+    def _convert_format(self):
+        """Convert texture format (e.g., DXT1, DXT5, RGBA)"""
+        if not self.selected_texture:
+            QMessageBox.warning(self, "No Selection", "Please select a texture first")
+            return
+
+        try:
+            # Get available formats
+            formats = ["DXT1", "DXT5", "RGBA8888", "RGB888", "RGBA4444", "RGB565"]
+
+            # Show format selection dialog
+            current_format = self.selected_texture.get('format', 'Unknown')
+            format_choice, ok = QInputDialog.getItem(
+                self,
+                "Convert Format",
+                f"Current format: {current_format}\n\nSelect target format:",
+                formats,
+                0,
+                False
+            )
+
+            if ok and format_choice:
+                # TODO: Implement actual format conversion logic
+                QMessageBox.information(
+                    self,
+                    "Format Conversion",
+                    f"Converting from {current_format} to {format_choice}\n\n"
+                    "This feature is under development."
+                )
+
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Could not convert format: {str(e)}")
+
+
     def _strip_unsupported_features_for_version(self, game_idx): #vers 1
         """Remove unsupported features based on target game version"""
         if game_idx == 1:  # GTA III
@@ -8043,7 +8117,7 @@ class TXDWorkshop(QWidget): #vers 3
             self.last_save_directory = os.path.dirname(file_path)
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"✅ Saved TXD file: {file_path}")
+                self.main_window.log_message(f"Saved TXD file: {file_path}")
 
             QMessageBox.information(self, "Success",
                 f"TXD saved successfully!\n\n{file_path}")
@@ -8089,6 +8163,11 @@ class TXDWorkshop(QWidget): #vers 3
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"Save as new error: {str(e)}")
             return False
+
+
+    def _save_as_new_txd(self): #vers 1
+        """Save As new TXD - Alias for context menu compatibility"""
+        self._save_as_txd_file()
 
 
     def save_txd_file(self): #vers 6
@@ -8609,7 +8688,7 @@ class TXDWorkshop(QWidget): #vers 3
                     self.main_window._refresh_table()
 
                 if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"✅ Updated {self.current_txd_name} in IMG")
+                    self.main_window.log_message(f"Updated {self.current_txd_name} in IMG")
                     self.main_window.log_message(f"   Version: 0x{target_version:08X}, Device: 0x{target_device:02X}")
                     self.main_window.log_message(f"   Size: {len(modified_txd_data)} bytes")
 
@@ -8675,7 +8754,7 @@ class TXDWorkshop(QWidget): #vers 3
                     raise InterruptedError("Save cancelled by user")
 
             # Step 2: Build TXD header
-            update_progress("📋 Building TXD header...")
+            update_progress("Building TXD header...")
             modified_txd_data = self._rebuild_txd_data_with_progress(update_progress)
 
             if not modified_txd_data:
@@ -8684,16 +8763,16 @@ class TXDWorkshop(QWidget): #vers 3
                 return False
 
             # Step 3: Update IMG
-            update_progress("💾 Writing to IMG archive...")
+            update_progress("Writing to IMG archive...")
             success = self._update_img_with_txd(modified_txd_data)
 
             if success:
                 progress.setValue(100)
-                progress.setLabelText("✅ Save complete!")
+                progress.setLabelText("Save complete!")
 
                 if self.main_window and hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message(
-                        f"✅ Saved TXD: {self.current_txd_name} "
+                        f"Saved TXD: {self.current_txd_name} "
                         f"({len(modified_txd_data)} bytes, {total_textures} textures)"
                     )
 
@@ -8718,7 +8797,7 @@ class TXDWorkshop(QWidget): #vers 3
             progress.close()
             QMessageBox.critical(self, "Error", f"Save failed: {str(e)}")
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Save error: {str(e)}")
+                self.main_window.log_message(f"Save error: {str(e)}")
             return False
 
 
@@ -8779,7 +8858,7 @@ class TXDWorkshop(QWidget): #vers 3
                 raise InterruptedError("Save cancelled by user")
 
         try:
-            update_progress("📋 Building TXD structure...")
+            update_progress("Building TXD structure...")
 
             # Rebuild with progress
             modified_txd_data = self._rebuild_txd_data_with_texture_progress(update_progress)
@@ -8789,7 +8868,7 @@ class TXDWorkshop(QWidget): #vers 3
                 QMessageBox.critical(self, "Error", "Failed to rebuild TXD data")
                 return False
 
-            update_progress("💾 Writing to file...")
+            update_progress("Writing to file...")
 
             # Write to file
             with open(file_path, 'wb') as f:
@@ -8802,11 +8881,11 @@ class TXDWorkshop(QWidget): #vers 3
                 self.last_save_directory = os.path.dirname(file_path)
 
             progress.setValue(100)
-            progress.setLabelText("✅ Save complete!")
+            progress.setLabelText("Save complete!")
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(
-                    f"✅ Saved TXD file: {file_path} ({len(modified_txd_data)} bytes)"
+                    f"Saved TXD file: {file_path} ({len(modified_txd_data)} bytes)"
                 )
 
             # Clear modified state
@@ -8843,7 +8922,7 @@ class TXDWorkshop(QWidget): #vers 3
             self._mark_as_modified()
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"✏️ Renamed: {old_name} → {new_name}")
+                self.main_window.log_message(f"Renamed: {old_name} → {new_name}")
 
         self.info_name.setReadOnly(True)
 
@@ -8862,7 +8941,7 @@ class TXDWorkshop(QWidget): #vers 3
             self._mark_as_modified()
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"✏️ Alpha renamed: {old_name} → {new_alpha_name}")
+                self.main_window.log_message(f"Alpha renamed: {old_name} → {new_alpha_name}")
 
         self.info_alpha_name.setReadOnly(True)
 
@@ -8976,24 +9055,24 @@ class TXDWorkshop(QWidget): #vers 3
                 # Update for mipmaps
                 num_mipmaps = len(texture.get('mipmap_levels', []))
                 if num_mipmaps > 0:
-                    update_progress(f"🗺️  {texture_name}: {num_mipmaps} mipmaps")
+                    update_progress(f" {texture_name}: {num_mipmaps} mipmaps")
 
                 # Update for bumpmap
                 if texture.get('has_bumpmap'):
                     type_names = ['Height', 'Normal', 'Both']
                     bumpmap_type = texture.get('bumpmap_type', 0)
-                    update_progress(f"📐 {texture_name}: {type_names[bumpmap_type]} bumpmap")
+                    update_progress(f" {texture_name}: {type_names[bumpmap_type]} bumpmap")
 
                 # Update for reflection
                 if texture.get('has_reflection'):
-                    update_progress(f"🌈 {texture_name}: Reflection maps")
+                    update_progress(f" {texture_name}: Reflection maps")
 
                 # Build texture section
                 tex_data = serializer._build_texture_native(texture)
                 texture_sections.append(tex_data)
 
             # Build final TXD
-            update_progress("📦 Finalizing TXD structure...")
+            update_progress("Finalizing TXD structure...")
 
             # Use the serializer's method to build dictionary
             result = serializer._build_texture_dictionary_from_sections(
@@ -9149,7 +9228,7 @@ class TXDWorkshop(QWidget): #vers 3
                     self.main_window._mark_as_modified()
 
                 if self.main_window and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"✅ Saved TXD to IMG: {self.current_txd_name}")
+                    self.main_window.log_message(f"Saved TXD to IMG: {self.current_txd_name}")
 
                 QMessageBox.information(self, "Success",
                     f"TXD saved to IMG archive\n\n"
@@ -9238,7 +9317,7 @@ class TXDWorkshop(QWidget): #vers 3
             self.current_txd_name = os.path.basename(file_path)
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"✅ Saved TXD file: {file_path}")
+                self.main_window.log_message(f"Saved TXD file: {file_path}")
 
             QMessageBox.information(self, "Success", f"TXD saved successfully!\n\n{file_path}")
 
@@ -9268,7 +9347,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"   ❌ Create TXD error: {str(e)}")
+                self.main_window.log_message(f"   Create TXD error: {str(e)}")
             return None
 
 
@@ -11275,8 +11354,54 @@ class TXDWorkshop(QWidget): #vers 3
         return "\n".join(formats)
 
 
-    def show_properties(self): #vers 2
-        """Show TXD properties including version and platform information"""
+    def show_properties(self): #vers 5
+        """Show TXD properties or detailed texture information"""
+        # If a texture is selected, show texture details
+        if self.selected_texture:
+            tex = self.selected_texture
+
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Texture Properties")
+            dialog.setMinimumWidth(500)
+            layout = QFormLayout(dialog)
+
+            # Basic texture info
+            layout.addRow("Name:", QLabel(tex.get('name', 'Unknown')))
+            layout.addRow("Dimensions:", QLabel(f"{tex.get('width', 0)}x{tex.get('height', 0)}"))
+            layout.addRow("Format:", QLabel(tex.get('format', 'Unknown')))
+            layout.addRow("Has Alpha:", QLabel('Yes' if tex.get('has_alpha', False) else 'No'))
+
+            if tex.get('alpha_name'):
+                layout.addRow("Alpha Name:", QLabel(tex.get('alpha_name')))
+
+            # Raw data information
+            if tex.get('rgba_data'):
+                data_size = len(tex['rgba_data'])
+                layout.addRow("", QLabel(""))  # Spacer
+                layout.addRow("Raw Data Size:", QLabel(f"{data_size:,} bytes ({data_size/1024:.1f} KB)"))
+
+                pixels = tex.get('width', 0) * tex.get('height', 0)
+                if pixels > 0:
+                    layout.addRow("Pixel Count:", QLabel(f"{pixels:,}"))
+                    layout.addRow("Bytes per Pixel:", QLabel(f"{data_size/pixels:.1f}"))
+
+            # Estimated compressed sizes
+            est_dxt1 = (tex.get('width', 0) * tex.get('height', 0)) // 2
+            est_dxt5 = tex.get('width', 0) * tex.get('height', 0)
+            layout.addRow("", QLabel(""))  # Spacer
+            layout.addRow(QLabel("<b>Estimated Compressed Sizes:</b>"))
+            layout.addRow("  DXT1:", QLabel(f"{est_dxt1:,} bytes"))
+            layout.addRow("  DXT5:", QLabel(f"{est_dxt5:,} bytes"))
+
+            # Close button
+            close_btn = QPushButton("Close")
+            close_btn.clicked.connect(dialog.accept)
+            layout.addRow("", close_btn)
+
+            dialog.exec()
+            return
+
+        # Otherwise, show TXD properties
         if not self.current_txd_name:
             QMessageBox.information(self, "No TXD", "No TXD file loaded")
             return
@@ -11285,26 +11410,24 @@ class TXDWorkshop(QWidget): #vers 3
             dialog = QDialog(self)
             dialog.setWindowTitle("TXD Properties")
             dialog.setMinimumWidth(500)
-
             layout = QFormLayout(dialog)
 
             # Basic info
             layout.addRow("TXD Name:", QLabel(self.current_txd_name))
             layout.addRow("Texture Count:", QLabel(str(len(self.texture_list))))
 
-            # NEW: Version information
+            # Version information
             layout.addRow("", QLabel(""))  # Spacer
             layout.addRow("RenderWare Version:", QLabel(self.txd_version_str))
             layout.addRow("Platform:", QLabel(self.txd_platform_name))
             layout.addRow("Game:", QLabel(self.txd_game))
             layout.addRow("Format:", QLabel(self._get_format_description()))
 
-            # NEW: Capabilities
+            # Capabilities
             if self.txd_capabilities:
                 layout.addRow("", QLabel(""))  # Spacer
                 caps_label = QLabel("<b>Capabilities:</b>")
                 layout.addRow(caps_label)
-
                 if self.txd_capabilities.get('mipmaps'):
                     layout.addRow("  Mipmaps:", QLabel("Supported"))
                 if self.txd_capabilities.get('bumpmaps'):
@@ -12374,8 +12497,8 @@ class TXDWorkshop(QWidget): #vers 3
             self.hotkey_import.activated.connect(self._import_normal_texture)
         elif hasattr(self, 'import_normal_texture'):
             self.hotkey_import.activated.connect(self.import_normal_texture)
-        elif hasattr(self, 'import_texture'):
-            self.hotkey_import.activated.connect(self.import_texture)
+        elif hasattr(self, 'import_textures'):
+            self.hotkey_import.activated.connect(self.import_textures)
 
         # Export Texture (Ctrl+E)
         self.hotkey_export = QShortcut(QKeySequence("Ctrl+E"), self)
@@ -12408,8 +12531,6 @@ class TXDWorkshop(QWidget): #vers 3
         self.hotkey_properties = QShortcut(QKeySequence("Alt+Return"), self)
         if hasattr(self, '_show_detailed_info'):
             self.hotkey_properties.activated.connect(self._show_detailed_info)
-        elif hasattr(self, 'show_detailed_info'):
-            self.hotkey_properties.activated.connect(self.show_detailed_info)
         elif hasattr(self, '_show_texture_info'):
             self.hotkey_properties.activated.connect(self._show_texture_info)
 
@@ -12444,11 +12565,8 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Help (F1)
         self.hotkey_help = QShortcut(QKeySequence.StandardKey.HelpContents, self)
-        if hasattr(self, '_show_txd_info'):
-            self.hotkey_help.activated.connect(self._show_txd_info)
-        elif hasattr(self, 'show_txd_info'):
-            self.hotkey_help.activated.connect(self.show_txd_info)
-        elif hasattr(self, 'show_help'):
+
+        if hasattr(self, 'show_help'):
             self.hotkey_help.activated.connect(self.show_help)
 
         if self.main_window and hasattr(self.main_window, 'log_message'):
