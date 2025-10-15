@@ -1,9 +1,10 @@
-#this belongs in methods/populate_img_table.py - Version: 6
-# X-Seti - August25 2025 - IMG Factory 1.5
+#this belongs in methods/populate_img_table.py - Version: 8
+# X-Seti - October15 2025 - IMG Factory 1.5
 
 """
 IMG Table Population - MINIMAL VERSION
 Shows basic entry info without heavy RW version detection to prevent freezing
+UPDATED: Clean column resize modes with multiple examples
 """
 
 import os
@@ -62,6 +63,7 @@ def reset_table_styling(main_window): #vers 1
         header.setStretchLastSection(True)
         header.setSectionsClickable(True)
         header.setSortIndicatorShown(True)
+        header.setSectionsMovable(False)
 
         main_window.log_message("🔧 Table styling completely reset")
         img_debugger.debug("Table styling reset to default")
@@ -91,24 +93,61 @@ def setup_table_structure(main_window, file_type: str = "IMG"): #vers 1
         img_debugger.error(f"Error setting up table structure: {e}")
         return False
 
-def setup_table_for_img_data(table: QTableWidget) -> bool: #vers 1
+def setup_table_for_img_data(table: QTableWidget) -> bool: #vers 2
     """Setup table structure for IMG file data"""
     try:
         # IMG file columns
         img_headers = ["Name", "Type", "Size", "Offset", "RW Address", "RW Version", "Compression", "Status"]
-        table.setColumnCount(len(img_headers))
         table.setColumnCount(8)
         table.setHorizontalHeaderLabels(img_headers)
 
-        # Set proper column widths - same as original
+        # Set initial column widths
         table.setColumnWidth(0, 190)  # Name
         table.setColumnWidth(1, 60)   # Type
         table.setColumnWidth(2, 90)   # Size
         table.setColumnWidth(3, 100)  # Offset
-        table.setColumnWidth(5, 100)  # RW Version
         table.setColumnWidth(4, 100)  # RW Address
+        table.setColumnWidth(5, 100)  # RW Version
         table.setColumnWidth(6, 110)  # Compression
         table.setColumnWidth(7, 110)  # Status
+
+        # Configure header - ACTIVE MODE (uncomment one option)
+        header = table.horizontalHeader()
+        header.setSectionsMovable(True)
+
+        # OPTION 1: Name column stretches, others manual (CURRENTLY ACTIVE)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Name stretches
+        for col in range(1, 8):
+            header.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
+
+        # OPTION 2: All columns proportional (equal resize)
+        # for col in range(8):
+        #     header.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
+        # header.setStretchLastSection(True)
+
+        # OPTION 3: Multiple stretch columns
+        # header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Name
+        # header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
+        # header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
+        # header.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)
+        # header.setSectionResizeMode(4, QHeaderView.ResizeMode.Interactive)
+        # header.setSectionResizeMode(5, QHeaderView.ResizeMode.Interactive)
+        # header.setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)  # Compression
+        # header.setSectionResizeMode(7, QHeaderView.ResizeMode.Stretch)  # Status
+
+        # OPTION 4: Fixed columns (no resizing allowed)
+        # for col in range(8):
+        #     header.setSectionResizeMode(col, QHeaderView.ResizeMode.Fixed)
+
+        # OPTION 5: Resize to contents (auto-fit data)
+        # for col in range(8):
+        #     header.setSectionResizeMode(col, QHeaderView.ResizeMode.ResizeToContents)
+
+        # OPTION 6: Force all columns visible (prevent horizontal scroll)
+        # table.horizontalHeader().setStretchLastSection(False)
+        # for col in range(7):  # All except last
+        #     header.setSectionResizeMode(col, QHeaderView.ResizeMode.Stretch)
+        # header.setSectionResizeMode(7, QHeaderView.ResizeMode.Stretch)
 
         # Enable sorting
         table.setSortingEnabled(True)
@@ -122,11 +161,11 @@ def setup_table_for_img_data(table: QTableWidget) -> bool: #vers 1
 
 class IMGTablePopulator:
     """Handles IMG table population with minimal processing to prevent freezing"""
-    
+
     def __init__(self, main_window):
         self.main_window = main_window
 
-    def populate_table_with_img_data(self, img_file: Any) -> bool: #vers 6
+    def populate_table_with_img_data(self, img_file: Any) -> bool: #vers 8
         """Populate table with IMG entry data - MINIMAL VERSION to prevent freezing"""
         try:
             if not img_file or not hasattr(img_file, 'entries'):
@@ -139,21 +178,54 @@ class IMGTablePopulator:
                 img_debugger.error("No table found for IMG population")
                 return False
 
-            # Keep original 8-column structure - same as before
+            # Keep original 8-column structure
             table.setColumnCount(8)
             table.setHorizontalHeaderLabels([
                 "Name", "Type", "Size", "Offset", "RW Address", "RW Version", "Compression", "Status"
             ])
 
-            # Set proper column widths - same as original
+            # Set initial column widths
             table.setColumnWidth(0, 190)  # Name
             table.setColumnWidth(1, 60)   # Type
             table.setColumnWidth(2, 90)   # Size
             table.setColumnWidth(3, 100)  # Offset
-            table.setColumnWidth(5, 100)  # RW Version
             table.setColumnWidth(4, 100)  # RW Address
+            table.setColumnWidth(5, 100)  # RW Version
             table.setColumnWidth(6, 110)  # Compression
             table.setColumnWidth(7, 110)  # Status
+
+            # Configure header - ACTIVE MODE (uncomment one option)
+            header = table.horizontalHeader()
+            header.setSectionsMovable(True)
+
+            # OPTION 1: Name column stretches, others manual (CURRENTLY ACTIVE)
+            #header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Name stretches
+            #for col in range(1, 8):
+            #    header.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
+
+            # OPTION 2: All columns equal proportional resize
+            # for col in range(8):
+            #     header.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
+            # header.setStretchLastSection(True)
+
+            # OPTION 3: First and last columns stretch
+            # header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Name
+            # for col in range(1, 7):
+            #     header.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
+            # header.setSectionResizeMode(7, QHeaderView.ResizeMode.Stretch)  # Status
+
+            # OPTION 4: Force all columns always visible (no horizontal scroll)
+            header.setStretchLastSection(False)
+            for col in range(8):
+                header.setSectionResizeMode(col, QHeaderView.ResizeMode.Stretch)
+
+            # OPTION 5: Fit to contents (auto-adjust to data)
+            # for col in range(8):
+            #     header.setSectionResizeMode(col, QHeaderView.ResizeMode.ResizeToContents)
+
+            # OPTION 6: Fixed size columns (no manual resize)
+            # for col in range(8):
+            #     header.setSectionResizeMode(col, QHeaderView.ResizeMode.Fixed)
 
             entries = img_file.entries
             if not entries:
@@ -174,6 +246,7 @@ class IMGTablePopulator:
         except Exception as e:
             img_debugger.error(f"Error populating IMG table: {str(e)}")
             return False
+
 
     def populate_table_row_minimal(self, table: Any, row: int, entry: Any): #vers 1
         """Populate single table row with MINIMAL processing - keep all 8 columns"""
@@ -278,7 +351,7 @@ class IMGTablePopulator:
             if hasattr(entry, 'rw_version_name') and entry.rw_version_name:
                 if entry.rw_version_name not in ["Unknown", "", "N/A"]:
                     return entry.rw_version_name
-            
+
             # Don't read file, just show basic info
             entry_type = self.get_img_entry_type_simple(entry)
             if entry_type in ['DFF', 'TXD']:
@@ -348,7 +421,7 @@ class IMGTablePopulator:
             if hasattr(entry, 'rw_version_name') and entry.rw_version_name:
                 if entry.rw_version_name not in ["Unknown", "", "N/A"]:
                     return entry.rw_version_name
-            
+
             # For non-RW files, just show file type
             entry_type = self.get_img_entry_type_simple(entry)
             if entry_type in ['COL', 'IPL', 'IDE', 'DAT', 'WAV', 'SCM']:
@@ -402,11 +475,11 @@ def populate_img_table(table, img_file) -> bool: #vers 2
         class DummyWindow:
             def __init__(self, table):
                 self.gui_layout = type('obj', (object,), {'table': table})
-        
+
         dummy_window = DummyWindow(table)
         populator = IMGTablePopulator(dummy_window)
         return populator.populate_table_with_img_data(img_file)
-        
+
     except Exception as e:
         img_debugger.error(f"Error in standalone populate_img_table: {e}")
         if table:
@@ -418,14 +491,14 @@ def clear_img_table(main_window) -> bool: #vers 1
     try:
         populator = IMGTablePopulator(main_window)
         table = populator.get_table_reference()
-        
+
         if table:
             table.setRowCount(0)
             table.clearContents()
             return True
         else:
             return False
-            
+
     except Exception as e:
         img_debugger.error(f"Error clearing IMG table: {str(e)}")
         return False
@@ -439,7 +512,7 @@ def refresh_img_table(main_window) -> bool: #vers 1
         else:
             clear_img_table(main_window)
             return False
-            
+
     except Exception as e:
         img_debugger.error(f"Error refreshing IMG table: {str(e)}")
         return False
@@ -449,15 +522,15 @@ def install_img_table_populator(main_window): #vers 1
     try:
         # Install methods into main window
         main_window.populate_img_table = lambda img_file: populate_img_table(
-            main_window.gui_layout.table if hasattr(main_window, 'gui_layout') else None, 
+            main_window.gui_layout.table if hasattr(main_window, 'gui_layout') else None,
             img_file
         )
         main_window.clear_img_table = lambda: clear_img_table(main_window)
         main_window.refresh_img_table = lambda: refresh_img_table(main_window)
-        
+
         img_debugger.info("✅ Minimal IMG table populator installed")
         return True
-        
+
     except Exception as e:
         img_debugger.error(f"Error installing IMG table populator: {str(e)}")
         return False
@@ -467,18 +540,18 @@ def update_img_table_selection_info(main_window) -> bool: #vers 1
     try:
         populator = IMGTablePopulator(main_window)
         table = populator.get_table_reference()
-        
+
         if not table:
             return False
-            
+
         selected_rows = len(table.selectionModel().selectedRows())
         total_rows = table.rowCount()
-        
+
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"Selected {selected_rows} of {total_rows} entries")
-        
+
         return True
-        
+
     except Exception as e:
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"❌ Error updating selection info: {str(e)}")

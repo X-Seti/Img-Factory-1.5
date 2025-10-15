@@ -877,21 +877,91 @@ class IMGFactory(QMainWindow):
             QMessageBox.critical(self, "Export Error",
                                f"Report export failed:\n{str(e)}")
 
-    def open_txd_workshop_docked(self, txd_name=None, txd_data=None): #vers 1
-        """Open TXD Workshop in docked mode"""
+
+    def open_txd_workshop_docked(self, txd_name=None, txd_data=None): #vers 3
+        """Open TXD Workshop as overlay on file window"""
         from components.Txd_Editor.txd_workshop import TXDWorkshop
 
-        # Create TXD Workshop instance
+        # Get current tab
+        current_tab_index = self.main_tab_widget.currentIndex()
+        if current_tab_index < 0:
+            self.log_message("No active tab")
+            return None
+
+        current_tab = self.main_tab_widget.widget(current_tab_index)
+        if not current_tab:
+            return None
+
+        # Find the file list table to get its geometry
+        from PyQt6.QtWidgets import QTableWidget
+        tables = current_tab.findChildren(QTableWidget)
+
+        if not tables:
+            self.log_message("No table found to overlay")
+            return None
+
+        file_table = tables[0]
+
+        # Create TXD Workshop as frameless overlay
         workshop = TXDWorkshop(parent=self, main_window=self)
 
-        # If TXD data provided, load it
+        # Make it frameless overlay
+        workshop.setWindowFlags(Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint)
+
+        # Load TXD data if provided
         if txd_name and txd_data:
             workshop._load_txd_textures(txd_data, txd_name)
 
-        # Dock it immediately
-        workshop._dock_to_main()
+        # Get file table geometry in global coordinates
+        table_rect = file_table.geometry()
+        table_global_pos = file_table.mapToGlobal(table_rect.topLeft())
+
+        # Position workshop over the file table
+        workshop.setGeometry(
+            table_global_pos.x(),
+            table_global_pos.y(),
+            table_rect.width(),
+            table_rect.height()
+        )
+
+        # Store references for show/hide
+        workshop.overlay_table = file_table
+        workshop.overlay_tab_index = current_tab_index
+        workshop.is_overlay = True
+
+        # Show the workshop
+        workshop.show()
+        workshop.raise_()
+
+        # Store in main window
+        if not hasattr(self, 'txd_workshops'):
+            self.txd_workshops = []
+        self.txd_workshops.append(workshop)
+
+        # Connect tab switching to hide/show
+        self.main_tab_widget.currentChanged.connect(
+            lambda idx: self._handle_txd_overlay_tab_switch(workshop, idx)
+        )
+
+        self.log_message("✅ TXD Workshop opened as overlay")
 
         return workshop
+
+
+    def _handle_txd_overlay_tab_switch(self, workshop, new_tab_index): #vers 1
+        """Handle hiding/showing TXD Workshop overlay on tab switch"""
+        if not hasattr(workshop, 'is_overlay') or not workshop.is_overlay:
+            return
+
+        if new_tab_index == workshop.overlay_tab_index:
+            # Switched to TXD's tab - show and raise
+            workshop.show()
+            workshop.raise_()
+            workshop.activateWindow()
+        else:
+            # Switched away - hide it
+            workshop.hide()
+
 
     def setup_unified_signals(self): #vers 6
         """Setup unified signal handler for all table interactions"""

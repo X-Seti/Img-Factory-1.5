@@ -528,6 +528,9 @@ class TXDWorkshop(QWidget): #vers 3
         # Docking state
         self.is_docked = (main_window is not None)
         self.dock_widget = None
+        self.is_overlay = False
+        self.overlay_table = None
+        self.overlay_tab_index = -1
 
         self.setWindowTitle("TXD Workshop: No File")
         self.resize(1400, 800)
@@ -1403,9 +1406,17 @@ class TXDWorkshop(QWidget): #vers 3
 
         self._update_dock_button_visibility()
 
+    def _dock_to_main(self): #vers 7
+        """Dock handled by overlay system in imgfactory"""
+        # Docking is handled by imgfactory.py open_txd_workshop_docked()
+        # This is now just a compatibility stub
+        if hasattr(self, 'is_overlay') and self.is_overlay:
+            self.show()
+            self.raise_()
 
-    def _dock_to_main(self): #vers 4
-        """Dock TXD Workshop into current IMG tab's content area"""
+    """
+    def _dock_to_main(self): #vers 5
+        #
         if not self.main_window:
             print("No main window available for docking")
             return
@@ -1424,53 +1435,48 @@ class TXDWorkshop(QWidget): #vers 3
         # Hide standalone window
         self.hide()
 
-        # Find the layout in the current tab
-        tab_layout = current_tab.layout()
-        if not tab_layout:
-            print("Current tab has no layout")
-            return
+        # Find the main splitter in the current tab
+        from PyQt6.QtWidgets import QSplitter
+        splitters = current_tab.findChildren(QSplitter)
 
-        # Add TXD Workshop to the current tab's layout
-        tab_layout.addWidget(self)
+        if splitters:
+            # Add to the first/main splitter found
+            main_splitter = splitters[0]
+            main_splitter.addWidget(self)
+
+            # Set sizes so TXD Workshop takes 50% of space
+            sizes = main_splitter.sizes()
+            if len(sizes) == 2:
+                total = sum(sizes)
+                main_splitter.setSizes([total // 2, total // 2])
+        else:
+            # Fallback: add to tab layout
+            tab_layout = current_tab.layout()
+            if tab_layout:
+                tab_layout.addWidget(self)
 
         self.is_docked = True
-
-        # Update button visibility
         self._update_dock_button_visibility()
 
         if hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message("✅ TXD Workshop docked into current tab")
+            self.main_window.log_message("✅ TXD Workshop docked")
+    """
 
-
-    def _undock_from_main(self): #vers 2
-        """Undock TXD Workshop into standalone window - FIXED: Update toolbar"""
-        if not self.main_window or not self.dock_widget:
-            return
-
-        # Remove from tabs
-        if hasattr(self.main_window, 'content_tabs'):
-            for i in range(self.main_window.content_tabs.count()):
-                if self.main_window.content_tabs.widget(i) == self.dock_widget:
-                    self.main_window.content_tabs.removeTab(i)
-                    break
-
-        # Remove from dock widget
-        self.setParent(None)
-
-        # Show as standalone window
-        self.setWindowTitle("TXD Workshop - Standalone")
-        self.resize(1200, 800)
-        self.show()
+    def _undock_from_main(self): #vers 3
+        """Undock from overlay mode to standalone window"""
+        if hasattr(self, 'is_overlay') and self.is_overlay:
+            # Switch from overlay to normal window
+            self.setWindowFlags(Qt.WindowType.Window)
+            self.is_overlay = False
+            self.overlay_table = None
 
         self.is_docked = False
         self._update_dock_button_visibility()
 
-        # MODIFIED: Update toolbar for undocked state
-        self._update_toolbar_for_docking_state()
+        self.show()
 
         if hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message("TXD Workshop undocked")
-
+            self.main_window.log_message("TXD Workshop undocked to standalone")
 
 
     def _apply_button_mode(self, dialog): #vers 1
@@ -2416,7 +2422,7 @@ class TXDWorkshop(QWidget): #vers 3
             self.tearoff_btn.setMaximumWidth(40)
             self.tearoff_btn.setMinimumHeight(30)
             self.tearoff_btn.clicked.connect(self._toggle_tearoff)
-            self.tearoff_btn.setToolTip("Merge back to IMG Factory window")
+            self.tearoff_btn.setToolTip("TXD Workshop - Tearoff window")
             self.tearoff_btn.setStyleSheet("""
                 QPushButton {
                     font-weight: bold;
@@ -2438,7 +2444,7 @@ class TXDWorkshop(QWidget): #vers 3
         self.minimize_btn.setMaximumWidth(40)
         self.minimize_btn.setMinimumHeight(30)
         self.minimize_btn.clicked.connect(self.showMinimized)
-        self.minimize_btn.setToolTip("Minimize Window")
+        self.minimize_btn.setToolTip("Minimize Window") # click tab to restore
         layout.addWidget(self.minimize_btn)
 
         self.maximize_btn = QPushButton()
@@ -2458,7 +2464,7 @@ class TXDWorkshop(QWidget): #vers 3
         self.close_btn.setMaximumWidth(40)
         self.close_btn.setMinimumHeight(30)
         self.close_btn.clicked.connect(self.close)
-        self.close_btn.setToolTip("Close Window")
+        self.close_btn.setToolTip("Close Window") # closes tab
         layout.addWidget(self.close_btn)
 
         return self.toolbar
