@@ -139,7 +139,7 @@ from methods.find_dups_functions import find_duplicates_by_hash, show_duplicates
 from methods.dragdrop_functions import integrate_drag_drop_system
 from methods.img_templates import IMGTemplateManager, TemplateManagerDialog
 
-
+App_name = "Img Factory 1.5"
 
 def setup_rebuild_system(self): #vers 1
     """Setup hybrid rebuild system with mode selection"""

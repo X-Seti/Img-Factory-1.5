@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# $vers" X-Seti - June26, 2025 - Img Factory 1.5 theme settings"
+# $vers" X-Seti - June26, 2025 - App Factory - Package theme settings"
 
 """
-IMG Factory App Settings System - Clean Version
+App Factory - App Settings System - Clean Version
 Settings management without demo code
 """
 
@@ -44,7 +44,7 @@ except ImportError:
         print("❌ Neither MSS nor PIL available - using Qt fallback")
 
 class ThemeSaveDialog(QDialog):
-    """Enhanced dialog for saving themes with complete metadata"""
+    """Dialog for saving themes with complete metadata"""
 
     def __init__(self, app_settings, current_theme_data, parent=None): #vers 1
         super().__init__(parent)
@@ -52,7 +52,7 @@ class ThemeSaveDialog(QDialog):
         self.current_theme_data = current_theme_data
         self.result_theme_data = None
 
-        self.setWindowTitle("Save Theme - IMG Factory 1.5")
+        self.setWindowTitle("Save Theme - " + App_name)
         self.setMinimumSize(500, 600)
         self.setModal(True)
 
@@ -1078,7 +1078,7 @@ class DebugSettings:
         return self.debug_enabled
 
 class AppSettings:
-    def __init__(self, settings_file="imgfactory.settings.json"): #vers 3
+    def __init__(self, settings_file="appfactory.settings.json"): #vers 3
         """Initialize application settings with Windows compatibility"""
         current_file_dir = Path(__file__).parent
 
@@ -1095,9 +1095,9 @@ class AppSettings:
             user_home = Path.home()
             desktop = user_home / "Desktop"
             steam_paths = [
-                Path("C:/Program Files (x86)/Steam/steamapps/common/Grand Theft Auto Vice City"),
-                Path("C:/Program Files/Steam/steamapps/common/Grand Theft Auto Vice City"),
-                user_home / ".steam/steam/steamapps/common/Grand Theft Auto Vice City"
+                Path("C:/Program Files (x86)/Steam/steamapps/common/"),
+                Path("C:/Program Files/Steam/steamapps/common/"),
+                user_home / ".steam/steam/steamapps/common/"
             ]
             working_gta = next((str(p) for p in steam_paths if p.exists()), str(desktop / "GTA_VC"))
         else:  # Linux/Mac
@@ -1109,8 +1109,8 @@ class AppSettings:
         self.default_settings = {
             'debug_mode': False,
             'debug_level': 'INFO',
-            'current_theme': 'img_factory',
-            'theme': 'img_factory',
+            'current_theme': 'App_Factory',
+            'theme': 'App_Factory',
             'debug_categories': ['IMG_LOADING', 'TABLE_POPULATION', 'BUTTON_ACTIONS', 'FILE_OPERATIONS'],
             'working_gta_folder': working_gta,
             'assists_folder': str(desktop / "Assists"),
@@ -1209,7 +1209,7 @@ class AppSettings:
                     if self.themes:
                         settings["theme"] = list(self.themes.keys())[0]
                     else:
-                        settings["theme"] = "img_factory"
+                        settings["theme"] = "App_Factory"
 
                 return settings
         except Exception as e:
@@ -1379,11 +1379,11 @@ class AppSettings:
     def _get_builtin_themes(self):
         """Essential built-in themes as fallbacks"""
         return {
-            "IMG_Factory": {
-                "name": "IMG Factory Professional",
-                "theme": "IMG Factory Professional",
-                "description": "Clean, organized interface inspired by IMG Factory 📁",
-                "category": "🏢 Professional",
+            "App_Factory": {
+                "name": "App Factory Professional",
+                "theme": "App Factory Professional",
+                "description": "Clean, organized interface inspired by App Factory",
+                "category": "Professional",
                 "author": "X-Seti",
                 "version": "1.0",
                 "colors": {
@@ -1413,8 +1413,8 @@ class AppSettings:
             "Default Green": {
                 "theme": "Default Green",
                 "name": "Default Green",
-                "description": "Clean light green theme 💚",
-                "category": "🌿 Nature",
+                "description": "Clean light green theme",
+                "category": "Nature",
                 "author": "X-Seti",
                 "version": "1.0",
                 "colors": {
@@ -1515,7 +1515,7 @@ class AppSettings:
     def _get_default_settings(self):
         """Get default settings - FIXED: This method was missing"""
         return {
-            "theme": "img_factory",
+            "theme": "App_Factory",
             "font_family": "Arial",
             "font_size": 9,
             "show_tooltips": True,
@@ -1706,7 +1706,7 @@ class AppSettings:
     def get_theme_colors(self, theme_name=None):
         """Get colors for specified theme"""
         if theme_name is None:
-            theme_name = self.current_settings.get("theme", "IMG_Factory")
+            theme_name = self.current_settings.get("theme", "APP_Factory")
 
         if theme_name in self.themes:
             return self.themes[theme_name].get("colors", {})
@@ -1887,7 +1887,7 @@ class AppSettings:
             return self.themes[theme_name]
         else:
             print(f"⚠️ Theme '{theme_name}' not found, using fallback")
-            fallback_theme = list(self.themes.keys())[0] if self.themes else "IMG_Factory"
+            fallback_theme = list(self.themes.keys())[0] if self.themes else "App_Factory"
             return self.themes.get(fallback_theme, {"colors": {}})
 
 
@@ -1901,7 +1901,7 @@ class SettingsDialog(QDialog): #vers 4
     def __init__(self, app_settings, parent=None): #vers 4
         """Initialize settings dialog"""
         super().__init__(parent)
-        self.setWindowTitle("IMG Factory Settings")
+        self.setWindowTitle("App Factory Settings")
         self.setMinimumSize(800, 600)
         self.setModal(True)
 
@@ -1990,7 +1990,7 @@ class SettingsDialog(QDialog): #vers 4
         """Show full preview window"""
         QMessageBox.information(self, "Full Preview",
             "Full preview window would open here!\n\n"
-            "This would show a complete IMG Factory interface\n"
+            "This would show a complete App Factory interface\n"
             "with the selected theme applied.")
 
 
@@ -2038,7 +2038,7 @@ class SettingsDialog(QDialog): #vers 4
         layout = QVBoxLayout(self)
 
         # Store original theme for reset
-        self._original_theme = self.app_settings.current_settings.get("theme", "IMG_Factory")
+        self._original_theme = self.app_settings.current_settings.get("theme", "App_Factory")
 
         # Create tab widget
         self.tabs = QTabWidget()
@@ -2272,7 +2272,7 @@ class SettingsDialog(QDialog): #vers 4
 
         # Create color editors
         self.color_editors = {}
-        current_theme = self.app_settings.current_settings.get("theme", "IMG_Factory")
+        current_theme = self.app_settings.current_settings.get("theme", "App_Factory")
         if current_theme in self.app_settings.themes:
             colors = self.app_settings.themes[current_theme].get("colors", {})
 
@@ -2393,7 +2393,7 @@ class SettingsDialog(QDialog): #vers 4
         quick_layout = QVBoxLayout(quick_group)
 
         # Popular themes
-        popular_themes = ["LCARS", "IMG_Factory", "Deep_Purple", "Cyberpunk", "Matrix"]
+        popular_themes = ["LCARS", "App_Factory", "Deep_Purple", "Cyberpunk", "Matrix"]
         for theme_name in popular_themes:
             if theme_name in self.app_settings.themes:
                 quick_btn = QPushButton(f"🎭 {theme_name}")
@@ -2433,7 +2433,7 @@ class SettingsDialog(QDialog): #vers 4
         right_layout = QVBoxLayout(right_widget)
 
         # Preview Header
-        preview_header = QGroupBox("📺 Live Preview - IMG Factory Interface")
+        preview_header = QGroupBox("📺 Live Preview - App Factory Interface")
         header_layout = QHBoxLayout(preview_header)
 
         self.preview_status = QLabel("Ready for preview")
@@ -2448,7 +2448,7 @@ class SettingsDialog(QDialog): #vers 4
 
         right_layout.addWidget(preview_header)
 
-        # Sample IMG Factory Toolbar
+        # Sample App Factory Toolbar
         toolbar_group = QGroupBox("🔧 Sample Toolbar")
         toolbar_layout = QGridLayout(toolbar_group)
 
@@ -2498,7 +2498,7 @@ class SettingsDialog(QDialog): #vers 4
         self.demo_log.setReadOnly(True)
 
         # Enhanced log content
-        initial_log = """🎮 IMG Factory 1.5 - Live Theme Preview
+        initial_log = """🎮 App Factory 1.0 - Live Theme Preview
 📁 Current IMG: sample_archive.img (150 MB)
 📊 Entries loaded: 1,247 files
 🎨 Active theme: """ + self.app_settings.current_settings["theme"] + """
@@ -2841,7 +2841,7 @@ class SettingsDialog(QDialog): #vers 4
         """Load current settings into UI"""
         # Set theme
         if hasattr(self, 'theme_selector_combo'):
-            current_theme = self.app_settings.current_settings.get("theme", "IMG_Factory")
+            current_theme = self.app_settings.current_settings.get("theme", "App_Factory")
             index = self.theme_selector_combo.findData(current_theme)
             if index >= 0:
                 self.theme_selector_combo.setCurrentIndex(index)
@@ -3389,7 +3389,7 @@ if __name__ == "__main__":
     
     # Create simple test window
     main_window = QMainWindow()
-    main_window.setWindowTitle("IMG Factory Settings Test")
+    main_window.setWindowTitle("App Factory Settings Test")
     main_window.setMinimumSize(400, 300)
     
     # Apply theme
