@@ -343,14 +343,14 @@ class ColorPickerWidget(QWidget):
 
         # Color display square
         self.color_display = QLabel()
-        self.color_display.setFixedSize(50, 27)
+        self.color_display.setFixedSize(50, 30)
         self.color_display.setStyleSheet("border: 1px solid #999; border-radius: 3px; background-color: #ffffff;")
         main_layout.addWidget(self.color_display)
 
         # Hex value display
         self.color_value = QLabel("#FFFFFF")
         self.color_value.setFixedWidth(100)
-        self.color_value.setFixedHeight(27)
+        self.color_value.setFixedHeight(30)
         self.color_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.color_value.setStyleSheet("""
             font-family: monospace;
@@ -366,7 +366,7 @@ class ColorPickerWidget(QWidget):
 
         # Pick button
         self.pick_button = QPushButton("Pick")
-        self.pick_button.setFixedSize(60, 20)
+        self.pick_button.setFixedSize(70, 30)
         self.pick_button.clicked.connect(self.open_color_dialog)
         main_layout.addWidget(self.pick_button)
 
@@ -806,7 +806,7 @@ class ThemeColorEditor(QWidget): #vers 4
 
         # Color preview
         self.color_preview = QLabel()
-        self.color_preview.setFixedSize(30, 20)
+        self.color_preview.setFixedSize(30, 30)
         self.update_preview(self.current_value)
         layout.addWidget(self.color_preview)
 
@@ -820,8 +820,8 @@ class ThemeColorEditor(QWidget): #vers 4
 
         # Color dialog button - FIXED: Wider for better visibility
         dialog_btn = QPushButton("Pick")
-        dialog_btn.setMinimumWidth(70)  # CHANGED from setFixedSize(50, 25)
-        dialog_btn.setFixedHeight(25)
+        dialog_btn.setMinimumWidth(80)  # CHANGED from setFixedSize(50, 25)
+        dialog_btn.setFixedHeight(30)
         dialog_btn.setToolTip("Open color picker dialog")
         dialog_btn.clicked.connect(self.open_color_dialog)
         layout.addWidget(dialog_btn)
