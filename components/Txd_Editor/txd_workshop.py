@@ -1218,7 +1218,6 @@ class TXDWorkshop(QWidget): #vers 3
                 self.show()
 
 
-
     def _scan_available_locales(self): #vers 2
         """Scan locale folder and return list of available languages"""
         import os
@@ -1414,54 +1413,6 @@ class TXDWorkshop(QWidget): #vers 3
             self.show()
             self.raise_()
 
-    """
-    def _dock_to_main(self): #vers 5
-        #
-        if not self.main_window:
-            print("No main window available for docking")
-            return
-
-        # Get current active tab
-        current_tab_index = self.main_window.main_tab_widget.currentIndex()
-        if current_tab_index < 0:
-            print("No active tab found")
-            return
-
-        current_tab = self.main_window.main_tab_widget.widget(current_tab_index)
-        if not current_tab:
-            print("Cannot get current tab widget")
-            return
-
-        # Hide standalone window
-        self.hide()
-
-        # Find the main splitter in the current tab
-        from PyQt6.QtWidgets import QSplitter
-        splitters = current_tab.findChildren(QSplitter)
-
-        if splitters:
-            # Add to the first/main splitter found
-            main_splitter = splitters[0]
-            main_splitter.addWidget(self)
-
-            # Set sizes so TXD Workshop takes 50% of space
-            sizes = main_splitter.sizes()
-            if len(sizes) == 2:
-                total = sum(sizes)
-                main_splitter.setSizes([total // 2, total // 2])
-        else:
-            # Fallback: add to tab layout
-            tab_layout = current_tab.layout()
-            if tab_layout:
-                tab_layout.addWidget(self)
-
-        self.is_docked = True
-        self._update_dock_button_visibility()
-
-        if hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message("✅ TXD Workshop docked")
-    """
-
     def _undock_from_main(self): #vers 3
         """Undock from overlay mode to standalone window"""
         if hasattr(self, 'is_overlay') and self.is_overlay:
@@ -1614,6 +1565,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         if self.main_window and hasattr(self.main_window, 'log_message'):
             self.main_window.log_message(f"Button display: {text}")
+
 
     def _rebuild_info_panel(self): #vers 1
         """Rebuild texture info panel with new layout"""
@@ -2101,21 +2053,6 @@ class TXDWorkshop(QWidget): #vers 3
             self.showMaximized()
 
 
-    def _enable_txd_features_after_load(self): #vers 1
-        """Enable TXD features after successful texture load"""
-        if self.texture_list:
-            self.save_txd_btn.setEnabled(False)
-            self.import_btn.setEnabled(True)
-            self.export_all_btn.setEnabled(True)
-
-            if hasattr(self, 'new_texture_btn'):
-                self.new_texture_btn.setEnabled(True)
-            if hasattr(self, 'stats_btn'):
-                self.stats_btn.setEnabled(True)
-
-            self._update_status_indicators()
-
-
     def _is_on_draggable_area(self, pos): #vers 3
         """Check if position is on draggable toolbar area (stretch space, not buttons)"""
         if not hasattr(self, 'toolbar'):
@@ -2481,7 +2418,19 @@ class TXDWorkshop(QWidget): #vers 3
         if hasattr(self, 'gen_alpha_btn'):
             self.gen_alpha_btn.setVisible(True)
 
+    def _enable_txd_features_after_load(self): #vers 1
+        """Enable TXD features after successful texture load"""
+        if self.texture_list:
+            self.save_txd_btn.setEnabled(False)
+            self.import_btn.setEnabled(True)
+            self.export_all_btn.setEnabled(True)
 
+            if hasattr(self, 'new_texture_btn'):
+                self.new_texture_btn.setEnabled(True)
+            if hasattr(self, 'stats_btn'):
+                self.stats_btn.setEnabled(True)
+
+            self._update_status_indicators()
 
     def _create_mipmaps_dialog(self): #vers 1
         """Open dialog to create mipmaps with depth selection"""
