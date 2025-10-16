@@ -21,31 +21,64 @@ from PyQt6.QtWidgets import (
     QLabel, QPushButton, QComboBox, QCheckBox, QSpinBox,
     QSlider, QGroupBox, QTabWidget, QDialog, QMessageBox,
     QFileDialog, QColorDialog, QFontDialog, QTextEdit,
-    QTableWidget, QTableWidgetItem, QHeaderView,
+    QTableWidget, QTableWidgetItem, QHeaderView, QFontComboBox,
     QScrollArea, QFrame, QLineEdit, QListWidget
 )
 
-from PyQt6.QtCore import Qt, pyqtSignal, QDateTime, QTimer, QThread, pyqtSlot
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QThread, pyqtSlot, QRect, QDateTime, QByteArray
 from PyQt6.QtGui import QFont, QColor, QPixmap, QPainter, QCursor
+
 
 # Check for screen capture libraries (for robust color picking)
 try:
     import mss
     MSS_AVAILABLE = True
-    print("✅ MSS library available - using high-performance screen capture")
+    print("MSS library available - using high-performance screen capture")
 except ImportError:
     MSS_AVAILABLE = False
     try:
         from PIL import ImageGrab
         PIL_AVAILABLE = True
-        print("⚠️ MSS not available, using PIL fallback")
+        print("MSS not available, using PIL fallback")
     except ImportError:
         PIL_AVAILABLE = False
-        print("❌ Neither MSS nor PIL available - using Qt fallback")
+        print("Neither MSS nor PIL available - using Qt fallback")
 
 class ThemeSaveDialog(QDialog):
     """Dialog for saving themes with complete metadata"""
+def _apply_settings(self): #vers 3
+    """Apply settings permanently and save to appfactory.settings.json"""
+    new_settings = self._get_dialog_settings()
+    old_theme = self.app_settings.current_settings["theme"]
 
+    # Update settings
+    self.app_settings.current_settings.update(new_settings)
+
+    # Save font settings if modified
+    if hasattr(self, 'font_controls'):
+        self._save_font_settings()
+
+    # Update modified colors if any
+    if hasattr(self, '_modified_colors') and self._modified_colors:
+        current_theme = self.app_settings.current_settings["theme"]
+        if current_theme in self.app_settings.themes:
+            if "colors" not in self.app_settings.themes[current_theme]:
+                self.app_settings.themes[current_theme]["colors"] = {}
+            self.app_settings.themes[current_theme]["colors"].update(self._modified_colors)
+
+    # Save settings to appfactory.settings.json
+    self.app_settings.save_settings()
+
+    # Emit signals
+    if new_settings["theme"] != old_theme:
+        self.themeChanged.emit(new_settings["theme"])
+    self.settingsChanged.emit()
+
+    QMessageBox.information(
+        self,
+        "Applied",
+        f"Settings saved to appfactory.settings.json\n\nActive theme: {new_settings['theme']}"
+    )
     def __init__(self, app_settings, current_theme_data, parent=None): #vers 1
         super().__init__(parent)
         self.app_settings = app_settings
@@ -319,6 +352,281 @@ class ThemeSaveDialog(QDialog):
     def get_theme_data(self): #vers 1
         """Get the final theme data after dialog closes"""
         return self.result_theme_data
+
+
+class CustomWindow(QMainWindow): #vers 1
+    """Base window class with custom gadgets and corner resize support"""
+
+    def __init__(self, app_name="Application", parent=None): #vers 2
+        """Initialize custom window"""
+        super().__init__(parent)
+
+        self.app_name = app_name
+        self.setWindowTitle(app_name)
+        self.setMinimumSize(800, 600)
+
+        # Load app settings
+        self.app_settings = AppSettings()
+
+        # Initialize icon provider WITH app_settings
+        self.icons = IconProvider(self, self.app_settings)
+
+        # Setup resize handling
+        self.resize_margin = 10
+        self.resize_direction = None
+        self.drag_position = None
+        self.initial_geometry = None
+        self.setMouseTracking(True)
+
+        # Create main layout
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        self.main_layout = QVBoxLayout(central_widget)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(0)
+
+        # Apply custom gadgets setting
+        self._apply_window_mode()
+
+        # Apply theme
+        self._apply_theme()
+
+
+    def _apply_theme(self): #vers 2
+        """Apply current theme"""
+        stylesheet = self.app_settings.get_stylesheet()
+        self.setStyleSheet(stylesheet)
+
+        # Update titlebar icons to match new theme
+        self._update_titlebar_icons()
+
+
+    def _apply_window_mode(self): #vers 1
+        """Apply custom window gadgets or system mode"""
+        use_custom = self.app_settings.current_settings.get("use_custom_gadgets", False)
+
+        if use_custom:
+            self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+            if not hasattr(self, 'custom_titlebar'):
+                self._create_custom_titlebar()
+            else:
+                self.custom_titlebar.setVisible(True)
+        else:
+            self.setWindowFlags(Qt.WindowType.Window)
+            if hasattr(self, 'custom_titlebar'):
+                self.custom_titlebar.setVisible(False)
+
+        self.show()
+
+
+    def _create_custom_titlebar(self): #vers 5
+        """Create custom title bar with window controls - Simple text-based"""
+        self.custom_titlebar = QWidget()
+        self.custom_titlebar.setObjectName("customTitleBar")
+        self.custom_titlebar.setFixedHeight(40)
+
+        titlebar_layout = QHBoxLayout(self.custom_titlebar)
+        titlebar_layout.setContentsMargins(4, 4, 4, 4)
+        titlebar_layout.setSpacing(4)
+
+        # Settings button on the left
+        settings_btn = QPushButton("Settings")
+        settings_btn.setFixedSize(100, 32)
+        settings_btn.clicked.connect(self.open_settings)
+        settings_btn.setToolTip("Settings")
+        titlebar_layout.addWidget(settings_btn)
+
+        # App title in center
+        titlebar_layout.addStretch()
+        title_label = QLabel(self.app_name)
+        title_label.setStyleSheet("font-weight: bold; font-size: 11pt;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        titlebar_layout.addWidget(title_label)
+        titlebar_layout.addStretch()
+
+        # Window control buttons - Simple text
+        minimize_btn = QPushButton("−")
+        minimize_btn.setFixedSize(32, 32)
+        minimize_btn.setStyleSheet("font-size: 16pt; font-weight: bold;")
+        minimize_btn.clicked.connect(self.showMinimized)
+        minimize_btn.setToolTip("Minimize")
+        titlebar_layout.addWidget(minimize_btn)
+
+        maximize_btn = QPushButton("□")
+        maximize_btn.setFixedSize(32, 32)
+        maximize_btn.setStyleSheet("font-size: 16pt; font-weight: bold;")
+        maximize_btn.clicked.connect(self._toggle_maximize)
+        maximize_btn.setToolTip("Maximize")
+        self.maximize_btn = maximize_btn
+        titlebar_layout.addWidget(maximize_btn)
+
+        close_btn = QPushButton("×")
+        close_btn.setFixedSize(32, 32)
+        close_btn.setStyleSheet("font-size: 20pt; font-weight: bold;")
+        close_btn.clicked.connect(self.close)
+        close_btn.setToolTip("Close")
+        titlebar_layout.addWidget(close_btn)
+
+        # Add to top of main layout
+        self.main_layout.insertWidget(0, self.custom_titlebar)
+
+        # Enable dragging
+        self.titlebar_drag_position = None
+        self.custom_titlebar.mousePressEvent = self._titlebar_mouse_press
+        self.custom_titlebar.mouseMoveEvent = self._titlebar_mouse_move
+        self.custom_titlebar.mouseDoubleClickEvent = self._titlebar_double_click
+
+
+    def _titlebar_mouse_press(self, event): #vers 1
+        """Handle mouse press on title bar"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.titlebar_drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            event.accept()
+
+    def _titlebar_mouse_move(self, event): #vers 1
+        """Handle mouse move on title bar - window dragging"""
+        if event.buttons() == Qt.MouseButton.LeftButton and self.titlebar_drag_position:
+            self.move(event.globalPosition().toPoint() - self.titlebar_drag_position)
+            event.accept()
+
+    def _titlebar_double_click(self, event): #vers 1
+        """Handle double click on title bar - maximize/restore"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._toggle_maximize()
+            event.accept()
+
+    def _toggle_maximize(self): #vers 1
+        """Toggle window maximize state"""
+        if self.isMaximized():
+            self.showNormal()
+            if hasattr(self, 'maximize_btn'):
+                self.maximize_btn.setIcon(self.icons.maximize_icon())
+                self.maximize_btn.setToolTip("Maximize")
+        else:
+            self.showMaximized()
+            if hasattr(self, 'maximize_btn'):
+                self.maximize_btn.setIcon(self.icons.restore_icon())
+                self.maximize_btn.setToolTip("Restore")
+
+    def paintEvent(self, event): #vers 1   ➕ Added built-in fallback: Default Green
+        """Paint corner resize handles"""
+        super().paintEvent(event)
+
+        if not self.app_settings.current_settings.get("enable_corner_resize", True):
+            return
+
+        from PyQt6.QtGui import QPainter, QPen, QColor
+
+        painter = QPainter(self)
+        pen = QPen(QColor(self.app_settings.get_theme_colors().get('border', '#cccccc')))
+        pen.setWidth(2)
+        painter.setPen(pen)
+
+        # Draw corner resize indicators
+        corner_size = 15
+
+        # Top-left corner
+        painter.drawLine(0, corner_size, corner_size, 0)
+
+        # Top-right corner
+        painter.drawLine(self.width() - corner_size, 0, self.width(), corner_size)
+
+        # Bottom-left corner
+        painter.drawLine(0, self.height() - corner_size, corner_size, self.height())
+
+        # Bottom-right corner
+        painter.drawLine(self.width() - corner_size, self.height(),
+                        self.width(), self.height() - corner_size)
+
+
+    def _get_resize_direction(self, pos): #vers 1
+        """Determine resize direction based on mouse position"""
+        rect = self.rect()
+        margin = self.resize_margin
+
+        left = pos.x() < margin
+        right = pos.x() > rect.width() - margin
+        top = pos.y() < margin
+        bottom = pos.y() > rect.height() - margin
+
+        if left and top:
+            return "top-left"
+        elif right and top:
+            return "top-right"
+        elif left and bottom:
+            return "bottom-left"
+        elif right and bottom:
+            return "bottom-right"
+        elif left:
+            return "left"
+        elif right:
+            return "right"
+        elif top:
+            return "top"
+        elif bottom:
+            return "bottom"
+
+        return None
+
+    def _update_cursor(self, direction): #vers 1
+        """Update cursor based on resize direction"""
+        if direction == "top" or direction == "bottom":
+            self.setCursor(Qt.CursorShape.SizeVerCursor)
+        elif direction == "left" or direction == "right":
+            self.setCursor(Qt.CursorShape.SizeHorCursor)
+        elif direction == "top-left" or direction == "bottom-right":
+            self.setCursor(Qt.CursorShape.SizeFDiagCursor)
+        elif direction == "top-right" or direction == "bottom-left":
+            self.setCursor(Qt.CursorShape.SizeBDiagCursor)
+        else:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+
+
+    def _handle_corner_resize(self, global_pos): #vers 1
+        """Handle window resizing from any edge or corner"""
+        if not self.resize_direction or not self.drag_position:
+            return
+
+        delta = global_pos - self.drag_position
+        geometry = self.initial_geometry
+
+        min_width = 800
+        min_height = 600
+
+        new_geometry = QRect(geometry)
+
+        if "left" in self.resize_direction:
+            new_x = geometry.x() + delta.x()
+            new_width = geometry.width() - delta.x()
+            if new_width >= min_width:
+                new_geometry.setLeft(new_x)
+
+        if "right" in self.resize_direction:
+            new_width = geometry.width() + delta.x()
+            if new_width >= min_width:
+                new_geometry.setWidth(new_width)
+
+        if "top" in self.resize_direction:
+            new_y = geometry.y() + delta.y()
+            new_height = geometry.height() - delta.y()
+            if new_height >= min_height:
+                new_geometry.setTop(new_y)
+
+        if "bottom" in self.resize_direction:
+            new_height = geometry.height() + delta.y()
+            if new_height >= min_height:
+                new_geometry.setHeight(new_height)
+
+        self.setGeometry(new_geometry)
+
+    # ===== SETTINGS DIALOG =====
+
+    def open_settings(self): #vers 1
+        """Open settings dialog"""
+        dialog = SettingsDialog(self.app_settings, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self._apply_theme()
+            self._apply_window_mode()
 
 
 class ColorPickerWidget(QWidget):
@@ -893,12 +1201,12 @@ class DebugActionsHelper: #vers 1
         """Test debug output - sends test messages to activity log"""
         if hasattr(self.main_window, 'log_message'):
             # Send test messages
-            self.main_window.log_message("🧪 Debug test message - debug system working!")
+            self.main_window.log_message("Debug test message - debug system working!")
             self.main_window.log_message(
-                f"🐛 [DEBUG-TEST] Debug enabled: {self.dialog.debug_enabled_check.isChecked()}"
+                f"[DEBUG-TEST] Debug enabled: {self.dialog.debug_enabled_check.isChecked()}"
             )
             self.main_window.log_message(
-                f"🐛 [DEBUG-TEST] Debug level: {self.dialog.debug_level_combo.currentText()}"
+                f"[DEBUG-TEST] Debug level: {self.dialog.debug_level_combo.currentText()}"
             )
 
             # Get enabled categories
@@ -907,12 +1215,12 @@ class DebugActionsHelper: #vers 1
                 if cb.isChecked()
             ]
             self.main_window.log_message(
-                f"🐛 [DEBUG-TEST] Active categories: {', '.join(enabled_categories)}"
+                f"[DEBUG-TEST] Active categories: {', '.join(enabled_categories)}"
             )
 
             # Test each category
             for category in enabled_categories:
-                self.main_window.log_message(f"🐛 [DEBUG-TEST] Testing {category} category")
+                self.main_window.log_message(f"[DEBUG-TEST] Testing {category} category")
 
         else:
             QMessageBox.information(
@@ -934,8 +1242,8 @@ class DebugActionsHelper: #vers 1
         img = self.main_window.current_img
 
         # Basic IMG info
-        self.main_window.log_message(f"🐛 [DEBUG-IMG] Current IMG: {img.file_path}")
-        self.main_window.log_message(f"🐛 [DEBUG-IMG] Entries: {len(img.entries)}")
+        self.main_window.log_message(f"[DEBUG-IMG] Current IMG: {img.file_path}")
+        self.main_window.log_message(f"[DEBUG-IMG] Entries: {len(img.entries)}")
 
         # File type analysis
         file_types = {}
@@ -946,12 +1254,12 @@ class DebugActionsHelper: #vers 1
             file_types[ext] = file_types.get(ext, 0) + 1
             all_extensions.add(ext)
 
-        self.main_window.log_message(f"🐛 [DEBUG-IMG] File types found:")
+        self.main_window.log_message(f"[DEBUG-IMG] File types found:")
         for ext, count in sorted(file_types.items()):
-            self.main_window.log_message(f"🐛 [DEBUG-IMG]   {ext}: {count} files")
+            self.main_window.log_message(f"[DEBUG-IMG]   {ext}: {count} files")
 
         self.main_window.log_message(
-            f"🐛 [DEBUG-IMG] Unique extensions: {sorted(all_extensions)}"
+            f"[DEBUG-IMG] Unique extensions: {sorted(all_extensions)}"
         )
 
         # Table state analysis
@@ -960,7 +1268,7 @@ class DebugActionsHelper: #vers 1
         # Memory info
         total_size = sum(entry.size for entry in img.entries)
         self.main_window.log_message(
-            f"🐛 [DEBUG-IMG] Total size: {self._format_size(total_size)}"
+            f"[DEBUG-IMG] Total size: {self._format_size(total_size)}"
         )
 
     def _debug_table_state(self): #vers 1
@@ -978,30 +1286,30 @@ class DebugActionsHelper: #vers 1
         hidden_rows = sum(1 for row in range(table_rows) if table.isRowHidden(row))
         visible_rows = table_rows - hidden_rows
 
-        self.main_window.log_message(f"🐛 [DEBUG-IMG] Table Analysis:")
-        self.main_window.log_message(f"🐛 [DEBUG-IMG]   Total rows: {table_rows}")
-        self.main_window.log_message(f"🐛 [DEBUG-IMG]   Visible rows: {visible_rows}")
-        self.main_window.log_message(f"🐛 [DEBUG-IMG]   Hidden rows: {hidden_rows}")
+        self.main_window.log_message(f"[DEBUG-IMG] Table Analysis:")
+        self.main_window.log_message(f"[DEBUG-IMG]   Total rows: {table_rows}")
+        self.main_window.log_message(f"[DEBUG-IMG]   Visible rows: {visible_rows}")
+        self.main_window.log_message(f"[DEBUG-IMG]   Hidden rows: {hidden_rows}")
 
         # Selection info
         selected_rows = table.selectedItems()
         selected_count = len(set(item.row() for item in selected_rows))
-        self.main_window.log_message(f"🐛 [DEBUG-IMG]   Selected rows: {selected_count}")
+        self.main_window.log_message(f"[DEBUG-IMG]   Selected rows: {selected_count}")
 
         # Column info
         column_count = table.columnCount()
-        self.main_window.log_message(f"🐛 [DEBUG-IMG]   Columns: {column_count}")
+        self.main_window.log_message(f"[DEBUG-IMG]   Columns: {column_count}")
 
         # Header info
         headers = [table.horizontalHeaderItem(i).text() for i in range(column_count)]
-        self.main_window.log_message(f"🐛 [DEBUG-IMG]   Headers: {', '.join(headers)}")
+        self.main_window.log_message(f"[DEBUG-IMG]   Headers: {', '.join(headers)}")
 
     def clear_debug_log(self): #vers 1
         """Clear the activity log"""
         if hasattr(self.main_window, 'gui_layout') and hasattr(self.main_window.gui_layout, 'log'):
             self.main_window.gui_layout.log.clear()
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("🗑️ Debug log cleared")
+                self.main_window.log_message("Debug log cleared")
         else:
             QMessageBox.information(
                 self.dialog,
@@ -1014,7 +1322,7 @@ class DebugActionsHelper: #vers 1
     def _show_no_img_message(self): #vers 1
         """Show no IMG loaded message"""
         if hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message("🐛 [DEBUG-IMG] No IMG file currently loaded")
+            self.main_window.log_message("[DEBUG-IMG] No IMG file currently loaded")
         else:
             QMessageBox.information(
                 self.dialog,
@@ -1103,7 +1411,7 @@ class AppSettings:
         else:  # Linux/Mac
             user_home = Path.home()
             desktop = user_home / "Desktop"
-            working_gta = str(user_home / ".steam/steam/steamapps/common/Grand Theft Auto Vice City")
+            working_gta = str(user_home / ".steam/steam/steamapps/common/")
 
         # Initialize default settings with Windows-safe paths
         self.default_settings = {
@@ -1111,6 +1419,16 @@ class AppSettings:
             'debug_level': 'INFO',
             'current_theme': 'App_Factory',
             'theme': 'App_Factory',
+            "button_display_mode": "both",  # "both", "icons", "text"
+            "use_custom_gadgets": False,
+            "enable_corner_resize": True,
+            "use_svg_icons": True,
+            "font_family": "Arial",
+            "font_size": 9,
+            "show_tooltips": True,
+            "show_menu_icons": True,
+            "auto_save": True,
+            "panel_opacity": 95,
             'debug_categories': ['IMG_LOADING', 'TABLE_POPULATION', 'BUTTON_ACTIONS', 'FILE_OPERATIONS'],
             'working_gta_folder': working_gta,
             'assists_folder': str(desktop / "Assists"),
@@ -1181,9 +1499,9 @@ class AppSettings:
         for directory in directories:
             try:
                 os.makedirs(directory, exist_ok=True)
-                print(f"✅ Directory ready: {directory}")
+                print(f"Directory ready: {directory}")
             except Exception as e:
-                print(f"⚠️ Could not create directory {directory}: {e}")
+                print(f"Could not create directory {directory}: {e}")
 
     def get(self, key, default=None):
         """Get setting value for core functions compatibility"""
@@ -1258,7 +1576,7 @@ class AppSettings:
             with open(self.settings_file, 'w', encoding='utf-8') as f:  # ADD encoding='utf-8'
                 json.dump(self.current_settings, f, indent=2, ensure_ascii=False)  # ADD ensure_ascii=False
         except Exception as e:
-            print(f"⚠️ Could not save settings: {e}")
+            print(f"Could not save settings: {e}")
         # Map old 'project_folder' to assists_folder for compatibility
         if key == 'project_folder':
             return getattr(self, 'assists_folder', default)
@@ -1492,10 +1810,10 @@ class AppSettings:
         """Load themes from JSON files in themes/ directory"""
         themes_dir = Path("themes")
         if not themes_dir.exists():
-            print("⚠️ themes/ directory not found - using hardcoded themes")
+            print("themes/ directory not found - using hardcoded themes")
             return
 
-        print("🎨 Loading themes from files...")
+        print("Loading themes from files...")
         for theme_file in themes_dir.glob("*.json"):
             try:
                 with open(theme_file, 'r') as f:
@@ -1505,12 +1823,12 @@ class AppSettings:
                 theme_key = theme_file.stem
                 self.themes[theme_key] = theme_data
 
-                print(f"  ✅ Loaded: {theme_key} - {theme_data.get('name', 'Unnamed')}")
+                print(f"Loaded: {theme_key} - {theme_data.get('name', 'Unnamed')}")
 
             except Exception as e:
-                print(f"  ❌ Failed to load {theme_file}: {e}")
+                print(f"Failed to load {theme_file}: {e}")
 
-        print(f"📊 Total themes loaded: {len(self.themes)}")
+        print(f"Total themes loaded: {len(self.themes)}")
 
     def _get_default_settings(self):
         """Get default settings - FIXED: This method was missing"""
@@ -1553,19 +1871,19 @@ class AppSettings:
         """Unified theme loading method"""
         themes = {}
 
-        print(f"🔍 Looking for themes in: {self.themes_dir}")
+        print(f"Looking for themes in: {self.themes_dir}")
 
         # Check if themes directory exists
         if self.themes_dir.exists() and self.themes_dir.is_dir():
-            print(f"📁 Found themes directory")
+            print(f"Found themes directory")
 
             # Load all .json files from themes directory
             theme_files = list(self.themes_dir.glob("*.json"))
-            print(f"🎨 Found {len(theme_files)} theme files")
+            print(f"Found {len(theme_files)} theme files")
 
             for theme_file in theme_files:
                 try:
-                    print(f"   📂 Loading: {theme_file.name}")
+                    print(f"Loading: {theme_file.name}")
                     with open(theme_file, 'r', encoding='utf-8') as f:
                         theme_data = json.load(f)
 
@@ -1575,27 +1893,27 @@ class AppSettings:
 
                     # Show theme info
                     display_name = theme_data.get('name', theme_name)
-                    print(f"   ✅ Loaded: {theme_name} -> '{display_name}'")
+                    print(f"Loaded: {theme_name} -> '{display_name}'")
 
                 except json.JSONDecodeError as e:
-                    print(f"   ❌ JSON error in {theme_file.name}: {e}")
+                    print(f"JSON error in {theme_file.name}: {e}")
                 except Exception as e:
-                    print(f"   ❌ Error loading {theme_file.name}: {e}")
+                    print(f"Error loading {theme_file.name}: {e}")
         else:
-            print(f"⚠️  Themes directory not found: {self.themes_dir}")
+            print(f"Themes directory not found: {self.themes_dir}")
 
         # Add built-in fallback themes if no themes loaded
         if not themes:
-            print("🔄 No themes loaded from files, using built-in themes")
+            print("No themes loaded from files, using built-in themes")
             themes = self._get_builtin_themes()
         else:
-            print(f"📊 Successfully loaded {len(themes)} themes from files")
+            print(f"Successfully loaded {len(themes)} themes from files")
             # Add a few essential built-in themes as fallbacks
             builtin = self._get_builtin_themes()
             for name, data in builtin.items():
                 if name not in themes:
                     themes[name] = data
-                    print(f"   ➕ Added built-in fallback: {name}")
+                    print(f"Added built-in fallback: {name}")
 
         return themes
 
@@ -1640,12 +1958,12 @@ class AppSettings:
 
     def refresh_themes(self):
         """Reload themes from disk - HOT RELOAD functionality"""
-        print("🔄 Refreshing themes from disk...")
+        print("Refreshing themes from disk...")
         old_count = len(self.themes)
         self.themes = self._load_all_themes()
         new_count = len(self.themes)
 
-        print(f"📊 Theme refresh complete: {old_count} -> {new_count} themes")
+        print(f"Theme refresh complete: {old_count} -> {new_count} themes")
         return self.themes
 
     def load_settings(self):
@@ -1662,7 +1980,7 @@ class AppSettings:
                 # FIXED: Validate theme exists after themes are loaded
                 theme_name = settings.get("theme")
                 if theme_name and theme_name not in self.themes:
-                    print(f"⚠️  Theme '{theme_name}' not found, using default")
+                    print(f"Theme '{theme_name}' not found, using default")
                     # Use first available theme or fallback
                     if self.themes:
                         settings["theme"] = list(self.themes.keys())[0]
@@ -1683,10 +2001,10 @@ class AppSettings:
 
             with open(self.settings_file, 'w', encoding='utf-8') as f:
                 json.dump(self.current_settings, f, indent=2, ensure_ascii=False)
-            print(f"💾 Settings saved to: {self.settings_file}")
+            print(f"Settings saved to: {self.settings_file}")
             return True
         except Exception as e:
-            print(f"❌ Error saving settings: {e}")
+            print(f"Error saving settings: {e}")
             return False
 
     def get_theme_info(self, theme_name: str) -> dict:
@@ -1711,18 +2029,19 @@ class AppSettings:
         if theme_name in self.themes:
             return self.themes[theme_name].get("colors", {})
         else:
-            print(f"⚠️  Theme '{theme_name}' not found, using fallback")
+            print(f"Theme '{theme_name}' not found, using fallback")
             # Try to find any available theme
             if self.themes:
                 fallback_name = list(self.themes.keys())[0]
-                print(f"   Using fallback theme: {fallback_name}")
+                print(f"Using fallback theme: {fallback_name}")
                 return self.themes[fallback_name].get("colors", {})
             else:
-                print("   No themes available!")
+                print("No themes available!")
                 return {}
 
-    def get_stylesheet(self):
-        """Generate complete stylesheet for current theme"""
+
+    def get_stylesheet(self): #vers 3
+        """Generate complete stylesheet for current theme - TXD Workshop style"""
         colors = self.get_theme_colors()
         if not colors:
             return ""
@@ -1734,9 +2053,49 @@ class AppSettings:
             color: {colors.get('text_primary', '#000000')};
         }}
 
+        QDialog {{
+            background-color: {colors.get('bg_primary', '#ffffff')};
+            color: {colors.get('text_primary', '#000000')};
+        }}
+
         QWidget {{
             background-color: {colors.get('bg_primary', '#ffffff')};
             color: {colors.get('text_primary', '#000000')};
+        }}
+
+        /* Custom Title Bar - Same color as app background */
+        QWidget#customTitleBar {{
+            background-color: {colors.get('bg_secondary', '#f0f0f0')};
+            color: {colors.get('text_primary', '#000000')};
+            border: 1px solid {colors.get('border', '#cccccc')};
+            border-bottom: 2px solid {colors.get('border', '#cccccc')};
+        }}
+
+        QWidget#customTitleBar QLabel {{
+            background-color: transparent;
+            color: {colors.get('text_primary', '#000000')};
+        }}
+
+        QWidget#customTitleBar QPushButton {{
+            background-color: {colors.get('button_normal', '#e0e0e0')};
+            border: 1px solid {colors.get('border', '#cccccc')};
+            border-radius: 3px;
+            color: {colors.get('text_primary', '#000000')};
+            font-size: 14pt;
+            font-weight: bold;
+        }}
+
+        QWidget#customTitleBar QPushButton:hover {{
+            background-color: {colors.get('button_hover', '#d0d0d0')};
+        }}
+
+        QWidget#customTitleBar QPushButton:pressed {{
+            background-color: {colors.get('button_pressed', '#c0c0c0')};
+        }}
+
+        QWidget#customTitleBar QPushButton:disabled {{
+            background-color: {colors.get('bg_secondary', '#f0f0f0')};
+            border: 1px solid {colors.get('border', '#cccccc')};
         }}
 
         QGroupBox {{
@@ -1752,7 +2111,7 @@ class AppSettings:
             subcontrol-origin: margin;
             left: 10px;
             padding: 0 5px 0 5px;
-            color: {colors.get('text_accent', '#FFECEE')};
+            color: {colors.get('text_accent', '#15803d')};
         }}
 
         QPushButton {{
@@ -1761,7 +2120,6 @@ class AppSettings:
             border-radius: 4px;
             padding: 6px 12px;
             color: {colors.get('text_primary', '#000000')};
-            font-weight: {self.current_settings.get('button_font_weight', 'bold')};
         }}
 
         QPushButton:hover {{
@@ -1777,64 +2135,55 @@ class AppSettings:
             alternate-background-color: {colors.get('bg_tertiary', '#e9ecef')};
             selection-background-color: {colors.get('accent_primary', '#1976d2')};
             selection-color: white;
-            gridline-color: {colors.get('border', '#dee2e6')};
+            gridline-color: {colors.get('grid', '#e0e0e0')};
+            border: 1px solid {colors.get('border', '#cccccc')};
         }}
 
-        QMenuBar {{
-            background-color: {colors.get('bg_secondary', '#f8f9fa')};
-            color: {colors.get('text_primary', '#212529')};
+        QTabWidget::pane {{
+            border: 1px solid {colors.get('border', '#cccccc')};
+            background-color: {colors.get('bg_primary', '#ffffff')};
         }}
 
-        QStatusBar {{
-            background-color: {colors.get('bg_secondary', '#f8f9fa')};
-            color: {colors.get('text_secondary', '#495057')};
-            border-top: 1px solid {colors.get('border', '#dee2e6')};
+        QTabBar::tab {{
+            background-color: {colors.get('bg_secondary', '#f0f0f0')};
+            border: 1px solid {colors.get('border', '#cccccc')};
+            padding: 8px 16px;
+            color: {colors.get('text_primary', '#000000')};
+        }}
+
+        QTabBar::tab:selected {{
+            background-color: {colors.get('accent_primary', '#1976d2')};
+            color: white;
+        }}
+
+        QTabBar::tab:hover {{
+            background-color: {colors.get('button_hover', '#e0e0e0')};
+        }}
+
+        QComboBox {{
+            background-color: {colors.get('button_normal', '#e0e0e0')};
+            border: 1px solid {colors.get('border', '#cccccc')};
+            border-radius: 4px;
+            padding: 4px;
+            color: {colors.get('text_primary', '#000000')};
+        }}
+
+        QSpinBox {{
+            background-color: {colors.get('button_normal', '#e0e0e0')};
+            border: 1px solid {colors.get('border', '#cccccc')};
+            border-radius: 4px;
+            padding: 4px;
+            color: {colors.get('text_primary', '#000000')};
+        }}
+
+        QCheckBox {{
+            color: {colors.get('text_primary', '#000000')};
+        }}
+
+        QLabel {{
+            color: {colors.get('text_primary', '#000000')};
         }}
         """
-
-        # Add action-specific button styling
-        action_colors = {
-            'import': {
-                'normal': colors.get('action_import', '#2196f3'),
-                'hover': self._lighten_color(colors.get('action_import', '#2196f3')),
-                'pressed': self._darken_color(colors.get('action_import', '#2196f3'))
-            },
-            'export': {
-                'normal': colors.get('action_export', '#4caf50'),
-                'hover': self._lighten_color(colors.get('action_export', '#4caf50')),
-                'pressed': self._darken_color(colors.get('action_export', '#4caf50'))
-            },
-            'remove': {
-                'normal': colors.get('action_remove', '#f44336'),
-                'hover': self._lighten_color(colors.get('action_remove', '#f44336')),
-                'pressed': self._darken_color(colors.get('action_remove', '#f44336'))
-            },
-            'update': {
-                'normal': colors.get('action_update', '#ff9800'),
-                'hover': self._lighten_color(colors.get('action_update', '#ff9800')),
-                'pressed': self._darken_color(colors.get('action_update', '#ff9800'))
-            },
-            'convert': {
-                'normal': colors.get('action_convert', '#9c27b0'),
-                'hover': self._lighten_color(colors.get('action_convert', '#9c27b0')),
-                'pressed': self._darken_color(colors.get('action_convert', '#9c27b0'))
-            }
-        }
-
-        for action_type, action_color_set in action_colors.items():
-            stylesheet += f"""
-            QPushButton[action-type="{action_type}"] {{
-                background-color: {action_color_set['normal']};
-                color: white;
-                border: 1px solid {self._darken_color(action_color_set['normal'])};
-            }}
-            QPushButton[action-type="{action_type}"]:hover {{
-                background-color: {action_color_set['hover']};
-            }}
-            QPushButton[action-type="{action_type}"]:pressed {{
-                background-color: {action_color_set['pressed']};
-            }}
-            """
 
         return stylesheet
 
@@ -1877,7 +2226,7 @@ class AppSettings:
         if theme_name in self.themes:
             return self.themes[theme_name]
         else:
-            print(f"⚠️ Theme '{theme_name}' not found, using fallback")
+            print(f"Theme '{theme_name}' not found, using fallback")
             fallback_theme = list(self.themes.keys())[0] if self.themes else "LCARS"
             return self.themes.get(fallback_theme, {"colors": {}})
 
@@ -1886,17 +2235,18 @@ class AppSettings:
         if theme_name in self.themes:
             return self.themes[theme_name]
         else:
-            print(f"⚠️ Theme '{theme_name}' not found, using fallback")
+            print(f"Theme '{theme_name}' not found, using fallback")
             fallback_theme = list(self.themes.keys())[0] if self.themes else "App_Factory"
             return self.themes.get(fallback_theme, {"colors": {}})
 
 
 
-class SettingsDialog(QDialog): #vers 4
-    """Settings dialog for theme and preference management - COMPLETE CLEAN VERSION"""
+class SettingsDialog(QDialog): #vers 15
+    """Settings dialog for theme and preference management"""
 
     themeChanged = pyqtSignal(str)  # theme_name
     settingsChanged = pyqtSignal()
+
 
     def __init__(self, app_settings, parent=None): #vers 4
         """Initialize settings dialog"""
@@ -1910,10 +2260,25 @@ class SettingsDialog(QDialog): #vers 4
         self._modified_colors = {}
         self.color_editors = {}
 
+        # Initialize icon provider
+        self.icons = IconProvider(self)
+
+        # Setup resize handling
+        self.resize_margin = 10
+        self.resize_direction = None
+        self.drag_position = None
+        self.initial_geometry = None
+        self.setMouseTracking(True)
+
+        # Apply window mode (custRom gadgets or system)
+        self._apply_dialog_window_mode()
+
+
         self._create_ui()
         self._load_current_settings()
 
     # ===== DEMO TAB FUNCTIONS =====
+
 
     def _apply_quick_theme(self, theme_name: str):
         """Apply quick theme with animation effect"""
@@ -1924,8 +2289,17 @@ class SettingsDialog(QDialog): #vers 4
         sender = self.sender()
         if sender:
             original_text = sender.text()
-            sender.setText(f"✨ Applied!")
+            sender.setText(f"Applied!")
             QTimer.singleShot(1000, lambda: sender.setText(original_text))
+
+
+    def _apply_dialog_window_mode(self): #vers 1
+        """Apply custom window gadgets to dialog if enabled"""
+        use_custom = self.app_settings.current_settings.get("use_custom_gadgets", False)
+
+        if use_custom:
+            self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
+
 
     def _random_theme(self):
         """Apply random theme"""
@@ -1938,7 +2312,8 @@ class SettingsDialog(QDialog): #vers 4
         self.demo_theme_combo.setCurrentText(random_theme)
         self._apply_demo_theme(random_theme)
 
-        self.demo_log.append(f"🎲 Random theme: {random_theme}")
+        self.demo_log.append(f"Random theme: {random_theme}")
+
 
     def _toggle_instant_apply(self, enabled: bool):
         """Enhanced instant apply toggle"""
@@ -1946,16 +2321,18 @@ class SettingsDialog(QDialog): #vers 4
             current_theme = self.demo_theme_combo.currentText()
             self._apply_demo_theme(current_theme)
             self.preview_status.setText("Instant apply: ON")
-            self.demo_log.append("⚡ Instant apply enabled")
+            self.demo_log.append("Instant apply enabled")
         else:
             self.preview_status.setText("Instant apply: OFF")
-            self.demo_log.append("⏸️ Instant apply disabled")
+            self.demo_log.append("Instant apply disabled")
+
 
     def _change_preview_scope(self, scope: str):
         """Change preview scope"""
-        self.demo_log.append(f"🎯 Preview scope: {scope}")
+        self.demo_log.append(f"Preview scope: {scope}")
         current_theme = self.demo_theme_combo.currentText()
         self._apply_demo_theme(current_theme)
+
 
     def _update_theme_info(self):
         """Update theme information display"""
@@ -1979,12 +2356,42 @@ class SettingsDialog(QDialog): #vers 4
             if hasattr(self, 'theme_info_label'):
                 self.theme_info_label.setText(info_text)
 
+
+    def _update_titlebar_icons(self): #vers 2
+        """Update titlebar icons when theme changes"""
+        if not hasattr(self, 'custom_titlebar') and not hasattr(self, 'dialog_titlebar'):
+            return
+
+        # Clear icon cache and recreate provider
+        if hasattr(self, 'icons'):
+            self.icons.clear_cache()
+
+        # Force refresh all titlebar button icons
+        titlebar = getattr(self, 'custom_titlebar', None) or getattr(self, 'dialog_titlebar', None)
+        if titlebar:
+            for button in titlebar.findChildren(QPushButton):
+                tooltip = button.toolTip()
+                if tooltip == "Settings":
+                    button.setIcon(self.icons.settings_icon(force_refresh=True))
+                elif tooltip == "Minimize":
+                    button.setIcon(self.icons.minimize_icon(force_refresh=True))
+                elif tooltip == "Maximize":
+                    if self.isMaximized():
+                        button.setIcon(self.icons.restore_icon(force_refresh=True))
+                    else:
+                        button.setIcon(self.icons.maximize_icon(force_refresh=True))
+                elif tooltip == "Close":
+                    button.setIcon(self.icons.close_icon(force_refresh=True))
+
+
+
     def _update_preview_stats(self):
         """Update preview statistics"""
         if hasattr(self, 'stats_labels'):
             current_count = int(self.stats_labels["Preview Changes:"].text()) + 1
             self.stats_labels["Preview Changes:"].setText(str(current_count))
             self.stats_labels["Last Applied:"].setText(self.demo_theme_combo.currentText())
+
 
     def _show_full_preview(self):
         """Show full preview window"""
@@ -2003,7 +2410,8 @@ class SettingsDialog(QDialog): #vers 4
 
             # Update status
             self.preview_status.setText(f"Previewing: {theme_name}")
-            self.demo_log.append(f"🎨 Theme preview: {theme_name}")
+            self.demo_log.append(f"Theme preview: {theme_name}")
+
 
     def _apply_demo_theme(self, theme_name: str): #vers 1
         """Apply theme to demo elements"""
@@ -2022,7 +2430,8 @@ class SettingsDialog(QDialog): #vers 4
             self.themeChanged.emit(theme_name)
 
         if hasattr(self, 'demo_log'):
-            self.demo_log.append(f"🎨 Previewing: {theme_name}")
+            self.demo_log.append(f"Previewing: {theme_name}")
+
 
     def _reset_demo_theme(self): #vers 1
         """Reset to original theme"""
@@ -2031,24 +2440,613 @@ class SettingsDialog(QDialog): #vers 4
             self.demo_theme_combo.setCurrentText(original)
         self._apply_demo_theme(original)
 
+
+    def _create_fonts_tab(self): #vers 2
+        """Create fonts settings tab with multiple font type controls"""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+
+        # Instructions
+        info_label = QLabel("Configure fonts for different UI elements. Changes are saved to appfactory.settings.json")
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("color: #666; font-style: italic; padding: 8px;")
+        layout.addWidget(info_label)
+
+        # Scroll area for font groups
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+
+        # Font type configurations
+        self.font_controls = {}
+
+        font_types = [
+            ("default", "Default Font", "General UI text and labels (was Font Family/Size)", "Segoe UI", 9, 8, 24),
+            ("title", "Title Font", "Window titles and main headers", "Arial", 14, 10, 32),
+            ("panel", "Panel Headers Font", "Group box titles and section headers", "Arial", 10, 8, 18),
+            ("button", "Button Font", "All button text", "Arial", 10, 8, 16),
+            ("menu", "Menu Font", "Menu bar and menu items", "Segoe UI", 9, 8, 14),
+            ("infobar", "Info Bar Font", "Status bar and info display text", "Courier New", 9, 7, 14),
+            ("table", "Table/List Font", "Data tables and list views", "Segoe UI", 9, 7, 14),
+            ("tooltip", "Tooltip Font", "Hover tooltip text", "Segoe UI", 8, 7, 12)
+        ]
+
+        for font_id, title, description, default_family, default_size, min_size, max_size in font_types:
+            group = self._create_font_control_group(
+                font_id, title, description,
+                default_family, default_size,
+                min_size, max_size
+            )
+            scroll_layout.addWidget(group)
+
+        scroll_layout.addStretch()
+        scroll.setWidget(scroll_widget)
+        layout.addWidget(scroll)
+
+        # Action buttons row
+        actions_layout = QHBoxLayout()
+
+        reset_fonts_btn = QPushButton("Reset All Fonts to Defaults")
+        reset_fonts_btn.clicked.connect(self._reset_all_fonts)
+        actions_layout.addWidget(reset_fonts_btn)
+
+        actions_layout.addStretch()
+
+        preview_btn = QPushButton("Preview Font Changes")
+        preview_btn.clicked.connect(self._preview_font_changes)
+        actions_layout.addWidget(preview_btn)
+
+        layout.addLayout(actions_layout)
+
+        return tab
+
+    def _create_font_control_group(self, font_id, title, description,
+                                default_family, default_size,
+                                min_size, max_size): #vers 1
+        """Create a font control group for specific font type"""
+        group = QGroupBox(title)
+        layout = QVBoxLayout(group)
+
+        # Description
+        desc_label = QLabel(description)
+        desc_label.setStyleSheet("color: #888; font-style: italic; font-size: 8pt;")
+        layout.addWidget(desc_label)
+
+        # Font controls row
+        controls_layout = QHBoxLayout()
+
+        # Font family
+        controls_layout.addWidget(QLabel("Font:"))
+        font_combo = QFontComboBox()
+
+        # Load current font setting from appfactory.settings.json
+        current_family = self.app_settings.current_settings.get(
+            f'{font_id}_font_family', default_family
+        )
+        font_combo.setCurrentFont(QFont(current_family))
+        font_combo.currentFontChanged.connect(
+            lambda f, fid=font_id: self._on_font_changed(fid, 'family', f.family())
+        )
+        controls_layout.addWidget(font_combo, 1)
+
+        # Font size
+        controls_layout.addWidget(QLabel("Size:"))
+        size_spin = QSpinBox()
+        size_spin.setRange(min_size, max_size)
+        current_size = self.app_settings.current_settings.get(
+            f'{font_id}_font_size', default_size
+        )
+        size_spin.setValue(current_size)
+        size_spin.setSuffix(" pt")
+        size_spin.setFixedWidth(80)
+        size_spin.valueChanged.connect(
+            lambda v, fid=font_id: self._on_font_changed(fid, 'size', v)
+        )
+        controls_layout.addWidget(size_spin)
+
+        # Font weight
+        controls_layout.addWidget(QLabel("Weight:"))
+        weight_combo = QComboBox()
+        weight_combo.addItems(["Normal", "Bold", "Light"])
+        current_weight = self.app_settings.current_settings.get(
+            f'{font_id}_font_weight', 'Normal'
+        )
+        weight_combo.setCurrentText(current_weight)
+        weight_combo.currentTextChanged.connect(
+            lambda w, fid=font_id: self._on_font_changed(fid, 'weight', w)
+        )
+        weight_combo.setFixedWidth(100)
+        controls_layout.addWidget(weight_combo)
+
+        layout.addLayout(controls_layout)
+
+        # Store controls for later access
+        self.font_controls[font_id] = {
+            'family': font_combo,
+            'size': size_spin,
+            'weight': weight_combo,
+            'group': group,
+            'default_family': default_family,
+            'default_size': default_size
+        }
+
+        return group
+
+    def _on_font_changed(self, font_id, property_type, value): #vers 1
+        """Handle font property changes - updates current_settings"""
+        if property_type == 'family':
+            self.app_settings.current_settings[f'{font_id}_font_family'] = value
+        elif property_type == 'size':
+            self.app_settings.current_settings[f'{font_id}_font_size'] = value
+        elif property_type == 'weight':
+            self.app_settings.current_settings[f'{font_id}_font_weight'] = value
+
+        # Mark as modified
+        if not hasattr(self, '_fonts_modified'):
+            self._fonts_modified = True
+
+    def _preview_font_changes(self): #vers 1
+        """Preview font changes in dialog"""
+        try:
+            # Apply default font to see immediate changes
+            if 'default' in self.font_controls:
+                family = self.font_controls['default']['family'].currentFont().family()
+                size = self.font_controls['default']['size'].value()
+                weight = self.font_controls['default']['weight'].currentText()
+
+                font = QFont(family, size)
+                if weight == "Bold":
+                    font.setWeight(QFont.Weight.Bold)
+                elif weight == "Light":
+                    font.setWeight(QFont.Weight.Light)
+
+                self.setFont(font)
+
+            # Show preview info
+            preview_text = "Font Preview Applied!\n\n"
+            for font_id, controls in self.font_controls.items():
+                family = controls['family'].currentFont().family()
+                size = controls['size'].value()
+                weight = controls['weight'].currentText()
+                preview_text += f"{controls['group'].title()}: {family} {size}pt {weight}\n"
+
+            QMessageBox.information(
+                self,
+                "Font Preview",
+                preview_text + "\nClick 'Apply' to save changes to appfactory.settings.json"
+            )
+        except Exception as e:
+            QMessageBox.warning(self, "Preview Error", f"Could not preview fonts:\n{e}")
+
+    def _reset_all_fonts(self): #vers 1
+        """Reset all fonts to their default values"""
+        reply = QMessageBox.question(
+            self,
+            "Reset Fonts",
+            "Reset all fonts to their default values?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            for font_id, controls in self.font_controls.items():
+                # Reset to defaults
+                default_family = controls['default_family']
+                default_size = controls['default_size']
+
+                controls['family'].setCurrentFont(QFont(default_family))
+                controls['size'].setValue(default_size)
+                controls['weight'].setCurrentText('Normal')
+
+                # Update settings
+                self.app_settings.current_settings[f'{font_id}_font_family'] = default_family
+                self.app_settings.current_settings[f'{font_id}_font_size'] = default_size
+                self.app_settings.current_settings[f'{font_id}_font_weight'] = 'Normal'
+
+            QMessageBox.information(self, "Fonts Reset", "All fonts reset to default values")
+
+    def _load_font_settings(self): #vers 1
+        """Load font settings from appfactory.settings.json into controls"""
+        font_ids = ['default', 'title', 'panel', 'button', 'menu', 'infobar', 'table', 'tooltip']
+
+        for font_id in font_ids:
+            if font_id not in self.font_controls:
+                continue
+
+            controls = self.font_controls[font_id]
+
+            # Load family
+            family = self.app_settings.current_settings.get(
+                f'{font_id}_font_family',
+                controls['default_family']
+            )
+            controls['family'].setCurrentFont(QFont(family))
+
+            # Load size
+            size = self.app_settings.current_settings.get(
+                f'{font_id}_font_size',
+                controls['default_size']
+            )
+            controls['size'].setValue(size)
+
+            # Load weight
+            weight = self.app_settings.current_settings.get(
+                f'{font_id}_font_weight',
+                'Normal'
+            )
+            controls['weight'].setCurrentText(weight)
+
+    def _save_font_settings(self): #vers 1
+        """Save font settings from controls to app settings and appfactory.settings.json"""
+        for font_id, controls in self.font_controls.items():
+            family = controls['family'].currentFont().family()
+            size = controls['size'].value()
+            weight = controls['weight'].currentText()
+
+            self.app_settings.current_settings[f'{font_id}_font_family'] = family
+            self.app_settings.current_settings[f'{font_id}_font_size'] = size
+            self.app_settings.current_settings[f'{font_id}_font_weight'] = weight
+
+        # Save to appfactory.settings.json
+        self.app_settings.save_settings()
+
     # ===== PICKER FUNCTIONS =====
 
-    def _create_ui(self): #vers 4
-        """Create the settings dialog UI - FIXED"""
+
+class SettingsDialog(QDialog): #vers 5
+    """Settings dialog for theme and preference management"""
+
+    themeChanged = pyqtSignal(str)  # theme_name
+    settingsChanged = pyqtSignal()
+
+    def __init__(self, app_settings, parent=None): #vers 5
+        """Initialize settings dialog"""
+        super().__init__(parent)
+
+        print(f"Has _update_titlebar_icons: {hasattr(self, '_update_titlebar_icons')}")
+
+        self.setWindowTitle("App Factory Settings")
+        self.setMinimumSize(800, 600)
+        self.setModal(True)
+
+        self.app_settings = app_settings
+        self.original_settings = app_settings.current_settings.copy()
+        self._modified_colors = {}
+        self.color_editors = {}
+
+        # Initialize icon provider
+        self.icons = IconProvider(self)
+
+        # Set default fonts
+        from PyQt6.QtGui import QFont
+        default_font = QFont("Fira Sans Condensed", 14)
+        self.setFont(default_font)
+        self.title_font = QFont("Arial", 14)
+        self.panel_font = QFont("Arial", 10)
+        self.button_font = QFont("Arial", 10)
+        self.infobar_font = QFont("Courier New", 9)
+
+        # Setup resize handling
+        self.dragging = False
+        self.resizing = False
+        self.resize_corner = None
+        self.resize_margin = 10
+        self.resize_direction = None
+        self.corner_size = 20
+        self.hover_corner = None
+
+        self.drag_position = None
+        self.initial_geometry = None
+        self.setMouseTracking(True)
+
+        # Apply window mode (custom gadgets or system)
+        self._apply_dialog_window_mode()
+
+        self._create_ui()
+        self._load_current_settings()
+
+    def _apply_dialog_window_mode(self): #vers 1
+        """Apply custom window gadgets to dialog if enabled"""
+        use_custom = self.app_settings.current_settings.get("use_custom_gadgets", False)
+
+        if use_custom:
+            self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
+
+    def _get_resize_corner(self, pos): #vers 2
+        """Determine which corner is under mouse position"""
+        size = self.corner_size
+        w = self.width()
+        h = self.height()
+
+        # Top-left corner
+        if pos.x() < size and pos.y() < size:
+            return "top-left"
+
+        # Top-right corner
+        if pos.x() > w - size and pos.y() < size:
+            return "top-right"
+
+        # Bottom-left corner
+        if pos.x() < size and pos.y() > h - size:
+            return "bottom-left"
+
+        # Bottom-right corner
+        if pos.x() > w - size and pos.y() > h - size:
+            return "bottom-right"
+
+        return None
+
+
+    def _handle_corner_resize(self, global_pos): #vers 2
+        """Handle window resizing from corners"""
+        if not self.resize_corner or not self.drag_position:
+            return
+
+        delta = global_pos - self.drag_position
+        geometry = self.initial_geometry
+
+        min_width = 800
+        min_height = 600
+
+        # Calculate new geometry based on corner
+        if self.resize_corner == "top-left":
+            # Move top-left corner
+            new_x = geometry.x() + delta.x()
+            new_y = geometry.y() + delta.y()
+            new_width = geometry.width() - delta.x()
+            new_height = geometry.height() - delta.y()
+
+            if new_width >= min_width and new_height >= min_height:
+                self.setGeometry(new_x, new_y, new_width, new_height)
+
+        elif self.resize_corner == "top-right":
+            # Move top-right corner
+            new_y = geometry.y() + delta.y()
+            new_width = geometry.width() + delta.x()
+            new_height = geometry.height() - delta.y()
+
+            if new_width >= min_width and new_height >= min_height:
+                self.setGeometry(geometry.x(), new_y, new_width, new_height)
+
+        elif self.resize_corner == "bottom-left":
+            # Move bottom-left corner
+            new_x = geometry.x() + delta.x()
+            new_width = geometry.width() - delta.x()
+            new_height = geometry.height() + delta.y()
+
+            if new_width >= min_width and new_height >= min_height:
+                self.setGeometry(new_x, geometry.y(), new_width, new_height)
+
+        elif self.resize_corner == "bottom-right":
+            # Move bottom-right corner
+            new_width = geometry.width() + delta.x()
+            new_height = geometry.height() + delta.y()
+
+            if new_width >= min_width and new_height >= min_height:
+                self.resize(new_width, new_height)
+
+
+    def _get_resize_direction(self, pos): #vers 1
+        """Determine resize direction based on mouse position"""
+        rect = self.rect()
+        margin = self.resize_margin
+
+        left = pos.x() < margin
+        right = pos.x() > rect.width() - margin
+        top = pos.y() < margin
+        bottom = pos.y() > rect.height() - margin
+
+        if left and top:
+            return "top-left"
+        elif right and top:
+            return "top-right"
+        elif left and bottom:
+            return "bottom-left"
+        elif right and bottom:
+            return "bottom-right"
+        elif left:
+            return "left"
+        elif right:
+            return "right"
+        elif top:
+            return "top"
+        elif bottom:
+            return "bottom"
+
+        return None
+
+
+    def _update_cursor(self, direction): #vers 1
+        """Update cursor based on resize direction"""
+        if direction == "top" or direction == "bottom":
+            self.setCursor(Qt.CursorShape.SizeVerCursor)
+        elif direction == "left" or direction == "right":
+            self.setCursor(Qt.CursorShape.SizeHorCursor)
+        elif direction == "top-left" or direction == "bottom-right":
+            self.setCursor(Qt.CursorShape.SizeFDiagCursor)
+        elif direction == "top-right" or direction == "bottom-left":
+            self.setCursor(Qt.CursorShape.SizeBDiagCursor)
+        else:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+
+
+    def _handle_resize(self, global_pos): #vers 1
+        """Handle window resizing"""
+        if not self.resize_direction or not self.drag_position:
+            return
+
+        delta = global_pos - self.drag_position
+        geometry = self.frameGeometry()
+
+        min_width = 800
+        min_height = 600
+
+        # Handle horizontal resizing
+        if "left" in self.resize_direction:
+            new_width = geometry.width() - delta.x()
+            if new_width >= min_width:
+                geometry.setLeft(geometry.left() + delta.x())
+        elif "right" in self.resize_direction:
+            new_width = geometry.width() + delta.x()
+            if new_width >= min_width:
+                geometry.setRight(geometry.right() + delta.x())
+
+        # Handle vertical resizing
+        if "top" in self.resize_direction:
+            new_height = geometry.height() - delta.y()
+            if new_height >= min_height:
+                geometry.setTop(geometry.top() + delta.y())
+        elif "bottom" in self.resize_direction:
+            new_height = geometry.height() + delta.y()
+            if new_height >= min_height:
+                geometry.setBottom(geometry.bottom() + delta.y())
+
+        self.setGeometry(geometry)
+        self.drag_position = global_pos
+
+
+    def resizeEvent(self, event): #vers 2
+        '''Keep resize grip in bottom-right corner'''
+        super().resizeEvent(event)
+        if hasattr(self, 'size_grip'):
+            self.size_grip.move(self.width() - 16, self.height() - 16)
+
+
+    def mousePressEvent(self, event): #vers 2
+        """Handle mouse press for dragging and resizing"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            # Check if clicking on corner
+            self.resize_corner = self._get_resize_corner(event.pos())
+
+            if self.resize_corner:
+                self.resizing = True
+                self.drag_position = event.globalPosition().toPoint()
+                self.initial_geometry = self.geometry()
+            else:
+                # Check if clicking on toolbar for dragging
+                if self._is_on_draggable_area(event.pos()):
+                    self.dragging = True
+                    self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+
+            event.accept()
+
+
+    def mouseMoveEvent(self, event): #vers 2
+        """Handle mouse move for dragging, resizing, and hover effects"""
+        if event.buttons() == Qt.MouseButton.LeftButton:
+            if self.resizing and self.resize_corner:
+                self._handle_corner_resize(event.globalPosition().toPoint())
+            elif self.dragging:
+                self.move(event.globalPosition().toPoint() - self.drag_position)
+            event.accept()
+        else:
+            # Update hover state and cursor
+            corner = self._get_resize_corner(event.pos())
+            if corner != self.hover_corner:
+                self.hover_corner = corner
+                self.update()  # Trigger repaint for hover effect
+            self._update_cursor(corner)
+
+
+    def mouseReleaseEvent(self, event): #vers 2
+        """Handle mouse release"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.dragging = False
+            self.resizing = False
+            self.resize_corner = None
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+            event.accept()
+
+
+    def mouseDoubleClickEvent(self, event): #vers 2
+        """Handle double-click on toolbar to maximize/restore"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            if self._is_on_draggable_area(event.pos()):
+                self._toggle_maximize()
+                event.accept()
+            else:
+                super().mouseDoubleClickEvent(event)
+
+
+    def _toggle_maximize(self): #vers 2
+        """Toggle window maximize state"""
+        if self.isMaximized():
+            self.showNormal()
+        else:
+            self.showMaximized()
+
+
+    def _is_on_draggable_area(self, pos): #vers 3
+        """Check if position is on draggable toolbar area (stretch space, not buttons)"""
+        if not hasattr(self, 'toolbar'):
+            return False
+
+        toolbar_rect = self.toolbar.geometry()
+        if not toolbar_rect.contains(pos):
+            return False
+
+        # Get all buttons in toolbar
+        buttons_to_check = []
+
+        if hasattr(self, 'info_btn'):
+            buttons_to_check.append(self.info_btn)
+        if hasattr(self, 'minimize_btn'):
+            buttons_to_check.append(self.minimize_btn)
+        if hasattr(self, 'maximize_btn'):
+            buttons_to_check.append(self.maximize_btn)
+        if hasattr(self, 'close_btn'):
+            buttons_to_check.append(self.close_btn)
+        # Should be enabled on selection:
+
+
+        if not hasattr(self, 'drag_btn'):
+            return False
+
+        # Convert to toolbar coordinates
+        toolbar_local_pos = self.toolbar.mapFrom(self, pos)
+
+        # Check if clicking on drag button
+        return self.drag_btn.geometry().contains(toolbar_local_pos)
+
+        # Check if position is NOT on any button (i.e., on stretch area)
+        for btn in buttons_to_check:
+            btn_global_rect = btn.geometry()
+            btn_rect = btn_global_rect.translated(toolbar_rect.topLeft())
+            if btn_rect.contains(pos):
+                return False  # On a button, not draggable
+
+        return True  # On empty stretch area, draggable
+
+
+    def _create_ui(self): #vers 7
+        """Create the settings dialog UI"""
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
         # Store original theme for reset
         self._original_theme = self.app_settings.current_settings.get("theme", "App_Factory")
+
+        # Add custom titlebar if using custom gadgets
+        if self.app_settings.current_settings.get("use_custom_gadgets", False):
+            self._create_dialog_titlebar()
+            layout.addWidget(self.dialog_titlebar)
+
+        # Content area
+        content_widget = QWidget()
+        content_layout = QVBoxLayout(content_widget)
 
         # Create tab widget
         self.tabs = QTabWidget()
 
         # Add tabs
         self.color_picker_tab = self._create_color_picker_tab()
-        self.tabs.addTab(self.color_picker_tab, "Color Picker")
+        self.tabs.addTab(self.color_picker_tab, "Colors")
 
-        #self.demo_tab = self._create_demo_tab()
-        #self.tabs.addTab(self.demo_tab, "Demo")
+        self.fonts_tab = self._create_fonts_tab()
+        self.tabs.addTab(self.fonts_tab, "Fonts")
 
         self.debug_tab = self._create_debug_tab()
         self.tabs.addTab(self.debug_tab, "Debug")
@@ -2056,7 +3054,7 @@ class SettingsDialog(QDialog): #vers 4
         self.interface_tab = self._create_interface_tab()
         self.tabs.addTab(self.interface_tab, "Interface")
 
-        layout.addWidget(self.tabs)
+        content_layout.addWidget(self.tabs)
 
         # Buttons
         button_layout = QHBoxLayout()
@@ -2067,20 +3065,418 @@ class SettingsDialog(QDialog): #vers 4
 
         button_layout.addStretch()
 
-        cancel_btn = QPushButton("Cancel")
-        cancel_btn.clicked.connect(self.reject)
-        button_layout.addWidget(cancel_btn)
-
         apply_btn = QPushButton("Apply")
         apply_btn.clicked.connect(self._apply_settings)
         button_layout.addWidget(apply_btn)
 
         ok_btn = QPushButton("OK")
-        ok_btn.clicked.connect(self._ok_clicked)
-        ok_btn.setDefault(True)
+        ok_btn.clicked.connect(self.accept)
         button_layout.addWidget(ok_btn)
 
-        layout.addLayout(button_layout)
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_btn)
+
+        content_layout.addLayout(button_layout)
+
+        layout.addWidget(content_widget)
+
+    def _create_dialog_titlebar(self): #vers 6
+        """Create custom title bar for settings dialog - TXD Workshop style"""
+        self.dialog_titlebar = QWidget()
+        self.dialog_titlebar.setObjectName("customTitleBar")
+        self.dialog_titlebar.setFixedHeight(40)
+
+        titlebar_layout = QHBoxLayout(self.dialog_titlebar)
+        titlebar_layout.setContentsMargins(4, 4, 4, 4)
+        titlebar_layout.setSpacing(4)
+
+        # Settings icon button on the left (decorative)
+        settings_icon_btn = QPushButton()
+        settings_icon_btn.setIcon(self.icons.settings_icon())
+        settings_icon_btn.setFixedSize(32, 32)
+        settings_icon_btn.setEnabled(False)  # Just decorative
+        titlebar_layout.addWidget(settings_icon_btn)
+
+        # Get parent app name and center title
+        titlebar_layout.addStretch()
+        app_name = getattr(self.parent(), 'app_name', 'Application') if self.parent() else 'Application'
+        title_label = QLabel(f"{app_name} - Settings")
+        title_label.setStyleSheet("font-weight: bold; font-size: 11pt;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        titlebar_layout.addWidget(title_label)
+        titlebar_layout.addStretch()
+
+        # Window control buttons on the right
+        minimize_btn = QPushButton()
+        minimize_btn.setIcon(self.icons.minimize_icon())
+        minimize_btn.setFixedSize(32, 32)
+        minimize_btn.clicked.connect(self.showMinimized)
+        minimize_btn.setToolTip("Minimize")
+        titlebar_layout.addWidget(minimize_btn)
+
+        maximize_btn = QPushButton()
+        maximize_btn.setIcon(self.icons.maximize_icon())
+        maximize_btn.setFixedSize(32, 32)
+        maximize_btn.clicked.connect(self._toggle_dialog_maximize)
+        maximize_btn.setToolTip("Maximize")
+        self.dialog_maximize_btn = maximize_btn
+        titlebar_layout.addWidget(maximize_btn)
+
+        close_btn = QPushButton()
+        close_btn.setIcon(self.icons.close_icon())
+        close_btn.setFixedSize(32, 32)
+        close_btn.clicked.connect(self.reject)
+        close_btn.setToolTip("Close")
+        titlebar_layout.addWidget(close_btn)
+
+        # Enable dragging
+        self.titlebar_drag_position = None
+        self.dialog_titlebar.mousePressEvent = self._titlebar_mouse_press
+        self.dialog_titlebar.mouseMoveEvent = self._titlebar_mouse_move
+        self.dialog_titlebar.mouseDoubleClickEvent = self._titlebar_double_click
+
+
+    def get_stylesheet(self): #vers 3
+        """Generate complete stylesheet for current theme - TXD Workshop style"""
+        colors = self.get_theme_colors()
+        if not colors:
+            return ""
+
+        # Base stylesheet
+        stylesheet = f"""
+        QMainWindow {{
+            background-color: {colors.get('bg_primary', '#ffffff')};
+            color: {colors.get('text_primary', '#000000')};
+        }}
+
+        QDialog {{
+            background-color: {colors.get('bg_primary', '#ffffff')};
+            color: {colors.get('text_primary', '#000000')};
+        }}
+
+        QWidget {{
+            background-color: {colors.get('bg_primary', '#ffffff')};
+            color: {colors.get('text_primary', '#000000')};
+        }}
+
+        /* Custom Title Bar - Same color as app background */
+        QWidget#customTitleBar {{
+            background-color: {colors.get('bg_secondary', '#f0f0f0')};
+            color: {colors.get('text_primary', '#000000')};
+            border: 1px solid {colors.get('border', '#cccccc')};
+            border-bottom: 2px solid {colors.get('border', '#cccccc')};
+        }}
+
+        QWidget#customTitleBar QLabel {{
+            background-color: transparent;
+            color: {colors.get('text_primary', '#000000')};
+        }}
+
+        #QWidget#customTitleBar QPushButton {{
+        #    background-color: {colors.get('button_normal', '#e0e0e0')};
+        #    border: 1px solid {colors.get('border', '#cccccc')};
+        #    border-radius: 3px;
+        #    color: {colors.get('text_primary', '#000000')};
+        #    font-size: 14pt;
+        #    font-weight: bold;
+        #}}
+
+        QWidget#customTitleBar QPushButton:hover {{
+            background-color: {colors.get('button_hover', '#d0d0d0')};
+        }}
+
+        QWidget#customTitleBar QPushButton:pressed {{
+            background-color: {colors.get('button_pressed', '#c0c0c0')};
+        }}
+
+        QWidget#customTitleBar QPushButton:disabled {{
+            background-color: {colors.get('bg_secondary', '#f0f0f0')};
+            border: 1px solid {colors.get('border', '#cccccc')};
+        }}
+
+        QGroupBox {{
+            background-color: {colors.get('panel_bg', '#f0f0f0')};
+            border: 2px solid {colors.get('border', '#cccccc')};
+            border-radius: 5px;
+            margin-top: 10px;
+            padding-top: 10px;
+            font-weight: bold;
+        }}
+
+        QGroupBox::title {{
+            subcontrol-origin: margin;
+            left: 10px;
+            padding: 0 5px 0 5px;
+            color: {colors.get('text_accent', '#15803d')};
+        }}
+
+        QPushButton {{
+            background-color: {colors.get('button_normal', '#e0e0e0')};
+            border: 1px solid {colors.get('border', '#cccccc')};
+            border-radius: 4px;
+            padding: 6px 12px;
+            color: {colors.get('text_primary', '#000000')};
+        }}
+
+        QPushButton:hover {{
+            background-color: {colors.get('button_hover', '#d0d0d0')};
+        }}
+
+        QPushButton:pressed {{
+            background-color: {colors.get('button_pressed', '#c0c0c0')};
+        }}
+
+        QTableWidget {{
+            background-color: {colors.get('bg_secondary', '#f8f9fa')};
+            alternate-background-color: {colors.get('bg_tertiary', '#e9ecef')};
+            selection-background-color: {colors.get('accent_primary', '#1976d2')};
+            selection-color: white;
+            gridline-color: {colors.get('grid', '#e0e0e0')};
+            border: 1px solid {colors.get('border', '#cccccc')};
+        }}
+
+        QTabWidget::pane {{
+            border: 1px solid {colors.get('border', '#cccccc')};
+            background-color: {colors.get('bg_primary', '#ffffff')};
+        }}
+
+        QTabBar::tab {{
+            background-color: {colors.get('bg_secondary', '#f0f0f0')};
+            border: 1px solid {colors.get('border', '#cccccc')};
+            padding: 8px 16px;
+            color: {colors.get('text_primary', '#000000')};
+        }}
+
+        QTabBar::tab:selected {{
+            background-color: {colors.get('accent_primary', '#1976d2')};
+            color: white;
+        }}
+
+        QTabBar::tab:hover {{
+            background-color: {colors.get('button_hover', '#e0e0e0')};
+        }}
+
+        QComboBox {{
+            background-color: {colors.get('button_normal', '#e0e0e0')};
+            border: 1px solid {colors.get('border', '#cccccc')};
+            border-radius: 4px;
+            padding: 4px;
+            color: {colors.get('text_primary', '#000000')};
+        }}
+
+        QSpinBox {{
+            background-color: {colors.get('button_normal', '#e0e0e0')};
+            border: 1px solid {colors.get('border', '#cccccc')};
+            border-radius: 4px;
+            padding: 4px;
+            color: {colors.get('text_primary', '#000000')};
+        }}
+
+        QCheckBox {{
+            color: {colors.get('text_primary', '#000000')};
+        }}
+
+        QLabel {{
+            color: {colors.get('text_primary', '#000000')};
+        }}
+        """
+
+        return stylesheet
+
+
+    def paintEvent(self, event): #vers 2
+        """Paint corner resize triangles"""
+        super().paintEvent(event)
+
+        from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QPainterPath
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # Colors
+        normal_color = QColor(100, 100, 100, 150)
+        hover_color = QColor(150, 150, 255, 200)
+
+        w = self.width()
+        h = self.height()
+        size = self.corner_size
+
+        # Define corner triangles
+        corners = {
+            'top-left': [(0, 0), (size, 0), (0, size)],
+            'top-right': [(w, 0), (w-size, 0), (w, size)],
+            'bottom-left': [(0, h), (size, h), (0, h-size)],
+            'bottom-right': [(w, h), (w-size, h), (w, h-size)]
+        }
+
+        for corner_name, points in corners.items():
+            # Choose color based on hover state
+            if self.hover_corner == corner_name:
+                painter.setBrush(QBrush(hover_color))
+                painter.setPen(QPen(hover_color.darker(120), 1))
+            else:
+                painter.setBrush(QBrush(normal_color))
+                painter.setPen(QPen(normal_color.darker(120), 1))
+
+            # Draw triangle
+            path = QPainterPath()
+            path.moveTo(points[0][0], points[0][1])
+            path.lineTo(points[1][0], points[1][1])
+            path.lineTo(points[2][0], points[2][1])
+            path.closeSubpath()
+
+            painter.drawPath(path)
+
+        painter.end()
+
+    def _titlebar_double_click(self, event): #vers 1
+        """Handle double click on title bar - maximize/restore"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._toggle_dialog_maximize()
+            event.accept()
+
+    def _toggle_dialog_maximize(self): #vers 1
+        """Toggle dialog maximize state"""
+        if self.isMaximized():
+            self.showNormal()
+            if hasattr(self, 'dialog_maximize_btn'):
+                self.dialog_maximize_btn.setIcon(self.icons.maximize_icon())
+                self.dialog_maximize_btn.setToolTip("Maximize")
+        else:
+            self.showMaximized()
+            if hasattr(self, 'dialog_maximize_btn'):
+                self.dialog_maximize_btn.setIcon(self.icons.restore_icon())
+                self.dialog_maximize_btn.setToolTip("Restore")
+
+
+    def _titlebar_mouse_press(self, event): #vers 1
+        """Handle mouse press on title bar"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.titlebar_drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            event.accept()
+
+    def _titlebar_mouse_move(self, event): #vers 1
+        """Handle mouse move on title bar - window dragging"""
+        if event.buttons() == Qt.MouseButton.LeftButton and self.titlebar_drag_position:
+            self.move(event.globalPosition().toPoint() - self.titlebar_drag_position)
+            event.accept()
+
+    # ===== CORNER RESIZE METHODS (same as CustomWindow) =====
+
+    def mousePressEvent(self, event): #vers 1
+        """Handle mouse press for resizing"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            if self.app_settings.current_settings.get("enable_corner_resize", True):
+                self.resize_direction = self._get_resize_direction(event.pos())
+                if self.resize_direction:
+                    self.drag_position = event.globalPosition().toPoint()
+                    self.initial_geometry = self.geometry()
+                    event.accept()
+                    return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event): #vers 1
+        """Handle mouse move for resizing and cursor updates"""
+        if self.app_settings.current_settings.get("enable_corner_resize", True):
+            if event.buttons() == Qt.MouseButton.LeftButton and self.resize_direction:
+                self._handle_corner_resize(event.globalPosition().toPoint())
+                event.accept()
+                return
+            else:
+                direction = self._get_resize_direction(event.pos())
+                self._update_cursor(direction)
+
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event): #vers 1
+        """Handle mouse release"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.resize_direction = None
+            self.drag_position = None
+            self.initial_geometry = None
+        super().mouseReleaseEvent(event)
+
+    def _get_resize_direction(self, pos): #vers 1
+        """Determine resize direction based on mouse position"""
+        rect = self.rect()
+        margin = self.resize_margin
+
+        left = pos.x() < margin
+        right = pos.x() > rect.width() - margin
+        top = pos.y() < margin
+        bottom = pos.y() > rect.height() - margin
+
+        if left and top:
+            return "top-left"
+        elif right and top:
+            return "top-right"
+        elif left and bottom:
+            return "bottom-left"
+        elif right and bottom:
+            return "bottom-right"
+        elif left:
+            return "left"
+        elif right:
+            return "right"
+        elif top:
+            return "top"
+        elif bottom:
+            return "bottom"
+
+        return None
+
+    def _update_cursor(self, direction): #vers 1
+        """Update cursor based on resize direction"""
+        if direction == "top" or direction == "bottom":
+            self.setCursor(Qt.CursorShape.SizeVerCursor)
+        elif direction == "left" or direction == "right":
+            self.setCursor(Qt.CursorShape.SizeHorCursor)
+        elif direction == "top-left" or direction == "bottom-right":
+            self.setCursor(Qt.CursorShape.SizeFDiagCursor)
+        elif direction == "top-right" or direction == "bottom-left":
+            self.setCursor(Qt.CursorShape.SizeBDiagCursor)
+        else:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+
+    def _handle_corner_resize(self, global_pos): #vers 2
+        """Handle window resizing from any edge or corner"""
+        if not self.resize_direction or not self.drag_position:
+            return
+
+        delta = global_pos - self.drag_position
+        geometry = self.initial_geometry
+
+        min_width = 800
+        min_height = 600
+
+        # Create a copy of the geometry
+        new_geometry = QRect(geometry.x(), geometry.y(), geometry.width(), geometry.height())
+
+        if "left" in self.resize_direction:
+            new_x = geometry.x() + delta.x()
+            new_width = geometry.width() - delta.x()
+            if new_width >= min_width:
+                new_geometry.setLeft(new_x)
+
+        if "right" in self.resize_direction:
+            new_width = geometry.width() + delta.x()
+            if new_width >= min_width:
+                new_geometry.setWidth(new_width)
+
+        if "top" in self.resize_direction:
+            new_y = geometry.y() + delta.y()
+            new_height = geometry.height() - delta.y()
+            if new_height >= min_height:
+                new_geometry.setTop(new_y)
+
+        if "bottom" in self.resize_direction:
+            new_height = geometry.height() + delta.y()
+            if new_height >= min_height:
+                new_geometry.setHeight(new_height)
+
+        self.setGeometry(new_geometry)
+
 
     def _create_color_picker_tab(self): #vers 4
         """Create color picker and theme editor tab - FIXED global sliders"""
@@ -2137,7 +3533,7 @@ class SettingsDialog(QDialog): #vers 4
         left_layout.addWidget(palette_group)
 
         # GLOBAL THEME SLIDERS - PROPERLY PLACED HERE
-        global_sliders_group = QGroupBox("🎛️ Global Theme Sliders")
+        global_sliders_group = QGroupBox("Global Theme Sliders")
         global_sliders_layout = QVBoxLayout(global_sliders_group)
 
         info_label = QLabel("<b>Adjust ALL colors globally:</b>")
@@ -2206,7 +3602,7 @@ class SettingsDialog(QDialog): #vers 4
 
 
         # Theme Selection
-        theme_sel_group = QGroupBox("🎨 Theme Selection")
+        theme_sel_group = QGroupBox("Theme Selection")
         theme_sel_layout = QVBoxLayout(theme_sel_group)
 
         # Instant apply checkbox
@@ -2225,17 +3621,17 @@ class SettingsDialog(QDialog): #vers 4
         # Theme action buttons
         theme_buttons_layout = QHBoxLayout()
 
-        refresh_themes_btn = QPushButton("🔄 Refresh")
+        refresh_themes_btn = QPushButton("Refresh")
         refresh_themes_btn.clicked.connect(self._refresh_themes)
         refresh_themes_btn.setToolTip("Refresh theme list from disk")
         theme_buttons_layout.addWidget(refresh_themes_btn)
 
-        save_theme_btn = QPushButton("💾 Save")
+        save_theme_btn = QPushButton("Save")
         save_theme_btn.clicked.connect(self._save_current_theme)
         save_theme_btn.setToolTip("Save changes to current theme")
         theme_buttons_layout.addWidget(save_theme_btn)
 
-        save_as_theme_btn = QPushButton("💾 Save As...")
+        save_as_theme_btn = QPushButton("Save As...")
         save_as_theme_btn.clicked.connect(self._save_theme_as)
         save_as_theme_btn.setToolTip("Save as new theme")
         theme_buttons_layout.addWidget(save_as_theme_btn)
@@ -2289,7 +3685,7 @@ class SettingsDialog(QDialog): #vers 4
         right_layout.addWidget(scroll_area)
 
         # Apply to Element Group
-        selection_group = QGroupBox("🎯 Apply Picked Color")
+        selection_group = QGroupBox("Apply Picked Color")
         selection_layout = QVBoxLayout(selection_group)
 
         self.selected_element_combo = QComboBox()
@@ -2297,7 +3693,7 @@ class SettingsDialog(QDialog): #vers 4
             self.selected_element_combo.addItem(color_name, color_key)
         selection_layout.addWidget(self.selected_element_combo)
 
-        apply_color_btn = QPushButton("🎨 Apply Picked Color to Selected Element")
+        apply_color_btn = QPushButton("Apply Picked Color to Selected Element")
         apply_color_btn.clicked.connect(self._apply_picked_color)
         selection_layout.addWidget(apply_color_btn)
 
@@ -2313,6 +3709,7 @@ class SettingsDialog(QDialog): #vers 4
         self.global_bri_slider.valueChanged.connect(self._on_global_bri_changed)
 
         return tab
+
 
     def _apply_palette_color(self, color): #vers 1
         """Apply palette color to selected element"""
@@ -2332,7 +3729,7 @@ class SettingsDialog(QDialog): #vers 4
         left_widget.setMaximumWidth(300)
 
         # Theme Selection Group
-        theme_group = QGroupBox("🎨 Theme Selection")
+        theme_group = QGroupBox("Theme Selection")
         theme_layout = QVBoxLayout(theme_group)
 
         # Current theme display
@@ -2350,7 +3747,7 @@ class SettingsDialog(QDialog): #vers 4
         self.demo_theme_combo = QComboBox()
         available_themes = list(self.app_settings.themes.keys())
         self.demo_theme_combo.addItems(available_themes)
-        refresh_themes_btn = QPushButton("🔄 Refresh Themes")
+        refresh_themes_btn = QPushButton("Refresh Themes")
         refresh_themes_btn.setToolTip("Reload themes from themes/ folder")
         refresh_themes_btn.clicked.connect(self.refresh_themes_in_dialog)
         self.demo_theme_combo.setCurrentText(self.app_settings.current_settings["theme"])
@@ -2362,7 +3759,7 @@ class SettingsDialog(QDialog): #vers 4
         left_layout.addWidget(theme_group)
 
         # Real-time Controls Group
-        controls_group = QGroupBox("⚡ Live Controls")
+        controls_group = QGroupBox("Live Controls")
         controls_layout = QVBoxLayout(controls_group)
 
         # Instant apply toggle
@@ -2396,16 +3793,16 @@ class SettingsDialog(QDialog): #vers 4
         popular_themes = ["LCARS", "App_Factory", "Deep_Purple", "Cyberpunk", "Matrix"]
         for theme_name in popular_themes:
             if theme_name in self.app_settings.themes:
-                quick_btn = QPushButton(f"🎭 {theme_name}")
+                quick_btn = QPushButton(f" {theme_name}")
                 quick_btn.clicked.connect(lambda checked, t=theme_name: self._apply_quick_theme(t))
                 quick_btn.setMinimumHeight(35)
                 quick_layout.addWidget(quick_btn)
 
         # Reset and randomize buttons
         button_layout = QHBoxLayout()
-        reset_btn = QPushButton("🔄 Reset")
+        reset_btn = QPushButton("Reset")
         reset_btn.clicked.connect(self._reset_demo_theme)
-        random_btn = QPushButton("🎲 Random")
+        random_btn = QPushButton("Random")
         random_btn.clicked.connect(self._random_theme)
         button_layout.addWidget(reset_btn)
         button_layout.addWidget(random_btn)
@@ -2414,7 +3811,7 @@ class SettingsDialog(QDialog): #vers 4
         left_layout.addWidget(quick_group)
 
         # Theme Info Group
-        info_group = QGroupBox("ℹ️ Theme Info")
+        info_group = QGroupBox("Theme Info")
         info_layout = QVBoxLayout(info_group)
 
         self.theme_info_label = QLabel()
@@ -2433,7 +3830,7 @@ class SettingsDialog(QDialog): #vers 4
         right_layout = QVBoxLayout(right_widget)
 
         # Preview Header
-        preview_header = QGroupBox("📺 Live Preview - App Factory Interface")
+        preview_header = QGroupBox("Live Preview - App Factory Interface")
         header_layout = QHBoxLayout(preview_header)
 
         self.preview_status = QLabel("Ready for preview")
@@ -2442,14 +3839,14 @@ class SettingsDialog(QDialog): #vers 4
         header_layout.addStretch()
 
         # Preview controls
-        self.full_preview_btn = QPushButton("🖥️ Full Preview")
+        self.full_preview_btn = QPushButton("Full Preview")
         self.full_preview_btn.clicked.connect(self._show_full_preview)
         header_layout.addWidget(self.full_preview_btn)
 
         right_layout.addWidget(preview_header)
 
         # Sample App Factory Toolbar
-        toolbar_group = QGroupBox("🔧 Sample Toolbar")
+        toolbar_group = QGroupBox("Sample Toolbar")
         toolbar_layout = QGridLayout(toolbar_group)
 
         self.demo_buttons = []
@@ -2476,7 +3873,7 @@ class SettingsDialog(QDialog): #vers 4
         right_layout.addWidget(toolbar_group)
 
         # Sample Table
-        table_group = QGroupBox("📋 Sample IMG Entries Table")
+        table_group = QGroupBox("Sample IMG Entries Table")
         table_layout = QVBoxLayout(table_group)
 
         self.demo_table = QTableWidget(5, 5)
@@ -2490,7 +3887,7 @@ class SettingsDialog(QDialog): #vers 4
         right_layout.addWidget(table_group)
 
         # Sample Log Output
-        log_group = QGroupBox("📜 Sample Activity Log")
+        log_group = QGroupBox("Sample Activity Log")
         log_layout = QVBoxLayout(log_group)
 
         self.demo_log = QTextEdit()
@@ -2498,12 +3895,12 @@ class SettingsDialog(QDialog): #vers 4
         self.demo_log.setReadOnly(True)
 
         # Enhanced log content
-        initial_log = """🎮 App Factory 1.0 - Live Theme Preview
-📁 Current IMG: sample_archive.img (150 MB)
-📊 Entries loaded: 1,247 files
-🎨 Active theme: """ + self.app_settings.current_settings["theme"] + """
-⚡ Live preview mode: ACTIVE
-📋 Ready for operations..."""
+        initial_log = """App Factory 1.0 - Live Theme Preview
+Current IMG: sample_archive.img (150 MB)
+Entries loaded: 1,247 files
+Active theme: """ + self.app_settings.current_settings["theme"] + """
+Live preview mode: ACTIVE
+Ready for operations..."""
 
         self.demo_log.setPlainText(initial_log)
         log_layout.addWidget(self.demo_log)
@@ -2511,7 +3908,7 @@ class SettingsDialog(QDialog): #vers 4
         right_layout.addWidget(log_group)
 
         # Preview Statistics
-        stats_group = QGroupBox("📊 Preview Statistics")
+        stats_group = QGroupBox("Preview Statistics")
         stats_layout = QGridLayout(stats_group)
 
         self.stats_labels = {}
@@ -2538,7 +3935,6 @@ class SettingsDialog(QDialog): #vers 4
         self._apply_demo_theme(self.app_settings.current_settings["theme"])
 
         return tab
-
 
 
     def _create_debug_tab(self): #vers 2
@@ -2571,7 +3967,7 @@ class SettingsDialog(QDialog): #vers 4
         layout.addWidget(debug_group)
 
         # Debug Categories
-        categories_group = QGroupBox("📋 Debug Categories")
+        categories_group = QGroupBox("Debug Categories")
         categories_layout = QGridLayout(categories_group)
 
         self.debug_categories = {}
@@ -2596,41 +3992,261 @@ class SettingsDialog(QDialog): #vers 4
         layout.addWidget(categories_group)
 
         # Clear log button
-        clear_btn = QPushButton("🗑️ Clear Debug Log")
+        clear_btn = QPushButton("Clear Debug Log")
         clear_btn.clicked.connect(self._clear_debug_log)
         layout.addWidget(clear_btn)
 
         layout.addStretch()
         return widget
 
-    def _create_interface_tab(self): #vers 2
-        """Create interface settings tab"""
+
+    def _create_fonts_tab(self): #vers 1
+        """Create fonts settings tab with multiple font type controls"""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+
+        # Instructions
+        info_label = QLabel("Configure fonts for different UI elements. Changes apply when theme is saved.")
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("color: #666; font-style: italic; padding: 8px;")
+        layout.addWidget(info_label)
+
+        # Scroll area for font groups
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+
+        # Font type configurations
+        self.font_controls = {}
+
+        font_types = [
+            ("default", "Default Font", "General UI text", "Segoe UI", 9, 8, 24),
+            ("title", "Title Font", "Window titles and main headers", "Arial", 14, 10, 32),
+            ("panel", "Panel Headers Font", "Group box titles", "Arial", 10, 8, 18),
+            ("button", "Button Font", "All button text", "Arial", 10, 8, 16),
+            ("menu", "Menu Font", "Menu bar and menu items", "Segoe UI", 9, 8, 14),
+            ("infobar", "Info Bar Font", "Status bar and info text", "Courier New", 9, 7, 14),
+            ("table", "Table/List Font", "Data tables and lists", "Segoe UI", 9, 7, 14),
+            ("tooltip", "Tooltip Font", "Hover tooltip text", "Segoe UI", 8, 7, 12)
+        ]
+
+        for font_id, title, description, default_family, default_size, min_size, max_size in font_types:
+            group = self._create_font_control_group(
+                font_id, title, description,
+                default_family, default_size,
+                min_size, max_size
+            )
+            scroll_layout.addWidget(group)
+
+        scroll_layout.addStretch()
+        scroll.setWidget(scroll_widget)
+        layout.addWidget(scroll)
+
+        # Preview button
+        preview_btn = QPushButton("Preview Font Changes")
+        preview_btn.clicked.connect(self._preview_font_changes)
+        layout.addWidget(preview_btn)
+
+        return tab
+
+
+    def _create_font_control_group(self, font_id, title, description,
+        default_family, default_size, min_size, max_size): #vers 1
+        """Create a font control group for specific font type"""
+        group = QGroupBox(title)
+        layout = QVBoxLayout(group)
+
+        # Description
+        desc_label = QLabel(description)
+        desc_label.setStyleSheet("color: #888; font-style: italic; font-size: 8pt;")
+        layout.addWidget(desc_label)
+
+        # Font controls row
+        controls_layout = QHBoxLayout()
+
+        # Font family
+        controls_layout.addWidget(QLabel("Font:"))
+        font_combo = QFontComboBox()
+
+        # Load current font setting
+        current_family = self.app_settings.current_settings.get(
+            f'{font_id}_font_family', default_family
+        )
+        font_combo.setCurrentFont(QFont(current_family))
+        font_combo.currentFontChanged.connect(
+            lambda f, fid=font_id: self._on_font_changed(fid, 'family', f.family())
+        )
+        controls_layout.addWidget(font_combo, 1)
+
+        # Font size
+        controls_layout.addWidget(QLabel("Size:"))
+        size_spin = QSpinBox()
+        size_spin.setRange(min_size, max_size)
+        current_size = self.app_settings.current_settings.get(
+            f'{font_id}_font_size', default_size
+        )
+        size_spin.setValue(current_size)
+        size_spin.setSuffix(" pt")
+        size_spin.setFixedWidth(80)
+        size_spin.valueChanged.connect(
+            lambda v, fid=font_id: self._on_font_changed(fid, 'size', v)
+        )
+        controls_layout.addWidget(size_spin)
+
+        # Font weight
+        controls_layout.addWidget(QLabel("Weight:"))
+        weight_combo = QComboBox()
+        weight_combo.addItems(["Normal", "Bold", "Light"])
+        current_weight = self.app_settings.current_settings.get(
+            f'{font_id}_font_weight', 'Normal'
+        )
+        weight_combo.setCurrentText(current_weight)
+        weight_combo.currentTextChanged.connect(
+            lambda w, fid=font_id: self._on_font_changed(fid, 'weight', w)
+        )
+        weight_combo.setFixedWidth(100)
+        controls_layout.addWidget(weight_combo)
+
+        layout.addLayout(controls_layout)
+
+        # Store controls for later access
+        self.font_controls[font_id] = {
+            'family': font_combo,
+            'size': size_spin,
+            'weight': weight_combo,
+            'group': group
+        }
+
+        return group
+
+
+    def _on_font_changed(self, font_id, property_type, value): #vers 1
+        """Handle font property changes"""
+        if property_type == 'family':
+            self.app_settings.current_settings[f'{font_id}_font_family'] = value
+        elif property_type == 'size':
+            self.app_settings.current_settings[f'{font_id}_font_size'] = value
+        elif property_type == 'weight':
+            self.app_settings.current_settings[f'{font_id}_font_weight'] = value
+
+        # Mark as modified
+        if not hasattr(self, '_fonts_modified'):
+            self._fonts_modified = True
+
+
+    def _preview_font_changes(self): #vers 1
+        """Preview font changes in dialog"""
+        # Apply fonts to current dialog elements
+        try:
+            # Default font
+            if 'default' in self.font_controls:
+                family = self.font_controls['default']['family'].currentFont().family()
+                size = self.font_controls['default']['size'].value()
+                weight = self.font_controls['default']['weight'].currentText()
+
+                font = QFont(family, size)
+                if weight == "Bold":
+                    font.setWeight(QFont.Weight.Bold)
+                elif weight == "Light":
+                    font.setWeight(QFont.Weight.Light)
+
+                self.setFont(font)
+
+            QMessageBox.information(
+                self,
+                "Font Preview",
+                "Font changes previewed!\n\nClick 'Apply' to save changes permanently."
+            )
+        except Exception as e:
+            QMessageBox.warning(self, "Preview Error", f"Could not preview fonts:\n{e}")
+
+
+    def _load_font_settings(self): #vers 1
+        """Load font settings into controls"""
+        font_ids = ['default', 'title', 'panel', 'button', 'menu', 'infobar', 'table', 'tooltip']
+
+        for font_id in font_ids:
+            if font_id not in self.font_controls:
+                continue
+
+            controls = self.font_controls[font_id]
+
+            # Load family
+            family = self.app_settings.current_settings.get(f'{font_id}_font_family', 'Segoe UI')
+            controls['family'].setCurrentFont(QFont(family))
+
+            # Load size
+            size = self.app_settings.current_settings.get(f'{font_id}_font_size', 9)
+            controls['size'].setValue(size)
+
+            # Load weight
+            weight = self.app_settings.current_settings.get(f'{font_id}_font_weight', 'Normal')
+            controls['weight'].setCurrentText(weight)
+
+
+    def _save_font_settings(self): #vers 1
+        """Save font settings from controls to app settings"""
+        for font_id, controls in self.font_controls.items():
+            family = controls['family'].currentFont().family()
+            size = controls['size'].value()
+            weight = controls['weight'].currentText()
+
+            self.app_settings.current_settings[f'{font_id}_font_family'] = family
+            self.app_settings.current_settings[f'{font_id}_font_size'] = size
+            self.app_settings.current_settings[f'{font_id}_font_weight'] = weight
+
+
+    def _create_interface_tab(self): #vers 4
+        """Create interface settings tab - UI display options"""
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
-        # Font settings
-        font_group = QGroupBox("🔤 Font Settings")
-        font_layout = QVBoxLayout(font_group)
+        # Button Display Mode
+        button_display_group = QGroupBox("Button Display Mode")
+        button_display_layout = QVBoxLayout(button_display_group)
 
-        font_family_layout = QHBoxLayout()
-        font_family_layout.addWidget(QLabel("Font Family:"))
-        self.font_family_combo = QComboBox()
-        self.font_family_combo.addItems(["Segoe UI", "Arial", "Tahoma", "Verdana", "Consolas"])
-        font_family_layout.addWidget(self.font_family_combo)
-        font_layout.addLayout(font_family_layout)
+        self.button_display_combo = QComboBox()
+        self.button_display_combo.addItems(["Icons + Text", "Icons Only", "Text Only"])
 
-        font_size_layout = QHBoxLayout()
-        font_size_layout.addWidget(QLabel("Font Size:"))
-        self.font_size_spin = QSpinBox()
-        self.font_size_spin.setRange(8, 16)
-        font_size_layout.addWidget(self.font_size_spin)
-        font_size_layout.addStretch()
-        font_layout.addLayout(font_size_layout)
+        # Load current setting
+        current_mode = self.app_settings.current_settings.get("button_display_mode", "both")
+        mode_map = {"both": 0, "icons": 1, "text": 2}
+        self.button_display_combo.setCurrentIndex(mode_map.get(current_mode, 0))
 
-        layout.addWidget(font_group)
+        button_display_layout.addWidget(self.button_display_combo)
 
-        # Interface options
-        interface_group = QGroupBox("⚙️ Interface Options")
+        hint_label = QLabel("Controls how toolbar buttons are displayed")
+        hint_label.setStyleSheet("color: #888; font-style: italic;")
+        button_display_layout.addWidget(hint_label)
+
+        layout.addWidget(button_display_group)
+
+        # Window Controls
+        window_group = QGroupBox("Window Controls")
+        window_layout = QVBoxLayout(window_group)
+
+        self.custom_gadgets_check = QCheckBox("Use custom window gadgets (TXD Workshop style)")
+        self.custom_gadgets_check.setChecked(
+            self.app_settings.current_settings.get("use_custom_gadgets", False)
+        )
+        window_layout.addWidget(self.custom_gadgets_check)
+
+        self.corner_resize_check = QCheckBox("Enable corner resize (all 4 corners)")
+        self.corner_resize_check.setChecked(
+            self.app_settings.current_settings.get("enable_corner_resize", True)
+        )
+        window_layout.addWidget(self.corner_resize_check)
+
+        gadget_hint = QLabel("Custom gadgets disable system title bar. Corner resize works in both modes.")
+        gadget_hint.setStyleSheet("color: #888; font-style: italic;")
+        gadget_hint.setWordWrap(True)
+        window_layout.addWidget(gadget_hint)
+
+        layout.addWidget(window_group)
+
+        # Interface Options
+        interface_group = QGroupBox("Interface Options")
         interface_layout = QVBoxLayout(interface_group)
 
         self.tooltips_check = QCheckBox("Show tooltips")
@@ -2639,8 +4255,11 @@ class SettingsDialog(QDialog): #vers 4
         self.menu_icons_check = QCheckBox("Show menu icons")
         interface_layout.addWidget(self.menu_icons_check)
 
-        self.button_icons_check = QCheckBox("Show button icons")
-        interface_layout.addWidget(self.button_icons_check)
+        self.use_svg_icons_check = QCheckBox("Use SVG icons (never emojis)")
+        self.use_svg_icons_check.setChecked(
+            self.app_settings.current_settings.get("use_svg_icons", True)
+        )
+        interface_layout.addWidget(self.use_svg_icons_check)
 
         layout.addWidget(interface_group)
         layout.addStretch()
@@ -2801,7 +4420,7 @@ class SettingsDialog(QDialog): #vers 4
 
             if hasattr(self, 'demo_log'):
                 element_name = self.selected_element_combo.currentText()
-                self.demo_log.append(f"🎨 Applied {picked_color} to {element_name}")
+                self.demo_log.append(f"Applied {picked_color} to {element_name}")
 
     def _refresh_themes(self): #vers 1
         """Refresh themes from disk"""
@@ -2832,12 +4451,12 @@ class SettingsDialog(QDialog): #vers 4
                 self.demo_theme_combo.setCurrentIndex(index)
 
             if hasattr(self, 'demo_log'):
-                self.demo_log.append(f"🔄 Refreshed: {len(self.app_settings.themes)} themes")
+                self.demo_log.append(f"Refreshed: {len(self.app_settings.themes)} themes")
 
 
     # ===== SETTINGS MANAGEMENT =====
 
-    def _load_current_settings(self): #vers 2
+    def _load_current_settings(self): #vers 5
         """Load current settings into UI"""
         # Set theme
         if hasattr(self, 'theme_selector_combo'):
@@ -2845,6 +4464,21 @@ class SettingsDialog(QDialog): #vers 4
             index = self.theme_selector_combo.findData(current_theme)
             if index >= 0:
                 self.theme_selector_combo.setCurrentIndex(index)
+
+       # Backward compatibility: migrate old font_family/font_size to default_font_*
+        if 'font_family' in self.app_settings.current_settings and 'default' in self.font_controls:
+            old_family = self.app_settings.current_settings.get('font_family', 'Segoe UI')
+            old_size = self.app_settings.current_settings.get('font_size', 9)
+
+            if 'default_font_family' not in self.app_settings.current_settings:
+                self.app_settings.current_settings['default_font_family'] = old_family
+                self.app_settings.current_settings['default_font_size'] = old_size
+                self.font_controls['default']['family'].setCurrentFont(QFont(old_family))
+                self.font_controls['default']['size'].setValue(old_size)
+
+        # Load font settings
+        if hasattr(self, 'font_controls'):
+            self._load_font_settings()
 
         # Set interface settings
         if hasattr(self, 'font_family_combo'):
@@ -2866,6 +4500,36 @@ class SettingsDialog(QDialog): #vers 4
         if hasattr(self, 'button_icons_check'):
             self.button_icons_check.setChecked(
                 self.app_settings.current_settings.get("show_button_icons", False)
+            )
+
+            # Button display mode
+        if hasattr(self, 'button_display_combo'):
+            current_mode = self.app_settings.current_settings.get("button_display_mode", "both")
+            mode_map = {"both": 0, "icons": 1, "text": 2}
+            self.button_display_combo.setCurrentIndex(mode_map.get(current_mode, 0))
+
+        # Window controls
+        if hasattr(self, 'custom_gadgets_check'):
+            self.custom_gadgets_check.setChecked(
+                self.app_settings.current_settings.get("use_custom_gadgets", False)
+            )
+        if hasattr(self, 'corner_resize_check'):
+            self.corner_resize_check.setChecked(
+                self.app_settings.current_settings.get("enable_corner_resize", True)
+            )
+
+        # Interface settings
+        if hasattr(self, 'tooltips_check'):
+            self.tooltips_check.setChecked(
+                self.app_settings.current_settings.get("show_tooltips", True)
+            )
+        if hasattr(self, 'menu_icons_check'):
+            self.menu_icons_check.setChecked(
+                self.app_settings.current_settings.get("show_menu_icons", True)
+            )
+        if hasattr(self, 'use_svg_icons_check'):
+            self.use_svg_icons_check.setChecked(
+                self.app_settings.current_settings.get("use_svg_icons", True)
             )
 
     def _get_dialog_settings(self): #vers 2
@@ -2896,6 +4560,26 @@ class SettingsDialog(QDialog): #vers 4
         if hasattr(self, 'button_icons_check'):
             settings["show_button_icons"] = self.button_icons_check.isChecked()
 
+        # Button display mode
+        if hasattr(self, 'button_display_combo'):
+            mode_index = self.button_display_combo.currentIndex()
+            mode_map = {0: "both", 1: "icons", 2: "text"}
+            settings["button_display_mode"] = mode_map.get(mode_index, "both")
+
+        # Window controls
+        if hasattr(self, 'custom_gadgets_check'):
+            settings["use_custom_gadgets"] = self.custom_gadgets_check.isChecked()
+        if hasattr(self, 'corner_resize_check'):
+            settings["enable_corner_resize"] = self.corner_resize_check.isChecked()
+
+        # Interface settings
+        if hasattr(self, 'tooltips_check'):
+            settings["show_tooltips"] = self.tooltips_check.isChecked()
+        if hasattr(self, 'menu_icons_check'):
+            settings["show_menu_icons"] = self.menu_icons_check.isChecked()
+        if hasattr(self, 'use_svg_icons_check'):
+            settings["use_svg_icons"] = self.use_svg_icons_check.isChecked()
+
         # Debug settings
         if hasattr(self, 'debug_enabled_check'):
             settings["debug_mode"] = self.debug_enabled_check.isChecked()
@@ -2910,13 +4594,19 @@ class SettingsDialog(QDialog): #vers 4
 
         return settings
 
-    def _apply_settings(self): #vers 2
-        """Apply settings permanently"""
+
+    def _apply_settings(self): #vers 5
+        """Apply settings permanently and save to appfactory.settings.json"""
         new_settings = self._get_dialog_settings()
         old_theme = self.app_settings.current_settings["theme"]
+        old_custom_gadgets = self.app_settings.current_settings.get("use_custom_gadgets", False)
 
         # Update settings
         self.app_settings.current_settings.update(new_settings)
+
+        # Save font settings if modified
+        if hasattr(self, 'font_controls'):
+            self._save_font_settings()
 
         # Update modified colors if any
         if hasattr(self, '_modified_colors') and self._modified_colors:
@@ -2926,19 +4616,34 @@ class SettingsDialog(QDialog): #vers 4
                     self.app_settings.themes[current_theme]["colors"] = {}
                 self.app_settings.themes[current_theme]["colors"].update(self._modified_colors)
 
-        # Save settings
+        # Save settings to appfactory.settings.json
         self.app_settings.save_settings()
+
+        # Apply theme and update icons
+        stylesheet = self.app_settings.get_stylesheet()
+        self.setStyleSheet(stylesheet)
 
         # Emit signals
         if new_settings["theme"] != old_theme:
             self.themeChanged.emit(new_settings["theme"])
+
+        # Check if custom gadgets setting changed
+        new_custom_gadgets = new_settings.get("use_custom_gadgets", False)
+        if old_custom_gadgets != new_custom_gadgets:
+            QMessageBox.information(
+                self,
+                "Restart Required",
+                "Window gadget changes will take effect after restarting the application."
+            )
+
         self.settingsChanged.emit()
 
         QMessageBox.information(
             self,
             "Applied",
-            f"Settings applied successfully!\n\nActive theme: {new_settings['theme']}"
+            f"Settings saved to appfactory.settings.json\n\nActive theme: {new_settings['theme']}"
         )
+
 
     def _reset_to_defaults(self): #vers 1
         """Reset to default settings"""
@@ -2960,7 +4665,7 @@ class SettingsDialog(QDialog): #vers 4
         if hasattr(self.parent(), 'gui_layout') and hasattr(self.parent().gui_layout, 'log'):
             self.parent().gui_layout.log.clear()
             if hasattr(self.parent(), 'log_message'):
-                self.parent().log_message("🗑️ Debug log cleared")
+                self.parent().log_message("Debug log cleared")
         else:
             QMessageBox.information(self, "Clear Log", "Activity log cleared (if available).")
 
@@ -2971,7 +4676,6 @@ class SettingsDialog(QDialog): #vers 4
 
     def _save_current_theme(self): #vers 2
         """Save current theme with modifications"""
-        # Collect all current colors
         colors = {}
         for color_key, editor in self.color_editors.items():
             colors[color_key] = editor.current_value
@@ -3021,7 +4725,7 @@ class SettingsDialog(QDialog): #vers 4
         theme_data = {
             "name": theme_name,
             "description": f"Custom theme created from {self.theme_selector_combo.currentText()}",
-            "category": "🎭 Custom",
+            "category": "Custom",
             "author": "User",
             "version": "1.0",
             "colors": colors
@@ -3100,7 +4804,273 @@ class SettingsDialog(QDialog): #vers 4
         return '#ffffff' if luminance < 0.5 else '#000000'
 
 
+class IconProvider: #vers 2
+    """Provides SVG icons that adapt to theme colors"""
 
+    def __init__(self, parent_widget, app_settings=None):
+        """Initialize with parent widget and optional app_settings for theme access"""
+        self.parent = parent_widget
+        self.app_settings = app_settings or getattr(parent_widget, 'app_settings', None)
+        self._icon_cache = {}
+
+    def _get_icon_color(self): #vers 3
+        """Get appropriate icon color based on current theme - uses theme text color"""
+        if not self.app_settings:
+            return '#000000'
+
+        # Use the theme's primary text color for icons
+        colors = self.app_settings.get_theme_colors()
+        text_color = colors.get('text_primary', '#000000')
+
+        return text_color
+
+    def _svg_to_icon(self, svg_data, size=24, force_refresh=False): #vers 3
+        """Convert SVG data to QIcon with theme color support"""
+        from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor
+        from PyQt6.QtSvg import QSvgRenderer
+        from PyQt6.QtCore import QByteArray
+
+        # Create cache key
+        cache_key = (svg_data, size, self._get_icon_color())
+
+        # Return cached icon if available and not forcing refresh
+        if not force_refresh and cache_key in self._icon_cache:
+            return self._icon_cache[cache_key]
+
+        try:
+            icon_color = self._get_icon_color()
+
+            # Replace currentColor with determined color
+            svg_str = svg_data.decode('utf-8')
+            svg_str = svg_str.replace('currentColor', icon_color)
+            svg_data = svg_str.encode('utf-8')
+
+            renderer = QSvgRenderer(QByteArray(svg_data))
+            pixmap = QPixmap(size, size)
+            pixmap.fill(QColor(0, 0, 0, 0))  # Transparent background
+
+            painter = QPainter(pixmap)
+            renderer.render(painter)
+            painter.end()
+
+            icon = QIcon(pixmap)
+            self._icon_cache[cache_key] = icon
+            return icon
+        except Exception as e:
+            print(f"Error creating icon: {e}")
+            return QIcon()
+
+    def clear_cache(self): #vers 1
+        """Clear icon cache to force regeneration with new theme colors"""
+        self._icon_cache.clear()
+
+    def restore_icon(self): #vers 1
+        """Restore - Two overlapping squares"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <rect x="7" y="7" width="10" height="10"
+                stroke="currentColor" stroke-width="2"
+                fill="none" rx="2"/>
+            <path d="M11 5h6a2 2 0 012 2v6"
+                stroke="currentColor" stroke-width="2"
+                fill="none" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def minimize_icon(self): #vers 1
+        """Minimize - Horizontal line"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <line x1="5" y1="12" x2="19" y2="12"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def maximize_icon(self): #vers 1
+        """Maximize - Square"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <rect x="5" y="5" width="14" height="14"
+                stroke="currentColor" stroke-width="2"
+                fill="none" rx="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def close_icon(self): #vers 1
+        """Close - X icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <line x1="6" y1="6" x2="18" y2="18"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+            <line x1="18" y1="6" x2="6" y2="18"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    # File Operation Icons
+
+    def folder_icon(self): #vers 1
+        """Open - Folder icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-7l-2-2H5a2 2 0 00-2 2z"
+                stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="none"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def save_icon(self): #vers 1
+        """Save - Floppy disk icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
+                stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def import_icon(self): #vers 1
+        """Import - Download arrow"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"
+                stroke="currentColor" stroke-width="2" fill="none"
+                stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="7 10 12 15 17 10"
+                stroke="currentColor" stroke-width="2" fill="none"
+                stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="12" y1="15" x2="12" y2="3"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def export_icon(self): #vers 1
+        """Export - Upload arrow"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"
+                stroke="currentColor" stroke-width="2" fill="none"
+                stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="17 8 12 3 7 8"
+                stroke="currentColor" stroke-width="2" fill="none"
+                stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="12" y1="3" x2="12" y2="15"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    # Edit Icons
+
+    def add_icon(self): #vers 1
+        """Add - Plus icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <line x1="12" y1="5" x2="12" y2="19"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="5" y1="12" x2="19" y2="12"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def delete_icon(self): #vers 1
+        """Delete - Trash icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <polyline points="3 6 5 6 21 6"
+                stroke="currentColor" stroke-width="2" fill="none"
+                stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                stroke="currentColor" stroke-width="2" fill="none"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def edit_icon(self): #vers 1
+        """Edit - Pencil icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"
+                stroke="currentColor" stroke-width="2" fill="none"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def copy_icon(self): #vers 1
+        """Copy icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <rect x="9" y="9" width="13" height="13" rx="2"
+                stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    # View Icons
+
+    def view_icon(self): #vers 1
+        """View - Eye icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9
+                M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17
+                M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5
+                C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"
+                fill="currentColor"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def settings_icon(self): #vers 1
+        """Settings - Gear icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def info_icon(self): #vers 1
+        """Info - Circle with i"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M12 11v6M12 8v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def filter_icon(self): #vers 1
+        """Filter - Sliders icon"""
+        svg_data = b'''<svg viewBox="0 0 20 20">
+            <circle cx="6" cy="4" r="2" fill="currentColor"/>
+            <rect x="5" y="8" width="2" height="8" fill="currentColor"/>
+            <circle cx="14" cy="12" r="2" fill="currentColor"/>
+            <rect x="13" y="4" width="2" height="6" fill="currentColor"/>
+            <circle cx="10" cy="8" r="2" fill="currentColor"/>
+            <rect x="9" y="12" width="2" height="4" fill="currentColor"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    # Utility Icons
+
+    def undo_icon(self): #vers 1
+        """Undo - Curved arrow"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <path d="M3 7v6h6M3 13a9 9 0 1018 0 9 9 0 00-18 0z"
+                stroke="currentColor" stroke-width="2" fill="none"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def refresh_icon(self): #vers 1
+        """Refresh - Circular arrow"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <path d="M16 10A6 6 0 1 1 4 10M4 10l3-3m-3 3l3 3"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" fill="none"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+
+"""
+# In your main window __init__:
+from utils.app_settings_system import IconProvider
+
+self.icons = IconProvider(self)
+
+# Then use icons like:
+open_btn.setIcon(self.icons.folder_icon())
+save_btn.setIcon(self.icons.save_icon())
+import_btn.setIcon(self.icons.import_icon())
+export_btn.setIcon(self.icons.export_icon())
+settings_btn.setIcon(self.icons.settings_icon())
+"""
 
 def rgb_to_hsl(hex_color): #vers 1
     """Convert hex color to HSL"""
@@ -3220,23 +5190,23 @@ def _create_debug_tab(self):
     layout.addWidget(categories_group)
 
     # Debug Actions Group
-    actions_group = QGroupBox("🔧 Debug Actions")
+    actions_group = QGroupBox("Debug Actions")
     actions_layout = QVBoxLayout(actions_group)
 
     # Quick debug buttons
     buttons_layout = QHBoxLayout()
 
-    test_debug_btn = QPushButton("🧪 Test Debug")
+    test_debug_btn = QPushButton("Test Debug")
     test_debug_btn.setToolTip("Send a test debug message")
     test_debug_btn.clicked.connect(self._test_debug_output)
     buttons_layout.addWidget(test_debug_btn)
 
-    debug_img_btn = QPushButton("📁 Debug IMG")
+    debug_img_btn = QPushButton("Debug IMG")
     debug_img_btn.setToolTip("Debug current IMG file (if loaded)")
     debug_img_btn.clicked.connect(self._debug_current_img)
     buttons_layout.addWidget(debug_img_btn)
 
-    clear_log_btn = QPushButton("🗑️ Clear Log")
+    clear_log_btn = QPushButton("Clear Log")
     clear_log_btn.setToolTip("Clear the activity log")
     clear_log_btn.clicked.connect(self._clear_debug_log)
     buttons_layout.addWidget(clear_log_btn)
@@ -3250,12 +5220,12 @@ def _create_debug_tab(self):
 def _test_debug_output(self):
     """Test debug output"""
     if hasattr(self.parent(), 'log_message'):
-        self.parent().log_message("🧪 Debug test message - debug system working!")
-        self.parent().log_message(f"🐛 [DEBUG-TEST] Debug enabled: {self.debug_enabled_check.isChecked()}")
-        self.parent().log_message(f"🐛 [DEBUG-TEST] Debug level: {self.debug_level_combo.currentText()}")
+        self.parent().log_message("Debug test message - debug system working!")
+        self.parent().log_message(f"[DEBUG-TEST] Debug enabled: {self.debug_enabled_check.isChecked()}")
+        self.parent().log_message(f"[DEBUG-TEST] Debug level: {self.debug_level_combo.currentText()}")
 
         enabled_categories = [cat for cat, cb in self.debug_categories.items() if cb.isChecked()]
-        self.parent().log_message(f"🐛 [DEBUG-TEST] Active categories: {', '.join(enabled_categories)}")
+        self.parent().log_message(f"[DEBUG-TEST] Active categories: {', '.join(enabled_categories)}")
     else:
         from PyQt6.QtWidgets import QMessageBox
         QMessageBox.information(self, "Debug Test", "Debug test completed!\nCheck the activity log for output.")
@@ -3264,8 +5234,8 @@ def _debug_current_img(self):
     """Debug current IMG file"""
     if hasattr(self.parent(), 'current_img') and self.parent().current_img:
         img = self.parent().current_img
-        self.parent().log_message(f"🐛 [DEBUG-IMG] Current IMG: {img.file_path}")
-        self.parent().log_message(f"🐛 [DEBUG-IMG] Entries: {len(img.entries)}")
+        self.parent().log_message(f"[DEBUG-IMG] Current IMG: {img.file_path}")
+        self.parent().log_message(f"[DEBUG-IMG] Entries: {len(img.entries)}")
 
         # Count file types
         file_types = {}
@@ -3273,19 +5243,19 @@ def _debug_current_img(self):
             ext = entry.name.split('.')[-1].upper() if '.' in entry.name else "NO_EXT"
             file_types[ext] = file_types.get(ext, 0) + 1
 
-        self.parent().log_message(f"🐛 [DEBUG-IMG] File types found:")
+        self.parent().log_message(f"[DEBUG-IMG] File types found:")
         for ext, count in sorted(file_types.items()):
-            self.parent().log_message(f"🐛 [DEBUG-IMG]   {ext}: {count} files")
+            self.parent().log_message(f"[DEBUG-IMG]   {ext}: {count} files")
 
         # Check table rows
         if hasattr(self.parent(), 'gui_layout') and hasattr(self.parent().gui_layout, 'table'):
             table = self.parent().gui_layout.table
             table_rows = table.rowCount()
             hidden_rows = sum(1 for row in range(table_rows) if table.isRowHidden(row))
-            self.parent().log_message(f"🐛 [DEBUG-IMG] Table: {table_rows} rows, {hidden_rows} hidden")
+            self.parent().log_message(f"[DEBUG-IMG] Table: {table_rows} rows, {hidden_rows} hidden")
 
     elif hasattr(self.parent(), 'log_message'):
-        self.parent().log_message("🐛 [DEBUG-IMG] No IMG file currently loaded")
+        self.parent().log_message("[DEBUG-IMG] No IMG file currently loaded")
     else:
         from PyQt6.QtWidgets import QMessageBox
         QMessageBox.information(self, "Debug IMG", "No IMG file loaded or no debug function available.")
@@ -3294,7 +5264,7 @@ def _clear_debug_log(self):
     """Clear the activity log"""
     if hasattr(self.parent(), 'gui_layout') and hasattr(self.parent().gui_layout, 'log'):
         self.parent().gui_layout.log.clear()
-        self.parent().log_message("🗑️ Debug log cleared")
+        self.parent().log_message("Debug log cleared")
     else:
         from PyQt6.QtWidgets import QMessageBox
         QMessageBox.information(self, "Clear Log", "Activity log cleared (if available).")
