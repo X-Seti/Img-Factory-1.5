@@ -2289,65 +2289,6 @@ class CollisionMain(QWidget): #vers 3
 
             view_layout = QHBoxLayout()
 
-            """
-            view_layout = QHBoxLayout()
-
-            # Bumpmap detection
-            self.info_format_b = QLabel("Bumpmaps:")
-            self.info_format_b.setFont(self.panel_font)
-            self.info_format_b.setMinimumWidth(120)
-            mipbump_layout.addWidget(self.info_format_b)
-
-            view_layout.setSpacing(5)
-            self.view_bumpmap_btn = QPushButton("Manage")
-            self.view_bumpmap_btn.setFont(self.button_font)
-            self.view_bumpmap_btn.setIcon(self._create_manage_icon())
-            self.view_bumpmap_btn.setIconSize(QSize(20, 20))
-            self.view_bumpmap_btn.setToolTip("View and Manage placeholder")
-            #self.view_bumpmap_btn.clicked.connect(self._view_bumpmap)
-            self.view_bumpmap_btn.setEnabled(False)
-            mipbump_layout.addWidget(self.view_bumpmap_btn)
-
-            self.export_bumpmap_btn = QPushButton("Export")
-            self.export_bumpmap_btn.setFont(self.button_font)
-            self.export_bumpmap_btn.setIcon(self._create_export_icon())
-            self.export_bumpmap_btn.setIconSize(QSize(20, 20))
-            self.export_bumpmap_btn.setToolTip("Export as ")
-            #self.export_bumpmap_btn.clicked.connect(self._export_bumpmap)
-            self.export_bumpmap_btn.setEnabled(False)
-            mipbump_layout.addWidget(self.export_bumpmap_btn)
-
-            self.import_bumpmap_btn = QPushButton("Import")
-            self.import_bumpmap_btn.setFont(self.button_font)
-            self.import_bumpmap_btn.setIcon(self._create_import_icon())
-            self.import_bumpmap_btn.setIconSize(QSize(20, 20))
-            self.import_bumpmap_btn.setToolTip("Import from image")
-            #self.import_bumpmap_btn.clicked.connect(self._import_bumpmap)
-            self.import_bumpmap_btn.setEnabled(False)
-            mipbump_layout.addWidget(self.import_bumpmap_btn)
-
-            #not needed - Render Mesh? optimize / enhance
-            self.bitdepth_btn = QPushButton("Bit Depth")
-            self.bitdepth_btn.setFont(self.button_font)
-            self.bitdepth_btn.setIcon(self._create_bitdepth_icon())
-            self.bitdepth_btn.setIconSize(QSize(20, 20))
-            self.bitdepth_btn.setToolTip("Change bit depth")
-            #self.bitdepth_btn.clicked.connect(self._change_bit_depth)
-            self.bitdepth_btn.setEnabled(False)
-            format_layout.addWidget(self.bitdepth_btn)
-
-            #not needed - Render Mesh? not needed
-            self.upscale_btn = QPushButton("AI Upscale")
-            self.upscale_btn.setFont(self.button_font)
-            self.upscale_btn.setIcon(self._create_upscale_icon())
-            self.upscale_btn.setIconSize(QSize(20, 20))
-            self.upscale_btn.setToolTip("AI upscale texture")
-            #self.upscale_btn.clicked.connect(self._upscale_surface)
-            self.upscale_btn.setEnabled(False)
-            format_layout.addWidget(self.upscale_btn)
-            """
-
-
             self.compress_btn = QPushButton("Compress")
             self.compress_btn.setFont(self.button_font)
             self.compress_btn.setIcon(self._create_compress_icon())
@@ -3495,6 +3436,54 @@ class CollisionMain(QWidget): #vers 3
                 json.dump(settings, indent=2, fp=f)
         except Exception as e:
             print(f"Failed to save settings: {e}")
+
+
+    def open_col_file(self, file_path): #vers 1
+        """Open standalone COL file"""
+        try:
+            from methods.col_operations import load_col_file
+
+            col_file = load_col_file(file_path)
+            if not col_file:
+                QMessageBox.warning(self, "Open Failed", f"Failed to load COL file:\n{file_path}")
+                return False
+
+            self.current_col_file = col_file
+            self.current_file_path = file_path
+
+            # Update UI
+            if hasattr(self, 'panelone_widget'):
+                self.panelone_widget.clear()
+
+            self.setWindowTitle(f"{App_name} - {os.path.basename(file_path)}")
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Loaded COL file: {os.path.basename(file_path)}")
+
+            img_debugger.success(f"Opened COL file: {file_path}")
+            return True
+
+        except Exception as e:
+            img_debugger.error(f"Error opening COL file: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to open COL file:\n{str(e)}")
+            return False
+
+    def load_from_img_archive(self, img_path): #vers 1
+        """Load COL files from IMG archive"""
+        try:
+            # TODO: Implement IMG archive COL loading
+            # This would extract COL files from the IMG and populate the list
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Loading COL files from IMG: {os.path.basename(img_path)}")
+
+            img_debugger.info(f"IMG archive COL loading - not yet implemented: {img_path}")
+            return False
+
+        except Exception as e:
+            img_debugger.error(f"Error loading from IMG archive: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to load from IMG:\n{str(e)}")
+            return False
 
 
     def keyPressEvent(self, event): #vers 1
