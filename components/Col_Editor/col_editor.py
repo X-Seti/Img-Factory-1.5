@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 #this belongs in components.Col_Editor.col_editor.py - Version: 6
 # X-Seti - August13 2025 - IMG Factory 1.5 - Enhanced COL Editor
 # Enhanced version with better integration and 3D viewer improvements
