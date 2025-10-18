@@ -568,7 +568,7 @@ class CollisionMain(QWidget): #vers 3
     def __init__(self, parent=None, main_window=None): #vers 10
         """initialize_features"""
         if DEBUG_STANDALONE and main_window is None:
-            print(App_name * " Initializing ...")
+            print(App_name + " Initializing ...")
 
         super().__init__(parent)
 
@@ -591,7 +591,6 @@ class CollisionMain(QWidget): #vers 3
         self._show_checkerboard = True
         self._checkerboard_size = 16
         self._overlay_opacity = 50
-        self._invert_alpha = False
         self.zoom_level = 1.0
         self.pan_offset = QPoint(0, 0)
         self.background_color = QColor(42, 42, 42)
@@ -1730,22 +1729,32 @@ class CollisionMain(QWidget): #vers 3
 
         layout.addStretch()
 
-        self.open_col_btn = QPushButton("Open")
-        self.open_col_btn.setFont(self.button_font)
-        self.open_col_btn.setIcon(self._create_file_icon())
-        self.open_col_btn.setIconSize(QSize(20, 20))
-        self.open_col_btn.setToolTip("Open col files")
-        #self.open_col_btn.clicked.connect(self.save_file)
-        layout.addWidget(self.open_col_btn)
+        # Open button
+        self.open_btn = QPushButton()
+        self.open_btn.setFont(self.button_font)
+        self.open_btn.setIcon(self._create_open_icon())
+        self.open_btn.setText("Open")
+        self.open_btn.setIconSize(QSize(20, 20))
+        self.open_btn.setShortcut("Ctrl+O")
+        if self.button_display_mode == 'icons':
+            self.open_btn.setFixedSize(40, 40)
+        self.open_btn.setToolTip("Open COL file (Ctrl+O)")
+        #self.open_btn.clicked.connect(self._open_file)  # TODO: Connect
+        layout.addWidget(self.open_btn)
 
-        self.save_col_btn = QPushButton("Save")
-        self.save_col_btn.setFont(self.button_font)
-        self.save_col_btn.setIcon(self._create_save_icon())
-        self.save_col_btn.setIconSize(QSize(20, 20))
-        self.save_col_btn.setToolTip("Save col files")
-        #self.save_col_btn.clicked.connect(self.save_dialog)
-        self.save_col_btn.setEnabled(False)
-        layout.addWidget(self.save_col_btn)
+        # Save button
+        self.save_btn = QPushButton()
+        self.save_btn.setFont(self.button_font)
+        self.save_btn.setIcon(self._create_save_icon())
+        self.save_btn.setText("Save")
+        self.save_btn.setIconSize(QSize(20, 20))
+        self.save_btn.setShortcut("Ctrl+S")
+        if self.button_display_mode == 'icons':
+            self.save_btn.setFixedSize(40, 40)
+        self.save_btn.setEnabled(False)  # Enable when modified
+        self.save_btn.setToolTip("Save COL file (Ctrl+S)")
+        #self.save_btn.clicked.connect(self._save_file)  # TODO: Connect
+        layout.addWidget(self.save_btn)
 
         layout.addSpacing(10)
 
@@ -1952,6 +1961,21 @@ class CollisionMain(QWidget): #vers 3
         layout.addWidget(self.rotate_ccw_btn)
 
         layout.addSpacing(5)
+
+        # Analyze button
+        self.analyze_btn = QPushButton()
+        self.analyze_btn.setFont(self.button_font)
+        self.analyze_btn.setIcon(self._create_analyze_icon())
+        self.analyze_btn.setText("Analyze")
+        self.analyze_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.analyze_btn.setFixedSize(40, 40)
+        #self.analyze_btn.clicked.connect(self._analyze_collision)  # TODO: Connect
+        self.analyze_btn.setEnabled(False)  # Enable when COL loaded
+        self.analyze_btn.setToolTip("Analyze collision data")
+        layout.addWidget(self.analyze_btn)
+
+        layout.addStretch()
 
         # Copy
         self.copy_btn = QPushButton()
@@ -2190,25 +2214,6 @@ class CollisionMain(QWidget): #vers 3
         #self.info_name.editingFinished.connect(self._save_surface_name)
         self.info_name.mousePressEvent = lambda e: self._enable_name_edit(e, False)
         name_layout.addWidget(self.info_name, stretch=1)
-
-        """
-        self.alpha_label = QLabel("Alpha:")
-        self.alpha_label.setFont(self.panel_font)
-        self.alpha_label.setStyleSheet("color: red;")
-        self.alpha_label.setVisible(False)
-        name_layout.addWidget(self.alpha_label)
-
-        self.info_alpha_name = QLineEdit()
-        self.info_alpha_name.setFont(self.panel_font)
-        self.info_alpha_name.setPlaceholderText("Click to edit...")
-        self.info_alpha_name.setReadOnly(True)
-        self.info_alpha_name.setStyleSheet("color: red; padding: 5px; border: 1px solid #3a3a3a;")
-        #self.info_alpha_name.returnPressed.connect(self._save_alpha_name)
-        #self.info_alpha_name.editingFinished.connect(self._save_alpha_name)
-        self.info_alpha_name.mousePressEvent = lambda e: self._enable_name_edit(e, True)
-        self.info_alpha_name.setVisible(False)
-        name_layout.addWidget(self.info_alpha_name, stretch=1)
-        """
 
         info_layout.addLayout(name_layout)
 
@@ -2460,26 +2465,40 @@ class CollisionMain(QWidget): #vers 3
         #bg_custom_btn.clicked.connect(self._pick_background_color)
         controls_layout.addWidget(bg_custom_btn)
 
-        """
-        # Add resize button here
-        self.resize_surface_btn = QPushButton()
-        self.resize_surface_btn.setIcon(self._create_resize_icon())
-        self.resize_surface_btn.setIconSize(QSize(20, 20))
-        self.resize_surface_btn.setFixedSize(40, 40)
-        self.resize_surface_btn.setToolTip("Resize") # not needed for col
-        #self.resize_surface_btn.clicked.connect(self._resize_surface)
-        #self.resize_surface_btn.setEnabled(False)
-        controls_layout.addWidget(self.resize_surface_btn)
+        controls_layout.addSpacing(5)
 
-        # Checkerboard pattern button
-        bg_checker_btn = QPushButton()
-        bg_checker_btn.setIcon(self._create_checkerboard_icon())
-        bg_checker_btn.setIconSize(QSize(20, 20))
-        bg_checker_btn.setFixedSize(40, 40)
-        bg_checker_btn.setToolTip("Checkerboard Pattern")
-        #bg_checker_btn.clicked.connect(lambda: self.preview_widget.set_checkerboard_background())
-        controls_layout.addWidget(bg_checker_btn)
-        """
+        # View Spheres toggle
+        self.view_spheres_btn = QPushButton()
+        self.view_spheres_btn.setIcon(self._create_sphere_icon())
+        self.view_spheres_btn.setIconSize(QSize(20, 20))
+        self.view_spheres_btn.setFixedSize(40, 40)
+        self.view_spheres_btn.setCheckable(True)
+        self.view_spheres_btn.setChecked(True)
+        self.view_spheres_btn.setToolTip("Toggle Spheres")
+        #self.view_spheres_btn.clicked.connect(self._toggle_spheres)  # TODO: Connect
+        controls_layout.addWidget(self.view_spheres_btn)
+
+        # View Boxes toggle
+        self.view_boxes_btn = QPushButton()
+        self.view_boxes_btn.setIcon(self._create_box_icon())
+        self.view_boxes_btn.setIconSize(QSize(20, 20))
+        self.view_boxes_btn.setFixedSize(40, 40)
+        self.view_boxes_btn.setCheckable(True)
+        self.view_boxes_btn.setChecked(True)
+        self.view_boxes_btn.setToolTip("Toggle Boxes")
+        #self.view_boxes_btn.clicked.connect(self._toggle_boxes)  # TODO: Connect
+        controls_layout.addWidget(self.view_boxes_btn)
+
+        # View Mesh toggle
+        self.view_mesh_btn = QPushButton()
+        self.view_mesh_btn.setIcon(self._create_mesh_icon())
+        self.view_mesh_btn.setIconSize(QSize(20, 20))
+        self.view_mesh_btn.setFixedSize(40, 40)
+        self.view_mesh_btn.setCheckable(True)
+        self.view_mesh_btn.setChecked(True)
+        self.view_mesh_btn.setToolTip("Toggle Mesh")
+        #self.view_mesh_btn.clicked.connect(self._toggle_mesh)  # TODO: Connect
+        controls_layout.addWidget(self.view_mesh_btn)
 
         controls_layout.addSpacing(5)
 
@@ -4224,6 +4243,16 @@ class CollisionMain(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data)
 
+
+    def _create_open_icon(self): #vers 1
+        """Open - Folder icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <path d="M3 7v13a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                stroke="currentColor" stroke-width="2"
+                fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
     def _create_save_icon(self): #vers 1
         """Save col - Floppy disk icon"""
         svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -4245,6 +4274,77 @@ class CollisionMain(QWidget): #vers 3
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data)
+
+    def _create_saveas_icon(self): #vers 1
+        """Save - Floppy disk icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
+                stroke="currentColor" stroke-width="2"
+                fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="17 21 17 13 7 13 7 21"
+                stroke="currentColor" stroke-width="2"
+                fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="7 3 7 8 15 8"
+                stroke="currentColor" stroke-width="2"
+                fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_analyze_icon(self): #vers 1
+        """Analyze - Bar chart icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <line x1="18" y1="20" x2="18" y2="10"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="12" y1="20" x2="12" y2="4"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="6" y1="20" x2="6" y2="14"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_sphere_icon(self): #vers 1
+        """Sphere - Circle icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"
+                stroke="currentColor" stroke-width="2"
+                fill="none"/>
+            <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"
+                stroke="currentColor" stroke-width="2"
+                fill="none"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_box_icon(self): #vers 1
+        """Box - Cube icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
+                stroke="currentColor" stroke-width="2"
+                fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"
+                stroke="currentColor" stroke-width="2"
+                fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="12" y1="22.08" x2="12" y2="12"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_mesh_icon(self): #vers 1
+        """Mesh - Grid/wireframe icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18"
+                stroke="currentColor" stroke-width="2"
+                fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="3" y1="9" x2="21" y2="9"
+                stroke="currentColor" stroke-width="2"/>
+            <line x1="3" y1="15" x2="21" y2="15"
+                stroke="currentColor" stroke-width="2"/>
+            <line x1="9" y1="3" x2="9" y2="21"
+                stroke="currentColor" stroke-width="2"/>
+            <line x1="15" y1="3" x2="15" y2="21"
+                stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_package_icon(self): #vers 1
         """Export All - Package/Box icon"""
@@ -4564,49 +4664,6 @@ class CollisionMain(QWidget): #vers 3
             # Fallback to no icon if SVG fails
             return QIcon()
 
-class COLToolbar(QToolBar): #vers 1
-    """COL editor toolbar"""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setMovable(False)
-
-        self.setup_actions()
-
-    def setup_actions(self): #vers 1
-        """Setup toolbar actions"""
-        # File actions
-        self.open_action = QAction("📂 Open", self)
-        self.open_action.setShortcut("Ctrl+O")
-        self.addAction(self.open_action)
-
-        self.save_action = QAction("💾 Save", self)
-        self.save_action.setShortcut("Ctrl+S")
-        self.addAction(self.save_action)
-
-        self.addSeparator()
-
-        # View actions
-        self.view_spheres_action = QAction("🔵 Spheres", self)
-        self.view_spheres_action.setCheckable(True)
-        self.view_spheres_action.setChecked(True)
-        self.addAction(self.view_spheres_action)
-
-        self.view_boxes_action = QAction("📦 Boxes", self)
-        self.view_boxes_action.setCheckable(True)
-        self.view_boxes_action.setChecked(True)
-        self.addAction(self.view_boxes_action)
-
-        self.view_mesh_action = QAction("🌐 Mesh", self)
-        self.view_mesh_action.setCheckable(True)
-        self.view_mesh_action.setChecked(True)
-        self.addAction(self.view_mesh_action)
-
-        self.addSeparator()
-
-        # Analysis action
-        self.analyze_action = QAction("📊 Analyze", self)
-        self.addAction(self.analyze_action)
 
 class COLEditorDialog(QDialog): #vers 3
     """Enhanced COL Editor Dialog"""
@@ -5225,7 +5282,7 @@ def open_workshop(main_window, img_path=None): #vers 3
         else:
             # Open in standalone mode (no IMG loaded)
             if main_window and hasattr(main_window, 'log_message'):
-                main_window.log_message(App_name * " opened in standalone mode")
+                main_window.log_message(App_name + " opened in standalone mode")
 
         workshop.show()
         return workshop
