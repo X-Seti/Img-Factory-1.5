@@ -42,6 +42,8 @@ from gui.col_dialogs import show_col_analysis_dialog
 App_name = "Col Workshop"
 DEBUG_STANDALONE = False
 
+
+
 class COLViewer3D(QLabel): #vers 2
     """Enhanced 3D viewer widget for COL models"""
 
@@ -581,6 +583,7 @@ class CollisionMain(QWidget): #vers 3
         self.panel_font = QFont("Arial", 10)
         self.button_font = QFont("Arial", 10)
         self.infobar_font = QFont("Courier New", 9)
+        self.standalone_mode = (main_window is None)
 
         # Preview settings
         self._show_checkerboard = True
@@ -627,8 +630,8 @@ class CollisionMain(QWidget): #vers 3
             parent_pos = parent.pos()
             self.move(parent_pos.x() + 50, parent_pos.y() + 80)
 
-        #if self.standalone_mode:
-        #    self._ensure_depends_structure()
+        if self.standalone_mode:
+            self._ensure_depends_structure()
 
         # Setup UI FIRST
         self.setup_ui()
@@ -718,6 +721,40 @@ class CollisionMain(QWidget): #vers 3
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"Feature init error: {str(e)}")
 
+
+    def _enable_name_edit(self, event, is_alpha): #vers 1
+        """Enable name editing on click"""
+        self.info_name.setReadOnly(False)
+        self.info_name.selectAll()
+        self.info_name.setFocus()
+
+
+    def _update_status_indicators(self): #vers 2
+        """Update status indicators"""
+        if hasattr(self, 'status_collision'):
+            self.status_textures.setText(f"collision: {len(self.collision_list)}")
+
+        if hasattr(self, 'status_selected'):
+            if self.selected_texture:
+                name = self.selected_collision.get('name', 'Unknown')
+                self.status_selected.setText(f"Selected: {name}")
+            else:
+                self.status_selected.setText("Selected: None")
+
+        if hasattr(self, 'status_size'):
+            if self.current_txd_data:
+                size_kb = len(self.current_col_data) / 1024
+                self.status_size.setText(f"COL Size: {size_kb:.1f} KB")
+            else:
+                self.status_size.setText("COL Size: Unknown")
+
+        if hasattr(self, 'status_modified'):
+            if self.windowTitle().endswith("*"):
+                self.status_modified.setText("MODIFIED")
+                self.status_modified.setStyleSheet("color: orange; font-weight: bold;")
+            else:
+                self.status_modified.setText("")
+                self.status_modified.setStyleSheet("")
 
     def _create_status_bar(self): #vers 1
         """Create bottom status bar - single line compact"""
@@ -1728,11 +1765,20 @@ class CollisionMain(QWidget): #vers 3
 
         layout.addStretch()
 
+        # Only show "Open IMG" button if NOT standalone
+        if not self.standalone_mode:
+            self.open_img_btn = QPushButton("OpenIMG")
+            self.open_img_btn.setFont(self.button_font)
+            self.open_img_btn.setIcon(self._create_folder_icon())
+            self.open_img_btn.setIconSize(QSize(20, 20))
+            self.open_img_btn.clicked.connect(self.open_img_archive)
+            layout.addWidget(self.open_img_btn)
+
         # Open button
         self.open_btn = QPushButton()
         self.open_btn.setFont(self.button_font)
         self.open_btn.setIcon(self._create_open_icon())
-        self.open_btn.setText("Open")
+        self.open_btn.setText("OpenCOL")
         self.open_btn.setIconSize(QSize(20, 20))
         self.open_btn.setShortcut("Ctrl+O")
         if self.button_display_mode == 'icons':
@@ -1745,7 +1791,7 @@ class CollisionMain(QWidget): #vers 3
         self.save_btn = QPushButton()
         self.save_btn.setFont(self.button_font)
         self.save_btn.setIcon(self._create_save_icon())
-        self.save_btn.setText("Save")
+        self.save_btn.setText("SaveCOL")
         self.save_btn.setIconSize(QSize(20, 20))
         self.save_btn.setShortcut("Ctrl+S")
         if self.button_display_mode == 'icons':
@@ -1754,6 +1800,21 @@ class CollisionMain(QWidget): #vers 3
         self.save_btn.setToolTip("Save COL file (Ctrl+S)")
         self.save_btn.clicked.connect(self._save_file)
         layout.addWidget(self.save_btn)
+
+        # Save button
+        self.saveall_btn = QPushButton()
+        self.saveall_btn.setFont(self.button_font)
+        self.saveall_btn.setIcon(self._create_saveas_icon())
+        self.saveall_btn.setText("Save ALL")
+        self.saveall_btn.setIconSize(QSize(20, 20))
+        self.saveall_btn.setShortcut("Ctrl+S")
+        if self.button_display_mode == 'icons':
+            self.saveall_btn.setFixedSize(40, 40)
+        self.saveall_btn.setEnabled(False)  # Enable when modified
+        self.saveall_btn.setToolTip("Save COL file (Ctrl+S)")
+        #self.saveall_btn.clicked.connect(self._saveall_file)
+        layout.addWidget(self.saveall_btn)
+
 
         layout.addSpacing(10)
 
@@ -1830,7 +1891,7 @@ class CollisionMain(QWidget): #vers 3
         """)
         self.info_btn.setIconSize(QSize(20, 20))
         self.info_btn.setFixedWidth(35)
-        #self.info_btn.clicked.connect(self._show_col_info)
+        self.info_btn.clicked.connect(self._show_col_info)
         layout.addWidget(self.info_btn)
 
         layout.addStretch()
@@ -1853,8 +1914,30 @@ class CollisionMain(QWidget): #vers 3
                 background-color: #5a5a5a;
             }
         """)
-        #self.dock_btn.clicked.connect(self.toggle_dock_mode)
+        self.dock_btn.clicked.connect(self.toggle_dock_mode)
         layout.addWidget(self.dock_btn)
+
+                # Tear-off button [T] - only in IMG Factory mode
+        if not self.standalone_mode:
+            self.tearoff_btn = QPushButton("T")
+            #self.tearoff_btn.setFont(self.button_font)
+            self.tearoff_btn.setMinimumWidth(40)
+            self.tearoff_btn.setMaximumWidth(40)
+            self.tearoff_btn.setMinimumHeight(30)
+            self.tearoff_btn.clicked.connect(self._toggle_tearoff)
+            self.tearoff_btn.setToolTip("TXD Workshop - Tearoff window")
+            self.tearoff_btn.setStyleSheet("""
+                QPushButton {
+                    font-weight: bold;
+                    background-color: #4a4a4a;
+                    border: 1px solid #5a5a5a;
+                    border-radius: 3px;
+                }
+                QPushButton:hover {
+                    background-color: #5a5a5a;
+                }
+            """)
+            layout.addWidget(self.tearoff_btn)
 
         # Window controls
         self.minimize_btn = QPushButton()
@@ -2002,6 +2085,44 @@ class CollisionMain(QWidget): #vers 3
         self.paste_btn.setToolTip("Paste col from clipboard")
         layout.addWidget(self.paste_btn)
 
+        # Create Collision
+        self.create_surface_btn = QPushButton()
+        self.create_surface_btn.setFont(self.button_font)
+        self.create_surface_btn.setIcon(self._create_create_icon())
+        self.create_surface_btn.setText("Create")
+        self.create_surface_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.create_surface_btn.setFixedSize(40, 40)
+        #self.create_surface_btn.clicked.connect(self._create_new_surface_entry)
+        self.create_surface_btn.setToolTip("Create new blank Collision")
+        layout.addWidget(self.create_surface_btn)
+
+        # Delete collision
+        self.delete_surface_btn = QPushButton()
+        self.delete_surface_btn.setFont(self.button_font)
+        self.delete_surface_btn.setIcon(self._create_delete_icon())
+        self.delete_surface_btn.setText("Delete")
+        self.delete_surface_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.delete_surface_btn.setFixedSize(40, 40)
+        #self.delete_surface_btn.clicked.connect(self._delete_surface)
+        self.delete_surface_btn.setEnabled(False)
+        self.delete_surface_btn.setToolTip("Remove selected Collision")
+        layout.addWidget(self.delete_surface_btn)
+
+        # Duplicate Collision
+        self.duplicate_surface_btn = QPushButton()
+        self.duplicate_surface_btn.setFont(self.button_font)
+        self.duplicate_surface_btn.setIcon(self._create_duplicate_icon())
+        self.duplicate_surface_btn.setText("Duplicate")
+        self.duplicate_surface_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.duplicate_surface_btn.setFixedSize(40, 40)
+        #self.duplicate_surface_btn.clicked.connect(self._duplicate_surface)
+        self.duplicate_surface_btn.setEnabled(False)
+        self.duplicate_surface_btn.setToolTip("Clone selected Collision")
+        layout.addWidget(self.duplicate_surface_btn)
+
         self.paint_btn = QPushButton()
         self.paint_btn.setFont(self.button_font)
         self.paint_btn.setIcon(self._create_paint_icon())
@@ -2051,44 +2172,6 @@ class CollisionMain(QWidget): #vers 3
         self.build_from_txd_btn.setToolTip("Create col surface from txd texture names")
         layout.addWidget(self.build_from_txd_btn)
 
-        # Create Collision
-        self.create_surface_btn = QPushButton()
-        self.create_surface_btn.setFont(self.button_font)
-        self.create_surface_btn.setIcon(self._create_create_icon())
-        self.create_surface_btn.setText("Create")
-        self.create_surface_btn.setIconSize(QSize(20, 20))
-        if self.button_display_mode == 'icons':
-            self.create_surface_btn.setFixedSize(40, 40)
-        #self.create_surface_btn.clicked.connect(self._create_new_surface_entry)
-        self.create_surface_btn.setToolTip("Create new blank Collision")
-        layout.addWidget(self.create_surface_btn)
-
-        # Delete collision
-        self.delete_surface_btn = QPushButton()
-        self.delete_surface_btn.setFont(self.button_font)
-        self.delete_surface_btn.setIcon(self._create_delete_icon())
-        self.delete_surface_btn.setText("Delete")
-        self.delete_surface_btn.setIconSize(QSize(20, 20))
-        if self.button_display_mode == 'icons':
-            self.delete_surface_btn.setFixedSize(40, 40)
-        #self.delete_surface_btn.clicked.connect(self._delete_surface)
-        self.delete_surface_btn.setEnabled(False)
-        self.delete_surface_btn.setToolTip("Remove selected Collision")
-        layout.addWidget(self.delete_surface_btn)
-
-        # Duplicate Collision
-        self.duplicate_surface_btn = QPushButton()
-        self.duplicate_surface_btn.setFont(self.button_font)
-        self.duplicate_surface_btn.setIcon(self._create_duplicate_icon())
-        self.duplicate_surface_btn.setText("Duplicate")
-        self.duplicate_surface_btn.setIconSize(QSize(20, 20))
-        if self.button_display_mode == 'icons':
-            self.duplicate_surface_btn.setFixedSize(40, 40)
-        #self.duplicate_surface_btn.clicked.connect(self._duplicate_surface)
-        self.duplicate_surface_btn.setEnabled(False)
-        self.duplicate_surface_btn.setToolTip("Clone selected Collision")
-        layout.addWidget(self.duplicate_surface_btn)
-
         layout.addSpacing(5)
 
         """
@@ -2110,10 +2193,14 @@ class CollisionMain(QWidget): #vers 3
 
         return self.transform_panel
 
-
-    def _create_left_panel(self): #vers 5
-        """Create left panel - col file list (only in IMG Factory mode)"""
+    """
+    def _create_left_panel(self): #vers 6
+        #Create left panel - col file list (only in IMG Factory mode)
         # Only create panel in IMG Factory mode
+        if not self.main_window:
+            # Standalone mode - return None to hide this panel
+            return None
+
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.StyledPanel)
         panel.setMinimumWidth(200)
@@ -2131,10 +2218,102 @@ class CollisionMain(QWidget): #vers 3
         layout.addWidget(self.panelone_widget)
 
         return panel
+    """
+
+    def _create_left_panel(self): #vers 5
+        """Create left panel - COL file list (only in IMG Factory mode)"""
+        # In standalone mode, don't create this panel
+        if self.standalone_mode:
+            self.col_list_widget = None  # Explicitly set to None
+            return None
+
+        if not self.main_window:
+            # Standalone mode - return None to hide this panel
+            return None
+
+        # Only create panel in IMG Factory mode
+        panel = QFrame()
+        panel.setFrameStyle(QFrame.Shape.StyledPanel)
+        panel.setMinimumWidth(200)
+        panel.setMaximumWidth(300)
+
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(5, 5, 5, 5)
+
+        header = QLabel("COL Files")
+        header.setFont(QFont("Arial", 10, QFont.Weight.Bold))
+        layout.addWidget(header)
+
+        self.col_list_widget = QListWidget()
+        self.col_list_widget.setAlternatingRowColors(True)
+        self.col_list_widget.itemClicked.connect(self._on_col_selected)
+        layout.addWidget(self.col_list_widget)
+
+        return panel
 
 
-    def _create_middle_panel(self): #vers 2
-        """Create middle panel with COL models list"""
+    def _apply_title_font(self): #vers 1
+        """Apply title font to title bar labels"""
+        if hasattr(self, 'title_font'):
+            # Find all title labels
+            for label in self.findChildren(QLabel):
+                if label.objectName() == "title_label" or "🗺️" in label.text():
+                    label.setFont(self.title_font)
+
+
+    def _apply_panel_font(self): #vers 1
+        """Apply panel font to info panels and labels"""
+        if hasattr(self, 'panel_font'):
+            # Apply to info labels (Mipmaps, Bumpmaps, status labels)
+            for label in self.findChildren(QLabel):
+                if any(x in label.text() for x in ["Mipmaps:", "Bumpmaps:", "Status:", "Type:", "Format:"]):
+                    label.setFont(self.panel_font)
+
+
+    def _apply_button_font(self): #vers 1
+        """Apply button font to all buttons"""
+        if hasattr(self, 'button_font'):
+            for button in self.findChildren(QPushButton):
+                button.setFont(self.button_font)
+
+
+    def _apply_infobar_font(self): #vers 1
+        """Apply fixed-width font to info bar at bottom"""
+        if hasattr(self, 'infobar_font'):
+            if hasattr(self, 'info_bar'):
+                self.info_bar.setFont(self.infobar_font)
+
+    def _load_img_col_list(self): #vers 2
+        """Load COL files from IMG archive"""
+        try:
+            # Safety check for standalone mode
+            if self.standalone_mode or not hasattr(self, 'col_list_widget') or self.col_list_widget is None:
+                return
+
+            self.col_list_widget.clear()
+            self.col_list = []
+
+            if not self.current_img:
+                return
+
+            for entry in self.current_img.entries:
+                if entry.name.lower().endswith('.col'):
+                    self.col_list.append(entry)
+                    item = QListWidgetItem(entry.name)
+                    item.setData(Qt.ItemDataRole.UserRole, entry)
+                    size_kb = entry.size / 1024
+                    item.setToolTip(f"{entry.name}\nSize: {size_kb:.1f} KB")
+                    self.col_list_widget.addItem(item)
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"📋 Found {len(self.txd_list)} COL files")
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Error loading COL list: {str(e)}")
+
+
+    def _create_middle_panel(self): #vers 3
+        """Create middle panel with COL models table - matches TXD Workshop layout"""
         panel = QGroupBox("COL Models")
         panel.setStyleSheet("""
             QGroupBox {
@@ -2158,10 +2337,17 @@ class CollisionMain(QWidget): #vers 3
         layout = QVBoxLayout(panel)
         layout.setSpacing(5)
 
-        # Model list widget
-        self.collision_list = QListWidget()
+        # Model table widget (like TXD Workshop texture_table)
+        self.collision_list = QTableWidget()
+        self.collision_list.setColumnCount(2)
+        self.collision_list.setHorizontalHeaderLabels(["Preview", "Details"])
+        self.collision_list.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.collision_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.collision_list.setAlternatingRowColors(True)
-        self.collision_list.itemClicked.connect(self._on_collision_selected)
+        self.collision_list.itemSelectionChanged.connect(self._on_collision_selected)
+        self.collision_list.setIconSize(QSize(64, 64))
+        self.collision_list.setColumnWidth(0, 80)  # Thumbnail column
+        self.collision_list.horizontalHeader().setStretchLastSection(True)  # Details column stretches
         layout.addWidget(self.collision_list)
 
         return panel
@@ -2184,12 +2370,16 @@ class CollisionMain(QWidget): #vers 3
         top_layout.addWidget(transform_panel, stretch=1)
 
         # Preview area (center)
-        preview_widget = self._create_preview_widget()
-        top_layout.addWidget(preview_widget, stretch=2)
+        self.preview_widget = ZoomablePreview(self)
+        top_layout.addWidget(self.preview_widget, stretch=2)
+
+        # Preview area (center)
+        #self.preview_widget = self._create_preview_widget()
+        #top_layout.addWidget(self.preview_widget, stretch=2)
 
         # Preview controls (right side, vertical)
-        preview_controls = self._create_preview_controls()
-        top_layout.addWidget(preview_controls, stretch=0)
+        self.preview_controls = self._create_preview_controls()
+        top_layout.addWidget(self.preview_controls, stretch=0)
         main_layout.addLayout(top_layout, stretch=1)
 
 
@@ -2287,8 +2477,6 @@ class CollisionMain(QWidget): #vers 3
             mipbump_layout.addWidget(self.remove_shadow_btn)
 
             mipbump_layout.addSpacing(30)
-
-
             view_layout = QHBoxLayout()
 
             self.compress_btn = QPushButton("Compress")
@@ -2317,7 +2505,7 @@ class CollisionMain(QWidget): #vers 3
         return panel
 
 
-    def _create_preview_controls(self): #vers 2
+    def _create_preview_controls(self): #vers 3
         """Create preview control buttons - vertical layout on right"""
         controls_frame = QFrame()
         controls_frame.setFrameStyle(QFrame.Shape.StyledPanel)
@@ -2332,7 +2520,7 @@ class CollisionMain(QWidget): #vers 3
         zoom_in_btn.setIconSize(QSize(20, 20))
         zoom_in_btn.setFixedSize(40, 40)
         zoom_in_btn.setToolTip("Zoom In")
-        #zoom_in_btn.clicked.connect(self.preview_widget.zoom_in)
+        zoom_in_btn.clicked.connect(self.preview_widget.zoom_in)
         controls_layout.addWidget(zoom_in_btn)
 
         # Zoom Out
@@ -2341,7 +2529,7 @@ class CollisionMain(QWidget): #vers 3
         zoom_out_btn.setIconSize(QSize(20, 20))
         zoom_out_btn.setFixedSize(40, 40)
         zoom_out_btn.setToolTip("Zoom Out")
-        #zoom_out_btn.clicked.connect(self.preview_widget.zoom_out)
+        zoom_out_btn.clicked.connect(self.preview_widget.zoom_out)
         controls_layout.addWidget(zoom_out_btn)
 
         # Reset
@@ -2350,7 +2538,7 @@ class CollisionMain(QWidget): #vers 3
         reset_btn.setIconSize(QSize(20, 20))
         reset_btn.setFixedSize(40, 40)
         reset_btn.setToolTip("Reset View")
-        #reset_btn.clicked.connect(self.preview_widget.reset_view)
+        reset_btn.clicked.connect(self.preview_widget.reset_view)
         controls_layout.addWidget(reset_btn)
 
         # Fit
@@ -2359,7 +2547,7 @@ class CollisionMain(QWidget): #vers 3
         fit_btn.setIconSize(QSize(20, 20))
         fit_btn.setFixedSize(40, 40)
         fit_btn.setToolTip("Fit to Window")
-        #fit_btn.clicked.connect(self.preview_widget.fit_to_window)
+        fit_btn.clicked.connect(self.preview_widget.fit_to_window)
         controls_layout.addWidget(fit_btn)
 
         controls_layout.addSpacing(10)
@@ -2370,7 +2558,7 @@ class CollisionMain(QWidget): #vers 3
         pan_up_btn.setIconSize(QSize(20, 20))
         pan_up_btn.setFixedSize(40, 40)
         pan_up_btn.setToolTip("Pan Up")
-        #pan_up_btn.clicked.connect(lambda: self._pan_preview(0, -20))
+        pan_up_btn.clicked.connect(lambda: self._pan_preview(0, -20))
         controls_layout.addWidget(pan_up_btn)
 
         # Pan Down
@@ -2379,7 +2567,7 @@ class CollisionMain(QWidget): #vers 3
         pan_down_btn.setIconSize(QSize(20, 20))
         pan_down_btn.setFixedSize(40, 40)
         pan_down_btn.setToolTip("Pan Down")
-        #pan_down_btn.clicked.connect(lambda: self._pan_preview(0, 20))
+        pan_down_btn.clicked.connect(lambda: self._pan_preview(0, 20))
         controls_layout.addWidget(pan_down_btn)
 
         # Pan Left
@@ -2388,7 +2576,7 @@ class CollisionMain(QWidget): #vers 3
         pan_left_btn.setIconSize(QSize(20, 20))
         pan_left_btn.setFixedSize(40, 40)
         pan_left_btn.setToolTip("Pan Left")
-        #pan_left_btn.clicked.connect(lambda: self._pan_preview(-20, 0))
+        pan_left_btn.clicked.connect(lambda: self._pan_preview(-20, 0))
         controls_layout.addWidget(pan_left_btn)
 
         # Pan Right
@@ -2397,7 +2585,7 @@ class CollisionMain(QWidget): #vers 3
         pan_right_btn.setIconSize(QSize(20, 20))
         pan_right_btn.setFixedSize(40, 40)
         pan_right_btn.setToolTip("Pan Right")
-        #pan_right_btn.clicked.connect(lambda: self._pan_preview(20, 0))
+        pan_right_btn.clicked.connect(lambda: self._pan_preview(20, 0))
         controls_layout.addWidget(pan_right_btn)
 
         bg_custom_btn = QPushButton()
@@ -2405,7 +2593,7 @@ class CollisionMain(QWidget): #vers 3
         bg_custom_btn.setIconSize(QSize(20, 20))
         bg_custom_btn.setFixedSize(40, 40)
         bg_custom_btn.setToolTip("Pick Color")
-        #bg_custom_btn.clicked.connect(self._pick_background_color)
+        bg_custom_btn.clicked.connect(self._pick_background_color)
         controls_layout.addWidget(bg_custom_btn)
 
         controls_layout.addSpacing(5)
@@ -2474,6 +2662,31 @@ class CollisionMain(QWidget): #vers 3
 
         return controls_frame
 
+    def _pan_preview(self, dx, dy): #vers 2
+        """Pan preview by dx, dy pixels - FIXED"""
+        if hasattr(self, 'preview_widget') and self.preview_widget:
+            self.preview_widget.pan(dx, dy)
+
+    def _pick_background_color(self): #vers 1
+        """Open color picker for background"""
+        color = QColorDialog.getColor(self.preview_widget.bg_color, self, "Pick Background Color")
+        if color.isValid():
+            self.preview_widget.set_background_color(color)
+
+
+    def _set_checkerboard_bg(self): #vers 1
+        """Set checkerboard background"""
+        # Create checkerboard pattern
+        self.preview_widget.setStyleSheet("""
+            border: 1px solid #3a3a3a;
+            background-image:
+                linear-gradient(45deg, #333 25%, transparent 25%),
+                linear-gradient(-45deg, #333 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #333 75%),
+                linear-gradient(-45deg, transparent 75%, #333 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        """)
 
     def _create_level_card(self, level_data): #vers 2
         """Create modern level card matching mockup"""
@@ -2510,29 +2723,19 @@ class CollisionMain(QWidget): #vers 3
 
         return card
 
-    def _create_preview_widget(self, level_data=None): #vers 2
-        """Create preview widget - blank square if no level_data"""
+    def _create_preview_widget(self, level_data=None): #vers 5
+        """Create preview widget - CollisionPreviewWidget for col_workshop"""
         if level_data is None:
-            # Return blank square placeholder
-            preview = QLabel()
-            preview.setFixedSize(600, 600)
-            preview.setStyleSheet("""
-                QLabel {
-                    background: #0a0a0a;
-                    border: 2px solid #3a3a3a;
-                    border-radius: 3px;
-                }
-            """)
-            preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            preview.setText("Preview Area")
+            # Return collision preview widget for main preview area
+            preview = CollisionPreviewWidget(self)
+            img_debugger.debug(f"Created CollisionPreviewWidget: {type(preview)}")  # ADD THIS
             return preview
 
-        # Original logic with level_data...
+        # Original logic with level_data for mipmap/level cards (if needed)
         level_num = level_data.get('level', 0)
         width = level_data.get('width', 0)
         height = level_data.get('height', 0)
         rgba_data = level_data.get('rgba_data')
-
         preview_size = max(45, 120 - (level_num * 15))
 
         preview = QLabel()
@@ -2558,9 +2761,9 @@ class CollisionMain(QWidget): #vers 3
                     )
                     preview.setPixmap(scaled_pixmap)
             except:
-                preview.setText("🖼️")
+                preview.setText("No Data")
         else:
-            preview.setText("🖼️")
+            preview.setText("No Data")
 
         return preview
 
@@ -2630,12 +2833,6 @@ class CollisionMain(QWidget): #vers 3
         size_stat = self._create_stat_box("Size:", f"{size_kb:.1f} KB")
         grid_layout.addWidget(size_stat)
 
-        # Compression stat
-        if 'DXT' in fmt:
-            ratio = "4:1" if 'DXT5' in fmt or 'DXT3' in fmt else "6:1"
-            comp_stat = self._create_stat_box("Compression:", ratio)
-        else:
-            comp_stat = self._create_stat_box("Compression:", "None")
         grid_layout.addWidget(comp_stat)
 
         # Status stat
@@ -3531,6 +3728,12 @@ class CollisionMain(QWidget): #vers 3
             # Populate UI
             self._populate_collision_list()  # ADD THIS LINE
 
+            # Select first model by default
+            if self.collision_list.rowCount() > 0:
+                self.collision_list.selectRow(0)
+                self._on_collision_selected()
+
+
             # Enable buttons
             if hasattr(self, 'save_btn'):
                 self.save_btn.setEnabled(True)
@@ -3593,16 +3796,55 @@ class CollisionMain(QWidget): #vers 3
             img_debugger.error(f"Error analyzing file: {str(e)}")
             QMessageBox.critical(self, "Error", f"Failed to analyze file:\n{str(e)}")
 
-
-    def _on_collision_selected(self, item): #vers 2
-        """Handle COL model selection from list"""
+    def _on_col_selected(self, item): #vers 1
+        """Handle COL file selection"""
         try:
-            model_index = self.collision_list.row(item)
+            entry = item.data(Qt.ItemDataRole.UserRole)
+            if entry:
+                txd_data = self._extract_col_from_img(entry)
+                if txd_data:
+                    self.current_col_data = col_data
+                    self.current_col_name = entry.name
+                    self._load_col_files(col_data, entry.name)
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Error selecting COL: {str(e)}")
 
-            if not self.current_col_file or not hasattr(self.current_col_file, 'models'):
+    def _extract_col_from_img(self, entry): #vers 2
+        """Extract TXD data from IMG entry"""
+        try:
+            if not self.current_img:
+                return None
+            return self.current_img.read_entry_data(entry)
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Extract error: {str(e)}")
+            return None
+
+    def _on_collision_selected(self): #vers 5
+        """Handle COL model selection from table"""
+        try:
+            selected_rows = self.collision_list.selectionModel().selectedRows()
+            if not selected_rows:
+                img_debugger.debug("No rows selected")
                 return
 
-            if model_index < 0 or model_index >= len(self.current_col_file.models):
+            row = selected_rows[0].row()
+            details_item = self.collision_list.item(row, 1)
+
+            if not details_item:
+                img_debugger.debug("No details item found")
+                return
+
+            model_index = details_item.data(Qt.ItemDataRole.UserRole)
+            img_debugger.debug(f"Selected row {row}, model index {model_index}")
+
+            if not self.current_col_file or not hasattr(self.current_col_file, 'models'):
+                img_debugger.debug("No COL file or models")
+                return
+
+            if model_index is None or model_index < 0 or model_index >= len(self.current_col_file.models):
+                img_debugger.debug(f"Invalid model index: {model_index}")
                 return
 
             # Get selected model
@@ -3610,23 +3852,30 @@ class CollisionMain(QWidget): #vers 3
             model_name = getattr(model, 'name', f'Model_{model_index}')
 
             # Update info display
-            self.info_name.setText(model_name)
+            if hasattr(self, 'info_name'):
+                self.info_name.setText(model_name)
 
-            # Update preview widget with rendered collision
+            # Render large preview
             if hasattr(self, 'preview_widget'):
-                preview_pixmap = self._render_collision_preview(model, 600, 600)
+                width = max(400, self.preview_widget.width())
+                height = max(400, self.preview_widget.height())
+                img_debugger.debug(f"Rendering preview: {width}x{height} for {model_name}")
+                preview_pixmap = self._render_collision_preview(model, width, height)
                 self.preview_widget.setPixmap(preview_pixmap)
-
-            img_debugger.debug(f"Selected COL model: {model_name}")
+                self.preview_widget.setScaledContents(False)
+                img_debugger.success(f"Preview updated for {model_name}")
+            else:
+                img_debugger.warning("No preview_widget attribute found")
 
         except Exception as e:
             img_debugger.error(f"Error selecting model: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
-
-    def _populate_collision_list(self): #vers 1
-        """Populate collision list with models from loaded COL file"""
+    def _populate_collision_list(self): #vers 4
+        """Populate collision table with models - matches TXD Workshop style"""
         try:
-            self.collision_list.clear()
+            self.collision_list.setRowCount(0)
 
             if not self.current_col_file or not hasattr(self.current_col_file, 'models'):
                 return
@@ -3642,17 +3891,56 @@ class CollisionMain(QWidget): #vers 3
                 faces = len(getattr(model, 'faces', []))
                 vertices = len(getattr(model, 'vertices', []))
 
-                # Create list item with info
-                item_text = f"{name}\n{version.name} - S:{spheres} B:{boxes} F:{faces} V:{vertices}"
-                item = QListWidgetItem(item_text)
-                item.setData(Qt.ItemDataRole.UserRole, i)  # Store model index
+                # Add row
+                row = self.collision_list.rowCount()
+                self.collision_list.insertRow(row)
 
-                self.collision_list.addItem(item)
+                # Create thumbnail item
+                thumb_item = QTableWidgetItem()
+                thumbnail = self._generate_collision_thumbnail(model, 64, 64)
+                thumb_item.setData(Qt.ItemDataRole.DecorationRole, thumbnail)
+                thumb_item.setFlags(thumb_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
 
-            img_debugger.debug(f"Populated collision list with {len(self.current_col_file.models)} models")
+                # Create details text
+                details = f"Name: {name}\n"
+                details += f"Version: {version.name}\n"
+                details += f"Spheres: {spheres} | Boxes: {boxes}\n"
+                details += f"Faces: {faces} | Vertices: {vertices}"
+
+                details_item = QTableWidgetItem(details)
+                details_item.setFlags(details_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                details_item.setData(Qt.ItemDataRole.UserRole, i)  # Store model index
+
+                # Set items
+                self.collision_list.setItem(row, 0, thumb_item)
+                self.collision_list.setItem(row, 1, details_item)
+
+                # Set row height
+                self.collision_list.setRowHeight(row, 100)
+
+            img_debugger.debug(f"Populated collision table with {len(self.current_col_file.models)} models")
 
         except Exception as e:
-            img_debugger.error(f"Error populating collision list: {str(e)}")
+            img_debugger.error(f"Error populating collision table: {str(e)}")
+
+
+    def _create_preview_widget(self, level_data=None): #vers 3
+        """Create preview widget - large collision preview like TXD Workshop"""
+        if level_data is None:
+            # Return preview label for collision display
+            preview = QLabel()
+            preview.setMinimumSize(400, 400)
+            preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            preview.setStyleSheet("""
+                QLabel {
+                    background: #0a0a0a;
+                    border: 2px solid #3a3a3a;
+                    border-radius: 3px;
+                    color: #888;
+                }
+            """)
+            preview.setText("Preview Area\n\nSelect a collision model to preview")
+            return preview
 
 
     def _toggle_spheres(self, checked): #vers 2
@@ -3747,46 +4035,6 @@ class CollisionMain(QWidget): #vers 3
         except Exception as e:
             img_debugger.error(f"Error updating 3D viewer: {str(e)}")
 
-
-    def _populate_collision_list(self): #vers 2
-        """Populate collision list with models and thumbnails"""
-        try:
-            self.collision_list.clear()
-
-            if not self.current_col_file or not hasattr(self.current_col_file, 'models'):
-                return
-
-            # Set icon mode for thumbnails
-            self.collision_list.setViewMode(QListWidget.ViewMode.IconMode)
-            self.collision_list.setIconSize(QSize(120, 120))
-            self.collision_list.setGridSize(QSize(140, 160))
-            self.collision_list.setResizeMode(QListWidget.ResizeMode.Adjust)
-            self.collision_list.setSpacing(10)
-
-            for i, model in enumerate(self.current_col_file.models):
-                # Get model info
-                name = getattr(model, 'name', f'Model_{i}')
-                version = getattr(model, 'version', COLVersion.COL_1)
-
-                # Count collision elements
-                spheres = len(getattr(model, 'spheres', []))
-                boxes = len(getattr(model, 'boxes', []))
-                faces = len(getattr(model, 'faces', []))
-
-                # Generate thumbnail
-                thumbnail = self._generate_collision_thumbnail(model, 120, 120)
-
-                # Create list item
-                item_text = f"{name}\n{version.name}\nS:{spheres} B:{boxes} F:{faces}"
-                item = QListWidgetItem(QIcon(thumbnail), item_text)
-                item.setData(Qt.ItemDataRole.UserRole, i)
-
-                self.collision_list.addItem(item)
-
-            img_debugger.debug(f"Populated collision list with {len(self.current_col_file.models)} models")
-
-        except Exception as e:
-            img_debugger.error(f"Error populating collision list: {str(e)}")
 
 
     def _generate_collision_thumbnail(self, model, width, height): #vers 2
@@ -4468,6 +4716,126 @@ class CollisionMain(QWidget): #vers 3
         button_layout.addWidget(ok_btn)
 
         layout.addLayout(button_layout)
+
+        dialog.exec()
+
+    def _ensure_depends_structure(self): #vers 1
+        """Ensure depends/ folder exists in standalone mode with required files"""
+        if not self.standalone_mode:
+            return
+
+        script_dir = Path(__file__).parent.resolve()
+        depends_dir = script_dir / "depends"
+
+        # Create depends folder if it doesn't exist
+        if not depends_dir.exists():
+            depends_dir.mkdir(parents=True, exist_ok=True)
+            print(f"Created depends directory: {depends_dir}")
+
+        # Check for required import modules
+        required_modules = [
+            'col_core_classes.py',
+            'col_dialogs.py',
+            'img_debug_functions.py'
+        ]
+
+        missing = []
+        for module in required_modules:
+            module_path = depends_dir / module
+            if not module_path.exists():
+                missing.append(module)
+
+        if missing:
+            print(f"Warning: Missing modules in depends/: {', '.join(missing)}")
+            print(f"Copy these from methods/ to: {depends_dir}")
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f" Missing import modules: {', '.join(missing)}")
+
+    def _show_col_info(self): #vers 4
+        """Show TXD Workshop information dialog - About and capabilities"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("About COL Workshop")
+        dialog.setMinimumWidth(600)
+        dialog.setMinimumHeight(500)
+
+        layout = QVBoxLayout(dialog)
+        layout.setSpacing(15)
+
+        # Header
+        header = QLabel("COL Workshop for IMG Factory 1.5")
+        header.setFont(QFont("Arial", 14, QFont.Weight.Bold))
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(header)
+
+        # Author info
+        author_label = QLabel("Author: X-Seti")
+        author_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(author_label)
+
+        # Version info
+        version_label = QLabel("Version: 1.5 - October 2025")
+        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(version_label)
+
+        layout.addWidget(QLabel(""))  # Spacer
+
+        # Capabilities section
+        capabilities = QTextEdit()
+        capabilities.setReadOnly(True)
+        capabilities.setMaximumHeight(350)
+
+        info_text = """<b>COL Workshop Capabilities:</b><br><br>
+
+<b>✓ File Operations:</b><br>
+
+
+<b>✓ Collision Viewing & Editing:</b><br>
+
+
+<b>✓ Collision Management:</b><br>
+
+
+<b>✓ Collision Surface Painting:</b><br>
+
+
+<b>✓ Format Support:</b><br>
+
+
+<b>✓ Advanced Features:</b><br>"""
+
+        # Add format support dynamically
+        formats_available = []
+
+        # Standard formats (always via PIL)
+
+        info_text += "<br>".join(formats_available)
+        info_text += "<br><br>"
+
+        # Settings info
+        info_text += """<b>✓ Customization:</b><br>
+- Adjustable texture name length (8-64 chars)<br>
+- Button display modes (Icons/Text/Both)<br>
+- Font customization<br>
+- Preview zoom and pan offsets<br><br>
+
+<b>Keyboard Shortcuts:</b><br>
+- Ctrl+O: Open COL<br>
+- Ctrl+S: Save COL<br>
+- Ctrl+I: Import Collision col, cst, 3ds<br>
+- Ctrl+E: Export Selected col, cst, 3ds<br>
+- Ctrl+Z: Undo<br>
+- Delete: Remove Collision<br>
+- Ctrl+D: Duplicate Collision<br>"""
+
+        capabilities.setHtml(info_text)
+        layout.addWidget(capabilities)
+
+        # Close button
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dialog.accept)
+        close_btn.setDefault(True)
+        layout.addWidget(close_btn)
 
         dialog.exec()
 
@@ -5232,13 +5600,263 @@ class CollisionMain(QWidget): #vers 3
             # Fallback to no icon if SVG fails
             return QIcon()
 
+class ZoomablePreview(QLabel): #vers 2
+    """Fixed preview widget with zoom and pan"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.main_window = parent
+        self.setMinimumSize(400, 400)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        #self.setStyleSheet("border: 2px solid #3a3a3a; background: #0a0a0a;")
+        self.setStyleSheet("border: 1px solid #3a3a3a;")
+        self.setMouseTracking(True)
+
+        # Display state
+        self.current_model = None
+        self.original_pixmap = None
+        self.scaled_pixmap = None
+
+        # View controls
+        self.zoom_level = 1.0
+        self.pan_offset = QPoint(0, 0)
+        self.rotation_x = 45  # X-axis rotation (up/down tilt)
+        self.rotation_y = 0   # Y-axis rotation (left/right spin)
+        self.rotation_z = 0   # Z-axis rotation (roll)
+
+        # View toggles
+        self.show_spheres = True
+        self.show_boxes = True
+        self.show_mesh = True
+
+        # Mouse interaction
+        self.dragging = False
+        self.drag_start = QPoint(0, 0)
+        self.drag_mode = None  # 'pan' or 'rotate'
+
+        # Background
+        #self.bg_color = QColor(10, 10, 10)
+        self.bg_color = QColor(42, 42, 42)
+
+        self.placeholder_text = "Select a collision model to preview"
+
+        self.background_mode = 'solid'
+        self._checkerboard_size = 16
+        self.placeholder_text = "No texture loaded"
+
+
+    def setPixmap(self, pixmap): #vers 2
+        """Set pixmap and update display"""
+        if pixmap and not pixmap.isNull():
+            self.original_pixmap = pixmap
+            self.placeholder_text = None
+            self._update_scaled_pixmap()
+        else:
+            self.original_pixmap = None
+            self.scaled_pixmap = None
+            self.placeholder_text = "No texture loaded"
+
+        self.update()  # Trigger repaint
+
+    def set_model(self, model): #vers 1
+        """Set collision model to display"""
+        self.current_model = model
+        self.render_collision()
+
+    def render_collision(self): #vers 2
+        """Render the collision model with current view settings"""
+        if not self.current_model:
+            self.setText(self.placeholder_text)
+            self.original_pixmap = None
+            self.scaled_pixmap = None
+            return
+
+        width = max(400, self.width())
+        height = max(400, self.height())
+
+        # Use the parent's render method
+        if hasattr(self.parent(), '_render_collision_preview'):
+            self.original_pixmap = self.parent()._render_collision_preview(
+                self.current_model,
+                width,
+                height
+            )
+        else:
+            # Fallback - just show text for now
+            name = getattr(self.current_model, 'name', 'Unknown')
+            self.setText(f"Collision Model: {name}\n\nRendering...")
+            return
+
+        self._update_scaled_pixmap()
+        self.update()
+
+    def _update_scaled_pixmap(self): #vers
+        """Update scaled pixmap based on zoom"""
+        if not self.original_pixmap:
+            self.scaled_pixmap = None
+            return
+
+        scaled_width = int(self.original_pixmap.width() * self.zoom_level)
+        scaled_height = int(self.original_pixmap.height() * self.zoom_level)
+
+        self.scaled_pixmap = self.original_pixmap.scaled(
+            scaled_width, scaled_height,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        )
+
+    def paintEvent(self, event): #vers 2
+        """Paint the preview with background and image"""
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
+        # Draw background
+        if self.background_mode == 'checkerboard':
+            self._draw_checkerboard(painter)
+        else:
+            painter.fillRect(self.rect(), self.bg_color)
+
+        # Draw image if available
+        if self.scaled_pixmap and not self.scaled_pixmap.isNull():
+            # Calculate centered position with pan offset
+            x = (self.width() - self.scaled_pixmap.width()) // 2 + self.pan_offset.x()
+            y = (self.height() - self.scaled_pixmap.height()) // 2 + self.pan_offset.y()
+            painter.drawPixmap(x, y, self.scaled_pixmap)
+        elif self.placeholder_text:
+            # Draw placeholder text
+            painter.setPen(QColor(150, 150, 150))
+            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self.placeholder_text)
+
+    def set_checkerboard_background(self): #vers 1
+        """Enable checkerboard background"""
+        self.background_mode = 'checkerboard'
+        self.update()
+
+    def set_background_color(self, color): #vers 1
+        """Set solid background color"""
+        self.background_mode = 'solid'
+        self.bg_color = color
+        self.update()
+
+    def _draw_checkerboard(self, painter): #vers 1
+        """Draw checkerboard background pattern"""
+        size = self._checkerboard_size
+        color1 = QColor(200, 200, 200)
+        color2 = QColor(150, 150, 150)
+
+        for y in range(0, self.height(), size):
+            for x in range(0, self.width(), size):
+                color = color1 if ((x // size) + (y // size)) % 2 == 0 else color2
+                painter.fillRect(x, y, size, size, color)
+
+
+    # Zoom controls
+    def zoom_in(self): #vers 1
+        """Zoom in"""
+        self.zoom_level = min(5.0, self.zoom_level * 1.2)
+        self._update_scaled_pixmap()
+        self.update()
+
+    def zoom_out(self): #vers 1
+        """Zoom out"""
+        self.zoom_level = max(0.1, self.zoom_level / 1.2)
+        self._update_scaled_pixmap()
+        self.update()
+
+    def reset_view(self): #vers 1
+        """Reset to default view"""
+        self.zoom_level = 1.0
+        self.pan_offset = QPoint(0, 0)
+        self.rotation_x = 45
+        self.rotation_y = 0
+        self.rotation_z = 0
+        self.render_collision()
+
+    def fit_to_window(self): #vers 2
+        """Fit image to window size"""
+        if not self.original_pixmap:
+            return
+
+        img_size = self.original_pixmap.size()
+        widget_size = self.size()
+
+        zoom_w = widget_size.width() / img_size.width()
+        zoom_h = widget_size.height() / img_size.height()
+
+        self.zoom_level = min(zoom_w, zoom_h) * 0.95
+        self.pan_offset = QPoint(0, 0)
+        self._update_scaled_pixmap()
+        self.update()
+
+
+    def pan(self, dx, dy): #vers 1
+        """Pan the view by dx, dy pixels"""
+        self.pan_offset += QPoint(dx, dy)
+        self.update()
+
+    # Rotation controls
+    def rotate_x(self, degrees): #vers 1
+        """Rotate around X axis"""
+        self.rotation_x = (self.rotation_x + degrees) % 360
+        self.render_collision()
+
+    def rotate_y(self, degrees): #vers 1
+        """Rotate around Y axis"""
+        self.rotation_y = (self.rotation_y + degrees) % 360
+        self.render_collision()
+
+    def rotate_z(self, degrees): #vers 1
+        """Rotate around Z axis"""
+        self.rotation_z = (self.rotation_z + degrees) % 360
+        self.render_collision()
+
+
+    # Mouse events
+    def mousePressEvent(self, event): #vers 1
+        """Handle mouse press"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.dragging = True
+            self.drag_start = event.pos()
+            self.drag_mode = 'rotate' if event.modifiers() & Qt.KeyboardModifier.ControlModifier else 'pan'
+
+    def mouseMoveEvent(self, event): #vers 1
+        """Handle mouse drag"""
+        if self.dragging:
+            delta = event.pos() - self.drag_start
+
+            if self.drag_mode == 'rotate':
+                # Rotate based on drag
+                self.rotate_y(delta.x() * 0.5)
+                self.rotate_x(-delta.y() * 0.5)
+            else:
+                # Pan
+                self.pan_offset += delta
+                self.update()
+
+            self.drag_start = event.pos()
+
+    def mouseReleaseEvent(self, event): #vers 1
+        """Handle mouse release"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.dragging = False
+            self.drag_mode = None
+
+    def wheelEvent(self, event): #vers 1
+        """Handle mouse wheel for zoom"""
+        delta = event.angleDelta().y()
+        if delta > 0:
+            self.zoom_in()
+        else:
+            self.zoom_out()
+
 
 class COLEditorDialog(QDialog): #vers 3
     """Enhanced COL Editor Dialog"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("COL Editor - IMG Factory 1.5")
+        self.setWindowTitle(App_name + " - IMG Factory 1.5")
         self.setModal(False)  # Allow non-modal operation
         self.resize(1000, 700)
 
@@ -5250,7 +5868,7 @@ class COLEditorDialog(QDialog): #vers 3
         self.setup_ui()
         self.connect_signals()
 
-        img_debugger.debug("COL Editor dialog created")
+        img_debugger.debug(App_name + " dialog created")
 
     def setup_ui(self): #vers 1
         """Setup editor UI"""

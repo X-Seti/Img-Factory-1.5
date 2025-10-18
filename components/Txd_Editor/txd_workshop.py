@@ -583,7 +583,7 @@ class TXDWorkshop(QWidget): #vers 3
         self.setMouseTracking(True)
 
         if DEBUG_STANDALONE and self.standalone_mode:
-            print("   ✓ TXD Workshop initialized")
+            print(App_name + " initialized")
 
     def setup_ui(self): #vers 7
         """Setup the main UI layout"""
@@ -10108,43 +10108,6 @@ class TXDWorkshop(QWidget): #vers 3
         self.paste_btn.setToolTip("Paste texture from clipboard")
         layout.addWidget(self.paste_btn)
 
-        self.paint_btn = QPushButton()
-        self.paint_btn.setFont(self.button_font)
-        self.paint_btn.setIcon(self._create_paint_icon())
-        self.paint_btn.setText("Paint")
-        self.paint_btn.setIconSize(QSize(20, 20))
-        if self.button_display_mode == 'icons':
-            self.paint_btn.setFixedSize(40, 40)
-        self.paint_btn.clicked.connect(self._open_paint_editor)
-        self.paint_btn.setEnabled(False)
-        self.paint_btn.setToolTip("Paint on texture")
-        layout.addWidget(self.paint_btn)
-
-        layout.addSpacing(5)
-
-        # Check TXD vs DFF
-        self.check_dff_btn = QPushButton()
-        self.check_dff_btn.setFont(self.button_font)
-        self.check_dff_btn.setIcon(self._create_check_icon())
-        self.check_dff_btn.setText("Check DFF")
-        self.check_dff_btn.setIconSize(QSize(20, 20))
-        if self.button_display_mode == 'icons':
-            self.check_dff_btn.setFixedSize(40, 40)
-        self.check_dff_btn.clicked.connect(self._check_txd_vs_dff)
-        self.check_dff_btn.setToolTip("Verify textures against DFF model file")
-        layout.addWidget(self.check_dff_btn)
-
-        self.build_from_dff_btn = QPushButton()
-        self.build_from_dff_btn.setFont(self.button_font)
-        self.build_from_dff_btn.setIcon(self._create_build_icon())
-        self.build_from_dff_btn.setText("Build TXD via")
-        self.build_from_dff_btn.setIconSize(QSize(20, 20))
-        if self.button_display_mode == 'icons':
-            self.build_from_dff_btn.setFixedSize(40, 40)
-        self.build_from_dff_btn.clicked.connect(self._build_txd_from_dff)
-        self.build_from_dff_btn.setToolTip("Create TXD structure from DFF material names")
-        layout.addWidget(self.build_from_dff_btn)
-
         # Create Texture
         self.create_texture_btn = QPushButton()
         self.create_texture_btn.setFont(self.button_font)
@@ -10183,7 +10146,42 @@ class TXDWorkshop(QWidget): #vers 3
         self.duplicate_texture_btn.setToolTip("Clone selected texture")
         layout.addWidget(self.duplicate_texture_btn)
 
+        self.paint_btn = QPushButton()
+        self.paint_btn.setFont(self.button_font)
+        self.paint_btn.setIcon(self._create_paint_icon())
+        self.paint_btn.setText("Paint")
+        self.paint_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.paint_btn.setFixedSize(40, 40)
+        self.paint_btn.clicked.connect(self._open_paint_editor)
+        self.paint_btn.setEnabled(False)
+        self.paint_btn.setToolTip("Paint on texture")
+        layout.addWidget(self.paint_btn)
+
         layout.addSpacing(5)
+
+        # Check TXD vs DFF
+        self.check_dff_btn = QPushButton()
+        self.check_dff_btn.setFont(self.button_font)
+        self.check_dff_btn.setIcon(self._create_check_icon())
+        self.check_dff_btn.setText("Check DFF")
+        self.check_dff_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.check_dff_btn.setFixedSize(40, 40)
+        self.check_dff_btn.clicked.connect(self._check_txd_vs_dff)
+        self.check_dff_btn.setToolTip("Verify textures against DFF model file")
+        layout.addWidget(self.check_dff_btn)
+
+        self.build_from_dff_btn = QPushButton()
+        self.build_from_dff_btn.setFont(self.button_font)
+        self.build_from_dff_btn.setIcon(self._create_build_icon())
+        self.build_from_dff_btn.setText("Build TXD via")
+        self.build_from_dff_btn.setIconSize(QSize(20, 20))
+        if self.button_display_mode == 'icons':
+            self.build_from_dff_btn.setFixedSize(40, 40)
+        self.build_from_dff_btn.clicked.connect(self._build_txd_from_dff)
+        self.build_from_dff_btn.setToolTip("Create TXD structure from DFF material names")
+        layout.addWidget(self.build_from_dff_btn)
 
         # Filters
         self.filters_btn = QPushButton()
