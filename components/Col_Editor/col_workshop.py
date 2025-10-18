@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-#this belongs in components.Col_Editor.collision_editor.py - Version: 1
+#this belongs in components.Col_Editor.col_workshop.py - Version: 1
 # X-Seti - August10 2025 - Converted col editor using gui base template.
 
-"""components/Col_Editor/collision_editor.py
+"""
+components/Col_Editor/col_workshop.py
 COL Editor - Main collision editor interface
 """
 
@@ -38,7 +39,7 @@ from gui.col_dialogs import show_col_analysis_dialog
 
 
 # Add root directory to path
-App_name = "Collision_Editor"
+App_name = "Col Workshop"
 DEBUG_STANDALONE = False
 
 class COLViewer3D(QLabel): #vers 2
@@ -583,6 +584,10 @@ class CollisionMain(QWidget): #vers 3
 
         # Preview settings
         self._show_checkerboard = True
+        self._show_spheres = True
+        self._show_boxes = True
+        self._show_mesh = True
+
         self._checkerboard_size = 16
         self._overlay_opacity = 50
         self.zoom_level = 1.0
@@ -1733,7 +1738,7 @@ class CollisionMain(QWidget): #vers 3
         if self.button_display_mode == 'icons':
             self.open_btn.setFixedSize(40, 40)
         self.open_btn.setToolTip("Open COL file (Ctrl+O)")
-        #self.open_btn.clicked.connect(self._open_file)  # TODO: Connect
+        self.open_btn.clicked.connect(self._open_file)
         layout.addWidget(self.open_btn)
 
         # Save button
@@ -1747,7 +1752,7 @@ class CollisionMain(QWidget): #vers 3
             self.save_btn.setFixedSize(40, 40)
         self.save_btn.setEnabled(False)  # Enable when modified
         self.save_btn.setToolTip("Save COL file (Ctrl+S)")
-        #self.save_btn.clicked.connect(self._save_file)  # TODO: Connect
+        self.save_btn.clicked.connect(self._save_file)
         layout.addWidget(self.save_btn)
 
         layout.addSpacing(10)
@@ -1964,7 +1969,7 @@ class CollisionMain(QWidget): #vers 3
         self.analyze_btn.setIconSize(QSize(20, 20))
         if self.button_display_mode == 'icons':
             self.analyze_btn.setFixedSize(40, 40)
-        #self.analyze_btn.clicked.connect(self._analyze_collision)  # TODO: Connect
+        self.analyze_btn.clicked.connect(self._analyze_collision)
         self.analyze_btn.setEnabled(False)  # Enable when COL loaded
         self.analyze_btn.setToolTip("Analyze collision data")
         layout.addWidget(self.analyze_btn)
@@ -2128,12 +2133,9 @@ class CollisionMain(QWidget): #vers 3
         return panel
 
 
-    def _create_middle_panel(self): #vers 1
-        """Create middle panel with controls"""
-        from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QGroupBox, QLabel
-
-        panel = QGroupBox("Collisions")
-        # Match your styling
+    def _create_middle_panel(self): #vers 2
+        """Create middle panel with COL models list"""
+        panel = QGroupBox("COL Models")
         panel.setStyleSheet("""
             QGroupBox {
                 font-weight: bold;
@@ -2154,7 +2156,13 @@ class CollisionMain(QWidget): #vers 3
         """)
 
         layout = QVBoxLayout(panel)
-        layout.setSpacing(10)
+        layout.setSpacing(5)
+
+        # Model list widget
+        self.collision_list = QListWidget()
+        self.collision_list.setAlternatingRowColors(True)
+        self.collision_list.itemClicked.connect(self._on_collision_selected)
+        layout.addWidget(self.collision_list)
 
         return panel
 
@@ -2410,7 +2418,7 @@ class CollisionMain(QWidget): #vers 3
         self.view_spheres_btn.setCheckable(True)
         self.view_spheres_btn.setChecked(True)
         self.view_spheres_btn.setToolTip("Toggle Spheres")
-        #self.view_spheres_btn.clicked.connect(self._toggle_spheres)  # TODO: Connect
+        self.view_spheres_btn.clicked.connect(self._toggle_spheres)
         controls_layout.addWidget(self.view_spheres_btn)
 
         # View Boxes toggle
@@ -2421,7 +2429,7 @@ class CollisionMain(QWidget): #vers 3
         self.view_boxes_btn.setCheckable(True)
         self.view_boxes_btn.setChecked(True)
         self.view_boxes_btn.setToolTip("Toggle Boxes")
-        #self.view_boxes_btn.clicked.connect(self._toggle_boxes)  # TODO: Connect
+        self.view_boxes_btn.clicked.connect(self._toggle_boxes)
         controls_layout.addWidget(self.view_boxes_btn)
 
         # View Mesh toggle
@@ -2432,7 +2440,7 @@ class CollisionMain(QWidget): #vers 3
         self.view_mesh_btn.setCheckable(True)
         self.view_mesh_btn.setChecked(True)
         self.view_mesh_btn.setToolTip("Toggle Mesh")
-        #self.view_mesh_btn.clicked.connect(self._toggle_mesh)  # TODO: Connect
+        self.view_mesh_btn.clicked.connect(self._toggle_mesh)
         controls_layout.addWidget(self.view_mesh_btn)
 
         controls_layout.addSpacing(5)
@@ -2465,7 +2473,6 @@ class CollisionMain(QWidget): #vers 3
         controls_layout.addStretch()
 
         return controls_frame
-
 
 
     def _create_level_card(self, level_data): #vers 2
@@ -3389,7 +3396,72 @@ class CollisionMain(QWidget): #vers 3
                 self.main_window.log_message(f"Refresh error: {str(e)}")
 
 
-#------ Tabbing Functions
+#------ Col functions
+
+    def _open_file(self): #vers 1
+        """Open file dialog and load COL file"""
+        try:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Open COL File",
+                "",
+                "COL Files (*.col);;All Files (*)"
+            )
+
+            if file_path:
+                self.open_col_file(file_path)
+
+        except Exception as e:
+            img_debugger.error(f"Error in open file dialog: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to open file:\n{str(e)}")
+
+
+    def _save_file(self): #vers 1
+        """Save current COL file"""
+        try:
+            if not self.current_col_file:
+                QMessageBox.warning(self, "Save", "No COL file loaded to save")
+                return
+
+            if not self.current_file_path:
+                # No path yet, do Save As
+                self._save_file_as()
+                return
+
+            # Save to current path
+            if self.current_col_file.save():
+                if self.main_window and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"✅ Saved COL: {os.path.basename(self.current_file_path)}")
+
+                QMessageBox.information(self, "Save", f"COL file saved successfully:\n{os.path.basename(self.current_file_path)}")
+                img_debugger.success(f"Saved COL file: {self.current_file_path}")
+            else:
+                error_msg = self.current_col_file.save_error if hasattr(self.current_col_file, 'save_error') else "Unknown error"
+                QMessageBox.critical(self, "Save Error", f"Failed to save COL file:\n{error_msg}")
+                img_debugger.error(f"Save failed: {error_msg}")
+
+        except Exception as e:
+            img_debugger.error(f"Error saving file: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to save file:\n{str(e)}")
+
+    def _save_file_as(self): #vers 1
+        """Save As dialog"""
+        try:
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save COL File As",
+                "",
+                "COL Files (*.col);;All Files (*)"
+            )
+
+            if file_path:
+                self.current_file_path = file_path
+                self.current_col_file.file_path = file_path
+                self._save_file()
+
+        except Exception as e:
+            img_debugger.error(f"Error in save as dialog: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to save file:\n{str(e)}")
 
 
     def _load_settings(self): #vers 1
@@ -3409,6 +3481,8 @@ class CollisionMain(QWidget): #vers 3
                     self.last_save_directory = settings.get('last_save_directory', None)
         except Exception as e:
             print(f"Failed to load settings: {e}")
+
+
 
 
     def _save_settings(self): #vers 1
@@ -3432,29 +3506,41 @@ class CollisionMain(QWidget): #vers 3
             print(f"Failed to save settings: {e}")
 
 
-    def open_col_file(self, file_path): #vers 1
-        """Open standalone COL file"""
+    def open_col_file(self, file_path): #vers 3
+        """Open standalone COL file - supports COL1, COL2, COL3"""
         try:
-            from methods.col_operations import load_col_file
+            from methods.col_core_classes import COLFile
 
-            col_file = load_col_file(file_path)
-            if not col_file:
-                QMessageBox.warning(self, "Open Failed", f"Failed to load COL file:\n{file_path}")
+            # Create and load COL file
+            col_file = COLFile(file_path)
+
+            if not col_file.load():
+                error_msg = col_file.load_error if hasattr(col_file, 'load_error') else "Unknown error"
+                QMessageBox.warning(self, "Open Failed", f"Failed to load COL file:\n{error_msg}")
                 return False
 
+            # Store loaded file
             self.current_col_file = col_file
             self.current_file_path = file_path
 
-            # Update UI
-            if hasattr(self, 'panelone_widget'):
-                self.panelone_widget.clear()
+            # Update window title with model count
+            model_count = len(col_file.models) if hasattr(col_file, 'models') else 0
+            version_str = f"COL ({model_count} models)"
+            self.setWindowTitle(f"{App_name} - {os.path.basename(file_path)} - {version_str}")
 
-            self.setWindowTitle(f"{App_name} - {os.path.basename(file_path)}")
+            # Populate UI
+            self._populate_collision_list()  # ADD THIS LINE
+
+            # Enable buttons
+            if hasattr(self, 'save_btn'):
+                self.save_btn.setEnabled(True)
+            if hasattr(self, 'analyze_btn'):
+                self.analyze_btn.setEnabled(True)
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Loaded COL file: {os.path.basename(file_path)}")
+                self.main_window.log_message(f"✅ Loaded COL: {os.path.basename(file_path)} ({model_count} models)")
 
-            img_debugger.success(f"Opened COL file: {file_path}")
+            img_debugger.success(f"Opened COL file: {file_path} with {model_count} models")
             return True
 
         except Exception as e:
@@ -3479,6 +3565,505 @@ class CollisionMain(QWidget): #vers 3
             QMessageBox.critical(self, "Error", f"Failed to load from IMG:\n{str(e)}")
             return False
 
+    def _analyze_collision(self): #vers 1
+        """Analyze current COL file"""
+        try:
+            if not self.current_col_file or not self.current_file_path:
+                QMessageBox.warning(self, "Analyze", "No COL file loaded to analyze")
+                return
+
+            # Import analysis functions
+            from methods.col_operations import get_col_detailed_analysis
+            from gui.col_dialogs import show_col_analysis_dialog
+
+            # Get detailed analysis
+            analysis_data = get_col_detailed_analysis(self.current_file_path)
+
+            if 'error' in analysis_data:
+                QMessageBox.warning(self, "Analysis Error", f"Analysis failed:\n{analysis_data['error']}")
+                return
+
+            # Show analysis dialog
+            show_col_analysis_dialog(self, analysis_data, os.path.basename(self.current_file_path))
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"✅ Analyzed COL: {os.path.basename(self.current_file_path)}")
+
+        except Exception as e:
+            img_debugger.error(f"Error analyzing file: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to analyze file:\n{str(e)}")
+
+
+    def _on_collision_selected(self, item): #vers 2
+        """Handle COL model selection from list"""
+        try:
+            model_index = self.collision_list.row(item)
+
+            if not self.current_col_file or not hasattr(self.current_col_file, 'models'):
+                return
+
+            if model_index < 0 or model_index >= len(self.current_col_file.models):
+                return
+
+            # Get selected model
+            model = self.current_col_file.models[model_index]
+            model_name = getattr(model, 'name', f'Model_{model_index}')
+
+            # Update info display
+            self.info_name.setText(model_name)
+
+            # Update preview widget with rendered collision
+            if hasattr(self, 'preview_widget'):
+                preview_pixmap = self._render_collision_preview(model, 600, 600)
+                self.preview_widget.setPixmap(preview_pixmap)
+
+            img_debugger.debug(f"Selected COL model: {model_name}")
+
+        except Exception as e:
+            img_debugger.error(f"Error selecting model: {str(e)}")
+
+
+    def _populate_collision_list(self): #vers 1
+        """Populate collision list with models from loaded COL file"""
+        try:
+            self.collision_list.clear()
+
+            if not self.current_col_file or not hasattr(self.current_col_file, 'models'):
+                return
+
+            for i, model in enumerate(self.current_col_file.models):
+                # Get model info
+                name = getattr(model, 'name', f'Model_{i}')
+                version = getattr(model, 'version', COLVersion.COL_1)
+
+                # Count collision elements
+                spheres = len(getattr(model, 'spheres', []))
+                boxes = len(getattr(model, 'boxes', []))
+                faces = len(getattr(model, 'faces', []))
+                vertices = len(getattr(model, 'vertices', []))
+
+                # Create list item with info
+                item_text = f"{name}\n{version.name} - S:{spheres} B:{boxes} F:{faces} V:{vertices}"
+                item = QListWidgetItem(item_text)
+                item.setData(Qt.ItemDataRole.UserRole, i)  # Store model index
+
+                self.collision_list.addItem(item)
+
+            img_debugger.debug(f"Populated collision list with {len(self.current_col_file.models)} models")
+
+        except Exception as e:
+            img_debugger.error(f"Error populating collision list: {str(e)}")
+
+
+    def _toggle_spheres(self, checked): #vers 2
+        """Toggle sphere visibility in preview"""
+        try:
+            self._show_spheres = checked  # Store state
+
+            # Refresh preview if model is selected
+            if hasattr(self, 'collision_list') and self.collision_list.currentItem():
+                self._on_collision_selected(self.collision_list.currentItem())
+
+            img_debugger.debug(f"Spheres visibility: {checked}")
+        except Exception as e:
+            img_debugger.error(f"Error toggling spheres: {str(e)}")
+
+    def _toggle_boxes(self, checked): #vers 2
+        """Toggle box visibility in preview"""
+        try:
+            self._show_boxes = checked  # Store state
+
+            # Refresh preview if model is selected
+            if hasattr(self, 'collision_list') and self.collision_list.currentItem():
+                self._on_collision_selected(self.collision_list.currentItem())
+
+            img_debugger.debug(f"Boxes visibility: {checked}")
+        except Exception as e:
+            img_debugger.error(f"Error toggling boxes: {str(e)}")
+
+    def _toggle_mesh(self, checked): #vers 2
+        """Toggle mesh visibility in preview"""
+        try:
+            self._show_mesh = checked  # Store state
+
+            # Refresh preview if model is selected
+            if hasattr(self, 'collision_list') and self.collision_list.currentItem():
+                self._on_collision_selected(self.collision_list.currentItem())
+
+            img_debugger.debug(f"Mesh visibility: {checked}")
+        except Exception as e:
+            img_debugger.error(f"Error toggling mesh: {str(e)}")
+
+
+# ----- Render functions
+
+    def update_display(self): #vers 2
+        """Update 3D viewer display with 2D wireframe rendering"""
+        try:
+            # Create a pixmap to draw on
+            pixmap = QPixmap(self.size())
+            pixmap.fill(QColor(30, 30, 30))  # Dark background
+
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+            if not self.current_model:
+                # No model loaded
+                painter.setPen(QColor(150, 150, 150))
+                painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter,
+                            "3D Viewer\n\nNo COL model selected")
+                painter.end()
+                self.setPixmap(pixmap)
+                return
+
+            # Get model data
+            spheres = getattr(self.current_model, 'spheres', [])
+            boxes = getattr(self.current_model, 'boxes', [])
+            vertices = getattr(self.current_model, 'vertices', [])
+            faces = getattr(self.current_model, 'faces', [])
+
+            # Calculate view bounds and scale
+            scale, offset_x, offset_y = self._calculate_view_transform()
+
+            # Draw grid
+            self._draw_grid(painter, scale, offset_x, offset_y)
+
+            # Draw collision elements
+            if self.show_spheres and spheres:
+                self._draw_spheres(painter, spheres, scale, offset_x, offset_y)
+
+            if self.show_boxes and boxes:
+                self._draw_boxes(painter, boxes, scale, offset_x, offset_y)
+
+            if self.show_mesh and vertices and faces:
+                self._draw_mesh(painter, vertices, faces, scale, offset_x, offset_y)
+
+            # Draw legend
+            self._draw_legend(painter)
+
+            painter.end()
+            self.setPixmap(pixmap)
+
+        except Exception as e:
+            img_debugger.error(f"Error updating 3D viewer: {str(e)}")
+
+
+    def _populate_collision_list(self): #vers 2
+        """Populate collision list with models and thumbnails"""
+        try:
+            self.collision_list.clear()
+
+            if not self.current_col_file or not hasattr(self.current_col_file, 'models'):
+                return
+
+            # Set icon mode for thumbnails
+            self.collision_list.setViewMode(QListWidget.ViewMode.IconMode)
+            self.collision_list.setIconSize(QSize(120, 120))
+            self.collision_list.setGridSize(QSize(140, 160))
+            self.collision_list.setResizeMode(QListWidget.ResizeMode.Adjust)
+            self.collision_list.setSpacing(10)
+
+            for i, model in enumerate(self.current_col_file.models):
+                # Get model info
+                name = getattr(model, 'name', f'Model_{i}')
+                version = getattr(model, 'version', COLVersion.COL_1)
+
+                # Count collision elements
+                spheres = len(getattr(model, 'spheres', []))
+                boxes = len(getattr(model, 'boxes', []))
+                faces = len(getattr(model, 'faces', []))
+
+                # Generate thumbnail
+                thumbnail = self._generate_collision_thumbnail(model, 120, 120)
+
+                # Create list item
+                item_text = f"{name}\n{version.name}\nS:{spheres} B:{boxes} F:{faces}"
+                item = QListWidgetItem(QIcon(thumbnail), item_text)
+                item.setData(Qt.ItemDataRole.UserRole, i)
+
+                self.collision_list.addItem(item)
+
+            img_debugger.debug(f"Populated collision list with {len(self.current_col_file.models)} models")
+
+        except Exception as e:
+            img_debugger.error(f"Error populating collision list: {str(e)}")
+
+
+    def _generate_collision_thumbnail(self, model, width, height): #vers 2
+        """Generate thumbnail preview of collision model"""
+        try:
+            pixmap = QPixmap(width, height)
+            pixmap.fill(QColor(40, 40, 40))
+
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+            # Get collision data
+            spheres = getattr(model, 'spheres', [])
+            boxes = getattr(model, 'boxes', [])
+            vertices = getattr(model, 'vertices', [])
+            faces = getattr(model, 'faces', [])
+
+            if not spheres and not boxes and not vertices:
+                # Empty model
+                painter.setPen(QColor(100, 100, 100))
+                painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "Empty")
+                painter.end()
+                return pixmap
+
+            # Calculate bounds and scale for thumbnail
+            all_points = []
+
+            for sphere in spheres:
+                if hasattr(sphere, 'center'):
+                    all_points.append((sphere.center.x, sphere.center.z))
+
+            for box in boxes:
+                if hasattr(box, 'min_point') and hasattr(box, 'max_point'):
+                    all_points.append((box.min_point.x, box.min_point.z))
+                    all_points.append((box.max_point.x, box.max_point.z))
+
+            for vertex in vertices:
+                if hasattr(vertex, 'position'):
+                    all_points.append((vertex.position.x, vertex.position.z))
+
+            if not all_points:
+                painter.setPen(QColor(100, 100, 100))
+                painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "No Data")
+                painter.end()
+                return pixmap
+
+            # Calculate bounds with safety checks
+            xs = [p[0] for p in all_points if abs(p[0]) < 10000]
+            zs = [p[1] for p in all_points if abs(p[1]) < 10000]
+
+            if not xs or not zs:
+                painter.setPen(QColor(100, 100, 100))
+                painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "Invalid")
+                painter.end()
+                return pixmap
+
+            min_x, max_x = min(xs), max(xs)
+            min_z, max_z = min(zs), max(zs)
+
+            # Calculate scale to fit in thumbnail
+            range_x = max_x - min_x if max_x != min_x else 1
+            range_z = max_z - min_z if max_z != min_z else 1
+
+            # Prevent extreme scaling
+            if range_x > 10000 or range_z > 10000 or range_x < 0.001 or range_z < 0.001:
+                painter.setPen(QColor(100, 100, 100))
+                painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "Too Large")
+                painter.end()
+                return pixmap
+
+            scale = min((width - 20) / range_x, (height - 20) / range_z)
+
+            # Clamp scale to reasonable values
+            scale = max(0.1, min(scale, 100))
+
+            offset_x = width / 2 - (min_x + max_x) / 2 * scale
+            offset_y = height / 2 - (min_z + max_z) / 2 * scale
+
+            # Helper function to clamp coordinates
+            def clamp_coord(val):
+                return max(-10000, min(10000, int(val)))
+
+            # Draw spheres
+            painter.setPen(QPen(QColor(100, 150, 255), 1))
+            painter.setBrush(QBrush(QColor(100, 150, 255, 50)))
+            for sphere in spheres[:50]:  # Limit to first 50
+                if hasattr(sphere, 'center') and hasattr(sphere, 'radius'):
+                    x = clamp_coord(sphere.center.x * scale + offset_x)
+                    y = clamp_coord(sphere.center.z * scale + offset_y)
+                    r = clamp_coord(sphere.radius * scale)
+
+                    if 0 <= x <= width and 0 <= y <= height and r > 0 and r < 1000:
+                        painter.drawEllipse(QPoint(x, y), r, r)
+
+            # Draw boxes
+            painter.setPen(QPen(QColor(255, 150, 100), 1))
+            painter.setBrush(QBrush(QColor(255, 150, 100, 50)))
+            for box in boxes[:50]:  # Limit to first 50
+                if hasattr(box, 'min_point') and hasattr(box, 'max_point'):
+                    x1 = clamp_coord(box.min_point.x * scale + offset_x)
+                    y1 = clamp_coord(box.min_point.z * scale + offset_y)
+                    x2 = clamp_coord(box.max_point.x * scale + offset_x)
+                    y2 = clamp_coord(box.max_point.z * scale + offset_y)
+
+                    w = abs(x2 - x1)
+                    h = abs(y2 - y1)
+
+                    if w > 0 and h > 0 and w < 1000 and h < 1000:
+                        painter.drawRect(min(x1, x2), min(y1, y2), w, h)
+
+            # Draw mesh wireframe
+            if faces and vertices:
+                painter.setPen(QPen(QColor(150, 255, 150), 1))
+                for face in faces[:50]:  # Limit to first 50 faces
+                    if hasattr(face, 'vertex_indices') and len(face.vertex_indices) >= 3:
+                        try:
+                            idx0 = face.vertex_indices[0]
+                            idx1 = face.vertex_indices[1]
+                            idx2 = face.vertex_indices[2]
+
+                            if idx0 < len(vertices) and idx1 < len(vertices) and idx2 < len(vertices):
+                                v1 = vertices[idx0].position
+                                v2 = vertices[idx1].position
+                                v3 = vertices[idx2].position
+
+                                x1 = clamp_coord(v1.x * scale + offset_x)
+                                y1 = clamp_coord(v1.z * scale + offset_y)
+                                x2 = clamp_coord(v2.x * scale + offset_x)
+                                y2 = clamp_coord(v2.z * scale + offset_y)
+                                x3 = clamp_coord(v3.x * scale + offset_x)
+                                y3 = clamp_coord(v3.z * scale + offset_y)
+
+                                painter.drawLine(x1, y1, x2, y2)
+                                painter.drawLine(x2, y2, x3, y3)
+                                painter.drawLine(x3, y3, x1, y1)
+                        except:
+                            pass
+
+            painter.end()
+            return pixmap
+
+        except Exception as e:
+            img_debugger.error(f"Error generating thumbnail: {str(e)}")
+            # Return error thumbnail
+            pixmap = QPixmap(width, height)
+            pixmap.fill(QColor(60, 60, 60))
+            painter = QPainter(pixmap)
+            painter.setPen(QColor(150, 150, 150))
+            painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "Error")
+            painter.end()
+            return pixmap
+
+
+    def _render_collision_preview(self, model, width, height): #vers 1
+        """Render collision model for preview panel"""
+        try:
+            pixmap = QPixmap(width, height)
+            pixmap.fill(QColor(10, 10, 10))
+
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+            # Get collision data
+            spheres = getattr(model, 'spheres', [])
+            boxes = getattr(model, 'boxes', [])
+            vertices = getattr(model, 'vertices', [])
+            faces = getattr(model, 'faces', [])
+
+            if not spheres and not boxes and not vertices:
+                painter.setPen(QColor(150, 150, 150))
+                painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter,
+                            "No Collision Data\n\nModel is empty")
+                painter.end()
+                return pixmap
+
+            # Calculate bounds
+            all_points = []
+            for sphere in spheres:
+                if hasattr(sphere, 'center'):
+                    all_points.append((sphere.center.x, sphere.center.z))
+
+            for box in boxes:
+                if hasattr(box, 'min_point') and hasattr(box, 'max_point'):
+                    all_points.append((box.min_point.x, box.min_point.z))
+                    all_points.append((box.max_point.x, box.max_point.z))
+
+            for vertex in vertices:
+                if hasattr(vertex, 'position'):
+                    all_points.append((vertex.position.x, vertex.position.z))
+
+            if not all_points:
+                painter.end()
+                return pixmap
+
+            # Calculate scale
+            xs = [p[0] for p in all_points]
+            zs = [p[1] for p in all_points]
+            min_x, max_x = min(xs), max(xs)
+            min_z, max_z = min(zs), max(zs)
+
+            range_x = max_x - min_x if max_x != min_x else 1
+            range_z = max_z - min_z if max_z != min_z else 1
+            scale = min((width - 40) / range_x, (height - 40) / range_z)
+
+            offset_x = width / 2 - (min_x + max_x) / 2 * scale
+            offset_y = height / 2 - (min_z + max_z) / 2 * scale
+
+            # Draw grid
+            painter.setPen(QPen(QColor(50, 50, 50), 1, Qt.PenStyle.DotLine))
+            for i in range(-10, 11):
+                painter.drawLine(int(offset_x + i * 50), 0,
+                            int(offset_x + i * 50), height)
+                painter.drawLine(0, int(offset_y + i * 50),
+                            width, int(offset_y + i * 50))
+
+            # Draw spheres (if enabled)
+            if self._show_checkerboard:  # Reuse this flag as show_spheres
+                painter.setPen(QPen(QColor(100, 180, 255), 2))
+                painter.setBrush(QBrush(QColor(100, 180, 255, 80)))
+                for sphere in spheres:
+                    if hasattr(sphere, 'center') and hasattr(sphere, 'radius'):
+                        x = sphere.center.x * scale + offset_x
+                        y = sphere.center.z * scale + offset_y
+                        r = sphere.radius * scale
+                        painter.drawEllipse(QPoint(int(x), int(y)), int(r), int(r))
+
+            # Draw boxes
+            painter.setPen(QPen(QColor(255, 180, 100), 2))
+            painter.setBrush(QBrush(QColor(255, 180, 100, 80)))
+            for box in boxes:
+                if hasattr(box, 'min_point') and hasattr(box, 'max_point'):
+                    x1 = box.min_point.x * scale + offset_x
+                    y1 = box.min_point.z * scale + offset_y
+                    x2 = box.max_point.x * scale + offset_x
+                    y2 = box.max_point.z * scale + offset_y
+                    painter.drawRect(int(x1), int(y1), int(x2-x1), int(y2-y1))
+
+            # Draw mesh wireframe
+            if faces and vertices:
+                painter.setPen(QPen(QColor(150, 255, 150), 1))
+                for face in faces[:500]:  # Limit faces for performance
+                    if hasattr(face, 'vertex_indices') and len(face.vertex_indices) >= 3:
+                        try:
+                            v1 = vertices[face.vertex_indices[0]].position
+                            v2 = vertices[face.vertex_indices[1]].position
+                            v3 = vertices[face.vertex_indices[2]].position
+
+                            x1 = v1.x * scale + offset_x
+                            y1 = v1.z * scale + offset_y
+                            x2 = v2.x * scale + offset_x
+                            y2 = v2.z * scale + offset_y
+                            x3 = v3.x * scale + offset_x
+                            y3 = v3.z * scale + offset_y
+
+                            painter.drawLine(int(x1), int(y1), int(x2), int(y2))
+                            painter.drawLine(int(x2), int(y2), int(x3), int(y3))
+                            painter.drawLine(int(x3), int(y3), int(x1), int(y1))
+                        except:
+                            pass
+
+            # Draw legend
+            painter.setPen(QColor(200, 200, 200))
+            painter.drawText(10, 20, f"Spheres: {len(spheres)}")
+            painter.drawText(10, 40, f"Boxes: {len(boxes)}")
+            painter.drawText(10, 60, f"Faces: {len(faces)}")
+
+            painter.end()
+            return pixmap
+
+        except Exception as e:
+            img_debugger.error(f"Error rendering preview: {str(e)}")
+            pixmap = QPixmap(width, height)
+            pixmap.fill(QColor(60, 60, 60))
+            return pixmap
+
+
+# ----- Hotkeps
 
     def keyPressEvent(self, event): #vers 1
         """Handle keyboard shortcuts"""

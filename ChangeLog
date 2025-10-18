@@ -61,6 +61,13 @@ This needs a work around.
 
 Added - Oct 18 - Collision Editor
 
+Open button → Opens COL file dialog and loads file
+Save button → Saves current COL file
+Analyze button → Shows COL analysis dialog
+View toggles → Toggle sphere/box/mesh visibility
+Model list → Populates when COL loads
+Model selection → Updates info panel
+
 String multiplication errors - FIXED
 Alpha texture code - REMOVED
 save_col_file() - ADDED
