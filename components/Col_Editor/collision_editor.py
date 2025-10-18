@@ -23,6 +23,26 @@ from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint, QRect, QByteArray
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QBrush, QColor, QCursor
 from PyQt6.QtSvg import QSvgRenderer
 
+
+# Add project root to path for standalone execution
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+sys.path.insert(0, project_root)
+
+# Now import everything without try/except
+try:
+    # When running from main app
+    from debug.img_debug_functions import img_debugger
+    from methods.col_core_classes import COLFile, COLModel, COLVersion, Vector3
+except ImportError:
+    # When running standalone
+    from depends.img_debug_functions import img_debugger
+    from depends.col_core_classes import COLFile, COLModel, COLVersion, Vector3
+
+# These should work now with project root in path
+from methods.col_operations import get_col_detailed_analysis, create_temporary_col_file, cleanup_temporary_file
+from gui.col_dialogs import show_col_analysis_dialog
+
 # Add root directory to path
 App_name = "Collision_Editor"
 DEBUG_STANDALONE = False
@@ -228,7 +248,317 @@ class COLModelListWidget(QListWidget): #vers 1
             model_index = item.data(Qt.ItemDataRole.UserRole)
             self.model_context_menu.emit(model_index, self.mapToGlobal(position))
 
+class COLPropertiesWidget(QTabWidget): #vers 2
+    """Enhanced properties editor widget for COL elements"""
 
+    property_changed = pyqtSignal(str, object)  # property_name, new_value
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.current_model = None
+
+        self.setup_tabs()
+
+    def setup_tabs(self): #vers 1
+        """Setup property tabs"""
+        # Model properties tab
+        self.model_tab = QWidget()
+        self.setup_model_tab()
+        self.addTab(self.model_tab, "📄 Model")
+
+        # Spheres tab
+        self.spheres_tab = QWidget()
+        self.setup_spheres_tab()
+        self.addTab(self.spheres_tab, "🔵 Spheres")
+
+        # Boxes tab
+        self.boxes_tab = QWidget()
+        self.setup_boxes_tab()
+        self.addTab(self.boxes_tab, "📦 Boxes")
+
+        # Mesh tab
+        self.mesh_tab = QWidget()
+        self.setup_mesh_tab()
+        self.addTab(self.mesh_tab, "🌐 Mesh")
+
+    def setup_model_tab(self): #vers 1
+        """Setup model properties tab"""
+        layout = QVBoxLayout(self.model_tab)
+
+        # Model info group
+        info_group = QGroupBox("Model Information")
+        info_layout = QFormLayout(info_group)
+
+        self.model_name_edit = QLineEdit()
+        self.model_name_edit.textChanged.connect(lambda text: self.property_changed.emit('name', text))
+        info_layout.addRow("Name:", self.model_name_edit)
+
+        self.model_version_combo = QComboBox()
+        for version in COLVersion:
+            self.model_version_combo.addItem(f"COL{version.value}", version)
+        self.model_version_combo.currentIndexChanged.connect(self.on_version_changed)
+        info_layout.addRow("Version:", self.model_version_combo)
+
+        self.model_id_spin = QSpinBox()
+        self.model_id_spin.setRange(0, 65535)
+        self.model_id_spin.valueChanged.connect(lambda value: self.property_changed.emit('model_id', value))
+        info_layout.addRow("Model ID:", self.model_id_spin)
+
+        layout.addWidget(info_group)
+
+        # Bounding box group
+        bbox_group = QGroupBox("Bounding Box")
+        bbox_layout = QFormLayout(bbox_group)
+
+        # Center coordinates
+        center_layout = QHBoxLayout()
+        self.center_x_spin = QDoubleSpinBox()
+        self.center_x_spin.setRange(-999999, 999999)
+        self.center_x_spin.setDecimals(3)
+        center_layout.addWidget(self.center_x_spin)
+
+        self.center_y_spin = QDoubleSpinBox()
+        self.center_y_spin.setRange(-999999, 999999)
+        self.center_y_spin.setDecimals(3)
+        center_layout.addWidget(self.center_y_spin)
+
+        self.center_z_spin = QDoubleSpinBox()
+        self.center_z_spin.setRange(-999999, 999999)
+        self.center_z_spin.setDecimals(3)
+        center_layout.addWidget(self.center_z_spin)
+
+        bbox_layout.addRow("Center (X,Y,Z):", center_layout)
+
+        self.radius_spin = QDoubleSpinBox()
+        self.radius_spin.setRange(0, 999999)
+        self.radius_spin.setDecimals(3)
+        bbox_layout.addRow("Radius:", self.radius_spin)
+
+        layout.addWidget(bbox_group)
+        layout.addStretch()
+
+    def setup_spheres_tab(self): #vers 1
+        """Setup spheres tab"""
+        layout = QVBoxLayout(self.spheres_tab)
+
+        # Spheres table
+        self.spheres_table = QTableWidget()
+        self.spheres_table.setColumnCount(5)
+        self.spheres_table.setHorizontalHeaderLabels([
+            "Center X", "Center Y", "Center Z", "Radius", "Material"
+        ])
+        layout.addWidget(self.spheres_table)
+
+        # Spheres buttons
+        spheres_buttons = QHBoxLayout()
+
+        self.add_sphere_btn = QPushButton("➕ Add Sphere")
+        self.add_sphere_btn.clicked.connect(self.add_sphere)
+        spheres_buttons.addWidget(self.add_sphere_btn)
+
+        self.remove_sphere_btn = QPushButton("➖ Remove Sphere")
+        self.remove_sphere_btn.clicked.connect(self.remove_sphere)
+        spheres_buttons.addWidget(self.remove_sphere_btn)
+
+        spheres_buttons.addStretch()
+        layout.addLayout(spheres_buttons)
+
+    def setup_boxes_tab(self): #vers 1
+        """Setup boxes tab"""
+        layout = QVBoxLayout(self.boxes_tab)
+
+        # Boxes table
+        self.boxes_table = QTableWidget()
+        self.boxes_table.setColumnCount(7)
+        self.boxes_table.setHorizontalHeaderLabels([
+            "Min X", "Min Y", "Min Z", "Max X", "Max Y", "Max Z", "Material"
+        ])
+        layout.addWidget(self.boxes_table)
+
+        # Boxes buttons
+        boxes_buttons = QHBoxLayout()
+
+        self.add_box_btn = QPushButton("➕ Add Box")
+        self.add_box_btn.clicked.connect(self.add_box)
+        boxes_buttons.addWidget(self.add_box_btn)
+
+        self.remove_box_btn = QPushButton("➖ Remove Box")
+        self.remove_box_btn.clicked.connect(self.remove_box)
+        boxes_buttons.addWidget(self.remove_box_btn)
+
+        boxes_buttons.addStretch()
+        layout.addLayout(boxes_buttons)
+
+    def setup_mesh_tab(self): #vers 1
+        """Setup mesh tab"""
+        layout = QVBoxLayout(self.mesh_tab)
+
+        # Mesh info
+        info_layout = QFormLayout()
+
+        self.vertices_count_label = QLabel("0")
+        info_layout.addRow("Vertices:", self.vertices_count_label)
+
+        self.faces_count_label = QLabel("0")
+        info_layout.addRow("Faces:", self.faces_count_label)
+
+        layout.addLayout(info_layout)
+
+        # Mesh buttons
+        mesh_buttons = QHBoxLayout()
+
+        self.import_mesh_btn = QPushButton("📥 Import Mesh")
+        self.import_mesh_btn.clicked.connect(self.import_mesh)
+        mesh_buttons.addWidget(self.import_mesh_btn)
+
+        self.export_mesh_btn = QPushButton("📤 Export Mesh")
+        self.export_mesh_btn.clicked.connect(self.export_mesh)
+        mesh_buttons.addWidget(self.export_mesh_btn)
+
+        mesh_buttons.addStretch()
+        layout.addLayout(mesh_buttons)
+
+        layout.addStretch()
+
+    def set_current_model(self, model: COLModel): #vers 1
+        """Set current model for editing"""
+        self.current_model = model
+        self.update_properties()
+
+    def update_properties(self): #vers 1
+        """Update property displays"""
+        if not self.current_model:
+            self.clear_properties()
+            return
+
+        try:
+            # Update model properties
+            if hasattr(self.current_model, 'name'):
+                self.model_name_edit.setText(self.current_model.name)
+
+            if hasattr(self.current_model, 'version'):
+                version_index = list(COLVersion).index(self.current_model.version)
+                self.model_version_combo.setCurrentIndex(version_index)
+
+            if hasattr(self.current_model, 'model_id'):
+                self.model_id_spin.setValue(self.current_model.model_id)
+
+            # Update bounding box
+            if hasattr(self.current_model, 'bounding_box') and self.current_model.bounding_box:
+                bbox = self.current_model.bounding_box
+                if hasattr(bbox, 'center'):
+                    self.center_x_spin.setValue(bbox.center.x)
+                    self.center_y_spin.setValue(bbox.center.y)
+                    self.center_z_spin.setValue(bbox.center.z)
+                if hasattr(bbox, 'radius'):
+                    self.radius_spin.setValue(bbox.radius)
+
+            # Update spheres table
+            self.update_spheres_table()
+
+            # Update boxes table
+            self.update_boxes_table()
+
+            # Update mesh info
+            self.update_mesh_info()
+
+        except Exception as e:
+            img_debugger.error(f"Error updating properties: {str(e)}")
+
+    def clear_properties(self): #vers 1
+        """Clear all property displays"""
+        self.model_name_edit.clear()
+        self.model_version_combo.setCurrentIndex(0)
+        self.model_id_spin.setValue(0)
+        self.center_x_spin.setValue(0)
+        self.center_y_spin.setValue(0)
+        self.center_z_spin.setValue(0)
+        self.radius_spin.setValue(0)
+        self.spheres_table.setRowCount(0)
+        self.boxes_table.setRowCount(0)
+        self.vertices_count_label.setText("0")
+        self.faces_count_label.setText("0")
+
+    def update_spheres_table(self): #vers 1
+        """Update spheres table"""
+        if not hasattr(self.current_model, 'spheres'):
+            self.spheres_table.setRowCount(0)
+            return
+
+        spheres = self.current_model.spheres
+        self.spheres_table.setRowCount(len(spheres))
+
+        for i, sphere in enumerate(spheres):
+            if hasattr(sphere, 'center'):
+                self.spheres_table.setItem(i, 0, QTableWidgetItem(f"{sphere.center.x:.3f}"))
+                self.spheres_table.setItem(i, 1, QTableWidgetItem(f"{sphere.center.y:.3f}"))
+                self.spheres_table.setItem(i, 2, QTableWidgetItem(f"{sphere.center.z:.3f}"))
+            if hasattr(sphere, 'radius'):
+                self.spheres_table.setItem(i, 3, QTableWidgetItem(f"{sphere.radius:.3f}"))
+            if hasattr(sphere, 'material'):
+                self.spheres_table.setItem(i, 4, QTableWidgetItem(str(sphere.material)))
+
+    def update_boxes_table(self): #vers 1
+        """Update boxes table"""
+        if not hasattr(self.current_model, 'boxes'):
+            self.boxes_table.setRowCount(0)
+            return
+
+        boxes = self.current_model.boxes
+        self.boxes_table.setRowCount(len(boxes))
+
+        for i, box in enumerate(boxes):
+            if hasattr(box, 'min_point'):
+                self.boxes_table.setItem(i, 0, QTableWidgetItem(f"{box.min_point.x:.3f}"))
+                self.boxes_table.setItem(i, 1, QTableWidgetItem(f"{box.min_point.y:.3f}"))
+                self.boxes_table.setItem(i, 2, QTableWidgetItem(f"{box.min_point.z:.3f}"))
+            if hasattr(box, 'max_point'):
+                self.boxes_table.setItem(i, 3, QTableWidgetItem(f"{box.max_point.x:.3f}"))
+                self.boxes_table.setItem(i, 4, QTableWidgetItem(f"{box.max_point.y:.3f}"))
+                self.boxes_table.setItem(i, 5, QTableWidgetItem(f"{box.max_point.z:.3f}"))
+            if hasattr(box, 'material'):
+                self.boxes_table.setItem(i, 6, QTableWidgetItem(str(box.material)))
+
+    def update_mesh_info(self): #vers 1
+        """Update mesh information"""
+        if not self.current_model:
+            return
+
+        vertices_count = len(getattr(self.current_model, 'vertices', []))
+        faces_count = len(getattr(self.current_model, 'faces', []))
+
+        self.vertices_count_label.setText(str(vertices_count))
+        self.faces_count_label.setText(str(faces_count))
+
+    def on_version_changed(self): #vers 1
+        """Handle version change"""
+        if self.current_model:
+            new_version = self.model_version_combo.currentData()
+            self.property_changed.emit('version', new_version)
+
+    def add_sphere(self): #vers 1
+        """Add new sphere"""
+        img_debugger.info("Add sphere - not yet implemented")
+
+    def remove_sphere(self): #vers 1
+        """Remove selected sphere"""
+        img_debugger.info("Remove sphere - not yet implemented")
+
+    def add_box(self): #vers 1
+        """Add new box"""
+        img_debugger.info("Add box - not yet implemented")
+
+    def remove_box(self): #vers 1
+        """Remove selected box"""
+        img_debugger.info("Remove box - not yet implemented")
+
+    def import_mesh(self): #vers 1
+        """Import mesh from file"""
+        img_debugger.info("Import mesh - not yet implemented")
+
+    def export_mesh(self): #vers 1
+        """Export mesh to file"""
+        img_debugger.info("Export mesh - not yet implemented")
 
 class CollisionMain(QWidget): #vers 3
     """GUI Setup - Main window"""
