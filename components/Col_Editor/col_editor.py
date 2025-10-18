@@ -27,18 +27,8 @@ from PyQt6.QtGui import QAction, QFont, QIcon
 
 # Add project root to path for standalone execution
 current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_dir)
+project_root = os.path.dirname(os.path.dirname(current_dir))  # Go up TWO levels
 sys.path.insert(0, project_root)
-
-# Now import everything without try/except
-try:
-    # When running from main app
-    from debug.img_debug_functions import img_debugger
-    from methods.col_core_classes import COLFile, COLModel, COLVersion, Vector3
-except ImportError:
-    # When running standalone
-    from img_debug_functions import img_debugger
-    from col_core_classes import COLFile, COLModel, COLVersion, Vector3
 
 # These should work now with project root in path
 from methods.col_operations import get_col_detailed_analysis, create_temporary_col_file, cleanup_temporary_file

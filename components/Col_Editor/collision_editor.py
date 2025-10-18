@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 #this belongs in components.Col_Editor.collision_editor.py - Version: 1
-# X-Seti - August10 2025 - Converted col editor using gui base tempplate.
+# X-Seti - August10 2025 - Converted col editor using gui base template.
 
-"""
-collision_editor
+"""components/Col_Editor/collision_editor.py
+COL Editor - Main collision editor interface
 """
 
 import os
@@ -16,6 +16,13 @@ import io
 import numpy as np
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple
+
+# Add project root to path FIRST
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(current_dir))
+sys.path.insert(0, project_root)
+
+# Import PyQt6
 from PyQt6.QtWidgets import (QApplication, QSlider, QCheckBox,
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QListWidget, QDialog, QFormLayout, QSpinBox,  QListWidgetItem, QLabel, QPushButton, QFrame, QFileDialog, QLineEdit, QTextEdit, QMessageBox, QScrollArea, QGroupBox, QTableWidget, QTableWidgetItem, QColorDialog, QHeaderView, QAbstractItemView, QMenu, QComboBox, QInputDialog, QTabWidget, QDoubleSpinBox, QRadioButton
 )
@@ -23,25 +30,12 @@ from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint, QRect, QByteArray
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QBrush, QColor, QCursor
 from PyQt6.QtSvg import QSvgRenderer
 
-
-# Add project root to path for standalone execution
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_dir)
-sys.path.insert(0, project_root)
-
-# Now import everything without try/except
-try:
-    # When running from main app
-    from debug.img_debug_functions import img_debugger
-    from methods.col_core_classes import COLFile, COLModel, COLVersion, Vector3
-except ImportError:
-    # When running standalone
-    from depends.img_debug_functions import img_debugger
-    from depends.col_core_classes import COLFile, COLModel, COLVersion, Vector3
-
-# These should work now with project root in path
-from methods.col_operations import get_col_detailed_analysis, create_temporary_col_file, cleanup_temporary_file
+# Import project modules AFTER path setup
+from debug.img_debug_functions import img_debugger
+from methods.col_core_classes import COLFile, COLModel, COLVersion, Vector3
+#from methods.col_integration import get_col_detailed_analysis, create_temporary_col_file, cleanup_temporary_file
 from gui.col_dialogs import show_col_analysis_dialog
+
 
 # Add root directory to path
 App_name = "Collision_Editor"
@@ -1769,7 +1763,7 @@ class CollisionMain(QWidget): #vers 3
 
         self.export_btn = QPushButton("Export")
         self.export_btn.setFont(self.button_font)
-        self.export_btn.setIcron(self._create_export_icon())
+        self.export_btn.setIcon(self._create_export_icon())
         self.export_btn.setIconSize(QSize(20, 20))
         self.export_btn.setToolTip("Export col, cst, 3ds files")
         #self.export_btn.clicked.connect(self.export_selected)
@@ -4856,6 +4850,12 @@ class COLEditorDialog(QDialog): #vers 3
         try:
             self.status_bar.showMessage("Analyzing COL file...")
 
+            # Import locally when needed
+            from methods.col_operations import get_col_detailed_analysis
+            from gui.col_dialogs import show_col_analysis_dialog
+
+            self.status_bar.showMessage("Analyzing COL file...")
+
             # Get detailed analysis
             analysis_data = get_col_detailed_analysis(self.file_path)
 
@@ -5066,187 +5066,6 @@ def apply_changes(editor: COLEditorDialog) -> bool: #vers 1
         img_debugger.error(f"Error applying changes: {str(e)}")
         return False
 
-# Footer functions
-
-def _rgb_to_565(r, g, b):
-    return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)
-
-
-def _565_to_rgb(c):
-    r = ((c >> 11) & 0x1F) << 3
-    g = ((c >> 5) & 0x3F) << 2
-    b = (c & 0x1F) << 3
-    return r, g, b
-
-
-def _best_color_index(palette, r, g, b):
-    best = 0
-    best_dist = None
-    for i, (pr, pg, pb) in enumerate(palette):
-        dr = pr - r
-        dg = pg - g
-        db = pb - b
-        dist = dr*dr + dg*dg + db*db
-        if best_dist is None or dist < best_dist:
-            best_dist = dist
-            best = i
-    return best
-
-
-def _encode_dxt1(rgba_bytes, width, height):
-    """Encode raw RGBA bytes (RGBA8888) into DXT1 bytes.
-    Simple block-wise encoder: select endpoints by luminance heuristic and assign indices.
-    """
-    blocks_x = (width + 3) // 4
-    blocks_y = (height + 3) // 4
-    out = bytearray()
-
-    for by in range(blocks_y):
-        for bx in range(blocks_x):
-            pixels = []
-            for py in range(4):
-                for px in range(4):
-                    x = bx*4 + px
-                    y = by*4 + py
-                    if x < width and y < height:
-                        idx = (y*width + x)*4
-                        r = rgba_bytes[idx]
-                        g = rgba_bytes[idx+1]
-                        b = rgba_bytes[idx+2]
-                    else:
-                        r = g = b = 0
-                    pixels.append((r,g,b))
-
-            lum = [0.2126*p[0] + 0.7152*p[1] + 0.0722*p[2] for p in pixels]
-            max_i = lum.index(max(lum))
-            min_i = lum.index(min(lum))
-            c0_rgb = pixels[max_i]
-            c1_rgb = pixels[min_i]
-
-            c0_565 = _rgb_to_565(*c0_rgb)
-            c1_565 = _rgb_to_565(*c1_rgb)
-
-            pr0 = _565_to_rgb(c0_565)
-            pr1 = _565_to_rgb(c1_565)
-            palette = [pr0, pr1]
-            if c0_565 > c1_565:
-                palette.append(((2*pr0[0]+pr1[0])//3, (2*pr0[1]+pr1[1])//3, (2*pr0[2]+pr1[2])//3))
-                palette.append(((pr0[0]+2*pr1[0])//3, (pr0[1]+2*pr1[1])//3, (pr0[2]+2*pr1[2])//3))
-            else:
-                palette.append(((pr0[0]+pr1[0])//2, (pr0[1]+pr1[1])//2, (pr0[2]+pr1[2])//2))
-                palette.append((0,0,0))
-
-            indices = 0
-            bit_pos = 0
-            for (r,g,b) in pixels:
-                idx = _best_color_index(palette, r, g, b)
-                indices |= (idx & 0x3) << bit_pos
-                bit_pos += 2
-
-            out.extend(struct.pack('<HHI', c0_565, c1_565, indices))
-
-    return bytes(out)
-
-
-def _encode_alpha_block(alpha_bytes):
-    """Encode 4x4 alpha block for DXT5.
-    alpha_bytes: list of 16 alpha values (0-255)
-    Returns 8 bytes: a0, a1, and 48-bit index stream (little-endian packed 3 bits per pixel)
-    """
-    a0 = max(alpha_bytes)
-    a1 = min(alpha_bytes)
-
-    # Build alpha palette
-    alpha_palette = [a0, a1]
-    if a0 > a1:
-        for i in range(1, 6):
-            alpha_palette.append((( (6 - i) * a0 + i * a1 ) // 6))
-    else:
-        for i in range(1, 4):
-            alpha_palette.append((( (4 - i) * a0 + i * a1 ) // 4))
-        alpha_palette.extend([0, 255])
-
-    # For each pixel, find best index (0..7)
-    indices = 0
-    bit_pos = 0
-    for a in alpha_bytes:
-        # find closest
-        best_i = 0
-        best_dist = None
-        for i, av in enumerate(alpha_palette):
-            dist = (av - a) * (av - a)
-            if best_dist is None or dist < best_dist:
-                best_dist = dist
-                best_i = i
-        indices |= (best_i & 0x7) << bit_pos
-        bit_pos += 3
-
-    # pack into 6 bytes little endian
-    idx_bytes = indices.to_bytes(6, 'little')
-    return bytes([a0, a1]) + idx_bytes
-
-
-def _encode_dxt5(rgba_bytes, width, height):
-    """Encode raw RGBA8888 bytes into DXT5 bytes.
-    DXT5 block = 8 bytes alpha block + 8 bytes color block (same as DXT1 color block)
-    """
-    blocks_x = (width + 3) // 4
-    blocks_y = (height + 3) // 4
-    out = bytearray()
-
-    for by in range(blocks_y):
-        for bx in range(blocks_x):
-            alpha_vals = []
-            pixels_rgb = []
-            for py in range(4):
-                for px in range(4):
-                    x = bx*4 + px
-                    y = by*4 + py
-                    if x < width and y < height:
-                        idx = (y*width + x)*4
-                        r = rgba_bytes[idx]
-                        g = rgba_bytes[idx+1]
-                        b = rgba_bytes[idx+2]
-                        a = rgba_bytes[idx+3]
-                    else:
-                        r = g = b = a = 0
-                    pixels_rgb.append((r,g,b))
-                    alpha_vals.append(a)
-
-            # alpha block
-            alpha_block = _encode_alpha_block(alpha_vals)
-
-            # color block same as DXT1
-            lum = [0.2126*p[0] + 0.7152*p[1] + 0.0722*p[2] for p in pixels_rgb]
-            max_i = lum.index(max(lum))
-            min_i = lum.index(min(lum))
-            c0_rgb = pixels_rgb[max_i]
-            c1_rgb = pixels_rgb[min_i]
-            c0_565 = _rgb_to_565(*c0_rgb)
-            c1_565 = _rgb_to_565(*c1_rgb)
-            pr0 = _565_to_rgb(c0_565)
-            pr1 = _565_to_rgb(c1_565)
-            palette = [pr0, pr1]
-            if c0_565 > c1_565:
-                palette.append(((2*pr0[0]+pr1[0])//3, (2*pr0[1]+pr1[1])//3, (2*pr0[2]+pr1[2])//3))
-                palette.append(((pr0[0]+2*pr1[0])//3, (pr0[1]+2*pr1[1])//3, (pr0[2]+2*pr1[2])//3))
-            else:
-                palette.append(((pr0[0]+pr1[0])//2, (pr0[1]+pr1[1])//2, (pr0[2]+pr1[2])//2))
-                palette.append((0,0,0))
-
-            indices = 0
-            bit_pos = 0
-            for (r,g,b) in pixels_rgb:
-                idx = _best_color_index(palette, r, g, b)
-                indices |= (idx & 0x3) << bit_pos
-                bit_pos += 2
-
-            color_bytes = struct.pack('<HHI', c0_565, c1_565, indices)
-
-            out.extend(alpha_block)
-            out.extend(color_bytes)
-
-    return bytes(out)
 
 # --- External AI upscaler integration helper ---
 import subprocess

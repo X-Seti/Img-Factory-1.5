@@ -57,6 +57,37 @@ This needs a work around.
 
 ----------- completed ---- >
 
+
+
+Added - Oct 18 - Collision Editor
+
+String multiplication errors - FIXED
+Alpha texture code - REMOVED
+save_col_file() - ADDED
+Incomplete self._invert_alpha - REMOVED
+
+Changes - Oct 16
+Open/Save → _create_toolbar()
+Analyze → _create_transform_panel()
+View toggles (Spheres/Boxes/Mesh) → _create_preview_controls()
+
+Fixed 3 string multiplication errors (* → +)
+Removed COLToolbar class entirely
+Removed QToolBar import
+Migrated buttons to proper locations:
+
+Open/Save → _create_toolbar()
+Analyze → _create_transform_panel()
+View toggles (Spheres/Boxes/Mesh) → _create_preview_controls()
+
+Changes - Oct 15
+Added 6 new SVG icon methods (open, save, analyze, sphere, box, mesh)
+Replaced all emoji icons with SVG
+Removed alpha texture code
+Added missing open_col_file() method
+Added missing load_from_img_archive() method
+Removed DXT compression code (texture editor only)
+
 Added - Oct 8
 Author info and feature list.
 Import Texture functions
