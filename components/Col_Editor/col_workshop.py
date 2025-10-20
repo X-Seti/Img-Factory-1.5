@@ -2355,10 +2355,7 @@ class COLWorkshop(QWidget): #vers 3
 
 
         # Preview area (center) - 3D Viewport
-        if VIEWPORT_AVAILABLE:
-            self.preview_widget = COL3DViewport()
-        else:
-            self.preview_widget = ZoomablePreview(self)
+        self.preview_widget = COL3DViewport()
         top_layout.addWidget(self.preview_widget, stretch=2)
 
         # Preview controls (right side, vertical)
