@@ -8,6 +8,11 @@ COL Editor - Main collision editor interface
 """
 
 import os
+# Force X11/GLX backend for NVIDIA on Wayland
+os.environ['QT_QPA_PLATFORM'] = 'xcb'
+os.environ['QSG_RHI_BACKEND'] = 'opengl'
+os.environ['LIBGL_ALWAYS_SOFTWARE'] = '0'  # Use hardware acceleration
+
 import tempfile
 import subprocess
 import shutil
@@ -37,157 +42,135 @@ from methods.col_core_classes import COLFile, COLModel, COLVersion, Vector3
 #from methods.col_integration import get_col_detailed_analysis, create_temporary_col_file, cleanup_temporary_file
 from gui.col_dialogs import show_col_analysis_dialog
 
+# Import COL viewport and preview from depends
+try:
+    from components.Col_Editor.depends.col_3d_viewport import COL3DViewport
+    from components.Col_Editor.depends.col_preview_generator import (
+        COLPreviewGenerator, create_col_preview, create_col_thumbnail
+    )
+    VIEWPORT_AVAILABLE = True
+except ImportError:
+    VIEWPORT_AVAILABLE = False
+    COL3DViewport = None
+    print("Warning: COL 3D viewport not available - install PyOpenGL")
 
 # Add root directory to path
 App_name = "Col Workshop"
 DEBUG_STANDALONE = False
 
+# Use new 3D viewport if available, fallback to text display
+if VIEWPORT_AVAILABLE:
+    ViewportWidget = COL3DViewport
+else:
+    ViewportWidget = QLabel  # Fallback text display
 
 
-class COLViewer3D(QLabel): #vers 2
-    """Enhanced 3D viewer widget for COL models"""
+##class COLModelListWidget: -
+# __init__
+# on_selection_changed
+# populate_models
+# set_col_file
+# show_context_menu
 
-    model_selected = pyqtSignal(int)  # Model index selected
+##class COLPropertiesWidget: -
+# __init__
+# add_box
+# add_sphere
+# clear_properties
+# export_mesh
+# import_mesh
+# on_version_changed
+# remove_box
+# remove_sphere
+# set_current_model
+# setup_boxes_tab
+# setup_mesh_tab
+# setup_model_tab
+# setup_spheres_tab
+# setup_tabs
+# update_boxes_table
+# update_mesh_info
+# update_properties
+# update_spheres_table
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setMinimumSize(500, 400)
-        self.setStyleSheet("""
-            QLabel {
-                border: 2px solid #555555;
-                background-color: #1e1e1e;
-                color: #ffffff;
-                font-family: 'Consolas', monospace;
-                font-size: 11px;
-            }
-        """)
+##class COLWorkshop: -
+# __init__
+# _apply_always_on_top
+# _apply_button_mode
+# _apply_window_flags
+# _create_info_panel
+# _create_left_panel
+# _create_preview_controls
+# _create_preview_widget
+# _create_right_panel
+# _create_transform_panel
+# _dock_to_main
+# _enable_name_edit
+# _ensure_depends_structure
+# _extract_entry_data
+# _generate_thumbnail
+# _load_settings
+# _on_collision_selected
+# _populate_collision_list
+# _render_collision_preview
+# _save_settings
+# _save_surface_name
+# _show_col_info
+# _toggle_boxes
+# _toggle_mesh
+# _toggle_spheres
+# _undock_from_main
+# _update_dock_button_visibility
+# load_from_img_archive
+# open_col_file
+# save_col_file
+# show_settings_dialog
+# toggle_dock_mode
+# update_display
 
-        # View options
-        self.show_spheres = True
-        self.show_boxes = True
-        self.show_mesh = True
-        self.show_wireframe = False
-        self.show_bounds = True
+##class ZoomablePreview: -
+# __init__
+# _update_scaled_pixmap
+# fit_to_window
+# mouseMoveEvent
+# mousePressEvent
+# mouseReleaseEvent
+# paintEvent
+# pan
+# render_collision
+# rotate_x
+# rotate_y
+# rotate_z
+# set_model
+# setPixmap
+# wheelEvent
+# zoom_in
+# zoom_out
 
-        self.current_model = None
-        self.current_file = None
-        self.selected_model_index = -1
+##class COLEditorDialog: -
+# __init__
+# analyze_file
+# closeEvent
+# connect_signals
+# load_col_file
+# on_model_selected
+# on_property_changed
+# open_file
+# save_file
+# save_file_as
+# setup_ui
 
-        self.update_display()
+##Module-level functions -
+# apply_changes
+# create_new_model
+# delete_model
+# export_model
+# import_elements
+# open_col_editor
+# open_workshop
+# refresh_model_list
+# update_view_options
 
-    def set_current_file(self, col_file: COLFile): #vers 1
-        """Set current COL file for display"""
-        self.current_file = col_file
-        self.selected_model_index = -1
-        self.current_model = None
-        self.update_display()
-
-    def set_current_model(self, model: COLModel, model_index: int = -1): #vers 2
-        """Set current model for display"""
-        self.current_model = model
-        self.selected_model_index = model_index
-        self.update_display()
-
-        if model:
-            img_debugger.debug(f"3D Viewer showing model: {model.name}")
-
-    def set_view_options(self, show_spheres=None, show_boxes=None, show_mesh=None, show_wireframe=None, show_bounds=None): #vers 1
-        """Update view options"""
-        if show_spheres is not None:
-            self.show_spheres = show_spheres
-        if show_boxes is not None:
-            self.show_boxes = show_boxes
-        if show_mesh is not None:
-            self.show_mesh = show_mesh
-        if show_wireframe is not None:
-            self.show_wireframe = show_wireframe
-        if show_bounds is not None:
-            self.show_bounds = show_bounds
-
-        self.update_display()
-
-    def update_display(self): #vers 1
-        """Update 3D viewer display"""
-        try:
-            if not self.current_file and not self.current_model:
-                self.setText("3D Viewer\n\nNo COL file loaded\nUse File > Open to load a COL file")
-                return
-
-            if self.current_file and not self.current_model:
-                # Show file overview
-                model_count = len(self.current_file.models) if hasattr(self.current_file, 'models') else 0
-                display_text = "3D Viewer - File Overview\n\n"
-                display_text += f"COL File: {os.path.basename(getattr(self.current_file, 'file_path', 'Unknown'))}\n"
-                display_text += f"Models: {model_count}\n\n"
-
-                if model_count > 0 and hasattr(self.current_file, 'models'):
-                    display_text += "Models (click to select):\n"
-                    for i, model in enumerate(self.current_file.models[:10]):  # Show first 10
-                        indicator = "→ " if i == self.selected_model_index else "  "
-                        display_text += f"{indicator}{i+1}: {getattr(model, 'name', f'Model_{i}')}\n"
-
-                    if model_count > 10:
-                        display_text += f"  ... and {model_count - 10} more models\n"
-
-                display_text += "\nView Options:\n"
-                display_text += f"Spheres: {'✅' if self.show_spheres else '❌'}\n"
-                display_text += f"Boxes: {'✅' if self.show_boxes else '❌'}\n"
-                display_text += f"Mesh: {'✅' if self.show_mesh else '❌'}\n"
-                display_text += f"Wireframe: {'✅' if self.show_wireframe else '❌'}\n"
-                display_text += f"Bounds: {'✅' if self.show_bounds else '❌'}\n"
-
-                self.setText(display_text)
-                return
-
-            if self.current_model:
-                # Show model details
-                display_text = "3D Viewer - Model View\n\n"
-                display_text += f"Model: {getattr(self.current_model, 'name', 'Unknown')}\n"
-                display_text += f"Version: {getattr(self.current_model, 'version', 'Unknown')}\n\n"
-
-                # Collision elements
-                spheres = getattr(self.current_model, 'spheres', [])
-                boxes = getattr(self.current_model, 'boxes', [])
-                faces = getattr(self.current_model, 'faces', [])
-                vertices = getattr(self.current_model, 'vertices', [])
-
-                display_text += "Collision Elements:\n"
-                display_text += f"Spheres: {len(spheres)} {'(shown)' if self.show_spheres else '(hidden)'}\n"
-                display_text += f"Boxes: {len(boxes)} {'(shown)' if self.show_boxes else '(hidden)'}\n"
-                display_text += f"Faces: {len(faces)} {'(shown)' if self.show_mesh else '(hidden)'}\n"
-                display_text += f"Vertices: {len(vertices)}\n\n"
-
-                # Bounding box info
-                if hasattr(self.current_model, 'bounding_box') and self.current_model.bounding_box:
-                    bbox = self.current_model.bounding_box
-                    display_text += "Bounding Box:\n"
-                    if hasattr(bbox, 'center'):
-                        display_text += f"Center: ({bbox.center.x:.2f}, {bbox.center.y:.2f}, {bbox.center.z:.2f})\n"
-                    if hasattr(bbox, 'radius'):
-                        display_text += f"Radius: {bbox.radius:.2f}\n"
-
-                display_text += "\n[Future: OpenGL 3D visualization will be displayed here]"
-                self.setText(display_text)
-
-        except Exception as e:
-            self.setText(f"3D Viewer Error:\n\n{str(e)}")
-            img_debugger.error(f"Error updating 3D viewer display: {str(e)}")
-
-    def mousePressEvent(self, event): #vers 1
-        """Handle mouse clicks for model selection"""
-        if event.button() == Qt.MouseButton.LeftButton and self.current_file:
-            # Simple model selection - in future this would be 3D picking
-            if hasattr(self.current_file, 'models') and self.current_file.models:
-                # Cycle through models for now
-                current_index = self.selected_model_index
-                next_index = (current_index + 1) % len(self.current_file.models)
-
-                self.selected_model_index = next_index
-                self.current_model = self.current_file.models[next_index]
-                self.update_display()
-                self.model_selected.emit(next_index)
-
-        super().mousePressEvent(event)
 
 class COLModelListWidget(QListWidget): #vers 1
     """Enhanced model list widget"""
@@ -557,8 +540,9 @@ class COLPropertiesWidget(QTabWidget): #vers 2
         """Export mesh to file"""
         img_debugger.info("Export mesh - not yet implemented")
 
-class CollisionMain(QWidget): #vers 3
-    """GUI Setup - Main window"""
+
+class COLWorkshop(QWidget): #vers 3
+    """COL Workshop - Main window"""
 
     workshop_closed = pyqtSignal()
 
@@ -2369,13 +2353,13 @@ class CollisionMain(QWidget): #vers 3
         transform_panel = self._create_transform_panel()
         top_layout.addWidget(transform_panel, stretch=1)
 
-        # Preview area (center)
-        self.preview_widget = ZoomablePreview(self)
-        top_layout.addWidget(self.preview_widget, stretch=2)
 
-        # Preview area (center)
-        #self.preview_widget = self._create_preview_widget()
-        #top_layout.addWidget(self.preview_widget, stretch=2)
+        # Preview area (center) - 3D Viewport
+        if VIEWPORT_AVAILABLE:
+            self.preview_widget = COL3DViewport()
+        else:
+            self.preview_widget = ZoomablePreview(self)
+        top_layout.addWidget(self.preview_widget, stretch=2)
 
         # Preview controls (right side, vertical)
         self.preview_controls = self._create_preview_controls()
@@ -2504,8 +2488,7 @@ class CollisionMain(QWidget): #vers 3
         main_layout.addWidget(info_group, stretch=0)
         return panel
 
-
-    def _create_preview_controls(self): #vers 3
+    def _create_preview_controls(self): #vers 4
         """Create preview control buttons - vertical layout on right"""
         controls_frame = QFrame()
         controls_frame.setFrameStyle(QFrame.Shape.StyledPanel)
@@ -2514,13 +2497,17 @@ class CollisionMain(QWidget): #vers 3
         controls_layout.setContentsMargins(5, 5, 5, 5)
         controls_layout.setSpacing(5)
 
+        # Check if using 3D viewport or 2D preview
+        is_3d_viewport = VIEWPORT_AVAILABLE and isinstance(self.preview_widget, COL3DViewport)
+
         # Zoom In
         zoom_in_btn = QPushButton()
         zoom_in_btn.setIcon(self._create_zoom_in_icon())
         zoom_in_btn.setIconSize(QSize(20, 20))
         zoom_in_btn.setFixedSize(40, 40)
         zoom_in_btn.setToolTip("Zoom In")
-        zoom_in_btn.clicked.connect(self.preview_widget.zoom_in)
+        if not is_3d_viewport:
+            zoom_in_btn.clicked.connect(self.preview_widget.zoom_in)
         controls_layout.addWidget(zoom_in_btn)
 
         # Zoom Out
@@ -2529,7 +2516,8 @@ class CollisionMain(QWidget): #vers 3
         zoom_out_btn.setIconSize(QSize(20, 20))
         zoom_out_btn.setFixedSize(40, 40)
         zoom_out_btn.setToolTip("Zoom Out")
-        zoom_out_btn.clicked.connect(self.preview_widget.zoom_out)
+        if not is_3d_viewport:
+            zoom_out_btn.clicked.connect(self.preview_widget.zoom_out)
         controls_layout.addWidget(zoom_out_btn)
 
         # Reset
@@ -2547,7 +2535,10 @@ class CollisionMain(QWidget): #vers 3
         fit_btn.setIconSize(QSize(20, 20))
         fit_btn.setFixedSize(40, 40)
         fit_btn.setToolTip("Fit to Window")
-        fit_btn.clicked.connect(self.preview_widget.fit_to_window)
+        if not is_3d_viewport:
+            fit_btn.clicked.connect(self.preview_widget.fit_to_window)
+        else:
+            fit_btn.clicked.connect(self.preview_widget.reset_view)
         controls_layout.addWidget(fit_btn)
 
         controls_layout.addSpacing(10)
@@ -2588,11 +2579,12 @@ class CollisionMain(QWidget): #vers 3
         pan_right_btn.clicked.connect(lambda: self._pan_preview(20, 0))
         controls_layout.addWidget(pan_right_btn)
 
+        # Color picker
         bg_custom_btn = QPushButton()
         bg_custom_btn.setIcon(self._create_color_picker_icon())
         bg_custom_btn.setIconSize(QSize(20, 20))
         bg_custom_btn.setFixedSize(40, 40)
-        bg_custom_btn.setToolTip("Pick Color")
+        bg_custom_btn.setToolTip("Pick Background Color")
         bg_custom_btn.clicked.connect(self._pick_background_color)
         controls_layout.addWidget(bg_custom_btn)
 
@@ -2639,7 +2631,6 @@ class CollisionMain(QWidget): #vers 3
         bg_black_btn.setFixedSize(40, 40)
         bg_black_btn.setStyleSheet("background-color: black; border: 1px solid #555;")
         bg_black_btn.setToolTip("Black Background")
-        #bg_black_btn.clicked.connect(lambda: self.preview_widget.set_background_color(QColor(0, 0, 0)))
         controls_layout.addWidget(bg_black_btn)
 
         bg_gray_btn = QPushButton()
@@ -2647,7 +2638,6 @@ class CollisionMain(QWidget): #vers 3
         bg_gray_btn.setFixedSize(40, 40)
         bg_gray_btn.setStyleSheet("background-color: #2a2a2a; border: 1px solid #555;")
         bg_gray_btn.setToolTip("Gray Background")
-        #bg_gray_btn.clicked.connect(lambda: self.preview_widget.set_background_color(QColor(42, 42, 42)))
         controls_layout.addWidget(bg_gray_btn)
 
         bg_white_btn = QPushButton()
@@ -2655,7 +2645,6 @@ class CollisionMain(QWidget): #vers 3
         bg_white_btn.setFixedSize(40, 40)
         bg_white_btn.setStyleSheet("background-color: white; border: 1px solid #555;")
         bg_white_btn.setToolTip("White Background")
-        #bg_white_btn.clicked.connect(lambda: self.preview_widget.set_background_color(QColor(255, 255, 255)))
         controls_layout.addWidget(bg_white_btn)
 
         controls_layout.addStretch()
@@ -3821,7 +3810,8 @@ class CollisionMain(QWidget): #vers 3
                 self.main_window.log_message(f"❌ Extract error: {str(e)}")
             return None
 
-    def _on_collision_selected(self): #vers 5
+
+    def _on_collision_selected(self): #vers 6
         """Handle COL model selection from table"""
         try:
             selected_rows = self.collision_list.selectionModel().selectedRows()
@@ -3855,15 +3845,21 @@ class CollisionMain(QWidget): #vers 3
             if hasattr(self, 'info_name'):
                 self.info_name.setText(model_name)
 
-            # Render large preview
+            # Update preview widget
             if hasattr(self, 'preview_widget'):
-                width = max(400, self.preview_widget.width())
-                height = max(400, self.preview_widget.height())
-                img_debugger.debug(f"Rendering preview: {width}x{height} for {model_name}")
-                preview_pixmap = self._render_collision_preview(model, width, height)
-                self.preview_widget.setPixmap(preview_pixmap)
-                self.preview_widget.setScaledContents(False)
-                img_debugger.success(f"Preview updated for {model_name}")
+                if VIEWPORT_AVAILABLE and isinstance(self.preview_widget, COL3DViewport):
+                    # Use 3D viewport
+                    self.preview_widget.set_current_model(model, model_index)
+                    img_debugger.success(f"3D viewport updated for {model_name}")
+                else:
+                    # Use 2D preview fallback
+                    width = max(400, self.preview_widget.width())
+                    height = max(400, self.preview_widget.height())
+                    img_debugger.debug(f"Rendering 2D preview: {width}x{height} for {model_name}")
+                    preview_pixmap = self._render_collision_preview(model, width, height)
+                    self.preview_widget.setPixmap(preview_pixmap)
+                    self.preview_widget.setScaledContents(False)
+                    img_debugger.success(f"2D preview updated for {model_name}")
             else:
                 img_debugger.warning("No preview_widget attribute found")
 
@@ -3871,6 +3867,7 @@ class CollisionMain(QWidget): #vers 3
             img_debugger.error(f"Error selecting model: {str(e)}")
             import traceback
             traceback.print_exc()
+
 
     def _populate_collision_list(self): #vers 4
         """Populate collision table with models - matches TXD Workshop style"""
@@ -5875,8 +5872,8 @@ class COLEditorDialog(QDialog): #vers 3
         layout = QVBoxLayout(self)
 
         # Toolbar
-        self.toolbar = COLToolbar(self)
-        layout.addWidget(self.toolbar)
+        #self.toolbar = COLToolbar(self)
+        #layout.addWidget(self.toolbar)
 
         # Main splitter
         main_splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -5913,10 +5910,17 @@ class COLEditorDialog(QDialog): #vers 3
         viewer_group = QGroupBox("3D Viewer")
         viewer_layout = QVBoxLayout(viewer_group)
 
-        self.viewer_3d = COLViewer3D()
-        viewer_layout.addWidget(self.viewer_3d)
+        if VIEWPORT_AVAILABLE:
+            self.viewer_3d = COL3DViewport()
+            viewer_layout.addWidget(self.viewer_3d)
 
-        main_splitter.addWidget(viewer_group)
+            # Add 3DS Max style controls at bottom
+            controls = self._create_viewport_controls()
+            viewer_layout.addWidget(controls)
+        else:
+            self.viewer_3d = QLabel("3D Viewport unavailable\nInstall: pip install PyOpenGL")
+            self.viewer_3d.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            viewer_layout.addWidget(self.viewer_3d)
 
         # Set main splitter sizes
         main_splitter.setSizes([350, 650])
@@ -6106,32 +6110,353 @@ class COLEditorDialog(QDialog): #vers 3
         except Exception as e:
             img_debugger.error(f"Error selecting model: {str(e)}")
 
-    def on_property_changed(self, property_name: str, new_value): #vers 1
-        """Handle property change"""
+
+    def _create_viewport_controls(self): #vers 1
+        """Create 3D viewport controls - 3DS Max style toolbar at bottom"""
+        if not VIEWPORT_AVAILABLE:
+            return QWidget()
+
+        controls_widget = QFrame()
+        controls_widget.setFrameStyle(QFrame.Shape.StyledPanel | QFrame.Shadow.Sunken)
+        controls_widget.setStyleSheet("""
+            QFrame {
+                background-color: #3a3a3a;
+                border: 1px solid #555555;
+                border-radius: 3px;
+                padding: 3px;
+            }
+            QPushButton {
+                background-color: #4a4a4a;
+                border: 1px solid #666666;
+                border-radius: 2px;
+                padding: 4px;
+                min-width: 28px;
+                min-height: 28px;
+            }
+            QPushButton:hover {
+                background-color: #5a5a5a;
+                border: 1px solid #888888;
+            }
+            QPushButton:pressed {
+                background-color: #2a2a2a;
+            }
+            QPushButton:checked {
+                background-color: #006699;
+                border: 1px solid #0088cc;
+            }
+        """)
+
+        layout = QHBoxLayout(controls_widget)
+        layout.setContentsMargins(4, 2, 4, 2)
+        layout.setSpacing(2)
+
+        # View mode buttons
+        btn_spheres = QPushButton()
+        btn_spheres.setIcon(self._create_sphere_icon())
+        btn_spheres.setCheckable(True)
+        btn_spheres.setChecked(True)
+        btn_spheres.setToolTip("Toggle Spheres")
+        btn_spheres.toggled.connect(
+            lambda checked: self.viewer_3d.set_view_options(show_spheres=checked)
+        )
+
+        btn_boxes = QPushButton()
+        btn_boxes.setIcon(self._create_box_icon())
+        btn_boxes.setCheckable(True)
+        btn_boxes.setChecked(True)
+        btn_boxes.setToolTip("Toggle Boxes")
+        btn_boxes.toggled.connect(
+            lambda checked: self.viewer_3d.set_view_options(show_boxes=checked)
+        )
+
+        btn_mesh = QPushButton()
+        btn_mesh.setIcon(self._create_mesh_icon())
+        btn_mesh.setCheckable(True)
+        btn_mesh.setChecked(True)
+        btn_mesh.setToolTip("Toggle Mesh")
+        btn_mesh.toggled.connect(
+            lambda checked: self.viewer_3d.set_view_options(show_mesh=checked)
+        )
+
+        btn_wireframe = QPushButton()
+        btn_wireframe.setIcon(self._create_wireframe_icon())
+        btn_wireframe.setCheckable(True)
+        btn_wireframe.setChecked(True)
+        btn_wireframe.setToolTip("Toggle Wireframe")
+        btn_wireframe.toggled.connect(
+            lambda checked: self.viewer_3d.set_view_options(show_wireframe=checked)
+        )
+
+        btn_bounds = QPushButton()
+        btn_bounds.setIcon(self._create_bounds_icon())
+        btn_bounds.setCheckable(True)
+        btn_bounds.setChecked(True)
+        btn_bounds.setToolTip("Toggle Bounding Box")
+        btn_bounds.toggled.connect(
+            lambda checked: self.viewer_3d.set_view_options(show_bounds=checked)
+        )
+
+        # Separator
+        separator1 = QFrame()
+        separator1.setFrameShape(QFrame.Shape.VLine)
+        separator1.setFrameShadow(QFrame.Shadow.Sunken)
+        separator1.setStyleSheet("color: #666666;")
+
+        # Camera controls
+        btn_reset = QPushButton()
+        btn_reset.setIcon(self._create_reset_view_icon())
+        btn_reset.setToolTip("Reset View")
+        btn_reset.clicked.connect(self.viewer_3d.reset_view)
+
+        btn_top = QPushButton("T")
+        btn_top.setToolTip("Top View")
+        btn_top.clicked.connect(lambda: self._set_camera_view('top'))
+
+        btn_front = QPushButton("F")
+        btn_front.setToolTip("Front View")
+        btn_front.clicked.connect(lambda: self._set_camera_view('front'))
+
+        btn_side = QPushButton("S")
+        btn_side.setToolTip("Side View")
+        btn_side.clicked.connect(lambda: self._set_camera_view('side'))
+
+        # Add widgets to layout
+        layout.addWidget(btn_spheres)
+        layout.addWidget(btn_boxes)
+        layout.addWidget(btn_mesh)
+        layout.addWidget(btn_wireframe)
+        layout.addWidget(btn_bounds)
+        layout.addWidget(separator1)
+        layout.addWidget(btn_reset)
+        layout.addWidget(btn_top)
+        layout.addWidget(btn_front)
+        layout.addWidget(btn_side)
+        layout.addStretch()
+
+        return controls_widget
+
+    def _create_sphere_icon(self): #vers 1
+        """Sphere collision icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="2" fill="none"/>
+            <ellipse cx="10" cy="10" rx="7" ry="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+            <path d="M3 10 Q10 13 17 10" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_box_icon(self): #vers 1
+        """Box collision icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 6 L10 3 L16 6 L16 14 L10 17 L4 14 Z" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M4 6 L10 9 L16 6" stroke="currentColor" stroke-width="2"/>
+            <path d="M10 9 L10 17" stroke="currentColor" stroke-width="2"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_mesh_icon(self): #vers 1
+        """Mesh collision icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 10 L10 3 L17 10 L10 17 Z" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M3 10 L17 10 M10 3 L10 17" stroke="currentColor" stroke-width="1.5"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_wireframe_icon(self): #vers 1
+        """Wireframe mode icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 5 L15 5 L15 15 L5 15 Z" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M5 10 L15 10 M10 5 L10 15" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="5" cy="5" r="1.5" fill="currentColor"/>
+            <circle cx="15" cy="5" r="1.5" fill="currentColor"/>
+            <circle cx="15" cy="15" r="1.5" fill="currentColor"/>
+            <circle cx="5" cy="15" r="1.5" fill="currentColor"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_bounds_icon(self): #vers 1
+        """Bounding box icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="3" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="3,2"/>
+            <path d="M3 3 L7 3 M17 3 L13 3 M3 17 L7 17 M17 17 L13 17 M3 3 L3 7 M3 17 L3 13 M17 3 L17 7 M17 17 L17 13" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _create_reset_view_icon(self): #vers 1
+        """Reset camera view icon"""
+        svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 10A6 6 0 1 1 4 10M4 10l3-3m-3 3l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+    def _set_camera_view(self, view_type): #vers 1
+        """Set predefined camera view"""
+        if not VIEWPORT_AVAILABLE or not hasattr(self, 'viewer_3d'):
+            return
+
+        if view_type == 'top':
+            self.viewer_3d.rotation_x = 0.0
+            self.viewer_3d.rotation_y = 0.0
+        elif view_type == 'front':
+            self.viewer_3d.rotation_x = 90.0
+            self.viewer_3d.rotation_y = 0.0
+        elif view_type == 'side':
+            self.viewer_3d.rotation_x = 90.0
+            self.viewer_3d.rotation_y = 90.0
+
+        self.viewer_3d.update()
+
+    def _svg_to_icon(self, svg_data, size=24): #vers 1
+        """Convert SVG to QIcon"""
+        from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor
+        from PyQt6.QtSvg import QSvgRenderer
+        from PyQt6.QtCore import QByteArray
+
         try:
-            if not self.current_model:
+            text_color = self.palette().color(self.foregroundRole())
+            svg_str = svg_data.decode('utf-8')
+            svg_str = svg_str.replace('currentColor', text_color.name())
+            svg_data = svg_str.encode('utf-8')
+
+            renderer = QSvgRenderer(QByteArray(svg_data))
+            pixmap = QPixmap(size, size)
+            pixmap.fill(QColor(0, 0, 0, 0))
+
+            painter = QPainter(pixmap)
+            renderer.render(painter)
+            painter.end()
+
+            return QIcon(pixmap)
+        except:
+            return QIcon()
+
+
+    def on_property_changed(self, property_name: str, new_value): #vers 2
+        """Handle property changes from properties widget"""
+        try:
+            if not self.current_file or not hasattr(self.current_file, 'models'):
                 return
 
-            # Apply property change
+            selected_index = self.model_list.currentRow()
+            if selected_index < 0 or selected_index >= len(self.current_file.models):
+                return
+
+            current_model = self.current_file.models[selected_index]
+
+            # Update model properties
             if property_name == 'name':
-                self.current_model.name = new_value
+                current_model.name = str(new_value)
+                self.model_list.item(selected_index).setText(new_value)
             elif property_name == 'version':
-                self.current_model.version = new_value
-            elif property_name == 'model_id':
-                self.current_model.model_id = new_value
+                current_model.version = new_value
+            elif property_name == 'material':
+                if hasattr(current_model, 'material'):
+                    current_model.material = new_value
 
             # Mark as modified
             self.is_modified = True
-            self.setWindowTitle(f"COL Editor - {os.path.basename(self.file_path or 'Untitled')} *")
+            self.status_bar.showMessage(f"Modified: {property_name} changed")
 
-            # Update displays
-            self.model_list.populate_models()
-            self.viewer_3d.update_display()
+            # Update viewer if needed
+            if hasattr(self, 'viewer_3d') and VIEWPORT_AVAILABLE:
+                self.viewer_3d.set_current_model(current_model, selected_index)
 
             img_debugger.debug(f"Property changed: {property_name} = {new_value}")
 
         except Exception as e:
-            img_debugger.error(f"Error changing property: {str(e)}")
+            img_debugger.error(f"Error handling property change: {str(e)}")
+            self.status_bar.showMessage(f"Error: {str(e)}")
+
+
+        def _create_sphere_icon(self): #vers 1
+            """Sphere collision icon"""
+            svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="2" fill="none"/>
+                <ellipse cx="10" cy="10" rx="7" ry="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                <path d="M3 10 Q10 13 17 10" stroke="currentColor" stroke-width="1.5" fill="none"/>
+            </svg>'''
+            return self._svg_to_icon(svg_data, size=20)
+
+        def _create_box_icon(self): #vers 1
+            """Box collision icon"""
+            svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 6 L10 3 L16 6 L16 14 L10 17 L4 14 Z" stroke="currentColor" stroke-width="2" fill="none"/>
+                <path d="M4 6 L10 9 L16 6" stroke="currentColor" stroke-width="2"/>
+                <path d="M10 9 L10 17" stroke="currentColor" stroke-width="2"/>
+            </svg>'''
+            return self._svg_to_icon(svg_data, size=20)
+
+        def _create_mesh_icon(self): #vers 1
+            """Mesh collision icon"""
+            svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 10 L10 3 L17 10 L10 17 Z" stroke="currentColor" stroke-width="2" fill="none"/>
+                <path d="M3 10 L17 10 M10 3 L10 17" stroke="currentColor" stroke-width="1.5"/>
+            </svg>'''
+            return self._svg_to_icon(svg_data, size=20)
+
+        def _create_wireframe_icon(self): #vers 1
+            """Wireframe mode icon"""
+            svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 5 L15 5 L15 15 L5 15 Z" stroke="currentColor" stroke-width="2" fill="none"/>
+                <path d="M5 10 L15 10 M10 5 L10 15" stroke="currentColor" stroke-width="1.5"/>
+                <circle cx="5" cy="5" r="1.5" fill="currentColor"/>
+                <circle cx="15" cy="5" r="1.5" fill="currentColor"/>
+                <circle cx="15" cy="15" r="1.5" fill="currentColor"/>
+                <circle cx="5" cy="15" r="1.5" fill="currentColor"/>
+            </svg>'''
+            return self._svg_to_icon(svg_data, size=20)
+
+        def _create_bounds_icon(self): #vers 1
+            """Bounding box icon"""
+            svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="3" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="3,2"/>
+                <path d="M3 3 L7 3 M17 3 L13 3 M3 17 L7 17 M17 17 L13 17 M3 3 L3 7 M3 17 L3 13 M17 3 L17 7 M17 17 L17 13" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>'''
+            return self._svg_to_icon(svg_data, size=20)
+
+        def _create_reset_view_icon(self): #vers 1
+            """Reset camera view icon"""
+            svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16 10A6 6 0 1 1 4 10M4 10l3-3m-3 3l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>'''
+            return self._svg_to_icon(svg_data, size=20)
+
+        def _set_camera_view(self, view_type): #vers 1
+            """Set predefined camera view"""
+            if view_type == 'top':
+                self.viewer_3d.rotation_x = 0.0
+                self.viewer_3d.rotation_y = 0.0
+            elif view_type == 'front':
+                self.viewer_3d.rotation_x = 90.0
+                self.viewer_3d.rotation_y = 0.0
+            elif view_type == 'side':
+                self.viewer_3d.rotation_x = 90.0
+                self.viewer_3d.rotation_y = 90.0
+
+            self.viewer_3d.update()
+
+        def _svg_to_icon(self, svg_data, size=24): #vers 1
+            """Convert SVG to QIcon"""
+            from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor
+            from PyQt6.QtSvg import QSvgRenderer
+            from PyQt6.QtCore import QByteArray
+
+            try:
+                text_color = self.palette().color(self.foregroundRole())
+                svg_str = svg_data.decode('utf-8')
+                svg_str = svg_str.replace('currentColor', text_color.name())
+                svg_data = svg_str.encode('utf-8')
+
+                renderer = QSvgRenderer(QByteArray(svg_data))
+                pixmap = QPixmap(size, size)
+                pixmap.fill(QColor(0, 0, 0, 0))
+
+                painter = QPainter(pixmap)
+                renderer.render(painter)
+                painter.end()
+
+                return QIcon(pixmap)
+            except:
+                return QIcon()
 
     def closeEvent(self, event): #vers 1
         """Handle close event"""
@@ -6249,7 +6574,7 @@ def refresh_model_list(list_widget: COLModelListWidget, col_file: COLFile): #ver
     except Exception as e:
         img_debugger.error(f"Error refreshing model list: {str(e)}")
 
-def update_view_options(viewer: COLViewer3D, **options): #vers 1
+def update_view_options(viewer: 'COL3DViewport', **options): #vers 1
     """Update 3D viewer options"""
     try:
         viewer.set_view_options(**options)
@@ -6280,7 +6605,7 @@ import sys
 def open_workshop(main_window, img_path=None): #vers 3
     """Open Workshop from main window - works with or without IMG"""
     try:
-        workshop = CollisionMain(main_window, main_window)
+        workshop = COLWorkshop(main_window, main_window)
 
         if img_path:
             # Check if it's a col file or IMG file
@@ -6313,7 +6638,7 @@ if __name__ == "__main__":
         app = QApplication(sys.argv)
         print("QApplication created")
 
-        workshop = CollisionMain()
+        workshop = COLWorkshop()
         print(App_name + " instance created")
 
         workshop.setWindowTitle(App_name + " - Standalone")
