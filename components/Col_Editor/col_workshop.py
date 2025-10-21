@@ -2336,23 +2336,19 @@ class COLWorkshop(QWidget): #vers 3
 
         return panel
 
-
     def _create_right_panel(self): #vers 10
         """Create right panel with editing controls - compact layout"""
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.StyledPanel)
         panel.setMinimumWidth(400)
         has_bumpmap = False
-
         main_layout = QVBoxLayout(panel)
         main_layout.setContentsMargins(5, 5, 5, 5)
-
         top_layout = QHBoxLayout()
 
         # Transform panel (left)
         transform_panel = self._create_transform_panel()
         top_layout.addWidget(transform_panel, stretch=1)
-
 
         # Preview area (center) - 3D Viewport
         self.preview_widget = COL3DViewport()
@@ -2363,7 +2359,6 @@ class COLWorkshop(QWidget): #vers 3
         top_layout.addWidget(self.preview_controls, stretch=0)
         main_layout.addLayout(top_layout, stretch=1)
 
-
         # Information group below
         info_group = QGroupBox("")
         info_group.setFont(self.title_font)
@@ -2372,13 +2367,11 @@ class COLWorkshop(QWidget): #vers 3
 
         # === LINE 1: collision name ===
         name_layout = QHBoxLayout()
-
         name_label = QLabel("COL Name:")
         name_label.setFont(self.panel_font)
         name_layout.addWidget(name_label)
 
         self.info_name = QLineEdit()
-
         self.info_name.setText("Click to edit...")
         self.info_name.setFont(self.panel_font)
         self.info_name.setReadOnly(True)
@@ -2387,7 +2380,6 @@ class COLWorkshop(QWidget): #vers 3
         #self.info_name.editingFinished.connect(self._save_surface_name)
         self.info_name.mousePressEvent = lambda e: self._enable_name_edit(e, False)
         name_layout.addWidget(self.info_name, stretch=1)
-
         info_layout.addLayout(name_layout)
 
         # === LINES 2 & 3: Adaptive based on display mode ===
@@ -2485,7 +2477,7 @@ class COLWorkshop(QWidget): #vers 3
         main_layout.addWidget(info_group, stretch=0)
         return panel
 
-    def _create_preview_controls(self): #vers 4
+    def _create_preview_controls(self): #vers 5
         """Create preview control buttons - vertical layout on right"""
         controls_frame = QFrame()
         controls_frame.setFrameStyle(QFrame.Shape.StyledPanel)
@@ -2503,8 +2495,7 @@ class COLWorkshop(QWidget): #vers 3
         zoom_in_btn.setIconSize(QSize(20, 20))
         zoom_in_btn.setFixedSize(40, 40)
         zoom_in_btn.setToolTip("Zoom In")
-        if not is_3d_viewport:
-            zoom_in_btn.clicked.connect(self.preview_widget.zoom_in)
+        zoom_in_btn.clicked.connect(self.preview_widget.zoom_in)
         controls_layout.addWidget(zoom_in_btn)
 
         # Zoom Out
@@ -2513,10 +2504,10 @@ class COLWorkshop(QWidget): #vers 3
         zoom_out_btn.setIconSize(QSize(20, 20))
         zoom_out_btn.setFixedSize(40, 40)
         zoom_out_btn.setToolTip("Zoom Out")
-        if not is_3d_viewport:
-            zoom_out_btn.clicked.connect(self.preview_widget.zoom_out)
+        zoom_out_btn.clicked.connect(self.preview_widget.zoom_out)
         controls_layout.addWidget(zoom_out_btn)
 
+        """
         # Reset
         reset_btn = QPushButton()
         reset_btn.setIcon(self._create_reset_icon())
@@ -2532,10 +2523,7 @@ class COLWorkshop(QWidget): #vers 3
         fit_btn.setIconSize(QSize(20, 20))
         fit_btn.setFixedSize(40, 40)
         fit_btn.setToolTip("Fit to Window")
-        if not is_3d_viewport:
-            fit_btn.clicked.connect(self.preview_widget.fit_to_window)
-        else:
-            fit_btn.clicked.connect(self.preview_widget.reset_view)
+        fit_btn.clicked.connect(self.preview_widget.fit_to_window)
         controls_layout.addWidget(fit_btn)
 
         controls_layout.addSpacing(10)
@@ -2550,7 +2538,7 @@ class COLWorkshop(QWidget): #vers 3
         controls_layout.addWidget(pan_up_btn)
 
         # Pan Down
-        pan_down_btn = QPushButton()
+        pan_down_btn_create_viewport_controls = QPushButton()
         pan_down_btn.setIcon(self._create_arrow_down_icon())
         pan_down_btn.setIconSize(QSize(20, 20))
         pan_down_btn.setFixedSize(40, 40)
@@ -2589,7 +2577,7 @@ class COLWorkshop(QWidget): #vers 3
 
         # View Spheres toggle
         self.view_spheres_btn = QPushButton()
-        self.view_spheres_btn.setIcon(self._create_sphere_icon())
+        self.view_sp_create_viewport_controlsheres_btn.setIcon(self._create_sphere_icon())
         self.view_spheres_btn.setIconSize(QSize(20, 20))
         self.view_spheres_btn.setFixedSize(40, 40)
         self.view_spheres_btn.setCheckable(True)
@@ -2618,10 +2606,10 @@ class COLWorkshop(QWidget): #vers 3
         self.view_mesh_btn.setChecked(True)
         self.view_mesh_btn.setToolTip("Toggle Mesh")
         self.view_mesh_btn.clicked.connect(self._toggle_mesh)
-        controls_layout.addWidget(self.view_mesh_btn)
-
+        controls_layout.addWidget(self.view_mesh_btn)_create_viewport_controls
         controls_layout.addSpacing(5)
 
+    def _create_preview_controls(self): #vers 4
         # Background colors
         bg_black_btn = QPushButton()
         bg_black_btn.setIconSize(QSize(20, 20))
@@ -2634,7 +2622,7 @@ class COLWorkshop(QWidget): #vers 3
         bg_gray_btn.setIconSize(QSize(20, 20))
         bg_gray_btn.setFixedSize(40, 40)
         bg_gray_btn.setStyleSheet("background-color: #2a2a2a; border: 1px solid #555;")
-        bg_gray_btn.setToolTip("Gray Background")
+        bg_gray_btn._create_viewport_controlssetToolTip("Gray Background")
         controls_layout.addWidget(bg_gray_btn)
 
         bg_white_btn = QPushButton()
@@ -2645,7 +2633,7 @@ class COLWorkshop(QWidget): #vers 3
         controls_layout.addWidget(bg_white_btn)
 
         controls_layout.addStretch()
-
+        """
         return controls_frame
 
     def _pan_preview(self, dx, dy): #vers 2
@@ -2658,7 +2646,6 @@ class COLWorkshop(QWidget): #vers 3
         color = QColorDialog.getColor(self.preview_widget.bg_color, self, "Pick Background Color")
         if color.isValid():
             self.preview_widget.set_background_color(color)
-
 
     def _set_checkerboard_bg(self): #vers 1
         """Set checkerboard background"""
@@ -3937,41 +3924,29 @@ class COLWorkshop(QWidget): #vers 3
             return preview
 
 
-    def _toggle_spheres(self, checked): #vers 2
-        """Toggle sphere visibility in preview"""
+    def _toggle_spheres(self, checked): #vers 3
+        """Toggle sphere visibility"""
         try:
-            self._show_spheres = checked  # Store state
-
-            # Refresh preview if model is selected
-            if hasattr(self, 'collision_list') and self.collision_list.currentItem():
-                self._on_collision_selected(self.collision_list.currentItem())
-
+            if hasattr(self, 'viewer_3d'):
+                self.viewer_3d.set_view_options(show_spheres=checked)
             img_debugger.debug(f"Spheres visibility: {checked}")
         except Exception as e:
             img_debugger.error(f"Error toggling spheres: {str(e)}")
 
-    def _toggle_boxes(self, checked): #vers 2
-        """Toggle box visibility in preview"""
+    def _toggle_boxes(self, checked): #vers 3
+        """Toggle box visibility"""
         try:
-            self._show_boxes = checked  # Store state
-
-            # Refresh preview if model is selected
-            if hasattr(self, 'collision_list') and self.collision_list.currentItem():
-                self._on_collision_selected(self.collision_list.currentItem())
-
+            if hasattr(self, 'viewer_3d'):
+                self.viewer_3d.set_view_options(show_boxes=checked)
             img_debugger.debug(f"Boxes visibility: {checked}")
         except Exception as e:
             img_debugger.error(f"Error toggling boxes: {str(e)}")
 
-    def _toggle_mesh(self, checked): #vers 2
-        """Toggle mesh visibility in preview"""
+    def _toggle_mesh(self, checked): #vers 3
+        """Toggle mesh visibility"""
         try:
-            self._show_mesh = checked  # Store state
-
-            # Refresh preview if model is selected
-            if hasattr(self, 'collision_list') and self.collision_list.currentItem():
-                self._on_collision_selected(self.collision_list.currentItem())
-
+            if hasattr(self, 'viewer_3d'):
+                self.viewer_3d.set_view_options(show_mesh=checked)
             img_debugger.debug(f"Mesh visibility: {checked}")
         except Exception as e:
             img_debugger.error(f"Error toggling mesh: {str(e)}")
@@ -5629,14 +5604,12 @@ class ZoomablePreview(QLabel): #vers 2
         self.drag_mode = None  # 'pan' or 'rotate'
 
         # Background
-        #self.bg_color = QColor(10, 10, 10)
         self.bg_color = QColor(42, 42, 42)
 
         self.placeholder_text = "Select a collision model to preview"
 
         self.background_mode = 'solid'
         self._checkerboard_size = 16
-        self.placeholder_text = "No texture loaded"
 
 
     def setPixmap(self, pixmap): #vers 2

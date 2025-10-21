@@ -61,11 +61,30 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
         self.zoom = 10.0
         self.pan_x = 0.0
         self.pan_y = 0.0
-        
+
+        self._overlay_opacity = 50
+        self.zoom_level = 1.0
+        self.pan_offset = QPoint(0, 0)
+
+        # Mouse interaction
+        self.dragging = False
+        self.drag_start = QPoint(0, 0)
+        self.drag_mode = None  # 'pan' or 'rotate'
+
         # Mouse tracking
         self.last_mouse_pos = QPoint()
         self.mouse_button = Qt.MouseButton.NoButton
-        
+
+        # Display state
+        self.background_color = QColor(42, 42, 42)
+        self.background_mode = 'solid'
+        self.placeholder_text = "Select a collision model to preview"
+        self._checkerboard_size = 16
+
+        self.scaled_pixmap = None
+        self.current_model = None
+        self.original_pixmap = None
+
         # Display options
         self.show_spheres = True
         self.show_boxes = True
@@ -88,7 +107,69 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
         self.bounds_color = QColor(255, 0, 0)
         
         self.setMinimumSize(400, 300)
-    
+
+
+    def setPixmap(self, pixmap): #vers 2
+        """Set pixmap and update display"""
+        if pixmap and not pixmap.isNull():
+            self.original_pixmap = pixmap
+            self.placeholder_text = None
+            self._update_scaled_pixmap()
+        else:
+            self.original_pixmap = None
+            self.scaled_pixmap = None
+            self.placeholder_text = "No texture loaded"
+
+        self.update()  # Trigger repaint
+
+    def set_model(self, model): #vers 1
+        """Set collision model to display"""
+        self.current_model = model
+        self.render_collision()
+
+    def render_collision(self): #vers 2
+        """Render the collision model with current view settings"""
+        if not self.current_model:
+            #self.setText(self.placeholder_text)
+            self.original_pixmap = None
+            self.scaled_pixmap = None
+            return
+
+        width = max(400, self.width())
+        height = max(400, self.height())
+
+        # Use the parent's render method
+        if hasattr(self.parent(), '_render_collision_preview'):
+            self.original_pixmap = self.parent()._render_collision_preview(
+                self.current_model,
+                width,
+                height
+            )
+        else:
+            # Fallback - just show text for now
+            name = getattr(self.current_model, 'name', 'Unknown')
+            #self.setText(f"Collision Model: {name}\n\nRendering...")
+            return
+
+        self._update_scaled_pixmap()
+        self.update()
+
+    def _update_scaled_pixmap(self): #vers
+        """Update scaled pixmap based on zoom"""
+        if not self.original_pixmap:
+            self.scaled_pixmap = None
+            return
+
+        scaled_width = int(self.original_pixmap.width() * self.zoom_level)
+        scaled_height = int(self.original_pixmap.height() * self.zoom_level)
+
+        self.scaled_pixmap = self.original_pixmap.scaled(
+            scaled_width, scaled_height,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        )
+
+
     def initializeGL(self): #vers 3
         """Initialize OpenGL settings - Modern OpenGL compatible"""
         if not OPENGL_AVAILABLE:
@@ -400,15 +481,128 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
         
         self.update()
     
-    def reset_view(self): #vers 1
+    def reset_view(self): #vers 2
         """Reset camera to default position"""
+        self.zoom_level = 1.0
+        self.pan_offset = QPoint(0, 0)
         self.rotation_x = 20.0
         self.rotation_y = 45.0
-        self.zoom = 10.0
+        self.rotation_z = 0
+        #self.zoom = 10.0
         self.pan_x = 0.0
         self.pan_y = 0.0
+        self.render_collision()
         self.update()
     
+
+    def pan(self, dx, dy): #vers 3
+        """Pan the view by delta x and y"""
+        self.pan_x -= dx * 0.05 # Inverted to fix left/right swap
+        self.pan_y -= dy * 0.05  # Inverted to fix up/down swap
+        self.update()
+
+    def set_background_color(self, color): #vers 1
+        """Set background color for viewport"""
+        if color.isValid():
+            self.bg_color = color
+            if OPENGL_AVAILABLE:
+                glClearColor(color.redF(), color.greenF(), color.blueF(), 1.0)
+            self.update()
+
+    """
+    def paintEvent(self, event): #vers 2
+        "Paint the preview with background and image"
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
+        # Draw background
+        if self.background_mode == 'checkerboard':
+            self._draw_checkerboard(painter)
+        else:
+            painter.fillRect(self.rect(), self.bg_color)
+
+        # Draw image if available
+        if self.scaled_pixmap and not self.scaled_pixmap.isNull():
+            # Calculate centered position with pan offset
+            x = (self.width() - self.scaled_pixmap.width()) // 2 + self.pan_offset.x()
+            y = (self.height() - self.scaled_pixmap.height()) // 2 + self.pan_offset.y()
+            painter.drawPixmap(x, y, self.scaled_pixmap)
+        elif self.placeholder_text:
+            # Draw placeholder text
+            painter.setPen(QColor(150, 150, 150))
+            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self.placeholder_text)
+    """
+
+    def set_checkerboard_background(self): #vers 1
+        """Enable checkerboard background"""
+        self.background_mode = 'checkerboard'
+        self.update()
+
+    def set_background_color(self, color): #vers 2
+        """Set background color for viewport"""
+        if color.isValid():
+            self.bg_color = color
+            if OPENGL_AVAILABLE:
+                glClearColor(color.redF(), color.greenF(), color.blueF(), 1.0)
+            self.update()
+
+    def _draw_checkerboard(self, painter): #vers 1
+        """Draw checkerboard background pattern"""
+        size = self._checkerboard_size
+        color1 = QColor(200, 200, 200)
+        color2 = QColor(150, 150, 150)
+
+        for y in range(0, self.height(), size):
+            for x in range(0, self.width(), size):
+                color = color1 if ((x // size) + (y // size)) % 2 == 0 else color2
+                painter.fillRect(x, y, size, size, color)
+
+    # Zoom controls
+    def zoom_in(self): #vers 1
+        """Zoom in by decreasing zoom distance"""
+        self.zoom += 1.0 #swapped
+        self.zoom = max(1.0, self.zoom)
+        self.update()
+
+    def zoom_out(self): #vers 1
+        """Zoom out by increasing zoom distance"""
+        self.zoom -= 1.0 #swapped
+        self.zoom = min(100.0, self.zoom)
+        self.update()
+
+    def fit_to_window(self): #vers 2
+        """Fit image to window size"""
+        if not self.original_pixmap:
+            return
+
+        img_size = self.original_pixmap.size()
+        widget_size = self.size()
+
+        zoom_h = widget_size.width() / img_size.width()
+        zoom_w = widget_size.height() / img_size.height()
+
+        self.zoom = min(zoom_w, zoom_h) * 0.95
+        self.pan = QPoint(0, 0)
+        self._update_scaled_pixmap()
+        self.update()
+
+    # Rotation controls
+    def rotate_x(self, degrees): #vers 1
+        """Rotate around X axis"""
+        self.rotation_x = (self.rotation_x + degrees) % 360
+        self.render_collision()
+
+    def rotate_y(self, degrees): #vers 1
+        """Rotate around Y axis"""
+        self.rotation_y = (self.rotation_y + degrees) % 360
+        self.render_collision()
+
+    def rotate_z(self, degrees): #vers 1
+        """Rotate around Z axis"""
+        self.rotation_z = (self.rotation_z + degrees) % 360
+        self.render_collision()
+
     def update_display(self): #vers 1
         """Force display update"""
         self.update()
