@@ -30,22 +30,35 @@ fmt.setProfile(QSurfaceFormat.OpenGLContextProfile.CompatibilityProfile)
 QSurfaceFormat.setDefaultFormat(fmt)
 
 ##Methods list -
+# _draw_bounding_box
+# _draw_checkerboard
+# _draw_grid
+# _draw_shadow_mesh
 # draw_box
 # draw_face_mesh
 # draw_sphere
+# fit_to_window
 # initializeGL
 # mouseMoveEvent
 # mousePressEvent
+# pan
 # paintGL
+# render_collision
 # reset_view
 # resizeGL
+# rotate_x
+# rotate_y
+# rotate_z
+# set_background_color
+# set_checkerboard_background
 # set_current_model
+# set_model
 # set_view_options
+# setPixmap
 # update_display
 # wheelEvent
-
-##Classes -
-# COL3DViewport
+# zoom_in
+# zoom_out
 
 class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
     """OpenGL 3D viewport for COL collision models"""
@@ -257,6 +270,13 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
         
         vertices = self.current_model.vertices
         faces = self.current_model.faces
+
+
+        print(f"✅ Drawing {len(faces)} faces, {len(vertices)} vertices")
+        if len(vertices) > 0:
+            v = vertices[0]
+            print(f"   First vertex: ({v.position.x:.3f}, {v.position.y:.3f}, {v.position.z:.3f})")
+
         
         if self.show_wireframe:
             glDisable(GL_LIGHTING)
@@ -501,13 +521,6 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
         self.pan_y -= dy * 0.05  # Inverted to fix up/down swap
         self.update()
 
-    def set_background_color(self, color): #vers 1
-        """Set background color for viewport"""
-        if color.isValid():
-            self.bg_color = color
-            if OPENGL_AVAILABLE:
-                glClearColor(color.redF(), color.greenF(), color.blueF(), 1.0)
-            self.update()
 
     """
     def paintEvent(self, event): #vers 2

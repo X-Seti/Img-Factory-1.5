@@ -210,8 +210,8 @@ class COLStructureManager:
             spheres = []
             
             if version == 1:
-                # COL1: center + radius + material + flags (20 bytes each)
-                sphere_size = 20
+                # COL1: center + radius + material + flags (24 bytes each)
+                sphere_size = 24
             else:
                 # COL2/3: center + radius + material (16 bytes each)
                 sphere_size = 16

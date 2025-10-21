@@ -2333,7 +2333,8 @@ class COLWorkshop(QWidget): #vers 3
         self.collision_list.setColumnWidth(0, 80)  # Thumbnail column
         self.collision_list.horizontalHeader().setStretchLastSection(True)  # Details column stretches
         layout.addWidget(self.collision_list)
-
+        self.collision_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.collision_list.customContextMenuRequested.connect(self._show_collision_context_menu)
         return panel
 
     def _create_right_panel(self): #vers 10
@@ -3851,6 +3852,107 @@ class COLWorkshop(QWidget): #vers 3
             import traceback
             traceback.print_exc()
 
+
+    def _show_collision_context_menu(self, position): #vers 1
+        """Show context menu for collision list"""
+        item = self.collision_list.itemAt(position)
+        if not item:
+            return
+
+        menu = QMenu(self)
+
+        # Get model index
+        row = self.collision_list.row(item)
+        if row < 0 or not self.current_col_file:
+            return
+
+        model = self.current_col_file.models[row]
+
+        # Show Details action
+        details_action = menu.addAction("📋 Show Details")
+        details_action.triggered.connect(lambda: self._show_model_details(model, row))
+
+        # Copy Info action
+        copy_action = menu.addAction("📄 Copy Info to Clipboard")
+        copy_action.triggered.connect(lambda: self._copy_model_info(model, row))
+
+        menu.exec(self.collision_list.mapToGlobal(position))
+
+    def _show_model_details(self, model, index): #vers 1
+        """Show detailed model information dialog"""
+        from PyQt6.QtWidgets import QDialog, QTextEdit, QVBoxLayout, QPushButton
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Model Details - {model.name}")
+        dialog.setMinimumSize(500, 400)
+
+        layout = QVBoxLayout(dialog)
+
+        # Create detailed info text
+        info_text = f"""Model: {model.name}
+    Index: {index}
+    Version: {model.version.name if hasattr(model.version, 'name') else model.version}
+
+    Bounding Box:
+    Center: ({model.bounding_box.center.x:.3f}, {model.bounding_box.center.y:.3f}, {model.bounding_box.center.z:.3f})
+    Min: ({model.bounding_box.min.x:.3f}, {model.bounding_box.min.y:.3f}, {model.bounding_box.min.z:.3f})
+    Max: ({model.bounding_box.max.x:.3f}, {model.bounding_box.max.y:.3f}, {model.bounding_box.max.z:.3f})
+    Radius: {model.bounding_box.radius:.3f}
+
+    Collision Data:
+    Spheres: {len(model.spheres)}
+    Boxes: {len(model.boxes)}
+    Vertices: {len(model.vertices)}
+    Faces: {len(model.faces)}
+
+    """
+
+        # Add first 3 vertices if available
+        if len(model.vertices) > 0:
+            info_text += "\nVertices:\n"
+            for i in range(min(30000, len(model.vertices))):
+                v = model.vertices[i]
+                info_text += f"  [{i}] ({v.position.x:.3f}, {v.position.y:.3f}, {v.position.z:.3f})\n"
+
+        # Add material info from faces
+        if len(model.faces) > 0:
+            materials = set()
+            for face in model.faces:
+                if hasattr(face, 'material'):
+                    mat_id = face.material.material_id if hasattr(face.material, 'material_id') else face.material
+                    materials.add(mat_id)
+            info_text += f"\nUnique Materials: {len(materials)}\n"
+            info_text += f"Material IDs: {sorted(materials)}\n"
+
+        text_edit = QTextEdit()
+        text_edit.setPlainText(info_text)
+        text_edit.setReadOnly(True)
+        layout.addWidget(text_edit)
+
+        # Copy button
+        copy_btn = QPushButton("Copy to Clipboard")
+        copy_btn.clicked.connect(lambda: self._copy_text_to_clipboard(info_text))
+        layout.addWidget(copy_btn)
+
+        # Close button
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
+
+        dialog.exec()
+
+    def _copy_model_info(self, model, index): #vers 1
+        """Copy model info to clipboard"""
+        info = f"{model.name} | S:{len(model.spheres)} B:{len(model.boxes)} V:{len(model.vertices)} F:{len(model.faces)}"
+        self._copy_text_to_clipboard(info)
+        if hasattr(self, 'status_bar'):
+            self.status_bar.showMessage("Model info copied to clipboard", 2000)
+
+    def _copy_text_to_clipboard(self, text): #vers 1
+        """Copy text to system clipboard"""
+        from PyQt6.QtWidgets import QApplication
+        clipboard = QApplication.clipboard()
+        clipboard.setText(text)
 
     def _populate_collision_list(self): #vers 4
         """Populate collision table with models - matches TXD Workshop style"""
