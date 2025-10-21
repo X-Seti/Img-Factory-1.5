@@ -2805,7 +2805,6 @@ class COLWorkshop(QWidget): #vers 3
         # Size stat
         size_stat = self._create_stat_box("Size:", f"{size_kb:.1f} KB")
         grid_layout.addWidget(size_stat)
-
         grid_layout.addWidget(comp_stat)
 
         # Status stat
