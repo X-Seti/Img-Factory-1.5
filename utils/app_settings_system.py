@@ -1478,6 +1478,167 @@ class AppSettings:
         self.weapons_folder = self.current_settings.get('weapons_folder', self.default_settings['weapons_folder'])
 
 
+    def _generate_stylesheet(self, colors): #vers 1
+        """Generate stylesheet from colors dict - shared by both classes"""
+        if not colors:
+            return ""
+
+        # Extract all colors
+        bg_primary = colors.get('bg_primary', '#ffffff')
+        bg_secondary = colors.get('bg_secondary', '#f5f5f5')
+        bg_tertiary = colors.get('bg_tertiary', '#e9ecef')
+        panel_bg = colors.get('panel_bg', '#f0f0f0')
+        text_primary = colors.get('text_primary', '#000000')
+        text_secondary = colors.get('text_secondary', '#666666')
+        text_accent = colors.get('text_accent', '#0066cc')
+        accent_primary = colors.get('accent_primary', '#0078d4')
+        border = colors.get('border', '#cccccc')
+        button_normal = colors.get('button_normal', '#e0e0e0')
+        button_hover = colors.get('button_hover', '#d0d0d0')
+        button_pressed = colors.get('button_pressed', '#b0b0b0')
+        selection_bg = colors.get('selection_background', '#0078d4')
+        selection_text = colors.get('selection_text', '#ffffff')
+        grid = colors.get('grid', '#e0e0e0')
+
+        stylesheet = f"""
+        QMainWindow {{
+            background-color: {bg_primary};
+            color: {text_primary};
+        }}
+
+        QDialog {{
+            background-color: {bg_primary};
+            color: {text_primary};
+        }}
+
+        QWidget {{
+            background-color: {bg_primary};
+            color: {text_primary};
+        }}
+
+        QWidget#customTitleBar {{
+            background-color: {bg_secondary};
+            color: {text_primary};
+            border: 1px solid {border};
+            border-bottom: 2px solid {border};
+        }}
+
+        QWidget#customTitleBar QLabel {{
+            background-color: transparent;
+            color: {text_primary};
+        }}
+
+        QWidget#customTitleBar QPushButton {{
+            background-color: {button_normal};
+            border: 1px solid {border};
+            border-radius: 3px;
+            color: {text_primary};
+            font-size: 14pt;
+            font-weight: bold;
+        }}
+
+        QWidget#customTitleBar QPushButton:hover {{
+            background-color: {button_hover};
+        }}
+
+        QWidget#customTitleBar QPushButton:pressed {{
+            background-color: {button_pressed};
+        }}
+
+        QWidget#customTitleBar QPushButton:disabled {{
+            background-color: {bg_secondary};
+            border: 1px solid {border};
+        }}
+
+        QGroupBox {{
+            background-color: {panel_bg};
+            border: 2px solid {border};
+            border-radius: 5px;
+            margin-top: 10px;
+            padding-top: 10px;
+            font-weight: bold;
+        }}
+
+        QGroupBox::title {{
+            subcontrol-origin: margin;
+            left: 10px;
+            padding: 0 5px 0 5px;
+            color: {text_accent};
+        }}
+
+        QPushButton {{
+            background-color: {button_normal};
+            border: 1px solid {border};
+            border-radius: 4px;
+            padding: 6px 12px;
+            color: {text_primary};
+        }}
+
+        QPushButton:hover {{
+            background-color: {button_hover};
+        }}
+
+        QPushButton:pressed {{
+            background-color: {button_pressed};
+        }}
+
+        QTableWidget {{
+            background-color: {bg_secondary};
+            alternate-background-color: {bg_tertiary};
+            selection-background-color: {selection_bg};
+            selection-color: {selection_text};
+            gridline-color: {grid};
+            border: 1px solid {border};
+        }}
+
+        QTabWidget::pane {{
+            border: 1px solid {border};
+            background-color: {bg_primary};
+        }}
+
+        QTabBar::tab {{
+            background-color: {bg_secondary};
+            border: 1px solid {border};
+            padding: 8px 16px;
+            color: {text_primary};
+        }}
+
+        QTabBar::tab:selected {{
+            background-color: {accent_primary};
+            color: white;
+        }}
+
+        QTabBar::tab:hover {{
+            background-color: {button_hover};
+        }}
+
+        QComboBox {{
+            background-color: {button_normal};
+            border: 1px solid {border};
+            border-radius: 4px;
+            padding: 4px;
+            color: {text_primary};
+        }}
+
+        QSpinBox {{
+            background-color: {button_normal};
+            border: 1px solid {border};
+            border-radius: 4px;
+            padding: 4px;
+            color: {text_primary};
+        }}
+
+        QCheckBox {{
+            color: {text_primary};
+        }}
+
+        QLabel {{
+            color: {text_primary};
+        }}
+        """
+
+        return stylesheet
+
 
     # For creating directories if they don't exist
     def ensure_directories_exist(self):
@@ -2007,6 +2168,7 @@ class AppSettings:
             print(f"Error saving settings: {e}")
             return False
 
+
     def get_theme_info(self, theme_name: str) -> dict:
         """Get detailed info about a specific theme"""
         if theme_name in self.themes:
@@ -2021,171 +2183,80 @@ class AppSettings:
             }
         return {}
 
-    def get_theme_colors(self, theme_name=None):
-        """Get colors for specified theme"""
+
+    def get_theme_colors(self, theme_name=None): #vers 2
+        """Get colors for specified theme with complete fallback support"""
         if theme_name is None:
-            theme_name = self.current_settings.get("theme", "APP_Factory")
+            theme_name = self.current_settings.get("theme", "IMG_Factory")
 
         if theme_name in self.themes:
-            return self.themes[theme_name].get("colors", {})
+            colors = self.themes[theme_name].get("colors", {})
+
+            # Add missing colors with smart fallbacks if not in theme
+            defaults = {
+                'bg_primary': '#ffffff',
+                'bg_secondary': '#f5f5f5',
+                'bg_tertiary': '#e9ecef',
+                'panel_bg': '#f0f0f0',
+                'text_primary': '#000000',
+                'text_secondary': '#666666',
+                'text_accent': '#0066cc',
+                'accent_primary': '#0078d4',
+                'accent_secondary': '#0A7Ad4',
+                'border': '#cccccc',
+                'button_normal': '#e0e0e0',
+                'button_hover': '#d0d0d0',
+                'button_pressed': colors.get('button_hover', '#b0b0b0'),
+                'selection_background': colors.get('accent_primary', '#0078d4'),
+                'selection_text': '#ffffff',
+                'table_row_even': colors.get('bg_primary', '#ffffff'),
+                'table_row_odd': colors.get('bg_secondary', '#f5f5f5')
+            }
+
+            # Merge defaults with theme colors (theme colors take priority)
+            for key, value in defaults.items():
+                if key not in colors:
+                    colors[key] = value
+
+            return colors
         else:
             print(f"Theme '{theme_name}' not found, using fallback")
-            # Try to find any available theme
             if self.themes:
                 fallback_name = list(self.themes.keys())[0]
                 print(f"Using fallback theme: {fallback_name}")
-                return self.themes[fallback_name].get("colors", {})
+                return self.get_theme_colors(fallback_name)
             else:
-                print("No themes available!")
-                return {}
+                print("No themes available! Using hardcoded defaults")
+                return self._get_hardcoded_defaults()
 
 
-    def get_stylesheet(self): #vers 3
-        """Generate complete stylesheet for current theme - TXD Workshop style"""
+    def _get_hardcoded_defaults(self): #vers 1
+        """Return hardcoded default colors when no themes are available"""
+        return {
+            'bg_primary': '#ffffff',
+            'bg_secondary': '#f5f5f5',
+            'bg_tertiary': '#e9ecef',
+            'panel_bg': '#f0f0f0',
+            'text_primary': '#000000',
+            'text_secondary': '#666666',
+            'text_accent': '#0066cc',
+            'accent_primary': '#0078d4',
+            'accent_secondary': '#0A7Ad4',
+            'border': '#cccccc',
+            'button_normal': '#e0e0e0',
+            'button_hover': '#d0d0d0',
+            'button_pressed': '#b0b0b0',
+            'selection_background': '#0078d4',
+            'selection_text': '#ffffff',
+            'table_row_even': '#ffffff',
+            'table_row_odd': '#f5f5f5'
+        }
+
+    def get_stylesheet(self): #vers 4
+        """Generate complete stylesheet for current theme"""
         colors = self.get_theme_colors()
-        if not colors:
-            return ""
+        return self._generate_stylesheet(colors)
 
-        # Base stylesheet
-        stylesheet = f"""
-        QMainWindow {{
-            background-color: {colors.get('bg_primary', '#ffffff')};
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        QDialog {{
-            background-color: {colors.get('bg_primary', '#ffffff')};
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        QWidget {{
-            background-color: {colors.get('bg_primary', '#ffffff')};
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        /* Custom Title Bar - Same color as app background */
-        QWidget#customTitleBar {{
-            background-color: {colors.get('bg_secondary', '#f0f0f0')};
-            color: {colors.get('text_primary', '#000000')};
-            border: 1px solid {colors.get('border', '#cccccc')};
-            border-bottom: 2px solid {colors.get('border', '#cccccc')};
-        }}
-
-        QWidget#customTitleBar QLabel {{
-            background-color: transparent;
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        QWidget#customTitleBar QPushButton {{
-            background-color: {colors.get('button_normal', '#e0e0e0')};
-            border: 1px solid {colors.get('border', '#cccccc')};
-            border-radius: 3px;
-            color: {colors.get('text_primary', '#000000')};
-            font-size: 14pt;
-            font-weight: bold;
-        }}
-
-        QWidget#customTitleBar QPushButton:hover {{
-            background-color: {colors.get('button_hover', '#d0d0d0')};
-        }}
-
-        QWidget#customTitleBar QPushButton:pressed {{
-            background-color: {colors.get('button_pressed', '#c0c0c0')};
-        }}
-
-        QWidget#customTitleBar QPushButton:disabled {{
-            background-color: {colors.get('bg_secondary', '#f0f0f0')};
-            border: 1px solid {colors.get('border', '#cccccc')};
-        }}
-
-        QGroupBox {{
-            background-color: {colors.get('panel_bg', '#f0f0f0')};
-            border: 2px solid {colors.get('border', '#cccccc')};
-            border-radius: 5px;
-            margin-top: 10px;
-            padding-top: 10px;
-            font-weight: bold;
-        }}
-
-        QGroupBox::title {{
-            subcontrol-origin: margin;
-            left: 10px;
-            padding: 0 5px 0 5px;
-            color: {colors.get('text_accent', '#15803d')};
-        }}
-
-        QPushButton {{
-            background-color: {colors.get('button_normal', '#e0e0e0')};
-            border: 1px solid {colors.get('border', '#cccccc')};
-            border-radius: 4px;
-            padding: 6px 12px;
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        QPushButton:hover {{
-            background-color: {colors.get('button_hover', '#d0d0d0')};
-        }}
-
-        QPushButton:pressed {{
-            background-color: {colors.get('button_pressed', '#c0c0c0')};
-        }}
-
-        QTableWidget {{
-            background-color: {colors.get('bg_secondary', '#f8f9fa')};
-            alternate-background-color: {colors.get('bg_tertiary', '#e9ecef')};
-            selection-background-color: {colors.get('accent_primary', '#1976d2')};
-            selection-color: white;
-            gridline-color: {colors.get('grid', '#e0e0e0')};
-            border: 1px solid {colors.get('border', '#cccccc')};
-        }}
-
-        QTabWidget::pane {{
-            border: 1px solid {colors.get('border', '#cccccc')};
-            background-color: {colors.get('bg_primary', '#ffffff')};
-        }}
-
-        QTabBar::tab {{
-            background-color: {colors.get('bg_secondary', '#f0f0f0')};
-            border: 1px solid {colors.get('border', '#cccccc')};
-            padding: 8px 16px;
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        QTabBar::tab:selected {{
-            background-color: {colors.get('accent_primary', '#1976d2')};
-            color: white;
-        }}
-
-        QTabBar::tab:hover {{
-            background-color: {colors.get('button_hover', '#e0e0e0')};
-        }}
-
-        QComboBox {{
-            background-color: {colors.get('button_normal', '#e0e0e0')};
-            border: 1px solid {colors.get('border', '#cccccc')};
-            border-radius: 4px;
-            padding: 4px;
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        QSpinBox {{
-            background-color: {colors.get('button_normal', '#e0e0e0')};
-            border: 1px solid {colors.get('border', '#cccccc')};
-            border-radius: 4px;
-            padding: 4px;
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        QCheckBox {{
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        QLabel {{
-            color: {colors.get('text_primary', '#000000')};
-        }}
-        """
-
-        return stylesheet
 
     def _darken_color(self, hex_color, factor=0.8): #keep
         """Darken a hex color by a factor"""
@@ -3137,153 +3208,11 @@ class SettingsDialog(QDialog): #vers 5
         self.dialog_titlebar.mouseDoubleClickEvent = self._titlebar_double_click
 
 
-    def get_stylesheet(self): #vers 3
-        """Generate complete stylesheet for current theme - TXD Workshop style"""
+
+    def get_stylesheet(self): #vers 4
+        """Generate complete stylesheet for current theme"""
         colors = self.get_theme_colors()
-        if not colors:
-            return ""
-
-        # Base stylesheet
-        stylesheet = f"""
-        QMainWindow {{
-            background-color: {colors.get('bg_primary', '#ffffff')};
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        QDialog {{
-            background-color: {colors.get('bg_primary', '#ffffff')};
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        QWidget {{
-            background-color: {colors.get('bg_primary', '#ffffff')};
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        /* Custom Title Bar - Same color as app background */
-        QWidget#customTitleBar {{
-            background-color: {colors.get('bg_secondary', '#f0f0f0')};
-            color: {colors.get('text_primary', '#000000')};
-            border: 1px solid {colors.get('border', '#cccccc')};
-            border-bottom: 2px solid {colors.get('border', '#cccccc')};
-        }}
-
-        QWidget#customTitleBar QLabel {{
-            background-color: transparent;
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        #QWidget#customTitleBar QPushButton {{
-        #    background-color: {colors.get('button_normal', '#e0e0e0')};
-        #    border: 1px solid {colors.get('border', '#cccccc')};
-        #    border-radius: 3px;
-        #    color: {colors.get('text_primary', '#000000')};
-        #    font-size: 14pt;
-        #    font-weight: bold;
-        #}}
-
-        QWidget#customTitleBar QPushButton:hover {{
-            background-color: {colors.get('button_hover', '#d0d0d0')};
-        }}
-
-        QWidget#customTitleBar QPushButton:pressed {{
-            background-color: {colors.get('button_pressed', '#c0c0c0')};
-        }}
-
-        QWidget#customTitleBar QPushButton:disabled {{
-            background-color: {colors.get('bg_secondary', '#f0f0f0')};
-            border: 1px solid {colors.get('border', '#cccccc')};
-        }}
-
-        QGroupBox {{
-            background-color: {colors.get('panel_bg', '#f0f0f0')};
-            border: 2px solid {colors.get('border', '#cccccc')};
-            border-radius: 5px;
-            margin-top: 10px;
-            padding-top: 10px;
-            font-weight: bold;
-        }}
-
-        QGroupBox::title {{
-            subcontrol-origin: margin;
-            left: 10px;
-            padding: 0 5px 0 5px;
-            color: {colors.get('text_accent', '#15803d')};
-        }}
-
-        QPushButton {{
-            background-color: {colors.get('button_normal', '#e0e0e0')};
-            border: 1px solid {colors.get('border', '#cccccc')};
-            border-radius: 4px;
-            padding: 6px 12px;
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        QPushButton:hover {{
-            background-color: {colors.get('button_hover', '#d0d0d0')};
-        }}
-
-        QPushButton:pressed {{
-            background-color: {colors.get('button_pressed', '#c0c0c0')};
-        }}
-
-        QTableWidget {{
-            background-color: {colors.get('bg_secondary', '#f8f9fa')};
-            alternate-background-color: {colors.get('bg_tertiary', '#e9ecef')};
-            selection-background-color: {colors.get('accent_primary', '#1976d2')};
-            selection-color: white;
-            gridline-color: {colors.get('grid', '#e0e0e0')};
-            border: 1px solid {colors.get('border', '#cccccc')};
-        }}
-
-        QTabWidget::pane {{
-            border: 1px solid {colors.get('border', '#cccccc')};
-            background-color: {colors.get('bg_primary', '#ffffff')};
-        }}
-
-        QTabBar::tab {{
-            background-color: {colors.get('bg_secondary', '#f0f0f0')};
-            border: 1px solid {colors.get('border', '#cccccc')};
-            padding: 8px 16px;
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        QTabBar::tab:selected {{
-            background-color: {colors.get('accent_primary', '#1976d2')};
-            color: white;
-        }}
-
-        QTabBar::tab:hover {{
-            background-color: {colors.get('button_hover', '#e0e0e0')};
-        }}
-
-        QComboBox {{
-            background-color: {colors.get('button_normal', '#e0e0e0')};
-            border: 1px solid {colors.get('border', '#cccccc')};
-            border-radius: 4px;
-            padding: 4px;
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        QSpinBox {{
-            background-color: {colors.get('button_normal', '#e0e0e0')};
-            border: 1px solid {colors.get('border', '#cccccc')};
-            border-radius: 4px;
-            padding: 4px;
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        QCheckBox {{
-            color: {colors.get('text_primary', '#000000')};
-        }}
-
-        QLabel {{
-            color: {colors.get('text_primary', '#000000')};
-        }}
-        """
-
-        return stylesheet
-
+        return self.app_settings._generate_stylesheet(colors)
 
     def paintEvent(self, event): #vers 2
         """Paint corner resize triangles"""
@@ -3660,6 +3589,10 @@ class SettingsDialog(QDialog): #vers 5
             'button_normal': 'Button Face',
             'button_hover': 'Button Hover',
             'button_pressed': 'Button Pressed',
+            'selection_background': 'Selection Background',
+            'selection_text': 'Selection Text',
+            'table_row_even': 'Table Row Even',
+            'table_row_odd': 'Table Row Odd',
             'border': 'Border Color',
             'success': 'Success Color',
             'warning': 'Warning Color',

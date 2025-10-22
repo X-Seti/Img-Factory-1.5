@@ -37,7 +37,7 @@ def open_file_dialog(main_window): #vers 11
 
     if file_path:
         file_ext = os.path.splitext(file_path)[1].lower()
-
+        options=QFileDialog.Option.DontUseNativeDialog
         if file_ext == '.txd':
             _load_txd_file(main_window, file_path)
         elif file_ext == '.col':

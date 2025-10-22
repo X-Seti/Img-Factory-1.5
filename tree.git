@@ -1,7 +1,7 @@
 .
 ├── appfactory.settings.json
 ├── cc.py
-├── ChangeLog
+├── ChangeLog.md
 ├── components
 │   ├── Col_Creator
 │   │   └── col_creator.py
@@ -15,6 +15,16 @@
 │   │   │   ├── img_debug_functions.py
 │   │   │   └── standalone
 │   │   └── img_factory_debug.log
+│   ├── Col_Viewer
+│   │   ├── COL_VIEWER_INTEGRATION_INSTRUCTIONS.txt
+│   │   ├── col_viewer.py
+│   │   └── depends
+│   │       ├── COL_materials.md
+│   │       ├── COL_Materials.py
+│   │       ├── COL_Parser.py
+│   │       └── Materials Reference.md
+│   ├── File_Browser
+│   │   └── dolphin_dialog.py
 │   ├── File_Editor
 │   │   ├── file_dirtree_backend.py
 │   │   ├── file_dirtree_browser.py
@@ -44,6 +54,7 @@
 ├── core
 │   ├── clean.py
 │   ├── close.py
+│   ├── col_viewer_integration.py
 │   ├── compression.py
 │   ├── convert.py
 │   ├── core.py
@@ -85,6 +96,7 @@
 │   ├── shortcuts.py
 │   ├── theme_integration.py
 │   └── utils.py
+├── Credits.md
 ├── debug
 │   ├── col_debug_functions.py
 │   ├── enh_debug_system.py
@@ -113,6 +125,7 @@
 │   ├── panel_manager.py
 │   ├── pastel_button_theme.py
 │   ├── status_bar.py
+│   ├── tab_context_menu.py
 │   ├── tearoff_integration.py
 │   ├── tear_off.py
 │   ├── txd_context_menu.py
@@ -175,6 +188,7 @@
 │   ├── txd_versions.py
 │   └── update_ui_for_loaded_img.py
 ├── package-lock.json
+├── Summery.md
 ├── templates
 │   └── new_templates.json
 ├── themes
@@ -209,6 +223,7 @@
 │   ├── Test Theme_light.json
 │   ├── themes_organization.md
 │   └── yellow_theme_light.json
+├── TODO.md
 ├── tree.git
 ├── unix_launcher.sh
 ├── utils
@@ -359,4 +374,4 @@
                         │   └── Lib-link.write.1.tlog
                         └── platform.obj
 
-69 directories, 291 files
+72 directories, 303 files

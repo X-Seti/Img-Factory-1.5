@@ -12,27 +12,35 @@ from typing import Dict, Any
 
 def get_smart_colors_for_theme(theme_colors: Dict[str, str]) -> Dict[str, str]:
     """
-    Generate smart scrollbar and selection colors based on existing theme colors
+    Generate smart scrollbar and selection colors based on existing theme colors.
+    Also adds missing base colors with smart defaults.
     """
     # Get base colors from theme
     bg_primary = theme_colors.get('bg_primary', '#ffffff')
     bg_secondary = theme_colors.get('bg_secondary', '#f5f5f5')
+    bg_tertiary = theme_colors.get('bg_tertiary', '#e9ecef')
+    panel_bg = theme_colors.get('panel_bg', '#f0f0f0')
     accent_primary = theme_colors.get('accent_primary', '#FFECEE')
+    accent_secondary = theme_colors.get('accent_secondary', '#FFD4D9')
     border_color = theme_colors.get('border', '#cccccc')
     text_primary = theme_colors.get('text_primary', '#000000')
-    
+    text_secondary = theme_colors.get('text_secondary', '#666666')
+    text_accent = theme_colors.get('text_accent', '#0066cc')
+    button_normal = theme_colors.get('button_normal', '#e0e0e0')
+    button_hover = theme_colors.get('button_hover', '#d0d0d0')
+
     # Helper function to darken/lighten colors
     def adjust_color(hex_color: str, factor: float) -> str:
         """Darken (negative factor) or lighten (positive factor) a hex color"""
         hex_color = hex_color.lstrip('#')
         if len(hex_color) == 3:
             hex_color = ''.join([c*2 for c in hex_color])
-        
+
         try:
             r = int(hex_color[0:2], 16)
             g = int(hex_color[2:4], 16)
             b = int(hex_color[4:6], 16)
-            
+
             if factor > 0:  # Lighten
                 r = min(255, int(r + (255 - r) * factor))
                 g = min(255, int(g + (255 - g) * factor))
@@ -42,61 +50,78 @@ def get_smart_colors_for_theme(theme_colors: Dict[str, str]) -> Dict[str, str]:
                 r = max(0, int(r * (1 - factor)))
                 g = max(0, int(g * (1 - factor)))
                 b = max(0, int(b * (1 - factor)))
-            
+
             return f"{r:02x}{g:02x}{b:02x}"
         except:
             return "777777"  # Fallback gray
-    
-    # Generate smart colors
+
+    # Generate smart colors - includes base colors AND calculated colors
     return {
+        # Base colors (add if missing)
+        "bg_primary": bg_primary.lstrip('#'),
+        "bg_secondary": bg_secondary.lstrip('#'),
+        "bg_tertiary": bg_tertiary.lstrip('#'),
+        "panel_bg": panel_bg.lstrip('#'),
+        "text_primary": text_primary.lstrip('#'),
+        "text_secondary": text_secondary.lstrip('#'),
+        "text_accent": text_accent.lstrip('#'),
+        "accent_primary": accent_primary.lstrip('#'),
+        "accent_secondary": accent_secondary.lstrip('#'),
+        "border": border_color.lstrip('#'),
+        "button_normal": button_normal.lstrip('#'),
+        "button_hover": button_hover.lstrip('#'),
+
+        # NEW: Calculated colors based on existing theme
+        "button_pressed": adjust_color(button_hover, -0.15),
+
         # Splitter colors
         "splitter_color_background": adjust_color(bg_secondary, -0.1),
         "splitter_color_shine": adjust_color(bg_secondary, 0.1),
         "splitter_color_shadow": adjust_color(bg_secondary, -0.2),
-        
+
         # Scrollbar colors
         "scrollbar_background": adjust_color(bg_primary, -0.05),
         "scrollbar_handle": adjust_color(border_color, -0.1),
         "scrollbar_handle_hover": adjust_color(border_color, -0.2),
         "scrollbar_handle_pressed": adjust_color(border_color, -0.3),
         "scrollbar_border": border_color.lstrip('#'),
-        
+
         # File window selection colors
         "selection_background": accent_primary.lstrip('#'),
         "selection_text": "ffffff" if is_dark_color(accent_primary) else "000000",
-        
+
         # File window background alternating row colors (zebra striping)
-        "table_row_even": bg_primary.lstrip('#'),  # Even rows use primary background
-        "table_row_odd": adjust_color(bg_primary, 0.03),  # Odd rows slightly lighter/darker
-        
+        "table_row_even": bg_primary.lstrip('#'),
+        "table_row_odd": adjust_color(bg_primary, 0.03),
+
         # Hardcoded layout values that should be themeable
-        "panel_margins": "5",  # Main layout margins
-        "panel_spacing": "2",  # Spacing between panels
-        "button_min_height": "30",  # Minimum button height
-        "button_padding": "6",  # Button padding
-        "button_border_radius": "4",  # Button corner radius
-        "groupbox_border_radius": "5",  # GroupBox corner radius
-        "splitter_handle_width": "8",  # Horizontal splitter width
-        "splitter_handle_height": "6",  # Vertical splitter height
-        
+        "panel_margins": "5",
+        "panel_spacing": "2",
+        "button_min_height": "30",
+        "button_padding": "6",
+        "button_border_radius": "4",
+        "groupbox_border_radius": "5",
+        "splitter_handle_width": "8",
+        "splitter_handle_height": "6",
+
         # Table styling
-        "table_header_height": "25",  # Table header height
-        "table_row_height": "22",  # Table row height
-        "table_border_width": "1",  # Table border thickness
-        "table_grid_line_width": "1",  # Grid line thickness
-        
-        # Status messages (could be localized)
+        "table_header_height": "25",
+        "table_row_height": "22",
+        "table_border_width": "1",
+        "table_grid_line_width": "1",
+
+        # Status messages
         "status_ready": "Ready",
         "status_no_img": "No IMG loaded",
         "status_loading": "Loading...",
         "status_complete": "Complete",
         "status_error": "Error",
-        
+
         # Default tab labels
         "tab_dff": "DFF",
-        "tab_col": "COL", 
+        "tab_col": "COL",
         "tab_both": "Both",
-        
+
         # Information bar labels
         "info_file_label": "File:",
         "info_type_label": "Type:",
@@ -104,29 +129,29 @@ def get_smart_colors_for_theme(theme_colors: Dict[str, str]) -> Dict[str, str]:
         "info_size_label": "Size:",
         "info_no_file": "No file loaded",
         "info_unknown_type": "Unknown",
-        
+
         # Group box titles
-        "group_file_info": "📋 File Information",
+        "group_file_info": "File Information",
         "group_img_files": "IMG Files",
-        "group_file_entries": "File Entries", 
+        "group_file_entries": "File Entries",
         "group_editing_options": "Editing Options",
         "group_filter_search": "Filter & Search",
-        "group_status_log": "📊 Status & Activity Log",
-        
+        "group_status_log": "Status & Activity Log",
+
         # Filter options
         "filter_all_files": "All Files",
         "filter_dff_models": "DFF Models",
-        "filter_txd_textures": "TXD Textures", 
+        "filter_txd_textures": "TXD Textures",
         "filter_col_collision": "COL Collision",
         "filter_ifp_animations": "IFP Animations",
-        
+
         # Search placeholder
         "search_placeholder": "Search filename...",
         "log_placeholder": "Activity log will appear here...",
-        
+
         # Column headers
         "col_filename": "Filename",
-        "col_type": "Type", 
+        "col_type": "Type",
         "col_size": "Size",
         "col_offset": "Offset",
         "col_version": "Version",
@@ -251,7 +276,7 @@ def update_theme_file(theme_path: Path) -> bool:
     Update a single theme JSON file with new colors, menus, and layout data
     """
     try:
-        print(f"📝 Processing: {theme_path.name}")
+        print(f"Processing: {theme_path.name}")
         
         # Read existing theme
         with open(theme_path, 'r', encoding='utf-8') as f:
@@ -300,10 +325,10 @@ def update_theme_file(theme_path: Path) -> bool:
             if buttons_added:
                 summary.append("button panels")
             
-            print(f"   ✅ Added {', '.join(summary)}")
+            print(f"Added {', '.join(summary)}")
             return True
         else:
-            print(f"   📋 No new data needed")
+            print(f"No new data needed")
             return False
             
     except Exception as e:
@@ -323,16 +348,16 @@ def backup_themes_folder():
             
             import shutil
             shutil.copytree(themes_dir, backup_dir)
-            print(f"💾 Backup created: {backup_dir}")
+            print(f"Backup created: {backup_dir}")
             return True
         except Exception as e:
-            print(f"⚠️  Backup failed: {str(e)}")
+            print(f"⚠Backup failed: {str(e)}")
             return False
     return False
 
 def main():
     """Main function to update all theme files"""
-    print("🎨 IMG Factory Complete Theme Updater")
+    print("IMG Factory Complete Theme Updater")
     print("Adds colors, menus, buttons, and layout data to JSON themes")
     print("=" * 60)
     
@@ -344,7 +369,7 @@ def main():
         return
     
     # Create backup
-    print("🔄 Creating backup...")
+    print("Creating backup...")
     backup_themes_folder()
     
     # Find all JSON files in themes directory
@@ -353,11 +378,11 @@ def main():
         print("❌ No JSON theme files found in themes/ directory")
         return
     
-    print(f"\n🔍 Found {len(theme_files)} theme files:")
+    print(f"\nFound {len(theme_files)} theme files:")
     for theme_file in theme_files:
         print(f"   • {theme_file.name}")
     
-    print(f"\n🚀 Starting updates...")
+    print(f"\nStarting updates...")
     print("-" * 30)
     
     # Process each theme file
@@ -369,35 +394,40 @@ def main():
     
     # Summary
     print("=" * 60)
-    print(f"📊 Summary:")
+    print(f"Summary:")
     print(f"   • Files processed: {len(theme_files)}")
     print(f"   • Files updated: {updated_count}")
     print(f"   • Files unchanged: {len(theme_files) - updated_count}")
     
     if updated_count > 0:
-        print(f"\n✅ Successfully updated {updated_count} theme files!")
-        print(f"💾 Original files backed up to: themes_backup/")
-        print(f"\n🎯 New data added to themes:")
-        print(f"   📋 COLORS ({len(['splitter_color_background', 'splitter_color_shine', 'splitter_color_shadow', 'scrollbar_background', 'scrollbar_handle', 'scrollbar_handle_hover', 'scrollbar_handle_pressed', 'scrollbar_border', 'selection_background', 'selection_text', 'table_row_even', 'table_row_odd'])} + layout values):")
-        print(f"      • Splitter colors (background, shine, shadow)")
-        print(f"      • Scrollbar colors (background, handle, hover, pressed, border)")
-        print(f"      • Selection colors (background, text)")
-        print(f"      • Table alternating row colors (even, odd)")
-        print(f"      • Layout values (margins, spacing, sizes)")
-        print(f"      • UI text labels (status messages, tooltips, etc.)")
-        print(f"   📋 MENUS:")
-        print(f"      • Complete menu structure with icons and shortcuts")
-        print(f"      • All menu items with actions and separators")
-        print(f"      • Icon mappings for each menu item")
-        print(f"   📋 BUTTON PANELS:")
-        print(f"      • IMG Files buttons with colors and actions")
-        print(f"      • File Entries buttons with colors and actions") 
-        print(f"      • Editing Options buttons with colors and actions")
-        print(f"      • Individual button colors and icons")
+        print(f"\n[Successfully updated {updated_count} theme files!]")
+        print(f"[Original files backed up to: themes_backup/]")
+        print(f"\n[New data added to themes]")
+        print(f"   COLORS:")
+        print(f"      - Base colors (bg_primary, bg_secondary, bg_tertiary, panel_bg)")
+        print(f"      - Text colors (text_primary, text_secondary, text_accent)")
+        print(f"      - Accent colors (accent_primary, accent_secondary)")
+        print(f"      - Button colors (button_normal, button_hover, button_pressed)")
+        print(f"      - Selection colors (selection_background, selection_text)")
+        print(f"      - Table row colors (table_row_even, table_row_odd)")
+        print(f"      - Splitter colors (background, shine, shadow)")
+        print(f"      - Scrollbar colors (background, handle, hover, pressed, border)")
+        print(f"      - Layout values (margins, spacing, sizes)")
+        print(f"      - UI text labels (status messages, tooltips, etc.)")
+        print(f"   MENUS:")
+        print(f"      - Complete menu structure with icons and shortcuts")
+        print(f"      - All menu items with actions and separators")
+        print(f"      - Icon mappings for each menu item")
+        print(f"   BUTTON PANELS:")
+        print(f"      - IMG Files buttons with colors and actions")
+        print(f"      - File Entries buttons with colors and actions")
+        print(f"      - Editing Options buttons with colors and actions")
+        print(f"      - Individual button colors and icons")
     else:
-        print(f"\n📋 All theme files already have the required data!")
-    
-    print(f"\n🔄 Restart IMG Factory to see the updated theme data.")
+        print(f"\n[All theme files already have the required data!]")
+
+    print(f"\n[Restart IMG Factory to see the updated theme data.]")
+
 
 if __name__ == "__main__":
     main()

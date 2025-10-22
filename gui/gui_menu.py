@@ -626,6 +626,41 @@ class IMGFactoryMenuBar:
                     # Add to menu
                     menu.addAction(action)
 
+    def _apply_gui_changes(self): #vers 1
+        """Apply GUI changes after preferences are saved"""
+        try:
+            # Apply settings to gui_layout
+            if hasattr(self.main_window, 'gui_layout'):
+                if hasattr(self.main_window.gui_layout, 'apply_settings_changes'):
+                    # Get current settings
+                    if hasattr(self.main_window, 'app_settings'):
+                        settings = self.main_window.app_settings.current_settings
+                        self.main_window.gui_layout.apply_settings_changes(settings)
+
+                # Apply theme changes
+                if hasattr(self.main_window.gui_layout, 'apply_all_window_themes'):
+                    self.main_window.gui_layout.apply_all_window_themes()
+
+            # Apply stylesheet
+            if hasattr(self.main_window, 'app_settings'):
+                stylesheet = self.main_window.app_settings.get_stylesheet()
+                self.main_window.setStyleSheet(stylesheet)
+
+            # Refresh button display if changed
+            if hasattr(self.main_window, 'gui_layout'):
+                if hasattr(self.main_window.gui_layout, '_update_button_icons_state'):
+                    button_mode = self.main_window.app_settings.current_settings.get('button_display_mode', 'text_only')
+                    show_icons = button_mode in ['icons_only', 'icons_with_text']
+                    self.main_window.gui_layout._update_button_icons_state(show_icons)
+
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("✅ GUI changes applied successfully")
+
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"⚠️ Error applying GUI changes: {str(e)}")
+            print(f"❌ _apply_gui_changes error: {str(e)}")
+
     def _setup_default_callbacks(self):
         """Set up default menu callbacks"""
         default_callbacks = {

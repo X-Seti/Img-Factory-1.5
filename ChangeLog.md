@@ -9,6 +9,51 @@ Complete history of fixes, updates, and improvements.
 
 ## October 2025
 
+
+**Added**: - Oct 22, 2025
+- New color variables for complete theme support:
+- ✅ button_pressed - Pressed button state color
+- ✅ selection_background - Selection highlight color for tables/trees
+- ✅ selection_text - Text color for selected items
+- ✅ table_row_even - Even row background color
+- ✅ table_row_odd - Odd row background color
+
+- Oct 22, 2025
+- ✅ update_themes_script.py:
+- ✅ get_smart_colors_for_theme() - Added base colors and new calculated colors
+- ✅ Updated script output messages (removed emojis, using brackets)
+- ✅ Script now ensures all 17 base colors exist in theme files
+
+- ✅ utils/app_settings_system.py:
+- ✅ get_theme_colors() #vers 2 - Added fallback support for missing colors
+- ✅ _get_hardcoded_defaults() #vers 1 - NEW METHOD - Returns complete default color set
+- ✅ _generate_stylesheet() #vers 1 - NEW METHOD - Shared stylesheet generator
+- ✅ get_stylesheet() #vers 4 (AppSettings class) - Now calls _generate_stylesheet()
+- ✅ get_stylesheet() #vers 4 (SettingsDialog class) - Now calls _generate_stylesheet()
+- ✅ Updated stylesheet to use new color variables (button_pressed, selection_background, selection_text)
+
+- ✅ components/File_Browser/dolphin_dialog.py - NEW FILE:
+- ✅ Complete Dolphin-style file browser dialog
+- ✅ Replaces native Qt dialogs with themed custom browser
+- ✅ Full theme integration from IMG Factory
+- ✅ SVG icons (no emojis)
+- ✅ Features: single/multi-select, create folder, rename, delete, properties
+- ✅ Places sidebar with common locations
+- ✅ Project Folders sidebar (replaces Devices)
+- ✅ File preview with system command integration (file/mdls/PowerShell)
+
+**Fixed**: - Oct 22, 2025
+- ✅ Black rows in file dialogs on light themes (native Qt dialog theme conflict)
+- ✅ Missing color definitions causing fallback to hardcoded values
+- ✅ Inconsistent selection colors across widgets
+- ✅ Button pressed state not using theme colors
+
+**Updated**: - Oct 22, 2025
+- ✅ 5 theme JSON files updated with missing color variables
+- ✅ 26 theme files already had complete color sets
+- ✅ All 31 themes backed up to themes_backup/
+
+
 ### October 22, 2025 - COL Viewer Complete
 **Added**:
 - ✅ Complete COL 3D Viewer from scratch
@@ -31,7 +76,7 @@ Complete history of fixes, updates, and improvements.
 - 3DS Max style controls
 
 ---
-
+  
 ## September 2025
 
 ### September 4, 2025 - Dump Command Fix
@@ -89,7 +134,7 @@ Complete history of fixes, updates, and improvements.
 **Fixed**:
 - ✅ Tab system for IMG's fixed
 - ✅ Close first tab fixed
-- ✅ Multiple tabs work properly
+- ✅ Multipl**Fixed**:e tabs work properly
 - ✅ Tab switching improved
 
 ---

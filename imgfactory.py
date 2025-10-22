@@ -1698,7 +1698,7 @@ class IMGFactory(QMainWindow):
             new_index = 0
             for old_index, file_info in sorted_items:
                 if old_index == removed_index:
-                    self.log_message(f"⏭️ Skipping removed tab {old_index}")
+                    self.log_message(f"Skipping removed tab {old_index}")
                     continue
 
                 new_open_files[new_index] = file_info
@@ -1712,7 +1712,7 @@ class IMGFactory(QMainWindow):
                 if hasattr(self.main_window, 'restore_tab_table_data'):
                     self.main_window.restore_tab_table_data(new_tab_index)
 
-            self.log_message("✅ ROBUST reindexing complete with data preservation")
+            self.log_message("ROBUST reindexing complete with data preservation")
 
             # STEP 4: Update current tab references
             current_index = self.main_window.main_tab_widget.currentIndex()
@@ -1720,7 +1720,7 @@ class IMGFactory(QMainWindow):
                 self.main_window.update_tab_manager_references(current_index)
 
         except Exception as e:
-            self.log_message(f"❌ Error in robust reindexing: {str(e)}")
+            self.log_message(f"Error in robust reindexing: {str(e)}")
 
 
     # INTEGRATION PATCH FOR EXISTING CLOSE MANAGER
