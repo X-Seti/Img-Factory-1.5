@@ -1,0 +1,125 @@
+#this belongs in root /COL_VIEWER_INTEGRATION_INSTRUCTIONS.txt - Version: 1
+# X-Seti - October22 2025 - COL Viewer Integration Instructions
+
+================================================================================
+                    COL 3D VIEWER - INTEGRATION INSTRUCTIONS
+================================================================================
+
+FILES CREATED:
+--------------
+1. components/col_viewer/depends/COL_Parser.py   - Clean COL parser from scratch
+2. components/col_viewer/col_viewer.py            - OpenGL 3D viewer widget
+3. core/col_viewer_integration.py                 - Integration with IMG Factory
+
+INTEGRATION STEPS:
+------------------
+
+STEP 1: Add import to imgfactory.py
+------------------------------------
+Location: Near top of imgfactory.py with other core imports
+
+Add this line:
+    from core.col_viewer_integration import integrate_col_viewer
+
+STEP 2: Call integration function
+----------------------------------
+Location: In imgfactory.py, after right-click context menu setup
+
+Find this line:
+    integrate_right_click_actions(self)
+
+Add AFTER it:
+    integrate_col_viewer(self)
+
+Example:
+    # Setup right-click context menus
+    integrate_right_click_actions(self)
+    
+    # Setup COL 3D viewer
+    integrate_col_viewer(self)
+
+
+STEP 3: Verify dependencies
+----------------------------
+The COL viewer requires:
+✓ PyOpenGL (already in use by col_workshop)
+✓ numpy (standard dependency)
+✓ PyQt6 (already in use)
+
+If PyOpenGL is not installed:
+    pip install PyOpenGL PyOpenGL_accelerate
+
+
+HOW IT WORKS:
+-------------
+1. Right-click any .col file in IMG Factory file window
+2. New option appears: "🎮 View COL (3D)"
+3. Clicks opens 3D viewer dialog
+4. Shows:
+   - Mesh faces (blue triangles)
+   - Collision spheres (red wireframe)
+   - Collision boxes (green wireframe)
+   - Bounding box (yellow)
+   - Grid and axes
+
+CONTROLS:
+---------
+- Left Mouse: Orbit camera
+- Middle Mouse: Pan camera
+- Scroll Wheel: Zoom in/out
+- Reset Camera: Button to return to default view
+- Fit View: Button to zoom to fit model
+
+THEME INTEGRATION:
+------------------
+✓ Automatically uses colors from utils/app_settings_system.py
+✓ Reads theme.json files from themes/ folder
+✓ Supports both light and dark themes
+✓ Colors adapt to current theme:
+  - Background: bg_primary
+  - Grid: border
+  - Mesh: accent_primary
+  - Bounds: warning
+  - Spheres: error
+  - Boxes: success
+
+MATERIAL IDs:
+-------------
+Currently displays material IDs as numbers (e.g., "Material: 34")
+When GTA surface type data is found, can easily add lookup:
+    SURFACE_TYPES = {
+        34: "Concrete",
+        128: "Metal",
+        # etc...
+    }
+
+FUTURE ENHANCEMENTS:
+--------------------
+□ Add surface type names when data is found
+□ Add material filtering (show only certain types)
+□ Add wireframe/solid toggle
+□ Export screenshot feature
+□ Measurement tools
+□ If this works well, code can be ported to col_workshop.py
+
+TROUBLESHOOTING:
+----------------
+If viewer doesn't appear:
+1. Check console for error messages
+2. Verify PyOpenGL is installed
+3. Check file paths are correct
+4. Ensure COL file is valid format
+
+If rendering is broken:
+1. This is a clean implementation - no legacy bugs
+2. Check COL_Parser.py parsed file correctly
+3. Enable debug mode in COLParser(debug=True)
+
+NO PATCH FILES:
+---------------
+✓ Clean, single-purpose files
+✓ No duplicates
+✓ No "enhanced", "fixed", "patched" versions
+✓ Simple, clear naming
+
+================================================================================

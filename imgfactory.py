@@ -81,6 +81,7 @@ from core.imgcol_replace import integrate_imgcol_replace_functions
 from core.imgcol_convert import integrate_imgcol_convert_functions
 from core.save_entry import integrate_save_entry_function
 from core.rw_unk_snapshot import integrate_unknown_rw_detection
+from core.col_viewer_integration import integrate_col_viewer
 #from core.analyze_rw import integrate_rw_analysis_trigger
 
 #gui-layout
