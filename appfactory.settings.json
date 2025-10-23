@@ -2,7 +2,7 @@
   "debug_mode": false,
   "debug_level": "INFO",
   "current_theme": "img_factory",
-  "theme": "Default Green",
+  "theme": "img_factory_dark",
   "button_display_mode": "both",
   "use_custom_gadgets": false,
   "enable_corner_resize": true,

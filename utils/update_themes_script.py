@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-X-Seti - JUNE27 2025 - Complete Theme Updater
+X-Seti - October23 2025 - Complete Theme Updater
 Add scrollbar, selection, menu, and button data to all JSON theme files
 """
-#this belongs in root /update_theme_colors.py
+#this belongs in root /update_themes_script.py - Version: 2
 
 import json
 import os
@@ -73,6 +73,9 @@ def get_smart_colors_for_theme(theme_colors: Dict[str, str]) -> Dict[str, str]:
 
         # NEW: Calculated colors based on existing theme
         "button_pressed": adjust_color(button_hover, -0.15),
+        "button_text_color": text_primary.lstrip('#'),
+        "button_text_hover": text_primary.lstrip('#'),
+        "button_text_pressed": text_primary.lstrip('#'),
 
         # Splitter colors
         "splitter_color_background": adjust_color(bg_secondary, -0.1),
@@ -93,6 +96,31 @@ def get_smart_colors_for_theme(theme_colors: Dict[str, str]) -> Dict[str, str]:
         # File window background alternating row colors (zebra striping)
         "table_row_even": bg_primary.lstrip('#'),
         "table_row_odd": adjust_color(bg_primary, 0.03),
+        "alternate_row": adjust_color(bg_primary, 0.03),  # Alias for table_row_odd
+        
+        # Grid and UI element colors
+        "grid": adjust_color(border_color, -0.05),
+        
+        # Status colors
+        "success": "4caf50",
+        "warning": "ff9800", 
+        "error": "f44336",
+        
+        # Pin colors
+        "pin_default": "757575",
+        "pin_highlight": accent_primary.lstrip('#'),
+        
+        # Action button colors (light for light themes, solid for dark themes)
+        "action_import": "e3f2fd" if not is_dark_color(bg_primary) else "2196f3",
+        "action_export": "e8f5e8" if not is_dark_color(bg_primary) else "4caf50",
+        "action_remove": "ffebee" if not is_dark_color(bg_primary) else "f44336",
+        "action_update": "fff3e0" if not is_dark_color(bg_primary) else "ff9800",
+        "action_convert": "f3e5f5" if not is_dark_color(bg_primary) else "9c27b0",
+        
+        # Panel background colors
+        "panel_entries": adjust_color(bg_tertiary, 0.05),
+        "panel_filter": adjust_color(bg_tertiary, 0.08),
+        "toolbar_bg": bg_secondary.lstrip('#'),
 
         # Hardcoded layout values that should be themeable
         "panel_margins": "5",
@@ -200,7 +228,7 @@ def add_menu_structure_to_theme(theme_data: Dict[str, Any]):
                 ],
                 "IMG": [
                     {"text": "Rebuild", "icon": "document-save", "action": "rebuild_img"},
-                    {"text": "Save Entry.", "icon": "document-save-entry", "action": "save_img_entry"},
+                    {"text": "Save Entry...", "icon": "document-save-entry", "action": "save_img_entry"},
                     {"separator": True},
                     {"text": "Merge IMG Files", "icon": "document-merge"},
                     {"text": "Split IMG File", "icon": "edit-cut"},
@@ -209,7 +237,7 @@ def add_menu_structure_to_theme(theme_data: Dict[str, Any]):
                 ],
                 "Entry": [
                     {"text": "Import Files...", "icon": "go-down", "action": "import_files"},
-                    {"text": "Export Selected...", "icon": "go-up", "action": "export_selected"}, 
+                    {"text": "Export Selected...", "icon": "go-up", "action": "export_selected"},
                     {"text": "Export All...", "icon": "go-up", "action": "export_all"},
                     {"separator": True},
                     {"text": "Remove Selected", "icon": "list-remove", "action": "remove_selected"},
@@ -228,6 +256,36 @@ def add_menu_structure_to_theme(theme_data: Dict[str, Any]):
             }
         }
 
+def add_fonts_to_theme(theme_data: Dict[str, Any]):
+    """Add fonts section to theme if it doesn't exist"""
+    if 'fonts' not in theme_data:
+        theme_data['fonts'] = {
+            "default_font_family": "Segoe UI",
+            "default_font_size": 9,
+            "default_font_weight": "Normal",
+            "title_font_family": "Arial",
+            "title_font_size": 14,
+            "title_font_weight": "Bold",
+            "panel_font_family": "Arial",
+            "panel_font_size": 10,
+            "panel_font_weight": "Bold",
+            "button_font_family": "Arial",
+            "button_font_size": 10,
+            "button_font_weight": "Normal",
+            "menu_font_family": "Segoe UI",
+            "menu_font_size": 9,
+            "menu_font_weight": "Normal",
+            "infobar_font_family": "Courier New",
+            "infobar_font_size": 9,
+            "infobar_font_weight": "Normal",
+            "table_font_family": "Segoe UI",
+            "table_font_size": 9,
+            "table_font_weight": "Normal",
+            "tooltip_font_family": "Segoe UI",
+            "tooltip_font_size": 8,
+            "tooltip_font_weight": "Normal"
+        }
+
 def add_button_structure_to_theme(theme_data: Dict[str, Any]):
     """Add button panel structure to theme if it doesn't exist"""
     if 'button_panels' not in theme_data:
@@ -237,7 +295,7 @@ def add_button_structure_to_theme(theme_data: Dict[str, Any]):
                 {"text": "Close", "action": "close", "icon": "window-close", "color": "#FFF3E0"},
                 {"text": "Close All", "action": "close_all", "icon": "edit-clear", "color": "#FFF3E0"},
                 {"text": "Rebuild", "action": "rebuild", "icon": "view-refresh", "color": "#E8F5E8"},
-                {"text": "Save Entry", "action": "save_img_entry", "icon": "document-save-entry", "color": "#E8F5E8"},
+                {"text": "Save Entry...", "icon": "document-save-entry", "action": "save_img_entry", "color": "#E8F5E8"},
                 {"text": "Rebuild All", "action": "rebuild_all", "icon": "document-save", "color": "#E8F5E8"},
                 {"text": "Merge", "action": "merge", "icon": "document-merge", "color": "#F3E5F5"},
                 {"text": "Split", "action": "split", "icon": "edit-cut", "color": "#F3E5F5"},
@@ -297,8 +355,6 @@ def update_theme_file(theme_path: Path) -> bool:
             if color_key not in colors:
                 colors[color_key] = color_value
                 added_colors.append(color_key)
-            else:
-                print(f"   ⚠️  {color_key} already exists, skipping")
         
         # Add menu structure
         menu_added = False
@@ -312,7 +368,13 @@ def update_theme_file(theme_path: Path) -> bool:
             add_button_structure_to_theme(theme_data)
             buttons_added = True
         
-        if added_colors or menu_added or buttons_added:
+        # Add fonts structure
+        fonts_added = False
+        if 'fonts' not in theme_data:
+            add_fonts_to_theme(theme_data)
+            fonts_added = True
+        
+        if added_colors or menu_added or buttons_added or fonts_added:
             # Write updated theme back to file
             with open(theme_path, 'w', encoding='utf-8') as f:
                 json.dump(theme_data, f, indent=2, ensure_ascii=False)
@@ -324,15 +386,17 @@ def update_theme_file(theme_path: Path) -> bool:
                 summary.append("menu structure")
             if buttons_added:
                 summary.append("button panels")
+            if fonts_added:
+                summary.append("fonts")
             
-            print(f"Added {', '.join(summary)}")
+            print(f"✅ Added {', '.join(summary)}")
             return True
         else:
-            print(f"No new data needed")
+            print(f"✅ No new data needed")
             return False
             
     except Exception as e:
-        print(f"   ❌ Error processing {theme_path.name}: {str(e)}")
+        print(f"❌ Error processing {theme_path.name}: {str(e)}")
         return False
 
 def backup_themes_folder():
@@ -348,16 +412,17 @@ def backup_themes_folder():
             
             import shutil
             shutil.copytree(themes_dir, backup_dir)
-            print(f"Backup created: {backup_dir}")
+            print(f"✅ Backup created: {backup_dir}")
             return True
         except Exception as e:
-            print(f"⚠Backup failed: {str(e)}")
+            print(f"⚠️  Backup failed: {str(e)}")
             return False
     return False
 
 def main():
     """Main function to update all theme files"""
-    print("IMG Factory Complete Theme Updater")
+    print("=" * 60)
+    print("IMG Factory Complete Theme Updater - Version 2")
     print("Adds colors, menus, buttons, and layout data to JSON themes")
     print("=" * 60)
     
@@ -369,7 +434,7 @@ def main():
         return
     
     # Create backup
-    print("Creating backup...")
+    print("\n📦 Creating backup...")
     backup_themes_folder()
     
     # Find all JSON files in themes directory
@@ -378,55 +443,54 @@ def main():
         print("❌ No JSON theme files found in themes/ directory")
         return
     
-    print(f"\nFound {len(theme_files)} theme files:")
-    for theme_file in theme_files:
-        print(f"   • {theme_file.name}")
-    
-    print(f"\nStarting updates...")
-    print("-" * 30)
+    print(f"\n🎨 Found {len(theme_files)} theme files")
+    print("-" * 60)
     
     # Process each theme file
     updated_count = 0
-    for theme_file in theme_files:
+    for theme_file in sorted(theme_files):
         if update_theme_file(theme_file):
             updated_count += 1
-        print()  # Empty line for readability
     
     # Summary
     print("=" * 60)
-    print(f"Summary:")
+    print(f"📊 Summary:")
     print(f"   • Files processed: {len(theme_files)}")
     print(f"   • Files updated: {updated_count}")
     print(f"   • Files unchanged: {len(theme_files) - updated_count}")
     
     if updated_count > 0:
-        print(f"\n[Successfully updated {updated_count} theme files!]")
-        print(f"[Original files backed up to: themes_backup/]")
-        print(f"\n[New data added to themes]")
+        print(f"\n✅ Successfully updated {updated_count} theme files!")
+        print(f"💾 Original files backed up to: themes_backup/")
+        print(f"\n📋 New data added to themes:")
         print(f"   COLORS:")
-        print(f"      - Base colors (bg_primary, bg_secondary, bg_tertiary, panel_bg)")
-        print(f"      - Text colors (text_primary, text_secondary, text_accent)")
-        print(f"      - Accent colors (accent_primary, accent_secondary)")
-        print(f"      - Button colors (button_normal, button_hover, button_pressed)")
-        print(f"      - Selection colors (selection_background, selection_text)")
-        print(f"      - Table row colors (table_row_even, table_row_odd)")
-        print(f"      - Splitter colors (background, shine, shadow)")
-        print(f"      - Scrollbar colors (background, handle, hover, pressed, border)")
-        print(f"      - Layout values (margins, spacing, sizes)")
-        print(f"      - UI text labels (status messages, tooltips, etc.)")
+        print(f"      • Base colors (bg_primary, bg_secondary, bg_tertiary, panel_bg)")
+        print(f"      • Text colors (text_primary, text_secondary, text_accent)")
+        print(f"      • Accent colors (accent_primary, accent_secondary)")
+        print(f"      • Button colors (button_normal, button_hover, button_pressed)")
+        print(f"      • Selection colors (selection_background, selection_text)")
+        print(f"      • Table row colors (table_row_even, table_row_odd, alternate_row)")
+        print(f"      • Status colors (success, warning, error)")
+        print(f"      • Pin colors (pin_default, pin_highlight)")
+        print(f"      • Action colors (action_import, action_export, etc.)")
+        print(f"      • Grid and panel colors (grid, panel_entries, panel_filter)")
+        print(f"      • Splitter colors (background, shine, shadow)")
+        print(f"      • Scrollbar colors (background, handle, hover, pressed, border)")
+        print(f"      • Layout values (margins, spacing, sizes)")
+        print(f"      • UI text labels (status messages, tooltips, etc.)")
         print(f"   MENUS:")
-        print(f"      - Complete menu structure with icons and shortcuts")
-        print(f"      - All menu items with actions and separators")
-        print(f"      - Icon mappings for each menu item")
+        print(f"      • Complete menu structure with icons and shortcuts")
         print(f"   BUTTON PANELS:")
-        print(f"      - IMG Files buttons with colors and actions")
-        print(f"      - File Entries buttons with colors and actions")
-        print(f"      - Editing Options buttons with colors and actions")
-        print(f"      - Individual button colors and icons")
+        print(f"      • IMG Files, File Entries, and Editing Options buttons")
+        print(f"   FONTS:")
+        print(f"      • Default, Title, Panel, Button, Menu fonts")
+        print(f"      • Infobar, Table, and Tooltip fonts")
+        print(f"      • Font family, size, and weight for each type")
     else:
-        print(f"\n[All theme files already have the required data!]")
+        print(f"\n✅ All theme files already have the required data!")
 
-    print(f"\n[Restart IMG Factory to see the updated theme data.]")
+    print(f"\n🔄 Restart IMG Factory to see the updated theme data.")
+    print("=" * 60)
 
 
 if __name__ == "__main__":

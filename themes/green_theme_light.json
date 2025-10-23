@@ -92,7 +92,8 @@
     "col_offset": "Offset",
     "col_version": "Version",
     "col_compression": "Compression",
-    "col_status": "Status"
+    "col_status": "Status",
+    "alternate_row": "f0fdf4"
   },
   "menus": {
     "menu_structure": [
@@ -431,5 +432,31 @@
         "color": "#E3F2FD"
       }
     ]
+  },
+  "fonts": {
+    "default_font_family": "Segoe UI",
+    "default_font_size": 9,
+    "default_font_weight": "Normal",
+    "title_font_family": "Arial",
+    "title_font_size": 14,
+    "title_font_weight": "Bold",
+    "panel_font_family": "Arial",
+    "panel_font_size": 10,
+    "panel_font_weight": "Bold",
+    "button_font_family": "Arial",
+    "button_font_size": 10,
+    "button_font_weight": "Normal",
+    "menu_font_family": "Segoe UI",
+    "menu_font_size": 9,
+    "menu_font_weight": "Normal",
+    "infobar_font_family": "Courier New",
+    "infobar_font_size": 9,
+    "infobar_font_weight": "Normal",
+    "table_font_family": "Segoe UI",
+    "table_font_size": 9,
+    "table_font_weight": "Normal",
+    "tooltip_font_family": "Segoe UI",
+    "tooltip_font_size": 8,
+    "tooltip_font_weight": "Normal"
   }
 }
