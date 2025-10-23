@@ -1,0 +1,25 @@
+{
+  "name": "bluish_light",
+  "description": "Custom theme created from Default Green",
+  "category": "\ud83c\udfad Custom",
+  "author": "User",
+  "version": "1.0",
+  "colors": {
+    "bg_primary": "#f5fffb",
+    "bg_secondary": "#eef7f3",
+    "bg_tertiary": "#e6f4ef",
+    "panel_bg": "#eef6f3",
+    "accent_primary": "#4cae8d",
+    "accent_secondary": "#378b6f",
+    "text_primary": "#1a5b48",
+    "text_secondary": "#2d7b62",
+    "text_accent": "#378b6f",
+    "button_normal": "#e6f4ef",
+    "button_hover": "#c7e5db",
+    "button_pressed": "#a4d5c5",
+    "border": "#a4d5c5",
+    "success": "#4cae8d",
+    "warning": "#c8ff00",
+    "error": "#f3ba35"
+  }
+}

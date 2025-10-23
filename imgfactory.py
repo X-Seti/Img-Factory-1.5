@@ -149,7 +149,7 @@ def setup_rebuild_system(self): #vers 1
         success = setup_hybrid_rebuild_methods(self)
 
         if success:
-            self.log_message("✅ Hybrid rebuild system enabled")
+            self.log_message("Hybrid rebuild system enabled")
             # Now you have these methods available:
 
             # self.rebuild_all_img() - Shows batch mode dialog
@@ -157,12 +157,12 @@ def setup_rebuild_system(self): #vers 1
             # self.fast_rebuild() - Direct fast mode
             # self.safe_rebuild() - Direct safe mode
         else:
-            self.log_message("⚠️ Hybrid rebuild setup failed")
+            self.log_message("Hybrid rebuild setup failed")
 
         return success
 
     except ImportError:
-        self.log_message("⚠️ Hybrid rebuild not available")
+        self.log_message("Hybrid rebuild not available")
         return False
 
 def create_rebuild_menu(self): #vers 1
@@ -179,7 +179,7 @@ def create_rebuild_menu(self): #vers 1
         rebuild_menu.addAction(rebuild_action)
 
         # Quick rebuild (fast mode only)
-        quick_action = QAction("⚡ Quick Rebuild", self)
+        quick_action = QAction("Quick Rebuild", self)
         quick_action.setShortcut("Ctrl+Shift+R")
         quick_action.setStatusTip("Quick rebuild using fast mode")
         quick_action.triggered.connect(self.quick_rebuild)
@@ -188,12 +188,12 @@ def create_rebuild_menu(self): #vers 1
         rebuild_menu.addSeparator()
 
         # Direct mode access
-        fast_action = QAction("🚀 Fast Rebuild", self)
+        fast_action = QAction("Fast Rebuild", self)
         fast_action.setStatusTip("Direct fast rebuild without dialog")
         fast_action.triggered.connect(self.fast_rebuild)
         rebuild_menu.addAction(fast_action)
 
-        safe_action = QAction("🔍 Safe Rebuild", self)
+        safe_action = QAction("Safe Rebuild", self)
         safe_action.setStatusTip("Direct safe rebuild with full checking")
         safe_action.triggered.connect(self.safe_rebuild)
         rebuild_menu.addAction(safe_action)
@@ -209,7 +209,7 @@ def create_rebuild_menu(self): #vers 1
         return True
 
     except Exception as e:
-        self.log_message(f"❌ Rebuild menu creation failed: {str(e)}")
+        self.log_message(f"Rebuild menu creation failed: {str(e)}")
         return False
 
 def setup_debug_mode(self): #vers 2
@@ -398,9 +398,9 @@ class IMGFactory(QMainWindow):
         try:
             from methods.img_templates import IMGTemplateManager
             self.template_manager = IMGTemplateManager()
-            print("✅ Template manager initialized")
+            print("Template manager initialized")
         except Exception as e:
-            print(f"❌ Template manager failed: {str(e)}")
+            print(f"Template manager failed: {str(e)}")
             class DummyTemplateManager:
                 def get_all_templates(self): return []
                 def get_default_templates(self): return []
@@ -482,25 +482,25 @@ class IMGFactory(QMainWindow):
         # TXD Editor Integration
         try:
             self.txd_editor = None
-            self.log_message("✅ TXD Editor available")
+            self.log_message("TXD Editor available")
         except Exception as e:
-            self.log_message(f"❌ TXD Editor failed: {str(e)}")
+            self.log_message(f"TXD Editor failed: {str(e)}")
 
         # File extraction
         try:
             from core.file_extraction import setup_complete_extraction_integration
             setup_complete_extraction_integration(self)
-            self.log_message("✅ File extraction integrated")
+            self.log_message("File extraction integrated")
         except Exception as e:
-            self.log_message(f"⚠️ Extraction integration failed: {str(e)}")
+            self.log_message(f"Extraction integration failed: {str(e)}")
 
         # COL System Integration
         try:
             from methods.populate_col_table import load_col_file_safely
             self.load_col_file_safely = lambda file_path: load_col_file_safely(self, file_path)
-            self.log_message("✅ COL file loading enabled")
+            self.log_message("COL file loading enabled")
         except Exception as e:
-            self.log_message(f"❌ COL loading setup failed: {str(e)}")
+            self.log_message(f"COL loading setup failed: {str(e)}")
 
         # File filtering
         integrate_file_filtering(self)
@@ -540,17 +540,17 @@ class IMGFactory(QMainWindow):
             integrate_rebuild_functions(self)
             integrate_batch_rebuild_functions(self)
             integrate_clean_utilities(self)
-            self.log_message("🔧 All systems integrated")
+            self.log_message("All systems integrated")
         except Exception as e:
-            self.log_message(f"❌ Integration failed: {e}")
+            self.log_message(f"Integration failed: {e}")
 
         """
         try:
             from core.img_corruption_analyzer import setup_corruption_analyzer
             setup_corruption_analyzer(self)
-            self.log_message("🔍 IMG corruption analyzer integrated")
+            self.log_message("IMG corruption analyzer integrated")
         except Exception as e:
-            self.log_message(f"⚠️ Corruption analyzer integration failed: {e}")
+            self.log_message(f"Corruption analyzer integration failed: {e}")
 
         # Debug features
         try:
@@ -558,9 +558,9 @@ class IMGFactory(QMainWindow):
             apply_visibility_fix(self)
             create_debug_keyboard_shortcuts(self)
             install_debug_control_system(self)
-            # self.log_message("✅ Debug features loaded")
+            # self.log_message("Debug features loaded")
         except Exception as e:
-            self.log_message(f"⚠️ Debug features failed: {str(e)}")
+            self.log_message(f"Debug features failed: {str(e)}")
 
         """
         # === PHASE 9: HIGHLIGHTING & FINAL SETUP ===
@@ -578,7 +578,7 @@ class IMGFactory(QMainWindow):
         self.reload_table = self.reload_current_file
 
         # === STARTUP COMPLETE ===
-        self.log_message("✅ IMG Factory 1.5 initialized - Ready!")
+        self.log_message("IMG Factory 1.5 initialized - Ready!")
 
         # Show window (non-blocking)
         self.show()
@@ -612,21 +612,21 @@ class IMGFactory(QMainWindow):
         """Quick debug before loading IMG"""
         try:
             file_size = os.path.getsize(file_path)
-            self.log_message(f"🐛 Debug: File size = {file_size:,} bytes")
+            self.log_message(f"Debug: File size = {file_size:,} bytes")
 
             with open(file_path, 'rb') as f:
                 first_8_bytes = f.read(8)
-                self.log_message(f"🐛 Debug: First 8 bytes = {first_8_bytes.hex()}")
+                self.log_message(f"Debug: First 8 bytes = {first_8_bytes.hex()}")
 
                 if first_8_bytes.startswith(b'VER2'):
                     entry_count = struct.unpack('<I', first_8_bytes[4:8])[0]
-                    self.log_message(f"🐛 Debug: V2 entry count = {entry_count:,}")
+                    self.log_message(f"Debug: V2 entry count = {entry_count:,}")
                 else:
                     potential_v1_entries = file_size // 32
-                    self.log_message(f"🐛 Debug: Potential V1 entries = {potential_v1_entries:,}")
+                    self.log_message(f"Debug: Potential V1 entries = {potential_v1_entries:,}")
 
         except Exception as e:
-            self.log_message(f"🐛 Debug failed: {e}")
+            self.log_message(f"Debug failed: {e}")
 
     def show_debug_settings(self): #vers 1
         """Show debug settings dialog"""
@@ -637,11 +637,9 @@ class IMGFactory(QMainWindow):
                 dialog = SettingsDialog(self.app_settings, self)
                 dialog.exec()
             else:
-                QMessageBox.information(self, "Debug Settings",
-                    "Debug settings: Use F12 to toggle performance mode")
+                QMessageBox.information(self, "Debug Settings", "Debug settings: Use F12 to toggle performance mode")
         except ImportError:
-            QMessageBox.information(self, "Debug Settings",
-                "Debug settings: Use F12 to toggle performance mode")
+            QMessageBox.information(self, "Debug Settings", "Debug settings: Use F12 to toggle performance mode")
 
 
     def _append_log_message(self, message: str): #vers 1
@@ -663,8 +661,7 @@ class IMGFactory(QMainWindow):
         """Analyze IMG file for corruption - Menu callback"""
         try:
             if not hasattr(self, 'current_img') or not self.current_img:
-                QMessageBox.warning(self, "No IMG File",
-                                  "Please open an IMG file first to analyze corruption")
+                QMessageBox.warning(self, "No IMG File", "Please open an IMG file first to analyze corruption")
                 return
 
             self.log_message("🔍 Starting IMG corruption analysis...")
@@ -682,23 +679,21 @@ class IMGFactory(QMainWindow):
                 success = fix_corrupted_img(self.current_img, report, fix_options, self)
 
                 if success:
-                    self.log_message("✅ IMG corruption fixed successfully")
+                    self.log_message("IMG corruption fixed successfully")
                 else:
-                    self.log_message("❌ IMG corruption fix failed")
+                    self.log_message("IMG corruption fix failed")
             else:
-                self.log_message("📊 Corruption analysis completed (no fixes applied)")
+                self.log_message("Corruption analysis completed (no fixes applied)")
 
         except Exception as e:
-            self.log_message(f"❌ Corruption analysis error: {str(e)}")
-            QMessageBox.critical(self, "Analysis Error",
-                               f"Corruption analysis failed:\n{str(e)}")
+            self.log_message(f"Corruption analysis error: {str(e)}")
+            QMessageBox.critical(self, "Analysis Error", f"Corruption analysis failed:\n{str(e)}")
 
     def quick_fix_corruption(self): #vers 1
         """Quick fix common corruption issues - Menu callback"""
         try:
             if not hasattr(self, 'current_img') or not self.current_img:
-                QMessageBox.warning(self, "No IMG File",
-                                  "Please open an IMG file first")
+                QMessageBox.warning(self, "No IMG File", "Please open an IMG file first")
                 return
 
             self.log_message("🔧 Quick fixing IMG corruption...")
@@ -744,24 +739,20 @@ class IMGFactory(QMainWindow):
                 success = fix_corrupted_img(self.current_img, report, quick_fix_options, self)
 
                 if success:
-                    self.log_message("✅ Quick corruption fix completed")
-                    QMessageBox.information(self, "Quick Fix Complete",
-                                          f"Successfully fixed {corrupted_count} corrupted entries!\n\n"
-                                          f"The IMG file has been cleaned and rebuilt.")
+                    self.log_message("Quick corruption fix completed")
+                    QMessageBox.information(self, "Quick Fix Complete", f"Successfully fixed {corrupted_count} corrupted entries!\n\n", f"The IMG file has been cleaned and rebuilt.")
                 else:
-                    self.log_message("❌ Quick corruption fix failed")
+                    self.log_message("Quick corruption fix failed")
 
         except Exception as e:
-            self.log_message(f"❌ Quick fix error: {str(e)}")
-            QMessageBox.critical(self, "Quick Fix Error",
-                               f"Quick fix failed:\n{str(e)}")
+            self.log_message(f"Quick fix error: {str(e)}")
+            QMessageBox.critical(self, "Quick Fix Error", f"Quick fix failed:\n{str(e)}")
 
     def clean_filenames_only(self): #vers 1
         """Clean only filenames, keep all entries - Menu callback"""
         try:
             if not hasattr(self, 'current_img') or not self.current_img:
-                QMessageBox.warning(self, "No IMG File",
-                                  "Please open an IMG file first")
+                QMessageBox.warning(self, "No IMG File", "Please open an IMG file first")
                 return
 
             self.log_message("🧹 Cleaning filenames only...")
@@ -771,15 +762,13 @@ class IMGFactory(QMainWindow):
             report = analyze_img_corruption(self.current_img, self)
 
             if 'error' in report:
-                QMessageBox.critical(self, "Analysis Failed",
-                                   f"Could not analyze file:\n{report['error']}")
+                QMessageBox.critical(self, "Analysis Failed", f"Could not analyze file:\n{report['error']}")
                 return
 
             corrupted_count = len(report.get('corrupted_entries', []))
 
             if corrupted_count == 0:
-                QMessageBox.information(self, "No Corruption",
-                                      "No filename corruption detected!")
+                QMessageBox.information(self, "No Corruption", "No filename corruption detected!")
                 return
 
             # Apply filename-only cleaning
@@ -795,44 +784,37 @@ class IMGFactory(QMainWindow):
             success = fix_corrupted_img(self.current_img, report, filename_fix_options, self)
 
             if success:
-                self.log_message("✅ Filename cleaning completed")
-                QMessageBox.information(self, "Filenames Cleaned",
-                                      f"Successfully cleaned {corrupted_count} filenames!\n\n"
-                                      f"All entries preserved, only filenames fixed.")
+                self.log_message("Filename cleaning completed")
+                QMessageBox.information(self, "Filenames Cleaned", f"Successfully cleaned {corrupted_count} filenames!\n\n", f"All entries preserved, only filenames fixed.")
             else:
-                self.log_message("❌ Filename cleaning failed")
+                self.log_message("Filename cleaning failed")
 
         except Exception as e:
-            self.log_message(f"❌ Filename cleaning error: {str(e)}")
-            QMessageBox.critical(self, "Cleaning Error",
-                               f"Filename cleaning failed:\n{str(e)}")
+            self.log_message(f"Filename cleaning error: {str(e)}")
+            QMessageBox.critical(self, "Cleaning Error", f"Filename cleaning failed:\n{str(e)}")
 
     def export_corruption_report(self): #vers 1
         """Export corruption report to file - Menu callback"""
         try:
             if not hasattr(self, 'current_img') or not self.current_img:
-                QMessageBox.warning(self, "No IMG File",
-                                  "Please open an IMG file first")
+                QMessageBox.warning(self, "No IMG File", "Please open an IMG file first")
                 return
 
-            self.log_message("📄 Generating corruption report...")
+            self.log_message("Generating corruption report...")
 
             # Analyze corruption
             from core.img_corruption_analyzer import analyze_img_corruption
             report = analyze_img_corruption(self.current_img, self)
 
             if 'error' in report:
-                QMessageBox.critical(self, "Analysis Failed",
-                                   f"Could not analyze file:\n{report['error']}")
+                QMessageBox.critical(self, "Analysis Failed", f"Could not analyze file:\n{report['error']}")
                 return
 
             # Get save filename
             from PyQt6.QtWidgets import QFileDialog
             filename, _ = QFileDialog.getSaveFileName(
                 self, "Export Corruption Report",
-                f"{os.path.splitext(os.path.basename(self.current_img.file_path))[0]}_corruption_report.txt",
-                "Text Files (*.txt);;All Files (*)"
-            )
+                f"{os.path.splitext(os.path.basename(self.current_img.file_path))[0]}_corruption_report.txt", "Text Files (*.txt);;All Files (*)")
 
             if filename:
                 # Export detailed report
@@ -869,14 +851,13 @@ class IMGFactory(QMainWindow):
                         f.write(f"  Size: {entry.get('size', 0):,} bytes\n")
                         f.write(f"  Offset: 0x{entry.get('offset', 0):08X}\n")
 
-                self.log_message(f"📄 Corruption report exported to: {filename}")
+                self.log_message(f"Corruption report exported to: {filename}")
                 QMessageBox.information(self, "Report Exported",
                                       f"Corruption report exported to:\n{filename}")
 
         except Exception as e:
-            self.log_message(f"❌ Report export error: {str(e)}")
-            QMessageBox.critical(self, "Export Error",
-                               f"Report export failed:\n{str(e)}")
+            self.log_message(f"Report export error: {str(e)}")
+            QMessageBox.critical(self, "Export Error", f"Report export failed:\n{str(e)}")
 
 
     def open_txd_workshop_docked(self, txd_name=None, txd_data=None): #vers 3
@@ -944,7 +925,7 @@ class IMGFactory(QMainWindow):
             lambda idx: self._handle_txd_overlay_tab_switch(workshop, idx)
         )
 
-        self.log_message("✅ TXD Workshop opened as overlay")
+        self.log_message("TXD Workshop opened as overlay")
 
         return workshop
 
@@ -978,9 +959,9 @@ class IMGFactory(QMainWindow):
         )
 
         if success:
-            self.log_message("✅ Unified signal system connected")
+            self.log_message("Unified signal system connected")
         else:
-            self.log_message("❌ Failed to connect unified signals")
+            self.log_message("Failed to connect unified signals")
 
         # Connect unified signals to status bar updates
         from components.unified_signal_handler import signal_handler
@@ -1047,18 +1028,18 @@ class IMGFactory(QMainWindow):
 
             # Log extension differences
             if name_ext != attr_ext:
-                self.log_message(f"  ⚠️ Extension mismatch: name='{name_ext}' vs attr='{attr_ext}'")
+                self.log_message(f"Extension mismatch: name='{name_ext}' vs attr='{attr_ext}'")
 
         # Summary
-        self.log_message(f"📊 File type summary:")
+        self.log_message(f"File type summary:")
         for ext, count in sorted(file_types.items()):
             self.log_message(f"  {ext}: {count} files")
 
-        self.log_message(f"🎯 All extensions found: {sorted(all_extensions)}")
+        self.log_message(f"All extensions found: {sorted(all_extensions)}")
 
         # Check table row count vs entries count
         table_rows = self.gui_layout.table.rowCount()
-        self.log_message(f"📋 Table has {table_rows} rows, IMG has {len(self.current_img.entries)} entries")
+        self.log_message(f"Table has {table_rows} rows, IMG has {len(self.current_img.entries)} entries")
 
         # Check if any rows are hidden
         hidden_count = 0
@@ -1066,10 +1047,10 @@ class IMGFactory(QMainWindow):
             if self.gui_layout.table.isRowHidden(row):
                 hidden_count += 1
 
-        self.log_message(f"👻 Hidden rows: {hidden_count}")
+        self.log_message(f"Hidden rows: {hidden_count}")
 
         if hidden_count > 0:
-            self.log_message("⚠️ Some rows are hidden! Check the filter settings.")
+            self.log_message("Some rows are hidden! Check the filter settings.")
 
 
     def _unified_double_click_handler(self, row, filename, item): #vers 2
@@ -1121,7 +1102,7 @@ class IMGFactory(QMainWindow):
         self.has_txd = lambda name: name.lower().endswith('.txd') if name else False
         self.get_entry_type = lambda name: name.split('.')[-1].upper() if name and '.' in name else "Unknown"
 
-        self.log_message("✅ Missing utility functions added")
+        self.log_message("Missing utility functions added")
 
 
     # INTEGRATION FIX for imgfactory.py:
@@ -1164,18 +1145,18 @@ class IMGFactory(QMainWindow):
             main_window.get_selected_entry_name = get_selected_entry_name
             main_window.get_selected_entries_count = get_selected_entries_count
 
-            main_window.log_message("✅ Selection callback functions fixed")
+            main_window.log_message("Selection callback functions fixed")
             return True
 
         except Exception as e:
-            main_window.log_message(f"❌ Selection callback fix failed: {e}")
+            main_window.log_message(f"Selection callback fix failed: {e}")
             return False
 
 
     def setup_col_integration(self): #vers 2 #Restored
         """Setup complete COL integration with IMG Factory"""
         try:
-            self.log_message("🛡️ Setting up COL integration...")
+            self.log_message("Setting up COL integration...")
 
             # Enable COL debug based on main debug state
             if hasattr(self, 'debug_enabled') and self.debug_enabled:
@@ -1187,7 +1168,7 @@ class IMGFactory(QMainWindow):
             success = setup_complete_col_integration(self)
 
             if success:
-                self.log_message("✅ COL integration completed successfully")
+                self.log_message("COL integration completed successfully")
 
                 # Add COL file loading capability
                 self.load_col_file_safely = lambda file_path: load_col_file_safely(self, file_path)
@@ -1196,19 +1177,19 @@ class IMGFactory(QMainWindow):
                 self.col_integration_active = True
 
             else:
-                self.log_message("❌ COL integration failed")
+                self.log_message("COL integration failed")
 
             return success
 
         except Exception as e:
-            self.log_message(f"❌ Error setting up COL integration: {str(e)}")
+            self.log_message(f"Error setting up COL integration: {str(e)}")
             return False
 
 
     def _update_ui_for_loaded_col(self): #vers 1 #restore
         """Update UI when COL file is loaded - Uses proper methods/populate_col_table.py"""
         if not hasattr(self, 'current_col') or not self.current_col:
-            self.log_message("⚠️ _update_ui_for_loaded_col called but no current_col")
+            self.log_message("_update_ui_for_loaded_col called but no current_col")
             return
 
         try:
@@ -1230,10 +1211,10 @@ class IMGFactory(QMainWindow):
                     populate_table_with_col_data_debug(self, self.current_col)
 
                     model_count = len(self.current_col.models) if hasattr(self.current_col, 'models') else 0
-                    self.log_message(f"📋 COL table populated with {model_count} models")
+                    self.log_message(f"COL table populated with {model_count} models")
 
                 except ImportError as e:
-                    self.log_message(f"⚠️ COL methods not available: {str(e)}")
+                    self.log_message(f"COL methods not available: {str(e)}")
                     # Fallback to basic display
                     self._basic_col_table_fallback(file_name)
 
@@ -1241,10 +1222,10 @@ class IMGFactory(QMainWindow):
             if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'show_progress'):
                 self.gui_layout.show_progress(-1, "COL loaded")
 
-            self.log_message("✅ COL UI updated successfully")
+            self.log_message("COL UI updated successfully")
 
         except Exception as e:
-            self.log_message(f"❌ Error updating COL UI: {str(e)}")
+            self.log_message(f"Error updating COL UI: {str(e)}")
 
     # FIX: Close manager tab widget issue
     def fix_close_manager_tab_reference(main_window): #vers 1
@@ -1253,10 +1234,10 @@ class IMGFactory(QMainWindow):
             if hasattr(main_window, 'close_manager'):
                 # Add missing reference
                 main_window.close_manager.main_tab_widget = main_window.main_tab_widget
-                main_window.log_message("✅ Close manager tab reference fixed")
+                main_window.log_message("Close manager tab reference fixed")
                 return True
         except Exception as e:
-            main_window.log_message(f"❌ Close manager fix failed: {str(e)}")
+            main_window.log_message(f"Close manager fix failed: {str(e)}")
         return False
 
 
@@ -1272,17 +1253,14 @@ class IMGFactory(QMainWindow):
 
         # Find buttons in GUI layout and update their states
         # These buttons need both an IMG and selection
-        selection_dependent_buttons = [
-            'export_btn', 'export_selected_btn', 'remove_btn', 'remove_selected_btn', 'reload_btn',
-            'extract_btn', 'quick_export_btn'
-        ]
+        selection_dependent_buttons = ['export_btn', 'export_selected_btn', 'remove_btn', 'remove_selected_btn', 'reload_btn', 'extract_btn', 'quick_export_btn']
 
         for btn_name in selection_dependent_buttons:
             if hasattr(self.gui_layout, btn_name):
                 button = getattr(self.gui_layout, btn_name)
                 if hasattr(button, 'setEnabled'):
-                    # Enable for IMG files with selection, disable for COL and TXD
-                    button.setEnabled(has_selection and has_img and not has_col and not has_txd)
+                    # Enable for IMG files with selection, open edit for COL and TXD - TODO
+                    button.setEnabled(has_selection and has_img and has_col and has_txd)
 
         # These buttons only need an IMG (no selection required) - DISABLE for COL and TXD
         img_dependent_buttons = [
@@ -1298,8 +1276,8 @@ class IMGFactory(QMainWindow):
                     if btn_name == 'rebuild_btn':
                         button.setEnabled(has_img and not has_col and not has_txd)
                     else:
-                        # Import/Close/Validate work for IMG or COL, but not TXD
-                        button.setEnabled((has_img or has_col) and not has_txd)
+                        # Import/Close/Validate work for IMG or COL, but open TXD - TODO
+                        button.setEnabled((has_img or has_col) and has_txd)
 
 
     def _update_status_from_signal(self, message): #vers 3
@@ -1321,7 +1299,7 @@ class IMGFactory(QMainWindow):
             pass  # Do nothing - connections.py handles this
 
         main_window._update_button_states = _update_button_states_stub
-        main_window.log_message("✅ Button states stub added")
+        main_window.log_message("Button states stub added")
 
 
     # MASTER FIX FUNCTION
@@ -1346,35 +1324,35 @@ class IMGFactory(QMainWindow):
             add_update_button_states_stub(main_window)
             fixes_applied += 1
 
-            main_window.log_message(f"✅ Applied {fixes_applied} quick fixes")
+            main_window.log_message(f"Applied {fixes_applied} quick fixes")
             return True
 
         except Exception as e:
-            main_window.log_message(f"❌ Quick fixes failed: {str(e)}")
+            main_window.log_message(f"Quick fixes failed: {str(e)}")
             return False
 
 
-    def handle_col_file_open(self, file_path: str):
+    def handle_col_file_open(self, file_path: str): #vers 4
         """Handle opening of COL files"""
         try:
             if file_path.lower().endswith('.col'):
-                self.log_message(f"📂 Loading COL file: {os.path.basename(file_path)}")
+                self.log_message(f"Loading COL file: {os.path.basename(file_path)}")
 
                 if hasattr(self, 'load_col_file_safely'):
                     success = self.load_col_file_safely(file_path)
                     if success:
-                        self.log_message("✅ COL file loaded successfully")
+                        self.log_message("COL file loaded successfully")
                     else:
-                        self.log_message("❌ Failed to load COL file")
+                        self.log_message("Failed to load COL file")
                     return success
                 else:
-                    self.log_message("❌ COL integration not available")
+                    self.log_message("COL integration not available")
                     return False
 
             return False
 
         except Exception as e:
-            self.log_message(f"❌ Error handling COL file: {str(e)}")
+            self.log_message(f"Error handling COL file: {str(e)}")
             return False
 
     def create_new_img(self): #vers 5
@@ -1384,41 +1362,40 @@ class IMGFactory(QMainWindow):
         """Select all entries in current table"""
         if hasattr(self.gui_layout, 'table') and self.gui_layout.table:
             self.gui_layout.table.selectAll()
-            self.log_message("✅ Selected all entries")
+            self.log_message("Selected all entries")
 
 
     def validate_img(self): #vers 4
         """Validate current IMG file"""
         if not self.current_img:
-            self.log_message("❌ No IMG file loaded")
+            self.log_message("No IMG file loaded")
             return
 
         try:
             from methods.img_validation import IMGValidator
             validation = IMGValidator.validate_img_file(self.current_img)
             if validation.is_valid:
-                self.log_message("✅ IMG validation passed")
+                self.log_message("IMG validation passed")
             else:
-                self.log_message(f"⚠️ IMG validation issues: {validation.get_summary()}")
+                self.log_message(f"IMG validation issues: {validation.get_summary()}")
         except Exception as e:
-            self.log_message(f"❌ Validation error: {str(e)}")
+            self.log_message(f"Validation error: {str(e)}")
 
 
     def show_gui_settings(self): #vers 5
         """Show GUI settings dialog"""
-        self.log_message("⚙️ GUI settings requested")
+        self.log_message("GUI settings requested")
         try:
             from utils.app_settings_system import SettingsDialog
             dialog = SettingsDialog(self.app_settings, self)
             dialog.exec()
         except Exception as e:
-            self.log_message(f"❌ Settings dialog error: {str(e)}")
+            self.log_message(f"Settings dialog error: {str(e)}")
 
 
     def show_about(self):
         """Show about dialog"""
-        QMessageBox.about(self, "About IMG Factory 1.5",
-                         "IMG Factory 1.5\nAdvanced IMG Archive Management\nX-Seti 2025")
+        QMessageBox.about(self, "About IMG Factory 1.5", "IMG Factory 1.5\nAdvanced IMG Archive Management\nX-Seti 2025")
 
 
     def enable_col_debug(self): #vers 2 #restore
@@ -1431,7 +1408,7 @@ class IMGFactory(QMainWindow):
         import methods.col_core_classes as col_module
         col_module._global_debug_enabled = True
 
-        self.log_message("🔊 COL debug output enabled")
+        self.log_message("COL debug output enabled")
 
 
     def disable_col_debug(self): #vers 2 #restore
@@ -1444,7 +1421,7 @@ class IMGFactory(QMainWindow):
         import methods.col_core_classes as col_module
         col_module._global_debug_enabled = False
 
-        self.log_message("🔇 COL debug output disabled")
+        self.log_message("COL debug output disabled")
 
     def toggle_col_debug(self): #vers 2 #restore
         """Toggle COL debug output"""
@@ -1458,7 +1435,7 @@ class IMGFactory(QMainWindow):
                 self.enable_col_debug()
 
         except Exception as e:
-            self.log_message(f"❌ Debug toggle error: {e}")
+            self.log_message(f"Debug toggle error: {e}")
 
 
     def setup_debug_controls(self): #vers 2 #restore
@@ -1473,10 +1450,10 @@ class IMGFactory(QMainWindow):
             # Start with debug disabled for performance
             self.disable_col_debug()
 
-            self.log_message("✅ Debug controls ready (Ctrl+Shift+D to toggle COL debug)")
+            self.log_message("Debug controls ready (Ctrl+Shift+D to toggle COL debug)")
 
         except Exception as e:
-            self.log_message(f"❌ Debug controls error: {e}")
+            self.log_message(f"Debug controls error: {e}")
 
     def _create_ui(self): #vers 11
         """Create the main user interface - WITH TABS FIXED"""
@@ -1532,8 +1509,7 @@ class IMGFactory(QMainWindow):
         self.gui_layout.create_main_ui_with_splitters(tab_layout)
 
         # Add tab with "No file" label
-        self.main_tab_widget.addTab(tab_widget, "📁 No File")
-
+        self.main_tab_widget.addTab(tab_widget, "No File")
 
 
     def _find_table_in_tab(self, tab_widget): #vers 1
@@ -1567,7 +1543,7 @@ class IMGFactory(QMainWindow):
             return None
 
         except Exception as e:
-            self.log_message(f"❌ Error finding table in tab: {str(e)}")
+            self.log_message(f"Error finding table in tab: {str(e)}")
             return None
 
 
@@ -1577,26 +1553,26 @@ class IMGFactory(QMainWindow):
             # Log file state
             if self.current_img:
                 entry_count = len(self.current_img.entries) if self.current_img.entries else 0
-                self.log_message(f"🔍 State: IMG with {entry_count} entries")
+                self.log_message(f"State: IMG with {entry_count} entries")
             elif self.current_col:
                 if hasattr(self.current_col, 'models'):
                     model_count = len(self.current_col.models) if self.current_col.models else 0
-                    self.log_message(f"🔍 State: COL with {model_count} models")
+                    self.log_message(f"State: COL with {model_count} models")
                 else:
-                    self.log_message(f"🔍 State: COL file loaded")
+                    self.log_message(f"State: COL file loaded")
             else:
-                self.log_message(f"🔍 State: No file loaded")
+                self.log_message(f"State: No file loaded")
 
             # Log table state
             if hasattr(self.gui_layout, 'table') and self.gui_layout.table:
                 table = self.gui_layout.table
                 row_count = table.rowCount() if table else 0
-                self.log_message(f"🔍 Table: {row_count} rows in gui_layout.table")
+                self.log_message(f"Table: {row_count} rows in gui_layout.table")
             else:
-                self.log_message(f"🔍 Table: No table reference in gui_layout")
+                self.log_message(f"Table: No table reference in gui_layout")
 
         except Exception as e:
-            self.log_message(f"❌ Error logging tab state: {str(e)}")
+            self.log_message(f"Error logging tab state: {str(e)}")
 
 
     def ensure_current_tab_references_valid(self): #vers 1
@@ -1614,14 +1590,14 @@ class IMGFactory(QMainWindow):
             has_valid_table = hasattr(self.gui_layout, 'table') and self.gui_layout.table is not None
 
             if has_valid_file and has_valid_table:
-                self.log_message(f"✅ Tab references validated for export operations")
+                self.log_message(f"Tab references validated for export operations")
                 return True
             else:
-                self.log_message(f"❌ Invalid tab references - File: {has_valid_file}, Table: {has_valid_table}")
+                self.log_message(f"Invalid tab references - File: {has_valid_file}, Table: {has_valid_table}")
                 return False
 
         except Exception as e:
-            self.log_message(f"❌ Error validating tab references: {str(e)}")
+            self.log_message(f"Error validating tab references: {str(e)}")
             return False
 
 
@@ -1645,7 +1621,7 @@ class IMGFactory(QMainWindow):
                     self.gui_layout.info_label.setText(f"COL: {os.path.basename(file_path)} | {model_count} models")
 
         except Exception as e:
-            self.log_message(f"❌ Error updating info bar: {str(e)}")
+            self.log_message(f"Error updating info bar: {str(e)}")
 
 
     def setup_robust_tab_system(self): #vers 1
@@ -1655,7 +1631,7 @@ class IMGFactory(QMainWindow):
             from core.robust_tab_system import install_robust_tab_system
 
             if install_robust_tab_system(self):
-                self.log_message("✅ Robust tab system ready")
+                self.log_message("Robust tab system ready")
 
                 # Run initial integrity check
                 if hasattr(self, 'validate_tab_data_integrity'):
@@ -1663,14 +1639,14 @@ class IMGFactory(QMainWindow):
 
                 return True
             else:
-                self.log_message("❌ Failed to setup robust tab system")
+                self.log_message("Failed to setup robust tab system")
                 return False
 
         except ImportError:
-            self.log_message("⚠️ Robust tab system not available - using basic system")
+            self.log_message("⚠Robust tab system not available - using basic system")
             return False
         except Exception as e:
-            self.log_message(f"❌ Error setting up robust tab system: {str(e)}")
+            self.log_message(f"Error setting up robust tab system: {str(e)}")
             return False
 
 
@@ -1682,7 +1658,7 @@ class IMGFactory(QMainWindow):
             if not hasattr(self.main_window, 'open_files'):
                 return
 
-            self.log_message(f"🔄 ROBUST reindexing after removing tab {removed_index}")
+            self.log_message(f"ROBUST reindexing after removing tab {removed_index}")
 
             # STEP 1: Preserve data for all remaining tabs
             preserved_data = {}
@@ -1702,7 +1678,7 @@ class IMGFactory(QMainWindow):
                     continue
 
                 new_open_files[new_index] = file_info
-                self.log_message(f"📁 Tab {old_index} → Tab {new_index}: {file_info.get('tab_name', 'Unknown')}")
+                self.log_message(f"Tab {old_index} → Tab {new_index}: {file_info.get('tab_name', 'Unknown')}")
                 new_index += 1
 
             self.main_window.open_files = new_open_files
@@ -1736,27 +1712,27 @@ class IMGFactory(QMainWindow):
                     return _reindex_open_files_robust(main_window.close_manager, removed_index)
 
                 main_window.close_manager._reindex_open_files = robust_reindex_wrapper
-                main_window.log_message("✅ Close manager patched for robust tabs")
+                main_window.log_message("Close manager patched for robust tabs")
                 return True
             else:
-                main_window.log_message("❌ No close manager found to patch")
+                main_window.log_message("No close manager found to patch")
                 return False
 
         except Exception as e:
-            main_window.log_message(f"❌ Error patching close manager: {str(e)}")
+            main_window.log_message(f"Error patching close manager: {str(e)}")
             return False
 
 
     def _update_ui_for_current_file(self): #vers 5
         """Update UI for currently selected file"""
         if self.current_img:
-            self.log_message("🔄 Updating UI for IMG file")
+            self.log_message("Updating UI for IMG file")
             self._update_ui_for_loaded_img()
         elif self.current_col:
-            self.log_message("🔄 Updating UI for COL file")
+            self.log_message("Updating UI for COL file")
             self._update_ui_for_loaded_col()
         else:
-            self.log_message("🔄 Updating UI for no file")
+            self.log_message("Updating UI for no file")
             self._update_ui_for_no_img()
 
 
@@ -1767,30 +1743,28 @@ class IMGFactory(QMainWindow):
             from col_parsing_functions import load_col_file_safely as real_load_col
             success = real_load_col(self, file_path)
             if success:
-                self.log_message(f"✅ COL file loaded: {os.path.basename(file_path)}")
+                self.log_message(f"COL file loaded: {os.path.basename(file_path)}")
             return success
         except Exception as e:
-            self.log_message(f"❌ Error loading COL file: {str(e)}")
+            self.log_message(f"Error loading COL file: {str(e)}")
             return False
 
 
-    def _load_col_as_generic_file(self, file_path):
+    def _load_col_as_generic_file(self, file_path): #vers 1
         """Load COL as generic file when COL classes aren't available"""
         try:
             # Create simple COL representation
             self.current_col = {
-                "file_path": file_path,
-                "type": "COL",
-                "size": os.path.getsize(file_path)
+                "file_path": file_path, "type": "COL", "size": os.path.getsize(file_path)
             }
 
             # Update UI
             self._update_ui_for_loaded_col()
 
-            self.log_message(f"✅ Loaded COL (generic): {os.path.basename(file_path)}")
+            self.log_message(f"Loaded COL (generic): {os.path.basename(file_path)}")
 
         except Exception as e:
-            self.log_message(f"❌ Error loading COL as generic: {str(e)}")
+            self.log_message(f"Error loading COL as generic: {str(e)}")
 
 
     def get_current_file_type(main_window) -> str: #vers 1
@@ -1824,7 +1798,7 @@ class IMGFactory(QMainWindow):
         try:
             open_file_dialog(self)  # Call function with self parameter
         except Exception as e:
-            self.log_message(f"❌ Error opening file dialog: {str(e)}")
+            self.log_message(f"Error opening file dialog: {str(e)}")
 
     def open_file_dialog(self): #vers 1
         """Unified file dialog - imported from core"""
@@ -1845,7 +1819,7 @@ class IMGFactory(QMainWindow):
             current_index = self.main_tab_widget.currentIndex()
             if current_index in self.open_files:
                 self.open_files[current_index]['file_object'] = img_file
-                self.log_message(f"✅ IMG file object stored in tab {current_index}")
+                self.log_message(f"IMG file object stored in tab {current_index}")
 
             # Use isolated file window update
             success = self.gui_layout.update_file_window_only(img_file)
@@ -1854,10 +1828,10 @@ class IMGFactory(QMainWindow):
             self.gui_layout.hide_progress_properly()
 
             if success:
-                self.log_message(f"✅ Loaded (isolated): {os.path.basename(img_file.file_path)} ({len(img_file.entries)} entries)")
+                self.log_message(f"Loaded (isolated): {os.path.basename(img_file.file_path)} ({len(img_file.entries)} entries)")
 
         except Exception as e:
-            self.log_message(f"❌ Loading error: {str(e)}")
+            self.log_message(f"Loading error: {str(e)}")
 
 
     def reload_table(self): #vers 1
@@ -1869,7 +1843,7 @@ class IMGFactory(QMainWindow):
         """Unified file loader for IMG and COL files"""
         try:
             if not file_path or not os.path.exists(file_path):
-                self.log_message("❌ File not found")
+                self.log_message("File not found")
                 return False
 
             file_ext = file_path.lower().split('.')[-1]
@@ -1887,7 +1861,7 @@ class IMGFactory(QMainWindow):
                     img_file = IMGFile(file_path)
 
                     if not img_file.open():
-                        self.log_message(f"❌ Failed to open IMG file: {img_file.get_error()}")
+                        self.log_message(f"Failed to open IMG file: {img_file.get_error()}")
                         return False
 
                     # Set as current IMG file #hangs after second img added?
@@ -1920,33 +1894,33 @@ class IMGFactory(QMainWindow):
                     entry_count = len(img_file.entries) if img_file.entries else 0
                     file_size = os.path.getsize(file_path)
 
-                    self.log_message(f"✅ IMG file loaded: {entry_count} entries")
+                    self.log_message(f"IMG file loaded: {entry_count} entries")
                     return True
 
                 except Exception as img_error:
-                    self.log_message(f"❌ Error loading IMG file: {str(img_error)}")
+                    self.log_message(f"Error loading IMG file: {str(img_error)}")
                     return False
 
             elif file_ext == 'col':
                 # COL file loading (unchanged - working correctly)
                 if hasattr_open_txd_workshop(self, 'load_col_file_safely'):
-                    self.log_message(f"🛡️ Loading COL file: {file_name}")
+                    self.log_message(f"Loading COL file: {file_name}")
                     success = self.load_col_file_safely(file_path)
                     if success:
-                        self.log_message("✅ COL file loaded successfully")
+                        self.log_message("COL file loaded successfully")
                     else:
-                        self.log_message("❌ Failed to load COL file")
+                        self.log_message("Failed to load COL file")
                     return success
                 else:
-                    self.log_message("❌ COL integration not available")
+                    self.log_message("COL integration not available")
                     return False
 
             else:
-                self.log_message(f"❌ Unsupported file type: {file_ext}")
+                self.log_message(f"Unsupported file type: {file_ext}")
                 return False
 
         except Exception as e:
-            self.log_message(f"❌ Error loading file: {str(e)}")
+            self.log_message(f"Error loading file: {str(e)}")
             import traceback
             traceback.print_exc()  # Debug info
             return False
@@ -1983,17 +1957,17 @@ class IMGFactory(QMainWindow):
 
             # Update tab to show it's a TXD
             file_name = os.path.basename(file_path)[:-4]  # Remove .txd
-            self.main_tab_widget.setTabText(tab_index, f"🖼️ {file_name}")
+            self.main_tab_widget.setTabText(tab_index, f"{file_name}") #TODO SVG icon
 
             # Open TXD Workshop for this file
             from components.Txd_Editor.txd_workshop import open_txd_workshop
             self.txd_workshop = open_txd_workshop(self, file_path)
 
             if workshop:
-                self.log_message(f"✅ TXD loaded in tab {tab_index}: {file_name}")
+                self.log_message(f"TXD loaded in tab {tab_index}: {file_name}")
 
         except Exception as e:
-            self.log_message(f"❌ Error loading TXD in tab:_open_txd_workshop {str(e)}")
+            self.log_message(f"Error loading TXD in tab:_open_txd_workshop {str(e)}")
 
     def _load_col_file_in_new_tab(self, file_path): #vers [your_version + 1]
         """Load COL file in new tab"""
@@ -2151,7 +2125,7 @@ class IMGFactory(QMainWindow):
 
     def _on_img_load_error(self, error_message: str): #vers 4
         """Handle IMG loading error - UPDATED: Uses unified progress system"""
-        self.log_message(f"❌ {error_message}")
+        self.log_message(f" {error_message}")
 
         # Hide progress using unified system
         try:
@@ -2170,11 +2144,11 @@ class IMGFactory(QMainWindow):
         try:
             from methods.progressbar_functions import integrate_progress_system
             integrate_progress_system(self)
-            self.log_message("✅ Unified progress system integrated")
+            self.log_message("Unified progress system integrated")
         except ImportError:
-            self.log_message("⚠️ Unified progress system not available - using fallback")
+            self.log_message("Unified progress system not available - using fallback")
         except Exception as e:
-            self.log_message(f"❌ Progress system integration failed: {str(e)}")
+            self.log_message(f"Progress system integration failed: {str(e)}")
 
 
     def _populate_col_table_img_format(self, col_file, file_name):
@@ -2210,14 +2184,14 @@ class IMGFactory(QMainWindow):
                     item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                     table.setItem(row, col, item)
 
-            self.log_message(f"📋 COL file loaded but no models found")
+            self.log_message(f"COL file loaded but no models found")
             return
 
         # Show individual models in IMG entry format
         models = col_file.models
         table.setRowCount(len(models))
 
-        self.log_message(f"📋 Populating table with {len(models)} COL models")
+        self.log_message(f"Populating table with {len(models)} COL models")
 
         virtual_offset = 0x0  # Virtual offset for COL models
 
@@ -2283,7 +2257,7 @@ class IMGFactory(QMainWindow):
                 table.setItem(row, 5, QTableWidgetItem("None"))
                 table.setItem(row, 6, QTableWidgetItem("Error"))
 
-        self.log_message(f"✅ Table populated with {len(models)} COL models (IMG format)")
+        self.log_message(f"Table populated with {len(models)} COL models (IMG format)")
 
     def _estimate_col_model_size_bytes(self, model): #vers 2 #restare
         """Estimate COL model size in bytes (similar to IMG entry sizes)"""
@@ -2367,7 +2341,7 @@ class IMGFactory(QMainWindow):
                             # Only read the header (12 bytes) for efficiency
                             file_data = f.read(min(entry.size, 12))
                 except Exception as e:
-                    print(f"🔍 DEBUG: Failed to read file data for {entry.name}: {e}")
+                    print(f"DEBUG: Failed to read file data for {entry.name}: {e}")
                     return "Unknown"
 
             # Parse RW version from file header
@@ -2379,21 +2353,21 @@ class IMGFactory(QMainWindow):
 
                     if rw_version > 0:
                         version_name = get_rw_version_name(rw_version)
-                        print(f"🔍 DEBUG: Found RW version 0x{rw_version:X} ({version_name}) for {entry.name}")
+                        print(f"DEBUG: Found RW version 0x{rw_version:X} ({version_name}) for {entry.name}")
                         return f"RW {version_name}"
                     else:
-                        print(f"🔍 DEBUG: Invalid RW version (0) for {entry.name}")
+                        print(f"DEBUG: Invalid RW version (0) for {entry.name}")
                         return "Unknown"
 
                 except struct.error as e:
-                    print(f"🔍 DEBUG: Struct unpack error for {entry.name}: {e}")
+                    print(f"DEBUG: Struct unpack error for {entry.name}: {e}")
                     return "Unknown"
             else:
-                print(f"🔍 DEBUG: Insufficient file data for {entry.name} (need 12 bytes, got {len(file_data) if file_data else 0})")
+                print(f"DEBUG: Insufficient file data for {entry.name} (need 12 bytes, got {len(file_data) if file_data else 0})")
                 return "Unknown"
 
         except Exception as e:
-            print(f"🔍 DEBUG: RW version detection error for {entry.name}: {e}")
+            print(f"DEBUG: RW version detection error for {entry.name}: {e}")
             return "Unknown"
 
 
@@ -2454,7 +2428,7 @@ class IMGFactory(QMainWindow):
             return details
 
         except Exception as e:
-            self.log_message(f"❌ Error getting COL model details: {str(e)}")
+            self.log_message(f"Error getting COL model details: {str(e)}")
             return {
                 'name': f"Model_{row_index}",
                 'type': "COL",
@@ -2503,7 +2477,7 @@ class IMGFactory(QMainWindow):
             )
 
         except Exception as e:
-            self.log_message(f"❌ Error showing COL model details: {str(e)}")
+            self.log_message(f"Error showing COL model details: {str(e)}")
 
 
     def _on_col_table_double_click(self, item): #vers 2 #Restore
@@ -2515,7 +2489,7 @@ class IMGFactory(QMainWindow):
             else:
                 self.log_message("No COL models available for details")
         except Exception as e:
-            self.log_message(f"❌ Error handling COL table double-click: {str(e)}")
+            self.log_message(f"Error handling COL table double-click: {str(e)}")
 
     def _on_col_loaded(self, col_file): #vers 1 #Restore
         """Handle COL file loaded - UPDATED with styling"""
@@ -2526,7 +2500,7 @@ class IMGFactory(QMainWindow):
 
             if hasattr(self, 'open_files') and current_index in self.open_files:
                 self.open_files[current_index]['file_object'] = col_file
-                self.log_message(f"✅ COL file object stored in tab {current_index}")
+                self.log_message(f"COL file object stored in tab {current_index}")
 
             # Apply COL tab styling if available
             if hasattr(self, '_apply_individual_col_tab_style'):
@@ -2535,9 +2509,9 @@ class IMGFactory(QMainWindow):
             # Update file info in open_files (same as IMG)
             if current_index in self.open_files:
                 self.open_files[current_index]['file_object'] = col_file
-                self.log_message(f"✅ Updated tab {current_index} with loaded COL")
+                self.log_message(f"Updated tab {current_index} with loaded COL")
             else:
-                self.log_message(f"⚠️ Tab {current_index} not found in open_files")
+                self.log_message(f"Tab {current_index} not found in open_files") #TODO warning svg icon
 
             # Apply enhanced COL tab styling after loading
             if hasattr(self, '_apply_individual_col_tab_style'):
@@ -2552,14 +2526,14 @@ class IMGFactory(QMainWindow):
             self.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
 
             model_count = len(col_file.models) if hasattr(col_file, 'models') and col_file.models else 0
-            self.log_message(f"✅ Loaded: {file_name} ({model_count} models)")
+            self.log_message(f"Loaded: {file_name} ({model_count} models)")
 
             # Hide progress and show COL-specific status
             if hasattr(self.gui_layout, 'show_progress'):
                 self.gui_layout.show_progress(-1, f"COL loaded: {model_count} models")
 
         except Exception as e:
-            self.log_message(f"❌ Error in _on_col_loaded: {str(e)}")
+            self.log_message(f"Error in _on_col_loaded: {str(e)}")
             if hasattr(self, '_on_col_load_error'):
                 self._on_col_load_error(str(e))
 
@@ -2570,13 +2544,13 @@ class IMGFactory(QMainWindow):
             if COL_SETUP_FUNCTION:
                 result = COL_SETUP_FUNCTION(self)
                 if result:
-                    self.log_message("✅ COL functionality integrated")
+                    self.log_message("COL functionality integrated")
                 else:
-                    self.log_message("⚠️ COL integration returned False")
+                    self.log_message("COL integration returned False")
             else:
-                self.log_message("⚠️ COL integration function not available")
+                self.log_message("COL integration function not available")
         except Exception as e:
-            self.log_message(f"❌ COL integration error: {str(e)}")
+            self.log_message(f"COL integration error: {str(e)}")
 
     def _on_load_progress(self, progress: int, status: str): #vers 2 #Restore
         """Handle loading progress updates"""
@@ -2596,7 +2570,7 @@ class IMGFactory(QMainWindow):
             tab_widget = self.main_tab_widget.widget(current_index)
             if tab_widget:
                 tab_widget.file_object = img_file
-                self.log_message(f"✅ IMG stored on tab {current_index}")
+                self.log_message(f"IMG stored on tab {current_index}")
 
             # Update window title
             file_name = os.path.basename(img_file.file_path)
@@ -2608,14 +2582,14 @@ class IMGFactory(QMainWindow):
 
             # Log success
             entry_count = len(img_file.entries) if img_file.entries else 0
-            self.log_message(f"✅ Loaded: {file_name} ({entry_count} entries)")
+            self.log_message(f"Loaded: {file_name} ({entry_count} entries)")
 
             # Hide progress
             if hasattr(self.gui_layout, 'hide_progress'):
                 self.gui_layout.hide_progress()
 
         except Exception as e:
-            self.log_message(f"❌ Error in _on_img_loaded: {str(e)}")
+            self.log_message(f"Error in _on_img_loaded: {str(e)}")
 
             if hasattr(self, '_on_img_load_error'):
                 self._on_img_load_error(str(e))
@@ -2759,13 +2733,13 @@ class IMGFactory(QMainWindow):
                 table.setItem(row, 5, QTableWidgetItem("None"))
                 table.setItem(row, 6, QTableWidgetItem("Error"))
 
-        self.log_message(f"📋 Table populated with {len(entries)} entries (SA format parser fixed)")
+        self.log_message(f"Table populated with {len(entries)} entries (SA format parser fixed)")
 
 
     def _on_load_error(self, error_message): #vers 2
         """Handle loading error from background thread"""
         try:
-            self.log_message(f"❌ Loading error: {error_message}")
+            self.log_message(f"Loading error: {error_message}")
 
             # Hide progress - CHECK if method exists first
             if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'show_progress'):
@@ -2782,7 +2756,7 @@ class IMGFactory(QMainWindow):
                 f"Failed to load IMG file:\n\n{error_message}")
 
         except Exception as e:
-            self.log_message(f"❌ Error in _on_load_error: {str(e)}")
+            self.log_message(f"Error in _on_load_error: {str(e)}")
 
 
     def close_all_img(self):
@@ -2791,9 +2765,9 @@ class IMGFactory(QMainWindow):
             if hasattr(self, 'close_manager') and self.close_manager:
                 self.close_manager.close_all_tabs()
             else:
-                self.log_message("❌ Close manager not available")
+                self.log_message("Close manager not available")
         except Exception as e:
-            self.log_message(f"❌ Error in close_all_img: {str(e)}")
+            self.log_message(f"Error in close_all_img: {str(e)}")
 
 
     def import_via_tool(self): #vers 1
@@ -2817,9 +2791,7 @@ class IMGFactory(QMainWindow):
 
         try:
             file_paths, _ = QFileDialog.getOpenFileNames(
-                self, "Import Files", "",
-                "All Files (*);;DFF Models (*.dff);;TXD Textures (*.txd);;COL Collision (*.col)"
-            )
+                self, "Import Files", "", "All Files (*);;DFF Models (*.dff);;TXD Textures (*.txd);;COL Collision (*.col)")
 
             if file_paths:
                 self.log_message(f"Importing {len(file_paths)} files...")
@@ -2840,7 +2812,7 @@ class IMGFactory(QMainWindow):
                             imported_count += 1
                             self.log_message(f"Imported: {os.path.basename(file_path)}")
                     else:
-                        self.log_message(f"❌ IMG import_file method not available")
+                        self.log_message(f"IMG import_file method not available")
                         break
 
                 # Refresh table
@@ -2907,7 +2879,7 @@ class IMGFactory(QMainWindow):
                             exported_count += 1
                             self.log_message(f"Exported: {entry_name}")
                     else:
-                        self.log_message(f"❌ IMG export_entry method not available")
+                        self.log_message(f"IMG export_entry method not available")
                         break
 
                 self.log_message(f"Export complete: {exported_count}/{len(selected_rows)} files exported")
@@ -2915,8 +2887,7 @@ class IMGFactory(QMainWindow):
                 if hasattr(self.gui_layout, 'show_progress'):
                     self.gui_layout.show_progress(-1, "Export complete")
 
-                QMessageBox.information(self, "Export Complete",
-                                      f"Exported {exported_count} of {len(selected_rows)} files to {export_dir}")
+                QMessageBox.information(self, "Export Complete", f"Exported {exported_count} of {len(selected_rows)} files to {export_dir}")
 
         except Exception as e:
             error_msg = f"Error exporting files: {str(e)}"
@@ -2958,7 +2929,7 @@ class IMGFactory(QMainWindow):
                             exported_count += 1
                             self.log_message(f"Exported: {entry_name}")
                     else:
-                        self.log_message(f"❌ IMG export_entry method not available")
+                        self.log_message(f"IMG export_entry method not available")
                         break
 
                 self.log_message(f"Export complete: {exported_count}/{entry_count} files exported")
@@ -2966,8 +2937,7 @@ class IMGFactory(QMainWindow):
                 if hasattr(self.gui_layout, 'show_progress'):
                     self.gui_layout.show_progress(-1, "Export complete")
 
-                QMessageBox.information(self, "Export Complete",
-                                      f"Exported {exported_count} of {entry_count} files to {export_dir}")
+                QMessageBox.information(self, "Export Complete", f"Exported {exported_count} of {entry_count} files to {export_dir}")
 
         except Exception as e:
             error_msg = f"Error exporting all files: {str(e)}"
@@ -3001,8 +2971,7 @@ class IMGFactory(QMainWindow):
                 entry_names.append(item.text() if item else f"Entry_{row}")
 
             reply = QMessageBox.question(
-                self, "Confirm Removal",
-                f"Remove {len(selected_rows)} selected entries?\n\n" + "\n".join(entry_names[:5]) +
+                self, "Confirm Removal", f"Remove {len(selected_rows)} selected entries?\n\n" + "\n".join(entry_names[:5]) +
                 (f"\n... and {len(entry_names) - 5} more" if len(entry_names) > 5 else ""),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
@@ -3022,7 +2991,7 @@ class IMGFactory(QMainWindow):
                             removed_count += 1
                             self.log_message(f"Removed: {entry_name}")
                     else:
-                        self.log_message(f"❌ IMG remove_entry method not available")
+                        self.log_message(f"IMG remove_entry method not available")
                         break
 
                 # Refresh table
@@ -3059,7 +3028,7 @@ class IMGFactory(QMainWindow):
                 self._update_ui_for_loaded_img()
                 self.log_message("All entries removed")
         except Exception as e:
-            self.log_message(f"❌ Error in remove_all_entries: {str(e)}")
+            self.log_message(f"Error in remove_all_entries: {str(e)}")
 
 
     def quick_export(self):
@@ -3086,7 +3055,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"Quick exporting {len(selected_rows)} files to {export_dir}")
             QMessageBox.information(self, "Info", "Quick export functionality coming soon")
         except Exception as e:
-            self.log_message(f"❌ Error in quick_export: {str(e)}")
+            self.log_message(f"Error in quick_export: {str(e)}")
 
     def close_img_file(self): #vers1
         """placeholder - close img debug"""
@@ -3100,20 +3069,20 @@ class IMGFactory(QMainWindow):
             if self.current_img and self.current_img.file_path:
                 # Store current IMG path
                 img_path = self.current_img.file_path
-                self.log_message(f"🔄 Reloading IMG file: {os.path.basename(img_path)}")
+                self.log_message(f"Reloading IMG file: {os.path.basename(img_path)}")
 
                 # Close current file
                 self.close_img_file()
 
                 # Reopen the file
                 self.load_img_file(img_path)
-                self.log_message("✅ IMG file reloaded")
+                self.log_message("IMG file reloaded")
                 return True
 
             elif self.current_col and hasattr(self.current_col, 'file_path'):
                 # Store current COL path
                 col_path = self.current_col.file_path
-                self.log_message(f"🔄 Reloading COL file: {os.path.basename(col_path)}")
+                self.log_message(f"Reloading COL file: {os.path.basename(col_path)}")
 
                 # Close current COL
                 self.current_col = None
@@ -3121,15 +3090,15 @@ class IMGFactory(QMainWindow):
                 # Reopen the COL file
                 if hasattr(self, 'load_col_file_safely'):
                     self.load_col_file_safely(col_path)
-                    self.log_message("✅ COL file reloaded")
+                    self.log_message("COL file reloaded")
                     return True
 
             else:
-                self.log_message("❌ No file to reload")
+                self.log_message("No file to reload")
                 return False
 
         except Exception as e:
-            self.log_message(f"❌ Reload failed: {str(e)}")
+            self.log_message(f"Reload failed: {str(e)}")
             return False
 
 
@@ -3153,7 +3122,7 @@ class IMGFactory(QMainWindow):
             from core.exporter import dump_all_function
             dump_all_function(self)
         except Exception as e:
-            self.log_message(f"❌ Dump error: {str(e)}")
+            self.log_message(f"Dump error: {str(e)}")
 
 
     def import_files_via(self): #vers 1
@@ -3162,7 +3131,7 @@ class IMGFactory(QMainWindow):
             from core.importer import import_via_function
             import_via_function(self)
         except Exception as e:
-            self.log_message(f"❌ Import via error: {str(e)}")
+            self.log_message(f"Import via error: {str(e)}")
 
 
     def remove_via_entries(self):
@@ -3171,7 +3140,7 @@ class IMGFactory(QMainWindow):
             from core.remove import remove_via_entries_function
             remove_via_entries_function(self)
         except Exception as e:
-            self.log_message(f"❌ Remove via error: {str(e)}")
+            self.log_message(f"Remove via error: {str(e)}")
 
 
     def pin_selected(self): #vers 1
@@ -3188,7 +3157,7 @@ class IMGFactory(QMainWindow):
 
             self.log_message(f"Pinned {len(selected_rows)} entries")
         except Exception as e:
-            self.log_message(f"❌ Error in pin_selected: {str(e)}")
+            self.log_message(f"Error in pin_selected: {str(e)}")
 
 
 
@@ -3200,9 +3169,9 @@ class IMGFactory(QMainWindow):
             # 1. Setup our new consolidated search system
             from core.guisearch import install_search_system
             if install_search_system(self):
-                self.log_message("✅ New search system installed")
+                self.log_message("New search system installed")
             else:
-                self.log_message("⚠️ Search system setup failed")
+                self.log_message("Search system setup failed")
 
             # 2. COL debug control (keep your existing code)
             try:
@@ -3214,12 +3183,12 @@ class IMGFactory(QMainWindow):
                         col_module._global_debug_enabled = not current
 
                         if col_module._global_debug_enabled:
-                            self.log_message("🔊 COL debug enabled")
+                            self.log_message("COL debug enabled")
                         else:
-                            self.log_message("🔇 COL debug disabled")
+                            self.log_message("COL debug disabled")
 
                     except Exception as e:
-                        self.log_message(f"❌ COL debug toggle error: {e}")
+                        self.log_message(f"COL debug toggle error: {e}")
 
                 # Add to main window
                 self.toggle_col_debug = toggle_col_debug
@@ -3228,35 +3197,28 @@ class IMGFactory(QMainWindow):
                 import methods.col_core_classes as col_module
                 col_module._global_debug_enabled = False
 
-                self.log_message("✅ COL performance mode enabled")
+                self.log_message("COL performance mode enabled")
 
             except Exception as e:
-                self.log_message(f"⚠️ COL setup issue: {e}")
+                self.log_message(f"COL setup issue: {e}")
 
-            self.log_message("✅ Search and performance fixes applied")
+            self.log_message("Search and performance fixes applied")
 
         except Exception as e:
-            self.log_message(f"❌ Apply fixes error: {e}")
+            self.log_message(f"Apply fixes error: {e}")
 
 
     # COL and editor functions
     def open_col_editor(self): #vers 2
         """Open COL file editor - WORKING VERSION"""
-        try:
-            from components.Col_Editor.col_editor import COLEditorDialog
-            self.log_message("🔧 Opening COL editor...")
-            editor = COLEditorDialog(self)
-            editor.show()
-            self.log_message("✅ COL editor opened")
-        except ImportError:
-            self.log_message("❌ COL editor components not available")
-        except Exception as e:
-            self.log_message(f"❌ Error opening COL editor: {str(e)}")
 
-    def open_txd_editor(self): #vers 1
-        """Open TXD texture editor"""
-        self.log_message("TXD editor functionality coming soon")
+        from components.Col_Editor.col_workshop import COLEditorDialog
+        self.log_message("Opening COL Workshop...")
+        editor = COLEditorDialog(self)
+        editor.show()
+        self.log_message("COL Workshop opened")
 
+   #TODO below, coming soon.
     def open_dff_editor(self): #vers 1
         """Open DFF model editor"""
         self.log_message("DFF editor functionality coming soon")
@@ -3325,14 +3287,14 @@ class IMGFactory(QMainWindow):
                 elif hasattr(validator, 'validate_img_file'):
                     validation_result = validator.validate_img_file(self.current_img)
             except Exception as e:
-                self.log_message(f"⚠️ IMGValidator error: {str(e)}")
+                self.log_message(f"IMGValidator error: {str(e)}")
 
             # Method 2: Try static method
             if not validation_result:
                 try:
                     validation_result = IMGValidator.validate_img_file(self.current_img)
                 except Exception as e:
-                    self.log_message(f"⚠️ Static validation error: {str(e)}")
+                    self.log_message(f"Static validation error: {str(e)}")
 
             if hasattr(self.gui_layout, 'show_progress'):
                 self.gui_layout.show_progress(-1, "Validation complete")
@@ -3400,7 +3362,7 @@ class IMGFactory(QMainWindow):
             layout = QVBoxLayout(dialog)
 
             # Panel width group
-            width_group = QGroupBox("📏 Right Panel Width Settings")
+            width_group = QGroupBox("Right Panel Width Settings")
             width_layout = QVBoxLayout(width_group)
 
             # Current width display
@@ -3437,7 +3399,7 @@ class IMGFactory(QMainWindow):
             # Buttons
             button_layout = QHBoxLayout()
 
-            preview_btn = QPushButton("👁️ Preview")
+            preview_btn = QPushButton("Preview")
             def preview_changes():
                 width = width_spin.value()
                 if hasattr(self.gui_layout, 'main_splitter') and hasattr(self.gui_layout.main_splitter, 'sizes'):
@@ -3454,7 +3416,7 @@ class IMGFactory(QMainWindow):
             preview_btn.clicked.connect(preview_changes)
             button_layout.addWidget(preview_btn)
 
-            apply_btn = QPushButton("✅ Apply & Close")
+            apply_btn = QPushButton("Apply & Close")
             def apply_changes():
                 width = width_spin.value()
                 if hasattr(self.gui_layout, 'main_splitter') and hasattr(self.gui_layout.main_splitter, 'sizes'):
@@ -3480,7 +3442,7 @@ class IMGFactory(QMainWindow):
             apply_btn.clicked.connect(apply_changes)
             button_layout.addWidget(apply_btn)
 
-            cancel_btn = QPushButton("❌ Cancel")
+            cancel_btn = QPushButton("Cancel")
             cancel_btn.clicked.connect(dialog.reject)
             button_layout.addWidget(cancel_btn)
 
@@ -3489,7 +3451,7 @@ class IMGFactory(QMainWindow):
             dialog.exec()
 
         except Exception as e:
-            self.log_message(f"❌ Error showing GUI settings: {str(e)}")
+            self.log_message(f"Error showing GUI settings: {str(e)}")
 
     def show_gui_layout_settings(self): #vers 2
         """Show GUI Layout settings - called from menu"""
@@ -3503,7 +3465,7 @@ class IMGFactory(QMainWindow):
         try:
             if hasattr(self, 'app_settings'):
                 settings = self.app_settings
-                self.log_message(f"🎨 Theme System Debug:")
+                self.log_message(f"Theme System Debug:")
 
                 if hasattr(settings, 'settings_file'):
                     self.log_message(f"   Settings file: {settings.settings_file}")
@@ -3520,11 +3482,11 @@ class IMGFactory(QMainWindow):
                     theme_files = list(settings.themes_dir.glob("*.json"))
                     self.log_message(f"   Theme files found: {[f.name for f in theme_files]}")
                 else:
-                    self.log_message(f"   ⚠️  Themes directory does not exist!")
+                    self.log_message(f"Themes directory does not exist!")
             else:
-                self.log_message("⚠️ No app_settings available")
+                self.log_message("No app_settings available")
         except Exception as e:
-            self.log_message(f"❌ Error in debug_theme_system: {str(e)}")
+            self.log_message(f"Error in debug_theme_system: {str(e)}")
 
     def show_settings(self): #vers 1
         """Show settings dialog"""
@@ -3601,7 +3563,7 @@ class IMGFactory(QMainWindow):
 
             event.accept()
         except Exception as e:
-            self.log_message(f"❌ Error during close: {str(e)}")
+            self.log_message(f"Error during close: {str(e)}")
             event.accept()  # Accept anyway to prevent hanging
 
 
