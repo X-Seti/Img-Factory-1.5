@@ -6,7 +6,7 @@ App Factory - App Settings System - Clean Version
 Settings management without demo code
 """
 
-#This goes in root/ app_settings_system.py - version 59
+#This goes in root/ app_settings_system.py - version 60
 
 import json
 import os
