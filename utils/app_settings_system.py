@@ -17,7 +17,7 @@ from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QGridLayout, QButtonGroup, QRadioButton, QLabel, QPushButton,
-    QComboBox, QCheckBox, QSpinBox, QMenu,
+    QComboBox, QCheckBox, QSpinBox, QMenu, QSlider, QSplitter,
     QLabel, QPushButton, QComboBox, QCheckBox, QSpinBox,
     QSlider, QGroupBox, QTabWidget, QDialog, QMessageBox,
     QFileDialog, QColorDialog, QFontDialog, QTextEdit,
@@ -3030,6 +3030,9 @@ class SettingsDialog(QDialog): #vers 15
         self.buttons_tab = self._create_buttons_tab()
         self.tabs.addTab(self.buttons_tab, "Buttons")
 
+        self.gadgets_tab = self._create_gadgets_tab()
+        self.tabs.addTab(self.gadgets_tab, "Gadgets")
+
         self.debug_tab = self._create_debug_tab()
         self.tabs.addTab(self.debug_tab, "Debug")
 
@@ -3215,7 +3218,7 @@ class SettingsDialog(QDialog): #vers 15
             self.move(event.globalPosition().toPoint() - self.titlebar_drag_position)
             event.accept()
 
-    # ===== CORNER RESIZE METHODS (same as CustomWindow) =====
+    # = CORNER RESIZE METHODS
 
     def mousePressEvent(self, event): #vers 1
         """Handle mouse press for resizing"""
@@ -3363,7 +3366,7 @@ class SettingsDialog(QDialog): #vers 15
         left_layout.addWidget(picker_group)
 
 
-        # --- PALETTE COLORS GROUP ---
+    # - PALETTE COLORS GROUP
         palette_group = QGroupBox("Quick Colors")
         palette_layout = QVBoxLayout(palette_group)
 
@@ -3371,21 +3374,21 @@ class SettingsDialog(QDialog): #vers 15
         top_bar = QHBoxLayout()
         palette_layout.addLayout(top_bar)
 
-        # --- GRID TOGGLE BUTTON ---
+    # - GRID TOGGLE BUTTON
         self.palette_toggle_btn = QPushButton("Grid: 6x8")
         self.palette_toggle_btn.setCheckable(False)
         top_bar.addWidget(self.palette_toggle_btn)
 
-        # --- RETRO MENU BUTTON ---
+    # - RETRO MENU BUTTON
         self.retro_btn = QPushButton("Retro ▼")
         top_bar.addWidget(self.retro_btn)
 
-        # --- PALETTE GRID AREA ---
+    # - PALETTE GRID AREA
         self.palette_grid = QGridLayout()
         palette_layout.addLayout(self.palette_grid)
         left_layout.addWidget(palette_group)
 
-        # --- RETRO PALETTE DEFINITIONS ---
+    # - RETRO PALETTE DEFINITIONS
         zx_spectrum = [
             "#000000", "#0000D7", "#D70000", "#D700D7",
             "#00D700", "#00D7D7", "#D7D700", "#D7D7D7",
@@ -3459,7 +3462,7 @@ class SettingsDialog(QDialog): #vers 15
 
         ]
 
-        # → 256 colors extracted from saveamiga_pal.png, formatted 8 per row.
+    # → 256 colors extracted from saveamiga_pal.png, formatted 8 per row.
 
         ula_plus = [
             "#000000", "#000154", "#0000AA", "#0000FE", "#270100", "#270055", "#2700A9", "#2800FF",
@@ -3551,7 +3554,7 @@ class SettingsDialog(QDialog): #vers 15
             "#442800", "#644818", "#846830", "#a08444", "#b8a058", "#ccb46c", "#e0c880", "#f4dc94",
         ]
 
-        # --- RETRO PALETTE REGISTRY ---
+    # - RETRO PALETTE REGISTRY
         self.retro_palettes = {
             "Amiga OCS": amiga_default,    # 32 colors
             "Amiga AGA": amiga_aga,        # 256 colors
@@ -3564,7 +3567,8 @@ class SettingsDialog(QDialog): #vers 15
             "ULA Plus": ula_plus           # 256 colors
         }
 
-        # --- PALETTE-SPECIFIC GRID SIZES ---
+    # - PALETTE-SPECIFIC GRID SIZES
+
         # Each retro palette has optimal grid dimensions based on its color count
         self.retro_palette_grids = {
             "Amiga OCS": (4, 8),      # 32 colors = 4×8
@@ -3578,12 +3582,12 @@ class SettingsDialog(QDialog): #vers 15
             "ULA Plus": (16, 16)      # 256 colors = 16×16
         }
 
-        # --- GRID SETTINGS ---
+    # - GRID SETTINGS
         self.palette_sizes = [(4, 6), (6, 8), (8, 10), (10,12), (8, 16), (12, 12), (16, 16)]
         self.current_palette_index = 1  # start 6x8
         self.current_retro_palette = None  # Track if a retro palette is active
 
-        # --- POPULATE GRID FUNCTION ---
+    # - POPULATE GRID FUNCTION
         def populate_palette_grid(colors=None):
             # Clear grid
             while self.palette_grid.count():
@@ -3622,7 +3626,7 @@ class SettingsDialog(QDialog): #vers 15
                 r, c_ = divmod(i, cols)
                 self.palette_grid.addWidget(btn, r, c_)
 
-        # --- TOGGLE GRID SIZE ---
+    # - TOGGLE GRID SIZE
         def toggle_palette_size():
             self.current_palette_index = (self.current_palette_index + 1) % len(self.palette_sizes)
             rows, cols = self.palette_sizes[self.current_palette_index]
@@ -3630,7 +3634,7 @@ class SettingsDialog(QDialog): #vers 15
             self.current_retro_palette = None  # Reset retro palette when manually changing grid
             populate_palette_grid()
 
-        # --- LOAD RETRO PALETTE ---
+    # - LOAD RETRO PALETTE
         def load_retro_palette(palette_name):
             self.current_retro_palette = palette_name
             colors = self.retro_palettes[palette_name]
@@ -3647,33 +3651,55 @@ class SettingsDialog(QDialog): #vers 15
             action.triggered.connect(lambda checked, name=palette_name: load_retro_palette(name))
         self.retro_btn.setMenu(retro_menu)
 
-        # --- INITIAL POPULATE ---
+    # - INITIAL POPULATE
         populate_palette_grid()
 
         # Apply Picked Color Group - MOVED TO LEFT PANEL
         # Color mapping (needed before creating combo)
         self.theme_colors = {
-            "bg_primary": "Background Primary",
-            "bg_secondary": "Background Secondary",
-            "bg_tertiary": "Background Tertiary",
+            "bg_primary": "Background - Primary",
+            "bg_secondary": "Background - Secondary",
+            "bg_tertiary": "Background - Tertiary",
             "panel_bg": "Panel Background",
-            "accent_primary": "Accent Primary",
-            "accent_secondary": "Accent Secondary",
-            "text_primary": "Text Primary",
-            "text_secondary": "Text Secondary",
-            "text_accent": "Text Accent",
-            "button_normal": "Button Normal",
-            "button_hover": "Button Hover",
-            "button_pressed": "Button Pressed",
-            "border": "Border",
-            "success": "Success",
-            "warning": "Warning",
-            "error": "Error",
-            "selection_background": "Selection Background",
-            "selection_text": "Selection Text",
-            "table_row_even": "Table Row Even",
-            "table_row_odd": "Table Row Odd",
-            "alternate_row": "Alternate Row"
+            "text_primary": "Text - Primary",
+            "text_secondary": "Text - Secondary",
+            "text_accent": "Text - Accent",
+            "accent_primary": "Accent - Primary",
+            "accent_secondary": "Accent - Secondary",
+            "border": "Border Color",
+            "button_normal": "Button - Normal",
+            "button_hover": "Button - Hover",
+            "button_pressed": "Button - Pressed",
+            "selection_background": "Selection - Background",
+            "selection_text": "Selection - Text",
+            "table_row_even": "Table Row - Even",
+            "table_row_odd": "Table Row - Odd",
+            "alternate_row": "Alternate Row",
+            "success": "Status - Success",
+            "warning": "Status - Warning",
+            "error": "Status - Error",
+            "grid": "Grid Lines",
+            "pin_default": "Pin - Default",
+            "pin_highlight": "Pin - Highlight",
+            "action_import": "Action - Import",
+            "action_export": "Action - Export",
+            "action_remove": "Action - Remove",
+            "action_update": "Action - Update",
+            "action_convert": "Action - Convert",
+            "panel_entries": "Panel - Entries",
+            "panel_filter": "Panel - Filter",
+            "toolbar_bg": "Toolbar Background",
+            "button_text_color": "Button Text - Normal",
+            "button_text_hover": "Button Text - Hover",
+            "button_text_pressed": "Button Text - Pressed",
+            "splitter_color_background": "Splitter - Background",
+            "splitter_color_shine": "Splitter - Shine",
+            "splitter_color_shadow": "Splitter - Shadow",
+            "scrollbar_background": "Scrollbar - Background",
+            "scrollbar_handle": "Scrollbar - Handle",
+            "scrollbar_handle_hover": "Scrollbar - Handle Hover",
+            "scrollbar_handle_pressed": "Scrollbar - Handle Pressed",
+            "scrollbar_border": "Scrollbar - Border"
         }
 
         selection_group = QGroupBox("Apply Picked Color")
@@ -3691,7 +3717,7 @@ class SettingsDialog(QDialog): #vers 15
         left_layout.addWidget(selection_group)
         left_layout.addStretch()
 
-        # ========== RIGHT PANEL ==========
+    # = RIGHT PANEL
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
 
@@ -3824,10 +3850,17 @@ class SettingsDialog(QDialog): #vers 15
         random_theme_btn.clicked.connect(self._random_theme_from_picker)
         theme_actions_layout.addWidget(random_theme_btn)
 
-        # Save Theme button
-        save_theme_btn = QPushButton("Save Theme As...")
-        save_theme_btn.clicked.connect(self._save_theme_as)
+        # Save button (saves current theme modifications)
+        save_theme_btn = QPushButton("Save")
+        save_theme_btn.setToolTip("Save modifications to current theme")
+        save_theme_btn.clicked.connect(self._save_current_theme)
         theme_actions_layout.addWidget(save_theme_btn)
+
+        # Save Theme As button
+        save_theme_as_btn = QPushButton("Save Theme As...")
+        save_theme_as_btn.setToolTip("Save as a new theme file")
+        save_theme_as_btn.clicked.connect(self._save_theme_as)
+        theme_actions_layout.addWidget(save_theme_as_btn)
 
         right_layout.addWidget(theme_actions_group)
 
@@ -3882,13 +3915,734 @@ class SettingsDialog(QDialog): #vers 15
             f"Applied theme: {theme_display_name}"
         )
 
-
     def _apply_palette_color(self, color): #vers 1
         """Apply palette color to selected element"""
         selected_data = self.selected_element_combo.currentData()
         if selected_data and selected_data in self.color_editors:
             self.color_editors[selected_data].set_color(color)
 
+
+    def _create_gadgets_tab(self): #vers 4
+        """Create gadgets styling tab with LIVE PREVIEW and proper splitter"""
+        tab = QWidget()
+        main_layout = QVBoxLayout(tab)
+
+        # Instructions at top
+        info_label = QLabel(
+            "<b>Widget Styling - Live Preview:</b><br>"
+            "Customize widget appearance and see changes instantly in the preview panel."
+        )
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("padding: 8px; background-color: #f0f8ff; border-radius: 4px;")
+        main_layout.addWidget(info_label)
+
+        # Create splitter for left (controls) and right (preview)
+        self.gadgets_splitter = QSplitter(Qt.Orientation.Horizontal)
+
+        # ========== LEFT SIDE - CONTROLS ==========
+        left_widget = QWidget()
+        layout = QVBoxLayout(left_widget)
+        layout.setSpacing(10)
+        layout.setContentsMargins(5, 5, 5, 5)
+
+        # Scroll area for controls
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+        scroll_layout.setSpacing(15)
+
+        # ========== BUTTON STYLING ==========
+        button_group = QGroupBox("🔘 Button Styling")
+        button_layout = QVBoxLayout(button_group)
+
+        # Button Shape
+        shape_layout = QHBoxLayout()
+        shape_layout.addWidget(QLabel("Shape:"))
+        self.button_shape_combo = QComboBox()
+        self.button_shape_combo.addItems(["Rounded", "Square", "Pill", "Beveled"])
+        self.button_shape_combo.currentTextChanged.connect(self._update_gadget_preview)
+        shape_layout.addWidget(self.button_shape_combo)
+        shape_layout.addStretch()
+        button_layout.addLayout(shape_layout)
+
+        # Border Radius
+        radius_layout = QHBoxLayout()
+        radius_layout.addWidget(QLabel("Border Radius:"))
+        self.button_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        self.button_radius_slider.setRange(0, 20)
+        self.button_radius_slider.setValue(4)
+        self.button_radius_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.button_radius_slider.setTickInterval(5)
+        self.button_radius_slider.valueChanged.connect(self._update_gadget_preview)
+        radius_layout.addWidget(self.button_radius_slider)
+        self.button_radius_label = QLabel("4px")
+        self.button_radius_label.setFixedWidth(40)
+        radius_layout.addWidget(self.button_radius_label)
+        button_layout.addLayout(radius_layout)
+
+        self.button_radius_slider.valueChanged.connect(
+            lambda v: self.button_radius_label.setText(f"{v}px")
+        )
+
+        # Button Height
+        height_layout = QHBoxLayout()
+        height_layout.addWidget(QLabel("Min Height:"))
+        self.button_height_spin = QSpinBox()
+        self.button_height_spin.setRange(20, 50)
+        self.button_height_spin.setValue(30)
+        self.button_height_spin.setSuffix("px")
+        self.button_height_spin.valueChanged.connect(self._update_gadget_preview)
+        height_layout.addWidget(self.button_height_spin)
+        height_layout.addStretch()
+        button_layout.addLayout(height_layout)
+
+        # Horizontal Padding
+        h_padding_layout = QHBoxLayout()
+        h_padding_layout.addWidget(QLabel("Horizontal Padding:"))
+        self.button_h_padding_spin = QSpinBox()
+        self.button_h_padding_spin.setRange(2, 30)
+        self.button_h_padding_spin.setValue(12)
+        self.button_h_padding_spin.setSuffix("px")
+        self.button_h_padding_spin.valueChanged.connect(self._update_gadget_preview)
+        h_padding_layout.addWidget(self.button_h_padding_spin)
+        h_padding_layout.addStretch()
+        button_layout.addLayout(h_padding_layout)
+
+        # Vertical Padding
+        v_padding_layout = QHBoxLayout()
+        v_padding_layout.addWidget(QLabel("Vertical Padding:"))
+        self.button_v_padding_spin = QSpinBox()
+        self.button_v_padding_spin.setRange(2, 20)
+        self.button_v_padding_spin.setValue(6)
+        self.button_v_padding_spin.setSuffix("px")
+        self.button_v_padding_spin.valueChanged.connect(self._update_gadget_preview)
+        v_padding_layout.addWidget(self.button_v_padding_spin)
+        v_padding_layout.addStretch()
+        button_layout.addLayout(v_padding_layout)
+
+        scroll_layout.addWidget(button_group)
+
+        # ========== SLIDER STYLING ==========
+        slider_group = QGroupBox("🎚️ Slider Styling")
+        slider_layout = QVBoxLayout(slider_group)
+
+        # Slider Height
+        slider_height_layout = QHBoxLayout()
+        slider_height_layout.addWidget(QLabel("Slider Height:"))
+        self.slider_height_spin = QSpinBox()
+        self.slider_height_spin.setRange(4, 20)
+        self.slider_height_spin.setValue(8)
+        self.slider_height_spin.setSuffix("px")
+        self.slider_height_spin.valueChanged.connect(self._update_gadget_preview)
+        slider_height_layout.addWidget(self.slider_height_spin)
+        slider_height_layout.addStretch()
+        slider_layout.addLayout(slider_height_layout)
+
+        # Handle Size
+        handle_size_layout = QHBoxLayout()
+        handle_size_layout.addWidget(QLabel("Handle Size:"))
+        self.slider_handle_size = QSpinBox()
+        self.slider_handle_size.setRange(12, 30)
+        self.slider_handle_size.setValue(16)
+        self.slider_handle_size.setSuffix("px")
+        self.slider_handle_size.valueChanged.connect(self._update_gadget_preview)
+        handle_size_layout.addWidget(self.slider_handle_size)
+        handle_size_layout.addStretch()
+        slider_layout.addLayout(handle_size_layout)
+
+        # Handle Radius
+        slider_radius_layout = QHBoxLayout()
+        slider_radius_layout.addWidget(QLabel("Handle Radius:"))
+        self.slider_handle_radius = QSlider(Qt.Orientation.Horizontal)
+        self.slider_handle_radius.setRange(0, 15)
+        self.slider_handle_radius.setValue(8)
+        self.slider_handle_radius.valueChanged.connect(self._update_gadget_preview)
+        slider_radius_layout.addWidget(self.slider_handle_radius)
+        self.slider_handle_radius_label = QLabel("8px")
+        self.slider_handle_radius_label.setFixedWidth(40)
+        slider_radius_layout.addWidget(self.slider_handle_radius_label)
+        slider_layout.addLayout(slider_radius_layout)
+
+        self.slider_handle_radius.valueChanged.connect(
+            lambda v: self.slider_handle_radius_label.setText(f"{v}px")
+        )
+
+        scroll_layout.addWidget(slider_group)
+
+        # ========== CHECKBOX STYLING ==========
+        checkbox_group = QGroupBox("☑️ Checkbox Styling")
+        checkbox_layout = QVBoxLayout(checkbox_group)
+
+        # Checkbox Size
+        cb_size_layout = QHBoxLayout()
+        cb_size_layout.addWidget(QLabel("Checkbox Size:"))
+        self.checkbox_size_spin = QSpinBox()
+        self.checkbox_size_spin.setRange(12, 30)
+        self.checkbox_size_spin.setValue(18)
+        self.checkbox_size_spin.setSuffix("px")
+        self.checkbox_size_spin.valueChanged.connect(self._update_gadget_preview)
+        cb_size_layout.addWidget(self.checkbox_size_spin)
+        cb_size_layout.addStretch()
+        checkbox_layout.addLayout(cb_size_layout)
+
+        # Checkbox Radius
+        cb_radius_layout = QHBoxLayout()
+        cb_radius_layout.addWidget(QLabel("Border Radius:"))
+        self.checkbox_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        self.checkbox_radius_slider.setRange(0, 9)
+        self.checkbox_radius_slider.setValue(3)
+        self.checkbox_radius_slider.valueChanged.connect(self._update_gadget_preview)
+        cb_radius_layout.addWidget(self.checkbox_radius_slider)
+        self.checkbox_radius_label = QLabel("3px")
+        self.checkbox_radius_label.setFixedWidth(40)
+        cb_radius_layout.addWidget(self.checkbox_radius_label)
+        checkbox_layout.addLayout(cb_radius_layout)
+
+        self.checkbox_radius_slider.valueChanged.connect(
+            lambda v: self.checkbox_radius_label.setText(f"{v}px")
+        )
+
+        scroll_layout.addWidget(checkbox_group)
+
+        # ========== SCROLLBAR STYLING ==========
+        scrollbar_group = QGroupBox("📜 Scrollbar Styling")
+        scrollbar_layout = QVBoxLayout(scrollbar_group)
+
+        # Scrollbar Width
+        sb_width_layout = QHBoxLayout()
+        sb_width_layout.addWidget(QLabel("Width:"))
+        self.scrollbar_width_slider = QSlider(Qt.Orientation.Horizontal)
+        self.scrollbar_width_slider.setRange(6, 20)
+        self.scrollbar_width_slider.setValue(12)
+        self.scrollbar_width_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.scrollbar_width_slider.setTickInterval(2)
+        self.scrollbar_width_slider.valueChanged.connect(self._update_gadget_preview)
+        sb_width_layout.addWidget(self.scrollbar_width_slider)
+        self.scrollbar_width_label = QLabel("12px")
+        self.scrollbar_width_label.setFixedWidth(40)
+        sb_width_layout.addWidget(self.scrollbar_width_label)
+        scrollbar_layout.addLayout(sb_width_layout)
+
+        self.scrollbar_width_slider.valueChanged.connect(
+            lambda v: self.scrollbar_width_label.setText(f"{v}px")
+        )
+
+        # Handle Radius
+        handle_radius_layout = QHBoxLayout()
+        handle_radius_layout.addWidget(QLabel("Handle Radius:"))
+        self.scrollbar_handle_radius = QSlider(Qt.Orientation.Horizontal)
+        self.scrollbar_handle_radius.setRange(0, 10)
+        self.scrollbar_handle_radius.setValue(3)
+        self.scrollbar_handle_radius.valueChanged.connect(self._update_gadget_preview)
+        handle_radius_layout.addWidget(self.scrollbar_handle_radius)
+        self.scrollbar_handle_radius_label = QLabel("3px")
+        self.scrollbar_handle_radius_label.setFixedWidth(40)
+        handle_radius_layout.addWidget(self.scrollbar_handle_radius_label)
+        scrollbar_layout.addLayout(handle_radius_layout)
+
+        self.scrollbar_handle_radius.valueChanged.connect(
+            lambda v: self.scrollbar_handle_radius_label.setText(f"{v}px")
+        )
+
+        scroll_layout.addWidget(scrollbar_group)
+
+        # ========== SPLITTER STYLING ==========
+        splitter_group = QGroupBox("⚡ Splitter Styling")
+        splitter_layout = QVBoxLayout(splitter_group)
+
+        # Splitter Width
+        sp_width_layout = QHBoxLayout()
+        sp_width_layout.addWidget(QLabel("Handle Width:"))
+        self.splitter_width_slider = QSlider(Qt.Orientation.Horizontal)
+        self.splitter_width_slider.setRange(4, 16)
+        self.splitter_width_slider.setValue(8)
+        self.splitter_width_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.splitter_width_slider.setTickInterval(2)
+        self.splitter_width_slider.valueChanged.connect(self._update_gadget_preview)
+        sp_width_layout.addWidget(self.splitter_width_slider)
+        self.splitter_width_label = QLabel("8px")
+        self.splitter_width_label.setFixedWidth(40)
+        sp_width_layout.addWidget(self.splitter_width_label)
+        splitter_layout.addLayout(sp_width_layout)
+
+        self.splitter_width_slider.valueChanged.connect(
+            lambda v: self.splitter_width_label.setText(f"{v}px")
+        )
+
+        # Splitter Radius
+        sp_radius_layout = QHBoxLayout()
+        sp_radius_layout.addWidget(QLabel("Handle Radius:"))
+        self.splitter_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        self.splitter_radius_slider.setRange(0, 8)
+        self.splitter_radius_slider.setValue(3)
+        self.splitter_radius_slider.valueChanged.connect(self._update_gadget_preview)
+        sp_radius_layout.addWidget(self.splitter_radius_slider)
+        self.splitter_radius_label = QLabel("3px")
+        self.splitter_radius_label.setFixedWidth(40)
+        sp_radius_layout.addWidget(self.splitter_radius_label)
+        splitter_layout.addLayout(sp_radius_layout)
+
+        self.splitter_radius_slider.valueChanged.connect(
+            lambda v: self.splitter_radius_label.setText(f"{v}px")
+        )
+
+        # Show Grip
+        grip_layout = QHBoxLayout()
+        self.splitter_show_grip = QCheckBox("Show Grip Handle")
+        self.splitter_show_grip.setChecked(True)
+        self.splitter_show_grip.stateChanged.connect(self._update_gadget_preview)
+        grip_layout.addWidget(self.splitter_show_grip)
+        grip_layout.addStretch()
+        splitter_layout.addLayout(grip_layout)
+
+        scroll_layout.addWidget(splitter_group)
+
+        # ========== ADVANCED STYLING ==========
+        advanced_group = QGroupBox("⚙️ Advanced Styling")
+        advanced_layout = QVBoxLayout(advanced_group)
+
+        # Panel Opacity
+        opacity_layout = QHBoxLayout()
+        opacity_layout.addWidget(QLabel("Panel Opacity:"))
+        self.panel_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.panel_opacity_slider.setRange(50, 100)
+        self.panel_opacity_slider.setValue(95)
+        self.panel_opacity_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.panel_opacity_slider.setTickInterval(10)
+        self.panel_opacity_slider.valueChanged.connect(self._update_gadget_preview)
+        opacity_layout.addWidget(self.panel_opacity_slider)
+        self.panel_opacity_label = QLabel("95%")
+        self.panel_opacity_label.setFixedWidth(40)
+        opacity_layout.addWidget(self.panel_opacity_label)
+        advanced_layout.addLayout(opacity_layout)
+
+        self.panel_opacity_slider.valueChanged.connect(
+            lambda v: self.panel_opacity_label.setText(f"{v}%")
+        )
+
+        # Enable Animations
+        anim_layout = QHBoxLayout()
+        self.enable_animations = QCheckBox("Enable Hover Animations")
+        self.enable_animations.setChecked(True)
+        self.enable_animations.stateChanged.connect(self._update_gadget_preview)
+        anim_layout.addWidget(self.enable_animations)
+        anim_layout.addStretch()
+        advanced_layout.addLayout(anim_layout)
+
+        scroll_layout.addWidget(advanced_group)
+
+        scroll_layout.addStretch()
+        scroll.setWidget(scroll_widget)
+        layout.addWidget(scroll)
+
+        # Reset button
+        reset_btn = QPushButton("Reset to Defaults")
+        reset_btn.clicked.connect(self._reset_gadget_styles)
+        layout.addWidget(reset_btn)
+
+        self.gadgets_splitter.addWidget(left_widget)
+
+        # ========== RIGHT SIDE - LIVE PREVIEW PANEL ==========
+        preview_panel = QWidget()
+        preview_layout = QVBoxLayout(preview_panel)
+        preview_layout.setContentsMargins(10, 10, 10, 10)
+
+        preview_title = QLabel("<b>Live Preview</b>")
+        preview_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        preview_title.setStyleSheet("font-size: 12pt; padding: 5px;")
+        preview_layout.addWidget(preview_title)
+
+        # Preview frame
+        self.preview_frame = QFrame()
+        self.preview_frame.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Sunken)
+        self.preview_frame.setMinimumSize(300, 400)
+        preview_frame_layout = QVBoxLayout(self.preview_frame)
+
+        # Sample buttons
+        preview_frame_layout.addWidget(QLabel("Button Samples:"))
+        self.preview_btn_normal = QPushButton("Normal Button")
+        preview_frame_layout.addWidget(self.preview_btn_normal)
+
+        self.preview_btn_primary = QPushButton("Primary Action")
+        preview_frame_layout.addWidget(self.preview_btn_primary)
+
+        self.preview_btn_danger = QPushButton("Remove")
+        preview_frame_layout.addWidget(self.preview_btn_danger)
+
+        preview_frame_layout.addSpacing(20)
+
+        # Sample sliders
+        preview_frame_layout.addWidget(QLabel("Slider Samples:"))
+        self.preview_slider_h = QSlider(Qt.Orientation.Horizontal)
+        self.preview_slider_h.setRange(0, 100)
+        self.preview_slider_h.setValue(50)
+        preview_frame_layout.addWidget(self.preview_slider_h)
+
+        preview_frame_layout.addSpacing(20)
+
+        # Sample checkboxes
+        preview_frame_layout.addWidget(QLabel("Checkbox Samples:"))
+        self.preview_checkbox1 = QCheckBox("Enable feature A")
+        self.preview_checkbox1.setChecked(True)
+        preview_frame_layout.addWidget(self.preview_checkbox1)
+
+        self.preview_checkbox2 = QCheckBox("Enable feature B")
+        preview_frame_layout.addWidget(self.preview_checkbox2)
+
+        preview_frame_layout.addSpacing(20)
+
+        # Sample text area with scrollbar
+        preview_frame_layout.addWidget(QLabel("Scrollbar Sample:"))
+        self.preview_text = QTextEdit()
+        self.preview_text.setPlainText(
+            "IMG Factory File Browser\n"
+            "======================\n\n"
+            "gta3.img - 1,245 entries\n"
+            "gta_int.img - 892 entries\n"
+            "player.img - 156 entries\n\n"
+            "DFF Models:\n"
+            "• admiral.dff\n"
+            "• banshee.dff\n"
+            "• infernus.dff\n"
+            "• patriot.dff\n"
+            "• rhino.dff\n\n"
+            "TXD Textures:\n"
+            "• admiral.txd\n"
+            "• banshee.txd\n"
+            "• infernus.txd\n\n"
+            "COL Collision:\n"
+            "• vehicles.col\n"
+            "• buildings.col\n"
+            "• peds.col\n\n"
+            "Total files: 2,293\n"
+            "Total size: 1.2 GB\n"
+            "RW Version: 3.6.0.0\n"
+        )
+        self.preview_text.setMaximumHeight(150)
+        preview_frame_layout.addWidget(self.preview_text)
+
+        preview_frame_layout.addSpacing(20)
+
+        # Sample splitter
+        preview_frame_layout.addWidget(QLabel("Splitter Sample:"))
+        self.preview_splitter = QSplitter(Qt.Orientation.Horizontal)
+        left_sample = QLabel("Left Panel")
+        left_sample.setFrameStyle(QFrame.Shape.Box)
+        left_sample.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        left_sample.setMinimumHeight(80)
+        right_sample = QLabel("Right Panel")
+        right_sample.setFrameStyle(QFrame.Shape.Box)
+        right_sample.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        right_sample.setMinimumHeight(80)
+        self.preview_splitter.addWidget(left_sample)
+        self.preview_splitter.addWidget(right_sample)
+        preview_frame_layout.addWidget(self.preview_splitter)
+
+        preview_frame_layout.addStretch()
+
+        preview_layout.addWidget(self.preview_frame)
+
+        self.gadgets_splitter.addWidget(preview_panel)
+
+        # Set initial splitter sizes (40% controls, 60% preview)
+        self.gadgets_splitter.setSizes([400, 600])
+
+        main_layout.addWidget(self.gadgets_splitter)
+
+        # Initial preview update
+        self._update_gadget_preview()
+
+        return tab
+
+
+    def _update_gadget_preview(self): #vers 2
+        """Update live preview with current gadget settings"""
+        if not hasattr(self, 'preview_frame'):
+            return
+
+        # Get current theme colors
+        theme_colors = self.app_settings.get_theme_colors()
+
+        # Collect gadget settings
+        button_radius = self.button_radius_slider.value()
+        button_height = self.button_height_spin.value()
+        button_h_padding = self.button_h_padding_spin.value()
+        button_v_padding = self.button_v_padding_spin.value()
+
+        slider_height = self.slider_height_spin.value()
+        slider_handle_size = self.slider_handle_size.value()
+        slider_handle_radius = self.slider_handle_radius.value()
+
+        checkbox_size = self.checkbox_size_spin.value()
+        checkbox_radius = self.checkbox_radius_slider.value()
+
+        scrollbar_width = self.scrollbar_width_slider.value()
+        scrollbar_radius = self.scrollbar_handle_radius.value()
+
+        splitter_width = self.splitter_width_slider.value()
+        splitter_radius = self.splitter_radius_slider.value()
+        show_grip = self.splitter_show_grip.isChecked()
+
+        panel_opacity = self.panel_opacity_slider.value()
+        enable_animations = self.enable_animations.isChecked()
+
+        # Build button stylesheet
+        button_style = f"""
+        QPushButton {{
+            background-color: {theme_colors.get('button_normal', '#e0e0e0')};
+            color: {theme_colors.get('text_primary', '#000000')};
+            border: 1px solid {theme_colors.get('border', '#cccccc')};
+            border-radius: {button_radius}px;
+            padding: {button_v_padding}px {button_h_padding}px;
+            min-height: {button_height}px;
+            font-weight: bold;
+        }}
+        QPushButton:hover {{
+            background-color: {theme_colors.get('button_hover', '#d0d0d0')};
+        }}
+        QPushButton:pressed {{
+            background-color: {theme_colors.get('button_pressed', '#b0b0b0')};
+        }}
+        """
+
+        # Apply to preview buttons
+        if hasattr(self, 'preview_btn_normal'):
+            self.preview_btn_normal.setStyleSheet(button_style)
+
+        if hasattr(self, 'preview_btn_primary'):
+            primary_style = button_style.replace(
+                theme_colors.get('button_normal', '#e0e0e0'),
+                theme_colors.get('action_export', '#e8f5e8')
+            )
+            self.preview_btn_primary.setStyleSheet(primary_style)
+
+        if hasattr(self, 'preview_btn_danger'):
+            danger_style = button_style.replace(
+                theme_colors.get('button_normal', '#e0e0e0'),
+                theme_colors.get('action_remove', '#ffebee')
+            )
+            self.preview_btn_danger.setStyleSheet(danger_style)
+
+        # Build slider stylesheet
+        slider_style = f"""
+        QSlider::groove:horizontal {{
+            height: {slider_height}px;
+            background: {theme_colors.get('bg_tertiary', '#e0e0e0')};
+            border: 1px solid {theme_colors.get('border', '#d0d0d0')};
+            border-radius: {slider_height // 2}px;
+        }}
+        QSlider::handle:horizontal {{
+            background: {theme_colors.get('accent_primary', '#0078d4')};
+            border: 1px solid {theme_colors.get('accent_secondary', '#0066b8')};
+            width: {slider_handle_size}px;
+            height: {slider_handle_size}px;
+            margin: -{(slider_handle_size - slider_height) // 2}px 0;
+            border-radius: {slider_handle_radius}px;
+        }}
+        QSlider::handle:horizontal:hover {{
+            background: {theme_colors.get('accent_secondary', '#0066b8')};
+        }}
+        """
+
+        if hasattr(self, 'preview_slider_h'):
+            self.preview_slider_h.setStyleSheet(slider_style)
+
+        # Build checkbox stylesheet
+        checkbox_style = f"""
+        QCheckBox::indicator {{
+            width: {checkbox_size}px;
+            height: {checkbox_size}px;
+            border: 2px solid {theme_colors.get('border', '#d0d0d0')};
+            border-radius: {checkbox_radius}px;
+            background-color: {theme_colors.get('bg_primary', '#ffffff')};
+        }}
+        QCheckBox::indicator:checked {{
+            background-color: {theme_colors.get('accent_primary', '#0078d4')};
+            border-color: {theme_colors.get('accent_primary', '#0078d4')};
+            image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTAuNSAyLjVMNC41IDguNSAyIDYiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPjwvc3ZnPg==);
+        }}
+        QCheckBox::indicator:hover {{
+            border-color: {theme_colors.get('accent_primary', '#0078d4')};
+        }}
+        """
+
+        if hasattr(self, 'preview_checkbox1'):
+            self.preview_checkbox1.setStyleSheet(checkbox_style)
+        if hasattr(self, 'preview_checkbox2'):
+            self.preview_checkbox2.setStyleSheet(checkbox_style)
+
+        # Build scrollbar stylesheet
+        scrollbar_style = f"""
+        QScrollBar:vertical {{
+            width: {scrollbar_width}px;
+            background-color: {theme_colors.get('scrollbar_background', '#f0f0f0')};
+            border: 1px solid {theme_colors.get('scrollbar_border', '#d0d0d0')};
+        }}
+        QScrollBar::handle:vertical {{
+            background-color: {theme_colors.get('scrollbar_handle', '#c0c0c0')};
+            border-radius: {scrollbar_radius}px;
+            min-height: 20px;
+        }}
+        QScrollBar::handle:vertical:hover {{
+            background-color: {theme_colors.get('scrollbar_handle_hover', '#a0a0a0')};
+        }}
+        QScrollBar::handle:vertical:pressed {{
+            background-color: {theme_colors.get('scrollbar_handle_pressed', '#909090')};
+        }}
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+            height: 0px;
+        }}
+        """
+
+        if hasattr(self, 'preview_text'):
+            self.preview_text.setStyleSheet(scrollbar_style)
+
+        # Build splitter stylesheet
+        grip_dots = ""
+        if show_grip:
+            grip_dots = f"""
+            QSplitter::handle:horizontal {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0.4 {theme_colors.get('bg_secondary', '#f0f0f0')},
+                    stop:0.5 {theme_colors.get('border', '#d0d0d0')},
+                    stop:0.6 {theme_colors.get('bg_secondary', '#f0f0f0')});
+            }}
+            """
+        else:
+            grip_dots = ""
+
+        splitter_style = f"""
+        QSplitter::handle:horizontal {{
+            background-color: {theme_colors.get('bg_secondary', '#f0f0f0')};
+            border: 1px solid {theme_colors.get('border', '#d0d0d0')};
+            width: {splitter_width}px;
+            border-radius: {splitter_radius}px;
+            margin: 1px;
+        }}
+        {grip_dots}
+        QSplitter::handle:horizontal:hover {{
+            background-color: {theme_colors.get('bg_tertiary', '#e0e0e0')};
+        }}
+        """
+
+        if hasattr(self, 'preview_splitter'):
+            self.preview_splitter.setStyleSheet(splitter_style)
+
+        # Apply to main gadgets splitter too
+        if hasattr(self, 'gadgets_splitter'):
+            self.gadgets_splitter.setStyleSheet(splitter_style)
+
+        # Mark as modified
+        self._gadget_modified = True
+
+
+    def _reset_gadget_styles(self): #vers 3
+        """Reset gadget styles to defaults and update preview"""
+        self.button_shape_combo.setCurrentText("Rounded")
+        self.button_radius_slider.setValue(4)
+        self.button_height_spin.setValue(30)
+        self.button_h_padding_spin.setValue(12)
+        self.button_v_padding_spin.setValue(6)
+
+        self.slider_height_spin.setValue(8)
+        self.slider_handle_size.setValue(16)
+        self.slider_handle_radius.setValue(8)
+
+        self.checkbox_size_spin.setValue(18)
+        self.checkbox_radius_slider.setValue(3)
+
+        self.scrollbar_width_slider.setValue(12)
+        self.scrollbar_handle_radius.setValue(3)
+
+        self.splitter_width_slider.setValue(8)
+        self.splitter_radius_slider.setValue(3)
+        self.splitter_show_grip.setChecked(True)
+
+        self.panel_opacity_slider.setValue(95)
+        self.enable_animations.setChecked(True)
+
+        # Update preview
+        self._update_gadget_preview()
+
+
+    def _collect_gadget_styles(self): #vers 2
+        """Collect current gadget style settings"""
+        return {
+            "button_shape": self.button_shape_combo.currentText(),
+            "button_border_radius": self.button_radius_slider.value(),
+            "button_min_height": self.button_height_spin.value(),
+            "button_padding_horizontal": self.button_h_padding_spin.value(),
+            "button_padding_vertical": self.button_v_padding_spin.value(),
+
+            "slider_height": self.slider_height_spin.value(),
+            "slider_handle_size": self.slider_handle_size.value(),
+            "slider_handle_radius": self.slider_handle_radius.value(),
+
+            "checkbox_size": self.checkbox_size_spin.value(),
+            "checkbox_border_radius": self.checkbox_radius_slider.value(),
+
+            "scrollbar_width": self.scrollbar_width_slider.value(),
+            "scrollbar_handle_radius": self.scrollbar_handle_radius.value(),
+
+            "splitter_handle_width": self.splitter_width_slider.value(),
+            "splitter_border_radius": self.splitter_radius_slider.value(),
+            "splitter_show_grip": self.splitter_show_grip.isChecked(),
+
+            "panel_opacity": self.panel_opacity_slider.value(),
+            "enable_animations": self.enable_animations.isChecked()
+        }
+
+
+    def _browse_background_image(self, target): #vers 1
+        """Browse for background image"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            f"Select {target.capitalize()} Background Image",
+            "",
+            "Images (*.png *.jpg *.jpeg *.bmp);;All Files (*)"
+        )
+
+        if file_path:
+            if target == "panel":
+                self.panel_bg_path.setText(file_path)
+            elif target == "button":
+                self.button_bg_path.setText(file_path)
+            self._on_gadget_changed()
+
+
+    def _clear_background_image(self, target): #vers 1
+        """Clear background image"""
+        if target == "panel":
+            self.panel_bg_path.clear()
+        elif target == "button":
+            self.button_bg_path.clear()
+        self._on_gadget_changed()
+
+
+    def _preview_gadget_styles(self): #vers 1
+        """Preview gadget style changes"""
+        # Collect current gadget settings
+        gadget_styles = self._collect_gadget_styles()
+
+        # Apply to current dialog as preview
+        self._apply_gadget_styles_to_dialog(gadget_styles)
+
+        QMessageBox.information(
+            self,
+            "Preview Applied",
+            "Gadget styles have been applied to this dialog as a preview.\n"
+            "Click 'Save' to apply to theme, or 'Cancel' to discard."
+        )
+
+
+    def _apply_gadget_styles_to_dialog(self, styles): #vers 1
+        """Apply gadget styles to current dialog for preview"""
+        # This would generate and apply stylesheet based on gadget settings
+        # Implementation depends on how you want to apply these styles
+        pass
 
     def _create_buttons_tab(self): #vers 1
         """Create buttons customization tab with light/dark sub-tabs"""
@@ -5385,32 +6139,59 @@ Ready for operations..."""
         self._apply_settings()
         self.accept()
 
+
+
     def _save_current_theme(self): #vers 2
-        """Save current theme with modifications"""
-        colors = {}
+        """Save modifications to the currently selected theme file in themes/"""
+        current_theme_key = self.theme_selector_combo.currentData()
+
+        if not current_theme_key:
+            QMessageBox.warning(self, "No Theme", "No theme selected to save.")
+            return
+
+        # Get current theme data as base (deep copy to preserve everything)
+        import copy
+        theme_data = copy.deepcopy(self.app_settings.themes.get(current_theme_key, {}))
+
+        # Update only the color values from editors (preserve all other color section data)
+        if "colors" not in theme_data:
+            theme_data["colors"] = {}
+
         for color_key, editor in self.color_editors.items():
-            colors[color_key] = editor.current_value
+            theme_data["colors"][color_key] = editor.color_input.text()
 
-        # Update theme
-        current_theme = self.theme_selector_combo.currentData()
-        if current_theme in self.app_settings.themes:
-            self.app_settings.themes[current_theme]["colors"] = colors
-            self.app_settings.save_settings()
+        # Collect gadget styles if modified
+        if hasattr(self, '_gadget_modified') and self._gadget_modified:
+            gadget_styles = self._collect_gadget_styles()
+            theme_data["styles"] = gadget_styles
 
+        # Save theme to themes/ directory
+        success = self.app_settings.save_theme_to_file(current_theme_key, theme_data)
+
+        if success:
+            # Update in-memory theme
+            self.app_settings.themes[current_theme_key] = theme_data
+
+            theme_file = self.app_settings.themes_dir / f"{current_theme_key}.json"
             QMessageBox.information(
-                self,
-                "Theme Saved",
-                f"Theme '{current_theme}' saved successfully!"
+                self, "Saved",
+                f"Theme '{current_theme_key}' saved successfully!\n\nFile: {theme_file}"
+            )
+        else:
+            QMessageBox.warning(
+                self, "Save Failed",
+                f"Failed to save theme '{current_theme_key}' to themes/ directory."
             )
 
 
-    def _save_theme_as(self): #vers 4
-        """Save current theme as a new theme - FIXED: Includes all theme sections"""
+    def _save_theme_as(self): #vers 7
+        """Save current theme as a new theme with file dialog - PRESERVES ALL DATA"""
         from PyQt6.QtWidgets import QInputDialog, QFileDialog, QMessageBox
         import json
+        import copy
         import os
 
-        # Ask for new theme name with instructions
+        # Ask for new theme name
         theme_name, ok = QInputDialog.getText(
             self,
             "Save Theme As",
@@ -5428,84 +6209,90 @@ Ready for operations..."""
         safe_filename = "".join(c if c.isalnum() or c in (' ', '_', '-') else '_' for c in theme_name)
         safe_filename = safe_filename.replace(' ', '_').lower()
 
-        # Get current theme as base
+        # Get current theme as base (DEEP COPY preserves all nested structures)
         current_theme_key = self.theme_selector_combo.currentData()
         base_theme_data = self.app_settings.themes.get(current_theme_key, {})
+        theme_data = copy.deepcopy(base_theme_data)
 
-        # Start with complete copy of base theme
-        theme_data = base_theme_data.copy()
+        # Update only the color values from editors (preserve layout params, labels, etc.)
+        if "colors" not in theme_data:
+            theme_data["colors"] = {}
 
-        # Collect all current colors from editors
-        colors = {}
         for color_key, editor in self.color_editors.items():
-            colors[color_key] = editor.color_input.text()
+            # Only update actual color values, preserve everything else in colors section
+            if color_key in theme_data["colors"] or color_key in self.theme_colors:
+                theme_data["colors"][color_key] = editor.color_input.text()
 
-        # Update theme data with new metadata and colors
+        # Update theme metadata
         theme_data.update({
             "name": theme_name,
             "description": f"Custom theme created from {self.theme_selector_combo.currentText()}",
             "category": "Custom",
             "author": "User",
-            "version": "1.0",
-            "colors": colors
+            "version": "1.0"
         })
 
-        # Ensure all sections are preserved
-        if "menus" not in theme_data and "menus" in base_theme_data:
-            theme_data["menus"] = base_theme_data["menus"]
+        # Collect gadget styles if modified
+        if hasattr(self, '_gadget_modified') and self._gadget_modified:
+            gadget_styles = self._collect_gadget_styles()
+            theme_data["styles"] = gadget_styles
 
-        if "button_panels" not in theme_data and "button_panels" in base_theme_data:
-            theme_data["button_panels"] = base_theme_data["button_panels"]
-
-        if "fonts" not in theme_data and "fonts" in base_theme_data:
-            theme_data["fonts"] = base_theme_data["fonts"]
-
-        # Use app_settings themes_dir
+        # Show file dialog
         themes_dir = str(self.app_settings.themes_dir)
         os.makedirs(themes_dir, exist_ok=True)
-
         default_path = os.path.join(themes_dir, f"{safe_filename}.json")
 
         file_path, _ = QFileDialog.getSaveFileName(
             self,
-            "Save Theme File",
+            "Save Theme As",
             default_path,
-            "JSON Files (*.json)"
+            "JSON Theme Files (*.json);;All Files (*)"
         )
 
-        if file_path:
-            try:
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    json.dump(theme_data, f, indent=2)
+        if not file_path:
+            return
 
-                # Refresh themes
-                self._refresh_themes()
+        # Ensure .json extension
+        if not file_path.endswith('.json'):
+            file_path += '.json'
 
-                # Count what was saved
-                sections_saved = []
-                if "colors" in theme_data:
-                    sections_saved.append(f"Colors: {len(theme_data['colors'])}")
-                if "menus" in theme_data:
-                    sections_saved.append("Menus: Yes")
-                if "button_panels" in theme_data:
-                    sections_saved.append("Button Panels: Yes")
-                if "fonts" in theme_data:
-                    sections_saved.append("Fonts: Yes")
+        # Save theme file
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(theme_data, f, indent=2, ensure_ascii=False)
 
-                QMessageBox.information(
-                    self,
-                    "Theme Saved",
-                    f"Theme '{theme_name}' saved successfully!\n\n"
-                    f"File: {os.path.basename(file_path)}\n\n"
-                    f"Sections saved:\n" + "\n".join(sections_saved)
-                )
-            except Exception as e:
-                QMessageBox.critical(
-                    self,
-                    "Save Error",
-                    f"Failed to save theme:\n{str(e)}"
-                )
+            # Extract filename without extension for theme key
+            theme_key = os.path.splitext(os.path.basename(file_path))[0]
 
+            # Update in-memory themes
+            self.app_settings.themes[theme_key] = theme_data
+
+            # Count components for feedback
+            color_count = len(theme_data.get('colors', {}))
+            menu_items = theme_data.get('menus', {}).get('menu_items', {})
+            menu_count = sum(len(items) for items in menu_items.values()) if menu_items else 0
+            button_panels = theme_data.get('button_panels', {})
+            button_count = sum(len(panel) for panel in button_panels.values()) if button_panels else 0
+            font_count = len(theme_data.get('fonts', {}))
+            has_styles = "Yes" if "styles" in theme_data else "No"
+
+            QMessageBox.information(
+                self, "Theme Saved",
+                f"Theme '{theme_name}' saved successfully!\n\n"
+                f"File: {file_path}\n\n"
+                f"Components saved:\n"
+                f"  • Colors section: {color_count} entries\n"
+                f"  • Menu items: {menu_count}\n"
+                f"  • Button panels: {button_count} buttons\n"
+                f"  • Font definitions: {font_count}\n"
+                f"  • Widget styles: {has_styles}"
+            )
+
+        except Exception as e:
+            QMessageBox.warning(
+                self, "Save Failed",
+                f"Failed to save theme '{theme_name}'.\n\nError: {str(e)}"
+            )
 
     def get_contrast_text_color(self, bg_color: str) -> str: #vers 1
         """
