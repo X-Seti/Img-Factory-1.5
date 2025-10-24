@@ -1,0 +1,30 @@
+{
+  "name": "IMG Factory Pro Blue_light",
+  "description": "Custom theme created from IMG Factory Professional",
+  "category": "Custom",
+  "author": "User",
+  "version": "1.0",
+  "colors": {
+    "bg_primary": "#e3f2fd",
+    "bg_secondary": "#cbeaff",
+    "bg_tertiary": "#caebff",
+    "panel_bg": "#bbdefb",
+    "accent_primary": "#1976d2",
+    "accent_secondary": "#1565c0",
+    "text_primary": "#000000",
+    "text_secondary": "#0000a1",
+    "text_accent": "#15803d",
+    "button_normal": "#e3f2fd",
+    "button_hover": "#bbdefb",
+    "button_pressed": "#90caf9",
+    "selection_background": "#1976d2",
+    "selection_text": "#e5f4ff",
+    "alternate_row": "#e3f2fd",
+    "table_row_even": "#bbdefb",
+    "table_row_odd": "#90caf9",
+    "border": "#dfedf8",
+    "success": "#4caf50",
+    "warning": "#ff9800",
+    "error": "#f44336"
+  }
+}
