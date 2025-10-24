@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-# $vers" X-Seti - June26, 2025 - App Factory - Package theme settings"
+# $vers" X-Seti - June26, 2025 - App Factory - Package theme settings
 
 """
 App Factory - App Settings System - Clean Version
 Settings management without demo code
 """
 
-#This goes in root/ app_settings_system.py - version 54
+#This goes in root/ app_settings_system.py - version 59
 
 import json
 import os
@@ -44,8 +44,18 @@ except ImportError:
         PIL_AVAILABLE = False
         print("Neither MSS nor PIL available - using Qt fallback")
 
+
+##Methods to add to SettingsDialog class
+# _create_buttons_tab (vers 1)
+# _create_button_panel_editor (vers 1)
+# _get_default_button_colors (vers 1)
+# _on_button_color_changed (vers 1)
+# _collect_current_button_colors (vers 1)
+
+
 class ThemeSaveDialog(QDialog):
     """Dialog for saving themes with complete metadata"""
+
 def _apply_settings(self): #vers 3
     """Apply settings permanently and save to appfactory.settings.json"""
     new_settings = self._get_dialog_settings()
@@ -315,31 +325,70 @@ def _apply_settings(self): #vers 3
             self.save_btn.setText("Invalid Name")
             self.save_btn.setStyleSheet("background-color: #ffcccb;")
 
-    def _save_theme(self): #vers 1
-        """Save the theme with all metadata"""
+
+    def _save_theme(self): #vers 5
+        """Save the theme with COMPLETE metadata including menus, buttons, and fonts"""
         theme_name = self.name_input.text().strip()
 
+        # Get default template structure (menus only - NO colors, fonts, or button_panels)
+        default_template = self._get_complete_theme_template()
+
+        # Collect ACTUAL colors from current theme data (user's picked colors)
+        colors = self.current_theme_data.get("colors", {}).copy()
+
+        # Collect ACTUAL font settings from app_settings (user's chosen fonts)
+        fonts = self._collect_current_font_settings()
+
+        # Collect ACTUAL button panel colors from button editor (user's chosen button colors)
+        button_panels = self._collect_current_button_colors()
+
+        # Build COMPLETE theme data with ALL required sections
         self.result_theme_data = {
             "name": self.display_input.text().strip() or theme_name,
             "description": self.description_input.text().strip() or f"Custom theme: {theme_name}",
             "category": self.category_combo.currentText(),
             "author": self.author_input.text().strip() or "X-Seti",
             "version": self.version_input.text().strip() or "1.0",
-            "colors": self.current_theme_data.get("colors", {})
+
+            # COLORS - Use actual colors from the theme being saved (user's color picks)
+            "colors": colors,
+
+            # MENUS - Get from current theme or use defaults
+            "menus": self.current_theme_data.get("menus", default_template.get("menus", {})),
+
+            # BUTTON PANELS - Use actual button colors from button editor (user's chosen colors)
+            "button_panels": button_panels,
+
+            # FONTS - Use actual font settings from app_settings (user's chosen fonts)
+            "fonts": fonts
         }
 
+        # Add timestamp
         from datetime import datetime
         self.result_theme_data["created"] = datetime.now().strftime("%Y-%m-%d %H:%M")
 
+        # Save theme
         success = self.app_settings.save_theme(theme_name, self.result_theme_data)
 
         if success:
+            # Count components for user feedback
+            color_count = len(self.result_theme_data.get('colors', {}))
+            menu_items = self.result_theme_data.get('menus', {}).get('menu_items', {})
+            menu_count = sum(len(items) for items in menu_items.values())
+            button_panels = self.result_theme_data.get('button_panels', {})
+            button_count = sum(len(panel) for panel in button_panels.values())
+            font_count = len(self.result_theme_data.get('fonts', {}))
+
             QMessageBox.information(
                 self, "Theme Saved",
                 f"Theme '{theme_name}' saved successfully!\n\n"
                 f"Display Name: {self.result_theme_data['name']}\n"
-                f"Category: {self.result_theme_data['category']}\n"
-                f"Colors: {len(self.result_theme_data['colors'])} defined"
+                f"Category: {self.result_theme_data['category']}\n\n"
+                f"Components exported:\n"
+                f"  • Colors: {color_count}\n"
+                f"  • Menu items: {menu_count}\n"
+                f"  • Button panels: {button_count} buttons\n"
+                f"  • Font definitions: {font_count}"
             )
             self.accept()
         else:
@@ -348,6 +397,74 @@ def _apply_settings(self): #vers 3
                 f"Failed to save theme '{theme_name}'.\n"
                 "Please check file permissions and try again."
             )
+
+    def _collect_current_font_settings(self): #vers 1
+        """Collect current font settings from app_settings.current_settings"""
+        font_ids = ['default', 'title', 'panel', 'button', 'menu', 'infobar', 'table', 'tooltip']
+        fonts = {}
+
+        for font_id in font_ids:
+            # Get font settings from app_settings (where they're stored after user changes)
+            family = self.app_settings.current_settings.get(f'{font_id}_font_family', 'Segoe UI')
+            size = self.app_settings.current_settings.get(f'{font_id}_font_size', 9)
+            weight = self.app_settings.current_settings.get(f'{font_id}_font_weight', 'Normal')
+
+            # Store in theme format
+            fonts[f'{font_id}_font_family'] = family
+            fonts[f'{font_id}_font_size'] = size
+            fonts[f'{font_id}_font_weight'] = weight
+
+        return fonts
+
+    def _get_complete_theme_template(self): #vers 1
+        """Get complete theme template structure (menus ONLY) - NO hardcoded colors, fonts, or button_panels"""
+        return {
+            "menus": {
+                "menu_structure": [
+                    "File", "Edit", "Dat", "IMG", "Model", "Texture", "Collision",
+                    "Item Definition", "Item Placement", "Entry", "Settings", "Help"
+                ],
+                "menu_items": {
+                    "File": [
+                        {"text": "New IMG...", "icon": "document-new", "shortcut": "Ctrl+N", "action": "create_new_img"},
+                        {"text": "Open IMG...", "icon": "document-open", "shortcut": "Ctrl+O", "action": "open_img_file"},
+                        {"text": "Open COL...", "icon": "document-open", "action": "open_col_file"},
+                        {"separator": True},
+                        {"text": "Close", "icon": "window-close", "action": "close_img_file"},
+                        {"separator": True},
+                        {"text": "Exit", "icon": "application-exit", "shortcut": "Ctrl+Q", "action": "close"}
+                    ],
+                    "IMG": [
+                        {"text": "Rebuild", "icon": "document-save", "action": "rebuild_img"},
+                        {"text": "Save Entry...", "icon": "document-save-entry", "action": "save_img_entry"},
+                        {"text": "Rebuild As...", "icon": "document-save-as", "action": "rebuild_img_as"},
+                        {"separator": True},
+                        {"text": "Merge IMG Files", "icon": "document-merge"},
+                        {"text": "Split IMG File", "icon": "edit-cut"},
+                        {"separator": True},
+                        {"text": "IMG Properties", "icon": "dialog-information"}
+                    ],
+                    "Entry": [
+                        {"text": "Import Files...", "icon": "go-down", "action": "import_files"},
+                        {"text": "Export Selected...", "icon": "go-up", "action": "export_selected"},
+                        {"text": "Export All...", "icon": "go-up", "action": "export_all"},
+                        {"separator": True},
+                        {"text": "Remove Selected", "icon": "list-remove", "action": "remove_selected"},
+                        {"text": "Rename Entry", "icon": "edit"}
+                    ],
+                    "Settings": [
+                        {"text": "Preferences...", "icon": "preferences-other", "action": "show_settings"},
+                        {"text": "Themes...", "icon": "applications-graphics", "action": "show_theme_settings"},
+                        {"separator": True},
+                        {"text": "Manage Templates...", "icon": "folder", "action": "manage_templates"}
+                    ],
+                    "Help": [
+                        {"text": "User Guide", "icon": "help-contents"},
+                        {"text": "About IMG Factory", "icon": "help-about", "action": "show_about"}
+                    ]
+                }
+            }
+        }
 
     def get_theme_data(self): #vers 1
         """Get the final theme data after dialog closes"""
@@ -2509,462 +2626,7 @@ class AppSettings:
             return self.themes.get(fallback_theme, {"colors": {}})
 
 
-
 class SettingsDialog(QDialog): #vers 15
-    """Settings dialog for theme and preference management"""
-
-    themeChanged = pyqtSignal(str)  # theme_name
-    settingsChanged = pyqtSignal()
-
-
-    def __init__(self, app_settings, parent=None): #vers 4
-        """Initialize settings dialog"""
-        super().__init__(parent)
-        self.setWindowTitle("App Factory Settings")
-        self.setMinimumSize(800, 600)
-        self.setModal(True)
-
-        self.app_settings = app_settings
-        self.original_settings = app_settings.current_settings.copy()
-        self._modified_colors = {}
-        self.color_editors = {}
-
-        # Initialize icon provider
-        self.icons = IconProvider(self)
-
-        # Setup resize handling
-        self.resize_margin = 10
-        self.resize_direction = None
-        self.drag_position = None
-        self.initial_geometry = None
-        self.setMouseTracking(True)
-
-        # Apply window mode (custRom gadgets or system)
-        self._apply_dialog_window_mode()
-
-
-        self._create_ui()
-        self._load_current_settings()
-
-    # ===== DEMO TAB FUNCTIONS =====
-
-
-    def _apply_quick_theme(self, theme_name: str):
-        """Apply quick theme with animation effect"""
-        self.demo_theme_combo.setCurrentText(theme_name)
-        self._apply_demo_theme(theme_name)
-
-        # Animate button click
-        sender = self.sender()
-        if sender:
-            original_text = sender.text()
-            sender.setText(f"Applied!")
-            QTimer.singleShot(1000, lambda: sender.setText(original_text))
-
-
-    def _apply_dialog_window_mode(self): #vers 1
-        """Apply custom window gadgets to dialog if enabled"""
-        use_custom = self.app_settings.current_settings.get("use_custom_gadgets", False)
-
-        if use_custom:
-            self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
-
-
-    def _random_theme(self):
-        """Apply random theme"""
-        import random
-        themes = list(self.app_settings.themes.keys())
-        current = self.demo_theme_combo.currentText()
-        themes.remove(current)  # Don't pick the same theme
-
-        random_theme = random.choice(themes)
-        self.demo_theme_combo.setCurrentText(random_theme)
-        self._apply_demo_theme(random_theme)
-
-        self.demo_log.append(f"Random theme: {random_theme}")
-
-
-    def _toggle_instant_apply(self, enabled: bool):
-        """Enhanced instant apply toggle"""
-        if enabled:
-            current_theme = self.demo_theme_combo.currentText()
-            self._apply_demo_theme(current_theme)
-            self.preview_status.setText("Instant apply: ON")
-            self.demo_log.append("Instant apply enabled")
-        else:
-            self.preview_status.setText("Instant apply: OFF")
-            self.demo_log.append("Instant apply disabled")
-
-
-    def _change_preview_scope(self, scope: str):
-        """Change preview scope"""
-        self.demo_log.append(f"Preview scope: {scope}")
-        current_theme = self.demo_theme_combo.currentText()
-        self._apply_demo_theme(current_theme)
-
-
-    def _update_theme_info(self):
-        """Update theme information display"""
-        current_theme = self.demo_theme_combo.currentText()
-        if current_theme in self.app_settings.themes:
-            theme_data = self.app_settings.themes[current_theme]
-
-            info_text = f"""
-            <b>{theme_data.get('name', current_theme)}</b><br>
-            <i>{theme_data.get('description', 'No description available')}</i><br><br>
-
-            <b>Colors:</b><br>
-            • Primary: {theme_data['colors'].get('accent_primary', 'N/A')}<br>
-            • Background: {theme_data['colors'].get('bg_primary', 'N/A')}<br>
-            • Text: {theme_data['colors'].get('text_primary', 'N/A')}<br>
-
-            <b>Category:</b> {theme_data.get('category', 'Standard')}<br>
-            <b>Author:</b> {theme_data.get('author', 'Unknown')}
-            """
-
-            if hasattr(self, 'theme_info_label'):
-                self.theme_info_label.setText(info_text)
-
-
-    def _update_titlebar_icons(self): #vers 2
-        """Update titlebar icons when theme changes"""
-        if not hasattr(self, 'custom_titlebar') and not hasattr(self, 'dialog_titlebar'):
-            return
-
-        # Clear icon cache and recreate provider
-        if hasattr(self, 'icons'):
-            self.icons.clear_cache()
-
-        # Force refresh all titlebar button icons
-        titlebar = getattr(self, 'custom_titlebar', None) or getattr(self, 'dialog_titlebar', None)
-        if titlebar:
-            for button in titlebar.findChildren(QPushButton):
-                tooltip = button.toolTip()
-                if tooltip == "Settings":
-                    button.setIcon(self.icons.settings_icon(force_refresh=True))
-                elif tooltip == "Minimize":
-                    button.setIcon(self.icons.minimize_icon(force_refresh=True))
-                elif tooltip == "Maximize":
-                    if self.isMaximized():
-                        button.setIcon(self.icons.restore_icon(force_refresh=True))
-                    else:
-                        button.setIcon(self.icons.maximize_icon(force_refresh=True))
-                elif tooltip == "Close":
-                    button.setIcon(self.icons.close_icon(force_refresh=True))
-
-
-
-    def _update_preview_stats(self):
-        """Update preview statistics"""
-        if hasattr(self, 'stats_labels'):
-            current_count = int(self.stats_labels["Preview Changes:"].text()) + 1
-            self.stats_labels["Preview Changes:"].setText(str(current_count))
-            self.stats_labels["Last Applied:"].setText(self.demo_theme_combo.currentText())
-
-
-    def _show_full_preview(self):
-        """Show full preview window"""
-        QMessageBox.information(self, "Full Preview",
-            "Full preview window would open here!\n\n"
-            "This would show a complete App Factory interface\n"
-            "with the selected theme applied.")
-
-
-    def _preview_theme_instantly(self, theme_name: str):
-        """Enhanced instant preview with better feedback"""
-        if hasattr(self, 'auto_preview_check') and self.auto_preview_check.isChecked():
-            self._apply_demo_theme(theme_name)
-            self._update_theme_info()
-            self._update_preview_stats()
-
-            # Update status
-            self.preview_status.setText(f"Previewing: {theme_name}")
-            self.demo_log.append(f"Theme preview: {theme_name}")
-
-
-    def _apply_demo_theme(self, theme_name: str): #vers 1
-        """Apply theme to demo elements"""
-        if theme_name not in self.app_settings.themes:
-            return
-
-        # Temporarily update settings for preview
-        self.app_settings.current_settings["theme"] = theme_name
-
-        # Apply theme stylesheet
-        stylesheet = self.app_settings.get_stylesheet()
-
-        # Apply to demo widgets if instant apply enabled
-        if hasattr(self, 'instant_apply_check') and self.instant_apply_check.isChecked():
-            self.setStyleSheet(stylesheet)
-            self.themeChanged.emit(theme_name)
-
-        if hasattr(self, 'demo_log'):
-            self.demo_log.append(f"Previewing: {theme_name}")
-
-
-    def _reset_demo_theme(self): #vers 1
-        """Reset to original theme"""
-        original = getattr(self, '_original_theme', self.app_settings.current_settings["theme"])
-        if hasattr(self, 'demo_theme_combo'):
-            self.demo_theme_combo.setCurrentText(original)
-        self._apply_demo_theme(original)
-
-
-    def _create_fonts_tab(self): #vers 2
-        """Create fonts settings tab with multiple font type controls"""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-
-        # Instructions
-        info_label = QLabel("Configure fonts for different UI elements. Changes are saved to appfactory.settings.json")
-        info_label.setWordWrap(True)
-        info_label.setStyleSheet("color: #666; font-style: italic; padding: 8px;")
-        layout.addWidget(info_label)
-
-        # Scroll area for font groups
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll_widget = QWidget()
-        scroll_layout = QVBoxLayout(scroll_widget)
-
-        # Font type configurations
-        self.font_controls = {}
-
-        font_types = [
-            ("default", "Default Font", "General UI text and labels (was Font Family/Size)", "Segoe UI", 9, 8, 24),
-            ("title", "Title Font", "Window titles and main headers", "Arial", 14, 10, 32),
-            ("panel", "Panel Headers Font", "Group box titles and section headers", "Arial", 10, 8, 18),
-            ("button", "Button Font", "All button text", "Arial", 10, 8, 16),
-            ("menu", "Menu Font", "Menu bar and menu items", "Segoe UI", 9, 8, 14),
-            ("infobar", "Info Bar Font", "Status bar and info display text", "Courier New", 9, 7, 14),
-            ("table", "Table/List Font", "Data tables and list views", "Segoe UI", 9, 7, 14),
-            ("tooltip", "Tooltip Font", "Hover tooltip text", "Segoe UI", 8, 7, 12)
-        ]
-
-        for font_id, title, description, default_family, default_size, min_size, max_size in font_types:
-            group = self._create_font_control_group(
-                font_id, title, description,
-                default_family, default_size,
-                min_size, max_size
-            )
-            scroll_layout.addWidget(group)
-
-        scroll_layout.addStretch()
-        scroll.setWidget(scroll_widget)
-        layout.addWidget(scroll)
-
-        # Action buttons row
-        actions_layout = QHBoxLayout()
-
-        reset_fonts_btn = QPushButton("Reset All Fonts to Defaults")
-        reset_fonts_btn.clicked.connect(self._reset_all_fonts)
-        actions_layout.addWidget(reset_fonts_btn)
-
-        actions_layout.addStretch()
-
-        preview_btn = QPushButton("Preview Font Changes")
-        preview_btn.clicked.connect(self._preview_font_changes)
-        actions_layout.addWidget(preview_btn)
-
-        layout.addLayout(actions_layout)
-
-        return tab
-
-    def _create_font_control_group(self, font_id, title, description,
-                                default_family, default_size,
-                                min_size, max_size): #vers 1
-        """Create a font control group for specific font type"""
-        group = QGroupBox(title)
-        layout = QVBoxLayout(group)
-
-        # Description
-        desc_label = QLabel(description)
-        desc_label.setStyleSheet("color: #888; font-style: italic; font-size: 8pt;")
-        layout.addWidget(desc_label)
-
-        # Font controls row
-        controls_layout = QHBoxLayout()
-
-        # Font family
-        controls_layout.addWidget(QLabel("Font:"))
-        font_combo = QFontComboBox()
-
-        # Load current font setting from appfactory.settings.json
-        current_family = self.app_settings.current_settings.get(
-            f'{font_id}_font_family', default_family
-        )
-        font_combo.setCurrentFont(QFont(current_family))
-        font_combo.currentFontChanged.connect(
-            lambda f, fid=font_id: self._on_font_changed(fid, 'family', f.family())
-        )
-        controls_layout.addWidget(font_combo, 1)
-
-        # Font size
-        controls_layout.addWidget(QLabel("Size:"))
-        size_spin = QSpinBox()
-        size_spin.setRange(min_size, max_size)
-        current_size = self.app_settings.current_settings.get(
-            f'{font_id}_font_size', default_size
-        )
-        size_spin.setValue(current_size)
-        size_spin.setSuffix(" pt")
-        size_spin.setFixedWidth(80)
-        size_spin.valueChanged.connect(
-            lambda v, fid=font_id: self._on_font_changed(fid, 'size', v)
-        )
-        controls_layout.addWidget(size_spin)
-
-        # Font weight
-        controls_layout.addWidget(QLabel("Weight:"))
-        weight_combo = QComboBox()
-        weight_combo.addItems(["Normal", "Bold", "Light"])
-        current_weight = self.app_settings.current_settings.get(
-            f'{font_id}_font_weight', 'Normal'
-        )
-        weight_combo.setCurrentText(current_weight)
-        weight_combo.currentTextChanged.connect(
-            lambda w, fid=font_id: self._on_font_changed(fid, 'weight', w)
-        )
-        weight_combo.setFixedWidth(100)
-        controls_layout.addWidget(weight_combo)
-
-        layout.addLayout(controls_layout)
-
-        # Store controls for later access
-        self.font_controls[font_id] = {
-            'family': font_combo,
-            'size': size_spin,
-            'weight': weight_combo,
-            'group': group,
-            'default_family': default_family,
-            'default_size': default_size
-        }
-
-        return group
-
-    def _on_font_changed(self, font_id, property_type, value): #vers 1
-        """Handle font property changes - updates current_settings"""
-        if property_type == 'family':
-            self.app_settings.current_settings[f'{font_id}_font_family'] = value
-        elif property_type == 'size':
-            self.app_settings.current_settings[f'{font_id}_font_size'] = value
-        elif property_type == 'weight':
-            self.app_settings.current_settings[f'{font_id}_font_weight'] = value
-
-        # Mark as modified
-        if not hasattr(self, '_fonts_modified'):
-            self._fonts_modified = True
-
-    def _preview_font_changes(self): #vers 1
-        """Preview font changes in dialog"""
-        try:
-            # Apply default font to see immediate changes
-            if 'default' in self.font_controls:
-                family = self.font_controls['default']['family'].currentFont().family()
-                size = self.font_controls['default']['size'].value()
-                weight = self.font_controls['default']['weight'].currentText()
-
-                font = QFont(family, size)
-                if weight == "Bold":
-                    font.setWeight(QFont.Weight.Bold)
-                elif weight == "Light":
-                    font.setWeight(QFont.Weight.Light)
-
-                self.setFont(font)
-
-            # Show preview info
-            preview_text = "Font Preview Applied!\n\n"
-            for font_id, controls in self.font_controls.items():
-                family = controls['family'].currentFont().family()
-                size = controls['size'].value()
-                weight = controls['weight'].currentText()
-                preview_text += f"{controls['group'].title()}: {family} {size}pt {weight}\n"
-
-            QMessageBox.information(
-                self,
-                "Font Preview",
-                preview_text + "\nClick 'Apply' to save changes to appfactory.settings.json"
-            )
-        except Exception as e:
-            QMessageBox.warning(self, "Preview Error", f"Could not preview fonts:\n{e}")
-
-    def _reset_all_fonts(self): #vers 1
-        """Reset all fonts to their default values"""
-        reply = QMessageBox.question(
-            self,
-            "Reset Fonts",
-            "Reset all fonts to their default values?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
-        )
-
-        if reply == QMessageBox.StandardButton.Yes:
-            for font_id, controls in self.font_controls.items():
-                # Reset to defaults
-                default_family = controls['default_family']
-                default_size = controls['default_size']
-
-                controls['family'].setCurrentFont(QFont(default_family))
-                controls['size'].setValue(default_size)
-                controls['weight'].setCurrentText('Normal')
-
-                # Update settings
-                self.app_settings.current_settings[f'{font_id}_font_family'] = default_family
-                self.app_settings.current_settings[f'{font_id}_font_size'] = default_size
-                self.app_settings.current_settings[f'{font_id}_font_weight'] = 'Normal'
-
-            QMessageBox.information(self, "Fonts Reset", "All fonts reset to default values")
-
-    def _load_font_settings(self): #vers 1
-        """Load font settings from appfactory.settings.json into controls"""
-        font_ids = ['default', 'title', 'panel', 'button', 'menu', 'infobar', 'table', 'tooltip']
-
-        for font_id in font_ids:
-            if font_id not in self.font_controls:
-                continue
-
-            controls = self.font_controls[font_id]
-
-            # Load family
-            family = self.app_settings.current_settings.get(
-                f'{font_id}_font_family',
-                controls['default_family']
-            )
-            controls['family'].setCurrentFont(QFont(family))
-
-            # Load size
-            size = self.app_settings.current_settings.get(
-                f'{font_id}_font_size',
-                controls['default_size']
-            )
-            controls['size'].setValue(size)
-
-            # Load weight
-            weight = self.app_settings.current_settings.get(
-                f'{font_id}_font_weight',
-                'Normal'
-            )
-            controls['weight'].setCurrentText(weight)
-
-    def _save_font_settings(self): #vers 1
-        """Save font settings from controls to app settings and appfactory.settings.json"""
-        for font_id, controls in self.font_controls.items():
-            family = controls['family'].currentFont().family()
-            size = controls['size'].value()
-            weight = controls['weight'].currentText()
-
-            self.app_settings.current_settings[f'{font_id}_font_family'] = family
-            self.app_settings.current_settings[f'{font_id}_font_size'] = size
-            self.app_settings.current_settings[f'{font_id}_font_weight'] = weight
-
-        # Save to appfactory.settings.json
-        self.app_settings.save_settings()
-
-    # ===== PICKER FUNCTIONS =====
-
-
-class SettingsDialog(QDialog): #vers 5
     """Settings dialog for theme and preference management"""
 
     themeChanged = pyqtSignal(str)  # theme_name
@@ -3016,12 +2678,27 @@ class SettingsDialog(QDialog): #vers 5
         self._create_ui()
         self._load_current_settings()
 
+
+    def _apply_quick_theme(self, theme_name: str):
+        """Apply quick theme with animation effect"""
+        self.demo_theme_combo.setCurrentText(theme_name)
+        self._apply_demo_theme(theme_name)
+
+        # Animate button click
+        sender = self.sender()
+        if sender:
+            original_text = sender.text()
+            sender.setText(f"Applied!")
+            QTimer.singleShot(1000, lambda: sender.setText(original_text))
+
+
     def _apply_dialog_window_mode(self): #vers 1
         """Apply custom window gadgets to dialog if enabled"""
         use_custom = self.app_settings.current_settings.get("use_custom_gadgets", False)
 
         if use_custom:
             self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
+
 
     def _get_resize_corner(self, pos): #vers 2
         """Determine which corner is under mouse position"""
@@ -3095,6 +2772,33 @@ class SettingsDialog(QDialog): #vers 5
 
             if new_width >= min_width and new_height >= min_height:
                 self.resize(new_width, new_height)
+
+
+    def _update_titlebar_icons(self): #vers 2
+        """Update titlebar icons when theme changes"""
+        if not hasattr(self, 'custom_titlebar') and not hasattr(self, 'dialog_titlebar'):
+            return
+
+        # Clear icon cache and recreate provider
+        if hasattr(self, 'icons'):
+            self.icons.clear_cache()
+
+        # Force refresh all titlebar button icons
+        titlebar = getattr(self, 'custom_titlebar', None) or getattr(self, 'dialog_titlebar', None)
+        if titlebar:
+            for button in titlebar.findChildren(QPushButton):
+                tooltip = button.toolTip()
+                if tooltip == "Settings":
+                    button.setIcon(self.icons.settings_icon(force_refresh=True))
+                elif tooltip == "Minimize":
+                    button.setIcon(self.icons.minimize_icon(force_refresh=True))
+                elif tooltip == "Maximize":
+                    if self.isMaximized():
+                        button.setIcon(self.icons.restore_icon(force_refresh=True))
+                    else:
+                        button.setIcon(self.icons.maximize_icon(force_refresh=True))
+                elif tooltip == "Close":
+                    button.setIcon(self.icons.close_icon(force_refresh=True))
 
 
     def _get_resize_direction(self, pos): #vers 1
@@ -3405,6 +3109,19 @@ class SettingsDialog(QDialog): #vers 5
         self.dialog_titlebar.mouseMoveEvent = self._titlebar_mouse_move
         self.dialog_titlebar.mouseDoubleClickEvent = self._titlebar_double_click
 
+
+    def _random_theme(self):
+        """Apply random theme"""
+        import random
+        themes = list(self.app_settings.themes.keys())
+        current = self.demo_theme_combo.currentText()
+        themes.remove(current)  # Don't pick the same theme
+
+        random_theme = random.choice(themes)
+        self.demo_theme_combo.setCurrentText(random_theme)
+        self._apply_demo_theme(random_theme)
+
+        self.demo_log.append(f"Random theme: {random_theme}")
 
 
     def get_stylesheet(self): #vers 4
@@ -3850,6 +3567,412 @@ class SettingsDialog(QDialog): #vers 5
             self.color_editors[selected_data].set_color(color)
 
 
+    def _create_buttons_tab(self): #vers 1
+        """Create buttons customization tab with light/dark sub-tabs"""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+
+        # Instructions
+        info_label = QLabel(
+            "<b>Customize Button Colors:</b><br>"
+            "Edit colors for each button panel. Colors are saved per theme.<br>"
+            "Light themes use pastel colors, dark themes use solid colors."
+        )
+        info_label.setWordWrap(True)
+        layout.addWidget(info_label)
+
+        # Light/Dark theme toggle
+        theme_type_group = QGroupBox("Button Color Mode")
+        theme_type_layout = QHBoxLayout(theme_type_group)
+
+        theme_type_layout.addWidget(QLabel("Editing colors for:"))
+        self.button_theme_type_combo = QComboBox()
+        self.button_theme_type_combo.addItems(["Light Theme Buttons", "Dark Theme Buttons"])
+        self.button_theme_type_combo.currentTextChanged.connect(self._on_button_theme_type_changed)
+        theme_type_layout.addWidget(self.button_theme_type_combo)
+        theme_type_layout.addStretch()
+
+        layout.addWidget(theme_type_group)
+
+        # Sub-tabs for different button panels
+        self.button_panels_tabs = QTabWidget()
+
+        # IMG Files panel
+        img_files_tab = self._create_button_panel_editor("img_files", [
+            ("Open", "open"),
+            ("Close", "close"),
+            ("Close All", "close_all"),
+            ("Rebuild", "rebuild"),
+            ("Save Entry", "save_entry"),
+            ("Rebuild All", "rebuild_all"),
+            ("Merge", "merge"),
+            ("Split", "split"),
+            ("Convert", "convert")
+        ])
+        self.button_panels_tabs.addTab(img_files_tab, "IMG Files Buttons")
+
+        # File Entries panel
+        file_entries_tab = self._create_button_panel_editor("file_entries", [
+            ("Import", "import"),
+            ("Import via", "import_via"),
+            ("Export", "export"),
+            ("Export via", "export_via"),
+            ("Remove", "remove"),
+            ("Remove All", "remove_all"),
+            ("Refresh", "update"),
+            ("Quick Export", "quick_export"),
+            ("Pin selected", "pin")
+        ])
+        self.button_panels_tabs.addTab(file_entries_tab, "File Entries Buttons")
+
+        # Editing Options panel
+        editing_options_tab = self._create_button_panel_editor("editing_options", [
+            ("Col Edit", "col_edit"),
+            ("Txd Edit", "txd_edit"),
+            ("Dff Edit", "dff_edit"),
+            ("Ipf Edit", "ipf_edit"),
+            ("IPL Edit", "ipl_edit"),
+            ("IDE Edit", "ide_edit"),
+            ("Dat Edit", "dat_edit"),
+            ("Zons Edit", "zons_edit"),
+            ("Weap Edit", "weap_edit"),
+            ("Vehi Edit", "vehi_edit"),
+            ("Radar Map", "radar_map"),
+            ("Paths Map", "paths_map"),
+            ("Waterpro", "waterpro")
+        ])
+        self.button_panels_tabs.addTab(editing_options_tab, "Editing Options Buttons")
+
+        layout.addWidget(self.button_panels_tabs)
+
+        # Action buttons
+        actions_layout = QHBoxLayout()
+
+        reset_btn = QPushButton("Reset to Theme Defaults")
+        reset_btn.clicked.connect(self._reset_button_colors_to_defaults)
+        actions_layout.addWidget(reset_btn)
+
+        actions_layout.addStretch()
+
+        preview_btn = QPushButton("Preview Button Colors")
+        preview_btn.clicked.connect(self._preview_button_colors)
+        actions_layout.addWidget(preview_btn)
+
+        layout.addLayout(actions_layout)
+
+        return tab
+
+    # ====================================================================================
+    # HELPER METHODS FOR BUTTON EDITOR
+    # ====================================================================================
+
+    def _create_button_panel_editor(self, panel_id, buttons): #vers 1
+        """Create editor for a specific button panel"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+
+        # Store button color editors
+        if not hasattr(self, 'button_color_editors'):
+            self.button_color_editors = {}
+
+        self.button_color_editors[panel_id] = {}
+
+        for button_text, button_action in buttons:
+            button_key = f"{panel_id}_{button_action}"
+
+            # Get default color
+            default_colors = self._get_default_button_colors()
+            is_light = self.button_theme_type_combo.currentText() == "Light Theme Buttons"
+            color_key = f"button_{panel_id}_{button_action}_{'light' if is_light else 'dark'}"
+            default_color = self.app_settings.current_settings.get(color_key, default_colors.get(button_action, "#E3F2FD"))
+
+            # Create color editor
+            editor_group = QGroupBox(button_text)
+            editor_layout = QHBoxLayout(editor_group)
+
+            # Color preview
+            color_preview = QLabel()
+            color_preview.setFixedSize(40, 30)
+            color_preview.setStyleSheet(f"background-color: {default_color}; border: 1px solid #999;")
+            editor_layout.addWidget(color_preview)
+
+            # Color input
+            color_input = QLineEdit(default_color)
+            color_input.setMaximumWidth(100)
+            color_input.textChanged.connect(
+                lambda c, key=button_key, prev=color_preview: self._on_button_color_changed(key, c, prev)
+            )
+            editor_layout.addWidget(color_input)
+
+            # Pick button
+            pick_btn = QPushButton("Pick Color")
+            pick_btn.clicked.connect(
+                lambda checked, inp=color_input: self._pick_button_color(inp)
+            )
+            editor_layout.addWidget(pick_btn)
+
+            editor_layout.addStretch()
+
+            scroll_layout.addWidget(editor_group)
+
+            # Store for later access
+            self.button_color_editors[panel_id][button_action] = {
+                'preview': color_preview,
+                'input': color_input,
+                'key': button_key
+            }
+
+        scroll_area.setWidget(scroll_widget)
+        layout.addWidget(scroll_area)
+
+        return widget
+
+    def _get_default_button_colors(self): #vers 1
+        """Get default button colors based on theme type (light/dark)"""
+        is_light = self.button_theme_type_combo.currentText() == "Light Theme Buttons"
+
+        if is_light:
+            # Light theme - Pastel colors
+            return {
+                "open": "#E3F2FD",
+                "close": "#FFF3E0",
+                "close_all": "#FFF3E0",
+                "rebuild": "#E8F5E8",
+                "save_entry": "#E8F5E8",
+                "rebuild_all": "#E8F5E8",
+                "merge": "#F3E5F5",
+                "split": "#F3E5F5",
+                "convert": "#FFF8E1",
+                "import": "#E1F5FE",
+                "import_via": "#E1F5FE",
+                "export": "#E0F2F1",
+                "export_via": "#E0F2F1",
+                "remove": "#FFEBEE",
+                "remove_all": "#FFEBEE",
+                "update": "#F9FBE7",
+                "quick_export": "#E0F2F1",
+                "pin": "#FCE4EC",
+                "col_edit": "#FFE0B2",
+                "txd_edit": "#E8EAF6",
+                "dff_edit": "#F1F8E9",
+                "ipf_edit": "#FFF3E0",
+                "ipl_edit": "#FFEBEE",
+                "ide_edit": "#E0F2F1",
+                "dat_edit": "#F3E5F5",
+                "zons_edit": "#E1F5FE",
+                "weap_edit": "#FFF8E1",
+                "vehi_edit": "#E8F5E8",
+                "radar_map": "#FCE4EC",
+                "paths_map": "#F9FBE7",
+                "waterpro": "#E3F2FD"
+            }
+        else:
+            # Dark theme - Solid darker colors
+            return {
+                "open": "#1a3a52",
+                "close": "#4a3d2d",
+                "close_all": "#4a3d2d",
+                "rebuild": "#2d4a2d",
+                "save_entry": "#2d4a2d",
+                "rebuild_all": "#2d4a2d",
+                "merge": "#3d2d4a",
+                "split": "#3d2d4a",
+                "convert": "#4a4a2d",
+                "import": "#1a3a52",
+                "import_via": "#1a3a52",
+                "export": "#1a4a44",
+                "export_via": "#1a4a44",
+                "remove": "#4a2d2d",
+                "remove_all": "#4a2d2d",
+                "update": "#4a4a2d",
+                "quick_export": "#1a4a44",
+                "pin": "#4a2d3d",
+                "col_edit": "#4a3d2d",
+                "txd_edit": "#2d2d4a",
+                "dff_edit": "#3a4a2d",
+                "ipf_edit": "#4a4a2d",
+                "ipl_edit": "#4a2d2d",
+                "ide_edit": "#1a4a44",
+                "dat_edit": "#3d2d4a",
+                "zons_edit": "#1a3a52",
+                "weap_edit": "#4a4a2d",
+                "vehi_edit": "#2d4a2d",
+                "radar_map": "#4a2d3d",
+                "paths_map": "#4a4a2d",
+                "waterpro": "#1a3a52"
+            }
+
+    def _on_button_color_changed(self, button_key, hex_color, preview_label): #vers 1
+        """Handle button color changes"""
+        # Update preview
+        preview_label.setStyleSheet(f"background-color: {hex_color}; border: 1px solid #999;")
+
+        # Store in settings
+        if not hasattr(self, '_modified_button_colors'):
+            self._modified_button_colors = {}
+        self._modified_button_colors[button_key] = hex_color
+
+    def _pick_button_color(self, color_input): #vers 1
+        """Open color picker for button"""
+        current_color = QColor(color_input.text())
+        color = QColorDialog.getColor(current_color, self, "Pick Button Color")
+        if color.isValid():
+            color_input.setText(color.name())
+
+    def _on_button_theme_type_changed(self, theme_type): #vers 1
+        """Handle switching between light/dark button color sets"""
+        # Reload button colors for the selected theme type
+        if hasattr(self, 'button_color_editors'):
+            default_colors = self._get_default_button_colors()
+            is_light = theme_type == "Light Theme Buttons"
+
+            for panel_id, editors in self.button_color_editors.items():
+                for button_action, editor_dict in editors.items():
+                    color_key = f"button_{panel_id}_{button_action}_{'light' if is_light else 'dark'}"
+                    color = self.app_settings.current_settings.get(
+                        color_key,
+                        default_colors.get(button_action, "#E3F2FD")
+                    )
+                    editor_dict['input'].setText(color)
+
+
+    def _toggle_instant_apply(self, enabled: bool):
+        """Enhanced instant apply toggle"""
+        if enabled:
+            current_theme = self.demo_theme_combo.currentText()
+            self._apply_demo_theme(current_theme)
+            self.preview_status.setText("Instant apply: ON")
+            self.demo_log.append("Instant apply enabled")
+        else:
+            self.preview_status.setText("Instant apply: OFF")
+            self.demo_log.append("Instant apply disabled")
+
+
+    def _change_preview_scope(self, scope: str):
+        """Change preview scope"""
+        self.demo_log.append(f"Preview scope: {scope}")
+        current_theme = self.demo_theme_combo.currentText()
+        self._apply_demo_theme(current_theme)
+
+
+    def _update_theme_info(self):
+        """Update theme information display"""
+        current_theme = self.demo_theme_combo.currentText()
+        if current_theme in self.app_settings.themes:
+            theme_data = self.app_settings.themes[current_theme]
+
+            info_text = f"""
+            <b>{theme_data.get('name', current_theme)}</b><br>
+            <i>{theme_data.get('description', 'No description available')}</i><br><br>
+
+            <b>Colors:</b><br>
+            • Primary: {theme_data['colors'].get('accent_primary', 'N/A')}<br>
+            • Background: {theme_data['colors'].get('bg_primary', 'N/A')}<br>
+            • Text: {theme_data['colors'].get('text_primary', 'N/A')}<br>
+
+            <b>Category:</b> {theme_data.get('category', 'Standard')}<br>
+            <b>Author:</b> {theme_data.get('author', 'Unknown')}
+            """
+
+            if hasattr(self, 'theme_info_label'):
+                self.theme_info_label.setText(info_text)
+
+
+    def _reset_button_colors_to_defaults(self): #vers 1
+        """Reset all button colors to theme defaults"""
+        reply = QMessageBox.question(
+            self, "Reset Button Colors",
+            "Reset all button colors to default values?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            default_colors = self._get_default_button_colors()
+
+            for panel_id, editors in self.button_color_editors.items():
+                for button_action, editor_dict in editors.items():
+                    default_color = default_colors.get(button_action, "#E3F2FD")
+                    editor_dict['input'].setText(default_color)
+
+            QMessageBox.information(self, "Reset Complete", "Button colors reset to defaults")
+
+    def _preview_button_colors(self): #vers 1
+        """Preview button color changes"""
+        QMessageBox.information(
+            self, "Button Preview",
+            "Button color preview will be applied when you click 'Apply'.\n\n"
+            "Current button colors have been updated in the editors."
+        )
+
+    def _collect_current_button_colors(self): #vers 1
+        """Collect current button panel colors for theme saving"""
+        button_panels = {
+            "img_files": [],
+            "file_entries": [],
+            "editing_options": []
+        }
+
+        # Check if we have button color editors
+        if not hasattr(self, 'button_color_editors'):
+            return button_panels
+
+        # Determine if we're using light or dark colors
+        is_light = getattr(self, 'button_theme_type_combo', None)
+        is_light = is_light.currentText() == "Light Theme Buttons" if is_light else True
+
+        # Get button definitions
+        button_definitions = {
+            "img_files": [
+                ("Open", "open"), ("Close", "close"), ("Close All", "close_all"),
+                ("Rebuild", "rebuild"), ("Save Entry...", "save_entry"),
+                ("Rebuild All", "rebuild_all"), ("Merge", "merge"),
+                ("Split", "split"), ("Convert", "convert")
+            ],
+            "file_entries": [
+                ("Import", "import"), ("Import via", "import_via"),
+                ("Export", "export"), ("Export via", "export_via"),
+                ("Remove", "remove"), ("Remove All", "remove_all"),
+                ("Refresh", "update"), ("Quick Export", "quick_export"),
+                ("Pin selected", "pin")
+            ],
+            "editing_options": [
+                ("Col Edit", "col_edit"), ("Txd Edit", "txd_edit"),
+                ("Dff Edit", "dff_edit"), ("Ipf Edit", "ipf_edit"),
+                ("IPL Edit", "ipl_edit"), ("IDE Edit", "ide_edit"),
+                ("Dat Edit", "dat_edit"), ("Zons Edit", "zons_edit"),
+                ("Weap Edit", "weap_edit"), ("Vehi Edit", "vehi_edit"),
+                ("Radar Map", "radar_map"), ("Paths Map", "paths_map"),
+                ("Waterpro", "waterpro")
+            ]
+        }
+
+        # Collect colors from editors
+        for panel_id, button_list in button_definitions.items():
+            for button_text, button_action in button_list:
+                # Get color from editor or settings
+                color = "#E3F2FD"  # Default
+
+                if panel_id in self.button_color_editors:
+                    if button_action in self.button_color_editors[panel_id]:
+                        editor = self.button_color_editors[panel_id][button_action]
+                        color = editor['input'].text()
+
+                # Add to button panel
+                button_panels[panel_id].append({
+                    "text": button_text,
+                    "action": button_action,
+                    "icon": f"edit-{button_action}",  # Icon placeholder
+                    "color": color
+                })
+
+        return button_panels
+
+
     def _create_demo_tab(self) -> QWidget:
         """Create improved demo tab with better layout"""
         tab = QWidget()
@@ -4068,7 +4191,6 @@ Ready for operations..."""
 
         return tab
 
-
     def _create_debug_tab(self): #vers 2
         """Create debug settings tab"""
         widget = QWidget()
@@ -4132,13 +4254,70 @@ Ready for operations..."""
         return widget
 
 
-    def _create_fonts_tab(self): #vers 1
+
+    def _update_preview_stats(self):
+        """Update preview statistics"""
+        if hasattr(self, 'stats_labels'):
+            current_count = int(self.stats_labels["Preview Changes:"].text()) + 1
+            self.stats_labels["Preview Changes:"].setText(str(current_count))
+            self.stats_labels["Last Applied:"].setText(self.demo_theme_combo.currentText())
+
+
+    def _show_full_preview(self):
+        """Show full preview window"""
+        QMessageBox.information(self, "Full Preview",
+            "Full preview window would open here!\n\n"
+            "This would show a complete App Factory interface\n"
+            "with the selected theme applied.")
+
+
+    def _preview_theme_instantly(self, theme_name: str):
+        """Enhanced instant preview with better feedback"""
+        if hasattr(self, 'auto_preview_check') and self.auto_preview_check.isChecked():
+            self._apply_demo_theme(theme_name)
+            self._update_theme_info()
+            self._update_preview_stats()
+
+            # Update status
+            self.preview_status.setText(f"Previewing: {theme_name}")
+            self.demo_log.append(f"Theme preview: {theme_name}")
+
+
+    def _apply_demo_theme(self, theme_name: str): #vers 1
+        """Apply theme to demo elements"""
+        if theme_name not in self.app_settings.themes:
+            return
+
+        # Temporarily update settings for preview
+        self.app_settings.current_settings["theme"] = theme_name
+
+        # Apply theme stylesheet
+        stylesheet = self.app_settings.get_stylesheet()
+
+        # Apply to demo widgets if instant apply enabled
+        if hasattr(self, 'instant_apply_check') and self.instant_apply_check.isChecked():
+            self.setStyleSheet(stylesheet)
+            self.themeChanged.emit(theme_name)
+
+        if hasattr(self, 'demo_log'):
+            self.demo_log.append(f"Previewing: {theme_name}")
+
+
+    def _reset_demo_theme(self): #vers 1
+        """Reset to original theme"""
+        original = getattr(self, '_original_theme', self.app_settings.current_settings["theme"])
+        if hasattr(self, 'demo_theme_combo'):
+            self.demo_theme_combo.setCurrentText(original)
+        self._apply_demo_theme(original)
+
+
+    def _create_fonts_tab(self): #vers 2
         """Create fonts settings tab with multiple font type controls"""
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
         # Instructions
-        info_label = QLabel("Configure fonts for different UI elements. Changes apply when theme is saved.")
+        info_label = QLabel("Configure fonts for different UI elements. Changes are saved to appfactory.settings.json")
         info_label.setWordWrap(True)
         info_label.setStyleSheet("color: #666; font-style: italic; padding: 8px;")
         layout.addWidget(info_label)
@@ -4146,6 +4325,7 @@ Ready for operations..."""
         # Scroll area for font groups
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
         scroll_widget = QWidget()
         scroll_layout = QVBoxLayout(scroll_widget)
 
@@ -4153,13 +4333,13 @@ Ready for operations..."""
         self.font_controls = {}
 
         font_types = [
-            ("default", "Default Font", "General UI text", "Segoe UI", 9, 8, 24),
+            ("default", "Default Font", "General UI text and labels (was Font Family/Size)", "Segoe UI", 9, 8, 24),
             ("title", "Title Font", "Window titles and main headers", "Arial", 14, 10, 32),
-            ("panel", "Panel Headers Font", "Group box titles", "Arial", 10, 8, 18),
+            ("panel", "Panel Headers Font", "Group box titles and section headers", "Arial", 10, 8, 18),
             ("button", "Button Font", "All button text", "Arial", 10, 8, 16),
             ("menu", "Menu Font", "Menu bar and menu items", "Segoe UI", 9, 8, 14),
-            ("infobar", "Info Bar Font", "Status bar and info text", "Courier New", 9, 7, 14),
-            ("table", "Table/List Font", "Data tables and lists", "Segoe UI", 9, 7, 14),
+            ("infobar", "Info Bar Font", "Status bar and info display text", "Courier New", 9, 7, 14),
+            ("table", "Table/List Font", "Data tables and list views", "Segoe UI", 9, 7, 14),
             ("tooltip", "Tooltip Font", "Hover tooltip text", "Segoe UI", 8, 7, 12)
         ]
 
@@ -4175,16 +4355,26 @@ Ready for operations..."""
         scroll.setWidget(scroll_widget)
         layout.addWidget(scroll)
 
-        # Preview button
+        # Action buttons row
+        actions_layout = QHBoxLayout()
+
+        reset_fonts_btn = QPushButton("Reset All Fonts to Defaults")
+        reset_fonts_btn.clicked.connect(self._reset_all_fonts)
+        actions_layout.addWidget(reset_fonts_btn)
+
+        actions_layout.addStretch()
+
         preview_btn = QPushButton("Preview Font Changes")
         preview_btn.clicked.connect(self._preview_font_changes)
-        layout.addWidget(preview_btn)
+        actions_layout.addWidget(preview_btn)
+
+        layout.addLayout(actions_layout)
 
         return tab
 
-
     def _create_font_control_group(self, font_id, title, description,
-        default_family, default_size, min_size, max_size): #vers 1
+                                default_family, default_size,
+                                min_size, max_size): #vers 1
         """Create a font control group for specific font type"""
         group = QGroupBox(title)
         layout = QVBoxLayout(group)
@@ -4201,7 +4391,7 @@ Ready for operations..."""
         controls_layout.addWidget(QLabel("Font:"))
         font_combo = QFontComboBox()
 
-        # Load current font setting
+        # Load current font setting from appfactory.settings.json
         current_family = self.app_settings.current_settings.get(
             f'{font_id}_font_family', default_family
         )
@@ -4247,14 +4437,16 @@ Ready for operations..."""
             'family': font_combo,
             'size': size_spin,
             'weight': weight_combo,
-            'group': group
+            'group': group,
+            'default_family': default_family,
+            'default_size': default_size
         }
 
         return group
 
 
     def _on_font_changed(self, font_id, property_type, value): #vers 1
-        """Handle font property changes"""
+        """Handle font property changes - updates current_settings"""
         if property_type == 'family':
             self.app_settings.current_settings[f'{font_id}_font_family'] = value
         elif property_type == 'size':
@@ -4269,9 +4461,8 @@ Ready for operations..."""
 
     def _preview_font_changes(self): #vers 1
         """Preview font changes in dialog"""
-        # Apply fonts to current dialog elements
         try:
-            # Default font
+            # Apply default font to see immediate changes
             if 'default' in self.font_controls:
                 family = self.font_controls['default']['family'].currentFont().family()
                 size = self.font_controls['default']['size'].value()
@@ -4285,17 +4476,53 @@ Ready for operations..."""
 
                 self.setFont(font)
 
+            # Show preview info
+            preview_text = "Font Preview Applied!\n\n"
+            for font_id, controls in self.font_controls.items():
+                family = controls['family'].currentFont().family()
+                size = controls['size'].value()
+                weight = controls['weight'].currentText()
+                preview_text += f"{controls['group'].title()}: {family} {size}pt {weight}\n"
+
             QMessageBox.information(
                 self,
                 "Font Preview",
-                "Font changes previewed!\n\nClick 'Apply' to save changes permanently."
+                preview_text + "\nClick 'Apply' to save changes to appfactory.settings.json"
             )
         except Exception as e:
             QMessageBox.warning(self, "Preview Error", f"Could not preview fonts:\n{e}")
 
 
+    def _reset_all_fonts(self): #vers 1
+        """Reset all fonts to their default values"""
+        reply = QMessageBox.question(
+            self,
+            "Reset Fonts",
+            "Reset all fonts to their default values?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            for font_id, controls in self.font_controls.items():
+                # Reset to defaults
+                default_family = controls['default_family']
+                default_size = controls['default_size']
+
+                controls['family'].setCurrentFont(QFont(default_family))
+                controls['size'].setValue(default_size)
+                controls['weight'].setCurrentText('Normal')
+
+                # Update settings
+                self.app_settings.current_settings[f'{font_id}_font_family'] = default_family
+                self.app_settings.current_settings[f'{font_id}_font_size'] = default_size
+                self.app_settings.current_settings[f'{font_id}_font_weight'] = 'Normal'
+
+            QMessageBox.information(self, "Fonts Reset", "All fonts reset to default values")
+
+
     def _load_font_settings(self): #vers 1
-        """Load font settings into controls"""
+        """Load font settings from appfactory.settings.json into controls"""
         font_ids = ['default', 'title', 'panel', 'button', 'menu', 'infobar', 'table', 'tooltip']
 
         for font_id in font_ids:
@@ -4305,20 +4532,28 @@ Ready for operations..."""
             controls = self.font_controls[font_id]
 
             # Load family
-            family = self.app_settings.current_settings.get(f'{font_id}_font_family', 'Segoe UI')
+            family = self.app_settings.current_settings.get(
+                f'{font_id}_font_family',
+                controls['default_family']
+            )
             controls['family'].setCurrentFont(QFont(family))
 
             # Load size
-            size = self.app_settings.current_settings.get(f'{font_id}_font_size', 9)
+            size = self.app_settings.current_settings.get(
+                f'{font_id}_font_size',
+                controls['default_size']
+            )
             controls['size'].setValue(size)
 
             # Load weight
-            weight = self.app_settings.current_settings.get(f'{font_id}_font_weight', 'Normal')
+            weight = self.app_settings.current_settings.get(
+                f'{font_id}_font_weight',
+                'Normal'
+            )
             controls['weight'].setCurrentText(weight)
 
-
     def _save_font_settings(self): #vers 1
-        """Save font settings from controls to app settings"""
+        """Save font settings from controls to app settings and appfactory.settings.json"""
         for font_id, controls in self.font_controls.items():
             family = controls['family'].currentFont().family()
             size = controls['size'].value()
@@ -4327,6 +4562,9 @@ Ready for operations..."""
             self.app_settings.current_settings[f'{font_id}_font_family'] = family
             self.app_settings.current_settings[f'{font_id}_font_size'] = size
             self.app_settings.current_settings[f'{font_id}_font_weight'] = weight
+
+        # Save to appfactory.settings.json
+        self.app_settings.save_settings()
 
 
     def _create_interface_tab(self): #vers 4
@@ -5262,8 +5500,6 @@ def hsl_to_rgb(h, s, l): #vers 1
         b = hue_to_rgb(p, q, h - 1/3)
 
     return f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
-
-
 
 
 def _create_debug_tab(self):
