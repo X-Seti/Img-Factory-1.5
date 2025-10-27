@@ -126,7 +126,9 @@ from methods.ide_parser_functions import integrate_ide_parser
 from methods.find_dups_functions import find_duplicates_by_hash, show_duplicates_dialog
 from methods.dragdrop_functions import integrate_drag_drop_system
 from methods.img_templates import IMGTemplateManager, TemplateManagerDialog
-from methods.tab_validation import validate_tab_before_operation, get_current_file_from_active_tab
+
+
+from components.Img_Factory.imgload_thread import IMGLoadThread
 
 App_name = "Img Factory 1.5"
 
@@ -179,7 +181,8 @@ def create_rebuild_menu(self): #vers 1
         fast_action = QAction("Fast Rebuild", self)
         fast_action.setStatusTip("Direct fast rebuild without dialog")
         fast_action.triggered.connect(self.fast_rebuild)
-        rebuild_menu.addAction(fast_action)
+        rebuild_menu.addAct
+        self.file_path = file_pathion(fast_action)
 
         safe_action = QAction("Safe Rebuild", self)
         safe_action.setStatusTip("Direct safe rebuild with full checking")
@@ -354,7 +357,6 @@ class IMGLoadThread(QThread):
 
         except Exception as e:
             self.loading_error.emit(f"Error loading IMG file: {str(e)}")
-
 
 class IMGFactory(QMainWindow):
     """Main IMG Factory application window"""
