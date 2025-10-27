@@ -7,7 +7,6 @@ from PyQt6.QtWidgets import QMessageBox, QFileDialog, QProgressDialog
 from PyQt6.QtCore import pyqtSignal, Qt, QThread
 
 
-
 class IMGLoadThread(QThread):
     """Background thread for loading IMG files"""
     progress_updated = pyqtSignal(int, str)  # progress, status
