@@ -1,4 +1,4 @@
-#this belongs in components.Img_Creator.img_creator.py - Version: 15
+#this belongs in components.Img_Creator.img_creator.py - Version: 17
 # X-Seti - August27 2025 - IMG Factory 1.5 - IMG Creator Dialog UI Only
 # Credit MexUK 2007 IMG Factory 1.2
 
@@ -33,6 +33,8 @@ from core.img_formats import GameSpecificIMGDialog, IMGCreator
 
 ##Classes -
 # NewIMGDialog
+
+#TODO - Create new tab for new created img.
 
 class NewIMGDialog(QDialog): #vers 10
     """New IMG Creation Dialog - UI ONLY"""
@@ -301,12 +303,12 @@ def create_new_img(self): #vers 5
             # Get the output path from the dialog
             if hasattr(dialog, 'output_path') and dialog.output_path:
                 output_path = dialog.output_path
-                self.log_message(f"✅ Created: {os.path.basename(output_path)}")
+                self.log_message(f"Created: {os.path.basename(output_path)}")
 
                 # Load the created IMG file in a new tab
                 self._load_img_file_in_new_tab(output_path)
     except Exception as e:
-        self.log_message(f"❌ Error creating new IMG: {str(e)}")
+        self.log_message(f"Error creating new IMG: {str(e)}")
 
 
 

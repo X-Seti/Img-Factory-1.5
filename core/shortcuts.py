@@ -1,4 +1,4 @@
-#this belongs in core/ shortcuts.py - Version: 12
+#this belongs in core/ shortcuts.py - Version: 14
 # X-Seti - July16 2025 - IMG Factory 1.5 - Keyboard Shortcuts
 
 """
@@ -43,12 +43,12 @@ def create_debug_keyboard_shortcuts(main_window): #vers 3
         debug_shortcut = QShortcut(QKeySequence("Ctrl+F12"), main_window)
         debug_shortcut.activated.connect(main_window.show_debug_settings)
 
-        main_window.log_message("✅ Debug keyboard shortcuts created")
-        main_window.log_message("⌨️ F12: Toggle performance mode")
-        main_window.log_message("⌨️ Ctrl+F12: Debug settings")
+        main_window.log_message("Debug keyboard shortcuts created")
+        main_window.log_message("F12: Toggle performance mode")
+        main_window.log_message("Ctrl+F12: Debug settings")
 
     except Exception as e:
-        main_window.log_message(f"❌ Keyboard shortcuts error: {e}")
+        main_window.log_message(f"Keyboard shortcuts error: {e}")
 
 
 def get_shortcuts_help_text(): #vers 10
@@ -90,7 +90,7 @@ def get_shortcuts_help_text(): #vers 10
 def setup_all_shortcuts(main_window): #vers 11
     """Setup all keyboard shortcuts"""
     try:
-        main_window.log_message("⌨️ Setting up keyboard shortcuts...")
+        main_window.log_message("Setting up keyboard shortcuts...")
 
         # Setup different categories
         setup_main_shortcuts(main_window)
@@ -99,11 +99,11 @@ def setup_all_shortcuts(main_window): #vers 11
         setup_debug_shortcuts(main_window)
         create_debug_keyboard_shortcuts(main_window)
 
-        main_window.log_message("✅ All keyboard shortcuts setup complete")
+        main_window.log_message("All keyboard shortcuts setup complete")
         return True
 
     except Exception as e:
-        main_window.log_message(f"❌ Shortcuts setup failed: {str(e)}")
+        main_window.log_message(f"Shortcuts setup failed: {str(e)}")
         return False
 
 
@@ -154,18 +154,18 @@ def setup_col_shortcuts(main_window): #vers 11
                 created_shortcuts.append(f"{key_sequence} → {description}")
             else:
                 # Create placeholder
-                placeholder = lambda desc=description: main_window.log_message(f"⌨️ {desc} - not yet implemented")
+                placeholder = lambda desc=description: main_window.log_message(f"Fail: {desc} - not yet implemented")
                 shortcut = QShortcut(QKeySequence(key_sequence), main_window)
                 shortcut.activated.connect(placeholder)
                 created_shortcuts.append(f"{key_sequence} → {description} (placeholder)")
         
         if created_shortcuts:
-            main_window.log_message(f"✅ Created {len(created_shortcuts)} COL shortcuts")
+            main_window.log_message(f"Created {len(created_shortcuts)} COL shortcuts")
         
         return True
         
     except Exception as e:
-        main_window.log_message(f"❌ COL shortcuts setup error: {str(e)}")
+        main_window.log_message(f"COL shortcuts setup error: {str(e)}")
         return False
 
 
@@ -182,17 +182,17 @@ def setup_debug_shortcuts(main_window): #vers 4
                     if hasattr(main_window, 'performance_mode'):
                         main_window.performance_mode()
                     else:
-                        main_window.log_message("🚀 Performance mode activated")
+                        main_window.log_message("Performance mode activated")
                 else:
                     if hasattr(main_window, 'minimal_debug_mode'):
                         main_window.minimal_debug_mode()
                     else:
-                        main_window.log_message("🔍 Debug mode activated")
+                        main_window.log_message("Debug mode activated")
             except:
                 if hasattr(main_window, 'toggle_col_debug'):
                     main_window.toggle_col_debug()
                 else:
-                    main_window.log_message("🎛️ Debug toggle - not available")
+                    main_window.log_message("Debug toggle - not available")
 
         perf_shortcut = QShortcut(QKeySequence("F12"), main_window)
         perf_shortcut.activated.connect(toggle_performance)
@@ -204,14 +204,14 @@ def setup_debug_shortcuts(main_window): #vers 4
         else:
             debug_shortcut.activated.connect(lambda: main_window.log_message("🔧 Debug settings - not yet implemented"))
 
-        main_window.log_message("✅ Debug shortcuts created")
-        main_window.log_message("⌨️ F12: Toggle performance mode")
-        main_window.log_message("⌨️ Ctrl+F12: Debug settings")
+        main_window.log_message("Debug shortcuts created")
+        main_window.log_message("F12: Toggle performance mode")
+        main_window.log_message("Ctrl+F12: Debug settings")
 
         return True
 
     except Exception as e:
-        main_window.log_message(f"❌ Debug shortcuts error: {str(e)}")
+        main_window.log_message(f"Debug shortcuts error: {str(e)}")
         return False
 
 
@@ -263,16 +263,16 @@ def setup_main_shortcuts(main_window): #vers 5
                 created_shortcuts.append(f"{key_sequence} → {description}")
             else:
                 # Create placeholder for missing methods
-                placeholder = lambda desc=description: main_window.log_message(f"⌨️ {desc} - not yet implemented")
+                placeholder = lambda desc=description: main_window.log_message(f"Fail: {desc} - not yet implemented")
                 shortcut = QShortcut(QKeySequence(key_sequence), main_window)
                 shortcut.activated.connect(placeholder)
                 created_shortcuts.append(f"{key_sequence} → {description} (placeholder)")
 
-        main_window.log_message(f"✅ Created {len(created_shortcuts)} main shortcuts")
+        main_window.log_message(f"Created {len(created_shortcuts)} main shortcuts")
         return True
 
     except Exception as e:
-        main_window.log_message(f"❌ Main shortcuts setup error: {str(e)}")
+        main_window.log_message(f"Main shortcuts setup error: {str(e)}")
         return False
 
 
@@ -295,24 +295,24 @@ def setup_search_shortcuts(main_window): #vers 4
             find_prev_shortcut = QShortcut(QKeySequence("Shift+F3"), main_window)
             find_prev_shortcut.activated.connect(search_manager.find_previous)
             
-            main_window.log_message("✅ Search shortcuts connected to search manager")
+            main_window.log_message("Search shortcuts connected to search manager")
         else:
             # Create placeholder shortcuts
             search_shortcut = QShortcut(QKeySequence("Ctrl+F"), main_window)
-            search_shortcut.activated.connect(lambda: main_window.log_message("🔍 Search dialog - not yet implemented"))
+            search_shortcut.activated.connect(lambda: main_window.log_message("Search dialog - not yet implemented"))
             
             find_next_shortcut = QShortcut(QKeySequence("F3"), main_window)
-            find_next_shortcut.activated.connect(lambda: main_window.log_message("🔍 Find next - not yet implemented"))
+            find_next_shortcut.activated.connect(lambda: main_window.log_message("Find next - not yet implemented"))
             
             find_prev_shortcut = QShortcut(QKeySequence("Shift+F3"), main_window)
-            find_prev_shortcut.activated.connect(lambda: main_window.log_message("🔍 Find previous - not yet implemented"))
+            find_prev_shortcut.activated.connect(lambda: main_window.log_message("Find previous - not yet implemented"))
             
-            main_window.log_message("✅ Search shortcuts created (placeholders)")
+            main_window.log_message("Search shortcuts created (placeholders)")
         
         return True
         
     except Exception as e:
-        main_window.log_message(f"❌ Search shortcuts setup error: {str(e)}")
+        main_window.log_message(f"Search shortcuts setup error: {str(e)}")
         return False
 
 

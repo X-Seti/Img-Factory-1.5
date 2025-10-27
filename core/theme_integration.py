@@ -1,4 +1,4 @@
-#this belongs in core/theme_integration.py - Version: 1
+#this belongs in core/theme_integration.py - Version: 2
 # X-Seti - August06 2025 - IMG Factory 1.5 - Theme Integration Fix
 
 """
@@ -18,26 +18,26 @@ def connect_theme_system(main_window): #vers 1
         # Connect to settings dialog theme change signal
         if hasattr(main_window, 'app_settings') and hasattr(main_window.app_settings, 'themeChanged'):
             main_window.app_settings.themeChanged.connect(lambda theme_name: on_theme_changed(main_window, theme_name))
-            print("✅ Theme system connected to main window")
+            print("Theme system connected to main window")
             return True
             
         # Alternative: Connect to settings dialog if it exists
         if hasattr(main_window, 'settings_dialog'):
             main_window.settings_dialog.themeChanged.connect(lambda theme_name: on_theme_changed(main_window, theme_name))
-            print("✅ Theme system connected via settings dialog")
+            print("Theme system connected via settings dialog")
             return True
             
-        print("⚠️ Theme system connection not found")
+        print("Theme system connection not found")
         return False
         
     except Exception as e:
-        print(f"❌ Theme system connection failed: {str(e)}")
+        print(f"Theme system connection failed: {str(e)}")
         return False
 
 def on_theme_changed(main_window, theme_name: str): #vers 1
     """Handle theme change signal from settings system"""
     try:
-        print(f"🎨 Theme changed to: {theme_name}")
+        print(f"Theme changed to: {theme_name}")
         
         # Update GUI layout buttons and colors
         update_gui_layout_theme(main_window, theme_name)
@@ -48,10 +48,10 @@ def on_theme_changed(main_window, theme_name: str): #vers 1
         # Update all other UI elements
         update_all_ui_elements(main_window, theme_name)
         
-        print("✅ All UI elements updated for new theme")
+        print("All UI elements updated for new theme")
         
     except Exception as e:
-        print(f"❌ Theme update failed: {str(e)}")
+        print(f"Theme update failed: {str(e)}")
 
 def update_gui_layout_theme(main_window, theme_name: str): #vers 1
     """Update GUI layout with new theme"""
@@ -60,17 +60,17 @@ def update_gui_layout_theme(main_window, theme_name: str): #vers 1
         if hasattr(main_window, 'gui_layout'):
             if hasattr(main_window.gui_layout, 'set_theme_mode'):
                 main_window.gui_layout.set_theme_mode(theme_name)
-                print(f"🎨 GUI layout updated to {theme_name} theme")
+                print(f"GUI layout updated to {theme_name} theme")
                 return True
             elif hasattr(main_window.gui_layout, 'apply_theme'):
                 main_window.gui_layout.apply_theme(theme_name) 
                 return True
                 
-        print("⚠️ GUI layout theme method not found")
+        print("GUI layout theme method not found")
         return False
         
     except Exception as e:
-        print(f"❌ GUI layout theme update failed: {str(e)}")
+        print(f"GUI layout theme update failed: {str(e)}")
         return False
 
 def update_status_bar_theme(main_window, theme_name: str): #vers 1
@@ -109,14 +109,14 @@ def update_status_bar_theme(main_window, theme_name: str): #vers 1
                             updated_elements.append(f"gui_layout.{element_name}")
         
         if updated_elements:
-            print(f"🎨 Status bar updated: {', '.join(updated_elements)}")
+            print(f"Status bar updated: {', '.join(updated_elements)}")
             return True
         else:
-            print("⚠️ No status bar elements found to update")
+            print("No status bar elements found to update")
             return False
             
     except Exception as e:
-        print(f"❌ Status bar theme update failed: {str(e)}")
+        print(f"Status bar theme update failed: {str(e)}")
         return False
 
 def update_all_ui_elements(main_window, theme_name: str): #vers 1
@@ -129,7 +129,7 @@ def update_all_ui_elements(main_window, theme_name: str): #vers 1
             stylesheet = main_window.app_settings.get_stylesheet()
             theme_colors = main_window.app_settings.get_theme_colors(theme_name)
         else:
-            print("⚠️ No app_settings found for stylesheet")
+            print("No app_settings found for stylesheet")
             return False
         
         # Update main table with theme-specific styling - CRITICAL FIX
@@ -189,11 +189,11 @@ def update_all_ui_elements(main_window, theme_name: str): #vers 1
             main_window.gui_layout.file_tree.setStyleSheet(stylesheet)
             updated_count += 1
             
-        print(f"🎨 Updated {updated_count} additional UI elements")
+        print(f"Updated {updated_count} additional UI elements")
         return updated_count > 0
         
     except Exception as e:
-        print(f"❌ UI elements theme update failed: {str(e)}")
+        print(f"UI elements theme update failed: {str(e)}")
         return False
 
 # Integration function to call from main IMG Factory
@@ -202,13 +202,13 @@ def integrate_theme_system(main_window): #vers 1
     try:
         success = connect_theme_system(main_window)
         if success:
-            print("🎨 Theme integration system ready")
+            print("Theme integration system ready")
         else:
-            print("⚠️ Theme integration partially ready")
+            print("Theme integration partially ready")
         return success
         
     except Exception as e:
-        print(f"❌ Theme integration failed: {str(e)}")
+        print(f"Theme integration failed: {str(e)}")
         return False
 
 # Delayed integration for calling early in startup
@@ -227,5 +227,5 @@ def integrate_theme_system_delayed(main_window): #vers 1
     from PyQt6.QtCore import QTimer
     timer = QTimer()
     timer.singleShot(100, lambda: try_integration())
-    print("🎨 Theme integration scheduled for when GUI is ready")
+    print("Theme integration scheduled for when GUI is ready")
     return True

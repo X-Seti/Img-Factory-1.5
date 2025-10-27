@@ -16,12 +16,12 @@ def convert_img(self): #vers 1
         self.log_message("IMG conversion functionality coming soon")
         QMessageBox.information(self, "Info", "IMG conversion functionality coming soon")
     except Exception as e:
-        self.log_message(f"❌ Error in convert_img: {str(e)}")
+        self.log_message(f"Error in convert_img: {str(e)}")
 
 
 def convert_img_format(self): #vers 1
     """Convert IMG format - Placeholder"""
-    self.log_message("🔄 Convert IMG format requested")
+    self.log_message("Convert IMG format requested")
     # TODO: Implement format conversion
 
 __all__ = [

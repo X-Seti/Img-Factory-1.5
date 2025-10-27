@@ -9,6 +9,10 @@ Complete history of fixes, updates, and improvements.
 
 ## October 2025
 
+**Fixed**: - Oct 24, 2025
+- app_settings_system updated, Theme save function repaired
+- ✅ Added all QT6 colors, no more buggy looking app windows. 
+- ✅ Added Gadgets tab, Customizable gadgets, buttons and scrollbars.
 
 **Added**: - Oct 22, 2025
 - New color variables for complete theme support:

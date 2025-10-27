@@ -10,9 +10,6 @@ from typing import List, Optional
 from pathlib import Path
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
-# Tab awareness system
-from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
-
 ##Methods list -
 # _debug_log
 # _add_file_to_img_direct

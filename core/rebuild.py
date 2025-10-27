@@ -1,4 +1,4 @@
-#this belongs in core/ rebuild.py - Version: 6
+#this belongs in core/ rebuild.py - Version: 7
 # X-Seti - August26 2025 - IMG Factory 1.5 - Native Rebuild Functions
 
 import os
@@ -6,7 +6,6 @@ import struct
 from typing import Optional, Callable, Dict, Any
 from PyQt6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QRadioButton, QButtonGroup
 
-from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 from methods.img_shared_operations import (
     create_progress_callback, get_img_version_info, validate_img_structure,
     create_temp_file_path, atomic_file_replace, write_img_header,
@@ -26,11 +25,6 @@ from methods.img_shared_operations import (
 def rebuild_current_img_native(main_window, mode: str = "auto") -> bool:
     """Native IMG rebuild using imgfactory objects directly - NO conversion needed"""
     try:
-        # Tab awareness validation
-        if not validate_tab_before_operation(main_window, "Rebuild Current IMG"):
-            return False
-        
-        file_object, file_type = get_current_file_from_active_tab(main_window)
         
         if file_type != 'IMG' or not file_object:
             QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file to rebuild")
@@ -56,13 +50,11 @@ def rebuild_current_img_native(main_window, mode: str = "auto") -> bool:
                 main_window.refresh_table()
             
             log_operation_progress(main_window, "REBUILD", "Completed successfully")
-            QMessageBox.information(main_window, "Rebuild Complete", 
-                "IMG file rebuilt successfully using native algorithm!")
+            QMessageBox.information(main_window, "Rebuild Complete", "IMG file rebuilt successfully using native algorithm!")
             return True
         else:
             log_operation_progress(main_window, "REBUILD", "Failed")
-            QMessageBox.critical(main_window, "Rebuild Failed", 
-                "Failed to rebuild IMG file. Check activity log for details.")
+            QMessageBox.critical(main_window, "Rebuild Failed", "Failed to rebuild IMG file. Check activity log for details.")
             return False
         
     except Exception as e:

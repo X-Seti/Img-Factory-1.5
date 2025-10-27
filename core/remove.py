@@ -1,4 +1,4 @@
-#this belongs in core/remove.py - Version: 4
+#this belongs in core/remove.py - Version: 5
 # X-Seti - September09 2025 - IMG Factory 1.5 - Remove Functions with Proper Modification Tracking
 
 """
@@ -9,8 +9,6 @@ import os
 from typing import List, Optional
 from PyQt6.QtWidgets import QMessageBox
 
-# Tab awareness system
-from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 
 ##Methods list -
 # _get_selected_entries_simple
@@ -24,10 +22,6 @@ from methods.tab_aware_functions import validate_tab_before_operation, get_curre
 
 def remove_selected_function(main_window): #vers 1
     """Remove selected entries with proper modification tracking"""
-    if not validate_tab_before_operation(main_window, "Remove Selected"):
-        return False
-    
-    file_object, file_type = get_current_file_from_active_tab(main_window)
     
     if file_type != 'IMG' or not file_object:
         QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
@@ -81,10 +75,6 @@ def remove_selected_function(main_window): #vers 1
 
 def remove_entries_by_name(main_window, entry_names: List[str]) -> bool: #vers 1
     """Remove entries by name with proper modification tracking"""
-    if not validate_tab_before_operation(main_window, "Remove Entries by Name"):
-        return False
-    
-    file_object, file_type = get_current_file_from_active_tab(main_window)
     
     if file_type != 'IMG' or not file_object:
         return False
@@ -121,10 +111,6 @@ def remove_entries_by_name(main_window, entry_names: List[str]) -> bool: #vers 1
 
 def remove_multiple_entries(main_window, entries_to_remove: List) -> bool: #vers 1
     """Remove multiple entries programmatically with proper modification tracking"""
-    if not validate_tab_before_operation(main_window, "Remove Multiple Entries"):
-        return False
-    
-    file_object, file_type = get_current_file_from_active_tab(main_window)
     
     if file_type != 'IMG' or not file_object:
         return False

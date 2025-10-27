@@ -1,5 +1,5 @@
-#this belongs in core/remove.py - Version: 2
-# X-Seti - September07 2025 - IMG Factory 1.5 - Remove Functions FIXED
+#this belongs in core/remove.py - Version: 3
+# X-Seti - September07 2025 - IMG Factory 1.5 - Remove Functions
 
 """
 IMG Remove Functions - FIXED VERSION
@@ -14,7 +14,6 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 
 # Import working methods
-from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 from methods.img_entry_operations import remove_entry_safe
 
 ##Methods list -
@@ -30,11 +29,6 @@ from methods.img_entry_operations import remove_entry_safe
 def remove_selected_function(main_window): #vers 2
     """Remove selected entries - FIXED VERSION"""
     try:
-        # Use tab validation
-        if not validate_tab_before_operation(main_window, "Remove Selected"):
-            return False
-        
-        file_object, file_type = get_current_file_from_active_tab(main_window)
         
         if file_type != 'IMG' or not file_object:
             QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
@@ -66,7 +60,7 @@ def remove_selected_function(main_window): #vers 2
             return False
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🗑️ Removing {len(selected_entries)} selected entries")
+            main_window.log_message(f"Removing {len(selected_entries)} selected entries")
         
         # Remove entries using working method
         success = _remove_entries_direct(file_object, selected_entries, main_window)
@@ -98,7 +92,7 @@ def remove_selected_function(main_window): #vers 2
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Remove selected error: {str(e)}")
+            main_window.log_message(f"Remove selected error: {str(e)}")
         QMessageBox.critical(main_window, "Remove Error", f"Remove error: {str(e)}")
         return False
 
@@ -106,10 +100,6 @@ def remove_selected_function(main_window): #vers 2
 def remove_entries_by_name(main_window, entry_names: List[str]) -> bool: #vers 2
     """Remove entries by name programmatically - FIXED"""
     try:
-        if not validate_tab_before_operation(main_window, "Remove Entries by Name"):
-            return False
-        
-        file_object, file_type = get_current_file_from_active_tab(main_window)
         
         if file_type != 'IMG' or not file_object:
             return False
@@ -118,7 +108,7 @@ def remove_entries_by_name(main_window, entry_names: List[str]) -> bool: #vers 2
             return False
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🗑️ Removing {len(entry_names)} entries by name")
+            main_window.log_message(f"Removing {len(entry_names)} entries by name")
         
         # Use IMG Factory's native remove method if available
         removed_count = 0
@@ -129,42 +119,38 @@ def remove_entries_by_name(main_window, entry_names: List[str]) -> bool: #vers 2
                 if file_object.remove_entry(entry_name):
                     removed_count += 1
                     if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"✅ Removed: {entry_name}")
+                        main_window.log_message(f"Removed: {entry_name}")
                 else:
                     failed_count += 1
                     if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"❌ Failed to remove: {entry_name}")
+                        main_window.log_message(f"Failed to remove: {entry_name}")
             else:
                 # Fallback to remove_entry_safe function
                 if remove_entry_safe(file_object, entry_name):
                     removed_count += 1
                     if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"✅ Removed: {entry_name}")
+                        main_window.log_message(f"Removed: {entry_name}")
                 else:
                     failed_count += 1
                     if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"❌ Failed to remove: {entry_name}")
+                        main_window.log_message(f"Failed to remove: {entry_name}")
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📊 Removal complete: {removed_count} success, {failed_count} failed")
+            main_window.log_message(f"Removal complete: {removed_count} success, {failed_count} failed")
             if removed_count > 0:
-                main_window.log_message("💾 Remember to rebuild IMG to save changes")
+                main_window.log_message("Remember to rebuild IMG to save changes")
         
         return removed_count > 0
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Remove by name error: {str(e)}")
+            main_window.log_message(f"Remove by name error: {str(e)}")
         return False
 
 
 def remove_multiple_entries(main_window, entries_to_remove: List) -> bool: #vers 2
     """Remove multiple entries programmatically - FIXED"""
     try:
-        if not validate_tab_before_operation(main_window, "Remove Multiple Entries"):
-            return False
-        
-        file_object, file_type = get_current_file_from_active_tab(main_window)
         
         if file_type != 'IMG' or not file_object:
             return False
@@ -173,13 +159,13 @@ def remove_multiple_entries(main_window, entries_to_remove: List) -> bool: #vers
             return False
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🗑️ Removing {len(entries_to_remove)} entries programmatically")
+            main_window.log_message(f"Removing {len(entries_to_remove)} entries programmatically")
         
         return _remove_entries_direct(file_object, entries_to_remove, main_window)
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Remove multiple error: {str(e)}")
+            main_window.log_message(f"Remove multiple error: {str(e)}")
         return False
 
 
@@ -264,11 +250,11 @@ def _remove_entries_direct(file_object, entries_to_remove, main_window) -> bool:
                 if remove_entry_safe(file_object, entry_name):
                     removed_count += 1
                     if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"✅ Removed: {entry_name}")
+                        main_window.log_message(f"Removed: {entry_name}")
                 else:
                     failed_count += 1
                     if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"❌ Failed to remove: {entry_name}")
+                        main_window.log_message(f"Failed to remove: {entry_name}")
                 
                 # Keep UI responsive
                 QApplication.processEvents()
@@ -282,15 +268,15 @@ def _remove_entries_direct(file_object, entries_to_remove, main_window) -> bool:
         
         # Report results
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📊 Removal complete: {removed_count} success, {failed_count} failed")
+            main_window.log_message(f"Removal complete: {removed_count} success, {failed_count} failed")
             if removed_count > 0:
-                main_window.log_message("💾 Remove successful - remember to rebuild IMG to save changes")
+                main_window.log_message("Remove successful - remember to rebuild IMG to save changes")
         
         return removed_count > 0
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Direct remove error: {str(e)}")
+            main_window.log_message(f"Direct remove error: {str(e)}")
         return False
 
 
@@ -335,7 +321,7 @@ def integrate_remove_functions(main_window) -> bool: #vers 2
         main_window.remove_entries = main_window.remove_multiple_entries
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Fixed remove functions integrated with tab awareness")
+            main_window.log_message("Fixed remove functions integrated with tab awareness")
             main_window.log_message("   • Uses working remove_entry_safe method from img_entry_operations")
             main_window.log_message("   • Supports selected entries, by name, and multiple entry removal")
             main_window.log_message("   • Remember to rebuild IMG after removal to save changes")
@@ -344,7 +330,7 @@ def integrate_remove_functions(main_window) -> bool: #vers 2
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Remove integration failed: {str(e)}")
+            main_window.log_message(f"Remove integration failed: {str(e)}")
         return False
 
 

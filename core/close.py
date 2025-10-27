@@ -29,9 +29,9 @@ def close_all_img(main_window): #vers 3
         if hasattr(main_window, 'close_manager') and main_window.close_manager:
             main_window.close_manager.close_all_tabs()
         else:
-            main_window.log_message("❌ Close manager not available")
+            main_window.log_message("Close manager not available")
     except Exception as e:
-        main_window.log_message(f"❌ Error in close_all_img: {str(e)}")
+        main_window.log_message(f"Error in close_all_img: {str(e)}")
 
 def close_img_file(main_window): #vers 6
     """Close current file (IMG or COL or TXD)"""
@@ -39,9 +39,9 @@ def close_img_file(main_window): #vers 6
         if hasattr(main_window, 'close_manager') and main_window.close_manager:
             main_window.close_manager.close_current_file()
         else:
-            main_window.log_message("❌ Close manager not available")
+            main_window.log_message("Close manager not available")
     except Exception as e:
-        main_window.log_message(f"❌ Error in close_img_file: {str(e)}")
+        main_window.log_message(f"Error in close_img_file: {str(e)}")
 
 def setup_close_manager(main_window): #vers 4
     """Setup close manager for main window"""
@@ -57,7 +57,7 @@ def install_close_functions(main_window): #vers 4
     main_window.close_all_tabs = close_manager.close_all_tabs
     main_window._clear_current_tab = close_manager._clear_current_tab
 
-    main_window.log_message("✅ Close functions installed")
+    main_window.log_message("Close functions installed")
     return close_manager
 
 class IMGCloseManager:
@@ -82,13 +82,13 @@ class IMGCloseManager:
                 self._clear_current_tab()
 
         except Exception as e:
-            self.log_message(f"❌ Error closing file: {str(e)}")
+            self.log_message(f"Error closing file: {str(e)}")
 
     def close_all_tabs(self): #vers 5
         """Close all tabs"""
         try:
             tab_count = self.main_window.main_tab_widget.count()
-            self.log_message(f"🗂️ Closing all {tab_count} tabs")
+            self.log_message(f"Closing all {tab_count} tabs")
 
             for i in range(tab_count - 1, -1, -1):
                 if self.main_window.main_tab_widget.count() > 1:
@@ -102,7 +102,7 @@ class IMGCloseManager:
 
             # If no tabs left, let tab_functions.py handle creating one
             if self.main_window.main_tab_widget.count() == 0:
-                self.log_message("⚠️ All tabs closed - tab system will create new one")
+                self.log_message("All tabs closed - tab system will create new one")
 
             # Clear references
             self.main_window.current_img = None
@@ -112,10 +112,10 @@ class IMGCloseManager:
                 self.main_window.current_txd = None
             self.main_window._update_ui_for_no_img()
 
-            self.log_message("✅ All tabs closed")
+            self.log_message("All tabs closed")
 
         except Exception as e:
-            self.log_message(f"❌ Error closing all tabs: {str(e)}")
+            self.log_message(f"Error closing all tabs: {str(e)}")
 
     def close_tab(self, index): #vers 6
         """Close tab at index"""
@@ -161,13 +161,13 @@ class IMGCloseManager:
             if hasattr(self.main_window, 'current_txd'):
                 self.main_window.current_txd = None
 
-            self.main_window.main_tab_widget.setTabText(current_index, "📂 No File")
+            self.main_window.main_tab_widget.setTabText(current_index, "No File")
             self.main_window._update_ui_for_no_img()
 
-            self.log_message("✅ Current tab cleared")
+            self.log_message("Current tab cleared")
 
         except Exception as e:
-            self.log_message(f"❌ Error clearing current tab: {str(e)}")
+            self.log_message(f"Error clearing current tab: {str(e)}")
 
     def _clear_all_tables_in_tab(self, tab_widget): #vers 1
         """Clear all table data in a tab widget"""
@@ -178,7 +178,7 @@ class IMGCloseManager:
                 table.clear()
                 table.setRowCount(0)
         except Exception as e:
-            self.log_message(f"❌ Error clearing tables: {str(e)}")
+            self.log_message(f"Error clearing tables: {str(e)}")
 
 
 __all__ = [

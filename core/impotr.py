@@ -1,4 +1,4 @@
-#this belongs in core/impotr.py - Version: 22
+#this belongs in core/impotr.py - Version: 23
 # X-Seti - September11 2025 - IMG Factory 1.5 - Import Functions - Clean Production Version
 
 """
@@ -11,9 +11,6 @@ import struct
 from typing import List, Optional
 from pathlib import Path
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
-
-# Tab awareness system
-from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 
 # Import existing RW detection systems
 from core.rw_versions import parse_rw_version, get_rw_version_name, is_valid_rw_version
@@ -32,7 +29,8 @@ from core.rw_versions import parse_rw_version, get_rw_version_name, is_valid_rw_
 
 # Constants
 SECTOR_SIZE = 2048
-MAX_FILENAME_LENGTH = 24
+MAX_FILENAME_LENGTH = 2
+file_type = ""
 
 def _detect_rw_version_basic(file_data: bytes, filename: str) -> tuple: #vers 1
     """Basic RW detection for common file types"""
@@ -227,10 +225,6 @@ def _ask_user_about_saving(main_window): #vers 1
 
 def import_files_function(main_window): #vers 1
     """Import multiple files via file dialog"""
-    if not validate_tab_before_operation(main_window, "Import Files"):
-        return False
-
-    file_object, file_type = get_current_file_from_active_tab(main_window)
 
     if file_type != 'IMG' or not file_object:
         QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
@@ -240,10 +234,7 @@ def import_files_function(main_window): #vers 1
     file_dialog = QFileDialog()
     file_paths, _ = file_dialog.getOpenFileNames(
         main_window,
-        "Select files to import",
-        "",
-        "All Files (*);;DFF Models (*.dff);;TXD Textures (*.txd);;COL Collision (*.col);;Audio (*.wav)"
-    )
+        "Select files to import", "", "All Files (*);;DFF Models (*.dff);;TXD Textures (*.txd);;COL Collision (*.col);;Audio (*.wav)")
 
     if not file_paths:
         return False
@@ -281,10 +272,6 @@ def import_files_function(main_window): #vers 1
 
 def import_files_with_list(main_window, file_paths: List[str]) -> bool: #vers 1
     """Import files from provided list"""
-    if not validate_tab_before_operation(main_window, "Import Files List"):
-        return False
-
-    file_object, file_type = get_current_file_from_active_tab(main_window)
 
     if file_type != 'IMG' or not file_object:
         return False
@@ -325,10 +312,6 @@ def import_multiple_files_core(main_window, file_paths: List[str]) -> bool: #ver
 
 def import_folder_contents(main_window) -> bool: #vers 1
     """Import all files from a folder"""
-    if not validate_tab_before_operation(main_window, "Import Folder"):
-        return False
-
-    file_object, file_type = get_current_file_from_active_tab(main_window)
 
     if file_type != 'IMG' or not file_object:
         QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
@@ -336,9 +319,7 @@ def import_folder_contents(main_window) -> bool: #vers 1
 
     # Folder selection dialog
     folder_path = QFileDialog.getExistingDirectory(
-        main_window,
-        "Select folder to import"
-    )
+        main_window, "Select folder to import")
 
     if not folder_path:
         return False

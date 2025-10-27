@@ -1,4 +1,4 @@
-#this belongs in core/import_via.py - Version: 11
+#this belongs in core/import_via.py - Version: 12
 # X-Seti - September11 2025 - IMG Factory 1.5 - Import Via Functions - Clean Production Version
 
 """
@@ -9,8 +9,6 @@ import os
 from typing import List, Optional, Dict, Any, Tuple
 from PyQt6.QtWidgets import QMessageBox, QFileDialog, QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QLabel, QRadioButton, QButtonGroup
 
-# Import required functions  
-from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 
 ##Methods list -
 # import_via_function
@@ -25,10 +23,6 @@ from methods.tab_aware_functions import validate_tab_before_operation, get_curre
 def import_via_function(main_window): #vers 1
     """Main import via function with dialog"""
     try:
-        if not validate_tab_before_operation(main_window, "Import Via"):
-            return False
-
-        file_object, file_type = get_current_file_from_active_tab(main_window)
 
         if file_type != 'IMG':
             QMessageBox.warning(main_window, "IMG Only", "Import Via only works with IMG files.\nPlease open an IMG file first.")
@@ -57,15 +51,11 @@ def import_via_function(main_window): #vers 1
 def import_via_ide_function(main_window) -> bool: #vers 1
     """Direct IDE import function"""
     try:
-        if not validate_tab_before_operation(main_window, "Import Via IDE"):
-            return False
 
         # Get IDE file
         ide_path, _ = QFileDialog.getOpenFileName(
             main_window,
-            "Select IDE File",
-            "",
-            "IDE Files (*.ide);;All Files (*)"
+            "Select IDE File", "", "IDE Files (*.ide);;All Files (*)"
         )
         
         if not ide_path:
@@ -95,9 +85,7 @@ def import_via_text_function(main_window) -> bool: #vers 1
         # File dialog for text file
         text_path, _ = QFileDialog.getOpenFileName(
             main_window,
-            "Select Text File List",
-            "",
-            "Text Files (*.txt);;All Files (*)"
+            "Select Text File List", "", "Text Files (*.txt);;All Files (*)"
         )
         
         if not text_path:
@@ -203,8 +191,7 @@ def _import_files_via_ide(main_window, ide_path: str, files_location: str) -> bo
                     main_window.log_message(f"Found: {texture_name}.txd")
         
         if not files_to_import:
-            QMessageBox.information(main_window, "No Files Found", 
-                f"No files found matching IDE definitions in:\n{files_location}")
+            QMessageBox.information(main_window, "No Files Found", f"No files found matching IDE definitions in:\n{files_location}")
             return False
         
         if hasattr(main_window, 'log_message'):
@@ -371,10 +358,7 @@ def _browse_file(dialog): #vers 1
     try:
         file_path, _ = QFileDialog.getOpenFileName(
             dialog, 
-            "Select File", 
-            "", 
-            "IDE Files (*.ide);;Text Files (*.txt);;All Files (*)"
-        )
+            "Select File", "", "IDE Files (*.ide);;Text Files (*.txt);;All Files (*)")
         
         if file_path:
             dialog.ide_path_input.setText(file_path)

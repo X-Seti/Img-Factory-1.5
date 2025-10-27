@@ -1,4 +1,4 @@
-#this belongs in components/rw_unk_snapshot.py - Version: 3
+#this belongs in components/rw_unk_snapshot.py - Version: 4
 # X-Seti - July20 2025 - IMG Factory 1.5 - Unknown RW File Snapshotter
 # Captures unknown RW files for analysis and database expansion
 
@@ -281,7 +281,7 @@ class RWSnapshotManager:
                 return
                 
             self.main_window.log_message("=" * 50)
-            self.main_window.log_message("🔍 UNKNOWN RW FILES DETECTED")
+            self.main_window.log_message("UNKNOWN RW FILES DETECTED")
             self.main_window.log_message("=" * 50)
             
             for i, unknown_file in enumerate(unknown_files):
@@ -293,8 +293,8 @@ class RWSnapshotManager:
                 self.main_window.log_message(f"{i+1:02d}. {copy_paste_line}")
                 
             self.main_window.log_message("=" * 50)
-            self.main_window.log_message(f"📁 Snapshots saved to: snapshots/session_{datetime.now().strftime('%Y%m%d_%H%M%S')}/")
-            self.main_window.log_message("📋 Copy the lines above for RW version database expansion")
+            self.main_window.log_message(f"Snapshots saved to: snapshots/session_{datetime.now().strftime('%Y%m%d_%H%M%S')}/")
+            self.main_window.log_message("Copy the lines above for RW version database expansion")
             self.main_window.log_message("=" * 50)
             
         except Exception as e:
@@ -316,8 +316,8 @@ class RWSnapshotManager:
             print(f"{i+1:02d}. {copy_paste_line}")
             
         print("=" * 50)
-        print(f"📁 Snapshots saved to: snapshots/")
-        print("📋 Copy the lines above for RW version database expansion")
+        print(f"Snapshots saved to: snapshots/")
+        print("Copy the lines above for RW version database expansion")
         print("=" * 50)
 
 # Integration function for main IMG loading
@@ -338,11 +338,11 @@ def integrate_unknown_rw_detection(main_window): #vers 1
             
         main_window.capture_unknown_rw_files = capture_unknown_rw_files_from_current_img
         
-        print("✅ Unknown RW detection integrated successfully")
+        print("Unknown RW detection integrated successfully")
         return True
         
     except Exception as e:
-        print(f"❌ Error integrating unknown RW detection: {e}")
+        print(f"Error integrating unknown RW detection: {e}")
         return False
 
 # Export functions

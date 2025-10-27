@@ -1,4 +1,4 @@
-#this belongs in core/dialogs.py - Version: 13
+#this belongs in core/dialogs.py - Version: 14
 # X-Seti - Aug15 2025 - Img Factory 1.5 - Complete Dialog Classes with Assists Integration
 
 """
@@ -177,7 +177,7 @@ class ExportOptionsDialog(QDialog): #vers 1
         
         # Assists folder quick access
         assists_layout = QHBoxLayout()
-        assists_btn = QPushButton("📁 Use Assists Folder")
+        assists_btn = QPushButton("Use Assists Folder")
         assists_btn.setStyleSheet("QPushButton { padding: 6px; font-weight: bold; }")
         assists_btn.clicked.connect(self._use_assists_folder)
         assists_layout.addWidget(assists_btn)
@@ -237,13 +237,13 @@ class ExportOptionsDialog(QDialog): #vers 1
                 assists_folder = getattr(self.parent_window.settings, 'assists_folder', None)
                 if assists_folder and os.path.exists(assists_folder):
                     self.folder_input.setText(assists_folder)
-                    self.assists_info_label.setText(f"📂 {assists_folder}")
+                    self.assists_info_label.setText(f"{assists_folder}")
                     self.assists_info_label.setStyleSheet("font-size: 9pt;")
                 else:
-                    self.assists_info_label.setText("⚠️ Assists folder not configured")
+                    self.assists_info_label.setText("Assists folder not configured")
                     self.assists_info_label.setStyleSheet("font-size: 9pt;")
         except Exception:
-            self.assists_info_label.setText("❌ Error checking assists folder")
+            self.assists_info_label.setText("Error checking assists folder")
             self.assists_info_label.setStyleSheet("font-size: 9pt;")
     
     def _use_assists_folder(self): #vers 1
@@ -383,9 +383,9 @@ class ValidationResultsDialog(QDialog): #vers 1
         result_text = "IMG Validation Results\n" + "="*50 + "\n\n"
         
         if self.validation_result.get('is_valid', False):
-            result_text += "✅ Validation PASSED\n\n"
+            result_text += "Validation PASSED\n\n"
         else:
-            result_text += "❌ Validation FAILED\n\n"
+            result_text += "Validation FAILED\n\n"
         
         # Show errors
         errors = self.validation_result.get('errors', [])
@@ -575,8 +575,7 @@ def show_progress_dialog(parent, title, text): #vers 2
 
 def show_about_dialog(parent): #vers 2
     """Show about dialog"""
-    QMessageBox.about(parent, "About IMG Factory 1.5", 
-                     "IMG Factory 1.5\n\nA comprehensive IMG file manager for GTA games.")
+    QMessageBox.about(parent, "About IMG Factory 1.5", "IMG Factory 1.5\n\nA comprehensive IMG file manager for GTA games.")
 
 # File dialog functions
 def get_img_file_filter(): #vers 2

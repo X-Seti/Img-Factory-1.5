@@ -10,9 +10,6 @@ import os
 from typing import Optional
 from PyQt6.QtWidgets import QMessageBox
 
-# Tab awareness system
-from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
-
 ##Methods list -
 # _detect_rw_versions_for_new_entries
 # _perform_rebuild_with_rw_analysis

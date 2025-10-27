@@ -82,7 +82,6 @@ from core.imgcol_convert import integrate_imgcol_convert_functions
 from core.save_entry import integrate_save_entry_function
 from core.rw_unk_snapshot import integrate_unknown_rw_detection
 from core.col_viewer_integration import integrate_col_viewer
-#from core.analyze_rw import integrate_rw_analysis_trigger
 
 #gui-layout
 from gui.ide_dialog import integrate_ide_dialog
@@ -101,14 +100,8 @@ from gui.tearoff_integration import integrate_tearoff_system
 from gui.gui_context import (add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
 
 #Shared Methods - Shared Functions.
-from methods.img_core_classes import (
-    IMGFile, IMGEntry, IMGVersion, Platform,
-    IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel, format_file_size)
-from methods.col_core_classes import (
-    COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup,
-    COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox,
-    diagnose_col_file, set_col_debug_enabled, is_col_debug_enabled
-)
+from methods.img_core_classes import (IMGFile, IMGEntry, IMGVersion, Platform, IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel, format_file_size)
+from methods.col_core_classes import (COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup, COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox, diagnose_col_file, set_col_debug_enabled, is_col_debug_enabled)
 
 from methods.col_integration import integrate_complete_col_system
 from methods.col_functions import setup_complete_col_integration
@@ -119,13 +112,7 @@ from methods.img_integration import integrate_img_functions, img_core_functions
 from methods.img_routing_operations import install_operation_routing
 from methods.img_validation import IMGValidator
 
-from methods.tab_functions import (
-    setup_tab_system,
-    migrate_tabs,
-    create_tab,
-    update_references
-)
-from methods.tab_aware_functions import integrate_tab_awareness_system
+
 from methods.populate_img_table import reset_table_styling, install_img_table_populator
 from methods.progressbar_functions import integrate_progress_system
 from methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate_update_ui_for_loaded_img
@@ -133,12 +120,13 @@ from methods.import_highlight_system import enable_import_highlighting
 from methods.refresh_table_functions import integrate_refresh_table
 from methods.img_entry_operations import integrate_entry_operations
 from methods.img_import_export import integrate_import_export_functions
-from methods.export_col_shared import integrate_col_export_shared
-from methods.mirror_tab_shared import show_mirror_tab_selection
+from methods.col_export_shared import integrate_col_export_shared
+#from methods.mirror_tab_shared import show_mirror_tab_selection
 from methods.ide_parser_functions import integrate_ide_parser
 from methods.find_dups_functions import find_duplicates_by_hash, show_duplicates_dialog
 from methods.dragdrop_functions import integrate_drag_drop_system
 from methods.img_templates import IMGTemplateManager, TemplateManagerDialog
+from methods.tab_validation import validate_tab_before_operation, get_current_file_from_active_tab
 
 App_name = "Img Factory 1.5"
 
@@ -434,7 +422,7 @@ class IMGFactory(QMainWindow):
 
         # Additional UI integrations
         add_project_menu_items(self)
-        integrate_tab_awareness_system(self)
+        #integrate_tab_awareness_system(self)
         integrate_tearoff_system(self)
 
         # === PHASE 4: ESSENTIAL INTEGRATIONS (Medium) ===
@@ -755,7 +743,7 @@ class IMGFactory(QMainWindow):
                 QMessageBox.warning(self, "No IMG File", "Please open an IMG file first")
                 return
 
-            self.log_message("🧹 Cleaning filenames only...")
+            self.log_message("Cleaning filenames only...")
 
             # Analyze corruption
             from core.img_corruption_analyzer import analyze_img_corruption
@@ -1480,7 +1468,7 @@ class IMGFactory(QMainWindow):
         self.close_manager = install_close_functions(self)
 
         # Setup NEW tab system
-        setup_tab_system(self)
+        #setup_tab_system(self)
 
         # Migrate existing tabs if any
         if self.open_files:
@@ -1925,6 +1913,7 @@ class IMGFactory(QMainWindow):
             traceback.print_exc()  # Debug info
             return False
 
+
     def _load_img_file_in_new_tab(self, file_path): #vers [your_version + 1]
         """Load IMG file in new tab"""
         try:
@@ -1932,7 +1921,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"Loading IMG in new tab: {os.path.basename(file_path)}")
 
             # Create new tab first
-            tab_index = self.create_tab(file_path, 'IMG', None)
+            #tab_index = self.create_tab(file_path, 'IMG', None)
 
             # Then load IMG using your existing thread loader
             if self.load_thread and self.load_thread.isRunning():
@@ -1947,13 +1936,14 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"Error loading IMG in new tab: {str(e)}")
 
+
     def _load_txd_file_in_new_tab(self, file_path): #vers 1
         """Load TXD file in new tab"""
         try:
             import os
 
             # Create new tab for TXD
-            tab_index = self.create_tab(file_path, 'TXD', None)
+            #tab_index = self.create_tab(file_path, 'TXD', None)
 
             # Update tab to show it's a TXD
             file_name = os.path.basename(file_path)[:-4]  # Remove .txd

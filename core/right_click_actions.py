@@ -1,4 +1,4 @@
-#this belongs in core/right_click_actions.py - Version: 3
+#this belongs in core/right_click_actions.py - Version: 4
 # X-Seti - August07 2025 - IMG Factory 1.5 - Complete Right-Click Actions
 # Combined: Basic copying + Advanced file operations + Extraction functionality
 
@@ -39,13 +39,13 @@ def setup_table_context_menu(main_window): #vers 3
             table = main_window.gui_layout.table
             table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             table.customContextMenuRequested.connect(lambda pos: show_advanced_context_menu(main_window, pos))
-            main_window.log_message("✅ Advanced table right-click context menu enabled")
+            main_window.log_message("Advanced table right-click context menu enabled")
             return True
         else:
-            main_window.log_message("! Table not available for context menu setup")
+            main_window.log_message("Table not available for context menu setup")
             return False
     except Exception as e:
-        main_window.log_message(f"❌ Error setting up context menu: {str(e)}")
+        main_window.log_message(f"Error setting up context menu: {str(e)}")
         return False
 
 def show_advanced_context_menu(main_window, position): #vers 3
@@ -134,7 +134,7 @@ def show_advanced_context_menu(main_window, position): #vers 3
 
             # Quick extract submenu
             if entry_type in ['IDE', 'COL', 'DFF', 'TXD']:
-                quick_extract_action = QAction(f"⚡ Quick Extract {entry_type} Files", menu_parent)
+                quick_extract_action = QAction(f"Quick Extract {entry_type} Files", menu_parent)
                 if entry_type == 'IDE' and hasattr(main_window, 'quick_extract_ide_files'):
                     quick_extract_action.triggered.connect(main_window.quick_extract_ide_files)
                 elif entry_type == 'COL' and hasattr(main_window, 'quick_extract_col_files'):
@@ -197,7 +197,7 @@ def show_advanced_context_menu(main_window, position): #vers 3
         menu.exec(table.mapToGlobal(position))
 
     except Exception as e:
-        main_window.log_message(f"❌ Error showing context menu: {str(e)}")
+        main_window.log_message(f"Error showing context menu: {str(e)}")
 
 # CLIPBOARD OPERATIONS
 def copy_table_cell(main_window, row: int, col: int): #vers 1
@@ -212,12 +212,12 @@ def copy_table_cell(main_window, row: int, col: int): #vers 1
             
             header_item = table.horizontalHeaderItem(col)
             column_name = header_item.text() if header_item else f"Column {col}"
-            main_window.log_message(f"📋 Copied {column_name}: '{text}'")
+            main_window.log_message(f"Copied {column_name}: '{text}'")
         else:
-            main_window.log_message("⚠️ No data in selected cell")
+            main_window.log_message("No data in selected cell")
             
     except Exception as e:
-        main_window.log_message(f"❌ Copy cell error: {str(e)}")
+        main_window.log_message(f"Copy cell error: {str(e)}")
 
 def copy_table_row(main_window, row: int): #vers 1
     """Copy entire table row to clipboard"""
@@ -236,10 +236,10 @@ def copy_table_row(main_window, row: int): #vers 1
         QApplication.clipboard().setText(text)
         
         filename = row_data[0] if row_data else f"Row {row}"
-        main_window.log_message(f"📄 Copied row: {filename}")
+        main_window.log_message(f"Copied row: {filename}")
         
     except Exception as e:
-        main_window.log_message(f"❌ Copy row error: {str(e)}")
+        main_window.log_message(f"Copy row error: {str(e)}")
 
 def copy_table_column_data(main_window, col: int): #vers 1
     """Copy entire column data to clipboard"""
@@ -260,10 +260,10 @@ def copy_table_column_data(main_window, col: int): #vers 1
         text = "\n".join(column_data)
         QApplication.clipboard().setText(text)
         
-        main_window.log_message(f"📊 Copied column '{column_name}': {table.rowCount()} entries")
+        main_window.log_message(f"Copied column '{column_name}': {table.rowCount()} entries")
         
     except Exception as e:
-        main_window.log_message(f"❌ Copy column error: {str(e)}")
+        main_window.log_message(f"Copy column error: {str(e)}")
 
 def copy_table_selection(main_window): #vers 1
     """Copy selected table items to clipboard"""
@@ -272,7 +272,7 @@ def copy_table_selection(main_window): #vers 1
         selected_items = table.selectedItems()
         
         if not selected_items:
-            main_window.log_message("⚠️ No items selected")
+            main_window.log_message("No items selected")
             return
         
         # Group by rows
@@ -296,10 +296,10 @@ def copy_table_selection(main_window): #vers 1
         text = "\n".join(lines)
         QApplication.clipboard().setText(text)
         
-        main_window.log_message(f"🔗 Copied selection: {len(selected_items)} items from {len(rows_data)} rows")
+        main_window.log_message(f"Copied selection: {len(selected_items)} items from {len(rows_data)} rows")
         
     except Exception as e:
-        main_window.log_message(f"❌ Copy selection error: {str(e)}")
+        main_window.log_message(f"Copy selection error: {str(e)}")
 
 def copy_filename_only(main_window, row: int): #vers 1
     """Copy filename without extension from first column"""
@@ -315,12 +315,12 @@ def copy_filename_only(main_window, row: int): #vers 1
                 filename_only = full_name
                 
             QApplication.clipboard().setText(filename_only)
-            main_window.log_message(f"📋 Copied filename: '{filename_only}'")
+            main_window.log_message(f"Copied filename: '{filename_only}'")
         else:
-            main_window.log_message("⚠️ No filename found")
+            main_window.log_message("No filename found")
             
     except Exception as e:
-        main_window.log_message(f"❌ Copy filename error: {str(e)}")
+        main_window.log_message(f"Copy filename error: {str(e)}")
 
 def copy_file_summary(main_window, row: int): #vers 1
     """Copy formatted file information summary"""
@@ -354,10 +354,10 @@ def copy_file_summary(main_window, row: int): #vers 1
         QApplication.clipboard().setText(text)
         
         filename = row_data[0] if row_data else "Unknown"
-        main_window.log_message(f"📄 Copied file summary for: {filename}")
+        main_window.log_message(f"Copied file summary for: {filename}")
         
     except Exception as e:
-        main_window.log_message(f"❌ Copy summary error: {str(e)}")
+        main_window.log_message(f"Copy summary error: {str(e)}")
 
 # FILE-TYPE SPECIFIC ACTIONS
 def edit_col_from_table(main_window, row: int): #vers 1
@@ -371,9 +371,9 @@ def edit_col_from_table(main_window, row: int): #vers 1
                 if hasattr(main_window, 'open_col_editor'):
                     main_window.open_col_editor(entry)
                 else:
-                    main_window.log_message("⚠️ COL editor not available")
+                    main_window.log_message("COL editor not available")
     except Exception as e:
-        main_window.log_message(f"❌ COL edit error: {str(e)}")
+        main_window.log_message(f"COL edit error: {str(e)}")
 
 def analyze_col_from_table(main_window, row: int): #vers 1
     """Analyze COL file from table row"""
@@ -386,9 +386,9 @@ def analyze_col_from_table(main_window, row: int): #vers 1
                 if hasattr(main_window, 'analyze_col_file'):
                     main_window.analyze_col_file(entry)
                 else:
-                    main_window.log_message("⚠️ COL analyzer not available")
+                    main_window.log_message("COL analyzer not available")
     except Exception as e:
-        main_window.log_message(f"❌ COL analysis error: {str(e)}")
+        main_window.log_message(f"COL analysis error: {str(e)}")
 
 def edit_ide_file(main_window, row: int): #vers 1
     """Edit IDE file from table row"""
@@ -401,9 +401,9 @@ def edit_ide_file(main_window, row: int): #vers 1
                 if hasattr(main_window, 'open_ide_editor'):
                     main_window.open_ide_editor(entry)
                 else:
-                    main_window.log_message("⚠️ IDE editor not available")
+                    main_window.log_message("IDE editor not available")
     except Exception as e:
-        main_window.log_message(f"❌ IDE edit error: {str(e)}")
+        main_window.log_message(f"IDE edit error: {str(e)}")
 
 def view_ide_definitions(main_window, row: int): #vers 1
     """View IDE definitions from table row"""
@@ -416,9 +416,9 @@ def view_ide_definitions(main_window, row: int): #vers 1
                 if hasattr(main_window, 'view_ide_definitions'):
                     main_window.view_ide_definitions(entry)
                 else:
-                    main_window.log_message("⚠️ IDE viewer not available")
+                    main_window.log_message("IDE viewer not available")
     except Exception as e:
-        main_window.log_message(f"❌ IDE view error: {str(e)}")
+        main_window.log_message(f"IDE view error: {str(e)}")
 
 def show_dff_info(main_window, row: int): #vers 1
     """Show DFF model information"""
@@ -431,9 +431,9 @@ def show_dff_info(main_window, row: int): #vers 1
                 if hasattr(main_window, 'show_dff_info'):
                     main_window.show_dff_info(entry)
                 else:
-                    main_window.log_message("⚠️ DFF info viewer not available")
+                    main_window.log_message("DFF info viewer not available")
     except Exception as e:
-        main_window.log_message(f"❌ DFF info error: {str(e)}")
+        main_window.log_message(f"DFF info error: {str(e)}")
 
 def view_txd_textures(main_window, row: int): #vers 1
     """View TXD textures from table row"""
@@ -446,9 +446,9 @@ def view_txd_textures(main_window, row: int): #vers 1
                 if hasattr(main_window, 'view_txd_textures'):
                     main_window.view_txd_textures(entry)
                 else:
-                    main_window.log_message("⚠️ TXD viewer not available")
+                    main_window.log_message("TXD viewer not available")
     except Exception as e:
-        main_window.log_message(f"❌ TXD view error: {str(e)}")
+        main_window.log_message(f"TXD view error: {str(e)}")
 
 # EXTRACTION SUPPORT
 def get_selected_entries_for_extraction(main_window) -> List: #vers 1
@@ -474,7 +474,7 @@ def get_selected_entries_for_extraction(main_window) -> List: #vers 1
         return entries
         
     except Exception as e:
-        main_window.log_message(f"❌ Error getting selected entries: {str(e)}")
+        main_window.log_message(f"Error getting selected entries: {str(e)}")
         return []
 
 def integrate_right_click_actions(main_window): #vers 3
@@ -482,7 +482,7 @@ def integrate_right_click_actions(main_window): #vers 3
     try:
         success = setup_table_context_menu(main_window)
         if success:
-            main_window.log_message("✅ Complete right-click actions integrated successfully")
+            main_window.log_message("Complete right-click actions integrated successfully")
             
             # Add convenience method to main window
             main_window.setup_table_right_click = lambda: setup_table_context_menu(main_window)
@@ -490,7 +490,7 @@ def integrate_right_click_actions(main_window): #vers 3
         return success
         
     except Exception as e:
-        main_window.log_message(f"❌ Right-click integration error: {str(e)}")
+        main_window.log_message(f"Right-click integration error: {str(e)}")
         return False
 
 # Export main functions

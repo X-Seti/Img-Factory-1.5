@@ -5,7 +5,6 @@
 RW Analysis Trigger - Run RW detection on existing entries to fix blank columns
 """
 
-from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 from PyQt6.QtWidgets import QMessageBox
 
 ##Methods list -

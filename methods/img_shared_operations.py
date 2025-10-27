@@ -1,4 +1,4 @@
-#this belongs in methods/ img_operations_shared.py - Version: 1
+#this belongs in methods/ img_operations_shared.py - Version: 2
 # X-Seti - August26 2025 - IMG Factory 1.5 - Shared IMG Operations
 
 import os
@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Optional, Callable, List, Tuple, Dict, Any
 from PyQt6.QtWidgets import QApplication
 
-from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 
 ##Methods list -
 # create_progress_callback
@@ -33,7 +32,7 @@ def create_progress_callback(main_window, operation_name: str) -> Callable:
             full_message = f"{operation_name}: {message}" if message else operation_name
             
             if hasattr(main_window, 'log_message') and message:
-                main_window.log_message(f"🔧 {full_message} ({percent}%)")
+                main_window.log_message(f"Msg: {full_message} ({percent}%)")
             
             # Update progress bar if available
             try:
@@ -138,7 +137,7 @@ def atomic_file_replace(temp_path: str, target_path: str, main_window=None) -> b
     try:
         if not os.path.exists(temp_path):
             if main_window and hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ Temporary file not found for atomic replace")
+                main_window.log_message("Temporary file not found for atomic replace")
             return False
         
         # Create backup if target exists
@@ -147,7 +146,7 @@ def atomic_file_replace(temp_path: str, target_path: str, main_window=None) -> b
             backup_path = f"{target_path}.backup"
             shutil.copy2(target_path, backup_path)
             if main_window and hasattr(main_window, 'log_message'):
-                main_window.log_message(f"📋 Created backup: {os.path.basename(backup_path)}")
+                main_window.log_message(f"Created backup: {os.path.basename(backup_path)}")
         
         # Atomic replace
         if os.name == 'nt':  # Windows
@@ -163,13 +162,13 @@ def atomic_file_replace(temp_path: str, target_path: str, main_window=None) -> b
             os.remove(backup_path)
         
         if main_window and hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Atomic file replacement completed")
+            main_window.log_message("Atomic file replacement completed")
         
         return True
         
     except Exception as e:
         if main_window and hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Atomic replace failed: {str(e)}")
+            main_window.log_message(f"Atomic replace failed: {str(e)}")
         
         # Restore backup if replace failed
         if backup_path and os.path.exists(backup_path):
@@ -204,7 +203,7 @@ def validate_img_structure(img_file, main_window=None) -> Tuple[bool, str]:
         if invalid_entries > 0:
             warning = f"Found {invalid_entries} entries with invalid names"
             if main_window and hasattr(main_window, 'log_message'):
-                main_window.log_message(f"⚠️ {warning}")
+                main_window.log_message(f"Warn: {warning}")
         
         return True, f"IMG structure valid ({len(img_file.entries)} entries)"
         
@@ -248,7 +247,7 @@ def get_entry_data_safely(entry, img_file, main_window=None) -> Optional[bytes]:
     except Exception as e:
         if main_window and hasattr(main_window, 'log_message'):
             entry_name = getattr(entry, 'name', 'Unknown')
-            main_window.log_message(f"⚠️ Failed to get data for {entry_name}: {str(e)}")
+            main_window.log_message(f"Failed to get data for {entry_name}: {str(e)}")
         return None
 
 
@@ -361,7 +360,7 @@ def cleanup_temp_files(base_path: str, main_window=None):
                     pass
         
         if removed_count > 0 and main_window and hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🧹 Cleaned up {removed_count} temporary files")
+            main_window.log_message(f"Cleaned up {removed_count} temporary files")
             
     except Exception:
         pass  # Ignore cleanup errors

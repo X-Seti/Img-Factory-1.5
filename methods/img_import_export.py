@@ -12,8 +12,6 @@ import math
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict
 
-# Import required modules
-from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 from methods.img_entry_operations import add_entry_safe, add_multiple_entries
 
 ##Methods list -
@@ -632,7 +630,7 @@ def integrate_import_export_functions(main_window) -> bool: #vers 1
         main_window.get_import_preview = lambda img_archive, file_paths: get_import_preview(img_archive, file_paths)
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Import/Export functions integrated - PORTED from modern system")
+            main_window.log_message("Import/Export functions integrated - PORTED from modern system")
             main_window.log_message("   • File import with proper validation")
             main_window.log_message("   • Batch operations for multiple files")
             main_window.log_message("   • IDE-based import with model/texture detection")
@@ -643,7 +641,7 @@ def integrate_import_export_functions(main_window) -> bool: #vers 1
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Import/Export integration failed: {str(e)}")
+            main_window.log_message(f"Import/Export integration failed: {str(e)}")
         return False
 
 # Export functions

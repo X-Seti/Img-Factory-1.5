@@ -312,7 +312,7 @@ class TemplateManagerDialog(QDialog):
         layout = QVBoxLayout(self)
         
         # Header
-        header = QLabel("📋 IMG Template Manager")
+        header = QLabel("IMG Template Manager")
         font = QFont()
         font.setPointSize(16)
         font.setBold(True)
@@ -329,19 +329,19 @@ class TemplateManagerDialog(QDialog):
         # Buttons
         button_layout = QHBoxLayout()
         
-        self.use_btn = QPushButton("✅ Use Template")
+        self.use_btn = QPushButton("Use Template")
         self.use_btn.clicked.connect(self._use_template)
         self.use_btn.setEnabled(False)
         button_layout.addWidget(self.use_btn)
         
-        self.delete_btn = QPushButton("🗑️ Delete")
+        self.delete_btn = QPushButton("Delete")
         self.delete_btn.clicked.connect(self._delete_template)
         self.delete_btn.setEnabled(False)
         button_layout.addWidget(self.delete_btn)
         
         button_layout.addStretch()
         
-        self.close_btn = QPushButton("✖️ Close")
+        self.close_btn = QPushButton("Close")
         self.close_btn.clicked.connect(self.accept)
         button_layout.addWidget(self.close_btn)
         
@@ -353,13 +353,13 @@ class TemplateManagerDialog(QDialog):
         
         # Add default templates
         for template in self.template_manager.get_default_templates():
-            item = QListWidgetItem(f"🏭 {template.get('name', 'Unnamed')} (Default)")
+            item = QListWidgetItem(f" {template.get('name', 'Unnamed')} (Default)")
             item.setData(Qt.ItemDataRole.UserRole, template)
             self.template_list.addItem(item)
         
         # Add user templates
         for template in self.template_manager.get_user_templates():
-            item = QListWidgetItem(f"👤 {template.get('name', 'Unnamed')}")
+            item = QListWidgetItem(f" {template.get('name', 'Unnamed')}")
             item.setData(Qt.ItemDataRole.UserRole, template)
             self.template_list.addItem(item)
     

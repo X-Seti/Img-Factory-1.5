@@ -12,7 +12,7 @@ def integrate_img_parsing_fixes(main_window):
         
         # Apply patches
         if patch_img_entry_class():
-            main_window.log_message("✅ IMG parsing fixes applied")
+            main_window.log_message("IMG parsing fixes applied")
             
             # Add parsing report method
             main_window.show_parsing_report = lambda: show_parsing_report_dialog(main_window)
@@ -22,11 +22,11 @@ def integrate_img_parsing_fixes(main_window):
             
             return True
         else:
-            main_window.log_message("⚠️ Failed to apply IMG parsing fixes")
+            main_window.log_message("Failed to apply IMG parsing fixes")
             return False
             
     except Exception as e:
-        main_window.log_message(f"❌ Error integrating IMG parsing fixes: {str(e)}")
+        main_window.log_message(f"Error integrating IMG parsing fixes: {str(e)}")
         return False
 
 def add_parsing_tools_to_menu(main_window):
@@ -51,13 +51,13 @@ def add_parsing_tools_to_menu(main_window):
         parsing_submenu = tools_menu.addMenu("🔧 IMG Parsing")
         
         # Parsing report
-        report_action = QAction("📋 Parsing Report", main_window)
+        report_action = QAction("Parsing Report", main_window)
         report_action.setStatusTip("Show filename parsing report for current IMG")
         report_action.triggered.connect(main_window.show_parsing_report)
         parsing_submenu.addAction(report_action)
         
         # Validate filenames
-        validate_action = QAction("✅ Validate Filenames", main_window)
+        validate_action = QAction("Validate Filenames", main_window)
         validate_action.setStatusTip("Validate and fix filename parsing issues")
         validate_action.triggered.connect(lambda: validate_current_img_filenames(main_window))
         parsing_submenu.addAction(validate_action)
@@ -65,7 +65,7 @@ def add_parsing_tools_to_menu(main_window):
         parsing_submenu.addSeparator()
         
         # Debug parsing
-        debug_action = QAction("🐛 Debug Parsing", main_window)
+        debug_action = QAction("Debug Parsing", main_window)
         debug_action.setStatusTip("Show detailed parsing debug info")
         debug_action.triggered.connect(lambda: debug_img_parsing(main_window))
         parsing_submenu.addAction(debug_action)
@@ -73,7 +73,7 @@ def add_parsing_tools_to_menu(main_window):
         return True
         
     except Exception as e:
-        main_window.log_message(f"❌ Error adding parsing tools to menu: {str(e)}")
+        main_window.log_message(f"Error adding parsing tools to menu: {str(e)}")
         return False
 
 def show_parsing_report_dialog(main_window):
@@ -141,7 +141,7 @@ def validate_current_img_filenames(main_window):
                     entry.extension = extension
                     fixes_applied += 1
                     
-                    main_window.log_message(f"🔧 Fixed: {original_name} → {expected_full_name}")
+                    main_window.log_message(f"Fixed: {original_name} → {expected_full_name}")
                 
             except Exception as e:
                 issues_found.append(f"Entry {i} ({original_name}): {str(e)}")
@@ -174,7 +174,7 @@ def debug_img_parsing(main_window):
             return
         
         debug_info = []
-        debug_info.append("🐛 IMG Parsing Debug Information")
+        debug_info.append("IMG Parsing Debug Information")
         debug_info.append("=" * 50)
         debug_info.append("")
         
@@ -199,13 +199,13 @@ def debug_img_parsing(main_window):
             # Check for corruption indicators
             name = getattr(entry, 'name', '')
             if any(char in name for char in ['\x00', '\xff', '\xcd']):
-                debug_info.append("  ⚠️ Contains null/invalid characters")
+                debug_info.append("  Contains null/invalid characters")
             
             if len(name) > 20:
-                debug_info.append("  ⚠️ Name longer than expected (>20 chars)")
+                debug_info.append("  Name longer than expected (>20 chars)")
             
             if not '.' in name and hasattr(entry, 'extension') and entry.extension:
-                debug_info.append("  🔧 Extension detected without dot in name")
+                debug_info.append("  Extension detected without dot in name")
         
         # Extension statistics
         debug_info.append("\n\nExtension Statistics:")
@@ -322,13 +322,13 @@ def setup_img_parsing_integration(main_window):
             # Add game detection
             main_window.detect_img_game_version = lambda: detect_img_game_version(main_window)
             
-            main_window.log_message("✅ IMG parsing integration complete")
+            main_window.log_message("IMG parsing integration complete")
             return True
         
         return False
         
     except Exception as e:
-        main_window.log_message(f"❌ IMG parsing integration failed: {str(e)}")
+        main_window.log_message(f"IMG parsing integration failed: {str(e)}")
         return False
 
 # Export functions

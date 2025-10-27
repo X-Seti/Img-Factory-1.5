@@ -29,7 +29,7 @@ def refresh_table(main_window): #vers 2
             
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error refreshing table: {str(e)}")
+            main_window.log_message(f"Error refreshing table: {str(e)}")
         return False
 
 
@@ -37,12 +37,12 @@ def _refresh_img_table(main_window) -> bool: #vers 5
     """Refresh IMG table with current IMG data - CORRECT 8 COLUMN STRUCTURE"""
     try:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("🔄 Refreshing IMG table...")
+            main_window.log_message("Refreshing IMG table...")
         
         img_file = main_window.current_img
         if not img_file or not hasattr(img_file, 'entries'):
             if hasattr(main_window, 'log_message'):
-                main_window.log_message("⚠️ No IMG entries to refresh")
+                main_window.log_message("No IMG entries to refresh")
             return _clear_table(main_window)
         
         # Import RW detection functions
@@ -173,16 +173,16 @@ def _refresh_img_table(main_window) -> bool: #vers 5
                     table.update()
                 
                 if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"✅ IMG table refreshed with 8 columns + RW detection - {len(img_file.entries)} entries")
+                    main_window.log_message(f"IMG table refreshed with 8 columns + RW detection - {len(img_file.entries)} entries")
                 return True
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("⚠️ Could not refresh IMG table - no table widget found")
+            main_window.log_message("Could not refresh IMG table - no table widget found")
         return False
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error refreshing IMG table: {str(e)}")
+            main_window.log_message(f"Error refreshing IMG table: {str(e)}")
         return False
 
 
@@ -190,12 +190,12 @@ def _refresh_col_table(main_window) -> bool: #vers 2
     """Refresh COL table with current COL data - FIXED"""
     try:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("🔄 Refreshing COL table...")
+            main_window.log_message("Refreshing COL table...")
         
         col_file = main_window.current_col
         if not col_file:
             if hasattr(main_window, 'log_message'):
-                main_window.log_message("⚠️ No COL file to refresh")
+                main_window.log_message("No COL file to refresh")
             return _clear_table(main_window)
         
         # Method 1: Use existing COL refresh method if available
@@ -203,11 +203,11 @@ def _refresh_col_table(main_window) -> bool: #vers 2
             try:
                 main_window.refresh_col_table()
                 if hasattr(main_window, 'log_message'):
-                    main_window.log_message("✅ COL table refreshed via existing method")
+                    main_window.log_message("COL table refreshed via existing method")
                 return True
             except Exception as e:
                 if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"⚠️ Existing COL refresh failed: {str(e)}")
+                    main_window.log_message(f"Existing COL refresh failed: {str(e)}")
         
         # Method 2: Manual COL table refresh
         if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
@@ -245,14 +245,14 @@ def _refresh_col_table(main_window) -> bool: #vers 2
                             
                         except Exception as row_error:
                             if hasattr(main_window, 'log_message'):
-                                main_window.log_message(f"⚠️ Error refreshing COL row {row}: {str(row_error)}")
+                                main_window.log_message(f"Error refreshing COL row {row}: {str(row_error)}")
                             continue
                     
                     # Resize columns to content
                     table.resizeColumnsToContents()
                     
                     if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"✅ COL table refreshed - {len(items)} models")
+                        main_window.log_message(f"COL table refreshed - {len(items)} models")
                     return True
                 
                 elif hasattr(col_file, 'entries') and col_file.entries:
@@ -272,22 +272,22 @@ def _refresh_col_table(main_window) -> bool: #vers 2
                             
                         except Exception as row_error:
                             if hasattr(main_window, 'log_message'):
-                                main_window.log_message(f"⚠️ Error refreshing COL entry row {row}: {str(row_error)}")
+                                main_window.log_message(f"Error refreshing COL entry row {row}: {str(row_error)}")
                             continue
                     
                     table.resizeColumnsToContents()
                     
                     if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"✅ COL table refreshed - {len(entries)} entries")
+                        main_window.log_message(f"COL table refreshed - {len(entries)} entries")
                     return True
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("⚠️ Could not refresh COL table - no available methods")
+            main_window.log_message("Could not refresh COL table - no available methods")
         return False
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error refreshing COL table: {str(e)}")
+            main_window.log_message(f"Error refreshing COL table: {str(e)}")
         return False
 
 
@@ -301,7 +301,7 @@ def _clear_table(main_window) -> bool: #vers 2
                 table.clearContents()
                 
                 if hasattr(main_window, 'log_message'):
-                    main_window.log_message("🗑️ Table cleared - no file loaded")
+                    main_window.log_message("Table cleared - no file loaded")
                 return True
         
         # Also try to clear other possible table references
@@ -316,7 +316,7 @@ def _clear_table(main_window) -> bool: #vers 2
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error clearing table: {str(e)}")
+            main_window.log_message(f"Error clearing table: {str(e)}")
         return False
 
 
@@ -336,12 +336,12 @@ def integrate_refresh_table(main_window): #vers 2
         main_window.refresh_current_tab_data = lambda: refresh_table(main_window)
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Fixed refresh table function integrated with all aliases")
+            main_window.log_message("Fixed refresh table function integrated with all aliases")
         return True
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error integrating refresh table: {str(e)}")
+            main_window.log_message(f"Error integrating refresh table: {str(e)}")
         return False
 
 

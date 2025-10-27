@@ -1,4 +1,4 @@
-#this belongs in core/col_viewer_integration.py - Version: 1
+#this belongs in core/col_viewer_integration.py - Version: 3
 # X-Seti - October22 2025 - IMG Factory 1.5 - COL Viewer Integration
 
 """
@@ -43,7 +43,7 @@ def extract_col_to_temp(main_window, entry) -> str: #vers 1
         return temp_path
         
     except Exception as e:
-        main_window.log_message(f"❌ Failed to extract COL: {str(e)}")
+        main_window.log_message(f"Failed to extract COL: {str(e)}")
         return None
 
 def cleanup_temp_col_file(temp_path: str): #vers 1
@@ -59,21 +59,21 @@ def open_col_viewer_dialog(main_window, row: int) -> bool: #vers 1
     try:
         # Get entry info
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
-            main_window.log_message("❌ No IMG file loaded")
+            main_window.log_message("No IMG file loaded")
             return False
         
         if row < 0 or row >= len(main_window.current_img.entries):
-            main_window.log_message("❌ Invalid entry selection")
+            main_window.log_message("Invalid entry selection")
             return False
         
         entry = main_window.current_img.entries[row]
         
         # Check if COL file
         if not entry.name.lower().endswith('.col'):
-            main_window.log_message("❌ Selected file is not a COL file")
+            main_window.log_message("Selected file is not a COL file")
             return False
         
-        main_window.log_message(f"🛡️ Opening 3D viewer for: {entry.name}")
+        main_window.log_message(f"Opening 3D viewer for: {entry.name}")
         
         # Extract to temp file
         temp_path = extract_col_to_temp(main_window, entry)
@@ -115,7 +115,7 @@ def open_col_viewer_dialog(main_window, row: int) -> bool: #vers 1
             # Show dialog
             dialog.exec()
             
-            main_window.log_message(f"✅ COL viewer closed: {entry.name}")
+            main_window.log_message(f"COL viewer closed: {entry.name}")
             
         finally:
             # Cleanup temp file
@@ -129,7 +129,7 @@ def open_col_viewer_dialog(main_window, row: int) -> bool: #vers 1
             "COL Viewer Error",
             f"COL Viewer component not found!\n\nError: {str(e)}\n\nMake sure components/col_viewer/ exists."
         )
-        main_window.log_message(f"❌ COL viewer import failed: {str(e)}")
+        main_window.log_message(f"COL viewer import failed: {str(e)}")
         return False
         
     except Exception as e:
@@ -138,7 +138,7 @@ def open_col_viewer_dialog(main_window, row: int) -> bool: #vers 1
             "COL Viewer Error",
             f"Failed to open COL viewer:\n\n{str(e)}"
         )
-        main_window.log_message(f"❌ COL viewer error: {str(e)}")
+        main_window.log_message(f"COL viewer error: {str(e)}")
         return False
 
 def add_view_col_3d_to_context_menu(main_window) -> bool: #vers 1
@@ -186,16 +186,16 @@ def add_view_col_3d_to_context_menu(main_window) -> bool: #vers 1
                 gui_context._original_enhanced_context_menu(main_window, event)
                 
             except Exception as e:
-                main_window.log_message(f"❌ Context menu error: {str(e)}")
+                main_window.log_message(f"Context menu error: {str(e)}")
         
         # Replace function
         gui_context.enhanced_context_menu_event = enhanced_context_menu_with_viewer
         
-        main_window.log_message("✅ COL 3D viewer added to context menu")
+        main_window.log_message("COL 3D viewer added to context menu")
         return True
         
     except Exception as e:
-        main_window.log_message(f"❌ Failed to add COL viewer to context menu: {str(e)}")
+        main_window.log_message(f"Failed to add COL viewer to context menu: {str(e)}")
         return False
 
 def integrate_col_viewer(main_window) -> bool: #vers 1
@@ -208,11 +208,11 @@ def integrate_col_viewer(main_window) -> bool: #vers 1
         # Add convenience method to main window
         main_window.open_col_3d_viewer = lambda row: open_col_viewer_dialog(main_window, row)
         
-        main_window.log_message("✅ COL 3D viewer integration complete")
+        main_window.log_message("COL 3D viewer integration complete")
         return True
         
     except Exception as e:
-        main_window.log_message(f"❌ COL viewer integration failed: {str(e)}")
+        main_window.log_message(f"COL viewer integration failed: {str(e)}")
         return False
 
 

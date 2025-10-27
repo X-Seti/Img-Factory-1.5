@@ -285,7 +285,7 @@ class BatchRebuildDialog(QDialog):
     def _on_file_completed(self, file_path: str, success: bool, message: str):
         """Handle individual file completion"""
         file_name = os.path.basename(file_path)
-        status = "✅" if success else "❌"
+        status = "Completed" if success else "Failed" # TODO svg icons
         self.progress_log.append(f"{status} {file_name}: {message}")
     
     def _on_batch_completed(self, total_files: int, success_count: int, failed_files: List[str]):
@@ -301,11 +301,11 @@ class BatchRebuildDialog(QDialog):
         # Show completion message
         failed_count = len(failed_files)
         if failed_count == 0:
-            self.progress_log.append(f"✅ All {success_count} files rebuilt successfully!")
+            self.progress_log.append(f"All {success_count} files rebuilt successfully!")
             QMessageBox.information(self, "Batch Complete", 
                 f"Successfully rebuilt {success_count} IMG files!")
         else:
-            self.progress_log.append(f"⚠️ Completed: {success_count} success, {failed_count} failed")
+            self.progress_log.append(f"Completed: {success_count} success, {failed_count} failed")
             
             failed_names = [os.path.basename(f) for f in failed_files[:5]]
             failed_text = "\n".join(failed_names)

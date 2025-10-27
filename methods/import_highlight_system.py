@@ -1,4 +1,4 @@
-#this belongs in methods/import_highlight_system.py - Version: 1
+#this belongs in methods/import_highlight_system.py - Version: 4
 # X-Seti - August07 2025 - IMG Factory 1.5 - Import File Highlighting System
 
 """
@@ -45,7 +45,7 @@ class ImportHighlightManager: #vers 2
         refresh_table_with_highlights(self.main_window)
 
         status = "enabled" if self.highlighting_enabled else "disabled"
-        self.main_window.log_message(f"✨ Import highlighting {status}")
+        self.main_window.log_message(f"Import highlighting {status}")
 
         return self.highlighting_enabled
 
@@ -105,7 +105,7 @@ def create_highlighted_item(text: str, highlight_type: str = "imported") -> QTab
         item.setFont(font)
         
         # Add tooltip
-        item.setToolTip("📥 Recently imported file")
+        item.setToolTip("Recently imported file")
         
     elif highlight_type == "replaced":
         # Light yellow background for replaced files
@@ -118,7 +118,7 @@ def create_highlighted_item(text: str, highlight_type: str = "imported") -> QTab
         item.setFont(font)
         
         # Add tooltip
-        item.setToolTip("🔄 Recently replaced file")
+        item.setToolTip("Recently replaced file")
         
     return item
 
@@ -272,11 +272,11 @@ def highlight_imported_files(main_window, imported_filenames: List[str], replace
         if success:
             # Log the highlighting
             total_highlighted = len(imported_filenames) + len(replaced_filenames)
-            main_window.log_message(f"✨ Highlighted {total_highlighted} imported files (10s duration)")
+            main_window.log_message(f"Highlighted: {total_highlighted} imported files (10s duration)")
             
             # Show status message
             if hasattr(main_window, 'statusBar'):
-                status_msg = f"✨ {len(imported_filenames)} imported"
+                status_msg = f"Status: {len(imported_filenames)} imported"
                 if replaced_filenames:
                     status_msg += f", {len(replaced_filenames)} replaced"
                 main_window.statusBar().showMessage(status_msg, 5000)
@@ -284,7 +284,7 @@ def highlight_imported_files(main_window, imported_filenames: List[str], replace
         return success
         
     except Exception as e:
-        main_window.log_message(f"❌ Error highlighting imported files: {str(e)}")
+        main_window.log_message(f"Error highlighting imported files: {str(e)}")
         return False
 
 def clear_import_highlights(main_window): #vers 1
@@ -293,11 +293,11 @@ def clear_import_highlights(main_window): #vers 1
         if hasattr(main_window, '_import_highlight_manager'):
             main_window._import_highlight_manager.clear_highlights()
             
-        main_window.log_message("🧹 Import highlights cleared")
+        main_window.log_message("Import highlights cleared")
         return True
         
     except Exception as e:
-        main_window.log_message(f"❌ Error clearing highlights: {str(e)}")
+        main_window.log_message(f"Error clearing highlights: {str(e)}")
         return False
 
 def set_import_highlight_style(main_window, highlight_duration: int = 10000): #vers 1
@@ -308,11 +308,11 @@ def set_import_highlight_style(main_window, highlight_duration: int = 10000): #v
             
         main_window._import_highlight_manager.highlight_duration = highlight_duration
         
-        main_window.log_message(f"⚙️ Import highlight duration set to {highlight_duration/1000}s")
+        main_window.log_message(f"Import highlight duration set to {highlight_duration/1000}s")
         return True
         
     except Exception as e:
-        main_window.log_message(f"❌ Error setting highlight style: {str(e)}")
+        main_window.log_message(f"Error setting highlight style: {str(e)}")
         return False
 
 def track_imported_files(main_window, filenames: List[str], replaced_files: List[str] = None): #vers 1
@@ -346,11 +346,11 @@ def integrate_import_highlighting(main_window): #vers 2
         # Add right-click menu
         add_highlight_context_menu(main_window)
 
-        main_window.log_message("✨ Import highlighting system integrated with right-click control")
+        main_window.log_message("Import highlighting system integrated with right-click control")
         return True
 
     except Exception as e:
-        main_window.log_message(f"❌ Failed to integrate import highlighting: {str(e)}")
+        main_window.log_message(f"Failed to integrate import highlighting: {str(e)}")
         return False
 
         
@@ -363,11 +363,11 @@ def integrate_import_highlighting(main_window): #vers 2
         # Override refresh function to include highlights
         main_window.refresh_table_with_highlights = lambda: refresh_table_with_highlights(main_window)
         
-        main_window.log_message("✨ Import highlighting system integrated")
+        main_window.log_message("Import highlighting system integrated")
         return True
         
     except Exception as e:
-        main_window.log_message(f"❌ Failed to integrate import highlighting: {str(e)}")
+        main_window.log_message(f"Failed to integrate import highlighting: {str(e)}")
         return False
 
 def create_highlighted_img_table_item(text: str, highlight_type: str = None) -> Any: #vers 3
@@ -386,7 +386,7 @@ def create_highlighted_img_table_item(text: str, highlight_type: str = None) -> 
             item.setBackground(QBrush(QColor(220, 255, 220)))  # Light green bg
             item.setForeground(QBrush(QColor(0, 80, 0)))       # Dark green text
 
-        item.setToolTip("📥 Recently imported file")
+        item.setToolTip("Recently imported file")
 
     elif highlight_type == "replaced":
         # Theme-aware yellow highlighting
@@ -397,7 +397,7 @@ def create_highlighted_img_table_item(text: str, highlight_type: str = None) -> 
             item.setBackground(QBrush(QColor(255, 255, 180)))  # Light yellow bg
             item.setForeground(QBrush(QColor(120, 100, 0)))    # Dark yellow text
 
-        item.setToolTip("🔄 Recently replaced file")
+        item.setToolTip("Recently replaced file")
 
     return item
 
@@ -460,11 +460,11 @@ def add_highlight_context_menu(main_window): #vers 2
             'clear_highlights': lambda: main_window._import_highlight_manager.clear_highlights() if hasattr(main_window, '_import_highlight_manager') else None
         }
 
-        main_window.log_message("✅ Highlighting functions ready for existing context menu")
+        main_window.log_message("Highlighting functions ready for existing context menu")
         return True
 
     except Exception as e:
-        main_window.log_message(f"❌ Failed to prepare highlight menu functions: {str(e)}")
+        main_window.log_message(f"Failed to prepare highlight menu functions: {str(e)}")
         return False
 
 def get_highlight_menu_actions(main_window): #vers 1
@@ -478,13 +478,13 @@ def get_highlight_menu_actions(main_window): #vers 1
         if highlight_mgr:
             # Toggle highlighting action
             status = "Disable" if highlight_mgr.highlighting_enabled else "Enable"
-            highlight_action = QAction(f"✨ {status} Import Highlighting")
+            highlight_action = QAction(f"Status: {status} Import Highlighting")
             highlight_action.triggered.connect(highlight_mgr.toggle_highlighting)
             actions.append(highlight_action)
 
             # Clear highlights action
             if highlight_mgr.imported_files or highlight_mgr.replaced_files:
-                clear_action = QAction("🧹 Clear Highlights")
+                clear_action = QAction("Clear Highlights")
                 clear_action.triggered.connect(highlight_mgr.clear_highlights)
                 actions.append(clear_action)
 
@@ -619,7 +619,7 @@ def populate_table_with_img_data_highlighted(self, img_file: Any) -> bool: #vers
                 if hasattr(self, 'populate_table_row'):
                     self.populate_table_row(table, i, entry)
 
-        img_debugger.info(f"✅ IMG table populated with {len(img_file.entries)} entries (highlighting enabled)")
+        img_debugger.info(f"IMG table populated with {len(img_file.entries)} entries (highlighting enabled)")
         return True
 
     except Exception as e:
@@ -641,14 +641,14 @@ def integrate_highlighting_with_img_table(main_window): #vers 1
             # Override the standard populate method to use highlighting
             populator.populate_table_with_img_data = populator.populate_table_with_img_data_highlighted
 
-            main_window.log_message("✅ IMG table highlighting integrated")
+            main_window.log_message("IMG table highlighting integrated")
             return True
         else:
-            main_window.log_message("⚠️ IMG table populator not found")
+            main_window.log_message("IMG table populator not found")
             return False
 
     except Exception as e:
-        main_window.log_message(f"❌ Failed to integrate table highlighting: {str(e)}")
+        main_window.log_message(f"Failed to integrate table highlighting: {str(e)}")
         return False
 
 # Add this to the end of your existing populate_img_table.py file
@@ -662,15 +662,15 @@ def enable_import_highlighting(main_window): #vers 1
         # Then integrate with the table populator
         integrate_highlighting_with_img_table(main_window)
 
-        main_window.log_message("✨ Import highlighting system fully enabled")
+        main_window.log_message("Import highlighting system fully enabled")
         return True
 
     except ImportError as e:
-        main_window.log_message(f"⚠️ Import highlighting system not found: {str(e)}")
-        main_window.log_message("💡 Create methods/import_highlight_system.py to enable highlighting")
+        main_window.log_message(f"Import highlighting system not found: {str(e)}")
+        main_window.log_message("Create methods/import_highlight_system.py to enable highlighting")
         return False
     except Exception as e:
-        main_window.log_message(f"❌ Failed to enable import highlighting: {str(e)}")
+        main_window.log_message(f"Failed to enable import highlighting: {str(e)}")
         return False
 
 

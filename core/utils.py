@@ -1,4 +1,4 @@
-#this belongs in core/utils.py - Version: 1
+#this belongs in core/utils.py - Version: 2
 # X-Seti - July15 2025 - Img Factory 1.5
 # Utility functions for IMG Factory
 
@@ -39,7 +39,7 @@ def get_selected_entries(main_window): #vers 3
             table = main_window.entries_table
         
         if not table:
-            main_window.log_message("❌ Could not find table widget")
+            main_window.log_message("Could not find table widget")
             return []
         
         # Get selected rows using selection model
@@ -63,7 +63,7 @@ def get_selected_entries(main_window): #vers 3
         return selected_entries
         
     except Exception as e:
-        main_window.log_message(f"❌ Error getting selected entries: {str(e)}")
+        main_window.log_message(f"Error getting selected entries: {str(e)}")
         return []
 
 
@@ -91,10 +91,10 @@ def create_backup_before_import(main_window) -> bool: #vers 5
             img_path = main_window.current_img.file_path
             backup_path = img_path + '.backup'
             shutil.copy2(img_path, backup_path)
-            main_window.log_message(f"✅ Backup created: {backup_path}")
+            main_window.log_message(f"Backup created: {backup_path}")
             return True
     except Exception as e:
-        main_window.log_message(f"❌ Backup failed: {str(e)}")
+        main_window.log_message(f"Backup failed: {str(e)}")
         return False
 
 
@@ -304,11 +304,11 @@ def integrate_core_functions(main_window): #vers 4
         main_window.format_file_size = format_file_size
         main_window.log_operation = lambda operation, details="": log_operation(main_window, operation, details)
         
-        main_window.log_message("✅ Core utility functions integrated")
+        main_window.log_message("Core utility functions integrated")
         return True
         
     except Exception as e:
-        main_window.log_message(f"❌ Failed to integrate core functions: {str(e)}")
+        main_window.log_message(f"Failed to integrate core functions: {str(e)}")
         return False
 
 

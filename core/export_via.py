@@ -1,4 +1,4 @@
-#this belongs in core/export_via.py - Version: 7
+#this belongs in core/export_via.py - Version: 8
 # X-Seti - September09 2025 - IMG Factory 1.5 - Export Via Functions - Clean Complete Version
 
 """
@@ -16,7 +16,6 @@ from pathlib import Path
 from PyQt6.QtWidgets import QMessageBox
 
 # Import required functions
-from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab, get_current_file_type_from_tab
 from methods.export_shared import get_export_folder
 from methods.export_overwrite_check import handle_overwrite_check, get_output_path_for_entry
 
@@ -33,10 +32,6 @@ from methods.export_overwrite_check import handle_overwrite_check, get_output_pa
 def export_via_function(main_window): #vers 5
     """Main export via function with full tab awareness"""
     try:
-        if not validate_tab_before_operation(main_window, "Export Via"):
-            return False
-
-        file_object, file_type = get_current_file_from_active_tab(main_window)
 
         if file_type == 'IMG':
             return _export_img_via_ide(main_window)
@@ -48,17 +43,13 @@ def export_via_function(main_window): #vers 5
 
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Export via error: {str(e)}")
+            main_window.log_message(f"Export via error: {str(e)}")
         return False
 
 def _export_img_via_ide(main_window): #vers 3
     """Export IMG via IDE with proper folder handling and file export"""
     try:
         # Validate current tab
-        if not validate_tab_before_operation(main_window, "Export IMG Via IDE"):
-            return False
-
-        file_object, file_type = get_current_file_from_active_tab(main_window)
 
         if file_type != 'IMG' or not file_object:
             QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
@@ -69,8 +60,7 @@ def _export_img_via_ide(main_window): #vers 3
             from gui.ide_dialog import show_ide_dialog
             ide_parser = show_ide_dialog(main_window, "export")
         except ImportError:
-            QMessageBox.critical(main_window, "IDE System Error",
-                               "IDE dialog system not available.\nPlease ensure all components are installed.")
+            QMessageBox.critical(main_window, "IDE System Error", "IDE dialog system not available.\nPlease ensure all components are installed.")
             return False
 
         if not ide_parser:
@@ -125,7 +115,7 @@ def _export_img_via_ide(main_window): #vers 3
             return False
 
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📤 Exporting {len(matching_entries)} IDE-related files to {export_folder}")
+            main_window.log_message(f"Exporting {len(matching_entries)} IDE-related files to {export_folder}")
 
         # Export options
         export_options = {
@@ -141,7 +131,7 @@ def _export_img_via_ide(main_window): #vers 3
 
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Export via IDE error: {str(e)}")
+            main_window.log_message(f"Export via IDE error: {str(e)}")
         QMessageBox.critical(main_window, "Export Via IDE Error", f"Export via IDE failed: {str(e)}")
         return False
 
@@ -154,7 +144,7 @@ def _handle_ide_dialog_result(ide_parser, main_window): #vers 3
             use_assists_structure = False
             
             if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"📂 Using chosen export folder: {export_folder}")
+                main_window.log_message(f"Using chosen export folder: {export_folder}")
             
             return (export_folder, use_assists_structure)
         
@@ -168,7 +158,7 @@ def _handle_ide_dialog_result(ide_parser, main_window): #vers 3
             use_assists_structure = False
             
             if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"📂 Using user-selected folder: {export_folder}")
+                main_window.log_message(f"Using user-selected folder: {export_folder}")
         else:
             # Use assists folder
             export_folder = os.path.join(assists_folder, "IDE_Export")
@@ -176,41 +166,41 @@ def _handle_ide_dialog_result(ide_parser, main_window): #vers 3
             use_assists_structure = True
             
             if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"📁 Using assists folder: {export_folder}")
+                main_window.log_message(f"Using assists folder: {export_folder}")
         
         return (export_folder, use_assists_structure)
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error handling IDE dialog result: {str(e)}")
+            main_window.log_message(f"Error handling IDE dialog result: {str(e)}")
         return None
 
 def _get_assists_folder_from_settings(main_window): #vers 3
     """Get assists folder from settings with comprehensive checking"""
     try:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("🔍 Searching for assists folder...")
+            main_window.log_message("Searching for assists folder...")
         
         # Method 1: New settings system (utils/app_settings_system.py)
         if hasattr(main_window, 'settings'):
             assists_folder = getattr(main_window.settings, 'assists_folder', None)
             if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"🔍 Method 1 - settings.assists_folder: {assists_folder}")
+                main_window.log_message(f"Method 1 - settings.assists_folder: {assists_folder}")
             
             if assists_folder and os.path.exists(assists_folder):
                 if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"✅ Found assists folder: {assists_folder}")
+                    main_window.log_message(f"Found assists folder: {assists_folder}")
                 return assists_folder
         
         # Method 2: Direct main_window.project_folder attribute
         if hasattr(main_window, 'project_folder'):
             project_folder = main_window.project_folder
             if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"🔍 Method 2 - main_window.project_folder: {project_folder}")
+                main_window.log_message(f"Method 2 - main_window.project_folder: {project_folder}")
                 
             if project_folder and os.path.exists(project_folder):
                 if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"✅ Found direct project folder: {project_folder}")
+                    main_window.log_message(f"Found direct project folder: {project_folder}")
                 return project_folder
         
         # Method 3: QSettings (gui/file_menu_integration.py system)
@@ -218,21 +208,21 @@ def _get_assists_folder_from_settings(main_window): #vers 3
         settings = QSettings("IMG Factory", "Project Settings")
         project_folder = settings.value("project_folder")
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🔍 Method 3 - QSettings project_folder: {project_folder}")
+            main_window.log_message(f"Method 3 - QSettings project_folder: {project_folder}")
             
         if project_folder and os.path.exists(project_folder):
             if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"✅ Found QSettings project folder: {project_folder}")
+                main_window.log_message(f"Found QSettings project folder: {project_folder}")
             return project_folder
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("❌ No assists folder found - will ask user to choose")
+            main_window.log_message("No assists folder found - will ask user to choose")
         
         return None
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error getting assists folder: {str(e)}")
+            main_window.log_message(f"Error getting assists folder: {str(e)}")
         return None
 
 def _find_files_in_img_enhanced(file_object, ide_entries, main_window): #vers 2
@@ -282,7 +272,7 @@ def _find_files_in_img_enhanced(file_object, ide_entries, main_window): #vers 2
 
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error finding files in IMG: {str(e)}")
+            main_window.log_message(f"Error finding files in IMG: {str(e)}")
         return [], [], []
 
 def _start_ide_export_with_progress(main_window, matching_entries, export_folder, export_options): #vers 7
@@ -292,7 +282,7 @@ def _start_ide_export_with_progress(main_window, matching_entries, export_folder
         from PyQt6.QtCore import Qt  # Keep Qt from QtCore
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📁 Creating export folder: {export_folder}")
+            main_window.log_message(f"Creating export folder: {export_folder}")
         
         # Ensure export folder exists
         os.makedirs(export_folder, exist_ok=True)
@@ -319,7 +309,7 @@ def _start_ide_export_with_progress(main_window, matching_entries, export_folder
         failed_count = 0
         
         # Get the current file object to access entry data
-        file_object, file_type = get_current_file_from_active_tab(main_window)
+
         if not file_object:
             QMessageBox.critical(main_window, "Export Error", "No file object available for export")
             progress.close()
@@ -346,7 +336,7 @@ def _start_ide_export_with_progress(main_window, matching_entries, export_folder
                         entry_data = entry.get_data()
                     except Exception as e:
                         if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"⚠️ get_data failed for {entry_name}: {str(e)}")
+                            main_window.log_message(f"et_data failed for {entry_name}: {str(e)}")
                 
                 # Method 2: Try data attribute
                 if entry_data is None and hasattr(entry, 'data'):
@@ -354,7 +344,7 @@ def _start_ide_export_with_progress(main_window, matching_entries, export_folder
                         entry_data = entry.data
                     except Exception as e:
                         if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"⚠️ data attribute failed for {entry_name}: {str(e)}")
+                            main_window.log_message(f"data attribute failed for {entry_name}: {str(e)}")
                 
                 # Method 3: Try to read from file using offset/size
                 if entry_data is None and hasattr(file_object, 'file_path'):
@@ -365,12 +355,12 @@ def _start_ide_export_with_progress(main_window, matching_entries, export_folder
                                 entry_data = f.read(entry.size)
                     except Exception as e:
                         if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"⚠️ File read failed for {entry_name}: {str(e)}")
+                            main_window.log_message(f"File read failed for {entry_name}: {str(e)}")
                 
                 if entry_data is None:
                     failed_count += 1
                     if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"❌ No data available for: {entry_name}")
+                        main_window.log_message(f"No data available for: {entry_name}")
                     continue
                 
                 # Use shared function to get output path
@@ -385,12 +375,12 @@ def _start_ide_export_with_progress(main_window, matching_entries, export_folder
                 
                 exported_count += 1
                 if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"✅ Exported: {entry_name} ({len(entry_data)} bytes)")
+                    main_window.log_message(f"Exported: {entry_name} ({len(entry_data)} bytes)")
                         
             except Exception as e:
                 failed_count += 1
                 if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"❌ Export error for {entry_name}: {str(e)}")
+                    main_window.log_message(f"Export error for {entry_name}: {str(e)}")
         
         progress.setValue(len(matching_entries))
         progress.close()
@@ -403,14 +393,14 @@ def _start_ide_export_with_progress(main_window, matching_entries, export_folder
             
             QMessageBox.information(main_window, "Export Complete", result_msg)
             if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"✅ Export complete: {exported_count} exported, {failed_count} failed")
+                main_window.log_message(f"Export complete: {exported_count} exported, {failed_count} failed")
         else:
             QMessageBox.critical(main_window, "Export Failed", 
                 f"No files were exported successfully.\nFailed: {failed_count} files")
             
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Export progress error: {str(e)}")
+            main_window.log_message(f"Export progress error: {str(e)}")
         QMessageBox.critical(main_window, "Export Error", f"Export failed: {str(e)}")
 
 def _export_col_via_ide(main_window): #vers 1
@@ -421,14 +411,14 @@ def _export_col_via_ide(main_window): #vers 1
             return False
 
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("🛡️ COL Export Via IDE not fully implemented yet")
+            main_window.log_message("COL Export Via IDE not fully implemented yet")
         
         QMessageBox.information(main_window, "COL Export", "COL Export Via IDE functionality will be implemented in a future update.")
         return True
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ COL export via IDE error: {str(e)}")
+            main_window.log_message(f"COL export via IDE error: {str(e)}")
         return False
 
 def integrate_export_via_functions(main_window) -> bool: #vers 3
@@ -444,7 +434,7 @@ def integrate_export_via_functions(main_window) -> bool: #vers 3
         main_window.export_via_dialog = main_window.export_via_function
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Export via functions integrated - complete clean version")
+            main_window.log_message("Export via functions integrated - complete clean version")
             main_window.log_message("   • Fixed assists folder detection")
             main_window.log_message("   • Added shared overwrite checking")
             main_window.log_message("   • Added Choose Export Folder support")
@@ -453,7 +443,7 @@ def integrate_export_via_functions(main_window) -> bool: #vers 3
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Failed to integrate export via functions: {str(e)}")
+            main_window.log_message(f"Failed to integrate export via functions: {str(e)}")
         return False
 
 # Export functions

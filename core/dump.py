@@ -9,8 +9,6 @@ from typing import List, Optional
 from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QFileDialog, QApplication
 from PyQt6.QtCore import Qt
 
-# Tab awareness system
-from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 
 ##Methods list -
 # dump_all_function
@@ -26,10 +24,6 @@ def dump_all_function(main_window): #vers 12
     """Dump all entries to folder"""
     try:
         # Validate tab
-        if not validate_tab_before_operation(main_window, "Dump All"):
-            return False
-        
-        file_object, file_type = get_current_file_from_active_tab(main_window)
         
         if file_type != 'IMG' or not file_object:
             QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
@@ -67,10 +61,6 @@ def dump_selected_function(main_window): #vers 12
     """Dump selected entries to folder"""
     try:
         # Validate tab
-        if not validate_tab_before_operation(main_window, "Dump Selected"):
-            return False
-        
-        file_object, file_type = get_current_file_from_active_tab(main_window)
         
         if file_type != 'IMG' or not file_object:
             QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
@@ -276,13 +266,13 @@ def integrate_dump_functions(main_window): #vers 12
         main_window.dump_entries = main_window.dump_selected_function
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Clean dump functions integrated")
+            main_window.log_message("Clean dump functions integrated")
         
         return True
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Dump integration failed: {str(e)}")
+            main_window.log_message(f"Dump integration failed: {str(e)}")
         return False
 
 

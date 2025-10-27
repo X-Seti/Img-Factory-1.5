@@ -48,7 +48,7 @@ class IMGAnalysisDialog(QDialog): #vers 1
         layout = QVBoxLayout(self)
         
         # Title
-        title_label = QLabel("📊 IMG File Analysis")
+        title_label = QLabel("IMG File Analysis")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("font-size: 16px; font-weight: bold; margin: 10px;")
         layout.addWidget(title_label)
@@ -106,7 +106,7 @@ class IMGAnalysisDialog(QDialog): #vers 1
         
         layout.addWidget(self.corruption_table)
         
-        self.tabs.addTab(tab, "🔍 Corruption")
+        self.tabs.addTab(tab, "Corruption")
     
     def create_structure_tab(self):
         """Create structure analysis tab"""
@@ -120,7 +120,7 @@ class IMGAnalysisDialog(QDialog): #vers 1
         self.structure_details.setReadOnly(True)
         layout.addWidget(self.structure_details)
         
-        self.tabs.addTab(tab, "🏗️ Structure")
+        self.tabs.addTab(tab, "Structure")
     
     def create_health_tab(self):
         """Create health analysis tab"""
@@ -134,7 +134,7 @@ class IMGAnalysisDialog(QDialog): #vers 1
         self.health_details.setReadOnly(True)
         layout.addWidget(self.health_details)
         
-        self.tabs.addTab(tab, "🔧 Health")
+        self.tabs.addTab(tab, "Health")
     
     def populate_data(self):
         """Populate analysis data"""
@@ -343,13 +343,13 @@ def analyze_img_corruption(img_file, main_window=None) -> Dict[str, Any]: #vers 
             report['severity'] = "Severe corruption"
         
         if main_window and hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🔍 Analysis complete: {len(corrupted_entries)} corrupted entries found ({corruption_percentage:.1f}%)")
+            main_window.log_message(f"Analysis complete: {len(corrupted_entries)} corrupted entries found ({corruption_percentage:.1f}%)")
         
         return report
         
     except Exception as e:
         if main_window and hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Corruption analysis failed: {str(e)}")
+            main_window.log_message(f"Corruption analysis failed: {str(e)}")
         return {'error': str(e)}
 
 
@@ -404,7 +404,7 @@ def analyze_img_structure(img_file, main_window=None) -> Dict[str, Any]: #vers 1
         
     except Exception as e:
         if main_window and hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Structure analysis failed: {str(e)}")
+            main_window.log_message(f"Structure analysis failed: {str(e)}")
         return {'error': str(e)}
 
 
@@ -467,7 +467,7 @@ def analyze_img_health(img_file, main_window=None) -> Dict[str, Any]: #vers 1
         
     except Exception as e:
         if main_window and hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Health analysis failed: {str(e)}")
+            main_window.log_message(f"Health analysis failed: {str(e)}")
         return {'error': str(e)}
 
 
@@ -498,7 +498,7 @@ def show_analysis_dialog(main_window) -> Optional[Dict]: #vers 1
             return None
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("📊 Starting comprehensive IMG analysis...")
+            main_window.log_message("Starting comprehensive IMG analysis...")
         
         # Perform all analyses
         corruption_data = analyze_img_corruption(main_window.current_img, main_window)
@@ -522,7 +522,7 @@ def show_analysis_dialog(main_window) -> Optional[Dict]: #vers 1
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Analysis dialog failed: {str(e)}")
+            main_window.log_message(f"Analysis dialog failed: {str(e)}")
         QMessageBox.critical(main_window, "Analysis Failed", f"Failed to show analysis dialog:\n{str(e)}")
         return None
 

@@ -1,4 +1,4 @@
-#this belongs in core/ rename.py - Version: 2
+#this belongs in core/ rename.py - Version: 4
 # X-Seti - August24 2025 - IMG Factory 1.5 - Rename Functions for IMG and COL
 
 """
@@ -15,9 +15,6 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
-
-# Use same tab awareness as other core functions
-from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab, get_current_file_type_from_tab
 
 # IMG_Editor core integration support
 try:
@@ -58,7 +55,7 @@ def rename_entry(main_window): #vers 2
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Rename entry error: {str(e)}")
+            main_window.log_message(f"Rename entry error: {str(e)}")
         QMessageBox.critical(main_window, "Rename Error", f"Rename failed: {str(e)}")
         return False
 
@@ -111,7 +108,7 @@ def rename_img_entry(main_window): #vers 2
             return False
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🏷️ Renaming IMG entry: '{current_name}' → '{new_name}'")
+            main_window.log_message(f"Renaming IMG entry: '{current_name}' → '{new_name}'")
         
         # Rename using IMG_Editor core if available
         success = _rename_with_img_core(main_window, file_object, selected_entry, new_name)
@@ -133,7 +130,7 @@ def rename_img_entry(main_window): #vers 2
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Rename IMG entry error: {str(e)}")
+            main_window.log_message(f"Rename IMG entry error: {str(e)}")
         QMessageBox.critical(main_window, "Rename IMG Entry Error", f"Rename IMG entry failed: {str(e)}")
         return False
 
@@ -172,7 +169,7 @@ def rename_col_model(main_window): #vers 2
             return False
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🏷️ Renaming COL model: '{current_name}' → '{new_name}'")
+            main_window.log_message(f"Renaming COL model: '{current_name}' → '{new_name}'")
         
         # Rename COL model
         try:
@@ -193,8 +190,8 @@ def rename_col_model(main_window): #vers 2
                 main_window.refresh_table()
             
             if hasattr(main_window, 'log_message'):
-                main_window.log_message("✅ COL model renamed successfully")
-                main_window.log_message("💾 Remember to save COL file to preserve changes")
+                main_window.log_message("COL model renamed successfully")
+                main_window.log_message("Remember to save COL file to preserve changes")
             
             QMessageBox.information(main_window, "Rename Complete", 
                 f"Successfully renamed COL model to '{new_name}'")
@@ -203,13 +200,13 @@ def rename_col_model(main_window): #vers 2
             
         except Exception as e:
             if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"❌ COL model rename error: {str(e)}")
+                main_window.log_message(f"COL model rename error: {str(e)}")
             QMessageBox.critical(main_window, "Rename Failed", f"Failed to rename COL model: {str(e)}")
             return False
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Rename COL model error: {str(e)}")
+            main_window.log_message(f"Rename COL model error: {str(e)}")
         QMessageBox.critical(main_window, "Rename COL Model Error", f"Rename COL model failed: {str(e)}")
         return False
 
@@ -251,9 +248,9 @@ def _show_rename_dialog(main_window, current_name: str, file_type: str) -> Optio
         
         # Add validation hints
         if file_type == "IMG Entry":
-            hint = QLabel("💡 IMG entries: 24 characters max, avoid special characters")
+            hint = QLabel("IMG entries: 24 characters max, avoid special characters")
         else:
-            hint = QLabel("💡 COL models: Any descriptive name")
+            hint = QLabel("COL models: Any descriptive name")
         
         hint.setStyleSheet("color: #666; font-size: 9px; margin-top: 5px;")
         
@@ -265,9 +262,9 @@ def _show_rename_dialog(main_window, current_name: str, file_type: str) -> Optio
         # Buttons
         button_layout = QHBoxLayout()
         
-        rename_btn = QPushButton("✅ Rename")
+        rename_btn = QPushButton("Rename")
         rename_btn.setDefault(True)
-        cancel_btn = QPushButton("❌ Cancel")
+        cancel_btn = QPushButton("Cancel")
         
         button_layout.addWidget(rename_btn)
         button_layout.addWidget(cancel_btn)
@@ -296,7 +293,7 @@ def _show_rename_dialog(main_window, current_name: str, file_type: str) -> Optio
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Rename dialog error: {str(e)}")
+            main_window.log_message(f"Rename dialog error: {str(e)}")
         return None
 
 
@@ -376,14 +373,14 @@ def _rename_with_img_core(main_window, file_object, entry, new_name: str) -> boo
                     return _rename_with_img_archive(main_window, img_archive, entry, new_name)
             except Exception as e:
                 if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"⚠️ IMG core rename failed, using fallback: {str(e)}")
+                    main_window.log_message(f"IMG core rename failed, using fallback: {str(e)}")
         
         # Fallback to direct rename
         return _rename_with_fallback_method(main_window, entry, new_name)
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Core rename error: {str(e)}")
+            main_window.log_message(f"Core rename error: {str(e)}")
         return False
 
 
@@ -391,7 +388,7 @@ def _rename_with_img_archive(main_window, img_archive, entry, new_name: str) -> 
     """Rename using IMG_Editor archive"""
     try:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("🔧 Using IMG_Editor core for reliable rename")
+            main_window.log_message("Using IMG_Editor core for reliable rename")
         
         # Find entry in IMG archive
         entry_name = getattr(entry, 'name', '')
@@ -404,7 +401,7 @@ def _rename_with_img_archive(main_window, img_archive, entry, new_name: str) -> 
         
         if not img_editor_entry:
             if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"❌ Entry not found in archive: {entry_name}")
+                main_window.log_message(f"Entry not found in archive: {entry_name}")
             return False
         
         # Rename entry
@@ -415,39 +412,14 @@ def _rename_with_img_archive(main_window, img_archive, entry, new_name: str) -> 
             img_archive.modified = True
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"✅ Renamed entry using IMG_Editor core")
-            main_window.log_message("💾 Remember to rebuild IMG to save changes")
+            main_window.log_message(f"Renamed entry using IMG_Editor core")
+            main_window.log_message("Remember to rebuild IMG to save changes")
         
         return True
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ IMG archive rename error: {str(e)}")
-        return False
-
-
-def _rename_with_fallback_method(main_window, entry, new_name: str) -> bool: #vers 2
-    """Fallback rename method"""
-    try:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message("⚠️ Using fallback rename method")
-        
-        # Direct rename
-        entry.name = new_name
-        
-        # Mark as modified if possible
-        if hasattr(entry, 'modified'):
-            entry.modified = True
-        
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Entry renamed using fallback method")
-            main_window.log_message("💾 Remember to save/rebuild file to preserve changes")
-        
-        return True
-        
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Fallback rename error: {str(e)}")
+            main_window.log_message(f"IMG archive rename error: {str(e)}")
         return False
 
 
@@ -566,7 +538,7 @@ def integrate_rename_functions(main_window) -> bool: #vers 2
         main_window.rename_item = main_window.rename_entry
         
         if hasattr(main_window, 'log_message'):
-            integration_msg = "✅ Rename functions integrated with tab awareness"
+            integration_msg = "Rename functions integrated with tab awareness"
             if IMG_INTEGRATION_AVAILABLE:
                 integration_msg += " + IMG_Editor core"
             main_window.log_message(integration_msg)
@@ -575,7 +547,7 @@ def integrate_rename_functions(main_window) -> bool: #vers 2
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Failed to integrate rename functions: {str(e)}")
+            main_window.log_message(f"Failed to integrate rename functions: {str(e)}")
         return False
 
 
@@ -586,4 +558,5 @@ __all__ = [
     'rename_img_entry',
     'rename_col_model',
     'integrate_rename_functions'
+    #'rename_txd_texture' TODO
 ]

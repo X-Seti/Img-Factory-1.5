@@ -1,4 +1,4 @@
-#this belongs in core/export.py - Version: 4
+#this belongs in core/export.py - Version: 6
 # X-Seti - September09 2025 - IMG Factory 1.5 - Export Functions with Overwrite Check
 
 """
@@ -15,7 +15,6 @@ from PyQt6.QtWidgets import QMessageBox, QFileDialog, QProgressDialog, QApplicat
 from PyQt6.QtCore import Qt
 
 # Import required functions
-from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 from methods.export_shared import get_export_folder, get_selected_entries
 from methods.export_overwrite_check import handle_overwrite_check, get_output_path_for_entry
 
@@ -31,10 +30,6 @@ from methods.export_overwrite_check import handle_overwrite_check, get_output_pa
 def export_selected_function(main_window): #vers 4
     """Export selected entries with overwrite check"""
     try:
-        if not validate_tab_before_operation(main_window, "Export Selected"):
-            return False
-
-        file_object, file_type = get_current_file_from_active_tab(main_window)
         
         if not file_object:
             QMessageBox.warning(main_window, "No File", "No file is currently loaded")
@@ -50,16 +45,12 @@ def export_selected_function(main_window): #vers 4
             
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Export selected error: {str(e)}")
+            main_window.log_message(f"Export selected error: {str(e)}")
         return False
 
 def export_all_function(main_window): #vers 4
     """Export all entries with overwrite check"""
     try:
-        if not validate_tab_before_operation(main_window, "Export All"):
-            return False
-
-        file_object, file_type = get_current_file_from_active_tab(main_window)
         
         if not file_object:
             QMessageBox.warning(main_window, "No File", "No file is currently loaded")
@@ -75,7 +66,7 @@ def export_all_function(main_window): #vers 4
             
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Export all error: {str(e)}")
+            main_window.log_message(f"Export all error: {str(e)}")
         return False
 
 def _export_img_selected(main_window, file_object): #vers 1
@@ -94,7 +85,7 @@ def _export_img_selected(main_window, file_object): #vers 1
             return False
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📤 Exporting {len(selected_entries)} IMG entries to: {export_dir}")
+            main_window.log_message(f"Exporting {len(selected_entries)} IMG entries to: {export_dir}")
         
         # Export options - individual files only (as per changelog request)
         export_options = {
@@ -108,7 +99,7 @@ def _export_img_selected(main_window, file_object): #vers 1
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Export IMG selected error: {str(e)}")
+            main_window.log_message(f"Export IMG selected error: {str(e)}")
         QMessageBox.critical(main_window, "Export Error", f"Export failed: {str(e)}")
         return False
 
@@ -127,7 +118,7 @@ def _export_img_all(main_window, file_object): #vers 1
             return False
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📤 Exporting all {len(all_entries)} IMG entries to: {export_dir}")
+            main_window.log_message(f"Exporting all {len(all_entries)} IMG entries to: {export_dir}")
         
         # Export options - individual files only (as per changelog request)
         export_options = {
@@ -141,7 +132,7 @@ def _export_img_all(main_window, file_object): #vers 1
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Export IMG all error: {str(e)}")
+            main_window.log_message(f"Export IMG all error: {str(e)}")
         QMessageBox.critical(main_window, "Export Error", f"Export failed: {str(e)}")
         return False
 
@@ -190,7 +181,7 @@ def _export_entries_with_overwrite_check(main_window, file_object, entries, expo
                         entry_data = entry.get_data()
                     except Exception as e:
                         if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"⚠️ get_data failed for {entry_name}: {str(e)}")
+                            main_window.log_message(f"get_data failed for {entry_name}: {str(e)}")
                 
                 # Method 2: Try cached data
                 if entry_data is None and hasattr(entry, '_cached_data') and entry._cached_data:
@@ -202,7 +193,7 @@ def _export_entries_with_overwrite_check(main_window, file_object, entries, expo
                         entry_data = file_object.read_entry_data(entry)
                     except Exception as e:
                         if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"⚠️ read_entry_data failed for {entry_name}: {str(e)}")
+                            main_window.log_message(f"read_entry_data failed for {entry_name}: {str(e)}")
                 
                 # Method 4: Try direct file reading using offset/size
                 if entry_data is None and hasattr(file_object, 'file_path'):
@@ -213,12 +204,12 @@ def _export_entries_with_overwrite_check(main_window, file_object, entries, expo
                                 entry_data = f.read(entry.size)
                     except Exception as e:
                         if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"⚠️ File read failed for {entry_name}: {str(e)}")
+                            main_window.log_message(f"File read failed for {entry_name}: {str(e)}")
                 
                 if entry_data is None:
                     failed_count += 1
                     if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"❌ No data available for: {entry_name}")
+                        main_window.log_message(f"No data available for: {entry_name}")
                     continue
                 
                 # Use shared function to get output path (handles organization if needed)
@@ -233,12 +224,12 @@ def _export_entries_with_overwrite_check(main_window, file_object, entries, expo
                 
                 success_count += 1
                 if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"✅ Exported: {entry_name} ({len(entry_data)} bytes)")
+                    main_window.log_message(f"Exported: {entry_name} ({len(entry_data)} bytes)")
                         
             except Exception as e:
                 failed_count += 1
                 if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"❌ Export error for {entry_name}: {str(e)}")
+                    main_window.log_message(f"Export error for {entry_name}: {str(e)}")
         
         progress.setValue(len(entries))
         progress.close()
@@ -251,7 +242,7 @@ def _export_entries_with_overwrite_check(main_window, file_object, entries, expo
             
             QMessageBox.information(main_window, "Export Complete", result_msg)
             if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"✅ Export complete: {success_count} exported, {failed_count} failed")
+                main_window.log_message(f"Export complete: {success_count} exported, {failed_count} failed")
             return True
         else:
             QMessageBox.critical(main_window, "Export Failed", 
@@ -260,7 +251,7 @@ def _export_entries_with_overwrite_check(main_window, file_object, entries, expo
             
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Export with overwrite check error: {str(e)}")
+            main_window.log_message(f"Export with overwrite check error: {str(e)}")
         QMessageBox.critical(main_window, "Export Error", f"Export failed: {str(e)}")
         return False
 
@@ -280,7 +271,7 @@ def _get_selected_entries_from_tab(main_window): #vers 2
         
         if not table:
             if hasattr(main_window, 'log_message'):
-                main_window.log_message("⚠️ No table found for entry selection")
+                main_window.log_message("No table found for entry selection")
             return selected_entries
         
         # Get selected rows
@@ -289,7 +280,7 @@ def _get_selected_entries_from_tab(main_window): #vers 2
             selected_rows.add(item.row())
         
         # Get file object to access entries
-        file_object, file_type = get_current_file_from_active_tab(main_window)
+
         if not file_object or not hasattr(file_object, 'entries'):
             return selected_entries
         
@@ -302,14 +293,14 @@ def _get_selected_entries_from_tab(main_window): #vers 2
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error getting selected entries: {str(e)}")
+            main_window.log_message(f"Error getting selected entries: {str(e)}")
         return []
 
 def _export_col_selected(main_window, file_object): #vers 2
     """Export selected COL models - PLACEHOLDER"""
     try:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("🛡️ COL selected export - Using placeholder implementation")
+            main_window.log_message("COL selected export - Using placeholder implementation")
         
         QMessageBox.information(main_window, "COL Export", 
             "COL export functionality will use the existing COL export system.\n\n"
@@ -318,14 +309,14 @@ def _export_col_selected(main_window, file_object): #vers 2
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ COL selected export error: {str(e)}")
+            main_window.log_message(f"COL selected export error: {str(e)}")
         return False
 
 def _export_col_all(main_window, file_object): #vers 2
     """Export all COL models - PLACEHOLDER"""
     try:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("🛡️ COL all export - Using placeholder implementation")
+            main_window.log_message("COL all export - Using placeholder implementation")
         
         QMessageBox.information(main_window, "COL Export", 
             "COL export functionality will use the existing COL export system.\n\n"
@@ -334,7 +325,7 @@ def _export_col_all(main_window, file_object): #vers 2
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ COL all export error: {str(e)}")
+            main_window.log_message(f"COL all export error: {str(e)}")
         return False
 
 def integrate_export_functions(main_window): #vers 4
@@ -351,7 +342,7 @@ def integrate_export_functions(main_window): #vers 4
         main_window.export_all = main_window.export_all_function
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Export functions integrated with overwrite check support")
+            main_window.log_message("Export functions integrated with overwrite check support")
             main_window.log_message("   • Individual file export (no combining)")
             main_window.log_message("   • Shared overwrite checking")
             main_window.log_message("   • Multiple data access methods")
@@ -361,7 +352,7 @@ def integrate_export_functions(main_window): #vers 4
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Export integration failed: {str(e)}")
+            main_window.log_message(f"Export integration failed: {str(e)}")
         return False
 
 # Export functions

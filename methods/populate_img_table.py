@@ -1,4 +1,4 @@
-#this belongs in methods/populate_img_table.py - Version: 8
+#this belongs in methods/populate_img_table.py - Version: 9
 # X-Seti - October15 2025 - IMG Factory 1.5
 
 """
@@ -65,13 +65,13 @@ def reset_table_styling(main_window): #vers 1
         header.setSortIndicatorShown(True)
         header.setSectionsMovable(False)
 
-        main_window.log_message("🔧 Table styling completely reset")
+        main_window.log_message("Table styling completely reset")
         img_debugger.debug("Table styling reset to default")
         return True
 
     except Exception as e:
         error_msg = f"Error resetting table styling: {str(e)}"
-        main_window.log_message(f"⚠️ {error_msg}")
+        main_window.log_message(f"Error: {error_msg}")
         img_debugger.error(error_msg)
         return False
 
@@ -240,7 +240,7 @@ class IMGTablePopulator:
             for row, entry in enumerate(entries):
                 self.populate_table_row_minimal(table, row, entry)
 
-            img_debugger.info(f"✅ Table populated with {len(entries)} entries")
+            img_debugger.info(f"Table populated with {len(entries)} entries")
             return True
 
         except Exception as e:
@@ -528,7 +528,7 @@ def install_img_table_populator(main_window): #vers 1
         main_window.clear_img_table = lambda: clear_img_table(main_window)
         main_window.refresh_img_table = lambda: refresh_img_table(main_window)
 
-        img_debugger.info("✅ Minimal IMG table populator installed")
+        img_debugger.info("Minimal IMG table populator installed")
         return True
 
     except Exception as e:
@@ -554,7 +554,7 @@ def update_img_table_selection_info(main_window) -> bool: #vers 1
 
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error updating selection info: {str(e)}")
+            main_window.log_message(f"Error updating selection info: {str(e)}")
         return False
 
 # Export functions

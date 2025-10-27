@@ -210,7 +210,7 @@ class IMGEntry:
                             self._version_detected = True
 
                             if hasattr(img_debugger, 'debug'):
-                                img_debugger.debug(f"✅ RW Version detected for {self.name}: {self.rw_version_name}")
+                                img_debugger.debug(f"RW Version detected for {self.name}: {self.rw_version_name}")
 
                 except Exception as e:
                     if hasattr(img_debugger, 'warning'):
@@ -569,11 +569,11 @@ class IMGFile:
                 return success
                 
             else:
-                print(f"❌ Unsupported IMG version: {version}")
+                print(f"Unsupported IMG version: {version}")
                 return False
 
         except Exception as e:
-            print(f"❌ Error creating IMG file: {e}")
+            print(f"Error creating IMG file: {e}")
             return False
 
     def save_img_file(self) -> bool: #vers 1
@@ -684,7 +684,7 @@ class IMGFile:
                     if current_pos < sector_end:
                         f.write(b'\x00' * (sector_end - current_pos))
 
-            print(f"✅ Rebuilt IMG file: {entry_count} entries")
+            print(f"Rebuilt IMG file: {entry_count} entries")
             return True
 
         except Exception as e:
@@ -750,7 +750,7 @@ class IMGFile:
                     if current_pos < sector_end:
                         f.write(b'\x00' * (sector_end - current_pos))
 
-            print(f"✅ Rebuilt DIR/IMG pair: {entry_count} entries")
+            print(f"Rebuilt DIR/IMG pair: {entry_count} entries")
             return True
 
         except Exception as e:
@@ -984,11 +984,11 @@ class IMGFile:
             img_file_class.get_entry = get_entry
             img_file_class.add_multiple_entries = add_multiple_entries
 
-            print("✅ Fixed add_entry methods integrated into IMGFile class")
+            print("Fixed add_entry methods integrated into IMGFile class")
             return True
 
         except Exception as e:
-            print(f"❌ Failed to integrate fixed add_entry methods: {e}")
+            print(f"Failed to integrate fixed add_entry methods: {e}")
             return False
 
 
@@ -1358,7 +1358,7 @@ def create_entries_table_panel(main_window): #vers 4
     layout.setContentsMargins(0, 0, 0, 0)
 
     # IMG file information
-    info_group = QGroupBox("📁 IMG File Information")
+    info_group = QGroupBox("IMG File Information")
     info_layout = QVBoxLayout(info_group)
 
     main_window.file_info_panel = IMGFileInfoPanel()
@@ -1367,7 +1367,7 @@ def create_entries_table_panel(main_window): #vers 4
     layout.addWidget(info_group)
 
     # Filter panel
-    filter_group = QGroupBox("🔍 Filter & Search")
+    filter_group = QGroupBox("Filter & Search")
     filter_layout = QVBoxLayout(filter_group)
 
     main_window.filter_panel = FilterPanel()
@@ -1376,7 +1376,7 @@ def create_entries_table_panel(main_window): #vers 4
     layout.addWidget(filter_group)
 
     # Entries table
-    entries_group = QGroupBox("📋 Archive Entries")
+    entries_group = QGroupBox("Archive Entries")
     entries_layout = QVBoxLayout(entries_group)
 
     main_window.entries_table = IMGEntriesTable()

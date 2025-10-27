@@ -1,4 +1,4 @@
-#this belongs in core/remove_via.py - Version: 5
+#this belongs in core/remove_via.py - Version: 6
 # X-Seti - September09 2025 - IMG Factory 1.5 - Remove Via Functions with Proper Modification Tracking
 
 """
@@ -8,9 +8,6 @@ Remove Via Functions - Remove entries via IDE/text files with proper modificatio
 import os
 from typing import List
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
-
-# Tab awareness system
-from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
 
 ##Methods list -
 # _parse_ide_file_for_removal
@@ -24,8 +21,6 @@ from methods.tab_aware_functions import validate_tab_before_operation, get_curre
 
 def remove_via_function(main_window): #vers 1
     """Remove entries via file selection dialog"""
-    if not validate_tab_before_operation(main_window, "Remove Via"):
-        return False
     
     file_dialog = QFileDialog()
     file_path, _ = file_dialog.getOpenFileName(
@@ -45,8 +40,6 @@ def remove_via_function(main_window): #vers 1
 
 def remove_via_ide_function(main_window): #vers 1
     """Remove entries using IDE file selection"""
-    if not validate_tab_before_operation(main_window, "Remove Via IDE"):
-        return False
     
     file_dialog = QFileDialog()
     ide_path, _ = file_dialog.getOpenFileName(
@@ -63,10 +56,6 @@ def remove_via_ide_function(main_window): #vers 1
 
 def remove_via_ide_function_with_path(main_window, ide_path: str): #vers 1
     """Remove entries using specific IDE file path with proper modification tracking"""
-    if not validate_tab_before_operation(main_window, "Remove Via IDE"):
-        return False
-    
-    file_object, file_type = get_current_file_from_active_tab(main_window)
     
     if file_type != 'IMG' or not file_object:
         QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
@@ -131,8 +120,6 @@ def remove_via_ide_function_with_path(main_window, ide_path: str): #vers 1
 
 def remove_via_text_function(main_window): #vers 1
     """Remove entries using text file selection"""
-    if not validate_tab_before_operation(main_window, "Remove Via Text"):
-        return False
     
     file_dialog = QFileDialog()
     text_path, _ = file_dialog.getOpenFileName(
@@ -149,10 +136,6 @@ def remove_via_text_function(main_window): #vers 1
 
 def remove_via_text_function_with_path(main_window, text_path: str): #vers 1
     """Remove entries using specific text file path with proper modification tracking"""
-    if not validate_tab_before_operation(main_window, "Remove Via Text"):
-        return False
-    
-    file_object, file_type = get_current_file_from_active_tab(main_window)
     
     if file_type != 'IMG' or not file_object:
         QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")

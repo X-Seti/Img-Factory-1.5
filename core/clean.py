@@ -1,4 +1,4 @@
-#this belongs in core/clean.py - Version: 1  
+#this belongs in core/clean.py - Version: 2
 # X-Seti - August09 2025 - IMG Factory 1.5 - Clean Utility Functions
 
 """
@@ -293,12 +293,12 @@ def integrate_clean_utilities(main_window) -> bool: #vers 1
         main_window.clean_filename_for_display = clean_filename_for_display
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("🧹 Clean utilities integrated")
+            main_window.log_message("Clean utilities integrated")
         return True
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Clean utilities integration failed: {str(e)}")
+            main_window.log_message(f"Clean utilities integration failed: {str(e)}")
         return False
 
 

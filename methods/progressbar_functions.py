@@ -146,7 +146,7 @@ class ProgressManager:
         """Auto-reset progress if it's been active too long"""
         if self.is_active:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("⚠️ Progress auto-reset due to timeout")
+                self.main_window.log_message("Progress auto-reset due to timeout")
             self.hide_progress("Ready")
 
 
@@ -225,13 +225,13 @@ def integrate_progress_system(main_window) -> bool:
         main_window._progress_manager = manager
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Unified progress system integrated")
+            main_window.log_message("Unified progress system integrated")
         
         return True
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Progress system integration failed: {str(e)}")
+            main_window.log_message(f"Progress system integration failed: {str(e)}")
         return False
 
 

@@ -10,9 +10,6 @@ import os
 import math
 from typing import List, Optional
 
-# Import required modules
-from methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
-
 ##Methods list -
 # add_entry_safe
 # add_multiple_entries
@@ -433,7 +430,7 @@ def integrate_entry_operations(main_window) -> bool: #vers 3
         main_window.rename_entry = main_window.rename_entry_safe
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Entry operations integrated - PORTED from modern system")
+            main_window.log_message("Entry operations integrated - PORTED from modern system")
             main_window.log_message("   • Safe entry addition with modification tracking")
             main_window.log_message("   • Proper deletion tracking for save detection")
             main_window.log_message("   • Entry renaming with validation")
@@ -443,7 +440,7 @@ def integrate_entry_operations(main_window) -> bool: #vers 3
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Entry operations integration failed: {str(e)}")
+            main_window.log_message(f"Entry operations integration failed: {str(e)}")
         return False
 
 # Export functions

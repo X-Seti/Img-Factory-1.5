@@ -1,4 +1,4 @@
-#this belongs in methods/img_operations_routing.py - Version: 1  
+#this belongs in methods/img_operations_routing.py - Version: 3
 # X-Seti - August10 2025 - IMG Factory 1.5 - Route All IMG Operations Through Shared System
 
 """
@@ -25,13 +25,13 @@ def route_remove_entry(main_window): #vers 1
     """Route remove entry function through placeholder"""
     try:
         if not main_window.current_img:
-            main_window.log_message("❌ No IMG file loaded")
+            main_window.log_message("No IMG file loaded")
             return False
             
         # Get selected entries from table
         selected_entries = get_selected_entry_names(main_window)
         if not selected_entries:
-            main_window.log_message("❌ No entries selected for removal")
+            main_window.log_message("No entries selected for removal")
             return False
             
         if len(selected_entries) == 1:
@@ -40,7 +40,7 @@ def route_remove_entry(main_window): #vers 1
             return main_window.shared_remove_entries_via(main_window.current_img, selected_entries)
             
     except Exception as e:
-        main_window.log_message(f"❌ Error routing remove: {str(e)}")
+        main_window.log_message(f"Error routing remove: {str(e)}")
         return False
 
 
@@ -48,13 +48,13 @@ def route_remove_via_list(main_window, entry_list): #vers 1
     """Route remove via list function through placeholder"""
     try:
         if not main_window.current_img:
-            main_window.log_message("❌ No IMG file loaded")
+            main_window.log_message("No IMG file loaded")
             return False
             
         return main_window.shared_remove_entries_via(main_window.current_img, entry_list)
         
     except Exception as e:
-        main_window.log_message(f"❌ Error routing remove via list: {str(e)}")
+        main_window.log_message(f"Error routing remove via list: {str(e)}")
         return False
 
 
@@ -62,13 +62,13 @@ def route_import_file(main_window, file_path, target_name=None): #vers 1
     """Route import file function through placeholder"""
     try:
         if not main_window.current_img:
-            main_window.log_message("❌ No IMG file loaded")
+            main_window.log_message("No IMG file loaded")
             return False
             
         return main_window.shared_import_file(main_window.current_img, file_path, target_name)
         
     except Exception as e:
-        main_window.log_message(f"❌ Error routing import: {str(e)}")
+        main_window.log_message(f"Error routing import: {str(e)}")
         return False
 
 
@@ -76,13 +76,13 @@ def route_import_via_list(main_window, file_paths): #vers 1
     """Route import via list function through placeholder"""
     try:
         if not main_window.current_img:
-            main_window.log_message("❌ No IMG file loaded")
+            main_window.log_message("No IMG file loaded")
             return False
             
         return main_window.shared_import_files_via(main_window.current_img, file_paths)
         
     except Exception as e:
-        main_window.log_message(f"❌ Error routing import via list: {str(e)}")
+        main_window.log_message(f"Error routing import via list: {str(e)}")
         return False
 
 
@@ -90,13 +90,13 @@ def route_split_img(main_window, split_criteria): #vers 1
     """Route split IMG function through placeholder"""
     try:
         if not main_window.current_img:
-            main_window.log_message("❌ No IMG file loaded")
+            main_window.log_message("No IMG file loaded")
             return False
             
         return main_window.shared_split_img(main_window.current_img, split_criteria)
         
     except Exception as e:
-        main_window.log_message(f"❌ Error routing split: {str(e)}")
+        main_window.log_message(f"Error routing split: {str(e)}")
         return False
 
 
@@ -104,13 +104,13 @@ def route_rebuild_img(main_window, options=None): #vers 1
     """Route rebuild IMG function through placeholder"""
     try:
         if not main_window.current_img:
-            main_window.log_message("❌ No IMG file loaded")
+            main_window.log_message("No IMG file loaded")
             return False
             
         return main_window.shared_rebuild_img(main_window.current_img, options)
         
     except Exception as e:
-        main_window.log_message(f"❌ Error routing rebuild: {str(e)}")
+        main_window.log_message(f"Error routing rebuild: {str(e)}")
         return False
 
 
@@ -118,13 +118,13 @@ def route_save_img(main_window, backup=True): #vers 1
     """Route save IMG function through placeholder"""
     try:
         if not main_window.current_img:
-            main_window.log_message("❌ No IMG file loaded")
+            main_window.log_message("No IMG file loaded")
             return False
             
         return main_window.shared_save_img(main_window.current_img, backup)
         
     except Exception as e:
-        main_window.log_message(f"❌ Error routing save: {str(e)}")
+        main_window.log_message(f"Error routing save: {str(e)}")
         return False
 
 
@@ -187,12 +187,12 @@ def disable_broken_functions(main_window): #vers 1
                     disabled_count += 1
                     
         main_window.log_message(f"🚫 Disabled {disabled_count} broken IMG functions")
-        main_window.log_message("✅ All operations now route through safe placeholder system")
+        main_window.log_message("All operations now route through safe placeholder system")
         
         return disabled_count > 0
         
     except Exception as e:
-        main_window.log_message(f"❌ Error disabling broken functions: {str(e)}")
+        main_window.log_message(f"Error disabling broken functions: {str(e)}")
         return False
 
 
@@ -214,13 +214,13 @@ def create_safe_function_wrappers(main_window): #vers 1
         main_window.import_multiple_files = lambda: route_import_files_dialog(main_window)
         main_window.validate_img = lambda: main_window.shared_validate_img(main_window.current_img) if main_window.current_img else (False, ["No IMG loaded"])
         
-        main_window.log_message("✅ Safe function wrappers created")
-        main_window.log_message("🛡️ All IMG operations protected from corruption")
+        main_window.log_message("Safe function wrappers created")
+        main_window.log_message("All IMG operations protected from corruption")
         
         return True
         
     except Exception as e:
-        main_window.log_message(f"❌ Error creating safe wrappers: {str(e)}")
+        main_window.log_message(f"Error creating safe wrappers: {str(e)}")
         return False
 
 
@@ -243,7 +243,7 @@ def route_import_file_dialog(main_window): #vers 1
             return False
             
     except Exception as e:
-        main_window.log_message(f"❌ Error in import dialog: {str(e)}")
+        main_window.log_message(f"Error in import dialog: {str(e)}")
         return False
 
 
@@ -266,7 +266,7 @@ def route_import_files_dialog(main_window): #vers 1
             return False
             
     except Exception as e:
-        main_window.log_message(f"❌ Error in import files dialog: {str(e)}")
+        main_window.log_message(f"Error in import files dialog: {str(e)}")
         return False
 
 
@@ -289,14 +289,14 @@ def install_operation_routing(main_window): #vers 1
         main_window.route_rebuild_img = lambda options=None: route_rebuild_img(main_window, options)
         main_window.show_operation_status = lambda: main_window.show_img_operation_status()
         
-        main_window.log_message("✅ IMG operation routing system installed")
-        main_window.log_message("🚧 All IMG edits route through placeholder system")
-        main_window.log_message("🛡️ Files protected from corruption until bugs fixed")
+        main_window.log_message("IMG operation routing system installed")
+        main_window.log_message("All IMG edits route through placeholder system")
+        main_window.log_message("Files protected from corruption until bugs fixed")
         
         return True
         
     except Exception as e:
-        main_window.log_message(f"❌ Error installing operation routing: {str(e)}")
+        main_window.log_message(f"Error installing operation routing: {str(e)}")
         return False
 
 
