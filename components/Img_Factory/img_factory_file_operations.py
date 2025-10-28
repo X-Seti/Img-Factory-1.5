@@ -10,6 +10,9 @@ from typing import Optional
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 from PyQt6.QtCore import Qt
 from methods.svg_shared_icons import get_open_icon, get_img_file_icon, get_error_icon
+from methods.img_core_classes import IMGFile
+from methods.col_core_classes import COLFile
+
 import os
 
 ##Methods list -

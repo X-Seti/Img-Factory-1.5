@@ -11,6 +11,8 @@ from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from methods.svg_shared_icons import get_img_file_icon, get_success_icon
+from methods.img_core_classes import IMGFile
+from methods.col_core_classes import COLFile
 import os
 
 ##Methods list -

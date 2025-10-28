@@ -59,7 +59,7 @@ def dump_function(main_window):
 def split_via_function(main_window):
     selected_tab, options = show_mirror_tab_selection(main_window, 'split_via')
     if selected_tab:
-        split_methofrom methods.img_core_classes import IMGFile, COLFiled = options.get('split_method', 'size')  # 'size' or 'count'
+        split_method = options.get('split_method', 'size')  # 'size' or 'count'
         split_value = options.get('split_value', 50)
         start_split_operation(main_window, selected_tab, split_method, split_value)
 
@@ -507,7 +507,7 @@ def open_file_dialog(main_window): #vers 8
                 main_window.load_img_file(file_path)
 
 
-    def _on_img_load_progress(self, progress: int, status: str): #vers 5
+def _on_img_load_progress(self, progress: int, status: str): #vers 5
     """Handle IMG loading progress updates - UPDATED: Uses unified progress system"""
     try:
         from methods.progressbar_functions import update_progress
@@ -581,8 +581,8 @@ def _on_img_load_error(self, error_message: str): #vers 4
 
     QMessageBox.critical(self, "IMG Load Error", error_message)
 
-    # Add this to __init__ method after GUI creation:
-    def integrate_unified_progress_system(self): #vers 1
+
+def integrate_unified_progress_system(self): #vers 1
     """Integrate unified progress system - call in __init__"""
     try:
         from methods.progressbar_functions import integrate_progress_system

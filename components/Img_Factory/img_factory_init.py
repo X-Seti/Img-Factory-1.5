@@ -44,7 +44,7 @@ def phase1_core_setup(main_window, settings): #vers 1
     main_window.setGeometry(100, 100, 1200, 800)
 
     # Core data initialization
-    from components.Img_Factory.imgload_thread import IMGLoadThread
+    from components.Img_Factory.img_factory_thread import IMGLoadThread
     main_window.current_img = None
     main_window.current_col = None
     main_window.open_files = {}
@@ -101,7 +101,9 @@ def phase3_gui_creation(main_window): #vers 1
     integrate_drag_drop_system(main_window)
 
     # Create main UI (includes tab system setup)
-    main_window._create_ui()
+    #main_window._create_ui()
+
+
 
     # Additional UI integrations
     add_project_menu_items(main_window)
