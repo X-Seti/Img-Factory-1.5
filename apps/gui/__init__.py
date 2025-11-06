@@ -19,7 +19,7 @@ from .tear_off import (
 )
 from .log_panel import create_log_panel, setup_logging_for_main_window
 from .status_bar import create_status_bar, create_enhanced_status_bar, apply_universal_status_theme
-from core.dialogs import (
+from apps.core.dialogs import (
     show_about_dialog, show_export_options_dialog,
     show_import_options_dialog, show_error_dialog, show_warning_dialog,
     show_question_dialog, show_info_dialog, show_progress_dialog

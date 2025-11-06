@@ -13,39 +13,39 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer, QSize, pyqtSignal, QPoint
 from PyQt6.QtGui import QFont, QAction, QIcon, QShortcut, QKeySequence, QPalette, QTextCursor
-from core.gui_search import ASearchDialog, SearchManager
+from apps.core.gui_search import ASearchDialog, SearchManager
 from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
-from components.Img_Creator.img_creator import NewIMGDialog, IMGCreationThread
-from components.Ide_Editor.ide_editor import open_ide_editor
+from apps.components.Img_Creator.img_creator import NewIMGDialog, IMGCreationThread
+from apps.components.Ide_Editor.ide_editor import open_ide_editor
 
 #core
-from core.impotr import import_files_function
-from core.import_via import import_via_function
+from apps.core.impotr import import_files_function
+from apps.core.import_via import import_via_function
 #from core.import_via import integrate_import_via_functions
-from core.remove import remove_selected_function
-from core.remove_via import integrate_remove_via_functions
-from core.remove_via import remove_via_function as remove_via_entries_function
-from core.export import export_selected_function
+from apps.core.remove import remove_selected_function
+from apps.core.remove_via import integrate_remove_via_functions
+from apps.core.remove_via import remove_via_function as remove_via_entries_function
+from apps.core.export import export_selected_function
 # export_all_function, integrate_export_functions
-from core.export_via import export_via_function
-from core.quick_export import quick_export_function
-from core.clean import integrate_clean_utilities
-from core.rebuild import rebuild_current_img_native
-from core.rebuild_all import rebuild_all_open_tabs
+from apps.core.export_via import export_via_function
+from apps.core.quick_export import quick_export_function
+from apps.core.clean import integrate_clean_utilities
+from apps.core.rebuild import rebuild_current_img_native
+from apps.core.rebuild_all import rebuild_all_open_tabs
 #from core.rebuild import rebuild_current_img #old function.
-from core.dump import dump_all_function # dump_selected_function, integrate_dump_functions
-from core.img_split import split_img, integrate_split_functions
-from core.img_merger import merge_img_function
-from core.convert import convert_img, convert_img_format
-from core.rename import rename_entry
-from core.reload import reload_current_file
-from core.create import create_new_img
-from core.open import _detect_and_open_file, open_file_dialog, _detect_file_type
-from core.close import close_img_file, close_all_img, install_close_functions, setup_close_manager
-from methods.colour_ui_for_loaded_img import integrate_color_ui_system
-from gui.gui_context import open_col_editor_dialog
-from methods.refresh_table_functions import refresh_table
+from apps.core.dump import dump_all_function # dump_selected_function, integrate_dump_functions
+from apps.core.img_split import split_img, integrate_split_functions
+from apps.core.img_merger import merge_img_function
+from apps.core.convert import convert_img, convert_img_format
+from apps.core.rename import rename_entry
+from apps.core.reload import reload_current_file
+from apps.core.create import create_new_img
+from apps.core.open import _detect_and_open_file, open_file_dialog, _detect_file_type
+from apps.core.close import close_img_file, close_all_img, install_close_functions, setup_close_manager
+from apps.methods.colour_ui_for_loaded_img import integrate_color_ui_system
+from apps.gui.gui_context import open_col_editor_dialog
+from apps.methods.refresh_table_functions import refresh_table
 
 
 def edit_txd_file(main_window): #vers 3

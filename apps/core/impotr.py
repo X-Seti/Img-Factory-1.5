@@ -13,7 +13,7 @@ from pathlib import Path
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 # Import existing RW detection systems
-from core.rw_versions import parse_rw_version, get_rw_version_name, is_valid_rw_version
+from apps.core.rw_versions import parse_rw_version, get_rw_version_name, is_valid_rw_version
 
 ##Methods list -
 # _add_file_to_img

@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from PyQt6.QtGui import QIcon, QFont, QCursor, QAction, QTextCursor
-from gui.tear_off import TearOffPanel
+from apps.gui.tear_off import TearOffPanel
 
 ##Methods list -
 # create_img_tearoff_window

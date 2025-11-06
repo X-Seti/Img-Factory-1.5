@@ -8,7 +8,7 @@ Enhanced Debug Error - Shows exact file and line where format_file_size error oc
 import sys
 import traceback
 import linecache
-from debug.img_debug_functions import img_debugger
+from apps.debug.img_debug_functions import img_debugger
 
 def enhanced_error_handler(exc_type, exc_value, exc_traceback): #vers 1
     """Enhanced error handler showing exact file and line"""

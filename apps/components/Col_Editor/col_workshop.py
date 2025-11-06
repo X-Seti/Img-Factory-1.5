@@ -37,15 +37,15 @@ from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QBrush, Q
 from PyQt6.QtSvg import QSvgRenderer
 
 # Import project modules AFTER path setup
-from debug.img_debug_functions import img_debugger
-from methods.col_core_classes import COLFile, COLModel, COLVersion, Vector3
+from apps.debug.img_debug_functions import img_debugger
+from apps.methods.col_core_classes import COLFile, COLModel, COLVersion, Vector3
 #from methods.col_integration import get_col_detailed_analysis, create_temporary_col_file, cleanup_temporary_file
-from gui.col_dialogs import show_col_analysis_dialog
+from apps.gui.col_dialogs import show_col_analysis_dialog
 
 # Import COL viewport and preview from depends
 try:
-    from components.Col_Editor.depends.col_3d_viewport import COL3DViewport
-    from components.Col_Editor.depends.col_preview_generator import (
+    from apps.components.Col_Editor.depends.col_3d_viewport import COL3DViewport
+    from apps.components.Col_Editor.depends.col_preview_generator import (
         COLPreviewGenerator, create_col_preview, create_col_thumbnail
     )
     VIEWPORT_AVAILABLE = True
@@ -3679,7 +3679,7 @@ class COLWorkshop(QWidget): #vers 3
     def open_col_file(self, file_path): #vers 3
         """Open standalone COL file - supports COL1, COL2, COL3"""
         try:
-            from methods.col_core_classes import COLFile
+            from apps.methods.col_core_classes import COLFile
 
             # Create and load COL file
             col_file = COLFile(file_path)
@@ -3749,8 +3749,8 @@ class COLWorkshop(QWidget): #vers 3
                 return
 
             # Import analysis functions
-            from methods.col_operations import get_col_detailed_analysis
-            from gui.col_dialogs import show_col_analysis_dialog
+            from apps.methods.col_operations import get_col_detailed_analysis
+            from apps.gui.col_dialogs import show_col_analysis_dialog
 
             # Get detailed analysis
             analysis_data = get_col_detailed_analysis(self.current_file_path)
@@ -6129,8 +6129,8 @@ class COLEditorDialog(QDialog): #vers 3
             self.status_bar.showMessage("Analyzing COL file...")
 
             # Import locally when needed
-            from methods.col_operations import get_col_detailed_analysis
-            from gui.col_dialogs import show_col_analysis_dialog
+            from apps.methods.col_operations import get_col_detailed_analysis
+            from apps.gui.col_dialogs import show_col_analysis_dialog
 
             self.status_bar.showMessage("Analyzing COL file...")
 

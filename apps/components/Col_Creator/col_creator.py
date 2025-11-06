@@ -20,9 +20,9 @@ from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QIcon
 
 # Import COL classes and IMG debug system
-from methods.col_core_classes import COLFile, COLModel, COLVersion
-from debug.col_debug_functions import col_debug_log, debug_col_creation_process
-from debug.img_debug_functions import img_debugger
+from apps.methods.col_core_classes import COLFile, COLModel, COLVersion
+from apps.debug.col_debug_functions import col_debug_log, debug_col_creation_process
+from apps.debug.img_debug_functions import img_debugger
 
 ##Methods list -
 # create_basic_col

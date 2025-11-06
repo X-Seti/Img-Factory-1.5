@@ -18,7 +18,7 @@ def update_ui_for_loaded_img(main_window): #vers 6
     try:
         if not hasattr(main_window, 'current_img') or not main_window.current_img:
             if hasattr(main_window, 'log_message'):
-                main_window.log_message("⚠️ update_ui_for_loaded_img called but no current_img")
+                main_window.log_message("update_ui_for_loaded_img called but no current_img")
             return False
 
         # Update window title
@@ -28,7 +28,7 @@ def update_ui_for_loaded_img(main_window): #vers 6
         # Populate table with IMG entries using STANDALONE method
         if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
             # Import and use the standalone function from methods/
-            from methods.populate_img_table import populate_img_table
+            from apps.methods.populate_img_table import populate_img_table
 
             # Setup IMG table structure first
             table = main_window.gui_layout.table
@@ -51,10 +51,10 @@ def update_ui_for_loaded_img(main_window): #vers 6
             populate_img_table(main_window.gui_layout.table, main_window.current_img)
             
             if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"📋 Table populated with {len(main_window.current_img.entries)} entries")
+                main_window.log_message(f"Table populated with {len(main_window.current_img.entries)} entries")
         else:
             if hasattr(main_window, 'log_message'):
-                main_window.log_message("⚠️ GUI layout or table not available")
+                main_window.log_message("GUI layout or table not available")
 
         # Update status - FIXED: Properly hide progress and update status
         if hasattr(main_window, 'gui_layout'):
@@ -132,13 +132,13 @@ def update_ui_for_loaded_img(main_window): #vers 6
             main_window.gui_layout.main_splitter.repaint()
 
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ IMG UI updated successfully with visibility fix")
+            main_window.log_message("IMG UI updated successfully with visibility fix")
         
         return True
 
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error updating UI for loaded IMG: {str(e)}")
+            main_window.log_message(f"Error updating UI for loaded IMG: {str(e)}")
         
         # Even if there's an error, try basic visibility fix
         try:
@@ -159,13 +159,13 @@ def integrate_update_ui_for_loaded_img(main_window): #vers 2
         main_window._update_ui_for_loaded_img = lambda: update_ui_for_loaded_img(main_window)
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Enhanced update_ui_for_loaded_img integrated with visibility fix")
+            main_window.log_message("Enhanced update_ui_for_loaded_img integrated with visibility fix")
         
         return True
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error integrating update_ui_for_loaded_img: {str(e)}")
+            main_window.log_message(f"Error integrating update_ui_for_loaded_img: {str(e)}")
         return False
 
 # Export functions

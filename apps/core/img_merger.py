@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 # Import core IMG functions
-from methods.img_core_classes import IMGFile, IMGVersion, IMGEntry
+from apps.methods.img_core_classes import IMGFile, IMGVersion, IMGEntry
 
 ##Methods list -
 # merge_img_function

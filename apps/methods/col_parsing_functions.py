@@ -10,8 +10,8 @@ Handles all COL format versions (COL1/COL2/COL3/COL4) with detailed logging
 import struct
 import os
 from typing import Dict, List, Tuple, Optional
-from debug.img_debug_functions import img_debugger
-from methods.col_core_classes import is_col_debug_enabled
+from apps.debug.img_debug_functions import img_debugger
+from apps.methods.col_core_classes import is_col_debug_enabled
 
 ##Methods list -
 # load_col_file_safely

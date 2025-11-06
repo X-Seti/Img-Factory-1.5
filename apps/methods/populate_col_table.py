@@ -12,8 +12,8 @@ from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView
 from PyQt6.QtCore import Qt
 
 # Import IMG debug system and COL classes
-from debug.img_debug_functions import img_debugger
-from methods.col_core_classes import COLFile, COLModel
+from apps.debug.img_debug_functions import img_debugger
+from apps.methods.col_core_classes import COLFile, COLModel
 
 ##Methods list -
 # load_col_file_object

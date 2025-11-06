@@ -42,100 +42,100 @@ from PyQt6.QtCore import pyqtSignal, QMimeData, Qt, QThread, QTimer, QSettings
 from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent, QFont, QIcon, QPixmap, QShortcut, QTextCursor
 
 # OR use the full path:
-from utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
+from apps.utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
 
 #components
-from components.Img_Creator.img_creator import NewIMGDialog, IMGCreationThread
-#from components.Txd_Editor.txd_workshop import TXDEditor
+from apps.components.Img_Creator.img_creator import NewIMGDialog, IMGCreationThread
+#from apps.components.Txd_Editor.txd_workshop import TXDEditor
 
 #debug
-from debug.col_debug_functions import set_col_debug_enabled
-from debug.unified_debug_functions import integrate_all_improvements, install_debug_control_system
+
+from apps.debug.col_debug_functions import set_col_debug_enabled
+from apps.debug.unified_debug_functions import integrate_all_improvements, install_debug_control_system
 
 #Core functions.
-from core.img_formats import GameSpecificIMGDialog, IMGCreator
-from core.file_extraction import setup_complete_extraction_integration
-from core.file_type_filter import integrate_file_filtering
-from core.rw_versions import get_rw_version_name
-from core.right_click_actions import integrate_right_click_actions, setup_table_context_menu
-from core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
-from core.convert import convert_img, convert_img_format
-from core.img_split import integrate_split_functions
-from core.theme_integration import integrate_theme_system
-from core.create import create_new_img
-from core.open import _detect_and_open_file, open_file_dialog, _detect_file_type
-from core.clean import integrate_clean_utilities
-from core.close import install_close_functions, setup_close_manager
-from core.export import integrate_export_functions
-from core.impotr import integrate_import_functions #import impotr
-from core.remove import integrate_remove_functions
-from core.export import export_selected_function, export_all_function, integrate_export_functions
-from core.dump import dump_all_function, dump_selected_function, integrate_dump_functions
-from core.import_via import integrate_import_via_functions
-from core.remove_via import integrate_remove_via_functions
-from core.export_via import export_via_function
-from core.rebuild import integrate_rebuild_functions
-from core.rebuild_all import integrate_batch_rebuild_functions
-from core.imgcol_rename import integrate_imgcol_rename_functions
-from core.imgcol_replace import integrate_imgcol_replace_functions
-from core.imgcol_convert import integrate_imgcol_convert_functions
-from core.save_entry import integrate_save_entry_function
-from core.rw_unk_snapshot import integrate_unknown_rw_detection
-from core.col_viewer_integration import integrate_col_viewer
+from apps.core.img_formats import GameSpecificIMGDialog, IMGCreator
+from apps.core.file_extraction import setup_complete_extraction_integration
+from apps.core.file_type_filter import integrate_file_filtering
+from apps.core.rw_versions import get_rw_version_name
+from apps.core.right_click_actions import integrate_right_click_actions, setup_table_context_menu
+from apps.core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
+from apps.core.convert import convert_img, convert_img_format
+from apps.core.img_split import integrate_split_functions
+from apps.core.theme_integration import integrate_theme_system
+from apps.core.create import create_new_img
+from apps.core.open import _detect_and_open_file, open_file_dialog, _detect_file_type
+from apps.core.clean import integrate_clean_utilities
+from apps.core.close import install_close_functions, setup_close_manager
+from apps.core.export import integrate_export_functions
+from apps.core.impotr import integrate_import_functions #import impotr
+from apps.core.remove import integrate_remove_functions
+from apps.core.export import export_selected_function, export_all_function, integrate_export_functions
+from apps.core.dump import dump_all_function, dump_selected_function, integrate_dump_functions
+from apps.core.import_via import integrate_import_via_functions
+from apps.core.remove_via import integrate_remove_via_functions
+from apps.core.export_via import export_via_function
+from apps.core.rebuild import integrate_rebuild_functions
+from apps.core.rebuild_all import integrate_batch_rebuild_functions
+from apps.core.imgcol_rename import integrate_imgcol_rename_functions
+from apps.core.imgcol_replace import integrate_imgcol_replace_functions
+from apps.core.imgcol_convert import integrate_imgcol_convert_functions
+from apps.core.save_entry import integrate_save_entry_function
+from apps.core.rw_unk_snapshot import integrate_unknown_rw_detection
+from apps.core.col_viewer_integration import integrate_col_viewer
 
 #gui-layout
-from gui.ide_dialog import integrate_ide_dialog
-from gui.gui_backend import ButtonDisplayMode, GUIBackend
-from gui.main_window import IMGFactoryMainWindow
-from gui.col_display import update_col_info_bar_enhanced
-from gui.gui_layout import IMGFactoryGUILayout
-from gui.unified_button_theme import apply_unified_button_theme
-from gui.gui_menu import IMGFactoryMenuBar
-from gui.autosave_menu import integrate_autosave_menu
-from gui.file_menu_integration import add_project_menu_items
-from gui.directory_tree_system import integrate_directory_tree_system
-from gui.tearoff_integration import integrate_tearoff_system
+from apps.gui.ide_dialog import integrate_ide_dialog
+from apps.gui.gui_backend import ButtonDisplayMode, GUIBackend
+from apps.gui.main_window import IMGFactoryMainWindow
+from apps.gui.col_display import update_col_info_bar_enhanced
+from apps.gui.gui_layout import IMGFactoryGUILayout
+from apps.gui.unified_button_theme import apply_unified_button_theme
+from apps.gui.gui_menu import IMGFactoryMenuBar
+from apps.gui.autosave_menu import integrate_autosave_menu
+from apps.gui.file_menu_integration import add_project_menu_items
+from apps.gui.directory_tree_system import integrate_directory_tree_system
+from apps.gui.tearoff_integration import integrate_tearoff_system
 
 # After GUI setup:
-from gui.gui_context import (add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
+from apps.gui.gui_context import (add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
 
 #Shared Methods - Shared Functions.
-from methods.img_core_classes import (IMGFile, IMGEntry, IMGVersion, Platform, IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel, format_file_size)
-from methods.col_core_classes import (COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup, COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox, diagnose_col_file, set_col_debug_enabled, is_col_debug_enabled)
+from apps.methods.img_core_classes import (IMGFile, IMGEntry, IMGVersion, Platform, IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel, format_file_size)
+from apps.methods.col_core_classes import (COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup, COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox, diagnose_col_file, set_col_debug_enabled, is_col_debug_enabled)
 
-from methods.col_integration import integrate_complete_col_system
-from methods.col_functions import setup_complete_col_integration
-from methods.col_parsing_functions import load_col_file_safely
-from methods.col_structure_manager import COLStructureManager
-from methods.img_analyze import analyze_img_corruption, show_analysis_dialog
-from methods.img_integration import integrate_img_functions, img_core_functions
-from methods.img_routing_operations import install_operation_routing
-from methods.img_validation import IMGValidator
-
-
-from methods.populate_img_table import reset_table_styling, install_img_table_populator
-from methods.progressbar_functions import integrate_progress_system
-from methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate_update_ui_for_loaded_img
-from methods.import_highlight_system import enable_import_highlighting
-from methods.refresh_table_functions import integrate_refresh_table
-from methods.img_entry_operations import integrate_entry_operations
-from methods.img_import_export import integrate_import_export_functions
-from methods.col_export_shared import integrate_col_export_shared
-#from methods.mirror_tab_shared import show_mirror_tab_selection
-from methods.ide_parser_functions import integrate_ide_parser
-from methods.find_dups_functions import find_duplicates_by_hash, show_duplicates_dialog
-from methods.dragdrop_functions import integrate_drag_drop_system
-from methods.img_templates import IMGTemplateManager, TemplateManagerDialog
+from apps.methods.col_integration import integrate_complete_col_system
+from apps.methods.col_functions import setup_complete_col_integration
+from apps.methods.col_parsing_functions import load_col_file_safely
+from apps.methods.col_structure_manager import COLStructureManager
+from apps.methods.img_analyze import analyze_img_corruption, show_analysis_dialog
+from apps.methods.img_integration import integrate_img_functions, img_core_functions
+from apps.methods.img_routing_operations import install_operation_routing
+from apps.methods.img_validation import IMGValidator
 
 
-from components.Img_Factory.img_factory_thread import IMGLoadThread
+from apps.methods.populate_img_table import reset_table_styling, install_img_table_populator
+from apps.methods.progressbar_functions import integrate_progress_system
+from apps.methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate_update_ui_for_loaded_img
+from apps.methods.import_highlight_system import enable_import_highlighting
+from apps.methods.refresh_table_functions import integrate_refresh_table
+from apps.methods.img_entry_operations import integrate_entry_operations
+from apps.methods.img_import_export import integrate_import_export_functions
+from apps.methods.col_export_shared import integrate_col_export_shared
+from apps.methods.mirror_tab_shared import show_mirror_tab_selection
+from apps.methods.ide_parser_functions import integrate_ide_parser
+from apps.methods.find_dups_functions import find_duplicates_by_hash, show_duplicates_dialog
+from apps.methods.dragdrop_functions import integrate_drag_drop_system
+from apps.methods.img_templates import IMGTemplateManager, TemplateManagerDialog
+
+from apps.components.Img_Factory.img_factory_thread import IMGLoadThread
 
 App_name = "Img Factory 1.5"
 
 def setup_rebuild_system(self): #vers 1
     """Setup hybrid rebuild system with mode selection"""
     try:
-        from core.hybrid_rebuild import setup_hybrid_rebuild_methods
+        from apps.core.hybrid_rebuild import setup_hybrid_rebuild_methods
         success = setup_hybrid_rebuild_methods(self)
 
         if success:
@@ -386,7 +386,7 @@ class IMGFactory(QMainWindow):
 
         # Template manager (with better error handling)
         try:
-            from methods.img_templates import IMGTemplateManager
+            from apps.methods.img_templates import IMGTemplateManager
             self.template_manager = IMGTemplateManager()
             print("Template manager initialized")
         except Exception as e:
@@ -478,7 +478,7 @@ class IMGFactory(QMainWindow):
 
         # File extraction
         try:
-            from core.file_extraction import setup_complete_extraction_integration
+            from apps.core.file_extraction import setup_complete_extraction_integration
             setup_complete_extraction_integration(self)
             self.log_message("File extraction integrated")
         except Exception as e:
@@ -486,7 +486,7 @@ class IMGFactory(QMainWindow):
 
         # COL System Integration
         try:
-            from methods.populate_col_table import load_col_file_safely
+            from apps.methods.populate_col_table import load_col_file_safely
             self.load_col_file_safely = lambda file_path: load_col_file_safely(self, file_path)
             self.log_message("COL file loading enabled")
         except Exception as e:
@@ -536,7 +536,7 @@ class IMGFactory(QMainWindow):
 
         """
         try:
-            from core.img_corruption_analyzer import setup_corruption_analyzer
+            from apps.core.img_corruption_analyzer import setup_corruption_analyzer
             setup_corruption_analyzer(self)
             self.log_message("IMG corruption analyzer integrated")
         except Exception as e:
@@ -622,7 +622,7 @@ class IMGFactory(QMainWindow):
         """Show debug settings dialog"""
         try:
             # Try to show proper debug settings if available
-            from utils.app_settings_system import SettingsDialog
+            from apps.utils.app_settings_system import SettingsDialog
             if hasattr(self, 'app_settings'):
                 dialog = SettingsDialog(self.app_settings, self)
                 dialog.exec()
@@ -657,7 +657,7 @@ class IMGFactory(QMainWindow):
             self.log_message("🔍 Starting IMG corruption analysis...")
 
             # Show corruption analysis dialog
-            from core.img_corruption_analyzer import show_corruption_analysis_dialog
+            from apps.core.img_corruption_analyzer import show_corruption_analysis_dialog
             result = show_corruption_analysis_dialog(self)
 
             if result:
@@ -665,7 +665,7 @@ class IMGFactory(QMainWindow):
                 report = result['report']
                 fix_options = result['fix_options']
 
-                from core.img_corruption_analyzer import fix_corrupted_img
+                from apps.core.img_corruption_analyzer import fix_corrupted_img
                 success = fix_corrupted_img(self.current_img, report, fix_options, self)
 
                 if success:
@@ -689,7 +689,7 @@ class IMGFactory(QMainWindow):
             self.log_message("🔧 Quick fixing IMG corruption...")
 
             # Analyze first
-            from core.img_corruption_analyzer import analyze_img_corruption
+            from apps.core.img_corruption_analyzer import analyze_img_corruption
             report = analyze_img_corruption(self.current_img, self)
 
             if 'error' in report:
@@ -725,7 +725,7 @@ class IMGFactory(QMainWindow):
                     'create_backup': True
                 }
 
-                from core.img_corruption_analyzer import fix_corrupted_img
+                from apps.core.img_corruption_analyzer import fix_corrupted_img
                 success = fix_corrupted_img(self.current_img, report, quick_fix_options, self)
 
                 if success:
@@ -748,7 +748,7 @@ class IMGFactory(QMainWindow):
             self.log_message("Cleaning filenames only...")
 
             # Analyze corruption
-            from core.img_corruption_analyzer import analyze_img_corruption
+            from apps.core.img_corruption_analyzer import analyze_img_corruption
             report = analyze_img_corruption(self.current_img, self)
 
             if 'error' in report:
@@ -770,7 +770,7 @@ class IMGFactory(QMainWindow):
                 'create_backup': True
             }
 
-            from core.img_corruption_analyzer import fix_corrupted_img
+            from apps.core.img_corruption_analyzer import fix_corrupted_img
             success = fix_corrupted_img(self.current_img, report, filename_fix_options, self)
 
             if success:
@@ -793,7 +793,7 @@ class IMGFactory(QMainWindow):
             self.log_message("Generating corruption report...")
 
             # Analyze corruption
-            from core.img_corruption_analyzer import analyze_img_corruption
+            from apps.core.img_corruption_analyzer import analyze_img_corruption
             report = analyze_img_corruption(self.current_img, self)
 
             if 'error' in report:
@@ -852,7 +852,7 @@ class IMGFactory(QMainWindow):
 
     def open_txd_workshop_docked(self, txd_name=None, txd_data=None): #vers 3
         """Open TXD Workshop as overlay on file window"""
-        from components.Txd_Editor.txd_workshop import TXDWorkshop
+        from apps.components.Txd_Editor.txd_workshop import TXDWorkshop
 
         # Get current tab
         current_tab_index = self.main_tab_widget.currentIndex()
@@ -937,7 +937,7 @@ class IMGFactory(QMainWindow):
 
     def setup_unified_signals(self): #vers 6
         """Setup unified signal handler for all table interactions"""
-        from components.unified_signal_handler import connect_table_signals
+        from apps.unified_signal_handler import connect_table_signals
 
         # Connect main entries table to unified system
         success = connect_table_signals(
@@ -954,12 +954,12 @@ class IMGFactory(QMainWindow):
             self.log_message("Failed to connect unified signals")
 
         # Connect unified signals to status bar updates
-        from components.unified_signal_handler import signal_handler
+        from apps.unified_signal_handler import signal_handler
         signal_handler.status_update_requested.connect(self._update_status_from_signal)
 
 
     # In core/export.py
-    from methods.mirror_tab_shared import show_mirror_tab_selection
+    from apps.methods.mirror_tab_shared import show_mirror_tab_selection
 
     def export_selected_function(main_window):
         selected_tab, options = show_mirror_tab_selection(main_window, 'export')
@@ -1055,7 +1055,7 @@ class IMGFactory(QMainWindow):
                 # Show file info if IMG is loaded
                 if self.current_img and row < len(self.current_img.entries):
                     entry = self.current_img.entries[row]
-                    from methods.img_core_classes import format_file_size
+                    from apps.methods.img_core_classes import format_file_size
                     self.log_message(f"File info: {entry.name} ({format_file_size(entry.size)})")
             else:
                 self.log_message(f"Double-clicked row {row} (no filename found)")
@@ -1192,7 +1192,7 @@ class IMGFactory(QMainWindow):
             if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
                 try:
                     # Import the proper COL table functions
-                    from methods.populate_col_table import setup_col_table_structure, populate_table_with_col_data_debug
+                    from apps.methods.populate_col_table import setup_col_table_structure, populate_table_with_col_data_debug
 
                     # Setup COL table structure (proper headers and widths)
                     setup_col_table_structure(self)
@@ -1362,7 +1362,7 @@ class IMGFactory(QMainWindow):
             return
 
         try:
-            from methods.img_validation import IMGValidator
+            from apps.methods.img_validation import IMGValidator
             validation = IMGValidator.validate_img_file(self.current_img)
             if validation.is_valid:
                 self.log_message("IMG validation passed")
@@ -1376,7 +1376,7 @@ class IMGFactory(QMainWindow):
         """Show GUI settings dialog"""
         self.log_message("GUI settings requested")
         try:
-            from utils.app_settings_system import SettingsDialog
+            from apps.utils.app_settings_system import SettingsDialog
             dialog = SettingsDialog(self.app_settings, self)
             dialog.exec()
         except Exception as e:
@@ -1395,7 +1395,7 @@ class IMGFactory(QMainWindow):
             self.current_col._debug_enabled = True
 
         # Set global flag for future COL files
-        import methods.col_core_classes as col_module
+        import apps.methods.col_core_classes as col_module
         col_module._global_debug_enabled = True
 
         self.log_message("COL debug output enabled")
@@ -1408,7 +1408,7 @@ class IMGFactory(QMainWindow):
             self.current_col._debug_enabled = False
 
         # Set global flag for future COL files
-        import methods.col_core_classes as col_module
+        import apps.methods.col_core_classes as col_module
         col_module._global_debug_enabled = False
 
         self.log_message("COL debug output disabled")
@@ -1416,7 +1416,7 @@ class IMGFactory(QMainWindow):
     def toggle_col_debug(self): #vers 2 #restore
         """Toggle COL debug output"""
         try:
-            import methods.col_core_classes as col_module
+            import apps.methods.col_core_classes as col_module
             debug_enabled = getattr(col_module, '_global_debug_enabled', False)
 
             if debug_enabled:
@@ -1618,7 +1618,7 @@ class IMGFactory(QMainWindow):
         """Setup robust tab system during initialization"""
         try:
             # Import and install robust tab system
-            from core.robust_tab_system import install_robust_tab_system
+            from apps.core.robust_tab_system import install_robust_tab_system
 
             if install_robust_tab_system(self):
                 self.log_message("Robust tab system ready")
@@ -1730,7 +1730,7 @@ class IMGFactory(QMainWindow):
         """Load COL file safely - Use the actual COL loading function"""
         try:
             # Import and use the real COL loading function
-            from col_parsing_functions import load_col_file_safely as real_load_col
+            from apps.col_parsing_functions import load_col_file_safely as real_load_col
             success = real_load_col(self, file_path)
             if success:
                 self.log_message(f"COL file loaded: {os.path.basename(file_path)}")
@@ -1792,7 +1792,7 @@ class IMGFactory(QMainWindow):
 
     def open_file_dialog(self): #vers 1
         """Unified file dialog - imported from core"""
-        from core.open_img import open_file_dialog
+        from apps.core.open_img import open_file_dialog
         return open_file_dialog(self)
 
     def _clean_on_img_loaded(self, img_file: IMGFile): #vers 6
@@ -1844,8 +1844,8 @@ class IMGFactory(QMainWindow):
                 return True  # ← Return immediately, let threading finish
                 try:
                     # Import IMG loading components directly
-                    from methods.img_core_classes import IMGFile
-                    from methods.populate_img_table import populate_img_table
+                    from apps.methods.img_core_classes import IMGFile
+                    from apps.methods.populate_img_table import populate_img_table
 
                     # Create IMG file object
                     img_file = IMGFile(file_path)
@@ -1952,7 +1952,7 @@ class IMGFactory(QMainWindow):
             self.main_tab_widget.setTabText(tab_index, f"{file_name}") #TODO SVG icon
 
             # Open TXD Workshop for this file
-            from components.Txd_Editor.txd_workshop import open_txd_workshop
+            from app.components.Txd_Editor.txd_workshop import open_txd_workshop
             self.txd_workshop = open_txd_workshop(self, file_path)
 
             if workshop:
@@ -1980,7 +1980,7 @@ class IMGFactory(QMainWindow):
 
     def _open_txd_workshop(self, file_path=None): #vers 2
         """Open TXD Workshop - connects to tab switching"""
-        from components.Txd_Editor.txd_workshop import open_txd_workshop
+        from apps.components.Txd_Editor.txd_workshop import open_txd_workshop
 
         if not file_path:
             if hasattr(self, 'current_img') and self.current_img:
@@ -2059,7 +2059,7 @@ class IMGFactory(QMainWindow):
     def _on_img_load_progress(self, progress: int, status: str): #vers 5
         """Handle IMG loading progress updates - UPDATED: Uses unified progress system"""
         try:
-            from methods.progressbar_functions import update_progress
+            from apps.methods.progressbar_functions import update_progress
             update_progress(self, progress, status)
         except ImportError:
             # Fallback for systems without unified progress
@@ -2082,7 +2082,7 @@ class IMGFactory(QMainWindow):
 
         # Reset progress using unified system
         try:
-            from methods.progressbar_functions import hide_progress
+            from apps.methods.progressbar_functions import hide_progress
             hide_progress(self, "Ready")
         except ImportError:
             # Fallback for old systems
@@ -2121,7 +2121,7 @@ class IMGFactory(QMainWindow):
 
         # Hide progress using unified system
         try:
-            from methods.progressbar_functions import hide_progress
+            from apps.methods.progressbar_functions import hide_progress
             hide_progress(self, "Load failed")
         except ImportError:
             # Fallback for old systems
@@ -2134,7 +2134,7 @@ class IMGFactory(QMainWindow):
     def integrate_unified_progress_system(self): #vers 1
         """Integrate unified progress system - call in __init__"""
         try:
-            from methods.progressbar_functions import integrate_progress_system
+            from apps.methods.progressbar_functions import integrate_progress_system
             integrate_progress_system(self)
             self.log_message("Unified progress system integrated")
         except ImportError:
@@ -2368,7 +2368,7 @@ class IMGFactory(QMainWindow):
         try:
             # Use the same formatting as IMG entries
             try:
-                from methods.img_core_classes import format_file_size
+                from apps.methods.img_core_classes import format_file_size
                 return format_file_size(size_bytes)
             except:
                 pass
@@ -3100,18 +3100,18 @@ class IMGFactory(QMainWindow):
 
     def export_selected_via(self): #vers 1
         """Export selected entries via IDE file"""
-        from core.exporter import export_via_function
+        from apps.core.exporter import export_via_function
         export_via_function(self)
 
     def quick_export_selected(self): #vers 1
         """Quick export selected entries"""
-        from core.exporter import quick_export_function
+        from apps.core.exporter import quick_export_function
         quick_export_function(self)
 
     def dump_entries(self): #vers 1
         """Dump all entries"""
         try:
-            from core.exporter import dump_all_function
+            from apps.core.exporter import dump_all_function
             dump_all_function(self)
         except Exception as e:
             self.log_message(f"Dump error: {str(e)}")
@@ -3120,7 +3120,7 @@ class IMGFactory(QMainWindow):
     def import_files_via(self): #vers 1
         """Import files via IDE file"""
         try:
-            from core.importer import import_via_function
+            from apps.core.importer import import_via_function
             import_via_function(self)
         except Exception as e:
             self.log_message(f"Import via error: {str(e)}")
@@ -3129,7 +3129,7 @@ class IMGFactory(QMainWindow):
     def remove_via_entries(self):
         """Remove entries via IDE file"""
         try:
-            from core.remove import remove_via_entries_function
+            from apps.core.remove import remove_via_entries_function
             remove_via_entries_function(self)
         except Exception as e:
             self.log_message(f"Remove via error: {str(e)}")
@@ -3159,7 +3159,7 @@ class IMGFactory(QMainWindow):
             self.log_message("🔧 Applying search and performance fixes...")
 
             # 1. Setup our new consolidated search system
-            from core.guisearch import install_search_system
+            from apps.core.guisearch import install_search_system
             if install_search_system(self):
                 self.log_message("New search system installed")
             else:
@@ -3170,7 +3170,7 @@ class IMGFactory(QMainWindow):
                 def toggle_col_debug():
                     """Simple COL debug toggle"""
                     try:
-                        import methods.col_core_classes as col_module
+                        import apps.methods.col_core_classes as col_module
                         current = getattr(col_module, '_global_debug_enabled', False)
                         col_module._global_debug_enabled = not current
 
@@ -3186,7 +3186,7 @@ class IMGFactory(QMainWindow):
                 self.toggle_col_debug = toggle_col_debug
 
                 # Start with debug disabled for performance
-                import methods.col_core_classes as col_module
+                import apps.methods.col_core_classes as col_module
                 col_module._global_debug_enabled = False
 
                 self.log_message("COL performance mode enabled")
@@ -3204,7 +3204,7 @@ class IMGFactory(QMainWindow):
     def open_col_editor(self): #vers 2
         """Open COL file editor - WORKING VERSION"""
 
-        from components.Col_Editor.col_workshop import COLEditorDialog
+        from apps.components.Col_Editor.col_workshop import COLEditorDialog
         self.log_message("Opening COL Workshop...")
         editor = COLEditorDialog(self)
         editor.show()
@@ -3486,7 +3486,7 @@ class IMGFactory(QMainWindow):
         try:
             # Try different import paths
             try:
-                from utils.app_settings_system import SettingsDialog, apply_theme_to_app
+                from apps.utils.app_settings_system import SettingsDialog, apply_theme_to_app
             except ImportError:
                 from app_settings_system import SettingsDialog, apply_theme_to_app
 
@@ -3570,10 +3570,7 @@ def main():
        # Load settings
        try:
            # Try different import paths for settings
-           try:
-               from utils.app_settings_system import AppSettings
-           except ImportError:
-               from app_settings_system import AppSettings
+           from apps.utils.app_settings_system import AppSettings
 
            settings = AppSettings()
            if hasattr(settings, 'load_settings'):

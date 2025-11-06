@@ -9,7 +9,7 @@ to avoid code duplication and ensure consistency between ImgFactory and standalo
 """
 
 # Import everything from the master version
-from methods.txd_versions import (
+from apps.methods.txd_versions import (
     # Classes
     TXDPlatform,
     TXDVersion,

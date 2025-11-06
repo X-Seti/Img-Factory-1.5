@@ -15,8 +15,8 @@ from PyQt6.QtWidgets import QMessageBox, QFileDialog, QProgressDialog, QApplicat
 from PyQt6.QtCore import Qt
 
 # Import required functions
-from methods.export_shared import get_export_folder, get_selected_entries
-from methods.export_overwrite_check import handle_overwrite_check, get_output_path_for_entry
+from apps.methods.export_shared import get_export_folder, get_selected_entries
+from apps.methods.export_overwrite_check import handle_overwrite_check, get_output_path_for_entry
 
 ##Methods list -
 # export_selected_function

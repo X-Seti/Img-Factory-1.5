@@ -14,9 +14,9 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer
 
 # Import IMG debug system and COL classes
-from debug.img_debug_functions import img_debugger
-from methods.col_core_classes import COLFile, COLModel
-from debug.col_debug_functions import col_debug_log
+from apps.debug.img_debug_functions import img_debugger
+from apps.methods.col_core_classes import COLFile, COLModel
+from apps.debug.col_debug_functions import col_debug_log
 
 ##Methods list -
 # add_col_context_menu_to_entries_table

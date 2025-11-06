@@ -24,7 +24,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QThread, pyqtSlot, QTimer, QSettings
 from PyQt6.QtGui import QAction, QIcon, QFont, QKeySequence, QActionGroup
 
 # Import backend classes and functions
-from core.file_dirtree_backend import (
+from apps.core.file_dirtree_backend import (
     BrowserSettingsDialog, FilePropertiesDialog, FileSearchDialog, format_file_size_backend, get_file_type_icon_backend, get_file_type_display_backend, get_file_attributes_backend, get_folder_size_quick_backend
 )
 

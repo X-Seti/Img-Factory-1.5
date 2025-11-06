@@ -6,7 +6,7 @@ import struct
 from typing import Optional, Callable, Dict, Any
 from PyQt6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QRadioButton, QButtonGroup
 
-from methods.img_shared_operations import (
+from apps.methods.img_shared_operations import (
     create_progress_callback, get_img_version_info, validate_img_structure,
     create_temp_file_path, atomic_file_replace, write_img_header,
     write_img_directory, consolidate_img_data, cleanup_temp_files,

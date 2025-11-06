@@ -16,8 +16,8 @@ from typing import Any, Dict, List, Optional
 from pathlib import Path
 
 # Import the proven IMG debug system
-from debug.img_debug_functions import img_debugger
-from debug.unified_debug_functions import debug_trace
+from apps.debug.img_debug_functions import img_debugger
+from apps.debug.unified_debug_functions import debug_trace
 
 ##Methods list -
 # col_debug_log

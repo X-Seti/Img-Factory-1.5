@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 
 # Import working methods
-from methods.img_entry_operations import remove_entry_safe
+from apps.methods.img_entry_operations import remove_entry_safe
 
 ##Methods list -
 # remove_selected_function

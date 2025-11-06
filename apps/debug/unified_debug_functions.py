@@ -81,7 +81,7 @@ def setup_img_debug_system_integration(main_window): #vers 1
     """Setup IMG debug system for COL operations - REPLACES old COL debug"""
     try:
         # Use the new col_debug_functions.py which uses IMG debug system
-        from debug.col_debug_functions import integrate_col_debug_with_main_window
+        from apps.debug.col_debug_functions import integrate_col_debug_with_main_window
         
         success = integrate_col_debug_with_main_window(main_window)
         
@@ -100,7 +100,7 @@ def install_search_manager(main_window): #vers 1
     """Install search manager - simplified approach"""
     try:
         # Try to install from core search system
-        from core.guisearch import install_search_system
+        from apps.core.guisearch import install_search_system
         
         success = install_search_system(main_window)
         
@@ -126,7 +126,7 @@ def fix_search_dialog(main_window): #vers 1
             def show_search_dialog():
                 """Simple search dialog"""
                 try:
-                    from core.dialogs import show_search_dialog as core_search
+                    from apps.core.dialogs import show_search_dialog as core_search
                     core_search(main_window)
                 except ImportError:
                     QMessageBox.information(main_window, "Search", 
@@ -148,7 +148,7 @@ def install_debug_control_system(main_window): #vers 1
             """Simple debug settings dialog"""
             try:
                 # Try to show proper debug settings if available
-                from utils.app_settings_system import SettingsDialog
+                from apps.utils.app_settings_system import SettingsDialog
                 if hasattr(main_window, 'app_settings'):
                     dialog = SettingsDialog(main_window.app_settings, main_window)
                     dialog.exec()
@@ -174,7 +174,7 @@ def setup_debug_convenience_methods(main_window): #vers 1
         def show_debug_info():
             """Show debug information"""
             try:
-                from debug.img_debug_functions import img_debugger
+                from apps.debug.img_debug_functions import img_debugger
                 from debug.col_debug_functions import is_col_debug_enabled
                 
                 info = f"IMG Debug: {'Enabled' if img_debugger.debug_enabled else 'Disabled'}\n"
@@ -194,7 +194,7 @@ def setup_debug_convenience_methods(main_window): #vers 1
         def view_debug_log():
             """View debug log file"""
             try:
-                from debug.img_debug_functions import img_debugger
+                from apps.debug.img_debug_functions import img_debugger
                 import os
                 
                 if os.path.exists(img_debugger.log_file):
@@ -235,10 +235,10 @@ def create_debug_menu(main_window): #vers 1
         img_debug_menu = debug_menu.addMenu("📁 IMG Debug")
         
         img_enable_action = img_debug_menu.addAction("Enable IMG Debug")
-        img_enable_action.triggered.connect(lambda: setattr(__import__('debug.img_debug_functions').img_debug_functions.img_debugger, 'debug_enabled', True))
+        img_enable_action.triggered.connect(lambda: setattr(__import__('apps.debug.img_debug_functions').img_debug_functions.img_debugger, 'debug_enabled', True))
         
         img_disable_action = img_debug_menu.addAction("Disable IMG Debug")
-        img_disable_action.triggered.connect(lambda: setattr(__import__('debug.img_debug_functions').img_debug_functions.img_debugger, 'debug_enabled', False))
+        img_disable_action.triggered.connect(lambda: setattr(__import__('apps.debug.img_debug_functions').img_debug_functions.img_debugger, 'debug_enabled', False))
         
         # COL Debug controls (using IMG debug system)
         col_debug_menu = debug_menu.addMenu("🛡️ COL Debug")
@@ -286,7 +286,7 @@ def add_status_indicators(main_window): #vers 1
         def update_debug_status():
             """Update debug status display"""
             try:
-                from debug.img_debug_functions import img_debugger
+                from apps.debug.img_debug_functions import img_debugger
                 from debug.col_debug_functions import is_col_debug_enabled
                 
                 img_debug = img_debugger.debug_enabled

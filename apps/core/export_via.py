@@ -16,8 +16,8 @@ from pathlib import Path
 from PyQt6.QtWidgets import QMessageBox
 
 # Import required functions
-from methods.export_shared import get_export_folder
-from methods.export_overwrite_check import handle_overwrite_check, get_output_path_for_entry
+from apps.methods.export_shared import get_export_folder
+from apps.methods.export_overwrite_check import handle_overwrite_check, get_output_path_for_entry
 
 ##Methods list -
 # export_via_function

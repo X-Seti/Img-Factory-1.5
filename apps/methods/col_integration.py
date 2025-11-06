@@ -18,9 +18,9 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QFont
 
 # Import IMG debug system and COL components
-from debug.img_debug_functions import img_debugger
-from debug.col_debug_functions import col_debug_log
-from methods.col_core_classes import COLFile, COLModel, COLVersion
+from apps.debug.img_debug_functions import img_debugger
+from apps.debug.col_debug_functions import col_debug_log
+from apps.methods.col_core_classes import COLFile, COLModel, COLVersion
 
 ##Methods list -
 # add_col_context_menu_items

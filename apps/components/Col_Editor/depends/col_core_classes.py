@@ -11,7 +11,7 @@ import struct
 import os
 from enum import Enum
 from typing import List, Optional, Tuple, Dict, Any
-from debug.img_debug_functions import img_debugger
+from apps.debug.img_debug_functions import img_debugger
 
 ##Classes -
 # BoundingBox
@@ -37,7 +37,7 @@ _global_debug_enabled = False
 # Debug system import with fallback
 # Import debug functions from img_debug system
 try:
-    from debug.img_debug_functions import img_debugger, set_col_debug_enabled, is_col_debug_enabled
+    from apps.debug.img_debug_functions import img_debugger, set_col_debug_enabled, is_col_debug_enabled
 except ImportError:
     # Fallback debug system
     class FallbackDebugger:

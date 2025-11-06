@@ -11,7 +11,7 @@ import struct
 from typing import Optional, Tuple, Any
 
 # Import comprehensive RW version data from existing core module
-from core.rw_versions import (
+from apps.core.rw_versions import (
     get_rw_version_name, is_valid_rw_version, parse_rw_version,
     get_model_format_version, RWVersion, DFFVersion, ModelFormat
 )

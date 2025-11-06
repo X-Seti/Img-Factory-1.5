@@ -9,7 +9,7 @@ Adds tear-off functionality to main IMG Factory window
 from PyQt6.QtWidgets import QPushButton, QHBoxLayout, QFrame, QWidget
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QTextCursor
-from gui.imgcol_tearoff import create_img_tearoff_window, create_col_tearoff_window, create_editor_tearoff_window
+from apps.gui.imgcol_tearoff import create_img_tearoff_window, create_col_tearoff_window, create_editor_tearoff_window
 
 ##Methods list -
 # add_tearoff_button_to_main_window

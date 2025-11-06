@@ -19,9 +19,9 @@ from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QAction, QIcon, QFont
 
 # Import COL components with IMG debug system
-from methods.col_core_classes import COLFile, COLModel
-from debug.col_debug_functions import col_debug_log, is_col_debug_enabled
-from debug.img_debug_functions import img_debugger
+from apps.methods.col_core_classes import COLFile, COLModel
+from apps.debug.col_debug_functions import col_debug_log, is_col_debug_enabled
+from apps.debug.img_debug_functions import img_debugger
 
 ##Methods list -
 # add_col_tab_to_main_widget

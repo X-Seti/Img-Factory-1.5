@@ -12,7 +12,7 @@ import math
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict
 
-from methods.img_entry_operations import add_entry_safe, add_multiple_entries
+from apps.methods.img_entry_operations import add_entry_safe, add_multiple_entries
 
 ##Methods list -
 # import_file
@@ -35,7 +35,7 @@ def import_file(img_archive, file_path: str, entry_name: Optional[str] = None) -
     try:
         # Import debug system
         try:
-            from debug.img_debug_functions import img_debugger
+            from apps.debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -85,7 +85,7 @@ def import_multiple_files(img_archive, file_paths: List[str], entry_names: Optio
     try:
         # Import debug system
         try:
-            from debug.img_debug_functions import img_debugger
+            from apps.debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -145,7 +145,7 @@ def import_folder(img_archive, folder_path: str, recursive: bool = False, filter
     try:
         # Import debug system
         try:
-            from debug.img_debug_functions import img_debugger
+            from apps.debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -221,7 +221,7 @@ def import_via_ide(img_archive, ide_file_path: str, models_directory: str) -> Tu
     try:
         # Import debug system
         try:
-            from debug.img_debug_functions import img_debugger
+            from apps.debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -392,7 +392,7 @@ def export_entry(img_archive, entry, output_path: Optional[str] = None, output_d
     try:
         # Import debug system
         try:
-            from debug.img_debug_functions import img_debugger
+            from apps.debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -440,7 +440,7 @@ def export_all(img_archive, output_dir: str, filter_type: Optional[str] = None) 
     try:
         # Import debug system
         try:
-            from debug.img_debug_functions import img_debugger
+            from apps.debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -482,7 +482,7 @@ def export_by_type(img_archive, output_dir: str, types: List[str]) -> Dict: #ver
     try:
         # Import debug system
         try:
-            from debug.img_debug_functions import img_debugger
+            from apps.debug.img_debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         

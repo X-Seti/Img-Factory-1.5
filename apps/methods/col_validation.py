@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 from pathlib import Path
 
 # Import IMG debug system (proven to work)
-from debug.img_debug_functions import img_debugger, debug_trace
+from apps.debug.img_debug_functions import img_debugger, debug_trace
 
 ## Methods list -
 # validate_col_file

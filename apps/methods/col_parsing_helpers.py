@@ -8,7 +8,7 @@ Used by methods.col_core_classes.py to safely parse COL data with bounds checkin
 
 import struct
 from typing import Tuple, Optional, Any
-from debug.img_debug_functions import img_debugger
+from apps.debug.img_debug_functions import img_debugger
 
 ##Methods list -
 # safe_parse_faces_col1

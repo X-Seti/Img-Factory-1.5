@@ -12,8 +12,8 @@ import os
 from typing import Dict, Any, Optional
 
 # Import debug systems
-from debug.col_debug_functions import col_debug_log, is_col_debug_enabled
-from debug.img_debug_functions import img_debugger
+from apps.debug.col_debug_functions import col_debug_log, is_col_debug_enabled
+from apps.debug.img_debug_functions import img_debugger
 
 ##Methods list -
 # get_col_file_statistics

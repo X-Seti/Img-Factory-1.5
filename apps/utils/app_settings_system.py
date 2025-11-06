@@ -6590,7 +6590,7 @@ class IconProvider: #vers 2
 
 """
 # In your main window __init__:
-from utils.app_settings_system import IconProvider
+from apps.utils.app_settings_system import IconProvider
 
 self.icons = IconProvider(self)
 
