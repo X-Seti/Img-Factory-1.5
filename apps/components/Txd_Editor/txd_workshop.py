@@ -26,7 +26,7 @@ from PyQt6.QtSvg import QSvgRenderer
 
 # Add root directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-from apps.gui.txd_context_menu import setup_txd_context_menu
+from gui.txd_context_menu import setup_txd_context_menu
 
 try:
     from PIL import Image
@@ -35,7 +35,7 @@ except ImportError:
 
 try:
     # Try main app path first
-    from apps.components.Txd_Editor.depends.txd_versions import (
+    from components.Txd_Editor.depends.txd_versions import (
         detect_txd_version, get_platform_name, get_game_from_version,
         get_version_capabilities, get_platform_capabilities,
         is_mipmap_supported, is_bumpmap_supported,
@@ -51,7 +51,7 @@ except ImportError:
     )
 
 try:
-    from apps.components.Txd_Editor.depends.txd_versions import (
+    from components.Txd_Editor.depends.txd_versions import (
         detect_txd_version,
         get_version_string,
         get_platform_name,
@@ -8297,7 +8297,7 @@ class TXDWorkshop(QWidget): #vers 3
             update_progress(10)
 
             try:
-                from apps.methods.txd_serializer import TXDSerializer
+                from methods.txd_serializer import TXDSerializer
                 log("Loaded serializer from methods/txd_serializer.py")
             except ImportError:
                 from depends.txd_serializer import TXDSerializer
@@ -9235,7 +9235,7 @@ class TXDWorkshop(QWidget): #vers 3
 
     def _get_target_version(self): #vers 1
         """Get target RenderWare version based on export settings"""
-        from apps.methods.txd_versions import get_recommended_version_for_game
+        from methods.txd_versions import get_recommended_version_for_game
 
         # Map game setting to game name
         game_map = {
@@ -11323,7 +11323,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Check indexed format support
         try:
-            from apps.methods.indexed_color_import import is_indexed_format
+            from methods.indexed_color_import import is_indexed_format
             formats.append("✓ 8-bit BMP, PCX, GIF")
         except ImportError:
             formats.append("✗ 8-bit indexed formats (missing module)")
@@ -11331,7 +11331,7 @@ class TXDWorkshop(QWidget): #vers 3
         # Check IFF support
         if self.iff_import_enabled:
             try:
-                from apps.methods.iff_import import is_iff_file
+                from methods.iff_import import is_iff_file
                 formats.append("✓ IFF/ILBM (Amiga)")
             except ImportError:
                 formats.append("✗ IFF format (missing module)")

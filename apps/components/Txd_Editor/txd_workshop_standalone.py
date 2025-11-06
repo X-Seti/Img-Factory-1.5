@@ -16,7 +16,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 # Now imports will work correctly
-from apps.components.Txd_Editor.txd_workshop import open_txd_workshop, TXDWorkshop
+from components.Txd_Editor.txd_workshop import open_txd_workshop, TXDWorkshop
 from PyQt6.QtWidgets import QApplication
 
 def main():

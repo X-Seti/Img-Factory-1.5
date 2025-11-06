@@ -13,7 +13,7 @@ import time
 from typing import Any, Dict, List, Optional
 from pathlib import Path
 
-from apps.debug.unified_debug_functions import debug_trace
+from debug.unified_debug_functions import debug_trace
 
 class IMGDebugger:
     """Advanced debugging system for IMG Factory operations"""
