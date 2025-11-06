@@ -731,16 +731,16 @@ def create_simple_directory_tree_widget(main_window): #vers 1
             # Fallback: create a wrapper function
             def load_file_wrapper(file_path):
                 try:
-                    main_window.log_message(f"📂 Loading file from directory tree: {file_path}")
+                    main_window.log_message(f"Loading file from directory tree: {file_path}")
                     # Try different loading methods
                     if hasattr(main_window, '_load_img_file_in_new_tab'):
                         main_window._load_img_file_in_new_tab(file_path)
                     elif hasattr(main_window, 'load_file_unified'):
                         main_window.load_file_unified(file_path)
                     else:
-                        main_window.log_message(f"❌ No suitable file loading method found")
+                        main_window.log_message(f"No suitable file loading method found")
                 except Exception as e:
-                    main_window.log_message(f"❌ Error loading file from directory tree: {str(e)}")
+                    main_window.log_message(f"Error loading file from directory tree: {str(e)}")
             
             tree_widget.img_file_requested.connect(load_file_wrapper)
         
@@ -750,21 +750,21 @@ def create_simple_directory_tree_widget(main_window): #vers 1
         
         tree_widget.log_message = main_window.log_message
         
-        main_window.log_message("✅ Simple directory tree widget created (fallback)")
+        main_window.log_message("Simple directory tree widget created (fallback)")
         return tree_widget
         
     except Exception as e:
-        main_window.log_message(f"❌ Error creating simple directory tree: {str(e)}")
+        main_window.log_message(f"Error creating simple directory tree: {str(e)}")
         return None
 
 
-def integrate_directory_tree_system(main_window): #vers 3
+def integrate_directory_tree_system(main_window): #vers 4 - old tab system.
     """Replace placeholder with functional directory tree - PRESERVE TAB STRUCTURE"""
     try:
         # Find the directory tree tab in gui_layout
         if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'tab_widget'):
-            main_window.log_message("❌ Tab widget not found for directory tree integration")
-            return False
+            main_window.log_message("Tab widget not found for directory tree integration")
+            return
 
         tab_widget = main_window.gui_layout.tab_widget
 
@@ -778,17 +778,17 @@ def integrate_directory_tree_system(main_window): #vers 3
                     directory_tab_index = i
                     break
         else:
-            main_window.log_message("❌ Tab widget is None or has no count method")
+            main_window.log_message("Tab widget is None or has no count method")
             return False
 
         if directory_tab_index == -1:
-            main_window.log_message("❌ Directory Tree tab not found")
+            main_window.log_message("Directory Tree tab not found")
             return False
 
         # Get the existing tab widget at this index (to replace its contents)
         existing_tab = tab_widget.widget(directory_tab_index)
         if not existing_tab:
-            main_window.log_message("❌ Directory Tree tab widget not found")
+            main_window.log_message("Directory Tree tab widget not found")
             return False
 
         # Clear the existing tab contents but keep the tab
@@ -813,18 +813,18 @@ def integrate_directory_tree_system(main_window): #vers 3
         existing_layout.addWidget(directory_tree)
 
         # Update the tab text with icon
-        tab_widget.setTabText(directory_tab_index, "🌳 Directory Tree")
+        tab_widget.setTabText(directory_tab_index, "Directory Tree")
 
         # Store reference for later use
         main_window.directory_tree = directory_tree
 
-        main_window.log_message("✅ Directory tree system integrated (tab structure preserved)")
-        main_window.log_message("🌳 Use 'Set Game Root' in File menu to browse GTA directories")
+        main_window.log_message("Directory tree system integrated (tab structure preserved)")
+        main_window.log_message("Use 'Set Game Root' in File menu to browse GTA directories")
 
         return True
 
     except Exception as e:
-        main_window.log_message(f"❌ Error integrating directory tree: {str(e)}")
+        main_window.log_message(f"Error integrating directory tree: {str(e)}")
         return False
 
 
