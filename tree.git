@@ -1,393 +1,238 @@
 .
-├── appfactory.settings.json
-├── cc.py
-├── ChangeLog.md
-├── components
-│   ├── Col_Creator
-│   │   └── col_creator.py
-│   ├── Col_Editor
-│   │   ├── col_workshop.py
-│   │   └── depends
-│   │       ├── col_3d_viewport.py
-│   │       ├── col_core_classes.py
-│   │       ├── col_dialogs.py
-│   │       ├── col_preview_generator.py
-│   │       ├── img_debug_functions.py
-│   │       └── standalone
-│   ├── Col_Viewer
-│   │   ├── COL_VIEWER_INTEGRATION_INSTRUCTIONS.txt
-│   │   ├── col_viewer.py
-│   │   └── depends
-│   │       ├── COL_materials.md
-│   │       ├── COL_Materials.py
-│   │       ├── COL_Parser.py
-│   │       └── Materials Reference.md
-│   ├── File_Browser
-│   │   └── dolphin_dialog.py
-│   ├── File_Editor
+├── apps
+│   ├── appfactory.settings.json
+│   ├── components
+│   │   ├── Col_Creator
+│   │   │   └── col_creator.py
+│   │   ├── Col_Editor
+│   │   │   ├── col_workshop.py
+│   │   │   └── depends
+│   │   │       ├── col_3d_viewport.py
+│   │   │       ├── col_core_classes.py
+│   │   │       ├── col_dialogs.py
+│   │   │       ├── col_preview_generator.py
+│   │   │       ├── img_debug_functions.py
+│   │   │       └── standalone
+│   │   ├── Col_Viewer
+│   │   │   ├── COL_VIEWER_INTEGRATION_INSTRUCTIONS.txt
+│   │   │   ├── col_viewer.py
+│   │   │   └── depends
+│   │   │       ├── COL_materials.md
+│   │   │       ├── COL_Materials.py
+│   │   │       ├── COL_Parser.py
+│   │   │       └── Materials Reference.md
+│   │   ├── File_Browser
+│   │   │   └── dolphin_dialog.py
+│   │   ├── File_Editor
+│   │   │   ├── file_dirtree_backend.py
+│   │   │   ├── file_dirtree_browser.py
+│   │   │   └── gta_file_editors.py
+│   │   ├── Ide_Editor
+│   │   │   └── ide_editor.py
+│   │   ├── Img_Creator
+│   │   │   └── img_creator.py
+│   │   ├── Img_Factory
+│   │   │   └── imgfactory.py
+│   │   ├── Project_Manager
+│   │   │   └── img_project_manager.py
+│   │   ├── Txd_Converter
+│   │   │   └── txd_converter.py
+│   │   └── Txd_Editor
+│   │       ├── depends
+│   │       │   ├── iff_import.py
+│   │       │   ├── indexed_color_import.py
+│   │       │   ├── txd_serializer.py
+│   │       │   ├── txd_versions.py
+│   │       │   └── txd_workshop_theme.py
+│   │       ├── locale
+│   │       │   └── Txd_Workshop_English_Local.lang
+│   │       ├── methodlist_script.py
+│   │       ├── txd_workshop.py
+│   │       └── txd_workshop_standalone.py
+│   ├── core
+│   │   ├── clean.py
+│   │   ├── close.py
+│   │   ├── col_viewer_integration.py
+│   │   ├── compression.py
+│   │   ├── convert.py
+│   │   ├── core.py
+│   │   ├── create.py
+│   │   ├── dialogs.py
+│   │   ├── dump.py
+│   │   ├── export.py
+│   │   ├── export_via.py
 │   │   ├── file_dirtree_backend.py
 │   │   ├── file_dirtree_browser.py
-│   │   └── gta_file_editors.py
-│   ├── Ide_Editor
-│   │   └── ide_editor.py
-│   ├── Img_Creator
-│   │   └── img_creator.py
-│   ├── Img_Factory
-│   │   ├── img_factory_col_integration.py
-│   │   ├── img_factory_corruption.py
-│   │   ├── img_factory_entry_operations.py
-│   │   ├── img_factory_file_operations.py
-│   │   ├── img_factory_img_operations.py
-│   │   ├── img_factory_init.py
-│   │   ├── img_factory_logging.py
-│   │   ├── img_factory_tab_system.py
-│   │   ├── img_factory_thread.py
-│   │   ├── img_factory_txd_workshop.py
-│   │   ├── img_factory_ui_dialogs.py
-│   │   └── img_factory_utility.py
-│   ├── Project_Manager
-│   │   └── img_project_manager.py
-│   ├── tree-git
-│   ├── Txd_Converter
-│   │   └── txd_converter.py
-│   ├── Txd_Editor
-│   │   ├── depends
-│   │   │   ├── iff_import.py
-│   │   │   ├── indexed_color_import.py
-│   │   │   ├── txd_serializer.py
-│   │   │   ├── txd_versions.py
-│   │   │   └── txd_workshop_theme.py
-│   │   ├── locale
-│   │   │   └── Txd_Workshop_English_Local.lang
-│   │   ├── methodlist_script.py
-│   │   ├── txd_workshop.py
-│   │   └── txd_workshop_standalone.py
-│   └── unified_signal_handler.py
-├── core
-│   ├── clean.py
-│   ├── close.py
-│   ├── col_viewer_integration.py
-│   ├── compression.py
-│   ├── convert.py
-│   ├── core.py
-│   ├── create.py
-│   ├── dialogs.py
-│   ├── dump.py
-│   ├── export.py
-│   ├── export_via.py
-│   ├── file_dirtree_backend.py
-│   ├── file_dirtree_browser.py
-│   ├── file_extraction.py
-│   ├── file_type_filter.py
-│   ├── gui_search.py
-│   ├── imgcol_convert.py
-│   ├── imgcol_rename.py
-│   ├── imgcol_replace.py
-│   ├── img_detection.py
-│   ├── img_formats.py
-│   ├── img_merger.py
-│   ├── img_split.py
-│   ├── img_version1.py
-│   ├── img_version2.py
-│   ├── import_via.py
-│   ├── impotr.py
-│   ├── notepad.py
-│   ├── open.py
-│   ├── quick_export.py
-│   ├── rebuild_all.py
-│   ├── rebuild.py
-│   ├── reload.py
-│   ├── remove.py
-│   ├── remove_via.py
-│   ├── rename.py
-│   ├── right_click_actions.py
-│   ├── rw_analysis_trigger.py
-│   ├── rw_unk_snapshot.py
-│   ├── rw_versions.py
-│   ├── save_entry.py
-│   ├── shortcuts.py
-│   ├── theme_integration.py
-│   └── utils.py
+│   │   ├── file_extraction.py
+│   │   ├── file_type_filter.py
+│   │   ├── gui_search.py
+│   │   ├── imgcol_convert.py
+│   │   ├── imgcol_rename.py
+│   │   ├── imgcol_replace.py
+│   │   ├── img_detection.py
+│   │   ├── img_formats.py
+│   │   ├── img_merger.py
+│   │   ├── img_split.py
+│   │   ├── img_version1.py
+│   │   ├── img_version2.py
+│   │   ├── import_via.py
+│   │   ├── impotr.py
+│   │   ├── notepad.py
+│   │   ├── open.py
+│   │   ├── quick_export.py
+│   │   ├── rebuild_all.py
+│   │   ├── rebuild.py
+│   │   ├── reload.py
+│   │   ├── remove.py
+│   │   ├── remove_via.py
+│   │   ├── rename.py
+│   │   ├── right_click_actions.py
+│   │   ├── rw_analysis_trigger.py
+│   │   ├── rw_unk_snapshot.py
+│   │   ├── rw_versions.py
+│   │   ├── save_entry.py
+│   │   ├── shortcuts.py
+│   │   ├── theme_integration.py
+│   │   └── utils.py
+│   ├── debug
+│   │   ├── col_debug_functions.py
+│   │   ├── enh_debug_system.py
+│   │   ├── img_debug_functions.py
+│   │   └── unified_debug_functions.py
+│   ├── gui
+│   │   ├── autosave_menu.py
+│   │   ├── col_dialogs.py
+│   │   ├── col_display.py
+│   │   ├── col_gui_integration.py
+│   │   ├── col_tab_css_theme.css
+│   │   ├── cross_platform_theme.py
+│   │   ├── directory_tree_system.py
+│   │   ├── file_menu_integration.py
+│   │   ├── gui_backend.py
+│   │   ├── gui_context.py
+│   │   ├── gui_infobar.py
+│   │   ├── gui_layout.py
+│   │   ├── gui_menu.py
+│   │   ├── gui_settings.py
+│   │   ├── ide_dialog.py
+│   │   ├── imgcol_tearoff.py
+│   │   ├── __init__.py
+│   │   ├── log_panel.py
+│   │   ├── main_window.py
+│   │   ├── panel_manager.py
+│   │   ├── pastel_button_theme.py
+│   │   ├── status_bar.py
+│   │   ├── tab_context_menu.py
+│   │   ├── tearoff_integration.py
+│   │   ├── tear_off.py
+│   │   ├── txd_context_menu.py
+│   │   └── unified_button_theme.py
+│   ├── locale
+│   │   └── local_settings.json
+│   ├── maps
+│   │   ├── bump_emboss.png
+│   │   ├── bump_sobel.png
+│   │   ├── fresnel_reflectivity.png
+│   │   ├── height_map.png
+│   │   ├── normal_map.png
+│   │   ├── normal_map_thumb.png
+│   │   ├── reflection_vector_map.png
+│   │   └── roughness_curvature.png
+│   ├── methods
+│   │   ├── col_core_classes.py
+│   │   ├── col_export_shared.py
+│   │   ├── col_functions.py
+│   │   ├── col_integration.py
+│   │   ├── col_loader.py
+│   │   ├── colour_ui_for_loaded_img.py
+│   │   ├── col_parsing_functions.py
+│   │   ├── col_parsing_helpers.py
+│   │   ├── col_structure_manager.py
+│   │   ├── col_validation.py
+│   │   ├── dragdrop_functions.py
+│   │   ├── export_overwrite_check.py
+│   │   ├── export_shared.py
+│   │   ├── find_dups_functions.py
+│   │   ├── ide_parser_functions.py
+│   │   ├── iff_import.py
+│   │   ├── img_analyze.py
+│   │   ├── img_core_classes.py
+│   │   ├── img_entry_operations.py
+│   │   ├── img_import_export.py
+│   │   ├── img_import_system.py
+│   │   ├── img_integration.py
+│   │   ├── img_parsing_functions.py
+│   │   ├── img_routing_operations.py
+│   │   ├── img_shared_operations.py
+│   │   ├── img_templates.json
+│   │   ├── img_templates.py
+│   │   ├── img_validation.py
+│   │   ├── import_highlight_system.py
+│   │   ├── indexed_color_import.py
+│   │   ├── mirror_tab_shared.py
+│   │   ├── populate_col_table.py
+│   │   ├── populate_img_table.py
+│   │   ├── progressbar_functions.py
+│   │   ├── refresh_table_functions.py
+│   │   ├── rw_detection.py
+│   │   ├── svg_shared_icons.py
+│   │   ├── tab_validation.py
+│   │   ├── txd_serializer.py
+│   │   ├── txd_versions.py
+│   │   └── update_ui_for_loaded_img.py
+│   ├── support
+│   │   ├── imgfactory_diagnostic.py
+│   │   ├── unix_launcher.sh
+│   │   └── windows_launcher.bat
+│   ├── templates
+│   │   └── new_templates.json
+│   ├── themes
+│   │   ├── amiga_mui_light.json
+│   │   ├── amiga_wb light.json
+│   │   ├── amiga_wb_light.json
+│   │   ├── blue_panels_dark.json
+│   │   ├── blue_theme_light.json
+│   │   ├── bluish_light.json
+│   │   ├── classic_dark.json
+│   │   ├── cyberpunk_dark.json
+│   │   ├── green_shad_light.json
+│   │   ├── green_theme_light.json
+│   │   ├── gta_forums_dark.json
+│   │   ├── gta_forums_light.json
+│   │   ├── gta_liberty_city_dark.json
+│   │   ├── gta_san_andreas_dark.json
+│   │   ├── gta_vice_city_dark.json
+│   │   ├── img_factory_dark.json
+│   │   ├── img_factory_light.json
+│   │   ├── knight_rider_dark.json
+│   │   ├── lavender_theme_light.json
+│   │   ├── matrix_dark.json
+│   │   ├── pastel_theme_light.json
+│   │   ├── peach_theme_light.json
+│   │   ├── pink_theme_light.json
+│   │   ├── professional_light.json
+│   │   ├── red_dead_theme_dark.json
+│   │   ├── red_theme_dark.json
+│   │   ├── rockstar_dark.json
+│   │   ├── synthwave_outrun_dark.json
+│   │   ├── tea_and_toast_dark.json
+│   │   ├── themes_organization.md
+│   │   └── yellow_theme_light.json
+│   ├── unified_signal_handler.py
+│   └── utils
+│       ├── app_settings_system.py
+│       ├── gui_window.py
+│       ├── themer_settings.json
+│       ├── themes -> /home/x2/Documents/GitHub/Img Factory 1.5/themes
+│       └── update_themes_script.py
+├── cc.py
+├── ChangeLog.md
 ├── Credits.md
-├── debug
-│   ├── col_debug_functions.py
-│   ├── enh_debug_system.py
-│   ├── img_debug_functions.py
-│   └── unified_debug_functions.py
-├── gui
-│   ├── autosave_menu.py
-│   ├── col_dialogs.py
-│   ├── col_display.py
-│   ├── col_gui_integration.py
-│   ├── col_tab_css_theme.css
-│   ├── cross_platform_theme.py
-│   ├── directory_tree_system.py
-│   ├── file_menu_integration.py
-│   ├── gui_backend.py
-│   ├── gui_context.py
-│   ├── gui_infobar.py
-│   ├── gui_layout.py
-│   ├── gui_menu.py
-│   ├── gui_settings.py
-│   ├── ide_dialog.py
-│   ├── imgcol_tearoff.py
-│   ├── __init__.py
-│   ├── log_panel.py
-│   ├── main_window.py
-│   ├── panel_manager.py
-│   ├── pastel_button_theme.py
-│   ├── status_bar.py
-│   ├── tab_context_menu.py
-│   ├── tearoff_integration.py
-│   ├── tear_off.py
-│   ├── txd_context_menu.py
-│   └── unified_button_theme.py
-├── Img Factory1.3 -> /home/x2/code base/Img Factory1.3
-├── imgfactory_broken.py
 ├── img_factory_debug.log
-├── imgfactory_new.py
-├── imgfactory.py
-├── locale
-│   └── local_settings.json
-├── maps
-│   ├── bump_emboss.png
-│   ├── bump_sobel.png
-│   ├── fresnel_reflectivity.png
-│   ├── height_map.png
-│   ├── normal_map.png
-│   ├── normal_map_thumb.png
-│   ├── reflection_vector_map.png
-│   └── roughness_curvature.png
-├── methods
-│   ├── col_core_classes.py
-│   ├── col_export_shared.py
-│   ├── col_functions.py
-│   ├── col_integration.py
-│   ├── col_loader.py
-│   ├── colour_ui_for_loaded_img.py
-│   ├── col_parsing_functions.py
-│   ├── col_parsing_helpers.py
-│   ├── col_structure_manager.py
-│   ├── col_validation.py
-│   ├── dragdrop_functions.py
-│   ├── export_overwrite_check.py
-│   ├── export_shared.py
-│   ├── find_dups_functions.py
-│   ├── ide_parser_functions.py
-│   ├── iff_import.py
-│   ├── img_analyze.py
-│   ├── img_core_classes.py
-│   ├── img_entry_operations.py
-│   ├── img_import_export.py
-│   ├── img_import_system.py
-│   ├── img_integration.py
-│   ├── img_parsing_functions.py
-│   ├── img_routing_operations.py
-│   ├── img_shared_operations.py
-│   ├── img_templates.json
-│   ├── img_templates.py
-│   ├── img_validation.py
-│   ├── import_highlight_system.py
-│   ├── indexed_color_import.py
-│   ├── mirror_tab_shared.py
-│   ├── populate_col_table.py
-│   ├── populate_img_table.py
-│   ├── progressbar_functions.py
-│   ├── refresh_table_functions.py
-│   ├── rw_detection.py
-│   ├── svg_shared_icons.py
-│   ├── tab_validation.py
-│   ├── txd_serializer.py
-│   ├── txd_versions.py
-│   └── update_ui_for_loaded_img.py
+├── launch_imgfactory.py
 ├── package-lock.json
 ├── Summery.md
-├── support
-│   ├── imgfactory_diagnostic.py
-│   ├── launch_imgfactory.py
-│   ├── unix_launcher.sh
-│   └── windows_launcher.bat
-├── templates
-│   └── new_templates.json
-├── themes
-│   ├── amiga_mui_light.json
-│   ├── amiga_wb light.json
-│   ├── amiga_wb_light.json
-│   ├── blue_panels_dark.json
-│   ├── blue_theme_light.json
-│   ├── bluish_light.json
-│   ├── classic_dark.json
-│   ├── cyberpunk_dark.json
-│   ├── green_shad_light.json
-│   ├── green_theme_light.json
-│   ├── gta_forums_dark.json
-│   ├── gta_forums_light.json
-│   ├── gta_liberty_city_dark.json
-│   ├── gta_san_andreas_dark.json
-│   ├── gta_vice_city_dark.json
-│   ├── img_factory_dark.json
-│   ├── img_factory_light.json
-│   ├── knight_rider_dark.json
-│   ├── lavender_theme_light.json
-│   ├── matrix_dark.json
-│   ├── pastel_theme_light.json
-│   ├── peach_theme_light.json
-│   ├── pink_theme_light.json
-│   ├── professional_light.json
-│   ├── red_dead_theme_dark.json
-│   ├── red_theme_dark.json
-│   ├── rockstar_dark.json
-│   ├── synthwave_outrun_dark.json
-│   ├── tea_and_toast_dark.json
-│   ├── themes_organization.md
-│   └── yellow_theme_light.json
 ├── TODO.md
-├── tree.git
-├── utils
-│   ├── app_settings_system.py
-│   ├── gui_window.py
-│   ├── themer_settings.json
-│   ├── themes -> /home/x2/Documents/GitHub/Img Factory 1.5/themes
-│   └── update_themes_script.py
-└── windows_source
-    ├── BXCF
-    ├── BXGI
-    ├── BXGX
-    ├── IMGF
-    ├── Input
-    │   ├── d3d8.lib
-    │   ├── d3dx8.lib
-    │   ├── freeglut.lib
-    │   ├── freetype261-debug.lib
-    │   ├── freetype261-release.lib
-    │   ├── libci.lib
-    │   └── libc.lib
-    └── Output
-        └── Intermediate
-            ├── BXCF
-            │   ├── BXCF
-            │   │   └── Debug.Win32
-            │   │       └── BXCF.tlog
-            │   │           ├── BXCF.lastbuildstate
-            │   │           └── Lib-link.write.1.tlog
-            │   ├── BXCF.App
-            │   │   └── Debug.Win32
-            │   │       └── BXCF.App.tlog
-            │   │           ├── BXCF.App.lastbuildstate
-            │   │           ├── CL.command.1.tlog
-            │   │           ├── CL.write.1.tlog
-            │   │           ├── link.command.1.tlog
-            │   │           ├── link.read.1.tlog
-            │   │           └── link.write.1.tlog
-            │   └── BXCF.ThirdParty
-            │       └── Debug.Win32
-            │           ├── adler32.obj
-            │           ├── BXCF.ThirdParty.tlog
-            │           │   └── BXCF.ThirdParty.lastbuildstate
-            │           ├── compress.obj
-            │           ├── gzclose.obj
-            │           ├── inffast.obj
-            │           ├── inftrees.obj
-            │           ├── lzo1b_1.obj
-            │           ├── lzo1b_2.obj
-            │           ├── lzo1b_cc.obj
-            │           ├── lzo1b_d1.obj
-            │           ├── lzo1b_d2.obj
-            │           ├── lzo1b_rr.obj
-            │           ├── lzo1b_xx.obj
-            │           ├── lzo1c_1.obj
-            │           ├── lzo1c_2.obj
-            │           ├── lzo1c_cc.obj
-            │           ├── lzo1c_d1.obj
-            │           ├── lzo1c_d2.obj
-            │           ├── lzo1c_rr.obj
-            │           ├── lzo1c_xx.obj
-            │           ├── lzo1f_1.obj
-            │           ├── lzo1f_d1.obj
-            │           ├── lzo1f_d2.obj
-            │           ├── lzo1x_d1.obj
-            │           ├── lzo1x_d2.obj
-            │           ├── lzo1x_d3.obj
-            │           ├── lzo1y_d1.obj
-            │           ├── lzo1y_d2.obj
-            │           ├── lzo1y_d3.obj
-            │           ├── lzo1z_d1.obj
-            │           ├── lzo1z_d2.obj
-            │           ├── lzo1z_d3.obj
-            │           ├── lzo2a_d1.obj
-            │           ├── lzo2a_d2.obj
-            │           ├── lzo_crc.obj
-            │           ├── lzo_ptr.obj
-            │           ├── lzo_str.obj
-            │           ├── lzo_util.obj
-            │           ├── uncompr.obj
-            │           └── zutil.obj
-            ├── BXGI
-            │   └── BXGI
-            │       └── Debug.Win32
-            │           ├── BXGI.tlog
-            │           │   └── BXGI.lastbuildstate
-            │           └── RWSectionDepthData.obj
-            ├── BXGX
-            │   ├── BXGX
-            │   │   └── Debug.Win32
-            │   │       ├── BXGX.tlog
-            │   │       │   └── BXGX.lastbuildstate
-            │   │       └── nsbxgx.obj
-            │   ├── BXGX.App
-            │   │   └── Debug.Win32
-            │   │       └── BXGX.App.tlog
-            │   │           ├── BXGX.App.lastbuildstate
-            │   │           ├── CL.command.1.tlog
-            │   │           ├── CL.write.1.tlog
-            │   │           ├── link.command.1.tlog
-            │   │           ├── link.read.1.tlog
-            │   │           └── link.write.1.tlog
-            │   └── BXGX.ThirdParty
-            │       └── Debug.Win32
-            │           └── BXGX.ThirdParty.tlog
-            │               ├── BXGX.ThirdParty.lastbuildstate
-            │               ├── CL.command.1.tlog
-            │               ├── CL.write.1.tlog
-            │               ├── Lib.command.1.tlog
-            │               ├── Lib-link.read.1.tlog
-            │               └── Lib-link.write.1.tlog
-            └── IMGF
-                ├── IMGF
-                │   └── Debug.Win32
-                │       └── IMGF.tlog
-                │           ├── IMGF.lastbuildstate
-                │           ├── rc.command.1.tlog
-                │           ├── rc.read.1.tlog
-                │           └── rc.write.1.tlog
-                ├── IMGF.BuildVersion
-                │   └── Debug.Win32
-                │       └── IMGF.Bui.6FBD84F0.tlog
-                │           ├── CL.command.1.tlog
-                │           ├── CL.write.1.tlog
-                │           ├── IMGF.BuildVersion.lastbuildstate
-                │           ├── link.command.1.tlog
-                │           ├── link.read.1.tlog
-                │           └── link.write.1.tlog
-                ├── IMGF.Installer
-                │   └── Debug.Win32
-                │       └── IMGF.Installer.tlog
-                │           ├── CL.command.1.tlog
-                │           ├── CL.write.1.tlog
-                │           ├── IMGF.Installer.lastbuildstate
-                │           ├── link.command.1.tlog
-                │           ├── link.read.1.tlog
-                │           ├── link.write.1.tlog
-                │           ├── rc.command.1.tlog
-                │           ├── rc.read.1.tlog
-                │           └── rc.write.1.tlog
-                └── IMGF.ThirdParty
-                    └── Debug.Win32
-                        ├── IMGF.ThirdParty.tlog
-                        │   ├── IMGF.ThirdParty.lastbuildstate
-                        │   ├── Lib.command.1.tlog
-                        │   ├── Lib-link.read.1.tlog
-                        │   └── Lib-link.write.1.tlog
-                        └── platform.obj
+└── tree.git
 
-74 directories, 317 files
+28 directories, 208 files
