@@ -1,9 +1,9 @@
-#this belongs in core/ open.py - Version: 7
-# X-Seti - September27 2025 - IMG Factory 1.5 - Open Functions with TXD Support
+#this belongs in core/ open.py - Version: 8
+# X-Seti - November10 2025 - IMG Factory 1.5 - Open Functions with Tab System
 
 """
 IMG Factory Open Functions - Now supports IMG, COL, and TXD files
-Functions use underscore prefix to avoid conflicts with instance methods
+Uses unified tab system from methods/tab_system.py
 """
 
 import os
@@ -17,16 +17,7 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 # _load_txd_file
 # open_file_dialog
 
-def _create_img_tab(main_window, file_path):
-    """Create new tab for IMG file"""
-    if hasattr(main_window, 'create_tab'):
-        return main_window.create_tab(file_path, 'IMG', None)
-    return None
-
-def _load_img_file(main_window, file_path):
-    tab_index = _create_img_tab(main_window, file_path)
-
-def open_file_dialog(main_window): #vers 11
+def open_file_dialog(main_window): #vers 12
     """Unified file dialog for IMG, COL, and TXD files"""
     file_path, _ = QFileDialog.getOpenFileName(
         main_window,
@@ -46,8 +37,8 @@ def open_file_dialog(main_window): #vers 11
             _load_img_file(main_window, file_path)
 
 
-def _load_img_file(main_window, file_path): #vers 2
-    """Load IMG file in new tab"""
+def _load_img_file(main_window, file_path): #vers 3
+    """Load IMG file in new tab using unified tab system"""
     try:
         if hasattr(main_window, '_load_img_file_in_new_tab'):
             main_window._load_img_file_in_new_tab(file_path)
@@ -59,8 +50,8 @@ def _load_img_file(main_window, file_path): #vers 2
         main_window.log_message(f"Error loading IMG: {str(e)}")
 
 
-def _load_col_file(main_window, file_path): #vers 2
-    """Load COL file in new tab"""
+def _load_col_file(main_window, file_path): #vers 3
+    """Load COL file in new tab using unified tab system"""
     try:
         if hasattr(main_window, '_load_col_file_in_new_tab'):
             main_window._load_col_file_in_new_tab(file_path)
@@ -74,8 +65,8 @@ def _load_col_file(main_window, file_path): #vers 2
         main_window.log_message(f"Error loading COL: {str(e)}")
 
 
-def _load_txd_file(main_window, file_path):
-    """Load TXD file - tries tab method first, then workshop"""
+def _load_txd_file(main_window, file_path): #vers 2
+    """Load TXD file in new tab using unified tab system"""
     try:
         main_window.log_message(f"Loading TXD file: {os.path.basename(file_path)}")
 
@@ -88,7 +79,7 @@ def _load_txd_file(main_window, file_path):
             return
 
         # Fallback: Open TXD Workshop window
-        from components.Txd_Editor.txd_workshop import open_txd_workshop
+        from apps.components.Txd_Editor.txd_workshop import open_txd_workshop
         workshop = open_txd_workshop(main_window, file_path)
 
         if workshop:

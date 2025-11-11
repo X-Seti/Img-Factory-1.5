@@ -226,7 +226,7 @@ def _load_col_file_in_new_tab(self, file_path): #vers [your_version + 1]
 
 def _open_txd_workshop(self, file_path=None): #vers 2
     """Open TXD Workshop - connects to tab switching"""
-    from components.Txd_Editor.txd_workshop import open_txd_workshop
+    from apps.components.Txd_Editor.txd_workshop import open_txd_workshop
 
     if not file_path:
         if hasattr(self, 'current_img') and self.current_img:
@@ -396,9 +396,15 @@ __all__ = [
     'reload_table',
     'load_file_unified',
     '_load_img_file_in_new_tab',
+    '_load_col_file_in_new_tab',
     '_load_txd_file_in_new_tab',
+    '_open_txd_workshop',
+    '_update_workshop_on_tab_change',
+    '_on_workshop_closed',
+    'open_file_dialog',
     '_on_img_load_progress',
     '_update_ui_for_no_img',
     '_on_img_load_error',
     'integrate_unified_progress_system'
+
 ]

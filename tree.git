@@ -6,13 +6,14 @@
 │   │   │   └── col_creator.py
 │   │   ├── Col_Editor
 │   │   │   ├── col_workshop.py
-│   │   │   └── depends
-│   │   │       ├── col_3d_viewport.py
-│   │   │       ├── col_core_classes.py
-│   │   │       ├── col_dialogs.py
-│   │   │       ├── col_preview_generator.py
-│   │   │       ├── img_debug_functions.py
-│   │   │       └── standalone
+│   │   │   ├── depends
+│   │   │   │   ├── col_3d_viewport.py
+│   │   │   │   ├── col_core_classes.py
+│   │   │   │   ├── col_dialogs.py
+│   │   │   │   ├── col_preview_generator.py
+│   │   │   │   ├── img_debug_functions.py
+│   │   │   │   └── standalone
+│   │   │   └── img_factory_debug.log
 │   │   ├── Col_Viewer
 │   │   │   ├── COL_VIEWER_INTEGRATION_INSTRUCTIONS.txt
 │   │   │   ├── col_viewer.py
@@ -32,7 +33,22 @@
 │   │   ├── Img_Creator
 │   │   │   └── img_creator.py
 │   │   ├── Img_Factory
-│   │   │   └── imgfactory.py
+│   │   │   ├── img_factory_col_integration.py
+│   │   │   ├── img_factory_corruption.py
+│   │   │   ├── img_factory_debug.log
+│   │   │   ├── img_factory_entry_operations.py
+│   │   │   ├── img_factory_file_operations.py
+│   │   │   ├── img_factory_img_operations.py
+│   │   │   ├── img_factory_init.py
+│   │   │   ├── img_factory_logging.py
+│   │   │   ├── imgfactory.py
+│   │   │   ├── img_factory_tab_system.py
+│   │   │   ├── img_factory_thread.py
+│   │   │   ├── img_factory_txd_workshop.py
+│   │   │   ├── img_factory_ui_dialogs.py
+│   │   │   ├── img_factory_utility.py
+│   │   │   └── __init__.py
+│   │   ├── __init__.py
 │   │   ├── Project_Manager
 │   │   │   └── img_project_manager.py
 │   │   ├── Txd_Converter
@@ -127,6 +143,7 @@
 │   │   ├── tear_off.py
 │   │   ├── txd_context_menu.py
 │   │   └── unified_button_theme.py
+│   ├── __init__.py
 │   ├── locale
 │   │   └── local_settings.json
 │   ├── maps
@@ -152,6 +169,7 @@
 │   │   ├── dragdrop_functions.py
 │   │   ├── export_overwrite_check.py
 │   │   ├── export_shared.py
+│   │   ├── file_loading_functions.py
 │   │   ├── find_dups_functions.py
 │   │   ├── ide_parser_functions.py
 │   │   ├── iff_import.py
@@ -176,6 +194,7 @@
 │   │   ├── refresh_table_functions.py
 │   │   ├── rw_detection.py
 │   │   ├── svg_shared_icons.py
+│   │   ├── tab_system.py
 │   │   ├── tab_validation.py
 │   │   ├── txd_serializer.py
 │   │   ├── txd_versions.py
@@ -235,4 +254,4 @@
 ├── TODO.md
 └── tree.git
 
-28 directories, 208 files
+28 directories, 227 files

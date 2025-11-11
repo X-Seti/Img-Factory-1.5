@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #this belongs in components/Img_Factory/img_factory_img_operations.py - Version: 1
 # X-Seti - Oct27 2025 - IMG Factory 1.5 - IMG Operations Methods
 
