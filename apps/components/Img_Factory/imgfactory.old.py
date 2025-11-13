@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 X-Seti - July22 2025 - IMG Factory 1.5 - AtariST version :D
-#this belongs in root /imgfactory.py - version 71
+#this belongs in root /imgfactory.py - version 79
 """
 import sys
 import os
@@ -12,9 +12,9 @@ print("Starting application...")
 
 # Setup paths FIRST - before any other imports
 current_dir = Path(__file__).parent
-components_dir = current_dir / "apps.components"
-gui_dir = current_dir / "apps.gui"
-utils_dir = current_dir / "apps.utils"
+components_dir = current_dir / "components"
+gui_dir = current_dir / "gui"
+utils_dir = current_dir / "/utils"
 
 
 # Add directories to Python path
@@ -49,6 +49,7 @@ from apps.components.Img_Creator.img_creator import NewIMGDialog, IMGCreationThr
 #from apps.components.Txd_Editor.txd_workshop import TXDEditor
 
 #debug
+
 from apps.debug.col_debug_functions import set_col_debug_enabled
 from apps.debug.unified_debug_functions import integrate_all_improvements, install_debug_control_system
 
@@ -82,7 +83,6 @@ from apps.core.imgcol_convert import integrate_imgcol_convert_functions
 from apps.core.save_entry import integrate_save_entry_function
 from apps.core.rw_unk_snapshot import integrate_unknown_rw_detection
 from apps.core.col_viewer_integration import integrate_col_viewer
-#from apps.core.analyze_rw import integrate_rw_analysis_trigger
 
 #gui-layout
 from apps.gui.ide_dialog import integrate_ide_dialog
@@ -101,14 +101,8 @@ from apps.gui.tearoff_integration import integrate_tearoff_system
 from apps.gui.gui_context import (add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
 
 #Shared Methods - Shared Functions.
-from apps.methods.img_core_classes import (
-    IMGFile, IMGEntry, IMGVersion, Platform,
-    IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel, format_file_size)
-from apps.methods.col_core_classes import (
-    COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup,
-    COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox,
-    diagnose_col_file, set_col_debug_enabled, is_col_debug_enabled
-)
+from apps.methods.img_core_classes import (IMGFile, IMGEntry, IMGVersion, Platform, IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel, format_file_size)
+from apps.methods.col_core_classes import (COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup, COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox, diagnose_col_file, set_col_debug_enabled, is_col_debug_enabled)
 
 from apps.methods.col_integration import integrate_complete_col_system
 from apps.methods.col_functions import setup_complete_col_integration
@@ -119,8 +113,7 @@ from apps.methods.img_integration import integrate_img_functions, img_core_funct
 from apps.methods.img_routing_operations import install_operation_routing
 from apps.methods.img_validation import IMGValidator
 
-from apps.methods.tab_functions import (setup_tab_system, migrate_tabs, create_tab, update_references)
-from apps.methods.tab_aware_functions import integrate_tab_awareness_system
+
 from apps.methods.populate_img_table import reset_table_styling, install_img_table_populator
 from apps.methods.progressbar_functions import integrate_progress_system
 from apps.methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate_update_ui_for_loaded_img
@@ -128,12 +121,17 @@ from apps.methods.import_highlight_system import enable_import_highlighting
 from apps.methods.refresh_table_functions import integrate_refresh_table
 from apps.methods.img_entry_operations import integrate_entry_operations
 from apps.methods.img_import_export import integrate_import_export_functions
-from apps.methods.export_col_shared import integrate_col_export_shared
+from apps.methods.col_export_shared import integrate_col_export_shared
 from apps.methods.mirror_tab_shared import show_mirror_tab_selection
 from apps.methods.ide_parser_functions import integrate_ide_parser
 from apps.methods.find_dups_functions import find_duplicates_by_hash, show_duplicates_dialog
 from apps.methods.dragdrop_functions import integrate_drag_drop_system
 from apps.methods.img_templates import IMGTemplateManager, TemplateManagerDialog
+from apps.methods.tab_system import setup_tab_tracking
+
+# Install file loading functions
+from apps.methods.file_loading_functions import integrate_file_loading_functions
+from apps.components.Img_Factory.img_factory_thread import IMGLoadThread
 
 
 App_name = "Img Factory 1.5"
@@ -161,7 +159,6 @@ def setup_rebuild_system(self): #vers 1
         self.log_message("Hybrid rebuild not available")
         return False
 
-
 def create_rebuild_menu(self): #vers 1
     """Create rebuild menu with mode options"""
     try:
@@ -188,7 +185,8 @@ def create_rebuild_menu(self): #vers 1
         fast_action = QAction("Fast Rebuild", self)
         fast_action.setStatusTip("Direct fast rebuild without dialog")
         fast_action.triggered.connect(self.fast_rebuild)
-        rebuild_menu.addAction(fast_action)
+        rebuild_menu.addAct
+        self.file_path = file_pathion(fast_action)
 
         safe_action = QAction("Safe Rebuild", self)
         safe_action.setStatusTip("Direct safe rebuild with full checking")
@@ -312,7 +310,6 @@ def debug_img_entries(self): #vers 2
         except:
             pass
 
-
 class IMGLoadThread(QThread):
     """Background thread for loading IMG files"""
     progress_updated = pyqtSignal(int, str)  # progress, status
@@ -428,10 +425,12 @@ class IMGFactory(QMainWindow):
 
         # Create main UI (includes tab system setup)
         self._create_ui()
+        setup_tab_tracking(self)
+        integrate_file_loading_functions(self)
 
         # Additional UI integrations
         add_project_menu_items(self)
-        integrate_tab_awareness_system(self)
+        #integrate_tab_awareness_system(self)
         integrate_tearoff_system(self)
 
         # === PHASE 4: ESSENTIAL INTEGRATIONS (Medium) ===
@@ -541,6 +540,25 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"Integration failed: {e}")
 
+        """
+        try:
+            from apps.core.img_corruption_analyzer import setup_corruption_analyzer
+            setup_corruption_analyzer(self)
+            self.log_message("IMG corruption analyzer integrated")
+        except Exception as e:
+            self.log_message(f"Corruption analyzer integration failed: {e}")
+
+        # Debug features
+        try:
+            integrate_debug_patch(self)
+            apply_visibility_fix(self)
+            create_debug_keyboard_shortcuts(self)
+            install_debug_control_system(self)
+            # self.log_message("Debug features loaded")
+        except Exception as e:
+            self.log_message(f"Debug features failed: {str(e)}")
+
+        """
         # === PHASE 9: HIGHLIGHTING & FINAL SETUP ===
 
         # Import highlighting
@@ -733,7 +751,7 @@ class IMGFactory(QMainWindow):
                 QMessageBox.warning(self, "No IMG File", "Please open an IMG file first")
                 return
 
-            self.log_message("🧹 Cleaning filenames only...")
+            self.log_message("Cleaning filenames only...")
 
             # Analyze corruption
             from apps.core.img_corruption_analyzer import analyze_img_corruption
@@ -925,7 +943,7 @@ class IMGFactory(QMainWindow):
 
     def setup_unified_signals(self): #vers 6
         """Setup unified signal handler for all table interactions"""
-        from apps.components.unified_signal_handler import connect_table_signals
+        from apps.unified_signal_handler import connect_table_signals
 
         # Connect main entries table to unified system
         success = connect_table_signals(
@@ -942,7 +960,7 @@ class IMGFactory(QMainWindow):
             self.log_message("Failed to connect unified signals")
 
         # Connect unified signals to status bar updates
-        from apps.components.unified_signal_handler import signal_handler
+        from apps.unified_signal_handler import signal_handler
         signal_handler.status_update_requested.connect(self._update_status_from_signal)
 
 
@@ -1383,7 +1401,7 @@ class IMGFactory(QMainWindow):
             self.current_col._debug_enabled = True
 
         # Set global flag for future COL files
-        import methods.col_core_classes as col_module
+        import apps.methods.col_core_classes as col_module
         col_module._global_debug_enabled = True
 
         self.log_message("COL debug output enabled")
@@ -1396,7 +1414,7 @@ class IMGFactory(QMainWindow):
             self.current_col._debug_enabled = False
 
         # Set global flag for future COL files
-        import methods.col_core_classes as col_module
+        import apps.methods.col_core_classes as col_module
         col_module._global_debug_enabled = False
 
         self.log_message("COL debug output disabled")
@@ -1404,7 +1422,7 @@ class IMGFactory(QMainWindow):
     def toggle_col_debug(self): #vers 2 #restore
         """Toggle COL debug output"""
         try:
-            import methods.col_core_classes as col_module
+            import apps.methods.col_core_classes as col_module
             debug_enabled = getattr(col_module, '_global_debug_enabled', False)
 
             if debug_enabled:
@@ -1458,7 +1476,7 @@ class IMGFactory(QMainWindow):
         self.close_manager = install_close_functions(self)
 
         # Setup NEW tab system
-        setup_tab_system(self)
+        #setup_tab_system(self)
 
         # Migrate existing tabs if any
         if self.open_files:
@@ -1718,7 +1736,7 @@ class IMGFactory(QMainWindow):
         """Load COL file safely - Use the actual COL loading function"""
         try:
             # Import and use the real COL loading function
-            from col_parsing_functions import load_col_file_safely as real_load_col
+            from apps.col_parsing_functions import load_col_file_safely as real_load_col
             success = real_load_col(self, file_path)
             if success:
                 self.log_message(f"COL file loaded: {os.path.basename(file_path)}")
@@ -1903,6 +1921,7 @@ class IMGFactory(QMainWindow):
             traceback.print_exc()  # Debug info
             return False
 
+
     def _load_img_file_in_new_tab(self, file_path): #vers [your_version + 1]
         """Load IMG file in new tab"""
         try:
@@ -1910,7 +1929,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"Loading IMG in new tab: {os.path.basename(file_path)}")
 
             # Create new tab first
-            tab_index = self.create_tab(file_path, 'IMG', None)
+            #tab_index = self.create_tab(file_path, 'IMG', None)
 
             # Then load IMG using your existing thread loader
             if self.load_thread and self.load_thread.isRunning():
@@ -1925,20 +1944,21 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"Error loading IMG in new tab: {str(e)}")
 
+
     def _load_txd_file_in_new_tab(self, file_path): #vers 1
         """Load TXD file in new tab"""
         try:
             import os
 
             # Create new tab for TXD
-            tab_index = self.create_tab(file_path, 'TXD', None)
+            #tab_index = self.create_tab(file_path, 'TXD', None)
 
             # Update tab to show it's a TXD
             file_name = os.path.basename(file_path)[:-4]  # Remove .txd
             self.main_tab_widget.setTabText(tab_index, f"{file_name}") #TODO SVG icon
 
             # Open TXD Workshop for this file
-            from apps.components.Txd_Editor.txd_workshop import open_txd_workshop
+            from app.components.Txd_Editor.txd_workshop import open_txd_workshop
             self.txd_workshop = open_txd_workshop(self, file_path)
 
             if workshop:
@@ -3156,7 +3176,7 @@ class IMGFactory(QMainWindow):
                 def toggle_col_debug():
                     """Simple COL debug toggle"""
                     try:
-                        import methods.col_core_classes as col_module
+                        import apps.methods.col_core_classes as col_module
                         current = getattr(col_module, '_global_debug_enabled', False)
                         col_module._global_debug_enabled = not current
 
@@ -3172,7 +3192,7 @@ class IMGFactory(QMainWindow):
                 self.toggle_col_debug = toggle_col_debug
 
                 # Start with debug disabled for performance
-                import methods.col_core_classes as col_module
+                import apps.methods.col_core_classes as col_module
                 col_module._global_debug_enabled = False
 
                 self.log_message("COL performance mode enabled")
@@ -3556,10 +3576,7 @@ def main():
        # Load settings
        try:
            # Try different import paths for settings
-           try:
-               from apps.utils.app_settings_system import AppSettings
-           except ImportError:
-               from app_settings_system import AppSettings
+           from apps.utils.app_settings_system import AppSettings
 
            settings = AppSettings()
            if hasattr(settings, 'load_settings'):

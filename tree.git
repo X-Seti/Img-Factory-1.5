@@ -33,38 +33,28 @@
 │   │   ├── Img_Creator
 │   │   │   └── img_creator.py
 │   │   ├── Img_Factory
-│   │   │   ├── img_factory_col_integration.py
-│   │   │   ├── img_factory_corruption.py
-│   │   │   ├── img_factory_debug.log
-│   │   │   ├── img_factory_entry_operations.py
-│   │   │   ├── img_factory_file_operations.py
-│   │   │   ├── img_factory_img_operations.py
-│   │   │   ├── img_factory_init.py
-│   │   │   ├── img_factory_logging.py
+│   │   │   ├── imgfactory.old.py
 │   │   │   ├── imgfactory.py
-│   │   │   ├── img_factory_tab_system.py
 │   │   │   ├── img_factory_thread.py
-│   │   │   ├── img_factory_txd_workshop.py
-│   │   │   ├── img_factory_ui_dialogs.py
-│   │   │   ├── img_factory_utility.py
 │   │   │   └── __init__.py
 │   │   ├── __init__.py
 │   │   ├── Project_Manager
 │   │   │   └── img_project_manager.py
 │   │   ├── Txd_Converter
 │   │   │   └── txd_converter.py
-│   │   └── Txd_Editor
-│   │       ├── depends
-│   │       │   ├── iff_import.py
-│   │       │   ├── indexed_color_import.py
-│   │       │   ├── txd_serializer.py
-│   │       │   ├── txd_versions.py
-│   │       │   └── txd_workshop_theme.py
-│   │       ├── locale
-│   │       │   └── Txd_Workshop_English_Local.lang
-│   │       ├── methodlist_script.py
-│   │       ├── txd_workshop.py
-│   │       └── txd_workshop_standalone.py
+│   │   ├── Txd_Editor
+│   │   │   ├── depends
+│   │   │   │   ├── iff_import.py
+│   │   │   │   ├── indexed_color_import.py
+│   │   │   │   ├── txd_serializer.py
+│   │   │   │   ├── txd_versions.py
+│   │   │   │   └── txd_workshop_theme.py
+│   │   │   ├── locale
+│   │   │   │   └── Txd_Workshop_English_Local.lang
+│   │   │   ├── methodlist_script.py
+│   │   │   ├── txd_workshop.py
+│   │   │   └── txd_workshop_standalone.py
+│   │   └── unified_signal_handler.py
 │   ├── core
 │   │   ├── clean.py
 │   │   ├── close.py
@@ -167,6 +157,7 @@
 │   │   ├── col_structure_manager.py
 │   │   ├── col_validation.py
 │   │   ├── dragdrop_functions.py
+│   │   ├── export_col_shared.py
 │   │   ├── export_overwrite_check.py
 │   │   ├── export_shared.py
 │   │   ├── file_loading_functions.py
@@ -194,6 +185,8 @@
 │   │   ├── refresh_table_functions.py
 │   │   ├── rw_detection.py
 │   │   ├── svg_shared_icons.py
+│   │   ├── tab_aware_functions.py
+│   │   ├── tab_functions.py
 │   │   ├── tab_system.py
 │   │   ├── tab_validation.py
 │   │   ├── txd_serializer.py
@@ -254,4 +247,4 @@
 ├── TODO.md
 └── tree.git
 
-28 directories, 227 files
+28 directories, 220 files

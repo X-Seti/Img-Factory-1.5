@@ -33,7 +33,7 @@ from PyQt6.QtGui import QFont, QColor, QPixmap, QPainter, QCursor
 try:
     import mss
     MSS_AVAILABLE = True
-    print("MSS library available - using high-performance screen capture")
+    print("MSS library available")
 except ImportError:
     MSS_AVAILABLE = False
     try:
