@@ -26,7 +26,7 @@ from PyQt6.QtSvg import QSvgRenderer
 
 # Add root directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-from gui.txd_context_menu import setup_txd_context_menu
+from apps.gui.txd_context_menu import setup_txd_context_menu
 
 try:
     from PIL import Image

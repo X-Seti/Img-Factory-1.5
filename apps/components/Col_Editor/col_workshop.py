@@ -37,10 +37,10 @@ from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QBrush, Q
 from PyQt6.QtSvg import QSvgRenderer
 
 # Import project modules AFTER path setup
-from debug.img_debug_functions import img_debugger
-from methods.col_core_classes import COLFile, COLModel, COLVersion, Vector3
+from apps.debug.img_debug_functions import img_debugger
+from apps.methods.col_core_classes import COLFile, COLModel, COLVersion, Vector3
 #from methods.col_integration import get_col_detailed_analysis, create_temporary_col_file, cleanup_temporary_file
-from gui.col_dialogs import show_col_analysis_dialog
+from apps.gui.col_dialogs import show_col_analysis_dialog
 
 # Import COL viewport and preview from depends
 try:
