@@ -39,13 +39,13 @@ from PyQt6.QtSvg import QSvgRenderer
 # Import project modules AFTER path setup
 from apps.debug.img_debug_functions import img_debugger
 from apps.methods.col_core_classes import COLFile, COLModel, COLVersion, Vector3
-#from methods.col_integration import get_col_detailed_analysis, create_temporary_col_file, cleanup_temporary_file
+#from apps.methods.col_integration import get_col_detailed_analysis, create_temporary_col_file, cleanup_temporary_file
 from apps.gui.col_dialogs import show_col_analysis_dialog
 
 # Import COL viewport and preview from depends
 try:
-    from components.Col_Editor.depends.col_3d_viewport import COL3DViewport
-    from components.Col_Editor.depends.col_preview_generator import (
+    from apps.components.Col_Editor.depends.col_3d_viewport import COL3DViewport
+    from apps.components.Col_Editor.depends.col_preview_generator import (
         COLPreviewGenerator, create_col_preview, create_col_thumbnail
     )
     VIEWPORT_AVAILABLE = True
@@ -3679,7 +3679,7 @@ class COLWorkshop(QWidget): #vers 3
     def open_col_file(self, file_path): #vers 3
         """Open standalone COL file - supports COL1, COL2, COL3"""
         try:
-            from methods.col_core_classes import COLFile
+            from apps.methods.col_core_classes import COLFile
 
             # Create and load COL file
             col_file = COLFile(file_path)
@@ -3749,7 +3749,7 @@ class COLWorkshop(QWidget): #vers 3
                 return
 
             # Import analysis functions
-            from methods.col_operations import get_col_detailed_analysis
+            from apps.methods.col_operations import get_col_detailed_analysis
             from gui.col_dialogs import show_col_analysis_dialog
 
             # Get detailed analysis
@@ -4817,7 +4817,7 @@ class COLWorkshop(QWidget): #vers 3
 
         if missing:
             print(f"Warning: Missing modules in depends/: {', '.join(missing)}")
-            print(f"Copy these from methods/ to: {depends_dir}")
+            print(f"Copy these from apps.methods. to: {depends_dir}")
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f" Missing import modules: {', '.join(missing)}")
@@ -6129,7 +6129,7 @@ class COLEditorDialog(QDialog): #vers 3
             self.status_bar.showMessage("Analyzing COL file...")
 
             # Import locally when needed
-            from methods.col_operations import get_col_detailed_analysis
+            from apps.methods.col_operations import get_col_detailed_analysis
             from gui.col_dialogs import show_col_analysis_dialog
 
             self.status_bar.showMessage("Analyzing COL file...")

@@ -83,7 +83,7 @@ def add_col_menu(img_factory_instance): #vers 1
         col_menu.addSeparator()
         
         # Batch operations
-        from methods.col_utilities import analyze_col_file_dialog
+        from apps.methods.col_utilities import analyze_col_file_dialog
         
         batch_process_action = QAction("⚙️ Batch Processor", img_factory_instance)
         batch_process_action.triggered.connect(lambda: open_col_batch_processor(img_factory_instance))
@@ -144,12 +144,12 @@ def add_col_tab(img_factory_instance): #vers 1
         col_splitter = QSplitter(Qt.Orientation.Horizontal)
         
         # Left panel - COL file list
-        from components.col_functions import COLListWidget
+        from apps.components.col_functions import COLListWidget
         col_list_widget = COLListWidget()
         col_splitter.addWidget(col_list_widget)
         
         # Right panel - COL model details
-        from components.col_functions import COLModelDetailsWidget
+        from apps.components.col_functions import COLModelDetailsWidget
         col_details_widget = COLModelDetailsWidget()
         col_splitter.addWidget(col_details_widget)
         
@@ -234,7 +234,7 @@ def open_col_editor(img_factory_instance, file_path=None): #vers 1
     try:
         # Try to open COL editor if available
         try:
-            from components.Col_Editor.col_editor import COLEditorDialog
+            from apps.components.Col_Editor.col_editor import COLEditorDialog
             editor = COLEditorDialog(img_factory_instance)
             if file_path:
                 editor.load_col_file(file_path)
@@ -349,7 +349,7 @@ def load_col_from_img_entry(img_factory_instance, entry): #vers 1
             temp_path = temp_file.name
 
         # Load using the COL loading system
-        from methods.col_parsing_functions import load_col_file_safely
+        from apps.methods.col_parsing_functions import load_col_file_safely
         success = load_col_file_safely(img_factory_instance, temp_path)
 
         # Clean up temp file
@@ -373,7 +373,7 @@ def load_col_from_img_entry(img_factory_instance, entry): #vers 1
 def integrate_col_editor(main_window) -> bool: #vers 1
     """Integrate COL editor functionality"""
     try:
-        from components.Col_Editor.col_editor import open_col_editor
+        from apps.components.Col_Editor.col_editor import open_col_editor
 
         # Add COL editor methods to main window
         main_window.open_col_editor = lambda file_path=None: open_col_editor(main_window, file_path)
@@ -493,7 +493,7 @@ def detect_col_version_from_data(data: bytes) -> Optional[dict]: #vers 1
 def create_col_editor_action(img_factory_instance): #vers 1
     """Create COL editor action using IMG debug system"""
     try:
-        from components.Col_Editor.col_editor import open_col_editor
+        from apps.components.Col_Editor.col_editor import open_col_editor
         return open_col_editor(img_factory_instance)
         
     except Exception as e:
@@ -503,7 +503,7 @@ def create_col_editor_action(img_factory_instance): #vers 1
 def open_col_batch_processor(img_factory_instance): #vers 1
     """Open COL batch processor using IMG debug system"""
     try:
-        from methods.col_utilities import open_col_batch_processor
+        from apps.methods.col_utilities import open_col_batch_processor
         open_col_batch_processor(img_factory_instance)
         return True
         
@@ -514,7 +514,7 @@ def open_col_batch_processor(img_factory_instance): #vers 1
 def open_col_editor_with_file(img_factory_instance, col_file: COLFile): #vers 1
     """Open COL editor with specific file using IMG debug system"""
     try:
-        from components.Col_Editor.col_editor import COLEditorDialog
+        from apps.components.Col_Editor.col_editor import COLEditorDialog
         editor = COLEditorDialog(img_factory_instance)
         if col_file.file_path:
             editor.load_col_file(col_file.file_path)
@@ -543,7 +543,7 @@ def edit_col_from_img(img_factory_instance, row: int): #vers 1
                 temp_path = temp_file.name
             
             # Open editor with temporary file
-            from components.Col_Editor.col_editor import open_col_editor
+            from apps.components.Col_Editor.col_editor import open_col_editor
             result = open_col_editor(img_factory_instance, temp_path)
             
             # Clean up temporary file
@@ -707,7 +707,7 @@ def create_col_file_dialog(main_window): #vers 1
             col_debug_log(main_window, f"Selected COL file: {file_path}", 'COL_DIALOG')
             
             # Load COL file using core loader
-            from methods.col_parsing_functions import load_col_file_safely
+            from apps.methods.col_parsing_functions import load_col_file_safely
             success = load_col_file_safely(main_window, file_path)
             
             if success:
@@ -727,7 +727,7 @@ def create_col_file_dialog(main_window): #vers 1
 def toggle_col_debug_setting(main_window): #vers 1
     """Toggle COL debug setting using IMG debug system"""
     try:
-        from debug.col_debug_functions import is_col_debug_enabled, set_col_debug_enabled
+        from apps.debug.col_debug_functions import is_col_debug_enabled, set_col_debug_enabled
         
         current_state = is_col_debug_enabled()
         new_state = not current_state
@@ -755,7 +755,7 @@ def export_col_to_img_format(main_window, col_file_path: str, output_img_path: s
             return False
         
         # Create new IMG file
-        from methods.img_core_classes import IMGFile, IMGVersion
+        from apps.methods.img_core_classes import IMGFile, IMGVersion
         img_file = IMGFile()
         
         if not img_file.create_new(output_img_path, IMGVersion.VERSION_2):
@@ -822,7 +822,7 @@ def setup_col_integration_full(main_window): #vers 3
                     img_debugger.warning(f"[COL-COL_INTEGRATION] Could not import context menu function: {e}")
                     # Try alternative import paths
                     try:
-                        from components.col_functions import add_col_context_menu_to_entries_table
+                        from apps.components.col_functions import add_col_context_menu_to_entries_table
                         add_col_context_menu_to_entries_table(main_window)
                         img_debugger.debug("[COL-COL_INTEGRATION] COL context menu added (alternative import)")
                     except ImportError:
@@ -847,12 +847,12 @@ def integrate_col_methods(main_window) -> bool: #vers 1
     try:
         # Add COL file loading capability
         if not hasattr(main_window, 'load_col_file_safely'):
-            from methods.populate_col_table import load_col_file_safely
+            from apps.methods.populate_col_table import load_col_file_safely
             main_window.load_col_file_safely = lambda file_path: load_col_file_safely(main_window, file_path)
             img_debugger.debug("✅ COL file loading method added")
 
         # Add COL operations methods
-        from methods.col_operations import (
+        from apps.methods.col_operations import (
             extract_col_from_img_entry,
             get_col_basic_info,
             get_col_detailed_analysis
@@ -950,7 +950,7 @@ def integrate_complete_col_system(main_window) -> bool: #vers 1
 def setup_col_debug_for_main_window(main_window): #vers 1
     """Setup COL debug functionality for main window using IMG debug system"""
     try:
-        from debug.col_debug_functions import set_col_debug_enabled
+        from apps.debug.col_debug_functions import set_col_debug_enabled
         
         # Enable COL debug based on main debug state
         if hasattr(main_window, 'debug_enabled') and main_window.debug_enabled:
@@ -970,7 +970,7 @@ def setup_threaded_col_loading(main_window): #vers 1
     try:
         col_debug_log(main_window, "Setting up threaded COL loading", 'COL_THREADING')
         
-        from components.col_loader import COLBackgroundLoader
+        from apps.components.col_loader import COLBackgroundLoader
         
         # Create background loader
         col_loader = COLBackgroundLoader()
@@ -996,7 +996,7 @@ def setup_col_file_loading(main_window) -> bool: #vers 1
     """Setup COL file loading in IMG system"""
     try:
         # Integrate COL file detection in IMG loading
-        from components.col_integration_main import integrate_complete_col_system
+        from apps.components.col_integration_main import integrate_complete_col_system
 
         success = integrate_complete_col_system(main_window)
 
@@ -1017,31 +1017,31 @@ def verify_col_components() -> bool: #vers 1
     missing_components = []
 
     try:
-        from methods.col_core_classes import COLFile, COLModel
+        from apps.methods.col_core_classes import COLFile, COLModel
         img_debugger.debug("✅ COL core classes available")
     except ImportError:
         missing_components.append("methods.col_core_classes")
 
     try:
-        from components.Col_Editor.col_editor import COLEditorDialog
+        from apps.components.Col_Editor.col_editor import COLEditorDialog
         img_debugger.debug("✅ COL editor available")
     except ImportError:
         missing_components.append("components.Col_Editor.col_editor")
 
     try:
-        from methods.col_utilities import COLBatchProcessor
+        from apps.methods.col_utilities import COLBatchProcessor
         img_debugger.debug("✅ COL utilities available")
     except ImportError:
         missing_components.append("methods.col_utilities")
 
     try:
-        from methods.col_validation import COLValidator
+        from apps.methods.col_validation import COLValidator
         img_debugger.debug("✅ COL validator available")
     except ImportError:
         missing_components.append("methods.col_validation")
 
     try:
-        from methods.col_operations import extract_col_from_img_entry
+        from apps.methods.col_operations import extract_col_from_img_entry
         img_debugger.debug("✅ COL operations methods available")
     except ImportError:
         missing_components.append("methods.col_operations")

@@ -20,7 +20,7 @@ from PyQt6.QtGui import QFont
 
 # IMG_Editor core integration support
 try:
-    from components.img_integration import IMGArchive, IMGEntry
+    from apps.components.img_integration import IMGArchive, IMGEntry
     IMG_INTEGRATION_AVAILABLE = True
 except ImportError:
     IMG_INTEGRATION_AVAILABLE = False
@@ -353,7 +353,7 @@ def _rename_with_img_core(main_window, file_object, entry, new_name: str) -> boo
             archive = _convert_to_img_archive(file_object, main_window)
             if archive and hasattr(archive, 'entries'):
                 # Use IMG_Editor core rename
-                from components.img_integration import Entries_and_Selection
+                from apps.components.img_integration import Entries_and_Selection
                 success = Entries_and_Selection.rename_entry(archive, entry, new_name)
                 
                 if success and hasattr(main_window, 'log_message'):

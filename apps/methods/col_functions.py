@@ -179,7 +179,7 @@ def add_col_tools_menu(main_window): #vers 1
         col_menu.addSeparator()
         
         # Batch operations
-        from methods.col_utilities import open_col_batch_processor, analyze_col_file_dialog
+        from apps.methods.col_utilities import open_col_batch_processor, analyze_col_file_dialog
         
         batch_process_action = QAction("⚙️ Batch Processor", main_window)
         batch_process_action.triggered.connect(lambda: open_col_batch_processor(main_window))
@@ -220,7 +220,7 @@ def open_col_file_dialog(main_window): #vers 4
 
         if file_path:
             # Use the COL loading system
-            from methods.col_parsing_functions import load_col_file_safely
+            from apps.methods.col_parsing_functions import load_col_file_safely
             success = load_col_file_safely(main_window, file_path)
 
             if success:
@@ -271,7 +271,7 @@ def open_col_editor(main_window): #vers 1
     try:
         col_debug_log(main_window, "Opening COL editor", 'COL_EDITOR')
         
-        from methods.col_utilities import open_col_editor
+        from apps.methods.col_utilities import open_col_editor
         open_col_editor(main_window)
         
     except Exception as e:
@@ -294,7 +294,7 @@ def import_col_to_current_img(main_window): #vers 2
                 col_data = f.read()
 
             # Validate it's a COL file
-            from components.col_integration_main import detect_col_version_from_data
+            from apps.components.col_integration_main import detect_col_version_from_data
             analysis = detect_col_version_from_data(col_data)
             if not analysis:
                 QMessageBox.warning(main_window, "Invalid File", "Selected file is not a valid COL file")
@@ -374,7 +374,7 @@ def edit_col_from_img_entry(main_window, row): #vers 3
                 entry = entries[row]
 
                 # Use the function from col_integration_main
-                from components.col_integration_main import edit_col_from_img_entry
+                from apps.components.col_integration_main import edit_col_from_img_entry
                 edit_col_from_img_entry(main_window, row)
                 return True
 
@@ -397,7 +397,7 @@ def analyze_col_from_img_entry(main_window, row): #vers 1
                 entry = entries[row]
 
                 # Use the function from col_integration_main
-                from components.col_integration_main import analyze_col_from_img_entry
+                from apps.components.col_integration_main import analyze_col_from_img_entry
                 analyze_col_from_img_entry(main_window, row)
                 return True
 
@@ -415,7 +415,7 @@ def setup_threaded_col_loading(main_window): #vers 1
     try:
         col_debug_log(main_window, "Setting up threaded COL loading", 'COL_THREADING')
         
-        from components.col_loader import COLBackgroundLoader
+        from apps.components.col_loader import COLBackgroundLoader
         
         # Create background loader
         col_loader = COLBackgroundLoader()
@@ -483,7 +483,7 @@ def setup_complete_col_integration(main_window): #vers 1
         # Check settings for initial debug state
         try:
             if hasattr(main_window, 'app_settings') and hasattr(main_window.app_settings, 'debug_enabled'):
-                from debug.col_debug_functions import set_col_debug_enabled
+                from apps.debug.col_debug_functions import set_col_debug_enabled
                 set_col_debug_enabled(main_window.app_settings.debug_enabled)
         except:
             pass

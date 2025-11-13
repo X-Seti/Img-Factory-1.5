@@ -110,7 +110,7 @@ def load_col_file_safely(main_window, file_path): #vers 6
 
         # Import our complete COL classes
         try:
-            from methods.col_core_classes import COLFile
+            from apps.methods.col_core_classes import COLFile
             img_debugger.debug("COL classes imported successfully")
         except ImportError as e:
             error_msg = f"Failed to import COL classes: {str(e)}"
@@ -192,7 +192,7 @@ def load_col_file_safely(main_window, file_path): #vers 6
 def _update_col_info_bar_enhanced(main_window, col_file, file_path): #vers 1
     """Update info bar using enhanced display manager"""
     try:
-        from components.col_display import COLDisplayManager
+        from apps.components.col_display import COLDisplayManager
 
         display_manager = COLDisplayManager(main_window)
         display_manager.update_col_info_bar(col_file, file_path)
@@ -264,7 +264,7 @@ def _setup_col_tab(main_window, file_path): #vers 1
 def _load_col_file(main_window, file_path): #vers 1
     """Load COL file object"""
     try:
-        from methods.col_core_classes import COLFile
+        from apps.methods.col_core_classes import COLFile
 
         img_debugger.debug(f"Loading COL file: {os.path.basename(file_path)}")
 

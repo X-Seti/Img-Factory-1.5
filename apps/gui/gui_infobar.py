@@ -98,7 +98,7 @@ def get_col_file_statistics(col_file, file_path: str) -> Dict[str, Any]: #vers 1
         return stats
 
 def update_col_info_bar(main_window, col_file, file_path: str) -> bool: #vers 1
-    """Basic COL info bar update - CONSOLIDATED from core/loadcol.py"""
+    """Basic COL info bar update - CONSOLIDATED from apps.core.loadcol.py"""
     try:
         col_debug_log(main_window, "Updating COL info bar (basic)", 'COL_INFOBAR')
         

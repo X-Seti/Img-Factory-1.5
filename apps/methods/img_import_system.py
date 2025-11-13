@@ -76,8 +76,8 @@ def _add_file_to_img_direct(file_object, file_path: str, main_window) -> bool: #
             
             # Try using entry operations from methods
             try:
-                from methods.img_entry_operations import add_entry_safe
-                _debug_log(main_window, "Using add_entry_safe from methods")
+                from apps.methods.img_entry_operations import add_entry_safe
+                _debug_log(main_window, "Using add_entry_safe from apps.methods.)
                 success = add_entry_safe(file_object, filename, file_data)
                 _debug_log(main_window, f"add_entry_safe returned: {success}")
                 

@@ -22,7 +22,7 @@ from apps.components.Ide_Editor.ide_editor import open_ide_editor
 #core
 from apps.core.impotr import import_files_function
 from apps.core.import_via import import_via_function
-#from core.import_via import integrate_import_via_functions
+#from apps.core.import_via import integrate_import_via_functions
 from apps.core.remove import remove_selected_function
 from apps.core.remove_via import integrate_remove_via_functions
 from apps.core.remove_via import remove_via_function as remove_via_entries_function
@@ -33,7 +33,7 @@ from apps.core.quick_export import quick_export_function
 from apps.core.clean import integrate_clean_utilities
 from apps.core.rebuild import rebuild_current_img_native
 from apps.core.rebuild_all import rebuild_all_open_tabs
-#from core.rebuild import rebuild_current_img #old function.
+#from apps.core.rebuild import rebuild_current_img #old function.
 from apps.core.dump import dump_all_function # dump_selected_function, integrate_dump_functions
 from apps.core.img_split import split_img, integrate_split_functions
 from apps.core.img_merger import merge_img_function
@@ -66,7 +66,7 @@ def edit_txd_file(main_window): #vers 3
             return
 
         # Open TXD Workshop
-        from components.Txd_Editor.txd_workshop import open_txd_workshop  # FIXED PATH
+        from apps.components.Txd_Editor.txd_workshop import open_txd_workshop  # FIXED PATH
 
         # Pass current IMG path if available
         img_path = None
@@ -658,7 +658,7 @@ class IMGFactoryGUILayout:
     def launch_txd_editor(self): #vers 3
         """Launch TXD Workshop - works with or without IMG loaded"""
         try:
-            from components.Txd_Editor.txd_workshop import open_txd_workshop
+            from apps.components.Txd_Editor.txd_workshop import open_txd_workshop
 
             # Get current IMG path if available (optional)
             img_path = None
@@ -1471,7 +1471,7 @@ class IMGFactoryGUILayout:
     def show_progress(self, value, text="Working..."): #vers 1
         """Show progress using unified progress system"""
         try:
-            from methods.progressbar_functions import show_progress as unified_show_progress
+            from apps.methods.progressbar_functions import show_progress as unified_show_progress
             unified_show_progress(self.main_window, value, text)
         except ImportError:
             # Fallback to old system if unified not available
@@ -1489,7 +1489,7 @@ class IMGFactoryGUILayout:
     def hide_progress(self): #vers 1
         """Hide progress using unified progress system"""
         try:
-            from methods.progressbar_functions import hide_progress as unified_hide_progress
+            from apps.methods.progressbar_functions import hide_progress as unified_hide_progress
             unified_hide_progress(self.main_window, "Ready")
         except ImportError:
             # Fallback to old system
@@ -1517,7 +1517,7 @@ class IMGFactoryGUILayout:
 
             # Integrate unified progress system
             try:
-                from methods.progressbar_functions import integrate_progress_system
+                from apps.methods.progressbar_functions import integrate_progress_system
                 integrate_progress_system(self.main_window)
                 self.log_message("✅ Status bar with unified progress created")
             except ImportError:

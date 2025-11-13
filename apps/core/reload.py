@@ -61,7 +61,7 @@ class ReloadThread(QThread):
     def _reload_img_file(self) -> bool:
         """Reload IMG file"""
         try:
-            from methods.img_core_classes import IMGFile
+            from apps.methods.img_core_classes import IMGFile
             
             self.progress_updated.emit(50, "Loading IMG data...")
             
@@ -84,7 +84,7 @@ class ReloadThread(QThread):
     def _reload_col_file(self) -> bool:
         """Reload COL file"""
         try:
-            from methods.col_core_classes import COLFile
+            from apps.methods.col_core_classes import COLFile
             
             self.progress_updated.emit(50, "Loading COL data...")
             
@@ -220,7 +220,7 @@ def reload_img_file(main_window, file_path: str) -> bool:
             main_window.current_img.close()
         
         # Load the file
-        from methods.img_core_classes import IMGFile
+        from apps.methods.img_core_classes import IMGFile
         new_img = IMGFile(file_path)
         
         if new_img.open():
@@ -258,7 +258,7 @@ def reload_col_file(main_window, file_path: str) -> bool:
             main_window.current_col.close()
         
         # Load the file
-        from methods.col_core_classes import COLFile
+        from apps.methods.col_core_classes import COLFile
         new_col = COLFile(file_path)
         
         if new_col.load():
@@ -308,7 +308,7 @@ def quick_reload(main_window) -> bool:
 def _update_reload_progress(main_window, progress: int, message: str):
     """Update reload progress using unified system"""
     try:
-        from methods.progressbar_functions import update_progress
+        from apps.methods.progressbar_functions import update_progress
         update_progress(main_window, progress, message)
         main_window.log_message(f"🔄 {message}")
     except ImportError:
@@ -322,7 +322,7 @@ def _handle_tab_reload_completion(main_window, success: bool, message: str, file
     """Handle reload completion with tab system updates"""
     try:
         # Hide progress using unified system
-        from methods.progressbar_functions import hide_progress
+        from apps.methods.progressbar_functions import hide_progress
         if success:
             hide_progress(main_window, "Reload complete")
         else:

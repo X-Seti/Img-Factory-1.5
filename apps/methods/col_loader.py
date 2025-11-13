@@ -41,7 +41,7 @@ def load_col_file_safely(main_window, file_path: str) -> bool: #vers 8
         img_debugger.debug(f"Loading COL: {os.path.basename(file_path)}")
 
         # Use threaded loader for better UX
-        #from components.col_loader import load_col_file_threaded
+        #from apps.components.col_loader import load_col_file_threaded
         loader = load_col_file_threaded(main_window, file_path)
 
         # Return True if loader started successfully
@@ -113,7 +113,7 @@ def setup_col_table_structure(main_window) -> bool: #vers 8
     try:
         # Try to use methods version first
         try:
-            from methods.populate_col_table import setup_col_table_structure as methods_setup_structure
+            from apps.methods.populate_col_table import setup_col_table_structure as methods_setup_structure
             return methods_setup_structure(main_window)
         except ImportError:
             img_debugger.warning("methods.populate_col_table not available, using fallback")
@@ -152,7 +152,7 @@ def populate_col_table(main_window, col_file: Any) -> bool: #vers 8
     try:
         # Try to use methods version first
         try:
-            from methods.populate_col_table import populate_table_with_col_data_debug
+            from apps.methods.populate_col_table import populate_table_with_col_data_debug
             return populate_table_with_col_data_debug(main_window, col_file)
         except ImportError:
             img_debugger.warning("methods.populate_col_table not available, using fallback")

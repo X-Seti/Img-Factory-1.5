@@ -1,10 +1,10 @@
 #this belongs in core/compression.py - Version: 1
 # X-Seti - August27 2025 - IMG Factory 1.5 - Compression Functions
-# Moved from components/img_compression.py + added from img_manager.py
+# Moved from apps.components.img_compression.py + added from img_manager.py
 
 """
 IMG Compression System - Complete compression analysis and processing
-Consolidated from components/img_compression.py with added analysis functions
+Consolidated from apps.components.img_compression.py with added analysis functions
 """
 
 import os

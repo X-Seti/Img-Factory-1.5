@@ -824,7 +824,7 @@ class SplitThread(QThread):
     def _create_version1_img(self, img_path: str, img_name: str, files: List) -> bool: #vers 3
         """Create Version 1 IMG with proper entry detection - FIXED"""
         try:
-            from methods.detect_file_type_and_version import create_enhanced_entry
+            from apps.methods.detect_file_type_and_version import create_enhanced_entry
             
             dir_path = img_path.replace('.img', '.dir')
             
@@ -901,7 +901,7 @@ class SplitThread(QThread):
     def _create_version2_img(self, img_path: str, files: List) -> bool: #vers 3
         """Create Version 2 IMG with proper entry detection - FIXED"""
         try:
-            from methods.detect_file_type_and_version import create_enhanced_entry
+            from apps.methods.detect_file_type_and_version import create_enhanced_entry
             
             entry_count = len(files)
             

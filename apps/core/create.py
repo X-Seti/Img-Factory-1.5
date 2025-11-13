@@ -289,7 +289,7 @@ def show_creation_dialog(parent=None) -> Optional[str]: #vers 1
 
 # In open.py and create.py, use tab_functions directly:
 def _load_img_file(main_window, file_path):
-    from methods.tab_functions import create_tab
+    from apps.methods.tab_functions import create_tab
     tab_index = create_tab(main_window, file_path, 'IMG', None)
 
 def create_new_img(self): #vers 5

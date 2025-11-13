@@ -35,7 +35,7 @@ except ImportError:
 
 try:
     # Try main app path first
-    from components.Txd_Editor.depends.txd_versions import (
+    from apps.components.Txd_Editor.depends.txd_versions import (
         detect_txd_version, get_platform_name, get_game_from_version,
         get_version_capabilities, get_platform_capabilities,
         is_mipmap_supported, is_bumpmap_supported,
@@ -51,7 +51,7 @@ except ImportError:
     )
 
 try:
-    from components.Txd_Editor.depends.txd_versions import (
+    from apps.components.Txd_Editor.depends.txd_versions import (
         detect_txd_version,
         get_version_string,
         get_platform_name,
@@ -6186,7 +6186,7 @@ class TXDWorkshop(QWidget): #vers 3
             if self.main_window and hasattr(self.main_window, 'current_img'):
                 self.current_img = self.main_window.current_img
             else:
-                from methods.img_core_classes import IMGFile
+                from apps.methods.img_core_classes import IMGFile
                 self.current_img = IMGFile(img_path)
                 self.current_img.open()
 
@@ -7539,7 +7539,7 @@ class TXDWorkshop(QWidget): #vers 3
                 struct.pack_into('<I', original_header, 4, target_version)
 
                 if self.main_window and hasattr(self.main_window, 'log_message'):
-                    from methods.txd_versions import get_version_string
+                    from apps.methods.txd_versions import get_version_string
                     self.main_window.log_message(
                         f"Converting to {get_version_string(target_version, target_device)}"
                     )
@@ -7572,7 +7572,7 @@ class TXDWorkshop(QWidget): #vers 3
 
                 # Try methods folder first (docked/IMG Factory)
                 try:
-                    from methods.txd_serializer import serialize_txd_file
+                    from apps.methods.txd_serializer import serialize_txd_file
                     return serialize_txd_file(self.texture_list, target_version, target_device)
                 except ImportError:
                     # Fallback to depends folder (standalone)
@@ -8297,8 +8297,8 @@ class TXDWorkshop(QWidget): #vers 3
             update_progress(10)
 
             try:
-                from methods.txd_serializer import TXDSerializer
-                log("Loaded serializer from methods/txd_serializer.py")
+                from apps.methods.txd_serializer import TXDSerializer
+                log("Loaded serializer from apps.methods.txd_serializer.py")
             except ImportError:
                 from depends.txd_serializer import TXDSerializer
                 log("Loaded serializer from depends/txd_serializer.py (fallback)")
@@ -9030,7 +9030,7 @@ class TXDWorkshop(QWidget): #vers 3
 
             # Try to use serializer
             try:
-                from methods.txd_serializer import TXDSerializer
+                from apps.methods.txd_serializer import TXDSerializer
             except ImportError:
                 from depends.txd_serializer import TXDSerializer
 
@@ -9099,7 +9099,7 @@ class TXDWorkshop(QWidget): #vers 3
             print("DEBUG: Attempting to use serializer...")
 
             try:
-                from methods.txd_serializer import serialize_txd_file
+                from apps.methods.txd_serializer import serialize_txd_file
                 print("DEBUG: Using methods/txd_serializer")
             except ImportError:
                 print("DEBUG: methods/txd_serializer not found, trying depends/")
@@ -9235,7 +9235,7 @@ class TXDWorkshop(QWidget): #vers 3
 
     def _get_target_version(self): #vers 1
         """Get target RenderWare version based on export settings"""
-        from methods.txd_versions import get_recommended_version_for_game
+        from apps.methods.txd_versions import get_recommended_version_for_game
 
         # Map game setting to game name
         game_map = {
@@ -11308,7 +11308,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         if missing:
             print(f"Warning: Missing modules in depends/: {', '.join(missing)}")
-            print(f"Copy these from methods/ to: {depends_dir}")
+            print(f"Copy these from apps.methods. to: {depends_dir}")
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f" Missing import modules: {', '.join(missing)}")
@@ -11323,7 +11323,7 @@ class TXDWorkshop(QWidget): #vers 3
 
         # Check indexed format support
         try:
-            from methods.indexed_color_import import is_indexed_format
+            from apps.methods.indexed_color_import import is_indexed_format
             formats.append("✓ 8-bit BMP, PCX, GIF")
         except ImportError:
             formats.append("✗ 8-bit indexed formats (missing module)")
@@ -11331,7 +11331,7 @@ class TXDWorkshop(QWidget): #vers 3
         # Check IFF support
         if self.iff_import_enabled:
             try:
-                from methods.iff_import import is_iff_file
+                from apps.methods.iff_import import is_iff_file
                 formats.append("✓ IFF/ILBM (Amiga)")
             except ImportError:
                 formats.append("✗ IFF format (missing module)")

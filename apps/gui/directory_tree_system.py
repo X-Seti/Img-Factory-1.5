@@ -662,7 +662,7 @@ def create_directory_tree_widget(main_window): #vers 3
     """Create comprehensive file browser widget for main window"""
     try:
         # Import the new comprehensive file browser
-        from core.file_dirtree_browser import create_file_browser_widget
+        from apps.core.file_dirtree_browser import create_file_browser_widget
         
         # Create the comprehensive file browser instead of simple tree
         browser_widget = create_file_browser_widget(main_window)

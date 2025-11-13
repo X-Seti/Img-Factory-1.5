@@ -3,7 +3,7 @@
 
 """
 IMG Factory Open Functions - Now supports IMG, COL, and TXD files
-Uses unified tab system from methods/tab_system.py
+Uses unified tab system from apps.methods.tab_system.py
 """
 
 import os

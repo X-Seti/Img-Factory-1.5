@@ -99,7 +99,7 @@ def setup_img_debug_system_integration(main_window): #vers 1
 def install_search_manager(main_window): #vers 1
     """Install search manager - simplified approach"""
     try:
-        # Try to install from core search system
+        # Try to install from apps.core.search system
         from apps.core.guisearch import install_search_system
         
         success = install_search_system(main_window)
@@ -175,7 +175,7 @@ def setup_debug_convenience_methods(main_window): #vers 1
             """Show debug information"""
             try:
                 from apps.debug.img_debug_functions import img_debugger
-                from debug.col_debug_functions import is_col_debug_enabled
+                from apps.debug.col_debug_functions import is_col_debug_enabled
                 
                 info = f"IMG Debug: {'Enabled' if img_debugger.debug_enabled else 'Disabled'}\n"
                 info += f"COL Debug: {'Enabled' if is_col_debug_enabled() else 'Disabled'}\n"
@@ -287,7 +287,7 @@ def add_status_indicators(main_window): #vers 1
             """Update debug status display"""
             try:
                 from apps.debug.img_debug_functions import img_debugger
-                from debug.col_debug_functions import is_col_debug_enabled
+                from apps.debug.col_debug_functions import is_col_debug_enabled
                 
                 img_debug = img_debugger.debug_enabled
                 col_debug = is_col_debug_enabled()

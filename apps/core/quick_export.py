@@ -44,7 +44,7 @@ def quick_export_function(main_window): #vers 4
                 return
             
             # Get selected COL models
-            from core.export import get_selected_col_models
+            from apps.core.export import get_selected_col_models
             selected_entries = get_selected_col_models(main_window)
             if not selected_entries:
                 QMessageBox.warning(main_window, "Nothing Selected", 
@@ -192,7 +192,7 @@ def _start_quick_col_export(main_window, col_entries, assists_folder, export_opt
                 progress_dialog.setLabelText(f"Exporting {model_name}...")
                 
                 # Create individual COL file for this model
-                from core.export import _create_single_model_col_file
+                from apps.core.export import _create_single_model_col_file
                 if _create_single_model_col_file(col_entry, output_path):
                     exported_count += 1
                 else:

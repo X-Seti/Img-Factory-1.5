@@ -178,7 +178,7 @@ class COLDisplayManager: #vers 1
         try:
             # Try using the centralized COL parser first
             try:
-                from methods.col_parsing_functions import get_model_collision_stats, format_model_collision_types
+                from apps.methods.col_parsing_functions import get_model_collision_stats, format_model_collision_types
                 
                 # Get stats from centralized parser with debug
                 stats = get_model_collision_stats(col_file.file_path, model_index, debug=True)

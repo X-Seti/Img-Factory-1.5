@@ -163,7 +163,7 @@ def load_txd_file_in_new_tab(main_window, file_path: str) -> bool: #vers 1
             return False
         
         # STEP 2: Open TXD Workshop for this file
-        from components.Txd_Editor.txd_workshop import open_txd_workshop
+        from apps.components.Txd_Editor.txd_workshop import open_txd_workshop
         
         workshop = open_txd_workshop(main_window, file_path)
         

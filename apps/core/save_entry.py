@@ -44,7 +44,7 @@ def _perform_rebuild_with_rw_analysis(img_file, main_window): #vers 1
         main_window.log_message("Starting rebuild with RW analysis...")
 
     # Import working rebuild from core
-    from core.rebuild import rebuild_current_img_native
+    from apps.core.rebuild import rebuild_current_img_native
     success = rebuild_current_img_native(main_window)
 
     if success:

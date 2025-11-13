@@ -550,7 +550,7 @@ class IMGFile:
 
             if version == IMGVersion.VERSION_1:
                 # Use Version 1 creator
-                from core.img_version1 import IMGVersion1Creator
+                from apps.core.img_version1 import IMGVersion1Creator
                 creator = IMGVersion1Creator()
                 success = creator.create_version_1(output_path, initial_size_mb)
                 if success:
@@ -560,7 +560,7 @@ class IMGFile:
                 
             elif version == IMGVersion.VERSION_2:
                 # Use Version 2 creator
-                from core.img_version2 import IMGVersion2Creator
+                from apps.core.img_version2 import IMGVersion2Creator
                 creator = IMGVersion2Creator()
                 success = creator.create_version_2(output_path, initial_size_mb, compression_enabled)
                 if success:
@@ -861,7 +861,7 @@ class IMGFile:
                     print(f"[DEBUG] save_img_file() returned: {success}")
                 else:
                     print(f"[DEBUG] save_img_file method not found, trying backup save...")
-                    from core.save_img_entry import save_img_file_with_backup
+                    from apps.core.save_img_entry import save_img_file_with_backup
                     success = save_img_file_with_backup(self)
                     print(f"[DEBUG] save_img_file_with_backup() returned: {success}")
 

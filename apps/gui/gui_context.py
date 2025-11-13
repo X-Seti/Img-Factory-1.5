@@ -72,7 +72,7 @@ def edit_col_from_img_entry(main_window, row): #vers 2
         main_window.log_message(f"🔧 Opening COL editor for: {entry.name}")
         
         # Use methods from col_operations
-        from methods.col_operations import extract_col_from_img_entry, create_temporary_col_file, cleanup_temporary_file
+        from apps.methods.col_operations import extract_col_from_img_entry, create_temporary_col_file, cleanup_temporary_file
         
         # Extract COL data
         extraction_result = extract_col_from_img_entry(main_window, row)
@@ -90,7 +90,7 @@ def edit_col_from_img_entry(main_window, row): #vers 2
         
         try:
             # Import and open COL editor
-            from components.Col_Editor.col_editor import COLEditorDialog
+            from apps.components.Col_Editor.col_editor import COLEditorDialog
             editor = COLEditorDialog(main_window)
             
             # Load the temporary COL file
@@ -128,7 +128,7 @@ def view_col_collision(main_window, row): #vers 2
         main_window.log_message(f"🔍 Viewing COL collision for: {entry.name}")
         
         # Use methods from col_operations
-        from methods.col_operations import extract_col_from_img_entry, get_col_basic_info
+        from apps.methods.col_operations import extract_col_from_img_entry, get_col_basic_info
         
         # Extract COL data
         extraction_result = extract_col_from_img_entry(main_window, row)
@@ -178,7 +178,7 @@ def analyze_col_from_img_entry(main_window, row): #vers 2
         main_window.log_message(f"🔍 Analyzing COL file: {entry.name}")
         
         # Use methods from col_operations
-        from methods.col_operations import extract_col_from_img_entry, validate_col_data, create_temporary_col_file, cleanup_temporary_file, get_col_detailed_analysis
+        from apps.methods.col_operations import extract_col_from_img_entry, validate_col_data, create_temporary_col_file, cleanup_temporary_file, get_col_detailed_analysis
         
         # Extract COL data
         extraction_result = extract_col_from_img_entry(main_window, row)
@@ -232,7 +232,7 @@ def open_col_editor_dialog(main_window): #vers 3
     """Open COL editor - WORKING VERSION"""
     try:
         # Try to import and open COL editor
-        from components.Col_Editor.col_editor import COLEditorDialog
+        from apps.components.Col_Editor.col_editor import COLEditorDialog
         
         main_window.log_message("🔧 Opening COL editor...")
         editor = COLEditorDialog(main_window)
@@ -257,7 +257,7 @@ def open_col_batch_proc_dialog(main_window): #vers 3
     """Open COL batch processor - WORKING VERSION"""
     try:
         # Try to import and open batch processor
-        from methods.col_utilities import COLBatchProcessor
+        from apps.methods.col_utilities import COLBatchProcessor
         
         main_window.log_message("⚙️ Opening COL batch processor...")
         processor = COLBatchProcessor(main_window)
@@ -301,12 +301,12 @@ def open_col_file_dialog(main_window): #vers 3
             else:
                 # Try to load using COL parsing functions
                 try:
-                    from methods.populate_col_table import load_col_file_safely
+                    from apps.methods.populate_col_table import load_col_file_safely
                     return load_col_file_safely(main_window, file_path)
                 except ImportError:
                     # Fallback: open in COL editor
                     try:
-                        from components.Col_Editor.col_editor import open_col_editor
+                        from apps.components.Col_Editor.col_editor import open_col_editor
                         editor = open_col_editor(main_window, file_path)
                         return editor is not None
                     except ImportError:
@@ -335,7 +335,7 @@ def analyze_col_file_dialog(main_window): #vers 3
             main_window.log_message(f"🔍 Analyzing COL file: {os.path.basename(file_path)}")
             
             try:
-                from methods.col_operations import get_col_detailed_analysis, validate_col_data
+                from apps.methods.col_operations import get_col_detailed_analysis, validate_col_data
                 
                 # Read file data
                 with open(file_path, 'rb') as f:

@@ -41,7 +41,7 @@ def extract_single_col_model(col_file, model_index: int) -> Optional[Any]: #vers
 
         # Import COL classes
         try:
-            from methods.col_core_classes import COLFile
+            from apps.methods.col_core_classes import COLFile
         except ImportError:
             return None
 
@@ -82,7 +82,7 @@ def extract_selected_col_models(col_file, model_indices: List[int]) -> Optional[
 
         # Import COL classes
         try:
-            from methods.col_core_classes import COLFile
+            from apps.methods.col_core_classes import COLFile
         except ImportError:
             return None
 
@@ -121,7 +121,7 @@ def _copy_col_model(source_model) -> Optional[Any]: #vers 1
     try:
         # Import COL classes
         try:
-            from methods.col_core_classes import COLModel, COLVersion
+            from apps.methods.col_core_classes import COLModel, COLVersion
         except ImportError:
             return None
 
@@ -168,7 +168,7 @@ def _copy_bounding_box(source_bbox) -> Optional[Any]: #vers 1
         New bounding box object or None
     """
     try:
-        from methods.col_core_classes import BoundingBox, Vector3
+        from apps.methods.col_core_classes import BoundingBox, Vector3
 
         new_bbox = BoundingBox()
         new_bbox.center = Vector3(source_bbox.center.x, source_bbox.center.y, source_bbox.center.z)

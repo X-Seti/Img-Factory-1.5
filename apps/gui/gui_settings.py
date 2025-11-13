@@ -1384,7 +1384,7 @@ class GUISettingsDialog(QDialog):
         """Complete integration of color settings into main window"""
         try:
             # First integrate the color UI system
-            from methods.colour_ui_for_loaded_img import integrate_color_ui_system
+            from apps.methods.colour_ui_for_loaded_img import integrate_color_ui_system
             integrate_color_ui_system(main_window)
 
             # Create or update settings menu

@@ -21,7 +21,7 @@ from PyQt6.QtGui import QFont
 
 # IMG_Editor core integration support
 try:
-    from components.img_integration import IMGArchive, IMG_Operations
+    from apps.components.img_integration import IMGArchive, IMG_Operations
     IMG_INTEGRATION_AVAILABLE = True
 except ImportError:
     IMG_INTEGRATION_AVAILABLE = False

@@ -1176,7 +1176,7 @@ class IMGFactory(QMainWindow):
                 file_name = os.path.basename(self.current_col.file_path)
                 self.setWindowTitle(f"IMG Factory 1.5 - {file_name}")
 
-            # Use proper COL table population from methods/
+            # Use proper COL table population from apps.methods.
             if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
                 try:
                     # Import the proper COL table functions
@@ -1779,7 +1779,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"Error opening file dialog: {str(e)}")
 
     def open_file_dialog(self): #vers 1
-        """Unified file dialog - imported from core"""
+        """Unified file dialog - imported from apps.core."""
         from apps.core.open_img import open_file_dialog
         return open_file_dialog(self)
 

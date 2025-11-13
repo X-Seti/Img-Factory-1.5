@@ -429,7 +429,7 @@ def get_theme_highlight_colors(): #vers 1
         # Replace this with your actual theme system calls
 
         # Example integration:
-        # from core.theme_integration import get_current_theme_colors
+        # from apps.core.theme_integration import get_current_theme_colors
         # theme_colors = get_current_theme_colors()
         # return theme_colors.get('accent_secondary', '#90EE90')
 
@@ -656,7 +656,7 @@ def enable_import_highlighting(main_window): #vers 1
     """Enable import highlighting for the IMG table - MAIN INTEGRATION FUNCTION"""
     try:
         # First create the highlighting system
-        from methods.import_highlight_system import integrate_import_highlighting
+        from apps.methods.import_highlight_system import integrate_import_highlighting
         integrate_import_highlighting(main_window)
 
         # Then integrate with the table populator

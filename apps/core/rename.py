@@ -18,7 +18,7 @@ from PyQt6.QtGui import QFont
 
 # IMG_Editor core integration support
 try:
-    from components.img_integration import IMGArchive, IMGEntry
+    from apps.components.img_integration import IMGArchive, IMGEntry
     IMG_INTEGRATION_AVAILABLE = True
 except ImportError:
     IMG_INTEGRATION_AVAILABLE = False
@@ -512,7 +512,7 @@ def _convert_to_img_archive(file_object, main_window):
             return None
         
         # Create and load IMG_Editor archive
-        from components.img_integration import IMGArchive
+        from apps.components.img_integration import IMGArchive
         archive = IMGArchive()
         if archive.load_from_file(file_path):
             return archive

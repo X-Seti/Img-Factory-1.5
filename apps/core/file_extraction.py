@@ -89,7 +89,7 @@ def analyze_col_from_table(main_window, row: int): #vers 15
                 entry = main_window.current_img.entries[row]
                 if entry.name.lower().endswith('.col'):
                     # Use existing COL integration
-                    from components.col_integration import analyze_col_from_img_entry
+                    from apps.components.col_integration import analyze_col_from_img_entry
                     analyze_col_from_img_entry(main_window, row)
                 else:
                     QMessageBox.warning(main_window, "Not a COL File", "Selected file is not a COL file.")
@@ -105,7 +105,7 @@ def edit_col_from_table(main_window, row: int): #vers 22
                 entry = main_window.current_img.entries[row]
                 if entry.name.lower().endswith('.col'):
                     # Use existing COL integration
-                    from components.col_integration import edit_col_from_img_entry
+                    from apps.components.col_integration import edit_col_from_img_entry
                     edit_col_from_img_entry(main_window, row)
                 else:
                     QMessageBox.warning(main_window, "Not a COL File", "Selected file is not a COL file.")
@@ -163,7 +163,7 @@ def get_selected_entries_for_extraction(main_window) -> List: #vers 2
 def integrate_extraction_system(main_window): #vers 3
     """Integrate file extraction system into main window"""
     try:
-        from core.file_type_filter import (
+        from apps.core.file_type_filter import (
             integrate_file_filtering, show_extraction_dialog,
             update_filter_statistics
         )
@@ -262,7 +262,7 @@ def setup_complete_extraction_integration(main_window): #vers 25
     """Complete integration of extraction system"""
     try:
         # Integrate GTA file editors first
-        from components.File_Editor.gta_file_editors import integrate_gta_file_editors
+        from apps.components.File_Editor.gta_file_editors import integrate_gta_file_editors
         integrate_gta_file_editors(main_window)
         
         # Integrate extraction system
@@ -282,7 +282,7 @@ def setup_complete_extraction_integration(main_window): #vers 25
 def setup_extraction_methods(main_window): #vers 7
     """Add extraction methods to main window"""
     try:
-        from core.file_type_filter import show_extraction_dialog, update_filter_statistics
+        from apps.core.file_type_filter import show_extraction_dialog, update_filter_statistics
 
         def extract_selected_files():
             """Extract currently selected files"""

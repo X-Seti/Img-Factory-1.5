@@ -4,7 +4,7 @@
 
 """
 COL GUI Integration - Complete integration of COL functionality into IMG Factory GUI
-Moved from components/col_tabs_functions.py to match IMG pattern
+Moved from apps.components.col_tabs_functions.py to match IMG pattern
 Uses IMG debug system throughout
 """
 
@@ -110,7 +110,7 @@ class COLToolsButtonGroup(QWidget):
         pass
 
 def setup_col_tab_for_file(main_window, file_path: str) -> Optional[int]: #vers 1
-    """Setup or reuse tab for COL file - MOVED from components/col_tabs_functions.py"""
+    """Setup or reuse tab for COL file - MOVED from apps.components.col_tabs_functions.py"""
     try:
         col_debug_log(main_window, f"Setting up COL tab for: {file_path}", 'COL_TABS')
         
@@ -155,7 +155,7 @@ def setup_col_tab_for_file(main_window, file_path: str) -> Optional[int]: #vers 
         return None
 
 def setup_col_table_structure(main_window): #vers 1
-    """Setup table structure for COL data display - MOVED from components"""
+    """Setup table structure for COL data display - MOVED from apps.components.""
     try:
         col_debug_log(main_window, "Setting up COL table structure", 'COL_TABLE')
         

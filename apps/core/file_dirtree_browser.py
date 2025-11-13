@@ -1701,7 +1701,7 @@ class FileBrowserWidget(QWidget):
             
             # Use IMG Factory text editor for supported files
             if file_ext in ['.ide', '.ipl', '.dat', '.cfg', '.txt', '.log']:
-                from core.notepad import open_text_file_in_editor
+                from apps.core.notepad import open_text_file_in_editor
                 main_window = self.get_main_window()
                 editor = open_text_file_in_editor(file_path, main_window)
                 if editor:
@@ -1724,7 +1724,7 @@ class FileBrowserWidget(QWidget):
     def open_in_notepad(self, file_path): #vers 2
         """Open file in IMG Factory text editor"""
         try:
-            from core.notepad import open_text_file_in_editor
+            from apps.core.notepad import open_text_file_in_editor
             main_window = self.get_main_window()
             editor = open_text_file_in_editor(file_path, main_window)
             if editor:

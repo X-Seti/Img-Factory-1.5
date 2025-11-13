@@ -81,7 +81,7 @@ def add_entry_safe(img_file, filename: str, data: bytes, auto_save: bool = False
                 # Fallback: create entry manually
                 try:
                     # Import IMG classes
-                    from methods.img_core_classes import IMGEntry
+                    from apps.methods.img_core_classes import IMGEntry
                     
                     new_entry = IMGEntry()
                     new_entry.name = filename

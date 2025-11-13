@@ -21,7 +21,7 @@ from PyQt6.QtGui import QFont
 
 # IMG_Editor core integration support
 try:
-    from components.img_integration import IMGArchive, IMGEntry, Import_Export
+    from apps.components.img_integration import IMGArchive, IMGEntry, Import_Export
     IMG_INTEGRATION_AVAILABLE = True
 except ImportError:
     IMG_INTEGRATION_AVAILABLE = False
@@ -434,7 +434,7 @@ def _replace_with_img_core(main_window, file_object, entry, replacement_file: st
                     new_data = f.read()
                 
                 # Use IMG_Editor core replace
-                from components.img_integration import Entries_and_Selection
+                from apps.components.img_integration import Entries_and_Selection
                 success = Entries_and_Selection.replace_entry(archive, entry, new_data)
                 
                 if success:
@@ -521,7 +521,7 @@ def _backup_original_entry(main_window, file_object, entry) -> bool: #vers 1
             # Use IMG_Editor core to extract
             archive = _convert_to_img_archive(file_object, main_window)
             if archive:
-                from components.img_integration import Import_Export
+                from apps.components.img_integration import Import_Export
                 success = Import_Export.export_entry(archive, entry, str(backup_path))
                 if not success:
                     return False

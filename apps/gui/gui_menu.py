@@ -451,7 +451,7 @@ class COLMenuBuilder:
     def _open_col_editor(parent_window):
         """Open COL editor"""
         try:
-            from components.Col_Editor.col_editor import open_col_editor
+            from apps.components.Col_Editor.col_editor import open_col_editor
             open_col_editor(parent_window)
         except ImportError:
             QMessageBox.warning(parent_window, "COL Editor", "COL Editor components not found")
@@ -484,7 +484,7 @@ class COLMenuBuilder:
     def _open_batch_processor(parent_window):
         """Open batch processor"""
         try:
-            from methods.col_utilities import open_col_batch_processor
+            from apps.methods.col_utilities import open_col_batch_processor
             open_col_batch_processor(parent_window)
         except ImportError:
             QMessageBox.warning(parent_window, "COL Tools", "COL batch processor not found")
@@ -495,7 +495,7 @@ class COLMenuBuilder:
     def _analyze_col(parent_window):
         """Analyze COL file"""
         try:
-            from methods.col_utilities import analyze_col_file_dialog
+            from apps.methods.col_utilities import analyze_col_file_dialog
             analyze_col_file_dialog(parent_window)
         except ImportError:
             QMessageBox.warning(parent_window, "COL Tools", "COL analyzer not found")
@@ -756,7 +756,7 @@ class IMGFactoryMenuBar:
     def _open_ide_editor(self):
         """Open IDE Editor"""
         try:
-            from components.Ide_Editor.col_editor import open_ide_editor
+            from apps.components.Ide_Editor.col_editor import open_ide_editor
             editor = open_ide_editor(self.main_window)
 
             # Connect signals for integration
@@ -1210,7 +1210,7 @@ ch export textures"""
                     self._preferences_dialog = None
 
             if hasattr(self.main_window, 'app_settings'):
-                from utils.app_settings_system import SettingsDialog
+                from apps.utils.app_settings_system import SettingsDialog
 
                 # Create new dialog
                 self._preferences_dialog = SettingsDialog(self.main_window.app_settings, self.main_window)

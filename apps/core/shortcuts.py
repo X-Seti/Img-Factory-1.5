@@ -26,7 +26,7 @@ def create_debug_keyboard_shortcuts(main_window): #vers 3
         def toggle_performance():
             """Toggle between performance and debug mode"""
             try:
-                from methods.col_core_classes import is_col_debug_enabled
+                from apps.methods.col_core_classes import is_col_debug_enabled
 
                 if is_col_debug_enabled():
                     main_window.performance_mode()
@@ -176,7 +176,7 @@ def setup_debug_shortcuts(main_window): #vers 4
         def toggle_performance():
             """Toggle between performance and debug mode"""
             try:
-                from components.col_debug_control import is_col_debug_enabled
+                from apps.components.col_debug_control import is_col_debug_enabled
 
                 if is_col_debug_enabled():
                     if hasattr(main_window, 'performance_mode'):

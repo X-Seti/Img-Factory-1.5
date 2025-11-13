@@ -36,7 +36,7 @@ def create_progress_callback(main_window, operation_name: str) -> Callable:
             
             # Update progress bar if available
             try:
-                from methods.progressbar_functions import update_progress
+                from apps.methods.progressbar_functions import update_progress
                 update_progress(main_window, percent, full_message)
             except ImportError:
                 # Fallback to basic status update

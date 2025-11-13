@@ -69,10 +69,10 @@ def _create_img_entry(filename: str, file_data: bytes, file_object) -> object: #
     try:
         # Try to import IMGEntry class
         try:
-            from methods.img_core_classes import IMGEntry
+            from apps.methods.img_core_classes import IMGEntry
         except ImportError:
             try:
-                from components.img_core_classes import IMGEntry
+                from apps.components.img_core_classes import IMGEntry
             except ImportError:
                 return None
         

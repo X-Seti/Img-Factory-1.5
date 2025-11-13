@@ -199,7 +199,7 @@ def setup_col_tab(main_window, file_path): #vers 1
 def load_col_file_object(main_window, file_path): #vers 1
     """Load COL file object"""
     try:
-        from methods.col_core_classes import COLFile
+        from apps.methods.col_core_classes import COLFile
         
         img_debugger.debug(f"Loading COL file: {os.path.basename(file_path)}")
         

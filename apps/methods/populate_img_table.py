@@ -15,7 +15,7 @@ from PyQt6.QtCore import Qt
 from apps.debug.img_debug_functions import img_debugger
 
 try:
-    from utils.img_debug_logger import img_debugger
+    from apps.utils.img_debug_logger import img_debugger
 except ImportError:
     class DummyDebugger:
         def debug(self, msg): print(f"DEBUG: {msg}")

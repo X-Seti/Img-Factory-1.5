@@ -144,7 +144,7 @@ def apply_file_window_theme(main_window, theme_name: str = "Light Pink"):
         
         # Apply theme using color_file_table method if available
         try:
-            from methods.colour_file_table import apply_pink_file_table_theme
+            from apps.methods.colour_file_table import apply_pink_file_table_theme
             apply_pink_file_table_theme(main_window, colors)
             
         except ImportError:
@@ -420,7 +420,7 @@ def update_ui_for_loaded_img(main_window): #vers 7
         if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
             try:
                 # Use the enhanced table setup
-                from methods.colour_file_table import setup_enhanced_img_table
+                from apps.methods.colour_file_table import setup_enhanced_img_table
                 setup_enhanced_img_table(main_window.gui_layout.table, main_window.current_img)
                 
                 # Apply saved theme or default
@@ -445,7 +445,7 @@ def update_ui_for_loaded_img(main_window): #vers 7
 
         # SAFE progress hiding using unified system
         try:
-            from methods.progressbar_functions import hide_progress
+            from apps.methods.progressbar_functions import hide_progress
             hide_progress(main_window, "IMG loaded")
         except ImportError:
             # Fallback: safe direct access
@@ -575,7 +575,7 @@ def integrate_color_ui_system(main_window): #vers 3
         
         # Also integrate enhanced color table system if available
         try:
-            from methods.colour_file_table import integrate_pink_file_table
+            from apps.methods.colour_file_table import integrate_pink_file_table
             integrate_pink_file_table(main_window)
         except ImportError:
             if hasattr(main_window, 'log_message'):

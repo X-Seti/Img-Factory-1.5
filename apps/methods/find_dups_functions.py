@@ -1,6 +1,6 @@
 #this belongs in methods/find_duplicates.py - Version: 1
 # X-Seti - August27 2025 - IMG Factory 1.5 - Duplicate Detection Functions
-# Moved from components/img_manager.py
+# Moved from apps.components.img_manager.py
 
 """
 Duplicate Detection Functions - Find duplicate files in IMG archives

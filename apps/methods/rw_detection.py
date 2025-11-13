@@ -4,7 +4,7 @@
 """
 RW Detection Methods - Comprehensive RenderWare version detection system
 Fixes the RW Address/Version detection issues for new entries
-Uses comprehensive RW version data from core/rw_versions.py
+Uses comprehensive RW version data from apps.core.rw_versions.py
 """
 
 import struct
@@ -42,7 +42,7 @@ def detect_rw_version_from_data(data: bytes, filename: str = "") -> Tuple[Option
         # RW version is at bytes 8-12
         version_bytes = data[8:12]
         
-        # Use comprehensive parsing from core/rw_versions.py
+        # Use comprehensive parsing from apps.core.rw_versions.py
         version_value, version_name = parse_rw_version(version_bytes)
         
         if is_valid_rw_version(version_value):
@@ -146,7 +146,7 @@ def integrate_rw_detection_working(main_window) -> bool: #vers 1
     main_window.analyze_all_entries_rw_versions_working = lambda img_file: analyze_all_entries_rw_versions_working(img_file)
     main_window.ensure_entry_has_rw_data = lambda entry, img_file=None: ensure_entry_has_rw_data(entry, img_file)
     
-    # Add RW version functions from core module
+    # Add RW version functions from apps.core.module
     main_window.get_file_type_from_name = get_file_type_from_name
     main_window.get_rw_version_name = get_rw_version_name
     main_window.is_valid_rw_version = is_valid_rw_version

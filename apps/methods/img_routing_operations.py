@@ -274,7 +274,7 @@ def install_operation_routing(main_window): #vers 1
     """Install complete IMG operation routing system"""
     try:
         # Step 1: Install shared operations
-        from methods.img_operations_shared import install_shared_img_operations
+        from apps.methods.img_operations_shared import install_shared_img_operations
         install_shared_img_operations(main_window)
         
         # Step 2: Disable broken functions

@@ -4,7 +4,7 @@
 """
 COL Core Classes - Complete with Safe Parsing
 Core COL file handling classes with complete save/load functionality
-Uses IMG debug system and safe parsing methods from methods/col_parsing_helpers.py
+Uses IMG debug system and safe parsing methods from apps.methods.col_parsing_helpers.py
 """
 
 import struct
@@ -496,9 +496,9 @@ class COLFile:
 
             img_debugger.debug(f"COL1: Model {model.name} - S:{num_spheres} B:{num_boxes} V:{num_vertices} F:{num_faces}")
 
-            # Use safe parsing methods from methods/
+            # Use safe parsing methods from apps.methods.
             try:
-                from methods.col_parsing_helpers import (
+                from apps.methods.col_parsing_helpers import (
                     safe_parse_spheres, safe_parse_boxes,
                     safe_parse_vertices, safe_parse_faces_col1
                 )
@@ -669,9 +669,9 @@ class COLFile:
             
             img_debugger.debug(f"COL2/3: Model {model.name} - S:{num_spheres} B:{num_boxes} V:{num_vertices} F:{num_faces}")
             
-            # Use safe parsing methods from methods/
+            # Use safe parsing methods from apps.methods.
             try:
-                from methods.col_parsing_helpers import (
+                from apps.methods.col_parsing_helpers import (
                     safe_parse_spheres, safe_parse_boxes, 
                     safe_parse_vertices, safe_parse_faces_col23
                 )

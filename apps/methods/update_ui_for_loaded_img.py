@@ -27,7 +27,7 @@ def update_ui_for_loaded_img(main_window): #vers 6
 
         # Populate table with IMG entries using STANDALONE method
         if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
-            # Import and use the standalone function from methods/
+            # Import and use the standalone function from apps.methods.
             from apps.methods.populate_img_table import populate_img_table
 
             # Setup IMG table structure first

@@ -85,7 +85,7 @@ Example output:
 ## API Usage
 
 ```python
-from components.col_viewer.depends.COL_Materials import get_material_name, get_material_info
+from apps.components.col_viewer.depends.COL_Materials import get_material_name, get_material_info
 
 # Get material name
 name = get_material_name(45, "SA")  # Returns "Glass"

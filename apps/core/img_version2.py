@@ -94,7 +94,7 @@ class IMGVersion2Creator:
     
     def _add_dummy_entry(self, size: int):
         """Add dummy entry to entries list"""
-        from methods.img_core_classes import IMGEntry, FileType
+        from apps.methods.img_core_classes import IMGEntry, FileType
         
         dummy_entry = IMGEntry()
         dummy_entry.name = "replaceme.dff"

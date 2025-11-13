@@ -1958,7 +1958,7 @@ class AppSettings:
 
 
     def _load_all_themes(self): #vers 2
-        """Load all theme files from themes directory - Windows compatible"""
+        """Load all theme files from apps.themes.directory - Windows compatible"""
         themes = {}
         try:
             if self.themes_dir.exists():
@@ -2322,7 +2322,7 @@ class AppSettings:
         if self.themes_dir.exists() and self.themes_dir.is_dir():
             print(f"Found themes directory")
 
-            # Load all .json files from themes directory
+            # Load all .json files from apps.themes.directory
             theme_files = list(self.themes_dir.glob("*.json"))
             print(f"Found {len(theme_files)} theme files")
 
@@ -5076,7 +5076,7 @@ class SettingsDialog(QDialog): #vers 15
         available_themes = list(self.app_settings.themes.keys())
         self.demo_theme_combo.addItems(available_themes)
         refresh_themes_btn = QPushButton("Refresh Themes")
-        refresh_themes_btn.setToolTip("Reload themes from themes/ folder")
+        refresh_themes_btn.setToolTip("Reload themes from apps.themes. folder")
         refresh_themes_btn.clicked.connect(self.refresh_themes_in_dialog)
         self.demo_theme_combo.setCurrentText(self.app_settings.current_settings["theme"])
         self.demo_theme_combo.currentTextChanged.connect(self._preview_theme_instantly)

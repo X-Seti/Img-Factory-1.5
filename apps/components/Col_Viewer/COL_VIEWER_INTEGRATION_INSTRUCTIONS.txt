@@ -19,7 +19,7 @@ STEP 1: Add import to imgfactory.py
 Location: Near top of imgfactory.py with other core imports
 
 Add this line:
-    from core.col_viewer_integration import integrate_col_viewer
+    from apps.core.col_viewer_integration import integrate_col_viewer
 
 STEP 2: Call integration function
 ----------------------------------
@@ -72,8 +72,8 @@ CONTROLS:
 
 THEME INTEGRATION:
 ------------------
-✓ Automatically uses colors from utils/app_settings_system.py
-✓ Reads theme.json files from themes/ folder
+✓ Automatically uses colors from apps.utils.app_settings_system.py
+✓ Reads theme.json files from apps.themes. folder
 ✓ Supports both light and dark themes
 ✓ Colors adapt to current theme:
   - Background: bg_primary

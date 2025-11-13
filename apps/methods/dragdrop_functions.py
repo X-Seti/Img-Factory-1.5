@@ -188,7 +188,7 @@ class DragDropHandler:
             extracted_files = []
             
             # Get current file object
-            from methods.tab_awareness import get_current_file_from_active_tab
+            from apps.methods.tab_awareness import get_current_file_from_active_tab
             file_object, file_type = get_current_file_from_active_tab(self.main_window)
             
             if file_type != 'IMG' or not file_object:

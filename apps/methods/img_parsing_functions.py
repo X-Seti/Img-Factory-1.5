@@ -8,7 +8,7 @@ from typing import List, Dict
 def integrate_img_parsing_fixes(main_window):
     """Integrate IMG parsing fixes into main window"""
     try:
-        from components.img_parsing_fixes import patch_img_entry_class, create_filename_report
+        from apps.components.img_parsing_fixes import patch_img_entry_class, create_filename_report
         
         # Apply patches
         if patch_img_entry_class():
@@ -83,7 +83,7 @@ def show_parsing_report_dialog(main_window):
             QMessageBox.information(main_window, "No IMG", "Please load an IMG file first.")
             return
         
-        from components.img_parsing_fixes import create_filename_report
+        from apps.components.img_parsing_fixes import create_filename_report
         
         # Convert entries to dict format for report
         entry_dicts = []
@@ -114,7 +114,7 @@ def validate_current_img_filenames(main_window):
             QMessageBox.information(main_window, "No IMG", "Please load an IMG file first.")
             return
         
-        from components.img_parsing_fixes import fix_vice_city_filename_parsing
+        from apps.components.img_parsing_fixes import fix_vice_city_filename_parsing
         
         fixes_applied = 0
         issues_found = []

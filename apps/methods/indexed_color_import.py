@@ -53,7 +53,7 @@ def load_indexed_image(file_path): #vers 1
         return load_tga_8bit(file_path)
     elif ext in ('lbm', 'iff', 'ilbm'):
         # Use IFF loader from iff_import.py
-        from methods.iff_import import load_iff_image
+        from apps.methods.iff_import import load_iff_image
         return load_iff_image(file_path)
     else:
         # Try PIL as fallback
