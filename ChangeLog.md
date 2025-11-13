@@ -7,7 +7,15 @@ Complete history of fixes, updates, and improvements.
 
 ---
 
-## October 2025
+**Fixed**: - November 11, 2025
+- Sussussfully moved img Factory to its new location with all the other tools.
+- ✅ moved all file paths from methods to apps.methods
+- ✅ moved all file paths from core to apps.core
+- ✅ moved all file paths from components to apps.components
+- ✅ moved all file paths from debug to apps.debug
+- ✅ Added better tab handling
+
+## October 2025 - small break. 
 
 **Fixed**: - Oct 24, 2025
 - app_settings_system updated, Theme save function repaired
