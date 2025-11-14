@@ -1,4 +1,4 @@
-#this belongs in components.Img_Creator.img_creator.py - Version: 17
+#this belongs in apps/core/creator.py - Version: 17
 # X-Seti - August27 2025 - IMG Factory 1.5 - IMG Creator Dialog UI Only
 # Credit MexUK 2007 IMG Factory 1.2
 
@@ -56,7 +56,7 @@ class NewIMGDialog(QDialog): #vers 10
         layout = QVBoxLayout(self)
         
         # Title
-        title_label = QLabel("🆕 Create New IMG Archive")
+        title_label = QLabel("ðŸ†• Create New IMG Archive")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_font = QFont()
         title_font.setPointSize(14)
@@ -287,9 +287,9 @@ def show_creation_dialog(parent=None) -> Optional[str]: #vers 1
     except Exception:
         return None
 
-# In open.py and create.py, use tab_functions directly:
+# In open.py and create.py, use tab_system directly:
 def _load_img_file(main_window, file_path):
-    from apps.methods.tab_functions import create_tab
+    from apps.methods.tab_system import create_tab
     tab_index = create_tab(main_window, file_path, 'IMG', None)
 
 def create_new_img(self): #vers 5

@@ -1,4 +1,4 @@
-#this belongs in methods/ dragdrop.py - Version: 1
+#this belongs in methods/dragdrop_functions.py - Version: 1
 # X-Seti - September04 2025 - IMG Factory 1.5 - Drag and Drop Support
 
 """
@@ -188,7 +188,7 @@ class DragDropHandler:
             extracted_files = []
             
             # Get current file object
-            from apps.methods.tab_awareness import get_current_file_from_active_tab
+            from apps.methods.tab_system import get_current_file_from_active_tab
             file_object, file_type = get_current_file_from_active_tab(self.main_window)
             
             if file_type != 'IMG' or not file_object:
@@ -314,7 +314,7 @@ class DragDropHandler:
     def _log_debug(self, message: str): #vers 1
         """Debug logging"""
         if hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(f"🎯 [DRAG-DROP] {message}")
+            self.main_window.log_message(f"ðŸŽ¯ [DRAG-DROP] {message}")
         else:
             print(f"[DRAG-DROP] {message}")
 
@@ -379,7 +379,7 @@ def setup_main_window_drag_drop(main_window) -> bool: #vers 1
         main_window.extract_entries_for_drag = lambda entries, temp_folder: handler.extract_entries_for_drag(entries, temp_folder)
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("🎯 Drag-and-drop support initialized")
+            main_window.log_message("ðŸŽ¯ Drag-and-drop support initialized")
         
         return True
         
@@ -434,17 +434,17 @@ def integrate_drag_drop_system(main_window) -> bool: #vers 1
         success = setup_main_window_drag_drop(main_window)
         
         if success and hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Complete drag-and-drop system integrated")
-            main_window.log_message("   • Files: Drag files onto IMG Factory to import")
-            main_window.log_message("   • Folders: Drag folders onto IMG Factory to import contents") 
-            main_window.log_message("   • Entries: Drag IMG entries to desktop to extract")
-            main_window.log_message("   • Cross-platform: Windows Explorer, Dolphin, Caja supported")
+            main_window.log_message("âœ… Complete drag-and-drop system integrated")
+            main_window.log_message("   â€¢ Files: Drag files onto IMG Factory to import")
+            main_window.log_message("   â€¢ Folders: Drag folders onto IMG Factory to import contents") 
+            main_window.log_message("   â€¢ Entries: Drag IMG entries to desktop to extract")
+            main_window.log_message("   â€¢ Cross-platform: Windows Explorer, Dolphin, Caja supported")
         
         return success
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Drag-drop integration failed: {str(e)}")
+            main_window.log_message(f"âŒ Drag-drop integration failed: {str(e)}")
         return False
 
 

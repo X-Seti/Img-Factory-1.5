@@ -7,6 +7,10 @@ Complete history of fixes, updates, and improvements.
 
 ---
 
+**Fixed**: - November 14, 2025
+- Sussussfully fixed the tab systen, each img, col and txd gets its own tab.
+- ✅ SVG icons integration for the img factory app.
+
 **Fixed**: - November 11, 2025
 - Sussussfully moved img Factory to its new location with all the other tools.
 - ✅ moved all file paths from methods to apps.methods

@@ -1,17 +1,16 @@
-#this belongs in methods/export_col_shared.py - Version: 8
+#this belongs in methods/export_col_shared.py - Version: 9
 # X-Seti - August16 2025 - IMG Factory 1.5 - Shared COL Export Functions
 
 """
 Shared COL Export Functions - Clean COL model extraction and export
 Used by: export, export_via, dump functions
 Provides single/combined COL file creation with proper model extraction
-FIXED: Tab switching support and robust file detection
 """
 
 import os
 import struct
 from typing import List, Dict, Any, Optional, Tuple
-from apps.methods.tab_aware_functions import validate_tab_before_operation, get_current_file_from_active_tab
+from apps.methods.tab_system import validate_tab_before_operation, get_current_file_from_active_tab
 
 ##Methods list -
 # extract_single_col_model
@@ -274,7 +273,7 @@ def save_col_models_with_options(main_window, col_entries: List[Dict[str, Any]],
         current_operation = 0
 
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🔄 Starting COL export: {total_operations} operations")
+            main_window.log_message(f"Starting COL export: {total_operations} operations")
 
         # Export single files
         if single_files:
@@ -283,7 +282,7 @@ def save_col_models_with_options(main_window, col_entries: List[Dict[str, Any]],
             os.makedirs(single_folder, exist_ok=True)
 
             if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"📁 Exporting {len(col_entries)} individual models...")
+                main_window.log_message(f"Exporting {len(col_entries)} individual models...")
 
             for i, col_entry in enumerate(col_entries):
                 try:
@@ -298,7 +297,7 @@ def save_col_models_with_options(main_window, col_entries: List[Dict[str, Any]],
                     # FIXED: Progress logging every 5 items to reduce spam
                     if i % 5 == 0 or i == len(col_entries) - 1:
                         if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"🔄 Processing {i+1}/{len(col_entries)}: {model_name}")
+                            main_window.log_message(f"Processing {i+1}/{len(col_entries)}: {model_name}")
 
                     # FIXED: Use optimized creation
                     if create_single_col_file(col_entry, output_path):
@@ -306,12 +305,12 @@ def save_col_models_with_options(main_window, col_entries: List[Dict[str, Any]],
                     else:
                         failed_count += 1
                         if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"❌ Failed: {model_name}")
+                            main_window.log_message(f"Failed: {model_name}")
 
                 except Exception as e:
                     failed_count += 1
                     if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"❌ Error creating {col_entry.get('name', 'unknown')}: {str(e)}")
+                        main_window.log_message(f"Error creating {col_entry.get('name', 'unknown')}: {str(e)}")
 
         # Export combined file
         if combined_file:
@@ -320,31 +319,31 @@ def save_col_models_with_options(main_window, col_entries: List[Dict[str, Any]],
                 combined_path = os.path.join(export_folder, combined_name)
 
                 if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"📦 Creating combined file: {combined_name}")
+                    main_window.log_message(f"Creating combined file: {combined_name}")
 
                 if create_combined_col_file(col_entries, combined_path):
                     success_count += 1
                     if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"✅ Combined file created: {combined_name}")
+                        main_window.log_message(f"Combined file created: {combined_name}")
                 else:
                     failed_count += 1
                     if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"❌ Failed to create combined file: {combined_name}")
+                        main_window.log_message(f"Failed to create combined file: {combined_name}")
 
             except Exception as e:
                 failed_count += 1
                 if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"❌ Error creating combined file: {str(e)}")
+                    main_window.log_message(f"Error creating combined file: {str(e)}")
 
         # FIXED: Final summary
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🏁 COL export complete: {success_count} success, {failed_count} failed")
+            main_window.log_message(f"COL export complete: {success_count} success, {failed_count} failed")
 
         return success_count, failed_count
 
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error in save_col_models_with_options: {str(e)}")
+            main_window.log_message(f"Error in save_col_models_with_options: {str(e)}")
         return 0, len(col_entries) if col_entries else 0
 
 
@@ -359,12 +358,12 @@ def get_col_models_from_selection(main_window) -> List[Dict[str, Any]]: #vers 4
     """
     try:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("🔍 === COL MODELS DEBUG START ===")
+            main_window.log_message(" === COL MODELS DEBUG START ===")
         
         # DEBUG: Check tab widget exists
         if not hasattr(main_window, 'main_tab_widget'):
             if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ No main_tab_widget attribute found!")
+                main_window.log_message("No main_tab_widget attribute found!")
             return []
         
         # DEBUG: Tab info
@@ -372,27 +371,27 @@ def get_col_models_from_selection(main_window) -> List[Dict[str, Any]]: #vers 4
         total_tabs = main_window.main_tab_widget.count()
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🔍 Tab info: Current={current_index}, Total={total_tabs}")
+            main_window.log_message(f"Tab info: Current={current_index}, Total={total_tabs}")
         
         if current_index == -1:
             if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ No active tab!")
+                main_window.log_message("No active tab!")
             return []
         
         # DEBUG: Get current tab widget
         current_tab = main_window.main_tab_widget.widget(current_index)
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🔍 Current tab widget: {type(current_tab).__name__ if current_tab else 'None'}")
+            main_window.log_message(f"Current tab widget: {type(current_tab).__name__ if current_tab else 'None'}")
         
         if not current_tab:
             if hasattr(main_window, 'log_message'):
-                main_window.log_message("❌ Current tab widget is None!")
+                main_window.log_message("Current tab widget is None!")
             return []
         
         # DEBUG: List ALL attributes of the tab
         if hasattr(main_window, 'log_message'):
             tab_attrs = [attr for attr in dir(current_tab) if not attr.startswith('_')]
-            main_window.log_message(f"🔍 Tab attributes: {tab_attrs[:10]}...")  # Show first 10
+            main_window.log_message(f"Tab attributes: {tab_attrs[:10]}...")  # Show first 10
         
         # DEBUG: Check for file objects
         file_object = None
@@ -431,29 +430,29 @@ def get_col_models_from_selection(main_window) -> List[Dict[str, Any]]: #vers 4
         
         # DEBUG: File detection results
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🔍 File detection: {file_source}")
-            main_window.log_message(f"🔍 File object: {type(file_object).__name__ if file_object else 'None'}")
+            main_window.log_message(f"File detection: {file_source}")
+            main_window.log_message(f"File object: {type(file_object).__name__ if file_object else 'None'}")
             
             if file_object:
                 if hasattr(file_object, 'models'):
                     model_count = len(file_object.models) if file_object.models else 0
-                    main_window.log_message(f"🔍 COL file with {model_count} models")
+                    main_window.log_message(f"COL file with {model_count} models")
                 elif hasattr(file_object, 'entries'):
                     entry_count = len(file_object.entries) if file_object.entries else 0
-                    main_window.log_message(f"🔍 IMG file with {entry_count} entries")
+                    main_window.log_message(f"IMG file with {entry_count} entries")
                 else:
-                    main_window.log_message(f"🔍 Unknown file type")
+                    main_window.log_message(f"Unknown file type")
         
         # DEBUG: Check main window references too
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🔍 main_window.current_col: {type(main_window.current_col).__name__ if main_window.current_col else 'None'}")
-            main_window.log_message(f"🔍 main_window.current_img: {type(main_window.current_img).__name__ if main_window.current_img else 'None'}")
+            main_window.log_message(f"main_window.current_col: {type(main_window.current_col).__name__ if main_window.current_col else 'None'}")
+            main_window.log_message(f"main_window.current_img: {type(main_window.current_img).__name__ if main_window.current_img else 'None'}")
         
         # If we found a COL file, process it
         if file_object and hasattr(file_object, 'models'):
             models = file_object.models
             if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"✅ Found COL file with {len(models) if models else 0} models")
+                main_window.log_message(f"Found COL file with {len(models) if models else 0} models")
             
             if models:
                 all_col_entries = []
@@ -473,23 +472,23 @@ def get_col_models_from_selection(main_window) -> List[Dict[str, Any]]: #vers 4
                         all_col_entries.append(col_entry)
                     except Exception as e:
                         if hasattr(main_window, 'log_message'):
-                            main_window.log_message(f"⚠️ Error processing model {i}: {str(e)}")
+                            main_window.log_message(f"Error processing model {i}: {str(e)}")
                 
                 if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"✅ Created {len(all_col_entries)} COL entries")
-                    main_window.log_message("🔍 === COL MODELS DEBUG END ===")
+                    main_window.log_message(f"Created {len(all_col_entries)} COL entries")
+                    main_window.log_message(" === COL MODELS DEBUG END ===")
                 return all_col_entries
         
         # If we get here, no COL file found
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("❌ No COL file found in current tab")
-            main_window.log_message("🔍 === COL MODELS DEBUG END ===")
+            main_window.log_message("No COL file found in current tab")
+            main_window.log_message(" === COL MODELS DEBUG END ===")
         return []
 
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error in get_col_models_from_selection: {str(e)}")
-            main_window.log_message("🔍 === COL MODELS DEBUG END ===")
+            main_window.log_message(f"Error in get_col_models_from_selection: {str(e)}")
+            main_window.log_message(" === COL MODELS DEBUG END ===")
         return []
 
 
@@ -516,13 +515,13 @@ def integrate_col_export_shared(main_window) -> bool: #vers 1
         main_window.export_combined_col_file = lambda entries, folder, name="combined_models.col": save_col_models_with_options(main_window, entries, folder, single_files=False, combined_file=True, combined_name=name)[0] > 0
 
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ COL export shared functions integrated")
+            main_window.log_message("COL export shared functions integrated")
 
         return True
 
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error integrating COL export shared functions: {str(e)}")
+            main_window.log_message(f"Error integrating COL export shared functions: {str(e)}")
         return False
 
 

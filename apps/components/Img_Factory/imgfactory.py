@@ -119,8 +119,7 @@ from apps.methods.img_integration import integrate_img_functions, img_core_funct
 from apps.methods.img_routing_operations import install_operation_routing
 from apps.methods.img_validation import IMGValidator
 
-from apps.methods.tab_functions import (setup_tab_system, migrate_tabs, create_tab, update_references)
-from apps.methods.tab_aware_functions import integrate_tab_awareness_system
+from apps.methods.tab_system import (setup_tab_system, migrate_tabs, create_tab, update_references, integrate_tab_system)
 from apps.methods.populate_img_table import reset_table_styling, install_img_table_populator
 from apps.methods.progressbar_functions import integrate_progress_system
 from apps.methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate_update_ui_for_loaded_img
@@ -166,7 +165,7 @@ def create_rebuild_menu(self): #vers 1
     """Create rebuild menu with mode options"""
     try:
         # Add to your existing menu bar
-        rebuild_menu = self.menuBar().addMenu("🔧 Rebuild")
+        rebuild_menu = self.menuBar().addMenu("ðŸ”§ Rebuild")
 
         # Regular rebuild (shows dialog)
         rebuild_action = QAction("Rebuild IMG...", self)
@@ -215,7 +214,7 @@ def setup_debug_mode(self): #vers 2
 
     # Add debug menu item
     if hasattr(self, 'menu_bar_system'):
-        debug_action = QAction("🐛 Debug Mode", self)
+        debug_action = QAction("ðŸ› Debug Mode", self)
         debug_action.setCheckable(True)
         debug_action.setChecked(self.debug.debug_enabled)
         debug_action.triggered.connect(self.toggle_debug_mode)
@@ -240,7 +239,7 @@ def toggle_debug_mode(self): #vers 2
     """Toggle debug mode with user feedback"""
     enabled = self.debug.toggle_debug_mode()
     status = "enabled" if enabled else "disabled"
-    self.log_message(f"🐛 Debug mode {status}")
+    self.log_message(f"ðŸ› Debug mode {status}")
 
     if enabled:
         self.log_message("Debug categories: " + ", ".join(self.debug.debug_categories))
@@ -431,7 +430,7 @@ class IMGFactory(QMainWindow):
 
         # Additional UI integrations
         add_project_menu_items(self)
-        integrate_tab_awareness_system(self)
+        integrate_tab_system(self)
         integrate_tearoff_system(self)
 
         # === PHASE 4: ESSENTIAL INTEGRATIONS (Medium) ===
@@ -642,7 +641,7 @@ class IMGFactory(QMainWindow):
                 QMessageBox.warning(self, "No IMG File", "Please open an IMG file first to analyze corruption")
                 return
 
-            self.log_message("🔍 Starting IMG corruption analysis...")
+            self.log_message("ðŸ” Starting IMG corruption analysis...")
 
             # Show corruption analysis dialog
             from apps.core.img_corruption_analyzer import show_corruption_analysis_dialog
@@ -674,7 +673,7 @@ class IMGFactory(QMainWindow):
                 QMessageBox.warning(self, "No IMG File", "Please open an IMG file first")
                 return
 
-            self.log_message("🔧 Quick fixing IMG corruption...")
+            self.log_message("ðŸ”§ Quick fixing IMG corruption...")
 
             # Analyze first
             from apps.core.img_corruption_analyzer import analyze_img_corruption
@@ -696,10 +695,10 @@ class IMGFactory(QMainWindow):
             reply = QMessageBox.question(self, "Quick Fix Corruption",
                                        f"Found {corrupted_count} corrupted entries.\n\n"
                                        f"Quick fix will:\n"
-                                       f"• Clean all filenames\n"
-                                       f"• Remove null bytes\n"
-                                       f"• Fix control characters\n"
-                                       f"• Create backup\n\n"
+                                       f"â€¢ Clean all filenames\n"
+                                       f"â€¢ Remove null bytes\n"
+                                       f"â€¢ Fix control characters\n"
+                                       f"â€¢ Create backup\n\n"
                                        f"Continue with quick fix?",
                                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
 
@@ -733,7 +732,7 @@ class IMGFactory(QMainWindow):
                 QMessageBox.warning(self, "No IMG File", "Please open an IMG file first")
                 return
 
-            self.log_message("🧹 Cleaning filenames only...")
+            self.log_message("ðŸ§¹ Cleaning filenames only...")
 
             # Analyze corruption
             from apps.core.img_corruption_analyzer import analyze_img_corruption
@@ -982,10 +981,10 @@ class IMGFactory(QMainWindow):
     def debug_img_entries(self): #vers 4
         """Debug function to check what entries are actually loaded"""
         if not self.current_img or not self.current_img.entries:
-            self.log_message("❌ No IMG loaded or no entries found")
+            self.log_message("âŒ No IMG loaded or no entries found")
             return
 
-        self.log_message(f"🔍 DEBUG: IMG file has {len(self.current_img.entries)} entries")
+        self.log_message(f"ðŸ” DEBUG: IMG file has {len(self.current_img.entries)} entries")
 
         # Count file types
         file_types = {}
@@ -1621,7 +1620,7 @@ class IMGFactory(QMainWindow):
                 return False
 
         except ImportError:
-            self.log_message("⚠Robust tab system not available - using basic system")
+            self.log_message("âš Robust tab system not available - using basic system")
             return False
         except Exception as e:
             self.log_message(f"Error setting up robust tab system: {str(e)}")
@@ -1656,7 +1655,7 @@ class IMGFactory(QMainWindow):
                     continue
 
                 new_open_files[new_index] = file_info
-                self.log_message(f"Tab {old_index} → Tab {new_index}: {file_info.get('tab_name', 'Unknown')}")
+                self.log_message(f"Tab {old_index} â†’ Tab {new_index}: {file_info.get('tab_name', 'Unknown')}")
                 new_index += 1
 
             self.main_window.open_files = new_open_files
@@ -1828,8 +1827,8 @@ class IMGFactory(QMainWindow):
             file_name = os.path.basename(file_path)
 
             if file_ext == 'img':
-                self._load_img_file_in_new_tab(file_path)  # ← Starts threading
-                return True  # ← Return immediately, let threading finish
+                self._load_img_file_in_new_tab(file_path)  # â† Starts threading
+                return True  # â† Return immediately, let threading finish
                 try:
                     # Import IMG loading components directly
                     from apps.methods.img_core_classes import IMGFile
@@ -2225,7 +2224,7 @@ class IMGFactory(QMainWindow):
                         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
 
             except Exception as e:
-                self.log_message(f"❌ Error populating COL model {row}: {str(e)}")
+                self.log_message(f"âŒ Error populating COL model {row}: {str(e)}")
                 # Create fallback row (same as IMG error handling)
                 table.setItem(row, 0, QTableWidgetItem(f"Model_{row}"))
                 table.setItem(row, 1, QTableWidgetItem("COL"))
@@ -2701,7 +2700,7 @@ class IMGFactory(QMainWindow):
                         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
 
             except Exception as e:
-                self.log_message(f"❌ Error populating row {row}: {str(e)}")
+                self.log_message(f"âŒ Error populating row {row}: {str(e)}")
                 # Create minimal fallback row
                 table.setItem(row, 0, QTableWidgetItem(f"Entry_{row}"))
                 table.setItem(row, 1, QTableWidgetItem("UNKNOWN"))
@@ -3142,7 +3141,7 @@ class IMGFactory(QMainWindow):
     def apply_search_and_performance_fixes(self): #vers 2
         """Apply search and performance fixes"""
         try:
-            self.log_message("🔧 Applying search and performance fixes...")
+            self.log_message("ðŸ”§ Applying search and performance fixes...")
 
             # 1. Setup our new consolidated search system
             from apps.core.guisearch import install_search_system
