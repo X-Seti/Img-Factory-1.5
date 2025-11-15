@@ -1,4 +1,4 @@
-#this belongs in root /ChangeLog.md - Version: 1
+#this belongs in root /ChangeLog.md - Version: 3
 # X-Seti - October22 2025 - IMG Factory 1.5 ChangeLog
 
 # IMG Factory 1.5 - ChangeLog - (New System)
