@@ -7,9 +7,38 @@ Complete history of fixes, updates, and improvements.
 
 ---
 
-**Unresolved**: - November 15, 2025
-- Tab system is still creating problems, Trying to export entries we get error messages "loaded img file can not be found". ??
 
+
+
+**Unresolved**: - November 15, 2025
+- ❌ Tab system is still creating problems, Trying to export entries we get error messages "loaded img file can not be found". ??
+
+### 1. tab_system.py (Version 6)
+**Location**: apps/methods/tab_system.py
+**Changes**:
+- `validate_tab_before_operation` (vers 3) - Now checks tab widget data directly
+- `get_current_file_from_active_tab` (vers 2) - Gets data from tab widget, not current_img
+- `get_tab_file_data` (vers 4) - Removed fallback to current_img
+- `get_current_active_tab_info` (vers 2) - Uses tab widget exclusively
+
+**Key Fix**: Validation now checks the actual tab widget data instead of main_window.current_img
+
+### 2. file_validation.py (Version 1)
+**Location**: apps/methods/file_validation.py
+**Purpose**: Universal file validation that works with IMG, COL, and TXD files
+
+**Functions**:
+- `validate_img_file()` - For IMG-only operations
+- `validate_col_file()` - For COL-only operations
+- `validate_txd_file()` - For TXD-only operations
+- `validate_any_file()` - For operations that work with any file type
+- `get_selected_entries_for_operation()` - Validates AND gets selected entries
+
+**Update**: - November 15, 2025
+- ✅ Dynamic file type detection
+- ✅ Proper error messages per file type
+- ✅ Works with tab system automatically
+- ✅ No more hardcoded "Current tab does not contain an IMG file"
 
 
 **Fixed**: - November 14, 2025

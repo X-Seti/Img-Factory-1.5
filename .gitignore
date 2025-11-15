@@ -12,3 +12,4 @@ gui/gui_layout_old.py
 gitimgtree.git
 /Assists/Dump
 *.py-old
+/.old_put_aside
