@@ -1,4 +1,4 @@
-#this belongs in core/remove.py - Version: 5
+#this belongs in core/remove.py - Version: 6
 # X-Seti - September09 2025 - IMG Factory 1.5 - Remove Functions with Proper Modification Tracking
 
 """
@@ -9,6 +9,7 @@ import os
 from typing import List, Optional
 from PyQt6.QtWidgets import QMessageBox
 from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
+from apps.methods.imgcol_exists import set_context
 
 
 ##Methods list -
@@ -21,12 +22,12 @@ from apps.methods.file_validation import validate_img_file, validate_any_file, g
 # remove_multiple_entries
 # remove_selected_function
 
-def remove_selected_function(main_window): #vers 1
+def remove_selected_function(main_window): #vers 3
     """Remove selected entries with proper modification tracking"""
     
-    if file_type != 'IMG' or not file_object:
-        QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
-        return False
+
+    imgcol_exists(main_window)
+    # File selection dialog - remove_entries should work with both img and col files.
     
     # Get selected entries
     selected_entries = _get_selected_entries_simple(main_window, file_object)
@@ -248,8 +249,12 @@ def _refresh_after_removal(main_window): #vers 1
     if hasattr(main_window, 'log_message'):
         main_window.log_message("UI refreshed after removal")
 
-def integrate_remove_functions(main_window) -> bool: #vers 1
+def integrate_remove_functions(main_window) -> bool: #vers 2
     """Integrate remove functions with proper modification tracking"""
+    global file_object, file_type
+    file_object = getattr(main_window, 'file_object', None)
+    file_type = getattr(main_window, 'file_type', None)
+
     # Main remove functions
     main_window.remove_selected_function = lambda: remove_selected_function(main_window)
     main_window.remove_entries_by_name = lambda entry_names: remove_entries_by_name(main_window, entry_names)

@@ -1,4 +1,4 @@
-#this belongs in core/remove_via.py - Version: 6
+#this belongs in core/remove_via.py - Version: 7
 # X-Seti - September09 2025 - IMG Factory 1.5 - Remove Via Functions with Proper Modification Tracking
 
 """
@@ -9,6 +9,7 @@ import os
 from typing import List
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
+from apps.methods.imgcol_exists import set_context
 
 ##Methods list -
 # _parse_ide_file_for_removal
@@ -20,9 +21,12 @@ from apps.methods.file_validation import validate_img_file, validate_any_file, g
 # remove_via_ide_function
 # remove_via_text_function
 
-def remove_via_function(main_window): #vers 1
+def remove_via_function(main_window, file_object, file_type): #vers 1
     """Remove entries via file selection dialog"""
     
+    imgcol_exists(main_window)
+    # File selection dialog - remove via should work with both img and col files.
+
     file_dialog = QFileDialog()
     file_path, _ = file_dialog.getOpenFileName(
         main_window,
@@ -324,8 +328,12 @@ def _refresh_after_removal_via(main_window): #vers 1
     if hasattr(main_window, 'log_message'):
         main_window.log_message("UI refreshed after removal via")
 
-def integrate_remove_via_functions(main_window) -> bool: #vers 1
+def integrate_remove_via_functions(main_window) -> bool: #vers 3
     """Integrate remove via functions with proper modification tracking"""
+    global file_object, file_type
+    file_object = getattr(main_window, 'file_object', None)
+    file_type = getattr(main_window, 'file_type', None)
+
     # Add remove via methods to main window
     main_window.remove_via_function = lambda: remove_via_function(main_window)
     main_window.remove_via_ide_function = lambda: remove_via_ide_function(main_window)

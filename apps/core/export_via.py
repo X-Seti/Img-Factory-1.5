@@ -1,4 +1,4 @@
-#this belongs in core/export_via.py - Version: 8
+#this belongs in core/export_via.py - Version: 9
 # X-Seti - September09 2025 - IMG Factory 1.5 - Export Via Functions - Clean Complete Version
 
 """
@@ -20,6 +20,8 @@ from apps.methods.export_shared import get_export_folder
 from apps.methods.export_overwrite_check import handle_overwrite_check, get_output_path_for_entry
 from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
 
+from apps.methods.imgcol_exists import set_context
+
 ##Methods list -
 # export_via_function
 # _export_img_via_ide
@@ -34,13 +36,8 @@ def export_via_function(main_window): #vers 5
     """Main export via function with full tab awareness"""
     try:
 
-        if file_type == 'IMG':
-            return _export_img_via_ide(main_window)
-        elif file_type == 'COL':
-            return _export_col_via_ide(main_window)
-        else:
-            QMessageBox.warning(main_window, "No File", "Please open an IMG or COL file first")
-            return False
+        imgcol_exists(main_window)
+        # File selection dialog - export via should work with both img and col files.
 
     except Exception as e:
         if hasattr(main_window, 'log_message'):
@@ -424,6 +421,10 @@ def _export_col_via_ide(main_window): #vers 1
 
 def integrate_export_via_functions(main_window) -> bool: #vers 3
     """Integrate export via functions into main window"""
+    global file_object, file_type
+    file_object = getattr(main_window, 'file_object', None)
+    file_type = getattr(main_window, 'file_type', None)
+
     try:
         # Add main export via function
         main_window.export_via_function = lambda: export_via_function(main_window)

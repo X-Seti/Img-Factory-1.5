@@ -7,11 +7,15 @@ Complete history of fixes, updates, and improvements.
 
 ---
 
-
+global file_object, file_type
+file_object = getattr(main_window, 'file_object', None)
+file_type = getattr(main_window, 'file_type', None)
 
 
 **Unresolved**: - November 15, 2025
 - ❌ Tab system is still creating problems, Trying to export entries we get error messages "loaded img file can not be found". ??
+
+
 
 ### 1. tab_system.py (Version 6)
 **Location**: apps/methods/tab_system.py

@@ -19,6 +19,8 @@ from apps.methods.img_shared_operations import (
     log_operation_progress
 )
 
+from apps.methods.imgcol_exists import set_context
+
 ##Methods list -
 # rebuild_all_open_tabs
 # rebuild_all_from_folder
@@ -436,8 +438,12 @@ def _validate_batch_targets(targets: List[Dict], main_window) -> List[Dict]:
     return valid_targets
 
 
-def integrate_batch_rebuild_functions(main_window) -> bool:
+def integrate_batch_rebuild_functions(main_window) -> bool: #vers 3
     """Integrate batch rebuild functions into main window"""
+    global file_object, file_type
+    file_object = getattr(main_window, 'file_object', None)
+    file_type = getattr(main_window, 'file_type', None)
+
     try:
         # Batch rebuild functions
         main_window.rebuild_all_open_tabs = lambda: rebuild_all_open_tabs(main_window)

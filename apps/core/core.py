@@ -27,7 +27,7 @@ from apps.methods.file_validation import validate_img_file, validate_any_file, g
 # _create_simple_progress_dialog
 # integrate_remove_functions
 
-def remove_selected_function(main_window): #vers 2
+def remove_selected_function(main_window, file_object, file_type): #vers 2
     """Remove selected entries - FIXED VERSION"""
     try:
         
@@ -309,6 +309,9 @@ def _create_simple_progress_dialog(main_window, total_entries) -> QProgressDialo
 
 def integrate_remove_functions(main_window) -> bool: #vers 2
     """Integrate fixed remove functions into main window"""
+    global file_object, file_type
+    file_object = getattr(main_window, 'file_object', None)
+    file_type = getattr(main_window, 'file_type', None)
     try:
         # Main remove functions
         main_window.remove_selected_function = lambda: remove_selected_function(main_window)

@@ -15,6 +15,8 @@ from apps.methods.img_shared_operations import (
     log_operation_progress
 )
 
+from apps.methods.imgcol_exists import set_context
+
 ##Methods list -
 # rebuild_current_img_native
 # fast_rebuild_current
@@ -28,9 +30,8 @@ def rebuild_current_img_native(main_window, mode: str = "auto") -> bool:
     """Native IMG rebuild using imgfactory objects directly - NO conversion needed"""
     try:
         
-        if file_type != 'IMG' or not file_object:
-            QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file to rebuild")
-            return False
+        imgcol_exists(main_window)
+        # File selection dialog - rebuild should work with both img and col files.
         
         # Structure validation
         is_valid, validation_msg = validate_img_structure(file_object, main_window)
@@ -239,8 +240,12 @@ def _calculate_data_start_offset(version_info: Dict, entry_count: int) -> int:
         return 8 + (entry_count * 32)
 
 
-def integrate_rebuild_functions(main_window) -> bool:
+def integrate_rebuild_functions(main_window) -> bool: #vers 3
     """Integrate native rebuild functions into main window"""
+    global file_object, file_type
+    file_object = getattr(main_window, 'file_object', None)
+    file_type = getattr(main_window, 'file_type', None)
+
     try:
         # Main rebuild functions
         main_window.rebuild_current_img = lambda: rebuild_current_img_native(main_window)

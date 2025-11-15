@@ -1,4 +1,4 @@
-#this belongs in core/import_via.py - Version: 12
+#this belongs in core/import_via.py - Version: 14
 # X-Seti - September11 2025 - IMG Factory 1.5 - Import Via Functions - Clean Production Version
 
 """
@@ -9,6 +9,7 @@ import os
 from typing import List, Optional, Dict, Any, Tuple
 from PyQt6.QtWidgets import QMessageBox, QFileDialog, QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QLabel, QRadioButton, QButtonGroup
 
+from apps.methods.imgcol_exists import set_context
 
 ##Methods list -
 # import_via_function
@@ -20,15 +21,14 @@ from PyQt6.QtWidgets import QMessageBox, QFileDialog, QDialog, QVBoxLayout, QHBo
 # _find_files_in_directory
 # integrate_import_via_functions
 
-def import_via_function(main_window): #vers 1
+def import_via_function(main_window): #vers 3
     """Main import via function with dialog"""
+
+    imgcol_exists(main_window)
+    # File selection dialog - import via should work with both img and col files.
+
     try:
-
-        if file_type != 'IMG':
-            QMessageBox.warning(main_window, "IMG Only", "Import Via only works with IMG files.\nPlease open an IMG file first.")
-            return False
-
-        # Create dialog
+        # import via dialog - import via should work with both img and col files.
         dialog_result = _create_import_via_dialog(main_window)
         
         if not dialog_result:
@@ -394,8 +394,12 @@ def _update_button_state(dialog): #vers 1
     except Exception:
         dialog.import_btn.setEnabled(False)
 
-def integrate_import_via_functions(main_window): #vers 1
+def integrate_import_via_functions(main_window): #vers
     """Integrate import via functions into main window"""
+    global file_object, file_type
+    file_object = getattr(main_window, 'file_object', None)
+    file_type = getattr(main_window, 'file_type', None)
+
     try:
         # Add main import via functions
         main_window.import_via_function = lambda: import_via_function(main_window)

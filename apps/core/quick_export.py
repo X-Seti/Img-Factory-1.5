@@ -23,19 +23,16 @@ def quick_export_function(main_window): #vers 4
     try:
         file_type = get_current_file_type(main_window)
         
-        if file_type == 'IMG':
-            # Original IMG quick export logic
-            if not hasattr(main_window, 'current_img') or not main_window.current_img:
-                QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first")
-                return
+        imgcol_exists(main_window)
+        # File selection dialog - export should work with both img and col files.
+
+        # Get selected entries - FROM ORIGINAL
+        selected_entries = get_selected_entries(main_window)
+        if not validate_export_entries(selected_entries, main_window):
+            return
             
-            # Get selected entries - FROM ORIGINAL
-            selected_entries = get_selected_entries(main_window)
-            if not validate_export_entries(selected_entries, main_window):
-                return
-            
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"⚡ Quick export: {len(selected_entries)} entries to Assists folder")
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"⚡ Quick export: {len(selected_entries)} entries to Assists folder")
             
         elif file_type == 'COL':
             # COL quick export logic
@@ -236,8 +233,12 @@ def _start_quick_col_export(main_window, col_entries, assists_folder, export_opt
             main_window.log_message(f"❌ Quick COL export error: {str(e)}")
         QMessageBox.critical(main_window, "Quick COL Export Error", f"Quick COL export failed: {str(e)}")
 
-def integrate_quick_export_functions(main_window): #vers 1
+def integrate_quick_export_functions(main_window): #vers 2
     """Integrate quick export functions into main window with all aliases"""
+    global file_object, file_type
+    file_object = getattr(main_window, 'file_object', None)
+    file_type = getattr(main_window, 'file_type', None)
+
     try:
         # Add main quick export function
         main_window.quick_export_function = lambda: quick_export_function(main_window)

@@ -1,4 +1,4 @@
-#this belongs in core/export.py - Version: 6
+#this belongs in core/export.py - Version: 7
 # X-Seti - September09 2025 - IMG Factory 1.5 - Export Functions with Overwrite Check
 
 """
@@ -17,6 +17,7 @@ from PyQt6.QtCore import Qt
 # Import required functions
 from apps.methods.export_shared import get_export_folder, get_selected_entries
 from apps.methods.export_overwrite_check import handle_overwrite_check, get_output_path_for_entry
+from apps.methods.imgcol_exists import set_context
 
 ##Methods list -
 # export_selected_function
@@ -27,21 +28,12 @@ from apps.methods.export_overwrite_check import handle_overwrite_check, get_outp
 # _export_col_all
 # integrate_export_functions
 
-def export_selected_function(main_window): #vers 4
+def export_selected_function(main_window): #vers 6
     """Export selected entries with overwrite check"""
     try:
-        
-        if not file_object:
-            QMessageBox.warning(main_window, "No File", "No file is currently loaded")
-            return False
-        
-        if file_type == 'IMG':
-            return _export_img_selected(main_window, file_object)
-        elif file_type == 'COL':
-            return _export_col_selected(main_window, file_object)
-        else:
-            QMessageBox.warning(main_window, "Unsupported File Type", f"Export not supported for {file_type} files")
-            return False
+
+        imgcol_exists(main_window)
+        # File selection dialog - export via should work with both img and col files.
             
     except Exception as e:
         if hasattr(main_window, 'log_message'):
@@ -330,6 +322,10 @@ def _export_col_all(main_window, file_object): #vers 2
 
 def integrate_export_functions(main_window): #vers 4
     """Integrate export functions with overwrite check support"""
+    global file_object, file_type
+    file_object = getattr(main_window, 'file_object', None)
+    file_type = getattr(main_window, 'file_type', None)
+
     try:
         # Main export functions
         main_window.export_selected_function = lambda: export_selected_function(main_window)

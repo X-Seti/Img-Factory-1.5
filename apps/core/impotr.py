@@ -1,4 +1,4 @@
-#this belongs in core/impotr.py - Version: 23
+#this belongs in core/impotr.py - Version: 4
 # X-Seti - September11 2025 - IMG Factory 1.5 - Import Functions - Clean Production Version
 
 """
@@ -15,6 +15,8 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 # Import existing RW detection systems
 from apps.core.rw_versions import parse_rw_version, get_rw_version_name, is_valid_rw_version
 from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
+
+from apps.methods.imgcol_exists import set_context
 
 ##Methods list -
 # _add_file_to_img
@@ -224,14 +226,13 @@ def _ask_user_about_saving(main_window): #vers 1
     except Exception:
         pass
 
-def import_files_function(main_window): #vers 1
+def import_files_function(main_window): #vers 5
     """Import multiple files via file dialog"""
+    from apps.methods.imgcol_exists import set_context
 
-    if file_type != 'IMG' or not file_object:
-        QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
-        return False
+    imgcol_exists(main_window)
+    # File selection dialog - import via should work with both img and col files.
 
-    # File selection dialog
     file_dialog = QFileDialog()
     file_paths, _ = file_dialog.getOpenFileNames(
         main_window,
@@ -338,8 +339,12 @@ def import_folder_contents(main_window) -> bool: #vers 1
 
     return import_files_with_list(main_window, file_paths)
 
-def integrate_import_functions(main_window) -> bool: #vers 1
+def integrate_import_functions(main_window) -> bool: #vers 2
     """Integrate import functions with main window"""
+    global file_object, file_type
+    file_object = getattr(main_window, 'file_object', None)
+    file_type = getattr(main_window, 'file_type', None)
+
     # Add import methods to main window
     main_window.import_files_function = lambda: import_files_function(main_window)
     main_window.import_files_with_list = lambda file_paths: import_files_with_list(main_window, file_paths)

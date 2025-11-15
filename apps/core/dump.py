@@ -26,9 +26,8 @@ def dump_all_function(main_window): #vers 12
     try:
         # Validate tab
         
-        if file_type != 'IMG' or not file_object:
-            QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
-            return False
+        imgcol_exists(main_window)
+        # File selection dialog - dump should work with both img and col files.
         
         # Get all entries
         all_entries = getattr(file_object, 'entries', [])
@@ -58,8 +57,9 @@ def dump_all_function(main_window): #vers 12
         return False
 
 
-def dump_selected_function(main_window): #vers 12
+def dump_selected_function(main_window, file_object, file_type): #vers 13
     """Dump selected entries to folder"""
+
     try:
         # Validate tab
         
@@ -254,6 +254,9 @@ def _open_folder_in_explorer(folder_path: str): #vers 12
 
 def integrate_dump_functions(main_window): #vers 12
     """Integrate dump functions into main window"""
+    global file_object, file_type
+    file_object = getattr(main_window, 'file_object', None)
+    file_type = getattr(main_window, 'file_type', None)
     try:
         # Add dump methods to main window
         main_window.dump_all_function = lambda: dump_all_function(main_window)

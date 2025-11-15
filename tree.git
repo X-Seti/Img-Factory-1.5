@@ -152,10 +152,12 @@
 │   │   ├── export_overwrite_check.py
 │   │   ├── export_shared.py
 │   │   ├── file_loading_functions.py
+│   │   ├── file_validation.py
 │   │   ├── find_dups_functions.py
 │   │   ├── ide_parser_functions.py
 │   │   ├── iff_import.py
 │   │   ├── img_analyze.py
+│   │   ├── imgcol_exists.py
 │   │   ├── img_core_classes.py
 │   │   ├── img_entry_operations.py
 │   │   ├── img_import_export.py
@@ -173,7 +175,22 @@
 │   │   ├── old
 │   │   │   ├── tab_aware_functions.py
 │   │   │   ├── tab_functions.py
-│   │   │   └── tab_validation.py
+│   │   │   ├── tab_validation.py
+│   │   │   └── validation_backup_20251115_152156
+│   │   │       ├── core.py
+│   │   │       ├── dump.py
+│   │   │       ├── export_via.py
+│   │   │       ├── imgcol_convert.py
+│   │   │       ├── imgcol_rename.py
+│   │   │       ├── imgcol_replace.py
+│   │   │       ├── img_import_system.py
+│   │   │       ├── impotr.py
+│   │   │       ├── rebuild.py
+│   │   │       ├── remove.py
+│   │   │       ├── remove_via.py
+│   │   │       ├── rename.py
+│   │   │       ├── rw_analysis_trigger.py
+│   │   │       └── save_entry.py
 │   │   ├── populate_col_table.py
 │   │   ├── populate_img_table.py
 │   │   ├── progressbar_functions.py
@@ -231,10 +248,11 @@
 ├── cc.py
 ├── ChangeLog.md
 ├── Credits.md
+├── img_factory_debug.log
 ├── launch_imgfactory.py
 ├── package-lock.json
 ├── Summery.md
 ├── TODO.md
 └── tree.git
 
-29 directories, 209 files
+30 directories, 226 files
