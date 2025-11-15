@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 # Import existing RW detection systems
 from apps.core.rw_versions import parse_rw_version, get_rw_version_name, is_valid_rw_version
+from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
 
 ##Methods list -
 # _add_file_to_img

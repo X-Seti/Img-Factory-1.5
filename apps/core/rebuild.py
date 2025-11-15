@@ -7,6 +7,7 @@ from typing import Optional, Callable, Dict, Any
 from PyQt6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QRadioButton, QButtonGroup
 
 from apps.methods.img_shared_operations import (
+from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
     create_progress_callback, get_img_version_info, validate_img_structure,
     create_temp_file_path, atomic_file_replace, write_img_header,
     write_img_directory, consolidate_img_data, cleanup_temp_files,

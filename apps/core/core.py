@@ -15,6 +15,7 @@ from PyQt6.QtCore import Qt
 
 # Import working methods
 from apps.methods.img_entry_operations import remove_entry_safe
+from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
 
 ##Methods list -
 # remove_selected_function

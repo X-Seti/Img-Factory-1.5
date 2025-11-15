@@ -9,6 +9,7 @@ Complete solution for proper IMG file saving with RW version analysis
 import os
 from typing import Optional
 from PyQt6.QtWidgets import QMessageBox
+from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
 
 ##Methods list -
 # _detect_rw_versions_for_new_entries

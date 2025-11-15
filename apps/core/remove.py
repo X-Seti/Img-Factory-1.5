@@ -8,6 +8,7 @@ Remove Functions - Remove entries with proper modification tracking for Save Ent
 import os
 from typing import List, Optional
 from PyQt6.QtWidgets import QMessageBox
+from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
 
 
 ##Methods list -

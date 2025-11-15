@@ -8,6 +8,7 @@ Remove Via Functions - Remove entries via IDE/text files with proper modificatio
 import os
 from typing import List
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
+from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
 
 ##Methods list -
 # _parse_ide_file_for_removal

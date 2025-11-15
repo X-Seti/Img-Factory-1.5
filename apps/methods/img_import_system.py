@@ -9,6 +9,7 @@ import os
 from typing import List, Optional
 from pathlib import Path
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
+from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
 
 ##Methods list -
 # _debug_log

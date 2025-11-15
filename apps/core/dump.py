@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import List, Optional
 from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QFileDialog, QApplication
 from PyQt6.QtCore import Qt
+from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
 
 
 ##Methods list -

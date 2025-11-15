@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import QMessageBox
 # Import required functions
 from apps.methods.export_shared import get_export_folder
 from apps.methods.export_overwrite_check import handle_overwrite_check, get_output_path_for_entry
+from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
 
 ##Methods list -
 # export_via_function

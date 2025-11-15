@@ -7,6 +7,11 @@ Complete history of fixes, updates, and improvements.
 
 ---
 
+**Unresolved**: - November 15, 2025
+- Tab system is still creating problems, Trying to export entries we get error messages "loaded img file can not be found". ??
+
+
+
 **Fixed**: - November 14, 2025
 - Sussussfully fixed the tab systen, each img, col and txd gets its own tab.
 - ✅ SVG icons integration for the img factory app.

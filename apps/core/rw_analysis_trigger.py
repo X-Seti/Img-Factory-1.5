@@ -6,6 +6,7 @@ RW Analysis Trigger - Run RW detection on existing entries to fix blank columns
 """
 
 from PyQt6.QtWidgets import QMessageBox
+from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
 
 ##Methods list -
 # analyze_current_img_rw_versions

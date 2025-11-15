@@ -136,15 +136,6 @@
 │   ├── __init__.py
 │   ├── locale
 │   │   └── local_settings.json
-│   ├── maps
-│   │   ├── bump_emboss.png
-│   │   ├── bump_sobel.png
-│   │   ├── fresnel_reflectivity.png
-│   │   ├── height_map.png
-│   │   ├── normal_map.png
-│   │   ├── normal_map_thumb.png
-│   │   ├── reflection_vector_map.png
-│   │   └── roughness_curvature.png
 │   ├── methods
 │   │   ├── col_core_classes.py
 │   │   ├── col_export_shared.py
@@ -234,19 +225,16 @@
 │   ├── unified_signal_handler.py
 │   └── utils
 │       ├── app_settings_system.py
-│       ├── gui_window.py
 │       ├── themer_settings.json
 │       ├── themes -> /home/x2/Documents/GitHub/Img Factory 1.5/themes
 │       └── update_themes_script.py
 ├── cc.py
 ├── ChangeLog.md
 ├── Credits.md
-├── img_factory_debug.log
 ├── launch_imgfactory.py
 ├── package-lock.json
-├── remove-emo.py
 ├── Summery.md
 ├── TODO.md
 └── tree.git
 
-30 directories, 220 files
+29 directories, 209 files

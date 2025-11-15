@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
+from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
 
 
 # IMG_Editor core integration support
