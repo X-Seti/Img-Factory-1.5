@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 from apps.core.rw_versions import parse_rw_version, get_rw_version_name, is_valid_rw_version
 from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
 
-from apps.methods.imgcol_exists import set_context
+from apps.methods.imgcol_exists import has_valid_file #has_file_type(
 
 ##Methods list -
 # _add_file_to_img
@@ -364,11 +364,3 @@ def integrate_import_functions(main_window) -> bool: #vers 2
 
     return True
 
-# Export functions
-__all__ = [
-    'import_files_function',
-    'import_files_with_list',
-    'import_multiple_files_core',
-    'import_folder_contents',
-    'integrate_import_functions'
-]
