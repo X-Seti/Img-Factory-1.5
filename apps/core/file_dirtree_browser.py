@@ -263,7 +263,7 @@ class FileBrowserWidget(QWidget):
         menu.addAction(new_folder_action)
         
         # New file
-        new_file_action = QAction("📄 New &File", self)
+        new_file_action = QAction("New &File", self)
         new_file_action.setShortcut("Ctrl+N")
         new_file_action.triggered.connect(self.create_new_file)
         menu.addAction(new_file_action)
@@ -271,7 +271,7 @@ class FileBrowserWidget(QWidget):
         menu.addSeparator()
         
         # Open
-        open_action = QAction("📂 &Open", self)
+        open_action = QAction("&Open", self)
         open_action.setShortcut("Enter")
         open_action.triggered.connect(self.open_selected)
         menu.addAction(open_action)
@@ -383,7 +383,7 @@ class FileBrowserWidget(QWidget):
         
         sort_group = QActionGroup(self)
         
-        sort_name_action = QAction("📄 &Name", self)
+        sort_name_action = QAction("&Name", self)
         sort_name_action.setCheckable(True)
         sort_name_action.setChecked(True)
         sort_name_action.triggered.connect(lambda: self.set_sort_mode('name'))
@@ -551,7 +551,7 @@ class FileBrowserWidget(QWidget):
         layout.addStretch()
 
         # Selected file info
-        self.info_group = QGroupBox("📄 File Information")
+        self.info_group = QGroupBox("File Information")
         #self.info_group.setMaximumHeight(200)
         info_layout = QVBoxLayout(self.info_group)
         info_layout.setSpacing(0)
@@ -596,7 +596,7 @@ class FileBrowserWidget(QWidget):
         actions_layout.setContentsMargins(6, 6, 6, 6)  # Add margins for better appearance
 
         # Row 1
-        self.open_btn = QPushButton("📂 Open")
+        self.open_btn = QPushButton("Open")
         self.open_btn.setEnabled(False)
         self.open_btn.setMinimumHeight(25)
         self.open_btn.setFont(font)
@@ -745,7 +745,7 @@ class FileBrowserWidget(QWidget):
                 with open(new_path, 'w') as f:
                     f.write("")  # Create empty file
                 self.refresh_view()
-                self.log_message(f"📄 Created file: {name}")
+                self.log_message(f"Created file: {name}")
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to create file: {str(e)}")
                 
@@ -1355,7 +1355,7 @@ class FileBrowserWidget(QWidget):
                 menu.addSeparator()
                 
             elif file_ext == '.col':
-                load_col_action = menu.addAction("🛡️ Load COL File")
+                load_col_action = menu.addAction("Load COL File")
                 load_col_action.triggered.connect(lambda: self.file_opened.emit(file_path))
                 
                 view_col_action = menu.addAction("👁️ View COL Models")
@@ -1363,7 +1363,7 @@ class FileBrowserWidget(QWidget):
                 menu.addSeparator()
                 
             elif file_ext == '.txd':
-                view_textures_action = menu.addAction("🖼️ View Textures")
+                view_textures_action = menu.addAction("View Textures")
                 view_textures_action.triggered.connect(lambda: self.view_txd_file(file_path))
                 menu.addSeparator()
                 
@@ -1381,7 +1381,7 @@ class FileBrowserWidget(QWidget):
                 menu.addSeparator()
             
             # Generic file actions
-            open_action = menu.addAction("📂 Open")
+            open_action = menu.addAction("Open")
             open_action.triggered.connect(lambda: self.file_opened.emit(file_path))
             
             open_with_action = menu.addAction("🔧 Open With...")
@@ -1395,7 +1395,7 @@ class FileBrowserWidget(QWidget):
         elif is_dir:
             # === DIRECTORY-SPECIFIC ACTIONS ===
             
-            open_action = menu.addAction("📂 Open Folder")
+            open_action = menu.addAction("Open Folder")
             open_action.triggered.connect(lambda: self.browse_directory(file_path))
             
             open_new_window_action = menu.addAction("🗂️ Open in New Window")
@@ -1410,7 +1410,7 @@ class FileBrowserWidget(QWidget):
             scan_models_action = menu.addAction("🎭 Scan for Models")
             scan_models_action.triggered.connect(lambda: self.scan_for_file_type(file_path, '.dff'))
             
-            scan_textures_action = menu.addAction("🖼️ Scan for Textures")
+            scan_textures_action = menu.addAction("Scan for Textures")
             scan_textures_action.triggered.connect(lambda: self.scan_for_file_type(file_path, '.txd'))
             
             menu.addSeparator()
@@ -1445,7 +1445,7 @@ class FileBrowserWidget(QWidget):
         copy_full_path_action = copy_path_menu.addAction("📍 Full Path")
         copy_full_path_action.triggered.connect(lambda: self.copy_path_to_clipboard(file_path))
         
-        copy_filename_action = copy_path_menu.addAction("📄 Filename Only")
+        copy_filename_action = copy_path_menu.addAction("Filename Only")
         copy_filename_action.triggered.connect(lambda: self.copy_filename_to_clipboard(file_path))
         
         copy_parent_action = copy_path_menu.addAction("📁 Parent Directory")
@@ -1614,7 +1614,7 @@ class FileBrowserWidget(QWidget):
         """Update file information display"""
         try:
             file_name = os.path.basename(file_path)
-            self.file_name_label.setText(f"📄 {file_name}")
+            self.file_name_label.setText(f"{file_name}")
             self.file_path_label.setText(f"Path: {file_path}")
             
             if os.path.isfile(file_path):

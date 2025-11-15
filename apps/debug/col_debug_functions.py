@@ -40,9 +40,9 @@ def set_col_debug_enabled(enabled: bool):
     _col_debug_enabled = enabled
     
     if enabled:
-        img_debugger.debug("🛡️ COL debug system ENABLED")
+        img_debugger.debug("COL debug system ENABLED")
     else:
-        img_debugger.debug("🛡️ COL debug system DISABLED for performance")
+        img_debugger.debug("COL debug system DISABLED for performance")
 
 def is_col_debug_enabled() -> bool:
     """Check if COL debug is enabled"""
@@ -201,15 +201,15 @@ def trace_col_function(func):
             start_time = time.time()
             
             # Log call with COL prefix
-            img_debugger.debug(f"🛡️ COL CALL: {func.__name__}")
+            img_debugger.debug(f"COL CALL: {func.__name__}")
             
             try:
                 result = func(*args, **kwargs)
                 execution_time = time.time() - start_time
-                img_debugger.debug(f"🛡️ COL RESULT: {func.__name__} completed in {execution_time:.3f}s")
+                img_debugger.debug(f"COL RESULT: {func.__name__} completed in {execution_time:.3f}s")
                 return result
             except Exception as e:
-                img_debugger.error(f"🛡️ COL ERROR in {func.__name__}: {e}")
+                img_debugger.error(f"COL ERROR in {func.__name__}: {e}")
                 raise
         else:
             return func(*args, **kwargs)

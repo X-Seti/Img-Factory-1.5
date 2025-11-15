@@ -362,7 +362,7 @@ class COLMenuBuilder:
         col_menu.addSeparator()
 
         # File operations
-        open_col_action = QAction("📂 &Open COL File", parent_window)
+        open_col_action = QAction("&Open COL File", parent_window)
         open_col_action.setShortcut("Ctrl+Shift+O")
         open_col_action.setStatusTip("Open COL file directly")
         open_col_action.triggered.connect(lambda: COLMenuBuilder._open_col_file(parent_window))
@@ -440,7 +440,7 @@ class COLMenuBuilder:
 
         corruption_menu.addSeparator()
 
-        export_report_action = QAction("📄 Export Corruption Report", self.main_window)
+        export_report_action = QAction("Export Corruption Report", self.main_window)
         export_report_action.setStatusTip("Export detailed corruption analysis to file")
         export_report_action.triggered.connect(self.main_window.export_corruption_report)
         corruption_menu.addAction(export_report_action)
@@ -792,7 +792,7 @@ class IMGFactoryMenuBar:
             if hasattr(self.main_window, 'sort_col_by_ide_order'):
                 self.main_window.sort_col_by_ide_order()
                 if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("🛡️ COL entries sorted by IDE order")
+                    self.main_window.log_message("COL entries sorted by IDE order")
             else:
                 QMessageBox.information(self.main_window, "Sort COL",
                     "Sort COL by IDE functionality will be available when both IDE and COL files are loaded.")

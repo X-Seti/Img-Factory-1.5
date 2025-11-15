@@ -661,7 +661,7 @@ class ProjectManagerDialog(QDialog):
         self.new_project_btn.clicked.connect(self._new_project)
         proj_buttons_layout.addWidget(self.new_project_btn)
         
-        self.open_project_btn = QPushButton("📂 Open Project")
+        self.open_project_btn = QPushButton("Open Project")
         self.open_project_btn.clicked.connect(self._open_project)
         proj_buttons_layout.addWidget(self.open_project_btn)
         

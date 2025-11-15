@@ -301,7 +301,7 @@ class COLStructureManager:
                 boxes.append(box)
             
             if self.debug:
-                img_debugger.debug(f"📦 Parsed {len(boxes)} collision boxes")
+                img_debugger.debug(f"Parsed {len(boxes)} collision boxes")
             
             return boxes, offset
             

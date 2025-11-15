@@ -113,7 +113,7 @@ class NewCOLDialog(QDialog):
         self.creation_thread = None
         
         # Initialize UI
-        self.setWindowTitle("🛡️ Create New COL File - IMG Factory 1.5")
+        self.setWindowTitle("Create New COL File - IMG Factory 1.5")
         self.setMinimumSize(500, 600)
         self.resize(600, 700)
         
@@ -151,7 +151,7 @@ class NewCOLDialog(QDialog):
         layout.addWidget(file_group)
         
         # COL settings section
-        col_group = QGroupBox("🛡️ COL Settings")
+        col_group = QGroupBox("COL Settings")
         col_layout = QFormLayout(col_group)
         
         # Version selection
@@ -212,7 +212,7 @@ class NewCOLDialog(QDialog):
         
         # Buttons
         button_layout = QHBoxLayout()
-        self.create_btn = QPushButton("🛡️ Create COL File")
+        self.create_btn = QPushButton("Create COL File")
         self.create_btn.setDefault(True)
         self.cancel_btn = QPushButton("❌ Cancel")
         

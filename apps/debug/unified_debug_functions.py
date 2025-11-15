@@ -241,7 +241,7 @@ def create_debug_menu(main_window): #vers 1
         img_disable_action.triggered.connect(lambda: setattr(__import__('apps.debug.img_debug_functions').img_debug_functions.img_debugger, 'debug_enabled', False))
         
         # COL Debug controls (using IMG debug system)
-        col_debug_menu = debug_menu.addMenu("🛡️ COL Debug")
+        col_debug_menu = debug_menu.addMenu("COL Debug")
         
         col_enable_action = col_debug_menu.addAction("Enable COL Debug")
         col_enable_action.triggered.connect(lambda: main_window.enable_col_debug() if hasattr(main_window, 'enable_col_debug') else None)

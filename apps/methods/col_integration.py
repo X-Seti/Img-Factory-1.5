@@ -63,7 +63,7 @@ def add_col_menu(img_factory_instance): #vers 1
         col_menu = menubar.addMenu("🔧 COL")
         
         # File operations
-        open_col_action = QAction("📂 Open COL File", img_factory_instance)
+        open_col_action = QAction("Open COL File", img_factory_instance)
         open_col_action.setShortcut("Ctrl+Shift+O")
         open_col_action.triggered.connect(lambda: open_col_file_dialog(img_factory_instance))
         col_menu.addAction(open_col_action)
@@ -662,7 +662,7 @@ def add_col_tools_menu(main_window): #vers 1
             col_debug_log(main_window, "Created new Tools menu", 'COL_INTEGRATION')
         
         # Add COL submenu
-        col_menu = tools_menu.addMenu("🛡️ COL Tools")
+        col_menu = tools_menu.addMenu("COL Tools")
         
         # COL file actions
         open_col_action = col_menu.addAction("Open COL File...")

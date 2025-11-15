@@ -71,7 +71,7 @@ def svg_to_icon(svg_data: bytes, size: int = 24, color: str = None) -> QIcon: #v
 # ========== FILE TYPE ICONS (Replace emojis in tabs) ==========
 
 def get_img_file_icon(size: int = 24) -> QIcon: #vers 1
-    """IMG archive icon - Replaces 📦 emoji"""
+    """IMG archive icon - Replaces emoji"""
     svg_data = b'''<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" 
             stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
@@ -83,7 +83,7 @@ def get_img_file_icon(size: int = 24) -> QIcon: #vers 1
 
 
 def get_col_file_icon(size: int = 24) -> QIcon: #vers 1
-    """COL collision icon - Replaces 🛡️ emoji"""
+    """COL collision icon - Replaces emoji"""
     svg_data = b'''<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path d="M12 2L4 6v6c0 5.5 3.8 10.7 8 12 4.2-1.3 8-6.5 8-12V6l-8-4z" 
             stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
@@ -94,7 +94,7 @@ def get_col_file_icon(size: int = 24) -> QIcon: #vers 1
 
 
 def get_txd_file_icon(size: int = 24) -> QIcon: #vers 1
-    """TXD texture icon - Replaces 🖼️ emoji"""
+    """TXD texture icon - Replaces emoji"""
     svg_data = b'''<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <rect x="3" y="3" width="18" height="18" rx="2" 
             stroke="currentColor" stroke-width="2" fill="none"/>
@@ -116,7 +116,7 @@ def get_folder_icon(size: int = 24) -> QIcon: #vers 1
 
 
 def get_file_icon(size: int = 24) -> QIcon: #vers 1
-    """Generic file icon - Replaces 📄 emoji"""
+    """Generic file icon - Replaces emoji"""
     svg_data = b'''<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" 
             stroke="currentColor" stroke-width="2" fill="none"/>

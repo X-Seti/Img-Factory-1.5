@@ -239,7 +239,7 @@ def _setup_col_tab(main_window, file_path): #vers 1
         # Setup tab info
         file_name = os.path.basename(file_path)
         file_name_clean = file_name[:-4] if file_name.lower().endswith('.col') else file_name
-        tab_name = f"🛡️ {file_name_clean}"
+        tab_name = f"{file_name_clean}"
 
         # Store tab info
         if not hasattr(main_window, 'open_files'):

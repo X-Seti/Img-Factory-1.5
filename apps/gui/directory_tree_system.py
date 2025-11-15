@@ -114,7 +114,7 @@ class DirectoryTreeWidget(QWidget):
         # Action buttons
         button_layout = QVBoxLayout()
         
-        self.load_img_btn = QPushButton("📂 Load IMG")
+        self.load_img_btn = QPushButton("Load IMG")
         self.load_img_btn.setEnabled(False)
         self.load_img_btn.clicked.connect(self.load_selected_img)
         button_layout.addWidget(self.load_img_btn)
@@ -491,7 +491,7 @@ class DirectoryTreeWidget(QWidget):
     def update_file_info(self, file_path: str): #vers 1
         """Update file information display"""
         try:
-            self.selected_file_label.setText(f"📄 {os.path.basename(file_path)}")
+            self.selected_file_label.setText(f"{os.path.basename(file_path)}")
             self.file_path_label.setText(f"Path: {file_path}")
             
             if os.path.isfile(file_path):
@@ -600,7 +600,7 @@ class DirectoryTreeWidget(QWidget):
             file_ext = os.path.splitext(file_path)[1].lower()
             
             if file_ext == '.img':
-                load_action = menu.addAction("📂 Load IMG File")
+                load_action = menu.addAction("Load IMG File")
                 load_action.triggered.connect(lambda: self.img_file_requested.emit(file_path))
                 
             elif file_ext in ['.ide', '.ipl', '.dat', '.txt']:
@@ -680,7 +680,7 @@ def create_directory_tree_widget(main_window): #vers 3
             # Fallback: create a wrapper function
             def load_file_wrapper(file_path):
                 try:
-                    main_window.log_message(f"📂 Loading file from browser: {file_path}")
+                    main_window.log_message(f"Loading file from browser: {file_path}")
                     # Try different loading methods
                     if hasattr(main_window, '_load_img_file_in_new_tab'):
                         main_window._load_img_file_in_new_tab(file_path)
@@ -731,7 +731,7 @@ def create_simple_directory_tree_widget(main_window): #vers 1
             # Fallback: create a wrapper function
             def load_file_wrapper(file_path):
                 try:
-                    main_window.log_message(f"📂 Loading file from directory tree: {file_path}")
+                    main_window.log_message(f"Loading file from directory tree: {file_path}")
                     # Try different loading methods
                     if hasattr(main_window, '_load_img_file_in_new_tab'):
                         main_window._load_img_file_in_new_tab(file_path)

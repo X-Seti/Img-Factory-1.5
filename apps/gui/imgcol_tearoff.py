@@ -91,21 +91,21 @@ def _setup_button_panel(parent, window_type): #vers 1
 
     if window_type == "img":
         button_configs = [
-            ("📂 Import", "import_files", "Import files into archive"),
+            ("Import", "import_files", "Import files into archive"),
             ("📤 Export", "export_selected", "Export selected entries"),
             ("🗑️ Remove", "remove_selected", "Remove selected entries"),
             ("🔄 Rebuild", "rebuild_archive", "Rebuild archive")
         ]
     elif window_type == "col":
         button_configs = [
-            ("📂 Import", "import_files", "Import COL files"),
+            ("Import", "import_files", "Import COL files"),
             ("📤 Export", "export_selected", "Export selected COL data"),
             ("✏️ Edit", "edit_collision", "Edit collision data"),
             ("🔍 Analyze", "analyze_collision", "Analyze collision")
         ]
     else:
         button_configs = [
-            ("📂 Import", "import_files", "Import files"),
+            ("Import", "import_files", "Import files"),
             ("📤 Export", "export_selected", "Export selected"),
             ("🗑️ Remove", "remove_selected", "Remove selected"),
             ("🔄 Refresh", "refresh_table", "Refresh table")
@@ -276,7 +276,7 @@ class IMGCOLTearOffWindow(QWidget): #vers 1
 
     def _import_files(self): #vers 1
         """Import files"""
-        self.log_message("📂 Import files")
+        self.log_message("Import files")
         if hasattr(self.parent_window, 'import_files'):
             self.parent_window.import_files()
         else:

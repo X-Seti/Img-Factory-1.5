@@ -325,12 +325,12 @@ class IMGFactoryTextEditor(QMainWindow):
         # File menu
         file_menu = menubar.addMenu("📁 &File")
         
-        new_action = QAction("📄 &New", self)
+        new_action = QAction("&New", self)
         new_action.setShortcut("Ctrl+N")
         new_action.triggered.connect(self.new_file)
         file_menu.addAction(new_action)
         
-        open_action = QAction("📂 &Open...", self)
+        open_action = QAction("&Open...", self)
         open_action.setShortcut("Ctrl+O")
         open_action.triggered.connect(self.open_file)
         file_menu.addAction(open_action)
@@ -409,11 +409,11 @@ class IMGFactoryTextEditor(QMainWindow):
         toolbar.setMovable(False)
         
         # File operations
-        new_btn = QPushButton("📄 New")
+        new_btn = QPushButton("New")
         new_btn.clicked.connect(self.new_file)
         toolbar.addWidget(new_btn)
         
-        open_btn = QPushButton("📂 Open")
+        open_btn = QPushButton("Open")
         open_btn.clicked.connect(self.open_file)
         toolbar.addWidget(open_btn)
         
@@ -457,13 +457,13 @@ class IMGFactoryTextEditor(QMainWindow):
                 <ul>
                     <li><b>📝 IDE Files:</b> Item definitions with syntax highlighting</li>
                     <li><b>📍 IPL Files:</b> Item placement files</li>
-                    <li><b>📄 DAT Files:</b> Data files and configurations</li>
+                    <li><b>DAT Files:</b> Data files and configurations</li>
                     <li><b>⚙️ CFG Files:</b> Configuration files</li>
                 </ul>
                 <p><b>Quick Start:</b></p>
                 <ul>
-                    <li>📂 Open a file (Ctrl+O)</li>
-                    <li>📄 Create new file (Ctrl+N)</li>
+                    <li>Open a file (Ctrl+O)</li>
+                    <li>Create new file (Ctrl+N)</li>
                     <li>🔍 Find text (Ctrl+F)</li>
                     <li>✅ Validate syntax (F7)</li>
                 </ul>

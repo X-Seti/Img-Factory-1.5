@@ -159,7 +159,7 @@ def add_col_tools_menu(main_window): #vers 1
         col_menu = menubar.addMenu("🔧 COL")
         
         # File operations
-        open_col_action = QAction("📂 Open COL File", main_window)
+        open_col_action = QAction("Open COL File", main_window)
         open_col_action.setShortcut("Ctrl+Shift+O")
         open_col_action.triggered.connect(lambda: open_col_file_dialog(main_window))
         col_menu.addAction(open_col_action)

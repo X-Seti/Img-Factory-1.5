@@ -527,7 +527,7 @@ class COLViewerWidget(QWidget): #vers 1
             header = model.header
             
             # Basic info
-            info_text = f"🛡️ {os.path.basename(file_path)} | "
+            info_text = f"{os.path.basename(file_path)} | "
             info_text += f"COL{header.version} | "
             info_text += f"{len(model.spheres)} spheres | "
             info_text += f"{len(model.boxes)} boxes | "
@@ -556,7 +556,7 @@ class COLViewerWidget(QWidget): #vers 1
             if hasattr(self, 'main_window') and self.main_window:
                 mat_names = [get_material_name(mid, game) for mid in sorted(material_ids)]
                 if mat_names and hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"📦 Materials: {', '.join(mat_names[:5])}{'...' if len(mat_names) > 5 else ''}")
+                    self.main_window.log_message(f"Materials: {', '.join(mat_names[:5])}{'...' if len(mat_names) > 5 else ''}")
     
     def get_theme_colors(self) -> dict: #vers 1
         """Get theme colors from main window"""

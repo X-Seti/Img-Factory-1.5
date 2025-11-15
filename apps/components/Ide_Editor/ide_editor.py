@@ -390,7 +390,7 @@ class IDEEditor(QDialog): #vers 1
         new_action.triggered.connect(self.new_ide_file)
         file_menu.addAction(new_action)
         
-        load_action = QAction("📂 Load IDE", self)
+        load_action = QAction("Load IDE", self)
         load_action.setShortcut("Ctrl+O")
         load_action.triggered.connect(self.open_ide_file)
         file_menu.addAction(load_action)

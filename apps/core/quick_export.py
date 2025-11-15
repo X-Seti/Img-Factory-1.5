@@ -161,7 +161,7 @@ def _start_quick_col_export(main_window, col_entries, assists_folder, export_opt
     """Start quick COL export with minimal progress display"""
     try:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"🛡️ Quick COL export: {len(col_entries)} models")
+            main_window.log_message(f"Quick COL export: {len(col_entries)} models")
         
         exported_count = 0
         failed_count = 0

@@ -293,7 +293,7 @@ def open_col_file_dialog(main_window): #vers 3
         )
 
         if file_path:
-            main_window.log_message(f"📂 Opening COL file: {os.path.basename(file_path)}")
+            main_window.log_message(f"Opening COL file: {os.path.basename(file_path)}")
             
             # Check if main window has a COL loading method
             if hasattr(main_window, 'load_col_file_safely'):
@@ -391,7 +391,7 @@ def view_dff_model(main_window, row): #vers 1
 
 def view_txd_textures(main_window, row): #vers 1
     """View TXD textures"""
-    main_window.log_message(f"🖼️ View TXD textures from row {row} - not yet implemented")
+    main_window.log_message(f"View TXD textures from row {row} - not yet implemented")
 
 def replace_selected_entry(main_window, row): #vers 1
     """Replace selected entry"""
@@ -463,7 +463,7 @@ def enhanced_context_menu_event(main_window, event): #vers 2
             
         elif entry_info['is_txd']:
             # TXD texture actions
-            view_action = QAction("🖼️ View Textures", table)
+            view_action = QAction("View Textures", table)
             view_action.triggered.connect(lambda: view_txd_textures(main_window, row))
             menu.addAction(view_action)
             

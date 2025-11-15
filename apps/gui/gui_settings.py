@@ -82,7 +82,7 @@ class GUISettingsDialog(QDialog):
         self.tab_widget.addTab(self._create_layout_tab(), "📐 Layout")
         self.tab_widget.addTab(self._create_tabs_tab(), "📑 Tabs")
         self.tab_widget.addTab(self._create_fonts_tab(), "🔤 Fonts")
-        self.tab_widget.addTab(self._create_icons_tab(), "🖼️ Icons")
+        self.tab_widget.addTab(self._create_icons_tab(), "Icons")
         self.tab_widget.addTab(self._create_behavior_tab(), "⚙️ Behavior")
         
         layout.addWidget(self.tab_widget)
@@ -446,7 +446,7 @@ class GUISettingsDialog(QDialog):
         layout = QVBoxLayout(widget)
         
         # Icon display
-        display_group = QGroupBox("🖼️ Icon Display")
+        display_group = QGroupBox("Icon Display")
         display_layout = QVBoxLayout(display_group)
         
         self.show_menu_icons_check = QCheckBox("Show icons in menus")

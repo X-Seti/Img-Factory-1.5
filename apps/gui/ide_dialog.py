@@ -191,7 +191,7 @@ class IDEDialog(QDialog):
         
         # FIXED: Only show Choose Export Folder for import/export operations
         if self.operation in ('import', 'export'):
-            self.choose_folder_btn = QPushButton("📂 Choose Export Folder")
+            self.choose_folder_btn = QPushButton("Choose Export Folder")
             # FIXED: Remove hardcoded green color to match theme
             self.choose_folder_btn.setStyleSheet("QPushButton { padding: 8px; font-weight: bold; }")
             self.choose_folder_btn.setToolTip("Choose a custom folder for export destination")
@@ -235,7 +235,7 @@ class IDEDialog(QDialog):
                 
                 # Update the button text to show selected folder
                 folder_name = os.path.basename(folder) if folder else "Export Folder"
-                self.choose_folder_btn.setText(f"📂 {folder_name}")
+                self.choose_folder_btn.setText(f"{folder_name}")
                 self.choose_folder_btn.setToolTip(f"Export folder: {folder}")
                 
                 # Update status
@@ -263,7 +263,7 @@ class IDEDialog(QDialog):
         
         if file_path and os.path.exists(file_path):
             self.parse_btn.setEnabled(True)
-            self.status_label.setText(f"📄 {os.path.basename(file_path)}")
+            self.status_label.setText(f"{os.path.basename(file_path)}")
             self.status_label.setStyleSheet("color: #333;")
             
             # Auto-parse if enabled
@@ -349,7 +349,7 @@ class IDEDialog(QDialog):
             # Show texture → models relationships  
             texture_relationships = self.ide_parser.get_texture_relationships()
             for texture, models in texture_relationships.items():
-                item_text = f"🖼️ {texture} ← {', '.join(models)}"
+                item_text = f"{texture} ← {', '.join(models)}"
                 item = QListWidgetItem(item_text)
                 item.setData(Qt.ItemDataRole.UserRole, {'type': 'texture', 'name': texture})
                 self.relationships_list.addItem(item)

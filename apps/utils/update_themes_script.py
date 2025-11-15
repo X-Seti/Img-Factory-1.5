@@ -434,7 +434,7 @@ def main():
         return
     
     # Create backup
-    print("\n📦 Creating backup...")
+    print("\nCreating backup...")
     backup_themes_folder()
     
     # Find all JSON files in themes directory

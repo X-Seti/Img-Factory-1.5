@@ -376,9 +376,9 @@ def load_col_file_async(main_window, file_path: str): #vers 1
     def on_model_loaded(count, name):
         """Report model loading"""
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"📦 Loaded model {count}: {name}")
+            main_window.log_message(f"Loaded model {count}: {name}")
         
-        img_debugger.debug(f"📦 COL Model {count} loaded: {name}")
+        img_debugger.debug(f"COL Model {count} loaded: {name}")
     
     def on_load_complete(col_file):
         """Handle successful load completion"""

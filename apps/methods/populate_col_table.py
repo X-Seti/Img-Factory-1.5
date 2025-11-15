@@ -1,4 +1,4 @@
-#this belongs in methods/populate_col_table.py - Version: 4
+#this belongs in methods/populate_col_table.py - Version: 5
 # X-Seti - August14 2025 - IMG Factory 1.5 - COL Table Population Methods
 """
 COL Table Population Methods - Fixed version
@@ -174,7 +174,7 @@ def setup_col_tab(main_window, file_path): #vers 1
         # Setup tab info
         file_name = os.path.basename(file_path)
         file_name_clean = file_name[:-4] if file_name.lower().endswith('.col') else file_name
-        tab_name = f"🛡️ {file_name_clean}"
+        tab_name = f"{file_name_clean}"
         
         # Store tab info
         if not hasattr(main_window, 'open_files'):
@@ -352,7 +352,7 @@ def update_col_info_bar_enhanced(main_window, col_file, file_path): #vers 2
         
         # Create info text
         file_name = os.path.basename(file_path)
-        info_text = f"🛡️ {file_name} | {total_models} models | {total_spheres} spheres | {total_boxes} boxes | {total_vertices} vertices | {total_faces} faces"
+        info_text = f"{file_name} | {total_models} models | {total_spheres} spheres | {total_boxes} boxes | {total_vertices} vertices | {total_faces} faces"
         
         # Update info bar
         main_window.gui_layout.info_bar.setText(info_text)

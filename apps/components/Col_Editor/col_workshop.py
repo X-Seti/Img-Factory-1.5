@@ -244,7 +244,7 @@ class COLPropertiesWidget(QTabWidget): #vers 2
         # Model properties tab
         self.model_tab = QWidget()
         self.setup_model_tab()
-        self.addTab(self.model_tab, "📄 Model")
+        self.addTab(self.model_tab, "Model")
 
         # Spheres tab
         self.spheres_tab = QWidget()
@@ -254,7 +254,7 @@ class COLPropertiesWidget(QTabWidget): #vers 2
         # Boxes tab
         self.boxes_tab = QWidget()
         self.setup_boxes_tab()
-        self.addTab(self.boxes_tab, "📦 Boxes")
+        self.addTab(self.boxes_tab, "Boxes")
 
         # Mesh tab
         self.mesh_tab = QWidget()
@@ -3873,7 +3873,7 @@ class COLWorkshop(QWidget): #vers 3
         details_action.triggered.connect(lambda: self._show_model_details(model, row))
 
         # Copy Info action
-        copy_action = menu.addAction("📄 Copy Info to Clipboard")
+        copy_action = menu.addAction("Copy Info to Clipboard")
         copy_action.triggered.connect(lambda: self._copy_model_info(model, row))
 
         menu.exec(self.collision_list.mapToGlobal(position))

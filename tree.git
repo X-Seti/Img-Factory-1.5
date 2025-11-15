@@ -33,9 +33,9 @@
 │   │   ├── Img_Creator
 │   │   │   └── img_creator.py
 │   │   ├── Img_Factory
-│   │   │   ├── imgfactory.old.py
+│   │   │   ├── depends
+│   │   │   │   └── img_factory_thread.py
 │   │   │   ├── imgfactory.py
-│   │   │   ├── img_factory_thread.py
 │   │   │   └── __init__.py
 │   │   ├── __init__.py
 │   │   ├── Project_Manager
@@ -179,16 +179,17 @@
 │   │   ├── import_highlight_system.py
 │   │   ├── indexed_color_import.py
 │   │   ├── mirror_tab_shared.py
+│   │   ├── old
+│   │   │   ├── tab_aware_functions.py
+│   │   │   ├── tab_functions.py
+│   │   │   └── tab_validation.py
 │   │   ├── populate_col_table.py
 │   │   ├── populate_img_table.py
 │   │   ├── progressbar_functions.py
 │   │   ├── refresh_table_functions.py
 │   │   ├── rw_detection.py
 │   │   ├── svg_shared_icons.py
-│   │   ├── tab_aware_functions.py
-│   │   ├── tab_functions.py
 │   │   ├── tab_system.py
-│   │   ├── tab_validation.py
 │   │   ├── txd_serializer.py
 │   │   ├── txd_versions.py
 │   │   └── update_ui_for_loaded_img.py
@@ -243,8 +244,9 @@
 ├── img_factory_debug.log
 ├── launch_imgfactory.py
 ├── package-lock.json
+├── remove-emo.py
 ├── Summery.md
 ├── TODO.md
 └── tree.git
 
-28 directories, 220 files
+30 directories, 220 files

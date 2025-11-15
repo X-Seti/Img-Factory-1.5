@@ -128,7 +128,7 @@ def handle_browse_game_directory(main_window): #vers 1
                 if not handle_set_game_root_folder(main_window):
                     return False
             else:
-                main_window.log_message("📂 Directory browser cancelled - no game root set")
+                main_window.log_message("Directory browser cancelled - no game root set")
                 return False
 
         # Now we should have a game root, switch to Directory Tree tab
@@ -196,7 +196,7 @@ def handle_browse_game_directory(main_window): #vers 1
                             directory_widget.browse_directory(main_window.game_root)
                         elif hasattr(directory_widget, 'populate_tree'):
                             directory_widget.populate_tree(main_window.game_root)
-                        main_window.log_message(f"📂 Directory widget populated with: {main_window.game_root}")
+                        main_window.log_message(f"Directory widget populated with: {main_window.game_root}")
                 else:
                     main_window.log_message("❌ Failed to integrate directory tree")
                     return False

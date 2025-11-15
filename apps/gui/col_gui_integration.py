@@ -40,7 +40,7 @@ class COLStatusIndicator(QLabel):
     """Status indicator for COL operations in status bar"""
     
     def __init__(self, parent=None):
-        super().__init__("🛡️ COL Ready", parent)
+        super().__init__("COL Ready", parent)
         self.setStyleSheet("color: #4CAF50; font-weight: bold; padding: 2px 8px;")
         self.setToolTip("COL system status")
         
@@ -56,10 +56,10 @@ class COLStatusIndicator(QLabel):
                 self.setText("🔴 COL Debug")
                 self.setStyleSheet("color: #f44336; font-weight: bold; padding: 2px 8px;")
             else:
-                self.setText("🛡️ COL Ready")
+                self.setText("COL Ready")
                 self.setStyleSheet("color: #4CAF50; font-weight: bold; padding: 2px 8px;")
         except:
-            self.setText("🛡️ COL Ready")
+            self.setText("COL Ready")
 
 class COLToolsButtonGroup(QWidget):
     """Group of COL tool buttons for right panel integration"""
@@ -79,7 +79,7 @@ class COLToolsButtonGroup(QWidget):
         layout.setContentsMargins(5, 5, 5, 5)
         
         # COL Tools group
-        col_group = QGroupBox("🛡️ COL Tools")
+        col_group = QGroupBox("COL Tools")
         col_layout = QVBoxLayout(col_group)
         
         # COL Editor button
@@ -131,7 +131,7 @@ def setup_col_tab_for_file(main_window, file_path: str) -> Optional[int]: #vers 
         # Setup tab info
         file_name = os.path.basename(file_path)
         file_name_clean = file_name[:-4] if file_name.lower().endswith('.col') else file_name
-        tab_name = f"🛡️ {file_name_clean}"
+        tab_name = f"{file_name_clean}"
 
         # Store tab info
         if not hasattr(main_window, 'open_files'):
@@ -235,7 +235,7 @@ def add_col_tab_to_main_widget(main_window): #vers 1
                 tools_menu = main_window.menuBar().addMenu("Tools")
 
             # Add COL submenu
-            col_menu = tools_menu.addMenu("🛡️ COL Tools")
+            col_menu = tools_menu.addMenu("COL Tools")
             
             # COL actions
             open_col_action = col_menu.addAction("Open COL File...")
@@ -286,9 +286,9 @@ def update_col_tab_info(main_window, file_path: str, stats: Dict[str, Any] = Non
         file_name_clean = file_name[:-4] if file_name.lower().endswith('.col') else file_name
         
         if stats and 'model_count' in stats:
-            tab_name = f"🛡️ {file_name_clean} ({stats['model_count']})"
+            tab_name = f"{file_name_clean} ({stats['model_count']})"
         else:
-            tab_name = f"🛡️ {file_name_clean}"
+            tab_name = f"{file_name_clean}"
         
         main_window.main_tab_widget.setTabText(current_index, tab_name)
         
@@ -298,9 +298,9 @@ def update_col_tab_info(main_window, file_path: str, stats: Dict[str, Any] = Non
         # Update status indicator if available
         if hasattr(main_window, 'col_status_indicator') and main_window.col_status_indicator:
             if stats and 'model_count' in stats:
-                main_window.col_status_indicator.setText(f"🛡️ COL ({stats['model_count']} models)")
+                main_window.col_status_indicator.setText(f"COL ({stats['model_count']} models)")
             else:
-                main_window.col_status_indicator.setText("🛡️ COL Loaded")
+                main_window.col_status_indicator.setText("COL Loaded")
         
         col_debug_log(main_window, f"COL tab info updated: {tab_name}", 'COL_TABS', 'SUCCESS')
         return True

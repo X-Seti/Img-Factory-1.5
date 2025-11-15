@@ -64,7 +64,7 @@ def create_tab(main_window, file_path=None, file_type=None, file_object=None): #
 
             tab_name = f"{icon} {file_name}"
         else:
-            tab_name = "📂 No File"
+            tab_name = "No File"
 
         tab_widget.tab_name = tab_name
 
@@ -193,12 +193,12 @@ def clear_tab(main_window, tab_index): #vers 2
         tab_widget.file_object = None
         tab_widget.file_type = 'NONE'
         tab_widget.file_path = None
-        tab_widget.tab_name = "📂 No File"
+        tab_widget.tab_name = "No File"
 
         if hasattr(tab_widget, 'table_ref') and tab_widget.table_ref:
             tab_widget.table_ref.setRowCount(0)
 
-        main_window.main_tab_widget.setTabText(tab_index, "📂 No File")
+        main_window.main_tab_widget.setTabText(tab_index, "No File")
 
         if tab_index == main_window.main_tab_widget.currentIndex():
             main_window.current_img = None
