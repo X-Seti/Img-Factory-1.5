@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#this belongs in components.Img_Browser.img_browser.py - Version: 6
+#this belongs in components.Img_Browser.img_browser.py - Version: #
 # X-Seti - August16 2025 - Simple Img Editor.
 
 import sys
@@ -27,6 +27,7 @@ from PyQt6.QtSvgWidgets import QSvgWidget
 App_name = "Img Browser" # keep
 
 # --- Import theme system ---
+
 try:
     from apps.utils.app_settings_system import AppSettings, SettingsDialog
 except ImportError:
@@ -44,6 +45,7 @@ except ImportError:
 
 # --- Data Structures ---
 IMGEntry = namedtuple('IMGEntry', ['name', 'offset', 'size', 'data_offset', 'rw_version'])
+
 
 # --- IDE Parser ---
 class IDEParser:
@@ -63,6 +65,7 @@ class IDEParser:
                     model_name = parts[1].strip()
                     if model_name and not model_name.startswith('*'):
                         self.model_names.append(model_name)
+
 
 # --- IMG Parser ---
 class IMGParser:
@@ -461,7 +464,7 @@ class IMGTab(QWidget):
 
 # --- Main Widget ---
 class MainWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None): #vers 1
         super().__init__(parent)
         self.debug_mode = False
         self.setup_ui()
@@ -778,7 +781,6 @@ class MainWidget(QWidget):
         self.tab_widget.removeTab(index)
 
 
-
 # --- Main Window ---
 class MainWindow(QMainWindow):
     def __init__(self): #vers 1
@@ -873,9 +875,10 @@ class MainWindow(QMainWindow):
                 self.main_widget.open_img_file(url.toLocalFile())
         event.accept()
 
+
 class IDEValidator:
     """Validate IMG entries against IDE file"""
-    def __init__(self, ide_path: str, img_parser: IMGParser):
+    def __init__(self, ide_path: str, img_parser: IMGParser): #vers 1
         self.ide_parser = IDEParser(ide_path)
         self.img_parser = img_parser
         self.img_names = {e.name for e in img_parser.entries}
@@ -952,8 +955,9 @@ class IDEValidator:
         print("Missing TXDs:", report["missing_txds"])
         print("Orphaned Files:", report["orphaned_files"])
 
+
 class NewIMGDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None): #vers 1
         super().__init__(parent)
         self.setWindowTitle("New IMG Archive")
         layout = QVBoxLayout(self)
@@ -975,6 +979,7 @@ class NewIMGDialog(QDialog):
 
     def get_version(self) -> int:
         return self.version_combo.currentData()
+
 
 def main(): #vers 1
     app = QApplication(sys.argv)
