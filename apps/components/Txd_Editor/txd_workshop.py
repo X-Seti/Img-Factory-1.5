@@ -70,7 +70,7 @@ except ModuleNotFoundError:
     )
 
 DEBUG_STANDALONE = False
-
+App_name = "Txd Workshop"
 
 ##Methods list -
 # _apply_gaussian_blur                  # Gaussian blur for bumpmap smoothing
