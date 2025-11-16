@@ -126,14 +126,16 @@ from apps.methods.update_ui_for_loaded_img import update_ui_for_loaded_img, inte
 from apps.methods.import_highlight_system import enable_import_highlighting
 from apps.methods.refresh_table_functions import integrate_refresh_table
 from apps.methods.img_entry_operations import integrate_entry_operations
-from apps.methods.img_import_export import integrate_import_export_functions
-from apps.methods.export_col_shared import integrate_col_export_shared
 from apps.methods.mirror_tab_shared import show_mirror_tab_selection
+
 from apps.methods.ide_parser_functions import integrate_ide_parser
 from apps.methods.find_dups_functions import find_duplicates_by_hash, show_duplicates_dialog
 from apps.methods.dragdrop_functions import integrate_drag_drop_system
 from apps.methods.img_templates import IMGTemplateManager, TemplateManagerDialog
 
+from apps.methods.img_import_functions import integrate_img_import_functions
+from apps.methods.img_export_functions import integrate_img_export_functions
+from apps.methods.col_export_functions import integrate_col_export_functions
 
 App_name = "Img Factory 1.5"
 
@@ -436,7 +438,6 @@ class IMGFactory(QMainWindow):
         # === PHASE 4: ESSENTIAL INTEGRATIONS (Medium) ===
 
         # Core parsers (now safe to use log_message)
-        integrate_col_export_shared(self)
         integrate_ide_parser(self)
         integrate_ide_dialog(self)
         install_operation_routing(self)
@@ -457,7 +458,9 @@ class IMGFactory(QMainWindow):
         integrate_import_via_functions(self)
         integrate_remove_via_functions(self)
         integrate_entry_operations(self)
-        integrate_import_export_functions(self)
+        integrate_img_import_functions(self)
+        integrate_img_export_functions(self)
+        integrate_col_export_functions(self)
 
         # File operations
         install_close_functions(self)
@@ -946,8 +949,6 @@ class IMGFactory(QMainWindow):
 
 
     # In core/export.py
-    from apps.methods.mirror_tab_shared import show_mirror_tab_selection
-
     def export_selected_function(main_window):
         selected_tab, options = show_mirror_tab_selection(main_window, 'export')
         if selected_tab:
