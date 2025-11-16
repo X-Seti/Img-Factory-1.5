@@ -24,7 +24,7 @@ from apps.methods.imgcol_exists import set_context
 def import_via_function(main_window): #vers 3
     """Main import via function with dialog"""
 
-    imgcol_exists(main_window)
+    set_context(main_window)
     # File selection dialog - import via should work with both img and col files.
 
     try:

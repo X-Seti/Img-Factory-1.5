@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 from apps.core.rw_versions import parse_rw_version, get_rw_version_name, is_valid_rw_version
 from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
 
-from apps.methods.imgcol_exists import has_valid_file #has_file_type(
+from apps.methods.imgcol_exists import has_valid_file, set_context
 
 ##Methods list -
 # _add_file_to_img
@@ -226,50 +226,58 @@ def _ask_user_about_saving(main_window): #vers 1
     except Exception:
         pass
 
-def import_files_function(main_window): #vers 5
+def import_files_function(main_window): #vers 6
     """Import multiple files via file dialog"""
-    from apps.methods.imgcol_exists import set_context
-
-    imgcol_exists(main_window)
-    # File selection dialog - import via should work with both img and col files.
-
-    file_dialog = QFileDialog()
-    file_paths, _ = file_dialog.getOpenFileNames(
-        main_window,
-        "Select files to import", "", "All Files (*);;DFF Models (*.dff);;TXD Textures (*.txd);;COL Collision (*.col);;Audio (*.wav)")
-
-    if not file_paths:
-        return False
-
-    # Import files
-    imported_count = 0
-    failed_count = 0
-
-    for file_path in file_paths:
-        if _add_file_to_img(file_object, file_path):
-            imported_count += 1
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"Imported: {os.path.basename(file_path)}")
-        else:
-            failed_count += 1
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"Failed: {os.path.basename(file_path)}")
-
-    if imported_count > 0:
-        # Refresh UI
-        _refresh_after_import(main_window)
-
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"Import complete: {imported_count} imported, {failed_count} failed")
-            main_window.log_message("IMG marked as modified - use Save Entry to save changes")
-
-        # Ask user about saving
-        _ask_user_about_saving(main_window)
+    try:
+        #set_context(main_window)
         
-        return True
-    else:
+        # Get file context
+        file_object = getattr(main_window, 'file_object', None)
+        file_type = getattr(main_window, 'file_type', None)
+        
+        file_dialog = QFileDialog()
+        file_paths, _ = file_dialog.getOpenFileNames(
+            main_window,
+            "Select files to import", "", "All Files (*);;DFF Models (*.dff);;TXD Textures (*.txd);;COL Collision (*.col);;Audio (*.wav)")
+
+        if not file_paths:
+            return False
+
+        # Import files
+        imported_count = 0
+        failed_count = 0
+
+        for file_path in file_paths:
+            if _add_file_to_img(file_object, file_path):
+                imported_count += 1
+                if hasattr(main_window, 'log_message'):
+                    main_window.log_message(f"Imported: {os.path.basename(file_path)}")
+            else:
+                failed_count += 1
+                if hasattr(main_window, 'log_message'):
+                    main_window.log_message(f"Failed: {os.path.basename(file_path)}")
+
+        if imported_count > 0:
+            # Refresh UI
+            _refresh_after_import(main_window)
+
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"Import complete: {imported_count} imported, {failed_count} failed")
+                main_window.log_message("IMG marked as modified - use Save Entry to save changes")
+
+            # Ask user about saving
+            _ask_user_about_saving(main_window)
+            
+            return True
+        else:
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("Import failed: No files were imported successfully")
+            return False
+    
+    except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("Import failed: No files were imported successfully")
+            main_window.log_message(f"Import error: {str(e)}")
+        QMessageBox.critical(main_window, "Import Error", f"Import failed: {str(e)}")
         return False
 
 def import_files_with_list(main_window, file_paths: List[str]) -> bool: #vers 1

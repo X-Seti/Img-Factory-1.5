@@ -172,25 +172,6 @@
 │   │   ├── import_highlight_system.py
 │   │   ├── indexed_color_import.py
 │   │   ├── mirror_tab_shared.py
-│   │   ├── old
-│   │   │   ├── tab_aware_functions.py
-│   │   │   ├── tab_functions.py
-│   │   │   ├── tab_validation.py
-│   │   │   └── validation_backup_20251115_152156
-│   │   │       ├── core.py
-│   │   │       ├── dump.py
-│   │   │       ├── export_via.py
-│   │   │       ├── imgcol_convert.py
-│   │   │       ├── imgcol_rename.py
-│   │   │       ├── imgcol_replace.py
-│   │   │       ├── img_import_system.py
-│   │   │       ├── impotr.py
-│   │   │       ├── rebuild.py
-│   │   │       ├── remove.py
-│   │   │       ├── remove_via.py
-│   │   │       ├── rename.py
-│   │   │       ├── rw_analysis_trigger.py
-│   │   │       └── save_entry.py
 │   │   ├── populate_col_table.py
 │   │   ├── populate_img_table.py
 │   │   ├── progressbar_functions.py
@@ -255,4 +236,4 @@
 ├── TODO.md
 └── tree.git
 
-30 directories, 226 files
+28 directories, 209 files

@@ -26,12 +26,18 @@ from apps.methods.imgcol_exists import set_context
 # _calculate_data_start_offset
 # integrate_rebuild_functions
 
-def rebuild_current_img_native(main_window, mode: str = "auto") -> bool:
+def rebuild_current_img_native(main_window, mode: str = "auto") -> bool: #vers 8
     """Native IMG rebuild using imgfactory objects directly - NO conversion needed"""
     try:
+        set_context(main_window)
         
-        imgcol_exists(main_window)
-        # File selection dialog - rebuild should work with both img and col files.
+        # Get file context
+        file_object = getattr(main_window, 'file_object', None)
+        file_type = getattr(main_window, 'file_type', None)
+        
+        if file_type != 'IMG' or not file_object:
+            QMessageBox.critical(main_window, "No IMG File", "Current tab does not contain an IMG file")
+            return False
         
         # Structure validation
         is_valid, validation_msg = validate_img_structure(file_object, main_window)

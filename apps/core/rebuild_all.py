@@ -44,7 +44,8 @@ class BatchRebuildThread(QThread):
         self.targets = targets
         self.mode = mode
         self.should_stop = False
-        
+        set_context(main_window)
+
     def run(self):
         """Execute batch rebuild"""
         total_files = len(self.targets)
@@ -81,6 +82,7 @@ class BatchRebuildThread(QThread):
         
         self.batch_completed.emit(total_files, success_count, failed_files)
     
+
     def _rebuild_single_target(self, target: Dict) -> bool:
         """Rebuild a single IMG target"""
         try:
@@ -238,7 +240,7 @@ class BatchRebuildDialog(QDialog):
             file_name = os.path.basename(target['file_path'])
             item = QListWidgetItem(f"{file_name} ({target['source']})")
             self.targets_list.addItem(item)
-        
+
         # Update button state
         self.start_btn.setEnabled(len(self.targets) > 0)
     

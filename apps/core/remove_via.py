@@ -24,7 +24,7 @@ from apps.methods.imgcol_exists import set_context
 def remove_via_function(main_window, file_object, file_type): #vers 1
     """Remove entries via file selection dialog"""
     
-    imgcol_exists(main_window)
+    set_context(main_window)
     # File selection dialog - remove via should work with both img and col files.
 
     file_dialog = QFileDialog()

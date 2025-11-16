@@ -21,13 +21,18 @@ from apps.methods.file_validation import validate_img_file, validate_any_file, g
 # _open_folder_in_explorer
 # integrate_dump_functions
 
-def dump_all_function(main_window): #vers 12
+def dump_all_function(main_window): #vers 13
     """Dump all entries to folder"""
     try:
-        # Validate tab
+        set_context(main_window)
         
-        imgcol_exists(main_window)
-        # File selection dialog - dump should work with both img and col files.
+        # Get file context
+        file_object = getattr(main_window, 'file_object', None)
+        file_type = getattr(main_window, 'file_type', None)
+        
+        if file_type != 'IMG' or not file_object:
+            QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
+            return False
         
         # Get all entries
         all_entries = getattr(file_object, 'entries', [])

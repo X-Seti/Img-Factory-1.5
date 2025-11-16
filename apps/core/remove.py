@@ -22,58 +22,70 @@ from apps.methods.imgcol_exists import set_context
 # remove_multiple_entries
 # remove_selected_function
 
-def remove_selected_function(main_window): #vers 3
+def remove_selected_function(main_window): #vers 4
     """Remove selected entries with proper modification tracking"""
-    
-
-    imgcol_exists(main_window)
-    # File selection dialog - remove_entries should work with both img and col files.
-    
-    # Get selected entries
-    selected_entries = _get_selected_entries_simple(main_window, file_object)
-    
-    if not selected_entries:
-        QMessageBox.information(main_window, "No Selection", "No entries selected for removal")
-        return False
-    
-    # Confirm removal
-    reply = QMessageBox.question(
-        main_window,
-        "Confirm Removal",
-        f"Remove {len(selected_entries)} selected entries from memory?\n\n"
-        f"Use 'Save Entry' afterwards to save changes to disk.",
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No
-    )
-    
-    if reply != QMessageBox.StandardButton.Yes:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message("Remove operation cancelled by user")
-        return False
-    
-    if hasattr(main_window, 'log_message'):
-        main_window.log_message(f"Removing {len(selected_entries)} selected entries")
-    
-    # Remove entries with proper tracking
-    success = _remove_entries_with_tracking(file_object, selected_entries, main_window)
-    
-    if success:
-        # Refresh after removal
-        _refresh_after_removal(main_window)
+    try:
+        set_context(main_window)
         
-        # Inform user about saving changes
-        QMessageBox.information(
-            main_window, 
-            "Remove Complete", 
-            f"Successfully removed {len(selected_entries)} entries from memory.\n\n"
-            f"Use the 'Save Entry' button to save changes to disk.\n"
-            f"Changes will be lost if you reload without saving."
+        # Get file context
+        file_object = getattr(main_window, 'file_object', None)
+        file_type = getattr(main_window, 'file_type', None)
+        
+        if file_type != 'IMG' or not file_object:
+            QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
+            return False
+        
+        # Get selected entries
+        selected_entries = _get_selected_entries_simple(main_window, file_object)
+        
+        if not selected_entries:
+            QMessageBox.information(main_window, "No Selection", "No entries selected for removal")
+            return False
+        
+        # Confirm removal
+        reply = QMessageBox.question(
+            main_window,
+            "Confirm Removal",
+            f"Remove {len(selected_entries)} selected entries from memory?\n\n"
+            f"Use 'Save Entry' afterwards to save changes to disk.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
         )
         
+        if reply != QMessageBox.StandardButton.Yes:
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message("Remove operation cancelled by user")
+            return False
+        
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"Removed {len(selected_entries)} entries - use Save Entry to save changes")
+            main_window.log_message(f"Removing {len(selected_entries)} selected entries")
+        
+        # Remove entries with proper tracking
+        success = _remove_entries_with_tracking(file_object, selected_entries, main_window)
+        
+        if success:
+            # Refresh after removal
+            _refresh_after_removal(main_window)
+            
+            # Inform user about saving changes
+            QMessageBox.information(
+                main_window, 
+                "Remove Complete", 
+                f"Successfully removed {len(selected_entries)} entries from memory.\n\n"
+                f"Use the 'Save Entry' button to save changes to disk.\n"
+                f"Changes will be lost if you reload without saving."
+            )
+            
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"Removed {len(selected_entries)} entries - use Save Entry to save changes")
+        
+        return success
     
-    return success
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Remove error: {str(e)}")
+        QMessageBox.critical(main_window, "Remove Error", f"Remove failed: {str(e)}")
+        return False
 
 def remove_entries_by_name(main_window, entry_names: List[str]) -> bool: #vers 1
     """Remove entries by name with proper modification tracking"""

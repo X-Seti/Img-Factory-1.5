@@ -28,12 +28,26 @@ from apps.methods.imgcol_exists import set_context
 # _export_col_all
 # integrate_export_functions
 
-def export_selected_function(main_window): #vers 6
+def export_selected_function(main_window): #vers 7
     """Export selected entries with overwrite check"""
     try:
-
-        imgcol_exists(main_window)
-        # File selection dialog - export via should work with both img and col files.
+        set_context(main_window)
+        
+        # Get file context
+        file_object = getattr(main_window, 'file_object', None)
+        file_type = getattr(main_window, 'file_type', None)
+        
+        if not file_object:
+            QMessageBox.warning(main_window, "No File", "No file is currently loaded")
+            return False
+        
+        if file_type == 'IMG':
+            return _export_img_selected(main_window, file_object)
+        elif file_type == 'COL':
+            return _export_col_selected(main_window, file_object)
+        else:
+            QMessageBox.warning(main_window, "Unsupported File Type", f"Export not supported for {file_type} files")
+            return False
             
     except Exception as e:
         if hasattr(main_window, 'log_message'):

@@ -36,7 +36,7 @@ def export_via_function(main_window): #vers 5
     """Main export via function with full tab awareness"""
     try:
 
-        imgcol_exists(main_window)
+        set_context(main_window)
         # File selection dialog - export via should work with both img and col files.
 
     except Exception as e:
