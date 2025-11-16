@@ -1,6 +1,6 @@
 .
 ├── apps
-│   ├── appfactory.settings.json
+│   ├── appfactory.settings.json.txt
 │   ├── components
 │   │   ├── Col_Creator
 │   │   │   └── col_creator.py
@@ -30,12 +30,16 @@
 │   │   │   └── gta_file_editors.py
 │   │   ├── Ide_Editor
 │   │   │   └── ide_editor.py
+│   │   ├── Img_Browser
+│   │   │   ├── img_browser.py
+│   │   │   └── img_browser.py.txt
 │   │   ├── Img_Creator
 │   │   │   └── img_creator.py
 │   │   ├── Img_Factory
 │   │   │   ├── depends
 │   │   │   │   └── img_factory_thread.py
 │   │   │   ├── imgfactory.py
+│   │   │   ├── imgfactory.tar.gz
 │   │   │   └── __init__.py
 │   │   ├── __init__.py
 │   │   ├── Project_Manager
@@ -133,13 +137,12 @@
 │   │   ├── tear_off.py
 │   │   ├── txd_context_menu.py
 │   │   └── unified_button_theme.py
-│   ├── img_import_functions.py
 │   ├── __init__.py
 │   ├── locale
 │   │   └── local_settings.json
 │   ├── methods
 │   │   ├── col_core_classes.py
-│   │   ├── col_export_shared.py
+│   │   ├── col_export_functions.py
 │   │   ├── col_functions.py
 │   │   ├── col_integration.py
 │   │   ├── col_loader.py
@@ -149,7 +152,6 @@
 │   │   ├── col_structure_manager.py
 │   │   ├── col_validation.py
 │   │   ├── dragdrop_functions.py
-│   │   ├── export_col_shared.py
 │   │   ├── export_overwrite_check.py
 │   │   ├── export_shared.py
 │   │   ├── file_loading_functions.py
@@ -161,7 +163,8 @@
 │   │   ├── imgcol_exists.py
 │   │   ├── img_core_classes.py
 │   │   ├── img_entry_operations.py
-│   │   ├── img_import_export.py
+│   │   ├── img_export_entry.py
+│   │   ├── img_export_functions.py
 │   │   ├── img_import_functions.py
 │   │   ├── img_integration.py
 │   │   ├── img_parsing_functions.py
@@ -237,4 +240,4 @@
 ├── TODO.md
 └── tree.git
 
-28 directories, 210 files
+29 directories, 212 files
