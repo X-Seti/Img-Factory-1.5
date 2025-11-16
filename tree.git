@@ -39,7 +39,6 @@
 │   │   │   ├── depends
 │   │   │   │   └── img_factory_thread.py
 │   │   │   ├── imgfactory.py
-│   │   │   ├── imgfactory.tar.gz
 │   │   │   └── __init__.py
 │   │   ├── __init__.py
 │   │   ├── Project_Manager
@@ -240,4 +239,4 @@
 ├── TODO.md
 └── tree.git
 
-29 directories, 212 files
+29 directories, 211 files
