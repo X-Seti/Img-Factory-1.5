@@ -133,6 +133,7 @@
 │   │   ├── tear_off.py
 │   │   ├── txd_context_menu.py
 │   │   └── unified_button_theme.py
+│   ├── img_import_functions.py
 │   ├── __init__.py
 │   ├── locale
 │   │   └── local_settings.json
@@ -161,7 +162,7 @@
 │   │   ├── img_core_classes.py
 │   │   ├── img_entry_operations.py
 │   │   ├── img_import_export.py
-│   │   ├── img_import_system.py
+│   │   ├── img_import_functions.py
 │   │   ├── img_integration.py
 │   │   ├── img_parsing_functions.py
 │   │   ├── img_routing_operations.py
@@ -236,4 +237,4 @@
 ├── TODO.md
 └── tree.git
 
-28 directories, 209 files
+28 directories, 210 files
