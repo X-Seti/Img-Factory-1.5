@@ -4,14 +4,14 @@
 """
 RW Detection Methods - Comprehensive RenderWare version detection system
 Fixes the RW Address/Version detection issues for new entries
-Uses comprehensive RW version data from apps.core.rw_versions.py
+Uses comprehensive RW version data from apps.methods.rw_versions.py
 """
 
 import struct
 from typing import Optional, Tuple, Any
 
 # Import comprehensive RW version data from existing core module
-from apps.core.rw_versions import (
+from apps.methods.rw_versions import (
     get_rw_version_name, is_valid_rw_version, parse_rw_version,
     get_model_format_version, RWVersion, DFFVersion, ModelFormat
 )
@@ -42,7 +42,7 @@ def detect_rw_version_from_data(data: bytes, filename: str = "") -> Tuple[Option
         # RW version is at bytes 8-12
         version_bytes = data[8:12]
         
-        # Use comprehensive parsing from apps.core.rw_versions.py
+        # Use comprehensive parsing from apps.methods.rw_versions.py
         version_value, version_name = parse_rw_version(version_bytes)
         
         if is_valid_rw_version(version_value):
@@ -155,7 +155,7 @@ def integrate_rw_detection_working(main_window) -> bool: #vers 1
     
     if hasattr(main_window, 'log_message'):
         main_window.log_message("RW detection methods integrated with comprehensive database")
-        main_window.log_message("   • Uses core/rw_versions.py comprehensive data")
+        main_window.log_message("   • Uses methods.rw_versions.py comprehensive data")
         main_window.log_message("   • Fixes RW Address/Version detection")
         main_window.log_message("   • Handles DFF, TXD, COL file detection")
         main_window.log_message("   • Supports new entries with in-memory data")

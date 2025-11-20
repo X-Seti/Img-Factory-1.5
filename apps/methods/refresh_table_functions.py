@@ -48,7 +48,7 @@ def _refresh_img_table(main_window) -> bool: #vers 5
         # Import RW detection functions
         try:
             from apps.methods.img_detection import detect_entry_file_type_and_version
-            from apps.core.rw_versions import get_rw_version_name
+            from apps.methods.rw_versions import get_rw_version_name
             rw_detection_available = True
         except ImportError:
             rw_detection_available = False

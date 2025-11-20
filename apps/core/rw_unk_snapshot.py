@@ -16,7 +16,7 @@ from pathlib import Path
 from datetime import datetime
 
 # Import existing functions - NO NEW FUNCTIONALITY
-from apps.core.rw_versions import get_rw_version_name, is_valid_rw_version
+from apps.methods.rw_versions import get_rw_version_name, is_valid_rw_version
 from apps.methods.img_core_classes import IMGFile, IMGEntry
 
 ##Methods list -

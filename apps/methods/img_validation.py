@@ -13,7 +13,7 @@ from typing import Optional, Any, List, Dict, Tuple
 from pathlib import Path
 from enum import Enum
 from apps.methods.img_core_classes import IMGFile, IMGEntry, IMGVersion
-from apps.core.rw_versions import is_valid_rw_version
+from apps.methods.rw_versions import is_valid_rw_version
 
 ##Methods list -
 # validate_img_file_structure
@@ -181,7 +181,7 @@ class IMGValidator:
             result.add_error("Unknown IMG version")
             return
 
-        # Version 1 specific validation
+        # Version 1 specific validation TODO, need to seprate SOL imgs version 1,5
         if version == IMGVersion.VERSION_1:
             dir_path = img_file.file_path.replace('.img', '.dir')
             if not os.path.exists(dir_path):
@@ -259,7 +259,7 @@ class IMGValidator:
         version = img_file.version
 
         # Check sector alignment for appropriate versions
-        if version in [IMGVersion.VERSION_2, IMGVersion.VERSION_3]:
+        if version in [IMGVersion.VERSION1_5, IMGVersion.VERSION_2, IMGVersion.VERSION_3]:
             for entry in img_file.entries:
                 if entry.offset % 2048 != 0:
                     result.add_warning(f"Entry '{entry.name}' not aligned to 2048-byte boundary")
@@ -272,7 +272,7 @@ class IMGValidator:
             gap = next_start - current_end
 
             if gap > 0:
-                if version in [IMGVersion.VERSION_2, IMGVersion.VERSION_3]:
+                if version in [IMGVersion.VERSION1_5, IMGVersion.VERSION_2, IMGVersion.VERSION_3]:
                     # Large gaps might indicate corruption
                     if gap > 4096:  # 4KB gap
                         result.add_warning(f"Large gap ({gap} bytes) between entries")
@@ -661,7 +661,7 @@ class IMGValidator:
 
         # Version suggestions
         if img_file.version == IMGVersion.VERSION_1:
-            suggestions.append("Consider upgrading to IMG Version 2 for better performance")
+            suggestions.append("Consider upgrading to IMG Version 1.5 for better performance")
 
         return suggestions
 
@@ -1242,32 +1242,39 @@ def integrate_validation_functions(main_window) -> bool: #vers 1
             main_window.log_message(f"❌ Validation integration failed: {e}")
         return False
 
-def detect_img_version(file_path: str) -> IMGVersion:
-    """Detect IMG file version from file header"""
-    try:
+    def detect_img_version(self, file_path: str) -> IMGVersion:
         with open(file_path, 'rb') as f:
             header = f.read(8)
 
-        if len(header) < 8:
-            return IMGVersion.UNKNOWN
+            if header.startswith(b'VER2'):
+                # It's a VERSION_2 IMG (VC or SOL)
+                f.seek(0)
+                # Read first few directory entries to check for SA-like sizes
+                dir_start = 8
+                f.seek(dir_start)
+                entry_data = f.read(32)  # First entry
 
-        # Check for VER2 (GTA SA/IV)
-        if header.startswith(b'VER2'):
-            return IMGVersion.VER2
+                if len(entry_data) == 32:
+                    # Parse offset/size (VC uses 32-byte entries)
+                    offset = struct.unpack('<I', entry_data[16:20])[0]
+                    size = struct.unpack('<I', entry_data[20:24])[0]
 
-        # Check for common IMG patterns
-        # GTA III/VC files often start with entry data
-        first_dword = struct.unpack('<I', header[:4])[0]
+                    # SOL IMGs have VC structure but SA-sized files (often >10MB)
+                    if size > 10 * 1024 * 1024:  # >10MB suggests SOL
+                        return IMGVersion.VERSION_SOL
 
-        # If first value looks like an offset and is reasonable
-        if 32 <= first_dword <= 0x10000000:
-            return IMGVersion.VER1
+                return IMGVersion.VERSION_2
 
-        return IMGVersion.UNKNOWN
-
-    except Exception:
-        return IMGVersion.UNKNOWN
-
+            elif header.startswith(b'\x00\x00\x00\x01'):
+                return IMGVersion.VERSION_1
+            elif header.startswith(b'VER3'):
+                return IMGVersion.VERSION_3
+            else:
+                # Fallback: check file size heuristics
+                file_size = os.path.getsize(file_path)
+                if file_size > 500 * 1024 * 1024:  # >500MB = likely SA/SOL
+                    return IMGVersion.VERSION_3
+                return IMGVersion.VERSION_2
 
 # Utility functions for integration
 def quick_validate_img(file_path: str) -> ValidationResult:

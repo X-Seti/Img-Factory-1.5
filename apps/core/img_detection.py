@@ -5,7 +5,7 @@
 """
 IMG Platform Detection - Enhanced Support
 Detects and handles PS2, Android, and GTA Stories IMG formats
-Uses existing core/rw_versions.py and core/img_formats.py functions
+Uses existing methods.rw_versions.py and core/img_formats.py functions
 """
 
 import os
@@ -15,7 +15,7 @@ from enum import Enum
 from pathlib import Path
 
 # Import existing functions - NO NEW FUNCTIONALITY
-from apps.core.rw_versions import get_rw_version_name, get_mdl_version_info
+from apps.methods.rw_versions import get_rw_version_name, get_mdl_version_info
 from apps.methods.img_core_classes import IMGVersion, IMGEntry, IMGFile
 
 ##Methods list -
