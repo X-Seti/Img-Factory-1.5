@@ -1,16 +1,16 @@
-#this belongs in core/import_via.py - Version: 17
-# X-Seti - November19 2025 - IMG Factory 1.5 - Import Via Functions - Clean Production Version
+#this belongs in core/import_via.py - Version: 15
+# X-Seti - November22 2025 - IMG Factory 1.5 - Import Via Functions - Enhanced Production Version
 
 """
-Import Via Functions - Clean production version with reliable IDE/text import
-FIXED: Now properly populates metadata for imported files.
+Import Via Functions - Enhanced production version with reliable IDE/text import
+Now uses the new core import system with comprehensive validation and preview
 """
 
 import os
 from typing import List, Optional, Dict, Any, Tuple
 from PyQt6.QtWidgets import QMessageBox, QFileDialog, QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QLabel, QRadioButton, QButtonGroup
-from apps.methods.imgcol_exists import set_context
-from apps.methods.tab_system import get_current_file_from_active_tab
+
+
 
 ##Methods list -
 # import_via_function
@@ -23,8 +23,8 @@ from apps.methods.tab_system import get_current_file_from_active_tab
 # integrate_import_via_functions
 
 def import_via_function(main_window): #vers 4
-    """Main import via function with dialog"""
-    set_context(main_window)
+    """Main import via function with dialog - NOW USES NEW CORE IMPORT SYSTEM"""
+
     # File selection dialog - import via should work with both img and col files.
     try:
         # import via dialog - import via should work with both img and col files.
@@ -42,9 +42,68 @@ def import_via_function(main_window): #vers 4
             main_window.log_message(f"Import Via error: {str(e)}")
         return False
 
+def import_via_ide_function(main_window) -> bool: #vers 2
+    """Direct IDE import function - NOW USES NEW CORE IMPORT SYSTEM"""
+    try:
+        # Get IDE file
+        ide_path, _ = QFileDialog.getOpenFileName(
+            main_window,
+            "Select IDE File", "", "IDE Files (*.ide);;All Files (*)"
+        )
+        
+        if not ide_path:
+            return False
+            
+        # Get files location
+        files_location = QFileDialog.getExistingDirectory(
+            main_window,
+            "Select Folder Containing Files to Import",
+            "",
+            QFileDialog.Option.ShowDirsOnly
+        )
+        
+        if not files_location:
+            return False
+        
+        return _import_files_via_ide(main_window, ide_path, files_location)
+        
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Import Via IDE error: {str(e)}")
+        return False
+
+def import_via_text_function(main_window) -> bool: #vers 2
+    """Import files from text file list - NOW USES NEW CORE IMPORT SYSTEM"""
+    try:
+        # File dialog for text file
+        text_path, _ = QFileDialog.getOpenFileName(
+            main_window,
+            "Select Text File List", "", "Text Files (*.txt);;All Files (*)"
+        )
+        
+        if not text_path:
+            return False
+        
+        # Get files location
+        files_location = QFileDialog.getExistingDirectory(
+            main_window,
+            "Select Folder Containing Files to Import",
+            "",
+            QFileDialog.Option.ShowDirsOnly
+        )
+        
+        if not files_location:
+            return False
+        
+        return _import_files_via_text(main_window, text_path, files_location)
+        
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Import via text error: {str(e)}")
+        return False
 
 def _import_files_via_ide(main_window, ide_path: str, files_location: str) -> bool: #vers 2
-    """Import files from IDE with file searching"""
+    """Import files from IDE with file searching - NOW USES NEW CORE IMPORT SYSTEM"""
     try:
         if not os.path.exists(ide_path):
             QMessageBox.warning(main_window, "IDE Not Found", f"IDE file not found: {ide_path}")
@@ -52,9 +111,10 @@ def _import_files_via_ide(main_window, ide_path: str, files_location: str) -> bo
         if not os.path.exists(files_location):
             QMessageBox.warning(main_window, "Folder Not Found", f"Files location not found: {files_location}")
             return False
-        file_object, file_type = get_current_file_from_active_tab(main_window)
-        if file_type != 'IMG':
-            QMessageBox.warning(main_window, "IMG Only", "Import Via IDE only works with IMG files")
+        
+        # Check if we have access to the new import system
+        if not hasattr(main_window, 'import_files_with_list'):
+            QMessageBox.critical(main_window, "Import System Error", "New import system not available")
             return False
 
         # Parse IDE file
@@ -119,12 +179,10 @@ def _import_files_via_ide(main_window, ide_path: str, files_location: str) -> bo
 
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"Found {len(files_to_import)} files from IDE definitions")
-
-        # Use the import system
-        if hasattr(main_window, 'import_files_with_list'):
-            return main_window.import_files_with_list(files_to_import)
-        else:
-            return False
+        
+        # Use the NEW core import system with validation and preview
+        return main_window.import_files_with_list(files_to_import)
+        
     except Exception as e:
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"IDE import error: {str(e)}")
