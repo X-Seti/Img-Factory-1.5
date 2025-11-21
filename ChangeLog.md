@@ -7,6 +7,9 @@ Complete history of fixes, updates, and improvements.
 
 ---
 
+**New**: - November 21, 2025
+Added AI access to help resolve bugs I can not seem to fix myself.
+
 **Fixed**: - November 20, 2025
 
 core/impotr.py
