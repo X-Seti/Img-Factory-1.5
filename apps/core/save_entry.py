@@ -36,21 +36,19 @@ def _detect_rw_versions_for_new_entries(img_file, main_window): #vers 1
         main_window.log_message(f"RW versions detected for {new_entries_count} new entries")
 
 
-def _perform_rebuild_with_rw_analysis(img_file, main_window): #vers 1
-    """Perform rebuild with RW analysis - FIXES EMPTY RW COLUMNS"""
-    if hasattr(main_window, 'log_message'):
-        main_window.log_message("Starting rebuild with RW analysis...")
-    # Import working rebuild from core
-    from apps.core.rebuild import rebuild_current_img_native
-    success = rebuild_current_img_native(main_window)
-    if success:
-        # After rebuild, analyze ALL entries for RW versions
-        if hasattr(img_file, 'analyze_all_entries_rw_versions'):
-            img_file.analyze_all_entries_rw_versions()
-            if hasattr(main_window, 'log_message'):
-                main_window.log_message("Re-analyzed all entries for RW versions after rebuild")
-        return True
-    else:
+
+def _perform_rebuild_with_rw_analysis(img_file, main_window): #vers 4
+    """Perform rebuild with RW analysis - USE STANDALONE REBUILD"""
+    try:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message("Starting rebuild with RW analysis...")
+
+        # Use the working rebuild system from core/rebuild.py
+        from apps.core.rebuild import rebuild_current_img_native
+        return rebuild_current_img_native(main_window)
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Rebuild failed: {str(e)}")
         return False
 
 
@@ -139,7 +137,7 @@ def save_img_entry(main_window): #vers 1
     if hasattr(main_window, 'log_message'):
         main_window.log_message(f"Saving with RW detection: {os.path.basename(file_object.file_path)}")
     # STEP 1: Detect RW versions for new entries BEFORE saving
-    _detect_rw_versions_for_new_entries(file_object, main_window)
+    _detect_rw_versions_for_new_entries(file_object, main_window) #TODO needs to be for imported files.
     # STEP 2: Perform rebuild with RW analysis
     success = _perform_rebuild_with_rw_analysis(file_object, main_window)
     if success:

@@ -42,6 +42,95 @@ def import_via_function(main_window): #vers 4
             main_window.log_message(f"Import Via error: {str(e)}")
         return False
 
+
+def _import_files_via_ide(main_window, ide_path: str, files_location: str) -> bool: #vers 2
+    """Import files from IDE with file searching"""
+    try:
+        if not os.path.exists(ide_path):
+            QMessageBox.warning(main_window, "IDE Not Found", f"IDE file not found: {ide_path}")
+            return False
+        if not os.path.exists(files_location):
+            QMessageBox.warning(main_window, "Folder Not Found", f"Files location not found: {files_location}")
+            return False
+        file_object, file_type = get_current_file_from_active_tab(main_window)
+        if file_type != 'IMG':
+            QMessageBox.warning(main_window, "IMG Only", "Import Via IDE only works with IMG files")
+            return False
+
+        # Parse IDE file
+        models = set()
+        textures = set()
+        try:
+            with open(ide_path, 'r', encoding='utf-8', errors='ignore') as f:
+                current_section = None
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    if line.lower() == 'objs':
+                        current_section = 'objs'
+                        continue
+                    elif line.lower() == 'tobj':
+                        current_section = 'tobj'
+                        continue
+                    elif line.lower() == 'end':
+                        current_section = None
+                        continue
+                    if current_section in ['objs', 'tobj']:
+                        try:
+                            parts = [part.strip() for part in line.split(',')]
+                            if len(parts) >= 3:
+                                model_name = parts[1].strip()
+                                texture_name = parts[2].strip()
+                                if model_name and not model_name.isdigit() and model_name != '-1':
+                                    models.add(model_name)
+                                if texture_name and not texture_name.isdigit() and texture_name != '-1':
+                                    textures.add(texture_name)
+                        except Exception:
+                            continue
+        except Exception as e:
+            QMessageBox.critical(main_window, "IDE Parse Error", f"Failed to parse IDE file: {str(e)}")
+            return False
+
+        if not models and not textures:
+            QMessageBox.information(main_window, "No Models", "No model definitions found in IDE file")
+            return False
+
+        # Find files to import
+        files_to_import = []
+        # Find DFF files
+        for model_name in models:
+            dff_path = _find_files_in_directory(files_location, f"{model_name}.dff")
+            if dff_path:
+                files_to_import.append(dff_path)
+                if hasattr(main_window, 'log_message'):
+                    main_window.log_message(f"Found: {model_name}.dff")
+        # Find TXD files
+        for texture_name in textures:
+            txd_path = _find_files_in_directory(files_location, f"{texture_name}.txd")
+            if txd_path:
+                files_to_import.append(txd_path)
+                if hasattr(main_window, 'log_message'):
+                    main_window.log_message(f"Found: {texture_name}.txd")
+
+        if not files_to_import:
+            QMessageBox.information(main_window, "No Files Found", f"No files found matching IDE definitions in: {files_location}")
+            return False
+
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Found {len(files_to_import)} files from IDE definitions")
+
+        # Use the import system
+        if hasattr(main_window, 'import_files_with_list'):
+            return main_window.import_files_with_list(files_to_import)
+        else:
+            return False
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"IDE import error: {str(e)}")
+        return False
+
+
 def import_via_ide_function(main_window) -> bool: #vers 2
     """Direct IDE import function"""
     try:
@@ -92,90 +181,6 @@ def import_via_text_function(main_window) -> bool: #vers 2
             main_window.log_message(f"Import via text error: {str(e)}")
         return False
 
-def _import_files_via_ide(main_window, ide_path: str, files_location: str) -> bool: #vers 2
-    """Import files from IDE with file searching"""
-    try:
-        if not os.path.exists(ide_path):
-            QMessageBox.warning(main_window, "IDE Not Found", f"IDE file not found: {ide_path}")
-            return False
-        if not os.path.exists(files_location):
-            QMessageBox.warning(main_window, "Folder Not Found", f"Files location not found: {files_location}")
-            return False
-        file_object, file_type = get_current_file_from_active_tab(main_window)
-        if file_type != 'IMG':
-            QMessageBox.warning(main_window, "IMG Only", "Import Via IDE only works with IMG files")
-            return False
-        # Parse IDE file
-        models = set()
-        textures = set()
-        try:
-            with open(ide_path, 'r', encoding='utf-8', errors='ignore') as f:
-                current_section = None
-                for line in f:
-                    line = line.strip()
-                    if not line or line.startswith('#'):
-                        continue
-                    if line.lower() == 'objs':
-                        current_section = 'objs'
-                        continue
-                    elif line.lower() == 'tobj':
-                        current_section = 'tobj'
-                        continue
-                    elif line.lower() == 'end':
-                        current_section = None
-                        continue
-                    if current_section in ['objs', 'tobj']:
-                        try:
-                            parts = [part.strip() for part in line.split(',')]
-                            if len(parts) >= 3:
-                                model_name = parts[1].strip()
-                                texture_name = parts[2].strip()
-                                if model_name and not model_name.isdigit() and model_name != '-1':
-                                    models.add(model_name)
-                                if texture_name and not texture_name.isdigit() and texture_name != '-1':
-                                    textures.add(texture_name)
-                        except Exception:
-                            continue
-        except Exception as e:
-            QMessageBox.critical(main_window, "IDE Parse Error", f"Failed to parse IDE file: {str(e)}")
-            return False
-        if not models and not textures:
-            QMessageBox.information(main_window, "No Models", "No model definitions found in IDE file")
-            return False
-        # Find files to import
-        files_to_import = []
-        # Find DFF files
-        for model_name in models:
-            dff_path = _find_files_in_directory(files_location, f"{model_name}.dff")
-            if dff_path:
-                files_to_import.append(dff_path)
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"Found: {model_name}.dff")
-        # Find TXD files
-        for texture_name in textures:
-            txd_path = _find_files_in_directory(files_location, f"{texture_name}.txd")
-            if txd_path:
-                files_to_import.append(txd_path)
-                if hasattr(main_window, 'log_message'):
-                    main_window.log_message(f"Found: {texture_name}.txd")
-        if not files_to_import:
-            QMessageBox.information(main_window, "No Files Found", f"No files found matching IDE definitions in: {files_location}")
-            return False
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"Found {len(files_to_import)} files from IDE definitions")
-        # Use the import system
-        if hasattr(main_window, 'import_files_with_list'):
-            success = main_window.import_files_with_list(files_to_import)
-            # Force a refresh to ensure metadata is populated
-            if success and hasattr(main_window, 'refresh_current_tab_data'):
-                main_window.refresh_current_tab_data()
-            return success
-        else:
-            return False
-    except Exception as e:
-        if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"IDE import error: {str(e)}")
-        return False
 
 def _import_files_via_text(main_window, text_path: str, base_dir: str) -> bool: #vers 2
     """Import files from text list"""
@@ -358,7 +363,7 @@ def integrate_import_via_functions(main_window): #vers 2
             main_window.log_message("   • IDE file import with model/texture detection")
             main_window.log_message("   • Text file list import")
             main_window.log_message("   • Recursive file searching")
-            main_window.log_message("   • ✅ FIXED: Metadata populated after import")
+            main_window.log_message("   • FIXED: Metadata populated after import")
         return True
     except Exception as e:
         if hasattr(main_window, 'log_message'):

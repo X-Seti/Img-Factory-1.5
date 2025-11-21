@@ -20,8 +20,6 @@ from PyQt6.QtCore import QTimer
 ##Classes -
 # ProgressManager
 
-_recursion_guard = False
-
 class ProgressManager:
     """Centralized progress management for IMG Factory"""
 
@@ -35,7 +33,6 @@ class ProgressManager:
         self.auto_reset_timer = QTimer()
         self.auto_reset_timer.setSingleShot(True)
         self.auto_reset_timer.timeout.connect(self._auto_reset)
-
 
     def show_progress(self, value: int = 0, text: str = "Working...", auto_reset_ms: int = 30000): #vers 1
         """Show progress bar with standardized interface
@@ -74,7 +71,6 @@ class ProgressManager:
         except Exception as e:
             print(f"Progress show error: {e}")
 
-
     def update_progress(self, value: int, text: str = None): #vers 1
         """Update progress value and optional text
 
@@ -106,7 +102,6 @@ class ProgressManager:
 
         except Exception as e:
             print(f"Progress update error: {e}")
-
 
     def hide_progress(self, final_text: str = "Ready"): #vers 1
         """Hide progress bar and reset to ready state
@@ -143,11 +138,9 @@ class ProgressManager:
         except Exception as e:
             print(f"Progress hide error: {e}")
 
-
     def reset_progress(self): #vers 1
         """Reset progress to ready state (alias for hide_progress)"""
         self.hide_progress("Ready")
-
 
     def _auto_reset_old(self): #vers 1
         """Auto-reset progress if it's been active too long"""
@@ -156,17 +149,16 @@ class ProgressManager:
                 self.main_window.log_message("Progress auto-reset due to timeout")
             self.hide_progress("Ready")
 
-
-    def _auto_reset(self):  # vers 6
+    def _auto_reset(self): #vers 4
         global _recursion_guard
         if _recursion_guard:
             return
         try:
             _recursion_guard = True
-            if hasattr(self, '_progress_bar') and self._progress_bar:
+            if self._progress_bar:
                 self._progress_bar.setValue(0)
                 self._progress_bar.setVisible(False)
-            if hasattr(self, '_status_label') and self._status_label:
+            if self._status_label:
                 self._status_label.setText("Ready")
         finally:
             _recursion_guard = False

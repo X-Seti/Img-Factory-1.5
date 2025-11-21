@@ -527,7 +527,7 @@ class IMGFactory(QMainWindow):
             apply_theme_to_app(QApplication.instance(), self.app_settings)
 
         # Progress system
-        integrate_progress_system(self)
+        #integrate_progress_system(self)
 
         # Split functions
         integrate_split_functions(self)

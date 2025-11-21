@@ -7,6 +7,16 @@ Complete history of fixes, updates, and improvements.
 
 ---
 
+**Fixed**: - November 20, 2025
+
+core/impotr.py
+methods/img_import_functions.py
+methods/img_entry_operations.py
+- IMG Import Functions - NO AUTO-SAVE during import
+- ✅ No rebuild_img_file() calls during import
+- ✅ Marks entries as is_new_entry for Save Entry
+- ✅ Uses tab-aware import
+
 **Fixed**: - November 18, 2025
 - Tab system is finally fixed once and for all.
 
