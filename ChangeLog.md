@@ -7,15 +7,65 @@ Complete history of fixes, updates, and improvements.
 
 ---
 
-global file_object, file_type
-file_object = getattr(main_window, 'file_object', None)
-file_type = getattr(main_window, 'file_type', None)
+**Fixed**: - November 20, 2025
 
+core/impotr.py
+methods/img_import_functions.py
+methods/img_entry_operations.py
+- IMG Import Functions - NO AUTO-SAVE during import
+- ✅ No rebuild_img_file() calls during import
+- ✅ Marks entries as is_new_entry for Save Entry
+- ✅ Uses tab-aware import
+
+**Fixed**: - November 18, 2025
+- Tab system is finally fixed once and for all.
+
+core/rebuild.py
+methods/remove.py
+methods/remove_via.py
+- ✅ FIXED: Now distinguishes between found and missing entries
+- ✅ Accurate user feedback ("Removed 1, 15 not found")
+- ✅ Uses tab-aware file detection
+- ✅ No global file_object/file_type
+
+methods/export.py
+- ✅ Uses tab-aware file detection from active tab
+- ✅ Removed global file_object/file_type
+- ✅ Now imports get_current_file_from_active_tab
+
+methods/export_via.py
+- ✅ 'str' object has no attribute 'name' error
+- ✅ Exports real IMG entry objects (not strings)
+- ✅ Uses correct export_entry (offset/size)
+- ✅ NO dependency on gui.ide_dialog
+- ✅ Uses apps.methods.ide_parser_functions
+- ✅ Tab-aware with proper imports
+- ✅ Handles both IDE and text file export lists
+- ✅ Fixes "IDE dialog system not available" error
+
+methods/rw_versions.py
+- ✅ Comprehensive version mapping for all GTA games
+- ✅ Prevents IMG corruption by preserving correct RW versions
+- ✅ Syntax error in get_model_format_version function
+
+methods/populate_img_table.py
+- ✅ Clean separator for status info
+- ✅ Proper highlighting of new entries
+
+**Unresolved**: - November 17, 2025
+core/impotr - still bugged - filelist corruption
+- ✅ Now sets is_new_entry=True on imported entries
+- ✅ Uses tab-aware refresh
+- ✅ Handles highlighting correctly
+- ✅ Tuple unpacking for import count
+
+core/import_via.py
+- ✅ Uses tab-aware file detection
+- ✅ Marks imported entries as is_new_entry=True
+- ✅ Proper duplicate handling
 
 **Unresolved**: - November 15, 2025
 - ❌ Tab system is still creating problems, Trying to export entries we get error messages "loaded img file can not be found". ??
-
-
 
 ### 1. tab_system.py (Version 6)
 **Location**: apps/methods/tab_system.py

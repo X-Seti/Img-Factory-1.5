@@ -20,7 +20,7 @@ from PyQt6.QtGui import QFont
 from apps.methods.img_core_classes import IMGFile, IMGVersion
 from apps.core.img_version1 import create_version_1_img
 from apps.core.img_version2 import create_version_2_img
-from apps.core.rw_versions import get_default_version_for_game
+from apps.methods.rw_versions import get_default_version_for_game
 default_version = get_default_version_for_game('gtasa')
 
 class GamePreset:

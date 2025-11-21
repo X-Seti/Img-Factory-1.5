@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
+from apps.methods.tab_system import get_current_file_from_active_tab, validate_tab_before_operation, get_current_file_type_from_tab
 
 # IMG_Editor core integration support
 try:
@@ -36,16 +37,14 @@ except ImportError:
 # _get_selected_col_model_safe
 # integrate_rename_functions
 
-def rename_entry(main_window): #vers 2
+def rename_entry(main_window): #vers 3
     """Main rename function - handles both IMG entries and COL models"""
     try:
-        # Use same tab awareness as other core functions
+        # Use tab-aware validation
         if not validate_tab_before_operation(main_window, "Rename Entry"):
             return False
-        
         # Get current file type
         file_type = get_current_file_type_from_tab(main_window)
-        
         if file_type == 'IMG':
             return rename_img_entry(main_window)
         elif file_type == 'COL':
@@ -53,7 +52,6 @@ def rename_entry(main_window): #vers 2
         else:
             QMessageBox.warning(main_window, "No File", "Please open an IMG or COL file first")
             return False
-        
     except Exception as e:
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"Rename entry error: {str(e)}")

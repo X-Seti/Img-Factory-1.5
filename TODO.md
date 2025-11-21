@@ -5,6 +5,8 @@
 
 ## Completed Today - October 22, 2025
 
+
+
 ### ✅ Theme System Color Expansion - COMPLETED
 **Status**: COMPLETE
 **Completed**: October 22, 2025
@@ -87,6 +89,7 @@
 ### 3. Tab System Issues
 **Issue**: Multiple tabs open (IMG/COL), export_via.py, export.py and dump.py functions can't see the current selected tab.
 
+IDE import error: name 'get_current_file_from_active_tab' is not defined
 **Tasks**:
 - [ ] Fix tab detection in export functions
 - [ ] Fix tab detection in dump functions

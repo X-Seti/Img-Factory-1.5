@@ -168,7 +168,7 @@ def _export_img_entries(main_window, img_file, entries: List, export_dir: str,
             
             try:
                 # Use img_import_export.py's export_entry function
-                output_path = export_entry(img_file, entry, output_dir=export_dir)
+                output_path = export_entry(img_file, entry, output_path=os.path.join(export_dir, entry.name))
                 
                 if output_path:
                     success_count += 1

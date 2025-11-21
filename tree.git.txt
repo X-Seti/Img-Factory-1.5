@@ -1,6 +1,6 @@
 .
 ├── apps
-│   ├── appfactory.settings.json
+│   ├── appfactory.settings.json.txt
 │   ├── components
 │   │   ├── Col_Creator
 │   │   │   └── col_creator.py
@@ -30,6 +30,9 @@
 │   │   │   └── gta_file_editors.py
 │   │   ├── Ide_Editor
 │   │   │   └── ide_editor.py
+│   │   ├── Img_Browser
+│   │   │   ├── img_browser.py
+│   │   │   └── img_browser.py.txt
 │   │   ├── Img_Creator
 │   │   │   └── img_creator.py
 │   │   ├── Img_Factory
@@ -65,8 +68,11 @@
 │   │   ├── create.py
 │   │   ├── dialogs.py
 │   │   ├── dump.py
+│   │   ├── dump.txt
 │   │   ├── export.py
+│   │   ├── export.txt
 │   │   ├── export_via.py
+│   │   ├── export_via.txt
 │   │   ├── file_dirtree_backend.py
 │   │   ├── file_dirtree_browser.py
 │   │   ├── file_extraction.py
@@ -82,21 +88,31 @@
 │   │   ├── img_version1.py
 │   │   ├── img_version2.py
 │   │   ├── import_via.py
+│   │   ├── import_via.txt
 │   │   ├── impotr.py
+│   │   ├── impotr.txt
 │   │   ├── notepad.py
 │   │   ├── open.py
 │   │   ├── quick_export.py
 │   │   ├── rebuild_all.py
+│   │   ├── rebuild_all.txt
 │   │   ├── rebuild.py
+│   │   ├── rebuild.txt
 │   │   ├── reload.py
+│   │   ├── reload.txt
 │   │   ├── remove.py
+│   │   ├── remove.txt
 │   │   ├── remove_via.py
+│   │   ├── remove_via.txt
 │   │   ├── rename.py
+│   │   ├── rename.txt
 │   │   ├── right_click_actions.py
 │   │   ├── rw_analysis_trigger.py
 │   │   ├── rw_unk_snapshot.py
 │   │   ├── rw_versions.py
+│   │   ├── rw_versions.txt
 │   │   ├── save_entry.py
+│   │   ├── save_entry.txt
 │   │   ├── shortcuts.py
 │   │   ├── theme_integration.py
 │   │   └── utils.py
@@ -133,13 +149,12 @@
 │   │   ├── tear_off.py
 │   │   ├── txd_context_menu.py
 │   │   └── unified_button_theme.py
-│   ├── img_import_functions.py
 │   ├── __init__.py
 │   ├── locale
 │   │   └── local_settings.json
 │   ├── methods
 │   │   ├── col_core_classes.py
-│   │   ├── col_export_shared.py
+│   │   ├── col_export_functions.py
 │   │   ├── col_functions.py
 │   │   ├── col_integration.py
 │   │   ├── col_loader.py
@@ -149,20 +164,25 @@
 │   │   ├── col_structure_manager.py
 │   │   ├── col_validation.py
 │   │   ├── dragdrop_functions.py
-│   │   ├── export_col_shared.py
 │   │   ├── export_overwrite_check.py
 │   │   ├── export_shared.py
+│   │   ├── export_shared.txt
 │   │   ├── file_loading_functions.py
 │   │   ├── file_validation.py
 │   │   ├── find_dups_functions.py
 │   │   ├── ide_parser_functions.py
+│   │   ├── ide_parser_functions.txt
 │   │   ├── iff_import.py
 │   │   ├── img_analyze.py
 │   │   ├── imgcol_exists.py
 │   │   ├── img_core_classes.py
 │   │   ├── img_entry_operations.py
-│   │   ├── img_import_export.py
+│   │   ├── img_export_entry.py
+│   │   ├── img_export_entry.txt
+│   │   ├── img_export_functions.py
+│   │   ├── img_export_functions.txt
 │   │   ├── img_import_functions.py
+│   │   ├── img_import_functions.txt
 │   │   ├── img_integration.py
 │   │   ├── img_parsing_functions.py
 │   │   ├── img_routing_operations.py
@@ -175,6 +195,7 @@
 │   │   ├── mirror_tab_shared.py
 │   │   ├── populate_col_table.py
 │   │   ├── populate_img_table.py
+│   │   ├── populate_img_table.txt
 │   │   ├── progressbar_functions.py
 │   │   ├── refresh_table_functions.py
 │   │   ├── rw_detection.py
@@ -237,4 +258,4 @@
 ├── TODO.md
 └── tree.git
 
-28 directories, 210 files
+29 directories, 230 files

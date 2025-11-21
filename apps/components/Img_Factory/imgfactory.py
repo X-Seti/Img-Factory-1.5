@@ -56,7 +56,7 @@ from apps.debug.unified_debug_functions import integrate_all_improvements, insta
 from apps.core.img_formats import GameSpecificIMGDialog, IMGCreator
 from apps.core.file_extraction import setup_complete_extraction_integration
 from apps.core.file_type_filter import integrate_file_filtering
-from apps.core.rw_versions import get_rw_version_name
+from apps.methods.rw_versions import get_rw_version_name
 from apps.core.right_click_actions import integrate_right_click_actions, setup_table_context_menu
 from apps.core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
 from apps.core.convert import convert_img, convert_img_format
@@ -527,7 +527,7 @@ class IMGFactory(QMainWindow):
             apply_theme_to_app(QApplication.instance(), self.app_settings)
 
         # Progress system
-        integrate_progress_system(self)
+        #integrate_progress_system(self)
 
         # Split functions
         integrate_split_functions(self)
@@ -1925,43 +1925,112 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"Error loading IMG in new tab: {str(e)}")
 
-    def _load_txd_file_in_new_tab(self, file_path): #vers 1
-        """Load TXD file in new tab"""
+
+    def _load_txd_file_in_new_tab(self, file_path):  # vers 3
+        """Load TXD file in new tab - FIXED: creates tab, assigns data, no overwrite"""
         try:
             import os
+            file_name = os.path.basename(file_path)
+            base_name = file_name[:-4] if file_name.lower().endswith('.txd') else file_name
 
-            # Create new tab for TXD
+            # STEP 1: Create new tab
             tab_index = self.create_tab(file_path, 'TXD', None)
+            if tab_index is None:
+                self.log_message("Failed to create TXD tab")
+                return
 
-            # Update tab to show it's a TXD
-            file_name = os.path.basename(file_path)[:-4]  # Remove .txd
-            self.main_tab_widget.setTabText(tab_index, f"{file_name}") #TODO SVG icon
-
-            # Open TXD Workshop for this file
+            # STEP 2: Load TXD via workshop
             from apps.components.Txd_Editor.txd_workshop import open_txd_workshop
-            self.txd_workshop = open_txd_workshop(self, file_path)
+            workshop = open_txd_workshop(self, file_path)
 
-            if workshop:
-                self.log_message(f"TXD loaded in tab {tab_index}: {file_name}")
+            if not workshop:
+                self.log_message("TXD workshop failed to open")
+                return
+
+            # STEP 3: If TXD loading sets self.current_txd, assign it to the tab
+            if hasattr(self, 'current_txd') and self.current_txd:
+                tab_widget = self.main_tab_widget.widget(tab_index)
+                if tab_widget:
+                    tab_widget.file_object = self.current_txd
+                    tab_widget.file_type = 'TXD'
+                    tab_widget.file_path = file_path
+                    self.log_message(f"TXD object assigned to tab {tab_index}")
+                # Clear global reference
+                self.current_txd = None
+
+            # STEP 4: Ensure we're on the new tab
+            self.main_tab_widget.setCurrentIndex(tab_index)
+
+            self.log_message(f"TXD loaded in tab {tab_index}: {base_name}")
 
         except Exception as e:
-            self.log_message(f"Error loading TXD in tab:_open_txd_workshop {str(e)}")
+            self.log_message(f"Error loading TXD in new tab: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
-    def _load_col_file_in_new_tab(self, file_path): #vers [your_version + 1]
-        """Load COL file in new tab"""
+
+    def _load_col_file_in_new_tab(self, file_path):  # vers 3
+        """Load COL file in new tab - FULLY FIXED: creates tab first, assigns data correctly"""
         try:
             import os
-            self.log_message(f"Loading COL in new tab: {os.path.basename(file_path)}")
+            file_name = os.path.basename(file_path)
+            self.log_message(f"Loading COL in new tab: {file_name}")
 
-            # Don't create tab here if load_col_file_safely creates one
-            # Just call the loader directly
-            if hasattr(self, 'load_col_file_safely'):
-                self.load_col_file_safely(file_path)
+            # STEP 1: Create new tab BEFORE loading
+            tab_index = self.create_tab(file_path, 'COL', None)
+            if tab_index is None:
+                self.log_message("Failed to create new tab for COL file")
+                return
+
+            # STEP 2: Remember the target tab index (in case user switches tabs during load)
+            target_tab_index = tab_index
+
+            # STEP 3: Load COL file (synchronously)
+            if not hasattr(self, 'load_col_file_safely'):
+                self.log_message("COL loading method not available")
+                return
+
+            success = self.load_col_file_safely(file_path)
+            if not success:
+                self.log_message("COL file failed to load after tab creation")
+                # Optionally close the empty tab
+                if hasattr(self, 'close_tab'):
+                    self.close_tab(target_tab_index)
+                return
+
+            # STEP 4: At this point, self.current_col is set by load_col_file_safely
+            # Assign it to the **correct tab**, not the current one (which may have changed)
+            if target_tab_index >= self.main_tab_widget.count():
+                self.log_message("Tab index out of bounds after COL load")
+                return
+
+            tab_widget = self.main_tab_widget.widget(target_tab_index)
+            if tab_widget and self.current_col:
+                # Store the loaded object on the tab
+                tab_widget.file_object = self.current_col
+                tab_widget.file_type = 'COL'
+                tab_widget.file_path = file_path
+                tab_widget.tab_ready = True
+
+                # Update tab text (remove .col)
+                base_name = file_name.rsplit('.', 1)[0]
+                self.main_tab_widget.setTabText(target_tab_index, base_name)
+
+                self.log_message(f"COL file assigned to tab {target_tab_index}")
             else:
-                self.log_message("Error: No COL loading method found")
+                self.log_message("Warning: No tab widget or current_col missing after COL load")
+
+            # STEP 5: Optionally clear global reference to avoid side effects
+            # But only AFTER it's safely stored on the tab
+            self.current_col = None
+
+            # STEP 6: Switch to the new tab (optional but expected UX)
+            self.main_tab_widget.setCurrentIndex(target_tab_index)
 
         except Exception as e:
             self.log_message(f"Error loading COL in new tab: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
 
     def _open_txd_workshop(self, file_path=None): #vers 2
