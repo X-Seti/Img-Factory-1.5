@@ -595,6 +595,28 @@ class IMGFile:
             print(f"[ERROR] Failed to save IMG file: {e}")
             return False
 
+    def rebuild_img_file(self) -> bool: #vers 1
+        """Rebuild the entire IMG file based on current entries - NEW METHOD"""
+        try:
+            print(f"[DEBUG] Rebuilding IMG file version {self.version}")
+            
+            if self.version == IMGVersion.VERSION_1:
+                return self._rebuild_version1()
+            elif self.version == IMGVersion.VERSION_2:
+                return self._rebuild_version2()
+            elif self.version == IMGVersion.VERSION_SOL:
+                # For SOL files, treat them as extended Version 1
+                return self._rebuild_version1()
+            else:
+                print(f"[ERROR] Unsupported IMG version for rebuild: {self.version}")
+                return False
+
+        except Exception as e:
+            print(f"[ERROR] Failed to rebuild IMG file: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
     def _sanitize_filename(self, filename: str) -> str: #vers 1
         """CRITICAL: Clean corrupted filenames before encoding"""
         try:
@@ -993,8 +1015,8 @@ class IMGFile:
             return False
 
 
-    def detect_version(self) -> IMGVersion: #vers 4
-        """Detect IMG version and platform from file"""
+    def detect_version(self) -> IMGVersion: #vers 5
+        """Detect IMG version and platform from file - FIXED to identify SOL as Version 1.5"""
         try:
             if not os.path.exists(self.file_path):
                 return IMGVersion.UNKNOWN
@@ -1011,10 +1033,15 @@ class IMGFile:
             if self.file_path.lower().endswith('.dir'):
                 img_path = self.file_path[:-4] + '.img'
                 if os.path.exists(img_path):
-                    self.version = IMGVersion.VERSION_1
-                    return IMGVersion.VERSION_1
+                    # Check if this is an extended IMG file (SOL format) by checking file size or entries
+                    if self._is_extended_version1(img_path):
+                        self.version = IMGVersion.VERSION_SOL
+                        return IMGVersion.VERSION_SOL
+                    else:
+                        self.version = IMGVersion.VERSION_1
+                        return IMGVersion.VERSION_1
 
-            # Check if it's a single .img file (Version 2)
+            # Check if it's a single .img file
             if self.file_path.lower().endswith('.img'):
                 try:
                     with open(self.file_path, 'rb') as f:
@@ -1022,9 +1049,15 @@ class IMGFile:
                         if header == b'VER2':
                             self.version = IMGVersion.VERSION_2
                             return IMGVersion.VERSION_2
-                        # Could be Version 1 IMG file without DIR
-                        self.version = IMGVersion.VERSION_1
-                        return IMGVersion.VERSION_1
+                        else:
+                            # Check if this is an extended IMG file (SOL format) by checking file size or entries
+                            if self._is_extended_version1(self.file_path):
+                                self.version = IMGVersion.VERSION_SOL
+                                return IMGVersion.VERSION_SOL
+                            else:
+                                # Could be Version 1 IMG file without DIR
+                                self.version = IMGVersion.VERSION_1
+                                return IMGVersion.VERSION_1
                 except:
                     pass
 
@@ -1033,6 +1066,44 @@ class IMGFile:
 
         self.version = IMGVersion.UNKNOWN
         return IMGVersion.UNKNOWN
+
+    def _is_extended_version1(self, img_path: str) -> bool:
+        """Check if Version 1 IMG file is extended (SOL format) by checking for extended features"""
+        try:
+            # Extended IMG files (SOL) typically have more entries or larger file sizes
+            # Check file size - SOL files are typically larger
+            file_size = os.path.getsize(img_path)
+            
+            # Also check if the directory file has more entries than normal
+            dir_path = img_path.replace('.img', '.dir')
+            if os.path.exists(dir_path):
+                dir_size = os.path.getsize(dir_path)
+                # Standard DIR files have 32 bytes per entry, so check if it's larger than expected
+                expected_entries = dir_size // 32
+                if expected_entries > 1000:  # Arbitrary threshold for "extended"
+                    return True
+            
+            # If file is very large, it might be extended
+            if file_size > 50 * 1024 * 1024:  # 50MB threshold
+                return True
+                
+            # Additional check: read first few entries to see if they contain extended data
+            with open(dir_path if os.path.exists(dir_path) else img_path, 'rb') as f:
+                # Read first few entries to check for extended format markers
+                f.seek(0)
+                entry_data = f.read(32)  # Size of one entry
+                if len(entry_data) == 32:
+                    # Check if entry name contains extended markers or if offset/size values are unusual
+                    offset = struct.unpack('<I', entry_data[0:4])[0]
+                    size = struct.unpack('<I', entry_data[4:8])[0]
+                    # Extended formats might have different patterns
+                    if size > 10000000:  # Very large individual entries could indicate extended format
+                        return True
+
+        except Exception:
+            pass
+            
+        return False
 
     def open(self) -> bool: #vers 5
         """Open and parse IMG file - FIXED WITH PROPER ENTRY PARSING"""
