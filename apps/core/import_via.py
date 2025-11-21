@@ -1,4 +1,4 @@
-#this belongs in core/import_via.py - Version: 16
+#this belongs in core/import_via.py - Version: 17
 # X-Seti - November19 2025 - IMG Factory 1.5 - Import Via Functions - Clean Production Version
 
 """
