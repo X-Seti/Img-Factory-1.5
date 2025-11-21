@@ -1,15 +1,1 @@
-
-*.log
-/dff_sample
-/gui/__pycache__
-/core/__pycache__
-/utils/__pycache__
-/components/__pycache__
-/openrw
-/methods/__pycache__
-/methods/__pycache__
-gui/gui_layout_old.py
-gitimgtree.git
-/Assists/Dump
-*.py-old
-/.old_put_aside
+(empty)
