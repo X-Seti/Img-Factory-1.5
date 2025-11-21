@@ -24,13 +24,20 @@ from typing import List, Optional
 SECTOR_SIZE = 2048
 MAX_FILENAME_LENGTH = 24
 
-def add_entry_safe(img_archive, entry_name: str, file_data: bytes, auto_save: bool = False) -> bool:  #vers 4
+def add_entry_safe(img_archive, entry_name: str, file_data: bytes, auto_save: bool = False) -> bool:  #vers 5
     """Add entry with safe fallback - auto_save DISABLED by default"""
     try:
         # Try IMGFile.add_entry first
         if hasattr(img_archive, 'add_entry') and callable(img_archive.add_entry):
             # Pass auto_save=False to prevent rebuild_img_file() call
-            return img_archive.add_entry(entry_name, file_data)
+            # Need to call add_entry with auto_save=False parameter
+            if 'auto_save' in str(img_archive.add_entry.__code__.co_varnames):
+                # The add_entry method accepts auto_save parameter
+                return img_archive.add_entry(entry_name, file_data, auto_save=auto_save)
+            else:
+                # The add_entry method doesn't accept auto_save parameter
+                # Call with auto_save disabled in other ways
+                return img_archive.add_entry(entry_name, file_data)
         else:
             # Fallback implementation
             from apps.methods.img_core_classes import IMGEntry
@@ -49,106 +56,8 @@ def add_entry_safe(img_archive, entry_name: str, file_data: bytes, auto_save: bo
             img_archive.entries.append(new_entry)
             img_archive.modified = True
             return True
-    except:
-        return False
-
-    try:
-        # Import debug system
-        try:
-            from apps.debug.img_debug_functions import img_debugger
-        except ImportError:
-            img_debugger = None
-        
-        # Validate inputs
-        if not filename or not data:
-            if img_debugger:
-                img_debugger.error("Invalid filename or data provided for add_entry")
-            return False
-        
-        # Ensure filename length is valid
-        if len(filename.encode('ascii', errors='replace')) >= MAX_FILENAME_LENGTH:
-            filename = filename[:MAX_FILENAME_LENGTH-1]  # Leave room for null terminator
-            if img_debugger:
-                img_debugger.debug(f"Filename truncated to: {filename}")
-        
-        # Check for duplicate entries (replace if exists)
-        existing_entry = None
-        if hasattr(img_file, 'entries'):
-            for i, entry in enumerate(img_file.entries):
-                if hasattr(entry, 'name') and entry.name.lower() == filename.lower():
-                    existing_entry = entry
-                    if img_debugger:
-                        img_debugger.debug(f"Replacing existing entry: {filename}")
-                    break
-        
-        if existing_entry:
-            # Replace existing entry data
-            existing_entry.data = data
-            existing_entry.size = math.ceil(len(data) / SECTOR_SIZE)
-            if hasattr(existing_entry, 'streaming_size'):
-                existing_entry.streaming_size = existing_entry.size
-            
-            # Detect file type and RW version from data
-            if hasattr(existing_entry, 'detect_rw_version'):
-                existing_entry.detect_rw_version(data)
-            
-            # Mark entry as new/modified for future save operations
-            existing_entry.is_new_entry = True
-            existing_entry.modified = True
-        else:
-            # Create brand new entry using IMG file's add_entry method if available
-            if hasattr(img_file, 'add_entry') and callable(img_file.add_entry):
-                success = img_file.add_entry(filename, data)
-                if not success:
-                    if img_debugger:
-                        img_debugger.error(f"IMG file add_entry method failed for: {filename}")
-                    return False
-            else:
-                # Fallback: create entry manually
-                try:
-                    # Import IMG classes
-                    from apps.methods.img_core_classes import IMGEntry
-                    
-                    new_entry = IMGEntry()
-                    new_entry.name = filename
-                    new_entry.data = data
-                    new_entry.size = math.ceil(len(data) / SECTOR_SIZE)
-                    new_entry.streaming_size = new_entry.size
-                    
-                    # Calculate proper offset for new entry
-                    new_entry.offset = _calculate_next_offset(img_file)
-                    
-                    # Detect file type and RW version from data
-                    if hasattr(new_entry, 'detect_rw_version'):
-                        new_entry.detect_rw_version(data)
-                    
-                    # Mark as new entry for future save operations
-                    new_entry.is_new_entry = True
-                    new_entry.modified = True
-                    
-                    # Add to entries list
-                    if not hasattr(img_file, 'entries'):
-                        img_file.entries = []
-                    img_file.entries.append(new_entry)
-                    
-                except ImportError:
-                    if img_debugger:
-                        img_debugger.error("Cannot import IMG classes for manual entry creation")
-                    return False
-        
-        # Mark archive as modified
-        img_file.modified = True
-        
-        if img_debugger:
-            img_debugger.success(f"Entry added successfully: {filename}")
-        
-        return True
-        
     except Exception as e:
-        if img_debugger:
-            img_debugger.error(f"Failed to add entry {filename}: {str(e)}")
-        else:
-            print(f"[ERROR] add_entry_safe failed: {e}")
+        print(f"[ERROR] add_entry_safe failed: {e}")
         return False
 
 def _calculate_next_offset(img_file) -> int: #vers 1
