@@ -1,16 +1,54 @@
-#this belongs in core/import_via.py - Version: 17
-# X-Seti - November19 2025 - IMG Factory 1.5 - Import Via Functions - Clean Production Version
+#this belongs in core/import_via.py - Version: 19
+# X-Seti - November22 2025 - IMG Factory 1.5 - NEW Import Via Functions - Ground Up Rebuild
 
 """
-Import Via Functions - Clean production version with reliable IDE/text import
-FIXED: Now properly populates metadata for imported files.
+NEW Import Via Functions - Ground Up Rebuild with enhanced functionality
 """
 
 import os
+import re
 from typing import List, Optional, Dict, Any, Tuple
 from PyQt6.QtWidgets import QMessageBox, QFileDialog, QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QLabel, QRadioButton, QButtonGroup
 from apps.methods.imgcol_exists import set_context
 from apps.methods.tab_system import get_current_file_from_active_tab
+
+def sanitize_filename(filename: str) -> str:
+    """Sanitize filename to remove problematic characters"""
+    # Remove invalid characters and replace with underscore
+    sanitized = re.sub(r'[<>:"/\\|?*]', '_', filename)
+    # Remove control characters
+    sanitized = ''.join(c for c in sanitized if ord(c) >= 32 and ord(c) != 127)
+    return sanitized
+
+def detect_file_type(filename: str) -> str:
+    """Detect file type based on extension"""
+    ext = os.path.splitext(filename)[1].lower()
+    if ext in ['.dff']:
+        return 'MODEL'
+    elif ext in ['.txd']:
+        return 'TEXTURE'
+    elif ext in ['.col']:
+        return 'COLLISION'
+    elif ext in ['.wav', '.mp3', '.ogg']:
+        return 'AUDIO'
+    elif ext in ['.dat', '.txt']:
+        return 'TEXT'
+    else:
+        return 'UNKNOWN'
+
+def detect_rw_version(file_path: str) -> tuple[int, str]:
+    """Detect RenderWare version from file data"""
+    try:
+        from apps.methods.rw_versions import parse_rw_version
+        with open(file_path, 'rb') as f:
+            data = f.read()
+        if len(data) >= 12:
+            version_val, version_name = parse_rw_version(data[8:12])
+            if version_val > 0:
+                return version_val, version_name
+        return 0, "Unknown"
+    except Exception:
+        return 0, "Unknown"
 
 ##Methods list -
 # import_via_function
@@ -22,8 +60,8 @@ from apps.methods.tab_system import get_current_file_from_active_tab
 # _find_files_in_directory
 # integrate_import_via_functions
 
-def import_via_function(main_window): #vers 4
-    """Main import via function with dialog"""
+def import_via_function(main_window): #vers 5
+    """Main import via function with dialog - NEW SYSTEM"""
     set_context(main_window)
     # File selection dialog - import via should work with both img and col files.
     try:
@@ -43,8 +81,8 @@ def import_via_function(main_window): #vers 4
         return False
 
 
-def _import_files_via_ide(main_window, ide_path: str, files_location: str) -> bool: #vers 2
-    """Import files from IDE with file searching"""
+def _import_files_via_ide(main_window, ide_path: str, files_location: str) -> bool: #vers 3
+    """Import files from IDE with file searching - NEW SYSTEM"""
     try:
         if not os.path.exists(ide_path):
             QMessageBox.warning(main_window, "IDE Not Found", f"IDE file not found: {ide_path}")
@@ -83,9 +121,9 @@ def _import_files_via_ide(main_window, ide_path: str, files_location: str) -> bo
                                 model_name = parts[1].strip()
                                 texture_name = parts[2].strip()
                                 if model_name and not model_name.isdigit() and model_name != '-1':
-                                    models.add(model_name)
+                                    models.add(sanitize_filename(model_name))
                                 if texture_name and not texture_name.isdigit() and texture_name != '-1':
-                                    textures.add(texture_name)
+                                    textures.add(sanitize_filename(texture_name))
                         except Exception:
                             continue
         except Exception as e:
@@ -120,9 +158,13 @@ def _import_files_via_ide(main_window, ide_path: str, files_location: str) -> bo
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"Found {len(files_to_import)} files from IDE definitions")
 
-        # Use the import system
+        # Use the NEW import system
         if hasattr(main_window, 'import_files_with_list'):
-            return main_window.import_files_with_list(files_to_import)
+            success = main_window.import_files_with_list(files_to_import)
+            # Force a refresh to ensure metadata is populated
+            if success and hasattr(main_window, 'refresh_current_tab_data'):
+                main_window.refresh_current_tab_data()
+            return success
         else:
             return False
     except Exception as e:
@@ -131,8 +173,8 @@ def _import_files_via_ide(main_window, ide_path: str, files_location: str) -> bo
         return False
 
 
-def import_via_ide_function(main_window) -> bool: #vers 2
-    """Direct IDE import function"""
+def import_via_ide_function(main_window) -> bool: #vers 3
+    """Direct IDE import function - NEW SYSTEM"""
     try:
         # Get IDE file
         ide_path, _ = QFileDialog.getOpenFileName(
@@ -156,8 +198,8 @@ def import_via_ide_function(main_window) -> bool: #vers 2
             main_window.log_message(f"Import Via IDE error: {str(e)}")
         return False
 
-def import_via_text_function(main_window) -> bool: #vers 2
-    """Import files from text file list"""
+def import_via_text_function(main_window) -> bool: #vers 3
+    """Import files from text file list - NEW SYSTEM"""
     try:
         # File dialog for text file
         text_path, _ = QFileDialog.getOpenFileName(
@@ -182,8 +224,8 @@ def import_via_text_function(main_window) -> bool: #vers 2
         return False
 
 
-def _import_files_via_text(main_window, text_path: str, base_dir: str) -> bool: #vers 2
-    """Import files from text list"""
+def _import_files_via_text(main_window, text_path: str, base_dir: str) -> bool: #vers 3
+    """Import files from text list - NEW SYSTEM"""
     try:
         if not os.path.exists(text_path):
             QMessageBox.warning(main_window, "Text File Not Found", f"Text file not found: {text_path}")
@@ -202,15 +244,23 @@ def _import_files_via_text(main_window, text_path: str, base_dir: str) -> bool: 
                 for line in f:
                     line = line.strip()
                     if line and not line.startswith('#'):
-                        # Look for file in base directory
-                        file_path = os.path.join(base_dir, line)
+                        # Look for file in base directory, sanitize the filename
+                        sanitized_line = sanitize_filename(line)
+                        file_path = os.path.join(base_dir, sanitized_line)
                         if os.path.exists(file_path):
                             files_to_import.append(file_path)
                             if hasattr(main_window, 'log_message'):
                                 main_window.log_message(f"Found: {line}")
                         else:
-                            if hasattr(main_window, 'log_message'):
-                                main_window.log_message(f"Not found: {line}")
+                            # Try to find the file with different case or extensions
+                            found_path = _find_files_in_directory(base_dir, sanitized_line)
+                            if found_path:
+                                files_to_import.append(found_path)
+                                if hasattr(main_window, 'log_message'):
+                                    main_window.log_message(f"Found (case-insensitive): {line}")
+                            else:
+                                if hasattr(main_window, 'log_message'):
+                                    main_window.log_message(f"Not found: {line}")
         except Exception as e:
             QMessageBox.critical(main_window, "Text Parse Error", f"Failed to parse text file: {str(e)}")
             return False
@@ -219,7 +269,7 @@ def _import_files_via_text(main_window, text_path: str, base_dir: str) -> bool: 
             return False
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"Found {len(files_to_import)} files from text list")
-        # Use the import system
+        # Use the NEW import system
         if hasattr(main_window, 'import_files_with_list'):
             success = main_window.import_files_with_list(files_to_import)
             # Force a refresh to ensure metadata is populated
@@ -233,21 +283,21 @@ def _import_files_via_text(main_window, text_path: str, base_dir: str) -> bool: 
             main_window.log_message(f"Text import error: {str(e)}")
         return False
 
-def _find_files_in_directory(directory: str, filename: str) -> Optional[str]: #vers 2
-    """Find a file in a directory (case-insensitive search)"""
-    filename_lower = filename.lower()
+def _find_files_in_directory(directory: str, filename: str) -> Optional[str]: #vers 3
+    """Find a file in a directory (case-insensitive search) - NEW SYSTEM"""
+    filename_lower = sanitize_filename(filename).lower()
     # Search recursively
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.lower() == filename_lower:
+            if sanitize_filename(file).lower() == filename_lower:
                 return os.path.join(root, file)
     return None
 
-def _create_import_via_dialog(main_window): #vers 2
-    """Create import via dialog"""
+def _create_import_via_dialog(main_window): #vers 3
+    """Create import via dialog - NEW SYSTEM"""
     try:
         dialog = QDialog(main_window)
-        dialog.setWindowTitle("Import Via")
+        dialog.setWindowTitle("Import Via - NEW SYSTEM")
         dialog.setModal(True)
         dialog.resize(500, 300)
         layout = QVBoxLayout()
