@@ -1,15 +1,41 @@
+# Compiled and build artifacts
+*.pyc
+__pycache__/
+*.o
+*.obj
 
+# Dependencies
+.venv/
+venv/
+node_modules/
+
+# Logs and temp files
 *.log
-/dff_sample
-/gui/__pycache__
-/core/__pycache__
-/utils/__pycache__
-/components/__pycache__
-/openrw
-/methods/__pycache__
-/methods/__pycache__
-gui/gui_layout_old.py
-gitimgtree.git
-/Assists/Dump
-*.py-old
-/.old_put_aside
+*.tmp
+*.swp
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+
+# Coverage
+.coverage
+coverage/
+htmlcov/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+.Python
+.pytest_cache/
+.mypy_cache/
+
+# System files
+.DS_Store
+Thumbs.db
