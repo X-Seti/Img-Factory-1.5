@@ -1,7 +1,7 @@
-#this belongs in core/impotr.py - Version: 18
-# X-Seti - November22 2025 - IMG Factory 1.5 - NEW IMPORT SYSTEM
+#this belongs in core/import.py - Version: 19
+# X-Seti - November25 2025 - IMG Factory 1.5 - NEW IMPORT SYSTEM - FIXED
 """
-NEW IMPORT SYSTEM - Ground Up Rebuild
+NEW IMPORT SYSTEM - Ground Up Rebuild - FIXED VERSION
 """
 import os
 import re

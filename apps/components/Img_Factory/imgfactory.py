@@ -67,7 +67,7 @@ from apps.core.open import _detect_and_open_file, open_file_dialog, _detect_file
 from apps.core.clean import integrate_clean_utilities
 from apps.core.close import install_close_functions, setup_close_manager
 from apps.core.export import integrate_export_functions
-from apps.core.impotr import integrate_import_functions #import impotr
+from apps.core.impotr import integrate_import_functions #import import
 from apps.core.remove import integrate_remove_functions
 from apps.core.export import export_selected_function, export_all_function, integrate_export_functions
 from apps.core.dump import dump_all_function, dump_selected_function, integrate_dump_functions

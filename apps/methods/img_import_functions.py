@@ -155,59 +155,6 @@ def import_folder(img_archive, folder_path: str, recursive: bool = False,
         return [], []
 
 
-def import_folder(img_archive, folder_path: str, recursive: bool = False,
-                  filter_extensions: Optional[List[str]] = None) -> Tuple[List, List]: #vers 2
-    """Import all files from a folder into an IMG archive"""
-    try:
-        # Import debug system
-        try:
-            from apps.debug.img_debug_functions import img_debugger
-        except ImportError:
-            img_debugger = None
-        if not os.path.exists(folder_path):
-            if img_debugger:
-                img_debugger.error(f"Folder not found: {folder_path}")
-            return [], []
-        if not os.path.isdir(folder_path):
-            if img_debugger:
-                img_debugger.error(f"Path is not a folder: {folder_path}")
-            return [], []
-        # Collect files
-        file_paths = []
-        if recursive:
-            for root, dirs, files in os.walk(folder_path):
-                for file in files:
-                    file_path = os.path.join(root, file)
-                    # Apply filter if provided
-                    if filter_extensions:
-                        ext = os.path.splitext(file)[1].lower()
-                        if ext not in [e.lower() for e in filter_extensions]:
-                            continue
-                    file_paths.append(file_path)
-        else:
-            for file in os.listdir(folder_path):
-                file_path = os.path.join(folder_path, file)
-                if not os.path.isfile(file_path):
-                    continue
-                # Apply filter if provided
-                if filter_extensions:
-                    ext = os.path.splitext(file)[1].lower()
-                    if ext not in [e.lower() for e in filter_extensions]:
-                        continue
-                file_paths.append(file_path)
-        if img_debugger:
-            img_debugger.debug(f"Found {len(file_paths)} files to import from {folder_path}")
-        # Import all collected files
-        return import_multiple_files(img_archive, file_paths)
-    except Exception as e:
-        try:
-            from apps.debug.img_debug_functions import img_debugger
-            img_debugger.error(f"Failed to import folder {folder_path}: {str(e)}")
-        except:
-            print(f"[ERROR] import_folder failed: {e}")
-        return [], []
-
-
 def validate_import_file(file_path: str, max_size_mb: Optional[int] = None) -> Tuple[bool, str]: #vers 2
     """Validate a file before importing
     Args:
