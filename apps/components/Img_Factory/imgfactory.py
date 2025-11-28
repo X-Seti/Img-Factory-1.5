@@ -138,6 +138,8 @@ from apps.methods.img_export_functions import integrate_img_export_functions
 from apps.methods.col_export_functions import integrate_col_export_functions
 
 App_name = "Img Factory 1.5"
+App_build ="November 28"
+App_auth = "X-Seti"
 
 def setup_rebuild_system(self): #vers 1
     """Setup hybrid rebuild system with mode selection"""
@@ -377,7 +379,7 @@ class IMGFactory(QMainWindow):
         self.app_settings = settings if hasattr(settings, 'themes') else AppSettings()
 
         # Window setup
-        self.setWindowTitle("IMG Factory 1.5 - X-Seti Aug09-2025")
+        self.setWindowTitle(App_name + " - " + App_auth + " - " + App_build)
         self.setGeometry(100, 100, 1200, 800)
 
         # Core data initialization
