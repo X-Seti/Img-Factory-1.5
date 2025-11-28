@@ -24,34 +24,8 @@ from typing import List, Optional
 SECTOR_SIZE = 2048
 MAX_FILENAME_LENGTH = 24
 
-def add_entry_safe(img_archive, entry_name: str, file_data: bytes, auto_save: bool = False) -> bool:  #vers 4
+def add_entry_safe(img_archive, entry_name: str, file_data: bytes, auto_save: bool = False) -> bool:  #vers 5
     """Add entry with safe fallback - auto_save DISABLED by default"""
-    try:
-        # Try IMGFile.add_entry first
-        if hasattr(img_archive, 'add_entry') and callable(img_archive.add_entry):
-            # Pass auto_save=False to prevent rebuild_img_file() call
-            return img_archive.add_entry(entry_name, file_data)
-        else:
-            # Fallback implementation
-            from apps.methods.img_core_classes import IMGEntry
-            new_entry = IMGEntry()
-            new_entry.name = entry_name
-            new_entry.data = file_data
-            new_entry.size = len(file_data)
-
-            # Calculate offset (append to end)
-            if img_archive.entries:
-                last_entry = img_archive.entries[-1]
-                new_entry.offset = last_entry.offset + last_entry.size
-            else:
-                new_entry.offset = 0x0800  # Standard IMG data start
-
-            img_archive.entries.append(new_entry)
-            img_archive.modified = True
-            return True
-    except:
-        return False
-
     try:
         # Import debug system
         try:
@@ -60,48 +34,49 @@ def add_entry_safe(img_archive, entry_name: str, file_data: bytes, auto_save: bo
             img_debugger = None
         
         # Validate inputs
-        if not filename or not data:
+        if not entry_name or not file_data:
             if img_debugger:
-                img_debugger.error("Invalid filename or data provided for add_entry")
+                img_debugger.error("Invalid entry_name or file_data provided for add_entry")
             return False
         
         # Ensure filename length is valid
-        if len(filename.encode('ascii', errors='replace')) >= MAX_FILENAME_LENGTH:
-            filename = filename[:MAX_FILENAME_LENGTH-1]  # Leave room for null terminator
+        if len(entry_name.encode('ascii', errors='replace')) >= MAX_FILENAME_LENGTH:
+            entry_name = entry_name[:MAX_FILENAME_LENGTH-1]  # Leave room for null terminator
             if img_debugger:
-                img_debugger.debug(f"Filename truncated to: {filename}")
+                img_debugger.debug(f"Filename truncated to: {entry_name}")
         
         # Check for duplicate entries (replace if exists)
         existing_entry = None
-        if hasattr(img_file, 'entries'):
-            for i, entry in enumerate(img_file.entries):
-                if hasattr(entry, 'name') and entry.name.lower() == filename.lower():
+        if hasattr(img_archive, 'entries'):
+            for i, entry in enumerate(img_archive.entries):
+                if hasattr(entry, 'name') and entry.name.lower() == entry_name.lower():
                     existing_entry = entry
                     if img_debugger:
-                        img_debugger.debug(f"Replacing existing entry: {filename}")
+                        img_debugger.debug(f"Replacing existing entry: {entry_name}")
                     break
         
         if existing_entry:
             # Replace existing entry data
-            existing_entry.data = data
-            existing_entry.size = math.ceil(len(data) / SECTOR_SIZE)
+            existing_entry.data = file_data
+            existing_entry.size = len(file_data)
             if hasattr(existing_entry, 'streaming_size'):
                 existing_entry.streaming_size = existing_entry.size
             
             # Detect file type and RW version from data
             if hasattr(existing_entry, 'detect_rw_version'):
-                existing_entry.detect_rw_version(data)
+                existing_entry.detect_rw_version(file_data)
             
-            # Mark entry as new/modified for future save operations
+            # Mark entry as replaced for highlighting
             existing_entry.is_new_entry = True
+            existing_entry.is_replaced = True
             existing_entry.modified = True
         else:
             # Create brand new entry using IMG file's add_entry method if available
-            if hasattr(img_file, 'add_entry') and callable(img_file.add_entry):
-                success = img_file.add_entry(filename, data)
+            if hasattr(img_archive, 'add_entry') and callable(img_archive.add_entry):
+                success = img_archive.add_entry(entry_name, file_data)
                 if not success:
                     if img_debugger:
-                        img_debugger.error(f"IMG file add_entry method failed for: {filename}")
+                        img_debugger.error(f"IMG file add_entry method failed for: {entry_name}")
                     return False
             else:
                 # Fallback: create entry manually
@@ -110,26 +85,27 @@ def add_entry_safe(img_archive, entry_name: str, file_data: bytes, auto_save: bo
                     from apps.methods.img_core_classes import IMGEntry
                     
                     new_entry = IMGEntry()
-                    new_entry.name = filename
-                    new_entry.data = data
-                    new_entry.size = math.ceil(len(data) / SECTOR_SIZE)
+                    new_entry.name = entry_name
+                    new_entry.data = file_data
+                    new_entry.size = len(file_data)
                     new_entry.streaming_size = new_entry.size
                     
                     # Calculate proper offset for new entry
-                    new_entry.offset = _calculate_next_offset(img_file)
+                    new_entry.offset = _calculate_next_offset(img_archive)
                     
                     # Detect file type and RW version from data
                     if hasattr(new_entry, 'detect_rw_version'):
-                        new_entry.detect_rw_version(data)
+                        new_entry.detect_rw_version(file_data)
                     
-                    # Mark as new entry for future save operations
+                    # Mark as new entry for highlighting
                     new_entry.is_new_entry = True
+                    new_entry.is_replaced = False
                     new_entry.modified = True
                     
                     # Add to entries list
-                    if not hasattr(img_file, 'entries'):
-                        img_file.entries = []
-                    img_file.entries.append(new_entry)
+                    if not hasattr(img_archive, 'entries'):
+                        img_archive.entries = []
+                    img_archive.entries.append(new_entry)
                     
                 except ImportError:
                     if img_debugger:
@@ -137,19 +113,19 @@ def add_entry_safe(img_archive, entry_name: str, file_data: bytes, auto_save: bo
                     return False
         
         # Mark archive as modified
-        img_file.modified = True
+        img_archive.modified = True
         
         if img_debugger:
-            img_debugger.success(f"Entry added successfully: {filename}")
+            img_debugger.success(f"Entry added successfully: {entry_name}")
         
         return True
         
     except Exception as e:
         if img_debugger:
-            img_debugger.error(f"Failed to add entry {filename}: {str(e)}")
+            img_debugger.error(f"Failed to add entry {entry_name}: {str(e)}")
         else:
             print(f"[ERROR] add_entry_safe failed: {e}")
-        return False
+
 
 def _calculate_next_offset(img_file) -> int: #vers 1
     """Calculate the next available offset for a new entry - HELPER FUNCTION"""

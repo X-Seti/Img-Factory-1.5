@@ -3622,6 +3622,14 @@ def main():
        app.setApplicationVersion("1.5")
        app.setOrganizationName("X-Seti")
 
+       # Set application icon
+       try:
+           from apps.methods.svg_shared_icons import get_app_icon
+           app_icon = get_app_icon()
+           app.setWindowIcon(app_icon)
+       except Exception as e:
+           print(f"Could not set application icon: {e}")
+
        # Load settings
        try:
            # Try different import paths for settings

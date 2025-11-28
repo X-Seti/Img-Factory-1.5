@@ -375,6 +375,22 @@ def get_image_icon(size: int = 24) -> QIcon: #vers 1
     return svg_to_icon(svg_data, size)
 
 
+def get_app_icon(size: int = 64) -> QIcon: #vers 1
+    """IMG Factory application icon with 'IMG' text and gradient background"""
+    # Using dark theme colors as default (can be changed based on current theme)
+    svg_data = b'''<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#444444;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#252525;stop-opacity:1" />
+            </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="64" height="64" rx="12" ry="12" fill="url(#bgGradient)"/>
+        <text x="32" y="38" font-size="24" fill="#CCCCCC" text-anchor="middle" font-weight="bold" font-family="Arial, sans-serif">IMG</text>
+    </svg>'''
+    return svg_to_icon(svg_data, size)
+
+
 # Export all icon functions
 __all__ = [
     'svg_to_icon',
@@ -406,4 +422,5 @@ __all__ = [
     'get_warning_icon',
     'get_error_icon',
     'get_success_icon',
+    'get_app_icon',
 ]
