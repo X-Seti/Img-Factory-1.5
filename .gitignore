@@ -2,12 +2,11 @@
 # Compiled and build artifacts
 *.pyc
 __pycache__/
-*.o
-*.obj
 
 # Dependencies
 .venv/
 venv/
+node_modules/
 
 # Logs and temp files
 *.log
@@ -17,25 +16,26 @@ venv/
 # Environment
 .env
 .env.local
-.env.
+*.env.*
 
 # Editors
 .vscode/
 .idea/
 
 # Coverage
+.coverage
 coverage/
 htmlcov/
-.coverage
 
-# MyPy
-.mypy_cache/
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
 
-# Pytest
+# Testing
 .pytest_cache/
-
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
+.mypy_cache/
 ```

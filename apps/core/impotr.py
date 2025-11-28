@@ -28,36 +28,68 @@ def import_files_function(main_window) -> bool:
         if not file_paths:
             return False
 
+        # Track original entries for replacement detection
+        original_entries = {entry.name.lower() for entry in file_object.entries if hasattr(entry, 'name')}
+        
         # Import WITHOUT auto-save
         success_list, failed_list = add_multiple_files_to_img(file_object, file_paths, main_window)
         imported_count = len(success_list)
 
         if imported_count > 0:
             # Mark as new entries and store data for proper metadata
+            imported_filenames = []
+            replaced_filenames = []
+            
             for entry in file_object.entries:
-                if not hasattr(entry, 'is_new_entry') and hasattr(entry, 'name'):
+                if hasattr(entry, 'name'):
+                    entry_name_lower = entry.name.lower()
+                    
+                    # Check if this is a newly imported file
+                    is_new_import = False
                     for fp in success_list:
-                        if sanitize_filename(os.path.basename(fp)) == sanitize_filename(entry.name):
-                            entry.is_new_entry = True
-                            # Read and store data for metadata
-                            if not hasattr(entry, 'data') or not entry.data:
-                                try:
-                                    with open(fp, 'rb') as f:
-                                        entry.data = f.read()
-                                    # Set file type
-                                    entry.file_type = detect_file_type(entry.name)
-                                    # Parse RW version for table display
-                                    if entry.name.lower().endswith(('.dff', '.txd')):
-                                        version_val, version_name = detect_rw_version(fp)
-                                        entry.rw_version = version_val
-                                        entry.rw_version_name = version_name
-                                    else:
-                                        entry.rw_version_name = "N/A"
-                                except Exception as e:
-                                    if hasattr(main_window, 'log_message'):
-                                        main_window.log_message(f"Failed to read data for {entry.name}: {str(e)}")
-                                    entry.rw_version_name = "Error"
+                        if sanitize_filename(os.path.basename(fp)).lower() == sanitize_filename(entry.name).lower():
+                            is_new_import = True
                             break
+                    
+                    if is_new_import:
+                        if entry_name_lower in original_entries:
+                            # This is a replaced entry
+                            entry.is_new_entry = True
+                            entry.is_replaced = True
+                            replaced_filenames.append(entry.name)
+                        else:
+                            # This is a truly new entry
+                            entry.is_new_entry = True
+                            entry.is_replaced = False
+                            imported_filenames.append(entry.name)
+                        
+                        # Read and store data for metadata
+                        if not hasattr(entry, 'data') or not entry.data:
+                            for fp in success_list:
+                                if sanitize_filename(os.path.basename(fp)).lower() == sanitize_filename(entry.name).lower():
+                                    try:
+                                        with open(fp, 'rb') as f:
+                                            entry.data = f.read()
+                                        # Set file type
+                                        entry.file_type = detect_file_type(entry.name)
+                                        # Parse RW version for table display
+                                        if entry.name.lower().endswith(('.dff', '.txd')):
+                                            version_val, version_name = detect_rw_version(fp)
+                                            entry.rw_version = version_val
+                                            entry.rw_version_name = version_name
+                                        else:
+                                            entry.rw_version_name = "N/A"
+                                    except Exception as e:
+                                        if hasattr(main_window, 'log_message'):
+                                            main_window.log_message(f"Failed to read data for {entry.name}: {str(e)}")
+                                        entry.rw_version_name = "Error"
+                                    break
+
+            # Track imported files for highlighting
+            if hasattr(main_window, 'track_imported_files'):
+                main_window.track_imported_files(imported_filenames, replaced_filenames)
+            elif hasattr(main_window, '_import_highlight_manager'):
+                main_window._import_highlight_manager.track_multiple_files(imported_filenames, replaced_filenames)
 
             refresh_after_import(main_window)
             main_window.log_message(f"Imported {imported_count} file(s) - use Save Entry to save changes")
@@ -80,32 +112,65 @@ def import_files_with_list(main_window, file_paths: List[str]) -> bool:
     if file_type != 'IMG' or not file_object:
         return False
 
+    # Track original entries for replacement detection
+    original_entries = {entry.name.lower() for entry in file_object.entries if hasattr(entry, 'name')}
+    
     success_list, failed_list = add_multiple_files_to_img(file_object, file_paths, main_window)
     if success_list:
         # Mark as new entries and store data
+        imported_filenames = []
+        replaced_filenames = []
+        
         for entry in file_object.entries:
-            if not hasattr(entry, 'is_new_entry') and hasattr(entry, 'name'):
+            if hasattr(entry, 'name'):
+                entry_name_lower = entry.name.lower()
+                
+                # Check if this is a newly imported file
+                is_new_import = False
                 for fp in success_list:
-                    if sanitize_filename(os.path.basename(fp)) == sanitize_filename(entry.name):
-                        entry.is_new_entry = True
-                        if not hasattr(entry, 'data') or not entry.data:
-                            try:
-                                with open(fp, 'rb') as f:
-                                    entry.data = f.read()
-                                # Set file type
-                                entry.file_type = detect_file_type(entry.name)
-                                # Parse RW version
-                                if entry.name.lower().endswith(('.dff', '.txd')):
-                                    version_val, version_name = detect_rw_version(fp)
-                                    entry.rw_version = version_val
-                                    entry.rw_version_name = version_name
-                                else:
-                                    entry.rw_version_name = "N/A"
-                            except Exception as e:
-                                if hasattr(main_window, 'log_message'):
-                                    main_window.log_message(f"Failed to read data for {entry.name}: {str(e)}")
-                                entry.rw_version_name = "Error"
+                    if sanitize_filename(os.path.basename(fp)).lower() == sanitize_filename(entry.name).lower():
+                        is_new_import = True
                         break
+                
+                if is_new_import:
+                    if entry_name_lower in original_entries:
+                        # This is a replaced entry
+                        entry.is_new_entry = True
+                        entry.is_replaced = True
+                        replaced_filenames.append(entry.name)
+                    else:
+                        # This is a truly new entry
+                        entry.is_new_entry = True
+                        entry.is_replaced = False
+                        imported_filenames.append(entry.name)
+                    
+                    if not hasattr(entry, 'data') or not entry.data:
+                        for fp in success_list:
+                            if sanitize_filename(os.path.basename(fp)).lower() == sanitize_filename(entry.name).lower():
+                                try:
+                                    with open(fp, 'rb') as f:
+                                        entry.data = f.read()
+                                    # Set file type
+                                    entry.file_type = detect_file_type(entry.name)
+                                    # Parse RW version
+                                    if entry.name.lower().endswith(('.dff', '.txd')):
+                                        version_val, version_name = detect_rw_version(fp)
+                                        entry.rw_version = version_val
+                                        entry.rw_version_name = version_name
+                                    else:
+                                        entry.rw_version_name = "N/A"
+                                except Exception as e:
+                                    if hasattr(main_window, 'log_message'):
+                                        main_window.log_message(f"Failed to read data for {entry.name}: {str(e)}")
+                                    entry.rw_version_name = "Error"
+                                break
+        
+        # Track imported files for highlighting
+        if hasattr(main_window, 'track_imported_files'):
+            main_window.track_imported_files(imported_filenames, replaced_filenames)
+        elif hasattr(main_window, '_import_highlight_manager'):
+            main_window._import_highlight_manager.track_multiple_files(imported_filenames, replaced_filenames)
+        
         refresh_after_import(main_window)
         return True
     return False
@@ -129,32 +194,65 @@ def import_folder_contents(main_window) -> bool:
     if not file_paths:
         return False
 
+    # Track original entries for replacement detection
+    original_entries = {entry.name.lower() for entry in file_object.entries if hasattr(entry, 'name')}
+    
     success_list, failed_list = add_multiple_files_to_img(file_object, file_paths, main_window)
     if success_list:
         # Mark as new entries and store data
+        imported_filenames = []
+        replaced_filenames = []
+        
         for entry in file_object.entries:
-            if not hasattr(entry, 'is_new_entry') and hasattr(entry, 'name'):
+            if hasattr(entry, 'name'):
+                entry_name_lower = entry.name.lower()
+                
+                # Check if this is a newly imported file
+                is_new_import = False
                 for fp in success_list:
-                    if sanitize_filename(os.path.basename(fp)) == sanitize_filename(entry.name):
-                        entry.is_new_entry = True
-                        if not hasattr(entry, 'data') or not entry.data:
-                            try:
-                                with open(fp, 'rb') as f:
-                                    entry.data = f.read()
-                                # Set file type
-                                entry.file_type = detect_file_type(entry.name)
-                                # Parse RW version
-                                if entry.name.lower().endswith(('.dff', '.txd')):
-                                    version_val, version_name = detect_rw_version(fp)
-                                    entry.rw_version = version_val
-                                    entry.rw_version_name = version_name
-                                else:
-                                    entry.rw_version_name = "N/A"
-                            except Exception as e:
-                                if hasattr(main_window, 'log_message'):
-                                    main_window.log_message(f"Failed to read data for {entry.name}: {str(e)}")
-                                entry.rw_version_name = "Error"
+                    if sanitize_filename(os.path.basename(fp)).lower() == sanitize_filename(entry.name).lower():
+                        is_new_import = True
                         break
+                
+                if is_new_import:
+                    if entry_name_lower in original_entries:
+                        # This is a replaced entry
+                        entry.is_new_entry = True
+                        entry.is_replaced = True
+                        replaced_filenames.append(entry.name)
+                    else:
+                        # This is a truly new entry
+                        entry.is_new_entry = True
+                        entry.is_replaced = False
+                        imported_filenames.append(entry.name)
+                    
+                    if not hasattr(entry, 'data') or not entry.data:
+                        for fp in success_list:
+                            if sanitize_filename(os.path.basename(fp)).lower() == sanitize_filename(entry.name).lower():
+                                try:
+                                    with open(fp, 'rb') as f:
+                                        entry.data = f.read()
+                                    # Set file type
+                                    entry.file_type = detect_file_type(entry.name)
+                                    # Parse RW version
+                                    if entry.name.lower().endswith(('.dff', '.txd')):
+                                        version_val, version_name = detect_rw_version(fp)
+                                        entry.rw_version = version_val
+                                        entry.rw_version_name = version_name
+                                    else:
+                                        entry.rw_version_name = "N/A"
+                                except Exception as e:
+                                    if hasattr(main_window, 'log_message'):
+                                        main_window.log_message(f"Failed to read data for {entry.name}: {str(e)}")
+                                    entry.rw_version_name = "Error"
+                                break
+        
+        # Track imported files for highlighting
+        if hasattr(main_window, 'track_imported_files'):
+            main_window.track_imported_files(imported_filenames, replaced_filenames)
+        elif hasattr(main_window, '_import_highlight_manager'):
+            main_window._import_highlight_manager.track_multiple_files(imported_filenames, replaced_filenames)
+        
         refresh_after_import(main_window)
         return True
     return False
