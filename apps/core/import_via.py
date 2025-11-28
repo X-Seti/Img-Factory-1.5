@@ -1,4 +1,4 @@
-#this belongs in core/import_via.py - Version: 19
+#this belongs in core/import_via.py - Version: 20
 # X-Seti - November22 2025 - IMG Factory 1.5 - NEW Import Via Functions - Ground Up Rebuild
 
 """
@@ -11,44 +11,7 @@ from typing import List, Optional, Dict, Any, Tuple
 from PyQt6.QtWidgets import QMessageBox, QFileDialog, QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QLabel, QRadioButton, QButtonGroup
 from apps.methods.imgcol_exists import set_context
 from apps.methods.tab_system import get_current_file_from_active_tab
-
-def sanitize_filename(filename: str) -> str:
-    """Sanitize filename to remove problematic characters"""
-    # Remove invalid characters and replace with underscore
-    sanitized = re.sub(r'[<>:"/\\|?*]', '_', filename)
-    # Remove control characters
-    sanitized = ''.join(c for c in sanitized if ord(c) >= 32 and ord(c) != 127)
-    return sanitized
-
-def detect_file_type(filename: str) -> str:
-    """Detect file type based on extension"""
-    ext = os.path.splitext(filename)[1].lower()
-    if ext in ['.dff']:
-        return 'MODEL'
-    elif ext in ['.txd']:
-        return 'TEXTURE'
-    elif ext in ['.col']:
-        return 'COLLISION'
-    elif ext in ['.wav', '.mp3', '.ogg']:
-        return 'AUDIO'
-    elif ext in ['.dat', '.txt']:
-        return 'TEXT'
-    else:
-        return 'UNKNOWN'
-
-def detect_rw_version(file_path: str) -> tuple[int, str]:
-    """Detect RenderWare version from file data"""
-    try:
-        from apps.methods.rw_versions import parse_rw_version
-        with open(file_path, 'rb') as f:
-            data = f.read()
-        if len(data) >= 12:
-            version_val, version_name = parse_rw_version(data[8:12])
-            if version_val > 0:
-                return version_val, version_name
-        return 0, "Unknown"
-    except Exception:
-        return 0, "Unknown"
+from apps.methods.common_functions import sanitize_filename, detect_file_type, detect_rw_version
 
 ##Methods list -
 # import_via_function
@@ -60,7 +23,7 @@ def detect_rw_version(file_path: str) -> tuple[int, str]:
 # _find_files_in_directory
 # integrate_import_via_functions
 
-def import_via_function(main_window): #vers 5
+def import_via_function(main_window): #vers 6
     """Main import via function with dialog - NEW SYSTEM"""
     set_context(main_window)
     # File selection dialog - import via should work with both img and col files.
@@ -81,7 +44,7 @@ def import_via_function(main_window): #vers 5
         return False
 
 
-def _import_files_via_ide(main_window, ide_path: str, files_location: str) -> bool: #vers 3
+def _import_files_via_ide(main_window, ide_path: str, files_location: str) -> bool: #vers 4
     """Import files from IDE with file searching - NEW SYSTEM"""
     try:
         if not os.path.exists(ide_path):
@@ -173,7 +136,7 @@ def _import_files_via_ide(main_window, ide_path: str, files_location: str) -> bo
         return False
 
 
-def import_via_ide_function(main_window) -> bool: #vers 3
+def import_via_ide_function(main_window) -> bool: #vers 4
     """Direct IDE import function - NEW SYSTEM"""
     try:
         # Get IDE file
@@ -198,7 +161,7 @@ def import_via_ide_function(main_window) -> bool: #vers 3
             main_window.log_message(f"Import Via IDE error: {str(e)}")
         return False
 
-def import_via_text_function(main_window) -> bool: #vers 3
+def import_via_text_function(main_window) -> bool: #vers 4
     """Import files from text file list - NEW SYSTEM"""
     try:
         # File dialog for text file
@@ -224,7 +187,7 @@ def import_via_text_function(main_window) -> bool: #vers 3
         return False
 
 
-def _import_files_via_text(main_window, text_path: str, base_dir: str) -> bool: #vers 3
+def _import_files_via_text(main_window, text_path: str, base_dir: str) -> bool: #vers 4
     """Import files from text list - NEW SYSTEM"""
     try:
         if not os.path.exists(text_path):
@@ -283,7 +246,7 @@ def _import_files_via_text(main_window, text_path: str, base_dir: str) -> bool: 
             main_window.log_message(f"Text import error: {str(e)}")
         return False
 
-def _find_files_in_directory(directory: str, filename: str) -> Optional[str]: #vers 3
+def _find_files_in_directory(directory: str, filename: str) -> Optional[str]: #vers 4
     """Find a file in a directory (case-insensitive search) - NEW SYSTEM"""
     filename_lower = sanitize_filename(filename).lower()
     # Search recursively
@@ -293,7 +256,7 @@ def _find_files_in_directory(directory: str, filename: str) -> Optional[str]: #v
                 return os.path.join(root, file)
     return None
 
-def _create_import_via_dialog(main_window): #vers 3
+def _create_import_via_dialog(main_window): #vers 4
     """Create import via dialog - NEW SYSTEM"""
     try:
         dialog = QDialog(main_window)

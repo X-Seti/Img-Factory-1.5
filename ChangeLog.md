@@ -7,6 +7,12 @@ Complete history of fixes, updates, and improvements.
 
 ---
 
+**Fixed**: - November 29, 2025
+methods/common_functions.py
+- Created new shared function module to consolidate duplicate functions
+- Consolidated sanitize_filename, detect_file_type, and detect_rw_version from core/impotr.py and core/import_via.py
+- Eliminates function duplication between import modules
+
 **New**: - November 21, 2025
 Added AI access to help resolve bugs I can not seem to fix myself.
 
