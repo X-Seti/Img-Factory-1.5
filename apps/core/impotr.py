@@ -14,10 +14,11 @@ from apps.methods.common_functions import sanitize_filename, detect_file_type, d
 
 
 def import_files_function(main_window) -> bool:
-    """Import multiple files via dialog - NEW SYSTEM"""
+    """Import multiple files via dialog - NEW SYSTEM - OPTIMIZED"""
     try:
         file_object, file_type = get_current_file_from_active_tab(main_window)
         if file_type != 'IMG' or not file_object:
+            from PyQt6.QtWidgets import QMessageBox
             QMessageBox.warning(main_window, "No IMG File", "Active tab must contain an IMG file")
             return False
 
@@ -91,7 +92,10 @@ def import_files_function(main_window) -> bool:
             elif hasattr(main_window, '_import_highlight_manager'):
                 main_window._import_highlight_manager.track_multiple_files(imported_filenames, replaced_filenames)
 
-            refresh_after_import(main_window)
+            # Use QTimer to defer the refresh to prevent blocking
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(0, lambda: refresh_after_import(main_window))
+            
             main_window.log_message(f"Imported {imported_count} file(s) - use Save Entry to save changes")
             return True
         else:
@@ -104,7 +108,7 @@ def import_files_function(main_window) -> bool:
 
 
 def import_files_with_list(main_window, file_paths: List[str]) -> bool:
-    """Import from provided list - NEW SYSTEM"""
+    """Import from provided list - NEW SYSTEM - OPTIMIZED"""
     if not file_paths:
         return False
 
@@ -171,13 +175,16 @@ def import_files_with_list(main_window, file_paths: List[str]) -> bool:
         elif hasattr(main_window, '_import_highlight_manager'):
             main_window._import_highlight_manager.track_multiple_files(imported_filenames, replaced_filenames)
         
-        refresh_after_import(main_window)
+        # Use QTimer to defer the refresh to prevent blocking
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(0, lambda: refresh_after_import(main_window))
+        
         return True
     return False
 
 
 def import_folder_contents(main_window) -> bool:
-    """Import folder contents - NEW SYSTEM"""
+    """Import folder contents - NEW SYSTEM - OPTIMIZED"""
     file_object, file_type = get_current_file_from_active_tab(main_window)
     if file_type != 'IMG' or not file_object:
         return False
@@ -253,7 +260,10 @@ def import_folder_contents(main_window) -> bool:
         elif hasattr(main_window, '_import_highlight_manager'):
             main_window._import_highlight_manager.track_multiple_files(imported_filenames, replaced_filenames)
         
-        refresh_after_import(main_window)
+        # Use QTimer to defer the refresh to prevent blocking
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(0, lambda: refresh_after_import(main_window))
+        
         return True
     return False
 
