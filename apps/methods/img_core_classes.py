@@ -1,5 +1,5 @@
-#this belongs in methods.img_core_classes.py - Version: 10
-# X-Seti - July20 2025 - IMG Factory 1.5 - IMG Core Classes with Fixed RW Version Detection
+#this belongs in methods.img_core_classes.py - Version: 11
+# X-Seti - November29 2025 - IMG Factory 1.5 - IMG Core Classes with Fixed RW Version Detection
 
 """
 IMG Core Classes
@@ -29,6 +29,7 @@ from apps.debug.img_debug_functions import img_debugger
 # format_file_size
 # integrate_filtering
 # populate_table_with_sample_data
+# rebuild_img_file
 
 ##Classes -
 # CompressionType
@@ -577,7 +578,7 @@ class IMGFile:
             print(f"Error creating IMG file: {e}")
             return False
 
-    def save_img_file(self) -> bool: #vers 1
+    def save_img_file(self) -> bool: #vers 2
         """Save IMG file with current entries"""
         try:
             if not self.file_path or not self.entries:
@@ -593,6 +594,21 @@ class IMGFile:
 
         except Exception as e:
             print(f"[ERROR] Failed to save IMG file: {e}")
+            return False
+
+    def rebuild_img_file(self) -> bool: #vers 1
+        """Rebuild IMG file based on version"""
+        try:
+            if self.version == IMGVersion.VERSION_1:
+                return self._rebuild_version1()
+            elif self.version == IMGVersion.VERSION_2:
+                return self._rebuild_version2()
+            else:
+                print(f"[ERROR] Unsupported IMG version: {self.version}")
+                return False
+
+        except Exception as e:
+            print(f"[ERROR] Failed to rebuild IMG file: {e}")
             return False
 
     def _sanitize_filename(self, filename: str) -> str: #vers 1

@@ -13,6 +13,12 @@ methods/common_functions.py
 - Consolidated sanitize_filename, detect_file_type, and detect_rw_version from core/impotr.py and core/import_via.py
 - Eliminates function duplication between import modules
 
+methods/img_core_classes.py
+- Added missing rebuild_img_file() method to IMGFile class
+- Fixes error: 'IMGFile' object has no attribute 'rebuild_img_file'
+- Method calls appropriate version-specific rebuild (_rebuild_version1 or _rebuild_version2)
+- Version updated to 2 for save_img_file and 1 for rebuild_img_file
+
 **New**: - November 21, 2025
 Added AI access to help resolve bugs I can not seem to fix myself.
 
