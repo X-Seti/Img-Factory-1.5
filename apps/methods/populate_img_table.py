@@ -129,10 +129,10 @@ class IMGTablePopulator:
             img_debugger.error(f"Error populating IMG table: {str(e)}")
             return False
 
-    def populate_table_row_minimal(self, table: Any, row: int, entry: Any): #vers 3
+    def populate_table_row_minimal(self, table: Any, row: int, entry: Any): #vers 4
         """Populate single table row with MINIMAL processing - keep all 8 columns"""
         try:
-            # Check if this entry should be highlighted
+            # Check if this entry should be highlighted - OPTIMIZED
             is_highlighted = False
             highlight_type = None
             if hasattr(entry, 'is_new_entry') and entry.is_new_entry:
@@ -142,27 +142,35 @@ class IMGTablePopulator:
                 else:
                     highlight_type = "imported"
             
+            # Create items with minimal processing
             name_text = str(entry.name) if hasattr(entry, 'name') else f"Entry_{row}"
             name_item = self.create_img_table_item(name_text, is_highlighted, highlight_type)
             table.setItem(row, 0, name_item)
+            
             entry_type = self.get_img_entry_type_simple(entry)
             type_item = self.create_img_table_item(entry_type, is_highlighted, highlight_type)
             table.setItem(row, 1, type_item)
+            
             size_text = self.format_img_entry_size_simple(entry)
             size_item = self.create_img_table_item(size_text, is_highlighted, highlight_type)
             table.setItem(row, 2, size_item)
+            
             offset_text = f"0x{entry.offset:08X}" if hasattr(entry, 'offset') else "N/A"
             offset_item = self.create_img_table_item(offset_text, is_highlighted, highlight_type)
             table.setItem(row, 3, offset_item)
+            
             rw_address_text = self.get_rw_address_light(entry)
             rw_address_item = self.create_img_table_item(rw_address_text, is_highlighted, highlight_type)
             table.setItem(row, 4, rw_address_item)
+            
             version_text = self.get_rw_version_light(entry)
             version_item = self.create_img_table_item(version_text, is_highlighted, highlight_type)
             table.setItem(row, 5, version_item)
+            
             info_text = self.get_compression_info(entry)
             info_item = self.create_img_table_item(info_text, is_highlighted, highlight_type)
             table.setItem(row, 6, info_item)
+            
             status_text = self.get_info_light(entry)
             status_item = self.create_img_table_item(status_text, is_highlighted, highlight_type)
             table.setItem(row, 7, status_item)
@@ -263,22 +271,22 @@ class IMGTablePopulator:
         except Exception:
             return "Original"
 
-    def create_img_table_item(self, text: str, is_highlighted: bool = False, highlight_type: str = None) -> QTableWidgetItem: #vers 3
-        """Create table item with optional highlighting - SIMPLE"""
+    def create_img_table_item(self, text: str, is_highlighted: bool = False, highlight_type: str = None) -> QTableWidgetItem: #vers 4
+        """Create table item with optional highlighting - OPTIMIZED"""
         try:
             from PyQt6.QtWidgets import QTableWidgetItem
-            from PyQt6.QtGui import QColor, QBrush
+            from PyQt6.QtGui import QColor, QBrush, QFont
             from PyQt6.QtCore import Qt
             
             item = QTableWidgetItem(str(text))
             
-            # Apply highlighting if needed
+            # Apply highlighting if needed - OPTIMIZED
             if is_highlighted and highlight_type:
                 if highlight_type == "imported":
                     # Light green background for newly imported files
                     item.setBackground(QBrush(QColor(200, 255, 200)))  # Light green
                     item.setForeground(QBrush(QColor(0, 100, 0)))      # Dark green text
-                    # Make text bold
+                    # Make text bold - OPTIMIZED
                     font = item.font()
                     font.setBold(True)
                     item.setFont(font)
@@ -288,7 +296,7 @@ class IMGTablePopulator:
                     # Light yellow background for replaced files
                     item.setBackground(QBrush(QColor(255, 255, 200)))  # Light yellow
                     item.setForeground(QBrush(QColor(150, 100, 0)))    # Dark orange text
-                    # Make text bold
+                    # Make text bold - OPTIMIZED
                     font = item.font()
                     font.setBold(True)
                     item.setFont(font)

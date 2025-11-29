@@ -24,8 +24,8 @@ from typing import List, Optional
 SECTOR_SIZE = 2048
 MAX_FILENAME_LENGTH = 24
 
-def add_entry_safe(img_archive, entry_name: str, file_data: bytes, auto_save: bool = False) -> bool:  #vers 5
-    """Add entry with safe fallback - auto_save DISABLED by default"""
+def add_entry_safe(img_archive, entry_name: str, file_data: bytes, auto_save: bool = False) -> bool:  #vers 6
+    """Add entry with safe fallback - auto_save DISABLED by default - OPTIMIZED"""
     try:
         # Import debug system
         try:
@@ -125,7 +125,7 @@ def add_entry_safe(img_archive, entry_name: str, file_data: bytes, auto_save: bo
             img_debugger.error(f"Failed to add entry {entry_name}: {str(e)}")
         else:
             print(f"[ERROR] add_entry_safe failed: {e}")
-
+        return False
 
 def _calculate_next_offset(img_file) -> int: #vers 1
     """Calculate the next available offset for a new entry - HELPER FUNCTION"""
