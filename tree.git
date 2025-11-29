@@ -42,6 +42,75 @@
 │   │   │   ├── imgfactory.py
 │   │   │   └── __init__.py
 │   │   ├── __init__.py
+│   │   ├── Map_Editor
+│   │   │   ├── Map_Workshop.py
+│   │   │   ├── moomapper-090-src-r2_repacked
+│   │   │   │   ├── About.ddp
+│   │   │   │   ├── About.dfm
+│   │   │   │   ├── About.pas
+│   │   │   │   ├── AudioADF.pas
+│   │   │   │   ├── DirDialog.pas
+│   │   │   │   ├── EditorArchive.ddp
+│   │   │   │   ├── EditorArchive.dfm
+│   │   │   │   ├── EditorArchive.pas
+│   │   │   │   ├── EditorDAT.ddp
+│   │   │   │   ├── EditorDAT.dfm
+│   │   │   │   ├── EditorDAT.pas
+│   │   │   │   ├── EditorIDE.ddp
+│   │   │   │   ├── EditorIDE.dfm
+│   │   │   │   ├── EditorIDE.pas
+│   │   │   │   ├── EditorIPL.ddp
+│   │   │   │   ├── EditorIPL.dfm
+│   │   │   │   ├── EditorIPL.pas
+│   │   │   │   ├── EditorItem.ddp
+│   │   │   │   ├── EditorItem.dfm
+│   │   │   │   ├── EditorItem.pas
+│   │   │   │   ├── ExtraView.ddp
+│   │   │   │   ├── ExtraView.dfm
+│   │   │   │   ├── ExtraView.pas
+│   │   │   │   ├── GLViewDetached.ddp
+│   │   │   │   ├── GLViewDetached.dfm
+│   │   │   │   ├── GLViewDetached.pas
+│   │   │   │   ├── GLView.pas
+│   │   │   │   ├── GTACol.pas
+│   │   │   │   ├── GTADff.pas
+│   │   │   │   ├── GTAIde.pas
+│   │   │   │   ├── GTAImg.pas
+│   │   │   │   ├── GTAText.pas
+│   │   │   │   ├── GTATxd.pas
+│   │   │   │   ├── GTAZon.pas
+│   │   │   │   ├── KCow.ico
+│   │   │   │   ├── KEd.cfg
+│   │   │   │   ├── KEd.dof
+│   │   │   │   ├── KEd.dpr
+│   │   │   │   ├── KEd.res
+│   │   │   │   ├── Loading.ddp
+│   │   │   │   ├── Loading.dfm
+│   │   │   │   ├── Loading.pas
+│   │   │   │   ├── Main.ddp
+│   │   │   │   ├── Main.dfm
+│   │   │   │   ├── Main.pas
+│   │   │   │   ├── Output
+│   │   │   │   │   └── output folder.txt
+│   │   │   │   ├── readme.txt
+│   │   │   │   ├── RequiredTypes.pas
+│   │   │   │   ├── Startup.ddp
+│   │   │   │   ├── Startup.dfm
+│   │   │   │   ├── Startup.pas
+│   │   │   │   ├── TextureView.ddp
+│   │   │   │   ├── TextureView.dfm
+│   │   │   │   ├── TextureView.pas
+│   │   │   │   ├── Validate.ddp
+│   │   │   │   ├── Validate.dfm
+│   │   │   │   └── Validate.pas
+│   │   │   └── MooMapper3
+│   │   │       ├── clip.txt
+│   │   │       ├── GAMES.TXT
+│   │   │       ├── internal.txd
+│   │   │       ├── KEd.exe
+│   │   │       ├── MooMapper.cnt
+│   │   │       ├── MooMapper.exe
+│   │   │       └── MooMapper.hlp
 │   │   ├── Project_Manager
 │   │   │   └── img_project_manager.py
 │   │   ├── Txd_Converter
@@ -236,7 +305,11 @@
 ├── cc.py
 ├── ChangeLog.md
 ├── Credits.md
+├── fix_col_workshop.py
 ├── fix_gui_layout.py
+├── fix_menu_system.py
+├── fix_save_functionality.py
+├── fix_summary.md
 ├── FIX_SUMMARY.md
 ├── img_factory_debug.log
 ├── launch_imgfactory.py
@@ -249,4 +322,4 @@
 ├── tree.git
 └── tree.git.txt
 
-30 directories, 220 files
+34 directories, 289 files
