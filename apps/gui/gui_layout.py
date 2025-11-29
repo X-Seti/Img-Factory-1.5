@@ -153,6 +153,7 @@ class IMGFactoryGUILayout:
             'select_all_entries': lambda: self.select_all_entries(),
             'select_inverse': lambda: self.select_inverse(),
             'sort_entries': lambda: self.sort_entries(),
+            'sort_entries_to_match_ide': lambda: self.sort_entries_to_match_ide(),
             'pin_selected_entries': lambda: self.pin_selected_entries(),
 
             # Edit methods
@@ -285,6 +286,7 @@ class IMGFactoryGUILayout:
             ("Select All", "select_all", "edit-select-all", colors['select_action'], "select_all_entries"),
             ("Inverse", "sel_inverse", "edit-select", colors['select_action'], "select_inverse"),
             ("Sort via", "sort", "view-sort", colors['select_action'], "sort_entries"),
+            ("Sort IDE", "sort_ide", "view-sort-ide", colors['select_action'], "sort_entries_to_match_ide"),
             ("Pin selected", "pin_selected", "pin", colors['select_action'], "pin_selected_entries"),
         ]
 
@@ -1602,34 +1604,58 @@ class IMGFactoryGUILayout:
             if hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"❌ Select inverse error: {str(e)}")
 
-    def sort_entries(self):  # vers 1
-        """Sort entries in the table"""
+    def sort_entries(self, sort_order="name"):  # vers 2
+        """Sort entries in the table with various options"""
         try:
             if self.table:
-                # Get currently selected items to restore selection after sorting
-                selected_items = self.table.selectedItems()
-                selected_rows = set(item.row() for item in selected_items) if selected_items else set()
+                # Import the sorting functionality
+                from apps.core.sort import sort_entries_in_table, get_associated_ide_file, parse_ide_file
                 
-                # Sort by the first column (filename) by default
-                self.table.sortItems(0, Qt.SortOrder.AscendingOrder)
+                # Get the current IMG file path if available
+                img_path = None
+                if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
+                    img_path = self.main_window.current_img.file_path
                 
-                # Restore selection if there were selected items
-                if selected_rows:
-                    for row in selected_rows:
-                        if row < self.table.rowCount():
-                            for col in range(self.table.columnCount()):
-                                item = self.table.item(row, col)
-                                if item:
-                                    item.setSelected(True)
+                ide_entries = []
                 
-                if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("✅ Entries sorted")
+                # If sorting by IDE order, try to find and parse the associated IDE file
+                if sort_order == "ide_order":
+                    if img_path:
+                        ide_path = get_associated_ide_file(img_path)
+                        if ide_path:
+                            ide_entries = parse_ide_file(ide_path)
+                            if ide_entries:
+                                self.main_window.log_message(f"✅ Found associated IDE file: {ide_path}")
+                            else:
+                                self.main_window.log_message(f"⚠️ IDE file found but could not be parsed: {ide_path}")
+                                # Fall back to name sorting if IDE parsing failed
+                                sort_order = "name"
+                        else:
+                            self.main_window.log_message("⚠️ No associated IDE file found, using name sort")
+                            sort_order = "name"
+                    else:
+                        self.main_window.log_message("⚠️ No IMG file loaded, using name sort")
+                        sort_order = "name"
+                
+                # Perform the sorting
+                sort_entries_in_table(self.table, sort_order, ide_entries)
+                
+                if sort_order == "ide_order":
+                    self.main_window.log_message("✅ Entries sorted by IDE model order (TXDs at bottom)")
+                else:
+                    self.main_window.log_message("✅ Entries sorted by name (TXDs at bottom)")
             else:
                 if hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message("❌ Table not available for sorting")
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"❌ Sort entries error: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+    def sort_entries_to_match_ide(self):  # vers 1
+        """Sort entries to match IDE model order"""
+        self.sort_entries(sort_order="ide_order")
 
     def pin_selected_entries(self):  # vers 1
         """Pin selected entries to keep them at the top of the table"""
@@ -1669,6 +1695,123 @@ class IMGFactoryGUILayout:
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"❌ Pin selected entries error: {str(e)}")
+
+    def move_entries_up(self):  # vers 1
+        """Move selected entries up in the table"""
+        try:
+            if self.table and self.table.selectedItems():
+                # Get selected rows
+                selected_items = self.table.selectedItems()
+                selected_rows = sorted(set(item.row() for item in selected_items))
+                
+                # Check if any selected rows are already at the top
+                if 0 in selected_rows:
+                    if hasattr(self.main_window, 'log_message'):
+                        self.main_window.log_message("⚠️ Cannot move entries up: some are already at top")
+                    return
+                
+                # Store data for selected rows
+                selected_data = []
+                for row in selected_rows:
+                    row_data = []
+                    for col in range(self.table.columnCount()):
+                        item = self.table.item(row, col)
+                        if item:
+                            row_data.append(item.text())
+                        else:
+                            row_data.append("")
+                    selected_data.append(row_data)
+                
+                # Remove selected rows from the table (in reverse order to maintain indices)
+                for row in sorted(selected_rows, reverse=True):
+                    self.table.removeRow(row)
+                
+                # Calculate new positions (move up by 1)
+                new_start_pos = min(selected_rows) - 1
+                if new_start_pos < 0:
+                    new_start_pos = 0
+                
+                # Insert rows at new positions
+                for i, row_data in enumerate(selected_data):
+                    insert_row = new_start_pos + i
+                    self.table.insertRow(insert_row)
+                    for j, cell_data in enumerate(row_data):
+                        self.table.setItem(insert_row, j, QTableWidgetItem(cell_data))
+                
+                # Re-select the moved rows
+                self.table.clearSelection()
+                for i in range(len(selected_data)):
+                    for col in range(self.table.columnCount()):
+                        item = self.table.item(new_start_pos + i, col)
+                        if item:
+                            item.setSelected(True)
+                
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"✅ {len(selected_data)} entries moved up")
+            else:
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("❌ No selected entries to move or table not available")
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Move entries up error: {str(e)}")
+
+    def move_entries_down(self):  # vers 1
+        """Move selected entries down in the table"""
+        try:
+            if self.table and self.table.selectedItems():
+                # Get selected rows
+                selected_items = self.table.selectedItems()
+                selected_rows = sorted(set(item.row() for item in selected_items))
+                
+                # Check if any selected rows are already at the bottom
+                if max(selected_rows) >= self.table.rowCount() - 1:
+                    if hasattr(self.main_window, 'log_message'):
+                        self.main_window.log_message("⚠️ Cannot move entries down: some are already at bottom")
+                    return
+                
+                # Store data for selected rows
+                selected_data = []
+                for row in reversed(selected_rows):  # Process in reverse to maintain indices when removing
+                    row_data = []
+                    for col in range(self.table.columnCount()):
+                        item = self.table.item(row, col)
+                        if item:
+                            row_data.append(item.text())
+                        else:
+                            row_data.append("")
+                    selected_data.insert(0, row_data)  # Insert at beginning to maintain order
+                
+                # Remove selected rows from the table (in reverse order to maintain indices)
+                for row in sorted(selected_rows, reverse=True):
+                    self.table.removeRow(row)
+                
+                # Calculate new positions (move down by 1)
+                new_start_pos = min(selected_rows) + 1
+                
+                # Insert rows at new positions
+                for i, row_data in enumerate(selected_data):
+                    insert_row = new_start_pos + i
+                    self.table.insertRow(insert_row)
+                    for j, cell_data in enumerate(row_data):
+                        self.table.setItem(insert_row, j, QTableWidgetItem(cell_data))
+                
+                # Re-select the moved rows
+                self.table.clearSelection()
+                for i in range(len(selected_data)):
+                    for col in range(self.table.columnCount()):
+                        item = self.table.item(new_start_pos + i, col)
+                        if item:
+                            item.setSelected(True)
+                
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"✅ {len(selected_data)} entries moved down")
+            else:
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("❌ No selected entries to move or table not available")
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Move entries down error: {str(e)}")
+
 # LEGACY COMPATIBILITY FUNCTIONS
 
 def create_control_panel(main_window): #vers 1
