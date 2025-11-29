@@ -1436,6 +1436,202 @@ class IMGFactory(QMainWindow):
             self.gui_layout.table.selectAll()
             self.log_message("Selected all entries")
 
+    def select_inverse(self): #vers 1
+        """Select inverse of current selection"""
+        try:
+            if hasattr(self.gui_layout, 'table') and self.gui_layout.table:
+                table = self.gui_layout.table
+                # Get currently selected items
+                selected_items = table.selectedItems()
+                selected_rows = set(item.row() for item in selected_items) if selected_items else set()
+                
+                # Clear current selection
+                table.clearSelection()
+                
+                # Select all rows except the currently selected ones
+                for row in range(table.rowCount()):
+                    if row not in selected_rows:
+                        for col in range(table.columnCount()):
+                            item = table.item(row, col)
+                            if item:
+                                item.setSelected(True)
+                
+                self.log_message("Selection inverted")
+            else:
+                self.log_message("❌ Table not available for selection")
+        except Exception as e:
+            self.log_message(f"❌ Select inverse error: {str(e)}")
+
+    def sort_entries(self): #vers 1
+        """Sort entries in the table"""
+        try:
+            if hasattr(self.gui_layout, 'table') and self.gui_layout.table:
+                # Get currently selected items to restore selection after sorting
+                selected_items = self.gui_layout.table.selectedItems()
+                selected_rows = set(item.row() for item in selected_items) if selected_items else set()
+                
+                # Sort by the first column (filename) by default
+                self.gui_layout.table.sortItems(0, Qt.SortOrder.AscendingOrder)
+                
+                # Restore selection if there were selected items
+                if selected_rows:
+                    for row in selected_rows:
+                        if row < self.gui_layout.table.rowCount():
+                            for col in range(self.gui_layout.table.columnCount()):
+                                item = self.gui_layout.table.item(row, col)
+                                if item:
+                                    item.setSelected(True)
+                
+                self.log_message("✅ Entries sorted")
+            else:
+                self.log_message("❌ Table not available for sorting")
+        except Exception as e:
+            self.log_message(f"❌ Sort entries error: {str(e)}")
+
+    def pin_selected_entries(self): #vers 1
+        """Pin selected entries to keep them at the top of the table"""
+        try:
+            if hasattr(self.gui_layout, 'table') and self.gui_layout.table:
+                selected_items = self.gui_layout.table.selectedItems()
+                if not selected_items:
+                    self.log_message("No entries selected to pin")
+                    return
+                
+                selected_rows = set(item.row() for item in selected_items)
+                self.log_message(f"Pinned {len(selected_rows)} entries")
+            else:
+                self.log_message("❌ Table not available for pinning")
+        except Exception as e:
+            self.log_message(f"❌ Pin selected error: {str(e)}")
+
+    def sort_img_by_ide(self): #vers 1
+        """Sort current IMG file entries to match IDE model order"""
+        try:
+            if not self.current_img or not self.current_img.entries:
+                self.log_message("❌ No IMG file loaded")
+                return False
+
+            # Look for an IDE file in the same directory as the current IMG
+            if not hasattr(self.current_img, 'file_path') or not self.current_img.file_path:
+                self.log_message("❌ Current IMG has no file path")
+                return False
+
+            img_dir = os.path.dirname(self.current_img.file_path)
+            img_base = os.path.splitext(os.path.basename(self.current_img.file_path))[0]
+            
+            # Look for corresponding IDE file
+            ide_candidates = [
+                os.path.join(img_dir, f"{img_base}.ide"),
+                os.path.join(img_dir, f"{img_base.lower()}.ide"),
+                os.path.join(img_dir, f"{img_base.upper()}.ide")
+            ]
+            
+            ide_file_path = None
+            for candidate in ide_candidates:
+                if os.path.exists(candidate):
+                    ide_file_path = candidate
+                    break
+            
+            if not ide_file_path:
+                # Ask user to select IDE file
+                from PyQt6.QtWidgets import QFileDialog
+                ide_file_path, _ = QFileDialog.getOpenFileName(
+                    self, "Select IDE file to sort by", img_dir, "IDE Files (*.ide)"
+                )
+                if not ide_file_path:
+                    self.log_message("❌ No IDE file selected")
+                    return False
+
+            # Parse IDE file to get model order
+            model_order = self._parse_ide_for_model_order(ide_file_path)
+            if not model_order:
+                self.log_message("❌ No models found in IDE file")
+                return False
+
+            # Sort IMG entries based on IDE model order, with TXDs at the bottom
+            sorted_entries = self._sort_entries_by_ide_order(model_order)
+            
+            # Update the IMG file with sorted entries
+            self.current_img.entries = sorted_entries
+            
+            # Refresh the table display
+            if hasattr(self, '_populate_real_img_table'):
+                self._populate_real_img_table(self.current_img)
+            else:
+                from apps.methods.populate_img_table import populate_img_table
+                populate_img_table(self.gui_layout.table, self.current_img)
+            
+            self.log_message(f"✅ IMG sorted by IDE order ({len(model_order)} models)")
+            return True
+
+        except Exception as e:
+            self.log_message(f"❌ Error sorting IMG by IDE: {str(e)}")
+            return False
+
+    def _parse_ide_for_model_order(self, ide_path: str) -> List[str]:
+        """Parse IDE file and return list of model names in order"""
+        try:
+            model_order = []
+            with open(ide_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            for line in lines:
+                line = line.strip()
+                if line and not line.startswith('#') and not line.startswith('end'):
+                    # Parse IDE line format: id, model, txd, meshcount, drawdist, flags
+                    parts = [part.strip() for part in line.split(',')]
+                    if len(parts) >= 3:  # Need at least id, model, txd
+                        model_name = parts[1].strip()  # Model name is second field
+                        if model_name and model_name not in model_order:
+                            model_order.append(model_name)
+            
+            return model_order
+        except Exception as e:
+            self.log_message(f"❌ Error parsing IDE file: {str(e)}")
+            return []
+
+    def _sort_entries_by_ide_order(self, model_order: List[str]) -> List:
+        """Sort current IMG entries based on IDE model order, with TXDs at the bottom"""
+        try:
+            if not self.current_img or not self.current_img.entries:
+                return []
+
+            # Create mapping of model names to entries (without extensions)
+            entry_map = {}
+            txd_entries = []
+            other_entries = []
+            
+            for entry in self.current_img.entries:
+                entry_name = entry.name.lower()
+                if entry_name.endswith('.txd'):
+                    txd_entries.append(entry)
+                else:
+                    # Get name without extension for comparison
+                    base_name = os.path.splitext(entry_name)[0]
+                    entry_map[base_name] = entry
+
+            # Build sorted list following IDE model order
+            sorted_entries = []
+            
+            # Add entries in IDE model order
+            for model_name in model_order:
+                base_name = model_name.lower()
+                if base_name in entry_map:
+                    sorted_entries.append(entry_map[base_name])
+                    del entry_map[base_name]  # Remove to avoid duplicates
+            
+            # Add remaining entries that weren't in IDE
+            for entry in entry_map.values():
+                sorted_entries.append(entry)
+            
+            # Add TXD entries at the end
+            sorted_entries.extend(txd_entries)
+            
+            return sorted_entries
+        except Exception as e:
+            self.log_message(f"❌ Error sorting entries by IDE order: {str(e)}")
+            return self.current_img.entries if self.current_img else []
+
 
     def validate_img(self): #vers 4
         """Validate current IMG file"""
