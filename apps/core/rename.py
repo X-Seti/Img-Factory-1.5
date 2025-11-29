@@ -422,6 +422,37 @@ def _rename_with_img_archive(main_window, img_archive, entry, new_name: str) -> 
         return False
 
 
+def _rename_with_fallback_method(main_window, entry, new_name: str) -> bool: #vers 1
+    """Fallback method to rename entry directly"""
+    try:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message("Using fallback method for rename")
+        
+        # Directly rename the entry's name attribute
+        old_name = getattr(entry, 'name', '')
+        entry.name = new_name
+        
+        # Mark entry as modified if there's a modified flag
+        if hasattr(entry, 'modified'):
+            entry.modified = True
+            
+        # Mark parent object as modified if it exists
+        if hasattr(entry, 'parent') and hasattr(entry.parent, 'modified'):
+            entry.parent.modified = True
+        elif hasattr(main_window, 'current_file') and hasattr(main_window.current_file, 'modified'):
+            main_window.current_file.modified = True
+        
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Successfully renamed entry using fallback method: {old_name} -> {new_name}")
+        
+        return True
+        
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Fallback rename error: {str(e)}")
+        return False
+
+
 def _get_selected_entry_safe(main_window, file_object): #vers 2
     """Safely get selected IMG entry"""
     try:
