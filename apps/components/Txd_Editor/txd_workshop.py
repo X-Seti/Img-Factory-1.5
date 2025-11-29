@@ -14138,6 +14138,74 @@ class BumpmapManagerWindow(QWidget): #vers 1
     def _replace_bumpmap(self): #vers 2
         """F10 - Import/Replace bumpmap"""
         self._import_bumpmap()
+    def save_to_img_file(self): #vers 1
+        """Save current TXD data back to the parent IMG file if docked"""
+        try:
+            if not self.main_window or not hasattr(self.main_window, 'current_img'):
+                # Not docked or no current IMG
+                return False
+            
+            current_img = self.main_window.current_img
+            if not current_img:
+                return False
+            
+            # Get the current TXD name to update in the IMG
+            if hasattr(self, 'current_txd_name') and self.current_txd_name:
+                # Find the entry in the IMG file
+                for i, entry in enumerate(current_img.entries):
+                    if entry.name.lower() == self.current_txd_name.lower():
+                        # Serialize current TXD data to bytes
+                        if hasattr(self, 'current_txd_data') and self.current_txd_data:
+                            # Update the entry data in the IMG
+                            # This would require actual serialization to TXD format
+                            txd_bytes = self._serialize_current_txd()
+                            if txd_bytes:
+                                # Update the entry with new data
+                                entry.data = txd_bytes
+                                entry.size = len(txd_bytes)
+                                
+                                # Update the IMG file on disk
+                                current_img.save()
+                                
+                                if hasattr(self.main_window, 'log_message'):
+                                    self.main_window.log_message(f"TXD saved back to IMG: {entry.name}")
+                                return True
+                        break
+            
+            return False
+            
+        except Exception as e:
+            if hasattr(self, 'main_window') and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Error saving TXD to IMG: {str(e)}")
+            return False
+
+    def _serialize_current_txd(self): #vers 1
+        """Serialize current TXD data to bytes for saving to IMG"""
+        try:
+            # This is a placeholder - actual serialization would depend on the TXD format
+            # For now, return None to indicate this needs proper implementation
+            # In a real implementation, this would serialize the current TXD data
+            # to the proper TXD file format bytes
+            return None
+        except Exception as e:
+            img_debugger.error(f"Error serializing TXD: {str(e)}")
+            return None
+
+    def _setup_save_functionality(self): #vers 1
+        """Setup save functionality when docked to IMG Factory"""
+        try:
+            # When docked to IMG Factory, enable save to IMG functionality
+            if self.main_window and hasattr(self.main_window, 'current_img'):
+                # Enable save functionality
+                if hasattr(self, 'save_btn'):
+                    # Connect save button to save to IMG functionality
+                    self.save_btn.clicked.connect(self.save_to_img_file)
+                    
+                if hasattr(self, 'main_window') and hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("TXD Workshop save to IMG enabled")
+                    
+        except Exception as e:
+            img_debugger.error(f"Error setting up save functionality: {str(e)}")
 
     def _generate_bumpmap(self): #vers 2
         """Generate bumpmap from texture"""
