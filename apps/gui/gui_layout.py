@@ -1547,22 +1547,31 @@ class IMGFactoryGUILayout:
             if hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"❌ Select all entries error: {str(e)}")
 
-    def select_inverse(self):  # vers 1
+    def select_inverse(self):  # vers 3
         """Invert the current selection in the table"""
         try:
             if self.table:
                 # Get the selection model
                 selection_model = self.table.selectionModel()
                 if selection_model:
-                    # Get all currently selected items
-                    current_selection = selection_model.selectedIndexes()
+                    # Store currently selected rows (only consider row level, not individual cells)
+                    currently_selected_rows = set()
+                    for index in selection_model.selectedIndexes():
+                        currently_selected_rows.add(index.row())
                     
-                    # Select all items first
-                    self.table.selectAll()
+                    # Clear current selection
+                    self.table.clearSelection()
                     
-                    # Then deselect the ones that were originally selected
-                    for index in current_selection:
-                        selection_model.select(index, QAbstractItemView.SelectionFlag.Deselect)
+                    # Select all rows that were NOT selected, and deselect those that were
+                    for row in range(self.table.rowCount()):
+                        if row in currently_selected_rows:
+                            # Leave deselected (these were originally selected)
+                            pass
+                        else:
+                            # Select this row (these were originally NOT selected)
+                            for col in range(self.table.columnCount()):
+                                index = self.table.model().index(row, col)
+                                selection_model.select(index, QAbstractItemView.SelectionFlag.Select)
                 else:
                     # Fallback method if selection model is not available
                     # Get all items in the table
@@ -1572,18 +1581,18 @@ class IMGFactoryGUILayout:
                             item = self.table.item(row, col)
                             if item:
                                 all_items.append(item)
-                    
+
                     # Store currently selected items
                     currently_selected = set(self.table.selectedItems())
-                    
+
                     # Clear selection
                     self.table.clearSelection()
-                    
+
                     # Select items that were not selected
                     for item in all_items:
                         if item not in currently_selected:
                             item.setSelected(True)
-                
+
                 if hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message("✅ Selection inverted")
             else:
@@ -1592,44 +1601,6 @@ class IMGFactoryGUILayout:
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"❌ Select inverse error: {str(e)}")
-
-    def sort_entries(self):  # vers 1
-        """Sort entries in the table"""
-        try:
-            if self.table and hasattr(self.table, 'setSortingEnabled'):
-                # Enable sorting and sort by first column (filename)
-                self.table.setSortingEnabled(True)
-                self.table.sortItems(0, Qt.SortOrder.AscendingOrder)  # Sort by first column
-                self.table.setSortingEnabled(False)  # Disable to allow manual selection again
-                if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("✅ Entries sorted")
-            else:
-                if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("❌ Table not available for sorting")
-        except Exception as e:
-            if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Sort entries error: {str(e)}")
-
-    def pin_selected_entries(self):  # vers 1
-        """Pin selected entries to keep them visible/fixed"""
-        try:
-            # This could be implemented to highlight or mark selected entries specially
-            # For now, we'll just log the action
-            selected_items = []
-            if self.table:
-                selected_items = self.table.selectedItems()
-            
-            if selected_items:
-                if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"✅ {len(selected_items)} entries pinned (placeholder implementation)")
-            else:
-                if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("❌ No entries selected to pin")
-        except Exception as e:
-            if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Pin selected entries error: {str(e)}")
-
-
 # LEGACY COMPATIBILITY FUNCTIONS
 
 def create_control_panel(main_window): #vers 1
