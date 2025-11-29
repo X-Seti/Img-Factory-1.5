@@ -1601,6 +1601,74 @@ class IMGFactoryGUILayout:
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"❌ Select inverse error: {str(e)}")
+
+    def sort_entries(self):  # vers 1
+        """Sort entries in the table"""
+        try:
+            if self.table:
+                # Get currently selected items to restore selection after sorting
+                selected_items = self.table.selectedItems()
+                selected_rows = set(item.row() for item in selected_items) if selected_items else set()
+                
+                # Sort by the first column (filename) by default
+                self.table.sortItems(0, Qt.SortOrder.AscendingOrder)
+                
+                # Restore selection if there were selected items
+                if selected_rows:
+                    for row in selected_rows:
+                        if row < self.table.rowCount():
+                            for col in range(self.table.columnCount()):
+                                item = self.table.item(row, col)
+                                if item:
+                                    item.setSelected(True)
+                
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("✅ Entries sorted")
+            else:
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("❌ Table not available for sorting")
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Sort entries error: {str(e)}")
+
+    def pin_selected_entries(self):  # vers 1
+        """Pin selected entries to keep them at the top of the table"""
+        try:
+            if self.table and self.table.selectedItems():
+                # Get selected rows
+                selected_items = self.table.selectedItems()
+                selected_rows = set(item.row() for item in selected_items)
+                
+                # Store the selected rows data
+                pinned_data = []
+                for row in sorted(selected_rows):
+                    row_data = []
+                    for col in range(self.table.columnCount()):
+                        item = self.table.item(row, col)
+                        if item:
+                            row_data.append(item.text())
+                        else:
+                            row_data.append("")
+                    pinned_data.append(row_data)
+                
+                # Remove selected rows from the table (in reverse order to maintain indices)
+                for row in sorted(selected_rows, reverse=True):
+                    self.table.removeRow(row)
+                
+                # Insert pinned rows at the top
+                for i, row_data in enumerate(pinned_data):
+                    self.table.insertRow(i)
+                    for j, cell_data in enumerate(row_data):
+                        self.table.setItem(i, j, QTableWidgetItem(cell_data))
+                
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"✅ {len(pinned_data)} entries pinned to top")
+            else:
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("❌ No selected entries to pin or table not available")
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Pin selected entries error: {str(e)}")
 # LEGACY COMPATIBILITY FUNCTIONS
 
 def create_control_panel(main_window): #vers 1
