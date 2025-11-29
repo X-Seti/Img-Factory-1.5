@@ -272,6 +272,7 @@
 ├── cc.py
 ├── ChangeLog.md
 ├── Credits.md
+├── fix_gui_layout.py
 ├── FIX_SUMMARY.md
 ├── img_factory_debug.log
 ├── launch_imgfactory.py
@@ -284,4 +285,4 @@
 ├── tree.git
 └── tree.git.txt
 
-30 directories, 255 files
+30 directories, 256 files
