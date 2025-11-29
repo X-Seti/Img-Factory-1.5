@@ -138,7 +138,7 @@ from apps.methods.img_export_functions import integrate_img_export_functions
 from apps.methods.col_export_functions import integrate_col_export_functions
 
 App_name = "Img Factory 1.5"
-App_build ="November 28"
+App_build ="November 29"
 App_auth = "X-Seti"
 
 def setup_rebuild_system(self): #vers 1
