@@ -39,6 +39,7 @@ from apps.core.img_split import split_img, integrate_split_functions
 from apps.core.img_merger import merge_img_function
 from apps.core.convert import convert_img, convert_img_format
 from apps.core.rename import rename_entry
+from apps.core.imgcol_replace import replace_selected
 from apps.core.reload import reload_current_file
 from apps.core.create import create_new_img
 from apps.core.open import _detect_and_open_file, open_file_dialog, _detect_file_type
@@ -149,14 +150,14 @@ class IMGFactoryGUILayout:
             'remove_via_entries': lambda: remove_via_entries_function(self.main_window),
 
             # Selection methods
-            'select_all_entries': lambda: self._log_missing_method('select_all_entries'),
-            'select_inverse': lambda: self._log_missing_method('select_inverse'),
-            'sort_entries': lambda: self._log_missing_method('sort_entries'),
-            'pin_selected_entries': lambda: self._log_missing_method('pin_selected_entries'),
+            'select_all_entries': lambda: self.select_all_entries(),
+            'select_inverse': lambda: self.select_inverse(),
+            'sort_entries': lambda: self.sort_entries(),
+            'pin_selected_entries': lambda: self.pin_selected_entries(),
 
             # Edit methods
-            'rename_selected': lambda: self._log_missing_method('rename_selected'),
-            'replace_selected': lambda: self._log_missing_method('replace_selected'),
+            'rename_selected': lambda: rename_entry(self.main_window),
+            'replace_selected': lambda: replace_selected(self.main_window),
 
             # Editor methods
             'edit_col_file': lambda: open_col_editor_dialog(self.main_window),
@@ -1532,7 +1533,74 @@ class IMGFactoryGUILayout:
         except Exception as e:
             self.log_message(f"❌ Status bar creation error: {str(e)}")
 
+    def select_all_entries(self):  # vers 1
+        """Select all entries in the table"""
+        try:
+            if self.table and hasattr(self.table, 'selectAll'):
+                self.table.selectAll()
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("✅ All entries selected")
+            else:
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("❌ Table not available for selection")
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Select all entries error: {str(e)}")
 
+    def select_inverse(self):  # vers 3
+        """Invert the current selection in the table"""
+        try:
+            if self.table:
+                # Get the selection model
+                selection_model = self.table.selectionModel()
+                if selection_model:
+                    # Store currently selected rows (only consider row level, not individual cells)
+                    currently_selected_rows = set()
+                    for index in selection_model.selectedIndexes():
+                        currently_selected_rows.add(index.row())
+                    
+                    # Clear current selection
+                    self.table.clearSelection()
+                    
+                    # Select all rows that were NOT selected, and deselect those that were
+                    for row in range(self.table.rowCount()):
+                        if row in currently_selected_rows:
+                            # Leave deselected (these were originally selected)
+                            pass
+                        else:
+                            # Select this row (these were originally NOT selected)
+                            for col in range(self.table.columnCount()):
+                                index = self.table.model().index(row, col)
+                                selection_model.select(index, QAbstractItemView.SelectionFlag.Select)
+                else:
+                    # Fallback method if selection model is not available
+                    # Get all items in the table
+                    all_items = []
+                    for row in range(self.table.rowCount()):
+                        for col in range(self.table.columnCount()):
+                            item = self.table.item(row, col)
+                            if item:
+                                all_items.append(item)
+
+                    # Store currently selected items
+                    currently_selected = set(self.table.selectedItems())
+
+                    # Clear selection
+                    self.table.clearSelection()
+
+                    # Select items that were not selected
+                    for item in all_items:
+                        if item not in currently_selected:
+                            item.setSelected(True)
+
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("✅ Selection inverted")
+            else:
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("❌ Table not available for selection")
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Select inverse error: {str(e)}")
 # LEGACY COMPATIBILITY FUNCTIONS
 
 def create_control_panel(main_window): #vers 1

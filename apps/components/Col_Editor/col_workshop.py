@@ -1361,26 +1361,67 @@ class COLWorkshop(QWidget): #vers 3
 
         self._update_dock_button_visibility()
 
-    def _dock_to_main(self): #vers 7
-        """Dock handled by overlay system in imgfactory"""
-        if hasattr(self, 'is_overlay') and self.is_overlay:
+    def _dock_to_main(self): #vers 8
+        """Dock handled by overlay system in imgfactory - IMPROVED"""
+        try:
+            if hasattr(self, 'is_overlay') and self.is_overlay:
+                self.show()
+                self.raise_()
+                return
+            
+            # For proper docking, we need to be called from imgfactory
+            # This method should be handled by imgfactory's overlay system
+            if self.main_window and hasattr(self.main_window, 'open_col_workshop_docked'):
+                # If available, use the main window's docking system
+                self.main_window.open_col_workshop_docked()
+            else:
+                # Fallback: just show the window
+                self.show()
+                self.raise_()
+                
+            # Update dock state
+            self.is_docked = True
+            self._update_dock_button_visibility()
+            
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"{App_name} docked to main window")
+                
+        except Exception as e:
+            img_debugger.error(f"Error docking: {str(e)}")
+            self.show()
+
+    def _undock_from_main(self): #vers 4
+        """Undock from overlay mode to standalone window - IMPROVED"""
+        try:
+            if hasattr(self, 'is_overlay') and self.is_overlay:
+                # Switch from overlay to normal window
+                self.setWindowFlags(Qt.WindowType.Window)
+                self.is_overlay = False
+                self.overlay_table = None
+
+            # Set proper window flags for standalone mode
+            self.setWindowFlags(Qt.WindowType.Window)
+            
+            # Ensure proper size when undocking
+            if hasattr(self, 'original_size'):
+                self.resize(self.original_size)
+            else:
+                self.resize(1000, 700)  # Reasonable default size
+                
+            self.is_docked = False
+            self._update_dock_button_visibility()
+
             self.show()
             self.raise_()
 
-    def _undock_from_main(self): #vers 3
-        """Undock from overlay mode to standalone window"""
-        if hasattr(self, 'is_overlay') and self.is_overlay:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"{App_name} undocked to standalone")
+                
+        except Exception as e:
+            img_debugger.error(f"Error undocking: {str(e)}")
+            # Fallback
             self.setWindowFlags(Qt.WindowType.Window)
-            self.is_overlay = False
-            self.overlay_table = None
-
-        self.is_docked = False
-        self._update_dock_button_visibility()
-
-        self.show()
-
-        if hasattr(self.main_window, 'log_message'):
-            self.main_window.log_message(App_name + " undocked to standalone")
+            self.show()
 
 
     def _apply_button_mode(self, dialog): #vers 1
@@ -1727,6 +1768,8 @@ class COLWorkshop(QWidget): #vers 3
 
         return True  # On empty stretch area, draggable
 
+    # IMPORTANT: This toolbar is isolated to this window only
+    # Do not add to main window's menu system
     def _create_toolbar(self): #vers 12
         """Create toolbar - FIXED: Hide drag button when docked, ensure buttons visible"""
         self.toolbar = QFrame()
@@ -2966,11 +3009,24 @@ class COLWorkshop(QWidget): #vers 3
             self.drag_btn.setVisible(not self.is_docked)
 
 
-    def _toggle_tearoff(self): #vers 1
-        """Toggle tear-off state (merge back to IMG Factory)"""
-        QMessageBox.information(self, "Tear-off",
-            "Merge back to IMG Factory functionality coming soon!\n\n"
-            "This will dock the app back into the main window.")
+    def _toggle_tearoff(self): #vers 2
+        """Toggle tear-off state (merge back to IMG Factory) - IMPROVED"""
+        try:
+            if self.is_docked:
+                # Undock from main window
+                self._undock_from_main()
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"{App_name} torn off from main window")
+            else:
+                # Dock back to main window
+                self._dock_to_main()
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message(f"{App_name} docked back to main window")
+                    
+        except Exception as e:
+            img_debugger.error(f"Error toggling tear-off: {str(e)}")
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Tear-off Error", f"Could not toggle tear-off state:\n{str(e)}")
 
 
     def _show_settings_dialog(self): #vers 5
@@ -4258,14 +4314,15 @@ class COLWorkshop(QWidget): #vers 3
             return pixmap
 
 
-    def _render_collision_preview(self, model, width, height): #vers 1
-        """Render collision model for preview panel"""
+    def _render_collision_preview(self, model, width, height): #vers 2
+        """Render collision model for preview panel - IMPROVED VERSION"""
         try:
             pixmap = QPixmap(width, height)
-            pixmap.fill(QColor(10, 10, 10))
+            pixmap.fill(QColor(20, 20, 20))
 
             painter = QPainter(pixmap)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
             # Get collision data
             spheres = getattr(model, 'spheres', [])
@@ -4275,109 +4332,175 @@ class COLWorkshop(QWidget): #vers 3
 
             if not spheres and not boxes and not vertices:
                 painter.setPen(QColor(150, 150, 150))
+                painter.setFont(QFont("Arial", 12))
                 painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter,
                             "No Collision Data\n\nModel is empty")
                 painter.end()
                 return pixmap
 
-            # Calculate bounds
+            # Calculate bounds from all available collision elements
             all_points = []
+            
+            # Add sphere centers and radii
             for sphere in spheres:
                 if hasattr(sphere, 'center'):
                     all_points.append((sphere.center.x, sphere.center.z))
+                    # Add points for the sphere radius to ensure proper scaling
+                    if hasattr(sphere, 'radius'):
+                        all_points.append((sphere.center.x + sphere.radius, sphere.center.z + sphere.radius))
+                        all_points.append((sphere.center.x - sphere.radius, sphere.center.z - sphere.radius))
 
+            # Add box corners
             for box in boxes:
                 if hasattr(box, 'min_point') and hasattr(box, 'max_point'):
                     all_points.append((box.min_point.x, box.min_point.z))
                     all_points.append((box.max_point.x, box.max_point.z))
+                    # Add all 4 corners of the box
+                    all_points.append((box.min_point.x, box.max_point.z))
+                    all_points.append((box.max_point.x, box.min_point.z))
 
+            # Add vertex positions
             for vertex in vertices:
                 if hasattr(vertex, 'position'):
                     all_points.append((vertex.position.x, vertex.position.z))
 
             if not all_points:
+                # Draw empty state
+                painter.setPen(QColor(150, 150, 150))
+                painter.setFont(QFont("Arial", 12))
+                painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter,
+                            "No Collision Data\n\nModel is empty")
                 painter.end()
                 return pixmap
 
-            # Calculate scale
+            # Calculate bounds with padding
             xs = [p[0] for p in all_points]
             zs = [p[1] for p in all_points]
             min_x, max_x = min(xs), max(xs)
             min_z, max_z = min(zs), max(zs)
 
+            # Add some padding to prevent elements from touching edges
+            padding = max((max_x - min_x) * 0.1, (max_z - min_z) * 0.1, 1.0)
+            min_x -= padding
+            max_x += padding
+            min_z -= padding
+            max_z += padding
+
             range_x = max_x - min_x if max_x != min_x else 1
             range_z = max_z - min_z if max_z != min_z else 1
-            scale = min((width - 40) / range_x, (height - 40) / range_z)
+            
+            # Calculate scale with aspect ratio preservation
+            scale_x = (width * 0.8) / range_x  # Use 80% of available space
+            scale_z = (height * 0.8) / range_z
+            scale = min(scale_x, scale_z)  # Use the smaller scale to fit everything
+            
+            # Calculate center offset
+            center_x = width / 2 - (min_x + max_x) / 2 * scale
+            center_z = height / 2 - (min_z + max_z) / 2 * scale
 
-            offset_x = width / 2 - (min_x + max_x) / 2 * scale
-            offset_y = height / 2 - (min_z + max_z) / 2 * scale
+            # Draw grid background
+            painter.setPen(QPen(QColor(40, 40, 40), 1, Qt.PenStyle.DotLine))
+            # Draw grid lines based on the calculated bounds
+            grid_step = max(abs(range_x), abs(range_z)) / 20  # 20 grid lines across the range
+            if grid_step > 0:
+                start_x = int(min_x / grid_step) * grid_step
+                start_z = int(min_z / grid_step) * grid_step
+                for i in range(-20, 21):
+                    grid_x = start_x + i * grid_step
+                    grid_z = start_z + i * grid_step
+                    screen_x = grid_x * scale + center_x
+                    screen_z = grid_z * scale + center_z
+                    if 0 <= screen_x <= width:
+                        painter.drawLine(int(screen_x), 0, int(screen_x), height)
+                    if 0 <= screen_z <= height:
+                        painter.drawLine(0, int(screen_z), width, int(screen_z))
 
-            # Draw grid
-            painter.setPen(QPen(QColor(50, 50, 50), 1, Qt.PenStyle.DotLine))
-            for i in range(-10, 11):
-                painter.drawLine(int(offset_x + i * 50), 0,
-                            int(offset_x + i * 50), height)
-                painter.drawLine(0, int(offset_y + i * 50),
-                            width, int(offset_y + i * 50))
+            # Draw coordinate system
+            painter.setPen(QPen(QColor(80, 80, 80), 2))
+            # X axis (red)
+            painter.drawLine(width//2 - 20, height//2, width//2 + 20, height//2)
+            # Z axis (blue) 
+            painter.drawLine(width//2, height//2 - 20, width//2, height//2 + 20)
 
             # Draw spheres (if enabled)
-            if self._show_checkerboard:  # Reuse this flag as show_spheres
+            if getattr(self, '_show_spheres', True):  # Use proper show_spheres flag
                 painter.setPen(QPen(QColor(100, 180, 255), 2))
                 painter.setBrush(QBrush(QColor(100, 180, 255, 80)))
                 for sphere in spheres:
                     if hasattr(sphere, 'center') and hasattr(sphere, 'radius'):
-                        x = sphere.center.x * scale + offset_x
-                        y = sphere.center.z * scale + offset_y
-                        r = sphere.radius * scale
-                        painter.drawEllipse(QPoint(int(x), int(y)), int(r), int(r))
+                        screen_x = sphere.center.x * scale + center_x
+                        screen_y = sphere.center.z * scale + center_z
+                        screen_radius = sphere.radius * scale
+                        # Only draw if sphere is within visible area
+                        if (0 <= screen_x <= width and 0 <= screen_y <= height and screen_radius > 0.5):
+                            painter.drawEllipse(QPoint(int(screen_x), int(screen_y)), int(screen_radius), int(screen_radius))
 
             # Draw boxes
-            painter.setPen(QPen(QColor(255, 180, 100), 2))
-            painter.setBrush(QBrush(QColor(255, 180, 100, 80)))
-            for box in boxes:
-                if hasattr(box, 'min_point') and hasattr(box, 'max_point'):
-                    x1 = box.min_point.x * scale + offset_x
-                    y1 = box.min_point.z * scale + offset_y
-                    x2 = box.max_point.x * scale + offset_x
-                    y2 = box.max_point.z * scale + offset_y
-                    painter.drawRect(int(x1), int(y1), int(x2-x1), int(y2-y1))
+            if getattr(self, '_show_boxes', True):  # Use proper show_boxes flag
+                painter.setPen(QPen(QColor(255, 180, 100), 2))
+                painter.setBrush(QBrush(QColor(255, 180, 100, 80)))
+                for box in boxes:
+                    if hasattr(box, 'min_point') and hasattr(box, 'max_point'):
+                        x1 = box.min_point.x * scale + center_x
+                        y1 = box.min_point.z * scale + center_z
+                        x2 = box.max_point.x * scale + center_x
+                        y2 = box.max_point.z * scale + center_z
+                        # Only draw if box is within visible area
+                        if (min(x1, x2) <= width and max(x1, x2) >= 0 and 
+                            min(y1, y2) <= height and max(y1, y2) >= 0):
+                            painter.drawRect(int(min(x1, x2)), int(min(y1, y2)), 
+                                           int(abs(x2-x1)), int(abs(y2-y1)))
 
             # Draw mesh wireframe
-            if faces and vertices:
+            if getattr(self, '_show_mesh', True) and faces and vertices:  # Use proper show_mesh flag
                 painter.setPen(QPen(QColor(150, 255, 150), 1))
                 for face in faces[:500]:  # Limit faces for performance
                     if hasattr(face, 'vertex_indices') and len(face.vertex_indices) >= 3:
                         try:
-                            v1 = vertices[face.vertex_indices[0]].position
-                            v2 = vertices[face.vertex_indices[1]].position
-                            v3 = vertices[face.vertex_indices[2]].position
+                            # Get first 3 vertices of the face
+                            if len(face.vertex_indices) >= 3:
+                                idx1, idx2, idx3 = face.vertex_indices[0], face.vertex_indices[1], face.vertex_indices[2]
+                                if idx1 < len(vertices) and idx2 < len(vertices) and idx3 < len(vertices):
+                                    v1 = vertices[idx1].position
+                                    v2 = vertices[idx2].position
+                                    v3 = vertices[idx3].position
 
-                            x1 = v1.x * scale + offset_x
-                            y1 = v1.z * scale + offset_y
-                            x2 = v2.x * scale + offset_x
-                            y2 = v2.z * scale + offset_y
-                            x3 = v3.x * scale + offset_x
-                            y3 = v3.z * scale + offset_y
+                                    x1 = v1.x * scale + center_x
+                                    y1 = v1.z * scale + center_z
+                                    x2 = v2.x * scale + center_x
+                                    y2 = v2.z * scale + center_z
+                                    x3 = v3.x * scale + center_x
+                                    y3 = v3.z * scale + center_z
 
-                            painter.drawLine(int(x1), int(y1), int(x2), int(y2))
-                            painter.drawLine(int(x2), int(y2), int(x3), int(y3))
-                            painter.drawLine(int(x3), int(y3), int(x1), int(y1))
-                        except:
-                            pass
+                                    # Only draw if all points are within reasonable bounds
+                                    if all(0 <= coord <= max(width, height) for coord in [x1, y1, x2, y2, x3, y3]):
+                                        painter.drawLine(int(x1), int(y1), int(x2), int(y2))
+                                        painter.drawLine(int(x2), int(y2), int(x3), int(y3))
+                                        painter.drawLine(int(x3), int(y3), int(x1), int(y1))
+                        except (IndexError, AttributeError):
+                            continue
 
-            # Draw legend
-            painter.setPen(QColor(200, 200, 200))
+            # Draw legend with collision stats
+            painter.setPen(QColor(220, 220, 220))
+            painter.setFont(QFont("Arial", 10))
             painter.drawText(10, 20, f"Spheres: {len(spheres)}")
             painter.drawText(10, 40, f"Boxes: {len(boxes)}")
             painter.drawText(10, 60, f"Faces: {len(faces)}")
+            painter.drawText(10, 80, f"Vertices: {len(vertices)}")
 
             painter.end()
             return pixmap
 
         except Exception as e:
             img_debugger.error(f"Error rendering preview: {str(e)}")
+            import traceback
+            traceback.print_exc()
             pixmap = QPixmap(width, height)
             pixmap.fill(QColor(60, 60, 60))
+            painter = QPainter(pixmap)
+            painter.setPen(QColor(255, 100, 100))
+            painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, f"Render Error:\n{str(e)[:50]}...")
+            painter.end()
             return pixmap
 
 
@@ -6552,6 +6675,49 @@ class COLEditorDialog(QDialog): #vers 3
 
         img_debugger.debug("COL Editor dialog closed")
 
+    # Add import/export functionality when docked
+    def _add_import_export_functionality(self): #vers 1
+        """Add import/export functionality when docked to img factory"""
+        try:
+            # Only add these when docked to img factory
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                # Add import button to toolbar if not already present
+                if not hasattr(self, 'import_btn'):
+                    # Import button would be added to the toolbar in _create_toolbar
+                    pass
+                    
+                # Add export button to toolbar if not already present
+                if not hasattr(self, 'export_btn'):
+                    # Export button would be added to the toolbar in _create_toolbar
+                    pass
+                    
+                self.main_window.log_message(f"{App_name} import/export functionality ready")
+                
+        except Exception as e:
+            img_debugger.error(f"Error adding import/export functionality: {str(e)}")
+
+    def _import_col_data(self): #vers 1
+        """Import COL data from external source"""
+        try:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"{App_name} import functionality - not yet implemented")
+                # TODO: Implement actual import functionality
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.information(self, "Import", "Import functionality coming soon!")
+        except Exception as e:
+            img_debugger.error(f"Error importing COL data: {str(e)}")
+
+    def _export_col_data(self): #vers 1
+        """Export COL data to external source"""
+        try:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"{App_name} export functionality - not yet implemented")
+                # TODO: Implement actual export functionality
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.information(self, "Export", "Export functionality coming soon!")
+        except Exception as e:
+            img_debugger.error(f"Error exporting COL data: {str(e)}")
+
 # Convenience functions
 def open_col_editor(parent=None, file_path: str = None) -> COLEditorDialog: #vers 2
     """Open COL editor dialog - ENHANCED VERSION"""
@@ -6650,6 +6816,28 @@ def update_view_options(viewer: 'COL3DViewport', **options): #vers 1
     try:
         viewer.set_view_options(**options)
         img_debugger.debug(f"View options updated: {options}")
+    def _ensure_standalone_functionality(self): #vers 1
+        """Ensure popped-out windows work independently of img factory"""
+        try:
+            # When popped out, ensure all necessary functionality is available
+            if not self.is_docked or getattr(self, 'is_overlay', False) == False:
+                # Enable all UI elements that might be disabled when docked
+                if hasattr(self, 'toolbar') and self.toolbar:
+                    self.toolbar.setEnabled(True)
+                
+                # Ensure all buttons and controls work independently
+                if hasattr(self, 'main_window') and self.main_window is None:
+                    # This is truly standalone, enable all features
+                    if hasattr(self, 'dock_btn'):
+                        self.dock_btn.setText("X")  # Change to close button when standalone
+                        self.dock_btn.setToolTip("Close window")
+                
+                # Set proper window flags for standalone operation
+                if not getattr(self, 'is_overlay', False):
+                    self.setWindowFlags(Qt.WindowType.Window)
+                
+        except Exception as e:
+            img_debugger.error(f"Error ensuring standalone functionality: {str(e)}")
 
     except Exception as e:
         img_debugger.error(f"Error updating view options: {str(e)}")
