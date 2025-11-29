@@ -72,12 +72,16 @@ def import_file(img_archive, file_path: str, entry_name: Optional[str] = None) -
 
 
 def refresh_after_import(main_window) -> None:
-    """Refresh UI after import"""
+    """Refresh UI after import - OPTIMIZED to prevent freezing"""
     try:
+        # Use QTimer to defer the refresh to prevent blocking
+        from PyQt6.QtCore import QTimer
         if hasattr(main_window, 'refresh_current_tab_data'):
-            main_window.refresh_current_tab_data()
+            # Use single shot timer to defer the refresh
+            QTimer.singleShot(0, main_window.refresh_current_tab_data)
         elif hasattr(main_window, 'refresh_table'):
-            main_window.refresh_table()
+            # Use single shot timer to defer the refresh
+            QTimer.singleShot(0, main_window.refresh_table)
     except Exception as e:
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"Refresh failed: {str(e)}")
