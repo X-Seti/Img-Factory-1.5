@@ -4,6 +4,7 @@
 __pycache__/
 *.o
 *.obj
+*.out
 
 # Dependencies
 .venv/
@@ -31,13 +32,55 @@ htmlcov/
 
 # Python specific
 *.pyc
-__pycache__/
 *.pyo
 *.pyd
 .Python
 *.so
-
-# Build directories
-build/
+*.egg-info/
 dist/
+build/
+*.egg
+*.egg~
+*.dist-info/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pytest
+.pytest_cache/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg-info/
+*.egg~
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 ```

@@ -422,14 +422,22 @@ def _rename_with_img_archive(main_window, img_archive, entry, new_name: str) -> 
         return False
 
 
-def _rename_with_fallback_method(main_window, entry, new_name: str) -> bool: #vers 1
-    """Fallback method to rename entry directly"""
+def _rename_with_fallback_method(main_window, entry, new_name: str) -> bool: #vers 2
+    """Fallback method to rename entry directly with undo support"""
     try:
         if hasattr(main_window, 'log_message'):
             main_window.log_message("Using fallback method for rename")
         
-        # Directly rename the entry's name attribute
+        # Get old name before renaming
         old_name = getattr(entry, 'name', '')
+        
+        # Create undo command before making changes
+        from apps.core.undo_system import RenameCommand
+        if hasattr(main_window, 'undo_manager'):
+            undo_command = RenameCommand(entry, old_name, new_name)
+            main_window.undo_manager.push_command(undo_command)
+        
+        # Directly rename the entry's name attribute
         entry.name = new_name
         
         # Mark entry as modified if there's a modified flag
@@ -441,6 +449,8 @@ def _rename_with_fallback_method(main_window, entry, new_name: str) -> bool: #ve
             entry.parent.modified = True
         elif hasattr(main_window, 'current_file') and hasattr(main_window.current_file, 'modified'):
             main_window.current_file.modified = True
+        elif hasattr(main_window, 'current_img') and hasattr(main_window.current_img, 'modified'):
+            main_window.current_img.modified = True
         
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"Successfully renamed entry using fallback method: {old_name} -> {new_name}")
