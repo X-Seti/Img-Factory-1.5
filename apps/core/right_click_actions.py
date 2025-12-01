@@ -160,6 +160,33 @@ def show_advanced_context_menu(main_window, position): #vers 3
                 remove_action.triggered.connect(main_window.remove_selected)
                 menu.addAction(remove_action)
 
+        # RENAME OPERATION
+        if hasattr(main_window, 'rename_entry'):
+            selected_items = table.selectedItems()
+            if selected_items:
+                rename_action = QAction("Rename", menu_parent)
+                rename_action.triggered.connect(main_window.rename_entry)
+                menu.addAction(rename_action)
+
+        # PIN OPERATIONS
+        if hasattr(main_window, 'toggle_pinned_entries'):
+            selected_items = table.selectedItems()
+            if selected_items:
+                pin_action = QAction("Toggle Pin", menu_parent)
+                pin_action.triggered.connect(main_window.toggle_pinned_entries)
+                menu.addAction(pin_action)
+
+        # UNDO/REDO OPERATIONS
+        if hasattr(main_window, 'undo'):
+            undo_action = QAction("Undo", menu_parent)
+            undo_action.triggered.connect(main_window.undo)
+            menu.addAction(undo_action)
+
+        if hasattr(main_window, 'redo'):
+            redo_action = QAction("Redo", menu_parent)
+            redo_action.triggered.connect(main_window.redo)
+            menu.addAction(redo_action)
+
         menu.addSeparator()
 
         # CLIPBOARD OPERATIONS (Basic functionality)

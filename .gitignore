@@ -18,30 +18,20 @@ node_modules/
 # Environment
 .env
 .env.local
-.env.*
+*.env.*
 
 # Editors
 .vscode/
 .idea/
 
-# Coverage reports
+# Coverage
 coverage/
 htmlcov/
 .coverage
 
-# Python specific
-*.pyo
-*.pyd
-.Python
-*.so
-*.egg-info/
-dist/
-build/
-*.egg
-
-# MyPy cache
+# MyPy
 .mypy_cache/
-# Pytest cache
-.pytest_cache/
 
+# Pytest
+.pytest_cache/
 ```
