@@ -1436,7 +1436,7 @@ class IMGFactory(QMainWindow):
             self.gui_layout.table.selectAll()
             self.log_message("Selected all entries")
 
-    def select_inverse(self): #vers 1
+    def select_inverse(self): #vers 2
         """Select inverse of current selection"""
         try:
             if hasattr(self.gui_layout, 'table') and self.gui_layout.table:
@@ -1451,10 +1451,7 @@ class IMGFactory(QMainWindow):
                 # Select all rows except the currently selected ones
                 for row in range(table.rowCount()):
                     if row not in selected_rows:
-                        for col in range(table.columnCount()):
-                            item = table.item(row, col)
-                            if item:
-                                item.setSelected(True)
+                        table.selectRow(row)
                 
                 self.log_message("Selection inverted")
             else:

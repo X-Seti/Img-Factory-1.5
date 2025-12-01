@@ -250,7 +250,7 @@ class IMGTablePopulator:
         except Exception:
             return "None"
 
-    def get_info_light(self, entry: Any) -> str: #vers 2
+    def get_info_light(self, entry: Any) -> str: #vers 3
         """Get entry info - LIGHT processing, no heavy detection"""
         try:
             info_parts = []
@@ -260,6 +260,11 @@ class IMGTablePopulator:
                 info_parts.append("Replaced")
             else:
                 info_parts.append("Original")
+            
+            # Check if entry is pinned
+            if hasattr(entry, 'is_pinned') and entry.is_pinned:
+                info_parts.append("Pinned")
+            
             entry_type = self.get_img_entry_type_simple(entry)
             if entry_type in ['DFF']:
                 info_parts.append("Model")
