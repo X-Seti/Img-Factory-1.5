@@ -83,6 +83,12 @@ def rename_img_entry(main_window): #vers 1
             QMessageBox.information(main_window, "No Selection", "Please select an IMG entry to rename")
             return False
         
+        # Check if entry is pinned - prevent renaming if pinned
+        if hasattr(selected_entry, 'is_pinned') and selected_entry.is_pinned:
+            QMessageBox.warning(main_window, "Pinned Entry", 
+                "Cannot rename a pinned entry. Unpin it first.")
+            return False
+        
         # Get current name
         current_name = getattr(selected_entry, 'name', '')
         if not current_name:
@@ -113,6 +119,12 @@ def rename_img_entry(main_window): #vers 1
         success = _rename_with_img_core(main_window, file_object, selected_entry, new_name)
         
         if success:
+            # Add undo command to the undo manager
+            if hasattr(main_window, 'undo_manager'):
+                from apps.core.undo_system import RenameCommand
+                undo_cmd = RenameCommand(selected_entry, current_name, new_name)
+                main_window.undo_manager.push_command(undo_cmd)
+        
             # Refresh current tab to show changes
             if hasattr(main_window, 'refresh_current_tab_data'):
                 main_window.refresh_current_tab_data()
@@ -379,11 +391,16 @@ def _rename_with_fallback(main_window, entry, new_name: str) -> bool: #vers 1
             main_window.log_message("⚠️ Using fallback rename method")
         
         # Direct rename
+        # Store the original name before renaming
+        if not hasattr(entry, 'original_name'):
+            entry.original_name = entry.name
         entry.name = new_name
         
-        # Mark as modified if possible
-        if hasattr(entry, 'modified'):
-            entry.modified = True
+        # Mark as modified
+        if not hasattr(entry, 'is_modified'):
+            entry.is_modified = True
+        else:
+            entry.is_modified = True
         
         if hasattr(main_window, 'log_message'):
             main_window.log_message("✅ Entry renamed using fallback method")

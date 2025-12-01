@@ -232,6 +232,8 @@ def setup_main_shortcuts(main_window): #vers 5
             ("Delete", "remove_selected", "Remove selected"),
             ("F2", "rename_selected", "Rename entry"),
             ("Ctrl+A", "select_all_entries", "Select all"),
+            ("Ctrl+Z", "undo", "Undo last action"),
+            ("Ctrl+Y", "redo", "Redo last action"),
 
             # View operations
             ("F4", "show_img_info", "IMG information"),

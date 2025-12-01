@@ -250,7 +250,7 @@ class IMGTablePopulator:
         except Exception:
             return "None"
 
-    def get_info_light(self, entry: Any) -> str: #vers 3
+    def get_info_light(self, entry: Any) -> str: #vers 4
         """Get entry info - LIGHT processing, no heavy detection"""
         try:
             info_parts = []
@@ -276,8 +276,8 @@ class IMGTablePopulator:
         except Exception:
             return "Original"
 
-    def create_img_table_item(self, text: str, is_highlighted: bool = False, highlight_type: str = None) -> QTableWidgetItem: #vers 4
-        """Create table item with optional highlighting - OPTIMIZED"""
+    def create_img_table_item(self, text: str, is_highlighted: bool = False, highlight_type: str = None) -> QTableWidgetItem: #vers 5
+        """Create table item with optional highlighting and pin icon - OPTIMIZED"""
         try:
             from PyQt6.QtWidgets import QTableWidgetItem
             from PyQt6.QtGui import QColor, QBrush, QFont

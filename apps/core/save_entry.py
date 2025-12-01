@@ -117,9 +117,33 @@ def save_img_entry(main_window): #vers 1
             has_changes = True
             if hasattr(main_window, 'log_message'):
                 main_window.log_message(f"Changes detected: {new_count} new entries")
+    # Check for renamed entries
+    renamed_count = 0
+    if hasattr(file_object, 'entries') and file_object.entries:
+        for entry in file_object.entries:
+            # Check if any entry has been modified since last save
+            if hasattr(entry, 'is_modified') and entry.is_modified:
+                has_changes = True
+                renamed_count += 1
+            # Check if entry was renamed by comparing to original names if available
+            elif hasattr(entry, 'original_name') and entry.original_name != entry.name:
+                has_changes = True
+                renamed_count += 1
+    if renamed_count > 0:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Changes detected: {renamed_count} renamed entries")
     # Check has_new_or_modified_entries method
     if hasattr(file_object, 'has_new_or_modified_entries') and file_object.has_new_or_modified_entries():
         has_changes = True
+    if not has_changes:
+        # Check if any entry has been modified in the current session
+        if hasattr(file_object, 'entries') and file_object.entries:
+            for entry in file_object.entries:
+                if (hasattr(entry, 'is_new_entry') and entry.is_new_entry) or \
+                   (hasattr(entry, 'is_replaced') and entry.is_replaced) or \
+                   (hasattr(entry, 'is_modified') and entry.is_modified):
+                    has_changes = True
+                    break
     if not has_changes:
         QMessageBox.information(main_window, "No Changes", "No changes detected. IMG file is up to date.")
         return True
