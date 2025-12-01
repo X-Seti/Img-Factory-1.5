@@ -43,7 +43,7 @@ class MenuDefinition:
     """Defines the complete menu structure"""
 
     def __init__(self):
-        # Complete IMG Factory menu structure - all original entries restored
+        # IMG Factory menu structure - Only File, Edit, and Settings as requested
         self.menu_structure = {
             "File": [
                 MenuAction("new_img", "&New IMG", "Ctrl+N", "document-new"),
@@ -75,215 +75,10 @@ class MenuDefinition:
                 MenuAction("find", "&Find", "Ctrl+F", "edit-find"),
                 MenuAction("find_next", "Find &Next", "F3"),
                 MenuAction("replace", "&Replace", "Ctrl+H"),
-            ],
-
-            "DAT": [
-                MenuAction("dat_info", "DAT File &Information"),
-                MenuAction("dat_validate", "&Validate DAT"),
-                MenuAction("dat_rebuild", "&Rebuild DAT"),
-                MenuAction("dat_optimize", "&Optimize DAT"),
-                MenuAction("sep1", ""),
-                MenuAction("dat_extract", "&Extract All"),
-                MenuAction("dat_create", "&Create New DAT"),
-                MenuAction("dat_merge", "&Merge DAT Files"),
-                MenuAction("sep2", ""),
-                MenuAction("dat_backup", "&Backup DAT"),
-                MenuAction("dat_restore", "&Restore DAT"),
-            ],
-
-            "IMG": [
-                MenuAction("img_info", "IMG &Information", "F4"),
-                MenuAction("img_validate", "&Validate IMG", "F5"),
-                MenuAction("img_rebuild", "&Rebuild IMG", "F6"),
-                MenuAction("Img analyze", "&Analyze IMG", "Shift+F7"),
-                MenuAction("img_save_entry", "Save Entry.", "Shift+F6"),
-                MenuAction("sep1", ""),
-                MenuAction("img_extract", "&Extract All"),
-                MenuAction("img_merge", "&Merge IMG Files"),
-                MenuAction("img_split", "&Split IMG File"),
-                MenuAction("img_convert", "&Convert Format"),
-                MenuAction("sep2", ""),
-                MenuAction("img_optimize", "&Optimize IMG"),
-                MenuAction("img_defrag", "&Defragment IMG"),
-                MenuAction("img_compress", "&Compress IMG"),
-                MenuAction("sep3", ""),
-                MenuAction("img_backup", "&Backup IMG"),
-                MenuAction("img_compare", "Co&mpare IMG Files"),
-            ],
-
-            "DFF": [
-                MenuAction("model_view", "&View Model", "F7"),
-                MenuAction("model_export", "&Export Model"),
-                MenuAction("model_import", "&Import Model"),
-                MenuAction("model_replace", "&Replace Model"),
-                MenuAction("sep1", ""),
-                MenuAction("model_convert", "&Convert Format"),
-                MenuAction("model_validate", "&Validate DFF"),
-                MenuAction("model_optimize", "&Optimize Model"),
-                MenuAction("sep2", ""),
-                MenuAction("model_batch_export", "&Batch Export"),
-                MenuAction("model_batch_convert", "Batch &Convert"),
-                MenuAction("model_batch_optimize", "Batch &Optimize"),
-                MenuAction("sep3", ""),
-                MenuAction("model_viewer_3d", "&3D Model Viewer"),
-                MenuAction("model_properties", "Model &Properties"),
-            ],
-
-            "TXD": [
-                MenuAction("texture_view", "&View Texture", "F8"),
-                MenuAction("texture_export", "&Export Texture"),
-                MenuAction("texture_import", "&Import Texture"),
-                MenuAction("texture_replace", "&Replace Texture"),
-                MenuAction("sep1", ""),
-                MenuAction("texture_convert", "&Convert Format"),
-                MenuAction("texture_validate", "&Validate TXD"),
-                MenuAction("texture_optimize", "&Optimize Textures"),
-                MenuAction("sep2", ""),
-                MenuAction("texture_batch_export", "&Batch Export"),
-                MenuAction("texture_batch_convert", "Batch &Convert"),
-                MenuAction("texture_batch_resize", "Batch &Resize"),
-                MenuAction("sep3", ""),
-                MenuAction("texture_palette", "Extract &Palette"),
-                MenuAction("texture_atlas", "Create &Atlas"),
-                MenuAction("texture_properties", "Texture &Properties"),
-            ],
-
-            "Coll": [
-                MenuAction("collision_view", "&View Collision", "F9"),
-                MenuAction("collision_edit", "&Edit Collision", "Ctrl+Shift+C"),
-                MenuAction("collision_export", "&Export Collision"),
-                MenuAction("collision_import", "&Import Collision"),
-                MenuAction("collision_replace", "&Replace Collision"),
-                MenuAction("sep1", ""),
-                MenuAction("collision_validate", "&Validate COL"),
-                MenuAction("collision_optimize", "&Optimize Collision"),
-                MenuAction("collision_analyze", "&Analyze Collision"),
-                MenuAction("sep2", ""),
-                MenuAction("collision_batch_export", "&Batch Export"),
-                MenuAction("collision_batch_convert", "Batch &Convert"),
-                MenuAction("sep3", ""),
-                MenuAction("collision_viewer_3d", "&3D Collision Viewer"),
-                MenuAction("collision_properties", "Collision &Properties"),
-                MenuAction("collision_debug", "&Debug Information"),
                 MenuAction("sep4", ""),
-                MenuAction("col_editor", "&COL Editor"),
-            ],
-
-            "Anim": [
-                MenuAction("anim_view", "&View Animation"),
-                MenuAction("anim_export", "&Export Animation"),
-                MenuAction("anim_import", "&Import Animation"),
-                MenuAction("anim_replace", "&Replace Animation"),
-                MenuAction("sep1", ""),
-                MenuAction("anim_validate", "&Validate IFP"),
-                MenuAction("anim_convert", "&Convert Format"),
-                MenuAction("sep2", ""),
-                MenuAction("anim_batch_export", "&Batch Export"),
-                MenuAction("anim_properties", "Animation &Properties"),
-                MenuAction("anim_player", "Animation &Player"),
-            ],
-
-            "IDE": [
-                MenuAction("ide_view", "&View IDE"),
-                MenuAction("ide_edit", "&Edit IDE"),
-                MenuAction("ide_validate", "&Validate IDE"),
-                MenuAction("ide_search", "&Search IDE"),
-                MenuAction("sep1", ""),
-                MenuAction("ide_export", "&Export to Text"),
-                MenuAction("ide_import", "&Import from Text"),
-                MenuAction("ide_convert", "&Convert Format"),
-                MenuAction("sep2", ""),
-                MenuAction("ide_backup", "&Backup IDE"),
-                MenuAction("ide_compare", "&Compare IDE Files"),
-                MenuAction("sep3", ""),
-                MenuAction("sort_img_by_ide", "Sort &IMG by IDE"),
-                MenuAction("sort_col_by_ide", "Sort &COL by IDE"),
-            ],
-
-            "IPL": [
-                MenuAction("ipl_view", "&View IPL"),
-                MenuAction("ipl_edit", "&Edit IPL"),
-                MenuAction("ipl_validate", "&Validate IPL"),
-                MenuAction("ipl_search", "&Search IPL"),
-                MenuAction("sep1", ""),
-                MenuAction("ipl_export", "&Export to Text"),
-                MenuAction("ipl_import", "&Import from Text"),
-                MenuAction("ipl_convert", "&Convert Format"),
-                MenuAction("sep2", ""),
-                MenuAction("ipl_map_view", "View on &Map"),
-                MenuAction("ipl_coordinates", "Show &Coordinates"),
-                MenuAction("ipl_zones", "Show &Zones"),
-            ],
-
-            "Entry": [
-                MenuAction("entry_info", "Entry &Information", "Alt+Enter"),
-                MenuAction("entry_properties", "&Properties", "Alt+P"),
-                MenuAction("entry_preview", "Pre&view", "Space"),
-                MenuAction("sep1", ""),
-                MenuAction("entry_import", "&Import Files", "Ctrl+I"),
-                MenuAction("entry_export", "&Export Selected", "Ctrl+E"),
-                MenuAction("entry_export_all", "Export &All", "Ctrl+Shift+E"),
-                MenuAction("entry_quick_export", "&Quick Export", "Ctrl+Q"),
-                MenuAction("sep2", ""),
-                MenuAction("entry_remove", "&Remove Selected", "Delete"),
-                MenuAction("entry_rename", "Re&name", "F2"),
-                MenuAction("entry_replace", "Rep&lace", "Ctrl+R"),
-                MenuAction("entry_duplicate", "&Duplicate", "Ctrl+D"),
-                MenuAction("sep3", ""),
-                MenuAction("entry_sort", "&Sort Entries"),
-                MenuAction("entry_filter", "&Filter Entries"),
-                MenuAction("entry_search", "Searc&h Entries"),
-                MenuAction("sep4", ""),
-                MenuAction("entry_batch_ops", "&Batch Operations"),
-                MenuAction("entry_mass_rename", "&Mass Rename"),
-                MenuAction("entry_verify", "&Verify Integrity"),
-            ],
-
-            "Tools": [
-                MenuAction("search", "&Search", "Ctrl+F", "search"),
-                MenuAction("filter", "&Filter", "Ctrl+Shift+F", "filter"),
-                MenuAction("batch_processor", "&Batch Processor"),
-                MenuAction("sep1", ""),
-                MenuAction("col_editor", "&COL Editor", "Ctrl+Shift+C"),
-                MenuAction("txd_editor", "&TXD Editor", "Ctrl+Shift+T"),
-                MenuAction("dff_editor", "&DFF Editor", "Ctrl+Shift+D"),
-                MenuAction("ifp_editor", "&IFP Editor", "Ctrl+Shift+I"),
-                MenuAction("sep2", ""),
-                MenuAction("ide_editor", "I&DE Editor"),
-                MenuAction("ipl_editor", "IP&L Editor"),
-                MenuAction("dat_editor", "DA&T Editor"),
-                MenuAction("sep3", ""),
-                MenuAction("file_converter", "File &Converter"),
-                MenuAction("hex_editor", "&Hex Editor"),
-                MenuAction("text_editor", "Te&xt Editor"),
-                MenuAction("sep4", ""),
-                MenuAction("game_launcher", "&Game Launcher"),
-                MenuAction("mod_manager", "&Mod Manager"),
-                MenuAction("sep5", ""),
-                MenuAction("preferences", "&Preferences", "Ctrl+,", "settings"),
-            ],
-
-            "View": [
-                MenuAction("toolbar", "&Toolbar", "", "", None, True),
-                MenuAction("statusbar", "&Status Bar", "", "", None, True),
-                MenuAction("log_panel", "&Log Panel", "F12", "", None, True),
-                MenuAction("sep1", ""),
-                MenuAction("file_tree", "&File Tree", "", "", None, True),
-                MenuAction("properties_panel", "&Properties Panel", "", "", None, True),
-                MenuAction("preview_panel", "Pre&view Panel", "", "", None, True),
-                MenuAction("sep2", ""),
-                MenuAction("icon_mode", "&Icon Mode", "Ctrl+1", "icon", None, True),
-                MenuAction("list_mode", "&List Mode", "Ctrl+2", "list", None, True),
-                MenuAction("detail_mode", "&Detail Mode", "Ctrl+3", "detail", None, True),
-                MenuAction("thumbnail_mode", "&Thumbnail Mode", "Ctrl+4", "thumbnail", None, True),
-                MenuAction("sep3", ""),
-                MenuAction("zoom_in", "Zoom &In", "Ctrl+="),
-                MenuAction("zoom_out", "Zoom &Out", "Ctrl+-"),
-                MenuAction("zoom_reset", "&Reset Zoom", "Ctrl+0"),
-                MenuAction("zoom_fit", "&Fit to Window", "Ctrl+9"),
-                MenuAction("sep4", ""),
-                MenuAction("fullscreen", "&Fullscreen", "F11"),
-                MenuAction("stay_on_top", "Stay on &Top", "", "", None, True),
+                MenuAction("rename_selected", "Re&name", "F2"),
+                MenuAction("duplicate_selected", "&Duplicate", "Ctrl+D"),
+                MenuAction("remove_selected", "&Remove Selected", "Delete"),
             ],
 
             "Settings": [
@@ -295,7 +90,6 @@ class MenuDefinition:
                 MenuAction("sep1", ""),
                 MenuAction("themes", "&Themes"),
                 MenuAction("language", "&Language"),
-                MenuAction("plugins", "&Plugins"),
                 MenuAction("sep2", ""),
                 MenuAction("file_associations", "&File Associations"),
                 MenuAction("default_directories", "&Default Directories"),
@@ -306,38 +100,6 @@ class MenuDefinition:
                 MenuAction("sep4", ""),
                 MenuAction("export_settings", "&Export Settings"),
                 MenuAction("import_settings", "&Import Settings"),
-            ],
-
-            "Debug": [
-                MenuAction("debug_console", "&Debug Console", "F12"),
-                MenuAction("debug_log", "Debug &Log"),
-                MenuAction("debug_performance", "&Performance Monitor"),
-                MenuAction("sep1", ""),
-                MenuAction("debug_col", "&COL Debug Mode", "", "", None, True),
-                MenuAction("debug_img", "&IMG Debug Mode", "", "", None, True),
-                MenuAction("debug_memory", "&Memory Debug", "", "", None, True),
-                MenuAction("sep2", ""),
-                MenuAction("debug_export_log", "&Export Debug Log"),
-                MenuAction("debug_clear_log", "&Clear Debug Log"),
-                MenuAction("debug_settings", "Debug &Settings"),
-            ],
-
-            "Help": [
-                MenuAction("help_contents", "&Help Contents", "F1"),
-                MenuAction("help_shortcuts", "&Keyboard Shortcuts"),
-                MenuAction("help_formats", "Supported &Formats"),
-                MenuAction("help_tutorial", "&Tutorial"),
-                MenuAction("sep1", ""),
-                MenuAction("help_website", "Visit &Website"),
-                MenuAction("help_forum", "Community &Forum"),
-                MenuAction("help_report_bug", "&Report Bug"),
-                MenuAction("help_feature_request", "&Feature Request"),
-                MenuAction("sep2", ""),
-                MenuAction("help_check_updates", "&Check for Updates"),
-                MenuAction("help_changelog", "&Changelog"),
-                MenuAction("sep3", ""),
-                MenuAction("about", "&About IMG Factory"),
-                MenuAction("about_qt", "About &Qt"),
             ]
         }
 
@@ -666,90 +428,175 @@ class IMGFactoryMenuBar:
         default_callbacks = {
             # File menu
             "exit": self._exit_application,
+            "new_img": self._create_new_img,
+            "open_img": self._open_img_file,
+            "save_img": self._save_img_file,
+            "save_as_img": self._save_img_as,
+            "close_img": self._close_img_file,
+            "close_all": self._close_all_img,
 
-            # IDE menu callbacks
-            "ide_editor": self._open_ide_editor,
-            "sort_img_by_ide": self._sort_img_by_ide,
-            "sort_col_by_ide": self._sort_col_by_ide,
-            "ide_view": self._view_ide,
-            "ide_edit": self._edit_ide,
-            "ide_validate": self._validate_ide,
-            "ide_search": self._search_ide,
-            "ide_export": self._export_ide,
-            "ide_import": self._import_ide,
-            "ide_convert": self._convert_ide,
-            "ide_backup": self._backup_ide,
-            "ide_compare": self._compare_ide,
-
-            # COL menu callbacks
-            "col_editor": self._open_col_editor,
-            "collision_view": self._view_collision,
-            "collision_edit": self._edit_collision,
-            "collision_export": self._export_collision,
-            "collision_import": self._import_collision,
-            "collision_validate": self._validate_collision,
-            "collision_optimize": self._optimize_collision,
-            "collision_analyze": self._analyze_collision,
-            "collision_batch_export": self._batch_export_collision,
-            "collision_batch_convert": self._batch_convert_collision,
-            "collision_viewer_3d": self._view_collision_3d,
-            "collision_properties": self._collision_properties,
-            "collision_debug": self._collision_debug,
-
-            # TXD menu callbacks
-            "texture_view": self._view_texture,
-            "texture_export": self._export_texture,
-            "texture_import": self._import_texture,
-            "texture_replace": self._replace_texture,
-            "texture_convert": self._convert_format,
-            "texture_validate": self._validate_txd,
-            "texture_optimize": self._optimize_textures,
-            "texture_batch_export": self._batch_export,
-            "texture_batch_convert": self._batch_convert,
-            "texture_batch_resize": self._batch_resize,
-            "texture_palette": self._extract_palette,
-            "texture_atlas": self._create_atlas,
-            "texture_properties": self._texture_properties,
-
-            # Tools menu (duplicate entries for accessibility)
-            "col_editor": self._open_col_editor,
-            "txd_editor": self._open_txd_editor,
-            "dff_editor": self._open_dff_editor,
-            "ifp_editor": self._open_ifp_editor,
-            "ipl_editor": self._open_ipl_editor,
-            "dat_editor": self._open_dat_editor,
+            # Edit menu
+            "undo": self._undo_action,
+            "redo": self._redo_action,
+            "select_all": self._select_all_entries,
+            "select_inverse": self._select_inverse_entries,
+            "select_none": self._select_none_entries,
+            "find": self._find_entries,
+            "find_next": self._find_next_entries,
+            "replace": self._replace_entries,
+            "rename_selected": self._rename_selected_entry,
+            "duplicate_selected": self._duplicate_selected_entry,
+            "remove_selected": self._remove_selected_entries,
 
             # Settings menu
             "preferences": self._show_preferences,
             "customize_interface": self._show_gui_settings,
+            "customize_menus": self._customize_menus,
             "themes": self._show_theme_settings,
+            "language": self._change_language,
+            "file_associations": self._file_associations,
+            "default_directories": self._default_directories,
+            "performance": self._performance_settings,
+            "reset_layout": self._reset_layout,
+            "reset_settings": self._reset_settings,
             "export_settings": self._export_settings,
             "import_settings": self._import_settings,
-            "reset_layout": self._reset_layout,
-
-            # View menu
-            "toolbar": self._toggle_toolbar,
-            "statusbar": self._toggle_statusbar,
-            "log_panel": self._toggle_log_panel,
-            "fullscreen": self._toggle_fullscreen,
-
-            # Help menu
-            "about": self._show_about,
-            "help_contents": self._show_help,
-            "help_shortcuts": self._show_shortcuts,
-            "help_formats": self._show_formats,
-            "about_qt": self._show_about_qt,
-
-            # Debug menu
-            "debug_console": self._show_debug_console,
-            "debug_clear_log": self._clear_debug_log,
         }
 
         self.set_callbacks(default_callbacks)
 
     # ========================================================================
-    # NEW IDE MENU CALLBACKS
+    # FILE MENU CALLBACKS
     # ========================================================================
+    
+    def _create_new_img(self):
+        """Create new IMG file"""
+        if hasattr(self.main_window, 'create_new_img'):
+            self.main_window.create_new_img()
+    
+    def _open_img_file(self):
+        """Open IMG file"""
+        if hasattr(self.main_window, 'open_img_file'):
+            self.main_window.open_img_file()
+    
+    def _save_img_file(self):
+        """Save IMG file"""
+        if hasattr(self.main_window, 'save_img_entry'):
+            self.main_window.save_img_entry()
+    
+    def _save_img_as(self):
+        """Save IMG file as"""
+        QMessageBox.information(self.main_window, "Save As", "Save As functionality coming soon!")
+    
+    def _close_img_file(self):
+        """Close IMG file"""
+        if hasattr(self.main_window, 'close_img_file'):
+            self.main_window.close_img_file()
+    
+    def _close_all_img(self):
+        """Close all IMG files"""
+        if hasattr(self.main_window, 'close_all_img'):
+            self.main_window.close_all_img()
+
+    # ========================================================================
+    # EDIT MENU CALLBACKS
+    # ========================================================================
+    
+    def _undo_action(self):
+        """Undo last action"""
+        if hasattr(self.main_window, 'undo_manager') and hasattr(self.main_window.undo_manager, 'undo'):
+            self.main_window.undo_manager.undo()
+        elif hasattr(self.main_window, 'undo'):
+            self.main_window.undo()
+        else:
+            QMessageBox.information(self.main_window, "Undo", "Undo functionality not available")
+    
+    def _redo_action(self):
+        """Redo last action"""
+        if hasattr(self.main_window, 'undo_manager') and hasattr(self.main_window.undo_manager, 'redo'):
+            self.main_window.undo_manager.redo()
+        elif hasattr(self.main_window, 'redo'):
+            self.main_window.redo()
+        else:
+            QMessageBox.information(self.main_window, "Redo", "Redo functionality not available")
+    
+    def _select_all_entries(self):
+        """Select all entries in table"""
+        if (hasattr(self.main_window, 'gui_layout') and 
+            hasattr(self.main_window.gui_layout, 'table')):
+            table = self.main_window.gui_layout.table
+            table.selectAll()
+    
+    def _select_inverse_entries(self):
+        """Invert selection of entries in table"""
+        if (hasattr(self.main_window, 'gui_layout') and 
+            hasattr(self.main_window.gui_layout, 'select_inverse')):
+            self.main_window.gui_layout.select_inverse()
+    
+    def _select_none_entries(self):
+        """Clear all selections in table"""
+        if (hasattr(self.main_window, 'gui_layout') and 
+            hasattr(self.main_window.gui_layout, 'table')):
+            table = self.main_window.gui_layout.table
+            table.clearSelection()
+    
+    def _find_entries(self):
+        """Find entries"""
+        QMessageBox.information(self.main_window, "Find", "Find functionality coming soon!")
+    
+    def _find_next_entries(self):
+        """Find next entry"""
+        QMessageBox.information(self.main_window, "Find Next", "Find Next functionality coming soon!")
+    
+    def _replace_entries(self):
+        """Replace entries"""
+        QMessageBox.information(self.main_window, "Replace", "Replace functionality coming soon!")
+    
+    def _rename_selected_entry(self):
+        """Rename selected entry"""
+        if hasattr(self.main_window, 'rename_entry'):
+            self.main_window.rename_entry()
+        else:
+            QMessageBox.information(self.main_window, "Rename", "Rename functionality coming soon!")
+    
+    def _duplicate_selected_entry(self):
+        """Duplicate selected entry"""
+        QMessageBox.information(self.main_window, "Duplicate", "Duplicate functionality coming soon!")
+    
+    def _remove_selected_entries(self):
+        """Remove selected entries"""
+        if hasattr(self.main_window, 'remove_selected'):
+            self.main_window.remove_selected()
+        else:
+            QMessageBox.information(self.main_window, "Remove", "Remove functionality coming soon!")
+
+    # ========================================================================
+    # SETTINGS MENU CALLBACKS
+    # ========================================================================
+    
+    def _customize_menus(self):
+        """Customize menus"""
+        QMessageBox.information(self.main_window, "Customize Menus", "Menu customization coming soon!")
+    
+    def _change_language(self):
+        """Change language"""
+        QMessageBox.information(self.main_window, "Language", "Language settings coming soon!")
+    
+    def _file_associations(self):
+        """File associations"""
+        QMessageBox.information(self.main_window, "File Associations", "File associations coming soon!")
+    
+    def _default_directories(self):
+        """Default directories"""
+        QMessageBox.information(self.main_window, "Default Directories", "Default directories settings coming soon!")
+    
+    def _performance_settings(self):
+        """Performance settings"""
+        QMessageBox.information(self.main_window, "Performance", "Performance settings coming soon!")
+    
+    def _reset_settings(self):
+        """Reset settings"""
+        QMessageBox.information(self.main_window, "Reset Settings", "Reset settings coming soon!")
 
 
 
