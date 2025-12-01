@@ -40,6 +40,8 @@ from PyQt6.QtWidgets import (
 print("PyQt6.QtCore imported successfully")
 from PyQt6.QtCore import pyqtSignal, QMimeData, Qt, QThread, QTimer, QSettings
 from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent, QFont, QIcon, QPixmap, QShortcut, QTextCursor
+from comprehensive_fix import fix_menu_system_and_functionality
+
 
 # OR use the full path:
 from apps.utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
@@ -574,6 +576,9 @@ class IMGFactory(QMainWindow):
 
         # Show window (non-blocking)
         self.show()
+        # Apply comprehensive fixes for menu system and functionality
+        fix_menu_system_and_functionality(self)
+
 
 
     def log_message(self, message: str): #vers 2
