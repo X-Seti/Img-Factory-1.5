@@ -161,11 +161,11 @@ def show_advanced_context_menu(main_window, position): #vers 3
                 menu.addAction(remove_action)
 
         # RENAME OPERATION
-        if hasattr(main_window, 'rename_entry'):
+        if hasattr(main_window, 'rename_selected'):
             selected_items = table.selectedItems()
             if selected_items:
                 rename_action = QAction("Rename", menu_parent)
-                rename_action.triggered.connect(main_window.rename_entry)
+                rename_action.triggered.connect(main_window.rename_selected)
                 menu.addAction(rename_action)
 
         # PIN OPERATIONS
