@@ -157,11 +157,9 @@
 │   │   ├── img_version2.py
 │   │   ├── import_via.py
 │   │   ├── impotr.py
-│   │   ├── inverse_selection.py
 │   │   ├── new_import_system.py
 │   │   ├── notepad.py
 │   │   ├── open.py
-│   │   ├── pin_entries.py
 │   │   ├── quick_export.py
 │   │   ├── rebuild_all.py
 │   │   ├── rebuild.py
@@ -174,9 +172,7 @@
 │   │   ├── rw_unk_snapshot.py
 │   │   ├── save_entry.py
 │   │   ├── shortcuts.py
-│   │   ├── sort_via_ide.py
 │   │   ├── theme_integration.py
-│   │   ├── undo_system.py
 │   │   └── utils.py
 │   ├── debug
 │   │   ├── col_debug_functions.py
@@ -309,11 +305,21 @@
 ├── cc.py
 ├── ChangeLog.md
 ├── Credits.md
+├── fix_col_workshop.py
+├── fix_gui_layout.py
+├── fix_menu_system.py
+├── fix_save_functionality.py
+├── fix_summary.md
+├── FIX_SUMMARY.md
+├── img_factory_debug.log
 ├── launch_imgfactory.py
 ├── package-lock.json
 ├── reviews
 │   └── pr-2-approval.md
+├── Summery.md
+├── test_import_highlighting.py
 ├── TODO.md
-└── tree.git
+├── tree.git
+└── tree.git.txt
 
-34 directories, 283 files
+34 directories, 289 files

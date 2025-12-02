@@ -16,11 +16,11 @@ Comprehensive fix for IMG Factory issues:
 
 import sys
 from PyQt6.QtWidgets import (
-    QMainWindow, QMenuBar, QMenu, QAction, QStatusBar, 
+    QMainWindow, QMenuBar, QMenu, QStatusBar,
     QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView
 )
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QAction, QPalette, QBrush, QColor, QIcon
+from PyQt6.QtGui import QAction, QPalette, QBrush, QColor, QIcon, QAction
 
 
 def fix_menu_system_and_functionality(main_window):
