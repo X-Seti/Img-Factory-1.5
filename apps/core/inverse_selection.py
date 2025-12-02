@@ -16,16 +16,26 @@ def inverse_selection(main_window):
     """Invert the current selection in the table"""
     try:
         # Validate tab and get file object
-        if not validate_tab_before_operation(main_window, "Inverse Selection"):
-            return False
+        if hasattr(main_window, 'validate_tab_before_operation'):
+            if not main_window.validate_tab_before_operation("Inverse Selection"):
+                return False
         
-        file_object, file_type = get_current_file_from_active_tab(main_window)
+            file_object, file_type = main_window.get_current_file_from_active_tab()
         
-        if file_type != 'IMG' or not file_object:
-            QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
-            return False
-        
+            if file_type != 'IMG' or not file_object:
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
+                return False
+        else:
+            # Fallback for non-tab mode
+            if not hasattr(main_window, 'current_img') or not main_window.current_img:
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.warning(main_window, "No IMG File", "No IMG file is currently loaded")
+                return False
+            file_object = main_window.current_img
+
         if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
+            from PyQt6.QtWidgets import QMessageBox
             QMessageBox.warning(main_window, "No Table", "Table not available")
             return False
         
@@ -38,11 +48,11 @@ def inverse_selection(main_window):
         # Get total number of rows
         total_rows = table.rowCount()
         
-        # Store the current selection state of each row
-        rows_to_select = []
-        for row in range(total_rows):
-            if row not in current_selected_rows:
-                rows_to_select.append(row)
+        # Get all rows in the table
+        all_rows = set(range(total_rows))
+        
+        # Find rows that are NOT currently selected
+        rows_to_select = all_rows - current_selected_rows
         
         # Clear current selection
         table.clearSelection()
@@ -53,13 +63,15 @@ def inverse_selection(main_window):
         
         # Count new selection
         new_selected_items = table.selectedItems()
-        main_window.log_message(f"Inversed selection: {len(new_selected_items)} entries now selected")
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Inversed selection: {len(new_selected_items)} entries now selected")
         
         return True
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"Inverse selection error: {str(e)}")
+        from PyQt6.QtWidgets import QMessageBox
         QMessageBox.critical(main_window, "Inverse Selection Error", f"Inverse selection failed: {str(e)}")
         return False
 

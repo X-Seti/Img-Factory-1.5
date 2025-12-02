@@ -948,6 +948,8 @@ class IMGFactoryGUILayout:
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.table.setSortingEnabled(True)
+        # Disable cell editing to allow clicking to move entries up/down instead
+        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         
         # Column sizing
         header = self.table.horizontalHeader()

@@ -77,11 +77,21 @@ def show_advanced_context_menu(main_window, position): #vers 3
         # Get entry info for file-type specific actions
         entry_name = ""
         entry_type = ""
-        if hasattr(main_window, 'current_img') and main_window.current_img:
-            if 0 <= row < len(main_window.current_img.entries):
-                entry = main_window.current_img.entries[row]
-                entry_name = entry.name
-                entry_type = entry.name.split('.')[-1].upper() if '.' in entry.name else ""
+        # Use tab-aware approach if available
+        if hasattr(main_window, 'get_current_file_from_active_tab'):
+            file_object, file_type = main_window.get_current_file_from_active_tab()
+            if file_type == 'IMG' and file_object and hasattr(file_object, 'entries'):
+                if 0 <= row < len(file_object.entries):
+                    entry = file_object.entries[row]
+                    entry_name = entry.name
+                    entry_type = entry.name.split('.')[-1].upper() if '.' in entry.name else ""
+        else:
+            # Fallback to old method
+            if hasattr(main_window, 'current_img') and main_window.current_img:
+                if 0 <= row < len(main_window.current_img.entries):
+                    entry = main_window.current_img.entries[row]
+                    entry_name = entry.name
+                    entry_type = entry.name.split('.')[-1].upper() if '.' in entry.name else ""
 
         # FILE-TYPE SPECIFIC ACTIONS (Advanced functionality)
         if entry_type:
@@ -260,7 +270,8 @@ def show_advanced_context_menu(main_window, position): #vers 3
         menu.exec(table.mapToGlobal(position))
 
     except Exception as e:
-        main_window.log_message(f"Error showing context menu: {str(e)}")
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Error showing context menu: {str(e)}")
 
 # CLIPBOARD OPERATIONS
 def copy_table_cell(main_window, row: int, col: int): #vers 1

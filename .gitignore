@@ -24,34 +24,14 @@ node_modules/
 .vscode/
 .idea/
 
-# Coverage
+# Coverage reports
 coverage/
 htmlcov/
 .coverage
 
-# Python specific
-*.pyc
-__pycache__/
-*.pyo
-*.pyd
-.Python
-*.so
+# MyPy cache
+.mypy_cache/
 
-# Distribution / packaging
-.Python
-*.so
-.Python
-*.pyc
-__pycache__/
-*$py.class
-*$py.py
-*$py.o
-*$py.d
-*.egg-info/
-.egg-info/
-dist/
-build/
-*.egg
-*.tar.gz
-*.whl
+# Pytest cache
+.pytest_cache/
 ```
