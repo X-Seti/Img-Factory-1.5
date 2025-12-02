@@ -481,6 +481,7 @@ class IMGFactoryMenuBar:
             "exit": self._exit_application,
             "new_img": self._create_new_img,
             "open_img": self._open_img_file,
+            "recent_files": self._show_recent_files,
             "save_img": self._save_img_file,
             "save_as_img": self._save_img_as,
             "close_img": self._close_img_file,
@@ -529,6 +530,91 @@ class IMGFactoryMenuBar:
         """Open IMG file"""
         if hasattr(self.main_window, 'open_img_file'):
             self.main_window.open_img_file()
+    
+    def _show_recent_files(self):
+        """Show recent files menu"""
+        try:
+            # Check if the main window has a recent files system
+            if hasattr(self.main_window, 'recent_files_manager'):
+                self.main_window.recent_files_manager.show_recent_files_menu()
+            else:
+                # Create a simple recent files menu using QSettings
+                self._create_recent_files_menu()
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Error showing recent files: {str(e)}")
+    
+    def _create_recent_files_menu(self):
+        """Create and show recent files submenu"""
+        try:
+            from PyQt6.QtCore import QSettings
+            from PyQt6.QtWidgets import QMenu
+            
+            # Create a popup menu for recent files
+            recent_menu = QMenu("Recent Files", self.main_window)
+            
+            # Get settings for recent files
+            settings = QSettings("IMG-Factory", "IMG-Factory")
+            recent_files = settings.value("recentFiles", [])
+            
+            if not recent_files:
+                # No recent files
+                no_files_action = recent_menu.addAction("No recent files")
+                no_files_action.setEnabled(False)
+            else:
+                # Add recent files to menu
+                for file_path in recent_files[:10]:  # Show up to 10 recent files
+                    action = recent_menu.addAction(file_path)
+                    action.triggered.connect(lambda fp=file_path: self._open_recent_file(fp))
+            
+            recent_menu.addSeparator()
+            
+            # Add clear recent files option
+            clear_action = recent_menu.addAction("Clear Recent Files")
+            clear_action.triggered.connect(self._clear_recent_files)
+            
+            # Show the menu at the current cursor position
+            recent_menu.exec()
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Error creating recent files menu: {str(e)}")
+    
+    def _open_recent_file(self, file_path):
+        """Open a recent file"""
+        try:
+            if hasattr(self.main_window, 'open_file_dialog'):
+                # Use the existing open functionality
+                self.main_window.open_file_dialog(file_path)
+            elif hasattr(self.main_window, '_load_img_file'):
+                # Try to load the file directly
+                self.main_window._load_img_file(file_path)
+            else:
+                # Fallback: try to use the open_img_file method with the path
+                if hasattr(self.main_window, 'open_img_file'):
+                    # Temporarily set the last opened directory
+                    import os
+                    from PyQt6.QtCore import QSettings
+                    settings = QSettings("IMG-Factory", "IMG-Factory")
+                    settings.setValue("lastOpenedDirectory", os.path.dirname(file_path))
+                    self.main_window.open_img_file(file_path)
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Error opening recent file {file_path}: {str(e)}")
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.critical(self.main_window, "Open Error", f"Failed to open recent file: {str(e)}")
+    
+    def _clear_recent_files(self):
+        """Clear recent files list"""
+        try:
+            from PyQt6.QtCore import QSettings
+            settings = QSettings("IMG-Factory", "IMG-Factory")
+            settings.setValue("recentFiles", [])
+            
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("🗑️ Recent files list cleared")
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Error clearing recent files: {str(e)}")
     
     def _save_img_file(self):
         """Save IMG file"""

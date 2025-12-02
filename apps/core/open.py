@@ -41,12 +41,13 @@ def open_file_dialog(main_window): #vers 12
             _load_img_file(main_window, file_path)
 
 
-def _load_cst_file(main_window, file_path): #vers 1
+def _load_cst_file(main_window, file_path): #vers 2
     """Load CST file - placeholder for future implementation"""
     try:
         main_window.log_message(f"Loading CST file: {os.path.basename(file_path)}")
         # CST files are typically collision files used in some games
         # For now, we'll just show a message and return
+        from PyQt6.QtWidgets import QMessageBox
         QMessageBox.information(
             main_window,
             "CST File Loaded",
@@ -55,16 +56,20 @@ def _load_cst_file(main_window, file_path): #vers 1
             "CST files contain collision data and will be fully supported in future updates."
         )
         main_window.log_message("CST file loaded successfully (basic support)")
+        
+        # Add to recent files
+        add_to_recent_files(main_window, file_path)
     except Exception as e:
         main_window.log_message(f"Error loading CST: {str(e)}")
 
 
-def _load_3ds_file(main_window, file_path): #vers 1
+def _load_3ds_file(main_window, file_path): #vers 2
     """Load 3DS file - placeholder for future implementation"""
     try:
         main_window.log_message(f"Loading 3DS file: {os.path.basename(file_path)}")
         # 3DS files are 3D Studio files containing 3D models
         # For now, we'll just show a message and return
+        from PyQt6.QtWidgets import QMessageBox
         QMessageBox.information(
             main_window,
             "3DS File Loaded",
@@ -73,11 +78,14 @@ def _load_3ds_file(main_window, file_path): #vers 1
             "3DS files contain 3D models and will be fully supported in future updates."
         )
         main_window.log_message("3DS file loaded successfully (basic support)")
+        
+        # Add to recent files
+        add_to_recent_files(main_window, file_path)
     except Exception as e:
         main_window.log_message(f"Error loading 3DS: {str(e)}")
 
 
-def _load_img_file(main_window, file_path): #vers 4
+def _load_img_file(main_window, file_path): #vers 5
     """Load IMG file in new tab using unified tab system"""
     try:
         if hasattr(main_window, '_load_img_file_in_new_tab'):
@@ -87,11 +95,49 @@ def _load_img_file(main_window, file_path): #vers 4
         else:
             main_window.log_message("Error: No IMG loading method found")
         
+        # Add to recent files
+        add_to_recent_files(main_window, file_path)
+        
         # Check for corresponding IDE file in the same directory
         check_and_prompt_for_ide_file(main_window, file_path)
         
     except Exception as e:
         main_window.log_message(f"Error loading IMG: {str(e)}")
+
+
+def add_to_recent_files(main_window, file_path):
+    """Add a file to the recent files list"""
+    try:
+        from PyQt6.QtCore import QSettings
+        
+        # Get the existing recent files list
+        settings = QSettings("IMG-Factory", "IMG-Factory")
+        recent_files = settings.value("recentFiles", [])
+        
+        # Convert to list if it's not already (QSettings can return other types)
+        if not isinstance(recent_files, list):
+            recent_files = []
+        
+        # Remove the file if it's already in the list to avoid duplicates
+        if file_path in recent_files:
+            recent_files.remove(file_path)
+        
+        # Add the file to the beginning of the list
+        recent_files.insert(0, file_path)
+        
+        # Keep only the most recent 10 files
+        recent_files = recent_files[:10]
+        
+        # Save the updated list
+        settings.setValue("recentFiles", recent_files)
+        
+        # Log the action
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"📁 Added to recent files: {os.path.basename(file_path)}")
+            
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Error adding to recent files: {str(e)}")
 
 
 def check_and_prompt_for_ide_file(main_window, img_file_path): #vers 1
@@ -159,7 +205,7 @@ def check_and_prompt_for_ide_file(main_window, img_file_path): #vers 1
         main_window.log_message(f"⚠️ Error checking for IDE file: {str(e)}")
 
 
-def _load_col_file(main_window, file_path): #vers 3
+def _load_col_file(main_window, file_path): #vers 4
     """Load COL file in new tab using unified tab system"""
     try:
         if hasattr(main_window, '_load_col_file_in_new_tab'):
@@ -170,11 +216,14 @@ def _load_col_file(main_window, file_path): #vers 3
             main_window.load_col_file_safely(file_path)
         else:
             main_window.log_message("Error: No COL loading method found")
+        
+        # Add to recent files
+        add_to_recent_files(main_window, file_path)
     except Exception as e:
         main_window.log_message(f"Error loading COL: {str(e)}")
 
 
-def _load_txd_file(main_window, file_path): #vers 2
+def _load_txd_file(main_window, file_path): #vers 3
     """Load TXD file in new tab using unified tab system"""
     try:
         main_window.log_message(f"Loading TXD file: {os.path.basename(file_path)}")
@@ -182,9 +231,13 @@ def _load_txd_file(main_window, file_path): #vers 2
         # Check if main window has a TXD tab loading method
         if hasattr(main_window, '_load_txd_file_in_new_tab'):
             main_window._load_txd_file_in_new_tab(file_path)
+            # Add to recent files
+            add_to_recent_files(main_window, file_path)
             return
         elif hasattr(main_window, 'load_txd_file_in_new_tab'):
             main_window.load_txd_file_in_new_tab(file_path)
+            # Add to recent files
+            add_to_recent_files(main_window, file_path)
             return
 
         # Fallback: Open TXD Workshop window
@@ -196,6 +249,9 @@ def _load_txd_file(main_window, file_path): #vers 2
                 main_window.txd_workshops = []
             main_window.txd_workshops.append(workshop)
             main_window.log_message(f"TXD Workshop opened: {os.path.basename(file_path)}")
+        
+        # Add to recent files even for fallback case
+        add_to_recent_files(main_window, file_path)
 
     except Exception as e:
         main_window.log_message(f"Error loading TXD: {str(e)}")
@@ -296,5 +352,6 @@ __all__ = [
     '_load_cst_file',
     '_load_3ds_file',
     'open_file_dialog',
-    'check_and_prompt_for_ide_file'
+    'check_and_prompt_for_ide_file',
+    'add_to_recent_files'
 ]
