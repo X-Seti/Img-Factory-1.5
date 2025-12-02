@@ -10,6 +10,8 @@ Complete history of fixes, updates, and improvements.
 **Fixed**: - December 02, 2025
 img_core_classes.py
 img_entry_operations.py
+rename.py
+- Rename has been fixed for the menu bar, right click and panel rename button.
 
 **Fixed**: - December 02, 2025
 gui/gui_menu.py
