@@ -1554,7 +1554,10 @@ class IMGFactoryGUILayout:
                 # Get the selection model
                 selection_model = self.table.selectionModel()
                 if selection_model:
-                    # Store currently selected rows (only consider row level, not individual cells)
+                    # Get all rows in the table
+                    all_rows = set(range(self.table.rowCount()))
+                    
+                    # Get currently selected rows
                     currently_selected_rows = set()
                     for index in selection_model.selectedIndexes():
                         currently_selected_rows.add(index.row())
@@ -1562,37 +1565,15 @@ class IMGFactoryGUILayout:
                     # Clear current selection
                     self.table.clearSelection()
                     
-                    # Select all rows that were NOT selected, and deselect those that were
-                    for row in range(self.table.rowCount()):
-                        if row in currently_selected_rows:
-                            # Leave deselected (these were originally selected)
-                            pass
-                        else:
-                            # Select this row (these were originally NOT selected)
-                            for col in range(self.table.columnCount()):
-                                index = self.table.model().index(row, col)
-                                selection_model.select(index, QAbstractItemView.SelectionFlag.Select)
-                else:
-                    # Fallback method if selection model is not available
-                    # Get all items in the table
-                    all_items = []
-                    for row in range(self.table.rowCount()):
-                        for col in range(self.table.columnCount()):
-                            item = self.table.item(row, col)
-                            if item:
-                                all_items.append(item)
-
-                    # Store currently selected items
-                    currently_selected = set(self.table.selectedItems())
-
-                    # Clear selection
-                    self.table.clearSelection()
-
-                    # Select items that were not selected
-                    for item in all_items:
-                        if item not in currently_selected:
-                            item.setSelected(True)
-
+                    # Select all rows that were NOT selected
+                    rows_to_select = all_rows - currently_selected_rows
+                    for row in rows_to_select:
+                        # Select the first cell in each unselected row to select the entire row
+                        index = self.table.model().index(row, 0)
+                        selection_model.select(index, 
+                            QAbstractItemView.SelectionFlag.Select | 
+                            QAbstractItemView.SelectionFlag.Rows)
+                
                 if hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message("✅ Selection inverted")
             else:
@@ -1603,27 +1584,79 @@ class IMGFactoryGUILayout:
                 self.main_window.log_message(f"❌ Select inverse error: {str(e)}")
 
     def sort_entries(self):  # vers 1
-        """Sort entries in the table"""
+        """Sort entries in the table with dialog options"""
         try:
             if self.table:
-                # Get currently selected items to restore selection after sorting
-                selected_items = self.table.selectedItems()
-                selected_rows = set(item.row() for item in selected_items) if selected_items else set()
+                # Create a simple dialog for sort options
+                from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QDialogButtonBox
                 
-                # Sort by the first column (filename) by default
-                self.table.sortItems(0, Qt.SortOrder.AscendingOrder)
+                dialog = QDialog(self.main_window)
+                dialog.setWindowTitle("Sort Options")
+                dialog.setModal(True)
                 
-                # Restore selection if there were selected items
-                if selected_rows:
-                    for row in selected_rows:
-                        if row < self.table.rowCount():
-                            for col in range(self.table.columnCount()):
-                                item = self.table.item(row, col)
-                                if item:
-                                    item.setSelected(True)
+                layout = QVBoxLayout()
                 
-                if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("✅ Entries sorted")
+                # Add sort by options
+                sort_label = QLabel("Sort by:")
+                layout.addWidget(sort_label)
+                
+                sort_combo = QComboBox()
+                sort_combo.addItems([
+                    "Filename (A-Z)", 
+                    "Filename (Z-A)", 
+                    "Size (Smallest First)", 
+                    "Size (Largest First)",
+                    "Type (A-Z)"
+                ])
+                layout.addWidget(sort_combo)
+                
+                # Add buttons
+                buttons = QDialogButtonBox(
+                    QDialogButtonBox.StandardButton.Ok | 
+                    QDialogButtonBox.StandardButton.Cancel
+                )
+                
+                buttons.accepted.connect(dialog.accept)
+                buttons.rejected.connect(dialog.reject)
+                
+                layout.addWidget(buttons)
+                dialog.setLayout(layout)
+                
+                result = dialog.exec()
+                
+                if result == QDialog.DialogCode.Accepted:
+                    sort_option = sort_combo.currentText()
+                    
+                    # Get currently selected items to restore selection after sorting
+                    selected_items = self.table.selectedItems()
+                    selected_rows = set(item.row() for item in selected_items) if selected_items else set()
+                    
+                    # Sort based on the selected option
+                    if sort_option == "Filename (A-Z)":
+                        self.table.sortItems(0, Qt.SortOrder.AscendingOrder)  # Sort by first column (filename)
+                    elif sort_option == "Filename (Z-A)":
+                        self.table.sortItems(0, Qt.SortOrder.DescendingOrder)
+                    elif sort_option == "Size (Smallest First)":
+                        self.table.sortItems(2, Qt.SortOrder.AscendingOrder)  # Assuming size is in column 2
+                    elif sort_option == "Size (Largest First)":
+                        self.table.sortItems(2, Qt.SortOrder.DescendingOrder)
+                    elif sort_option == "Type (A-Z)":
+                        self.table.sortItems(1, Qt.SortOrder.AscendingOrder)  # Assuming type is in column 1
+                    
+                    # Restore selection if there were selected items
+                    if selected_rows:
+                        for row in selected_rows:
+                            if row < self.table.rowCount():
+                                for col in range(self.table.columnCount()):
+                                    item = self.table.item(row, col)
+                                    if item:
+                                        item.setSelected(True)
+                    
+                    if hasattr(self.main_window, 'log_message'):
+                        self.main_window.log_message(f"✅ Entries sorted by: {sort_option}")
+                else:
+                    if hasattr(self.main_window, 'log_message'):
+                        self.main_window.log_message("❌ Sort operation cancelled")
             else:
                 if hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message("❌ Table not available for sorting")
@@ -1632,37 +1665,54 @@ class IMGFactoryGUILayout:
                 self.main_window.log_message(f"❌ Sort entries error: {str(e)}")
 
     def pin_selected_entries(self):  # vers 1
-        """Pin selected entries to keep them at the top of the table"""
+        """Pin selected entries to keep them at the top of the table with visual indicators"""
         try:
             if self.table and self.table.selectedItems():
                 # Get selected rows
                 selected_items = self.table.selectedItems()
                 selected_rows = set(item.row() for item in selected_items)
                 
-                # Store the selected rows data
-                pinned_data = []
-                for row in sorted(selected_rows):
-                    row_data = []
-                    for col in range(self.table.columnCount()):
-                        item = self.table.item(row, col)
-                        if item:
-                            row_data.append(item.text())
+                # Check if any of the selected rows are already pinned (by checking for pin icon in status column)
+                # We'll implement pinning by adding a visual indicator in the status column
+                for row in selected_rows:
+                    # Get the status column (assuming it's the last column)
+                    status_col = self.table.columnCount() - 1
+                    status_item = self.table.item(row, status_col)
+                    
+                    # If status item doesn't exist, create one
+                    if not status_item:
+                        status_item = QTableWidgetItem(" ")
+                        self.table.setItem(row, status_col, status_item)
+                    
+                    # Toggle pin state - if it already has a pin icon, remove it; otherwise add it
+                    current_text = status_item.text() if status_item.text() else ""
+                    if "📌" in current_text:
+                        # Remove pin
+                        new_text = current_text.replace("📌", "").strip()
+                        if not new_text:
+                            new_text = " "
+                        status_item.setText(new_text)
+                        if hasattr(self.main_window, 'log_message'):
+                            self.main_window.log_message(f"✅ Entry at row {row} unpinned")
+                    else:
+                        # Add pin
+                        if current_text.strip() == "" or current_text.strip() == " ":
+                            status_item.setText("📌")
                         else:
-                            row_data.append("")
-                    pinned_data.append(row_data)
+                            status_item.setText(current_text + " 📌")
+                        if hasattr(self.main_window, 'log_message'):
+                            self.main_window.log_message(f"✅ Entry at row {row} pinned")
                 
-                # Remove selected rows from the table (in reverse order to maintain indices)
-                for row in sorted(selected_rows, reverse=True):
-                    self.table.removeRow(row)
-                
-                # Insert pinned rows at the top
-                for i, row_data in enumerate(pinned_data):
-                    self.table.insertRow(i)
-                    for j, cell_data in enumerate(row_data):
-                        self.table.setItem(i, j, QTableWidgetItem(cell_data))
-                
+                # Count total pinned entries for the status message
+                pinned_count = 0
+                for row in range(self.table.rowCount()):
+                    status_col = self.table.columnCount() - 1
+                    status_item = self.table.item(row, status_col)
+                    if status_item and "📌" in status_item.text():
+                        pinned_count += 1
+                        
                 if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"✅ {len(pinned_data)} entries pinned to top")
+                    self.main_window.log_message(f"📊 {pinned_count} entries pinned/unpinned")
             else:
                 if hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message("❌ No selected entries to pin or table not available")
