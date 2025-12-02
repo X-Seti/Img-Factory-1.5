@@ -16,7 +16,23 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
-from apps.methods.tab_system import get_current_file_from_active_tab, validate_tab_before_operation, get_current_file_type_from_tab
+try:
+    from apps.methods.tab_system import get_current_file_from_active_tab, validate_tab_before_operation, get_current_file_type_from_tab
+except ImportError:
+    # Fallback if tab_system is not available
+    def validate_tab_before_operation(main_window, operation_name):
+        # Simple fallback that always allows the operation
+        return True
+    def get_current_file_from_active_tab(main_window):
+        # Fallback that returns current_img if available
+        if hasattr(main_window, 'current_img'):
+            return main_window.current_img, 'IMG'
+        return None, None
+    def get_current_file_type_from_tab(main_window):
+        # Fallback that returns IMG if current_img is available
+        if hasattr(main_window, 'current_img'):
+            return 'IMG'
+        return None
 
 # IMG_Editor core integration support
 try:

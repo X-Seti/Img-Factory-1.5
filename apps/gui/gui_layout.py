@@ -1572,9 +1572,10 @@ class IMGFactoryGUILayout:
                     for row in rows_to_select:
                         # Select the first cell in each unselected row to select the entire row
                         index = self.table.model().index(row, 0)
-                        selection_model.select(index, 
-                            selection_model.Select | 
-                            selection_model.Rows)
+                        from PyQt6.QtCore import QItemSelectionModel
+                        selection_model.select(index,
+                            QItemSelectionModel.SelectionFlag.Select |
+                            QItemSelectionModel.SelectionFlag.Rows)
                 
                 if hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message("✅ Selection inverted")
