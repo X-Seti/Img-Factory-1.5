@@ -254,6 +254,11 @@ def show_advanced_context_menu(main_window, position): #vers 3
             copy_selection_action = QAction(f"Copy Selection ({len(selected_items)} items)", menu_parent)
             copy_selection_action.triggered.connect(lambda: copy_table_selection(main_window))
             menu.addAction(copy_selection_action)
+        
+        # Copy selected text from current cell (if text is selected)
+        copy_selected_text_action = QAction("Copy Selected Text", menu_parent)
+        copy_selected_text_action.triggered.connect(lambda: copy_selected_text_from_cell(main_window, row, col))
+        menu.addAction(copy_selected_text_action)
 
         # Copy filename only (for first column)
         if col == 0:
