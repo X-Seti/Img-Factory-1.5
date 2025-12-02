@@ -2,28 +2,16 @@
 # Compiled and build artifacts
 *.pyc
 __pycache__/
-*.o
-*.obj
-*.so
-*.dll
-*.exe
-*.class
-*.out
+*.pyo
+*.pyd
 
 # Dependencies
 .venv/
 venv/
 env/
-node_modules/
-dist/
-build/
-target/
-.gradle/
-.mypy_cache/
-.pytest_cache/
-coverage/
-htmlcov/
-.coverage
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
 
 # Logs and temp files
 *.log
@@ -35,6 +23,7 @@ htmlcov/
 .env
 .env.local
 .env.*
+.env~*
 
 # Editors
 .vscode/
@@ -42,7 +31,21 @@ htmlcov/
 *.swp
 *.swo
 
-# System
-.DS_Store
-Thumbs.db
+# Coverage
+.coverage
+coverage/
+htmlcov/
+.coverage.*
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
+
+# Distribution
+dist/
+build/
+*.egg
+*.egg-info/
+MANIFEST
 ```

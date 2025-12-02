@@ -13,8 +13,8 @@ from apps.methods.tab_system import get_current_file_from_active_tab
 # reload_current_file
 # integrate_reload_functions
 
-def reload_current_file(main_window) -> bool: #vers 9
-    """Reload file in current tab - TAB AWARE VERSION"""
+def reload_current_file(main_window) -> bool: #vers 10
+    """Reload file in current tab - TAB AWARE VERSION - FIXED to properly close and reopen from disk"""
     try:
         # Get file from active tab
         file_object, file_type = get_current_file_from_active_tab(main_window)
@@ -41,14 +41,37 @@ def reload_current_file(main_window) -> bool: #vers 9
             if hasattr(main_window, 'log_message'):
                 main_window.log_message("Reload cancelled by user")
             return False
-        # Reload based on type
+        
+        # Store current state before closing
+        current_tab_index = main_window.main_tab_widget.currentIndex() if hasattr(main_window, 'main_tab_widget') else 0
+        
+        # Close the current file properly to free resources
         if file_type == 'IMG':
-            return _reload_img_in_tab(main_window, file_path)
+            # Clear current reference
+            main_window.current_img = None
         elif file_type == 'COL':
-            return _reload_col_in_tab(main_window, file_path)
+            main_window.current_col = None
+            
+        # Also clear tab reference if using tabs
+        if hasattr(main_window, 'main_tab_widget'):
+            current_tab = main_window.main_tab_widget.widget(current_tab_index)
+            if current_tab and hasattr(current_tab, 'file_object'):
+                current_tab.file_object = None
+                current_tab.file_type = None
+        
+        # Now reload based on type - this will read fresh from disk
+        if file_type == 'IMG':
+            result = _reload_img_in_tab(main_window, file_path)
+        elif file_type == 'COL':
+            result = _reload_col_in_tab(main_window, file_path)
         else:
             QMessageBox.warning(main_window, "Unsupported Type", f"Cannot reload {file_type} files")
             return False
+            
+        if result:
+            if hasattr(main_window, 'log_message'):
+                main_window.log_message(f"File reloaded successfully: {filename}")
+        return result
     except Exception as e:
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"Reload error: {str(e)}")
@@ -56,12 +79,17 @@ def reload_current_file(main_window) -> bool: #vers 9
         return False
 
 
-def _reload_img_in_tab(main_window, file_path: str) -> bool: #vers 1
-    """Reload IMG file in current tab"""
+def _reload_img_in_tab(main_window, file_path: str) -> bool: #vers 2
+    """Reload IMG file in current tab - FIXED to properly close and reopen"""
     try:
         filename = os.path.basename(file_path)
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"Reloading IMG: {filename}")
+        
+        # Store current tab info to restore after reload
+        current_index = main_window.main_tab_widget.currentIndex() if hasattr(main_window, 'main_tab_widget') else 0
+        tab_widget = main_window.main_tab_widget.widget(current_index) if hasattr(main_window, 'main_tab_widget') else None
+        
         # Load new IMG instance
         from apps.methods.img_core_classes import IMGFile
         new_img = IMGFile(file_path)
@@ -69,19 +97,27 @@ def _reload_img_in_tab(main_window, file_path: str) -> bool: #vers 1
             if hasattr(main_window, 'log_message'):
                 main_window.log_message(f"Failed to reload IMG: {filename}")
             return False
+        
         # Update current tab's file object
-        current_index = main_window.main_tab_widget.currentIndex()
-        tab_widget = main_window.main_tab_widget.widget(current_index)
         if tab_widget:
             tab_widget.file_object = new_img
             tab_widget.file_type = 'IMG'
+        
         # Update main_window reference (for compatibility)
         main_window.current_img = new_img
-        # Refresh UI
+        
+        # Refresh UI - make sure to fully refresh the table
         if hasattr(main_window, 'refresh_current_tab_data'):
             main_window.refresh_current_tab_data()
         elif hasattr(main_window, 'populate_entries_table'):
             main_window.populate_entries_table()
+        else:
+            # Fallback: manually refresh table data
+            if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+                table = main_window.gui_layout.table
+                from apps.methods.populate_img_table import populate_img_entries_table
+                populate_img_entries_table(main_window, new_img)
+        
         entry_count = len(new_img.entries) if new_img.entries else 0
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"IMG reloaded: {filename} ({entry_count} entries)")

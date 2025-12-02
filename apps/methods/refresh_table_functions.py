@@ -33,8 +33,8 @@ def refresh_table(main_window): #vers 2
         return False
 
 
-def _refresh_img_table(main_window) -> bool: #vers 5
-    """Refresh IMG table with current IMG data - CORRECT 8 COLUMN STRUCTURE"""
+def _refresh_img_table(main_window) -> bool: #vers 6
+    """Refresh IMG table with current IMG data - PRESERVES SELECTION AND STATE"""
     try:
         if hasattr(main_window, 'log_message'):
             main_window.log_message("Refreshing IMG table...")
@@ -44,6 +44,22 @@ def _refresh_img_table(main_window) -> bool: #vers 5
             if hasattr(main_window, 'log_message'):
                 main_window.log_message("No IMG entries to refresh")
             return _clear_table(main_window)
+        
+        # Preserve current selection and scroll position
+        preserved_selection = []
+        current_scroll_pos = 0
+        current_row = -1
+        
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            table = main_window.gui_layout.table
+            # Store current selection
+            selected_items = table.selectedItems()
+            for item in selected_items:
+                preserved_selection.append((item.row(), item.column()))
+            
+            # Store current scroll position
+            current_scroll_pos = table.verticalScrollBar().value()
+            current_row = table.currentRow()
         
         # Import RW detection functions
         try:
@@ -172,6 +188,19 @@ def _refresh_img_table(main_window) -> bool: #vers 5
                     table.setUpdatesEnabled(True)
                     table.update()
                 
+                # Restore selection after refresh
+                if preserved_selection and table.rowCount() > 0:
+                    table.clearSelection()
+                    for row, col in preserved_selection:
+                        if row < table.rowCount() and col < table.columnCount():
+                            table.selectRow(row)  # Select the entire row
+                
+                # Restore scroll position and current row
+                if current_scroll_pos > 0:
+                    table.verticalScrollBar().setValue(current_scroll_pos)
+                if current_row >= 0 and current_row < table.rowCount():
+                    table.setCurrentCell(current_row, 0)
+                
                 if hasattr(main_window, 'log_message'):
                     main_window.log_message(f"IMG table refreshed with 8 columns + RW detection - {len(img_file.entries)} entries")
                 return True
@@ -186,8 +215,8 @@ def _refresh_img_table(main_window) -> bool: #vers 5
         return False
 
 
-def _refresh_col_table(main_window) -> bool: #vers 2
-    """Refresh COL table with current COL data - FIXED"""
+def _refresh_col_table(main_window) -> bool: #vers 3
+    """Refresh COL table with current COL data - PRESERVES SELECTION AND STATE"""
     try:
         if hasattr(main_window, 'log_message'):
             main_window.log_message("Refreshing COL table...")
@@ -198,12 +227,42 @@ def _refresh_col_table(main_window) -> bool: #vers 2
                 main_window.log_message("No COL file to refresh")
             return _clear_table(main_window)
         
+        # Preserve current selection and scroll position
+        preserved_selection = []
+        current_scroll_pos = 0
+        current_row = -1
+        
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            table = main_window.gui_layout.table
+            # Store current selection
+            selected_items = table.selectedItems()
+            for item in selected_items:
+                preserved_selection.append((item.row(), item.column()))
+            
+            # Store current scroll position
+            current_scroll_pos = table.verticalScrollBar().value()
+            current_row = table.currentRow()
+        
         # Method 1: Use existing COL refresh method if available
         if hasattr(main_window, 'refresh_col_table') and callable(main_window.refresh_col_table):
             try:
                 main_window.refresh_col_table()
                 if hasattr(main_window, 'log_message'):
                     main_window.log_message("COL table refreshed via existing method")
+                
+                # Restore selection after refresh
+                if preserved_selection and table.rowCount() > 0:
+                    table.clearSelection()
+                    for row, col in preserved_selection:
+                        if row < table.rowCount() and col < table.columnCount():
+                            table.selectRow(row)  # Select the entire row
+                
+                # Restore scroll position and current row
+                if current_scroll_pos > 0:
+                    table.verticalScrollBar().setValue(current_scroll_pos)
+                if current_row >= 0 and current_row < table.rowCount():
+                    table.setCurrentCell(current_row, 0)
+                
                 return True
             except Exception as e:
                 if hasattr(main_window, 'log_message'):
@@ -216,70 +275,93 @@ def _refresh_col_table(main_window) -> bool: #vers 2
             if table and (hasattr(col_file, 'models') or hasattr(col_file, 'entries')):
                 from PyQt6.QtWidgets import QTableWidgetItem
                 
-                # Get COL data
-                if hasattr(col_file, 'models') and col_file.models:
-                    items = col_file.models
-                    table.setRowCount(len(items))
-                    
-                    # Ensure we have the right number of columns for COL
-                    if table.columnCount() < 3:
-                        table.setColumnCount(3)
-                        headers = ["Name", "Type", "Info"]
-                        table.setHorizontalHeaderLabels(headers)
-                    
-                    for row, model in enumerate(items):
-                        try:
-                            # Name
-                            name = getattr(model, 'name', f'model_{row}')
-                            table.setItem(row, 0, QTableWidgetItem(str(name)))
-                            
-                            # Type
-                            table.setItem(row, 1, QTableWidgetItem('COL'))
-                            
-                            # Info
-                            spheres_count = len(getattr(model, 'spheres', []))
-                            boxes_count = len(getattr(model, 'boxes', []))
-                            faces_count = len(getattr(model, 'faces', []))
-                            info = f"Spheres: {spheres_count}, Boxes: {boxes_count}, Faces: {faces_count}"
-                            table.setItem(row, 2, QTableWidgetItem(info))
-                            
-                        except Exception as row_error:
-                            if hasattr(main_window, 'log_message'):
-                                main_window.log_message(f"Error refreshing COL row {row}: {str(row_error)}")
-                            continue
-                    
-                    # Resize columns to content
-                    table.resizeColumnsToContents()
-                    
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"COL table refreshed - {len(items)} models")
-                    return True
+                # Disable updates temporarily to prevent UI freezing
+                table.setUpdatesEnabled(False)
                 
-                elif hasattr(col_file, 'entries') and col_file.entries:
-                    # Handle COL files with entries instead of models
-                    entries = col_file.entries
-                    table.setRowCount(len(entries))
+                try:
+                    # Get COL data
+                    if hasattr(col_file, 'models') and col_file.models:
+                        items = col_file.models
+                        table.setRowCount(len(items))
+                        
+                        # Ensure we have the right number of columns for COL
+                        if table.columnCount() < 3:
+                            table.setColumnCount(3)
+                            headers = ["Name", "Type", "Info"]
+                            table.setHorizontalHeaderLabels(headers)
+                        
+                        for row, model in enumerate(items):
+                            try:
+                                # Name
+                                name = getattr(model, 'name', f'model_{row}')
+                                table.setItem(row, 0, QTableWidgetItem(str(name)))
+                                
+                                # Type
+                                table.setItem(row, 1, QTableWidgetItem('COL'))
+                                
+                                # Info
+                                spheres_count = len(getattr(model, 'spheres', []))
+                                boxes_count = len(getattr(model, 'boxes', []))
+                                faces_count = len(getattr(model, 'faces', []))
+                                info = f"Spheres: {spheres_count}, Boxes: {boxes_count}, Faces: {faces_count}"
+                                table.setItem(row, 2, QTableWidgetItem(info))
+                                
+                            except Exception as row_error:
+                                if hasattr(main_window, 'log_message'):
+                                    main_window.log_message(f"Error refreshing COL row {row}: {str(row_error)}")
+                                continue
+                        
+                        # Resize columns to content
+                        table.resizeColumnsToContents()
+                        
+                        if hasattr(main_window, 'log_message'):
+                            main_window.log_message(f"COL table refreshed - {len(items)} models")
+                        return True
                     
-                    for row, entry in enumerate(entries):
-                        try:
-                            name = getattr(entry, 'name', f'entry_{row}')
-                            table.setItem(row, 0, QTableWidgetItem(str(name)))
-                            table.setItem(row, 1, QTableWidgetItem('COL'))
-                            
-                            size = getattr(entry, 'size', 0)
-                            size_text = f"{size} bytes" if size > 0 else "Unknown"
-                            table.setItem(row, 2, QTableWidgetItem(size_text))
-                            
-                        except Exception as row_error:
-                            if hasattr(main_window, 'log_message'):
-                                main_window.log_message(f"Error refreshing COL entry row {row}: {str(row_error)}")
-                            continue
-                    
-                    table.resizeColumnsToContents()
-                    
-                    if hasattr(main_window, 'log_message'):
-                        main_window.log_message(f"COL table refreshed - {len(entries)} entries")
-                    return True
+                    elif hasattr(col_file, 'entries') and col_file.entries:
+                        # Handle COL files with entries instead of models
+                        entries = col_file.entries
+                        table.setRowCount(len(entries))
+                        
+                        for row, entry in enumerate(entries):
+                            try:
+                                name = getattr(entry, 'name', f'entry_{row}')
+                                table.setItem(row, 0, QTableWidgetItem(str(name)))
+                                table.setItem(row, 1, QTableWidgetItem('COL'))
+                                
+                                size = getattr(entry, 'size', 0)
+                                size_text = f"{size} bytes" if size > 0 else "Unknown"
+                                table.setItem(row, 2, QTableWidgetItem(size_text))
+                                
+                            except Exception as row_error:
+                                if hasattr(main_window, 'log_message'):
+                                    main_window.log_message(f"Error refreshing COL entry row {row}: {str(row_error)}")
+                                continue
+                        
+                        table.resizeColumnsToContents()
+                        
+                        if hasattr(main_window, 'log_message'):
+                            main_window.log_message(f"COL table refreshed - {len(entries)} entries")
+                        return True
+                finally:
+                    # Re-enable updates
+                    table.setUpdatesEnabled(True)
+                    table.update()
+                
+                # Restore selection after refresh
+                if preserved_selection and table.rowCount() > 0:
+                    table.clearSelection()
+                    for row, col in preserved_selection:
+                        if row < table.rowCount() and col < table.columnCount():
+                            table.selectRow(row)  # Select the entire row
+                
+                # Restore scroll position and current row
+                if current_scroll_pos > 0:
+                    table.verticalScrollBar().setValue(current_scroll_pos)
+                if current_row >= 0 and current_row < table.rowCount():
+                    table.setCurrentCell(current_row, 0)
+                
+                return True
         
         if hasattr(main_window, 'log_message'):
             main_window.log_message("Could not refresh COL table - no available methods")
