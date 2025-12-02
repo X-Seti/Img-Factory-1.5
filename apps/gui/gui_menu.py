@@ -623,9 +623,8 @@ class IMGFactoryMenuBar:
     
     def _select_inverse_entries(self):
         """Invert selection of entries in table"""
-        if (hasattr(self.main_window, 'gui_layout') and 
-            hasattr(self.main_window.gui_layout, 'select_inverse')):
-            self.main_window.gui_layout.select_inverse()
+        if hasattr(self.main_window, 'inverse_selection'):
+            self.main_window.inverse_selection()
     
     def _select_none_entries(self):
         """Clear all selections in table"""
