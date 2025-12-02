@@ -13,19 +13,32 @@ Simple refresh functionality for IMG and COL tables that actually works
 # _clear_table
 # integrate_refresh_table
 
-def refresh_table(main_window): #vers 2
-    """Refresh the current table - works for IMG or COL files - FIXED"""
+def refresh_table(main_window): #vers 3
+    """Refresh the current table - works for IMG or COL files - FIXED - TAB AWARE"""
     try:
-        # Check what type of file is currently loaded
-        if hasattr(main_window, 'current_img') and main_window.current_img:
-            # IMG file is loaded - refresh IMG table
-            return _refresh_img_table(main_window)
-        elif hasattr(main_window, 'current_col') and main_window.current_col:
-            # COL file is loaded - refresh COL table
-            return _refresh_col_table(main_window)
+        # Use tab-aware approach to get current file
+        if hasattr(main_window, 'get_current_file_from_active_tab'):
+            file_object, file_type = main_window.get_current_file_from_active_tab()
+            if file_object and file_type == 'IMG':
+                # IMG file is loaded - refresh IMG table
+                return _refresh_img_table(main_window)
+            elif file_object and file_type == 'COL':
+                # COL file is loaded - refresh COL table
+                return _refresh_col_table(main_window)
+            else:
+                # No file loaded - clear table
+                return _clear_table(main_window)
         else:
-            # No file loaded - clear table
-            return _clear_table(main_window)
+            # Fallback to old method
+            if hasattr(main_window, 'current_img') and main_window.current_img:
+                # IMG file is loaded - refresh IMG table
+                return _refresh_img_table(main_window)
+            elif hasattr(main_window, 'current_col') and main_window.current_col:
+                # COL file is loaded - refresh COL table
+                return _refresh_col_table(main_window)
+            else:
+                # No file loaded - clear table
+                return _clear_table(main_window)
             
     except Exception as e:
         if hasattr(main_window, 'log_message'):
