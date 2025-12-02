@@ -182,6 +182,12 @@ class IMGFactoryGUILayout:
             'editscm': lambda: self._log_missing_method('editscm'),
             'editgxt': lambda: self._log_missing_method('editgxt'),
             'editmenu': lambda: self._log_missing_method('editmenu'),
+            
+            # Search methods
+            'show_search_dialog': lambda: self.main_window.show_search_dialog(),
+            'search_entries': lambda: self.main_window.search_entries(),
+            'search_next': lambda: self.main_window.search_next(),
+            'search_previous': lambda: self.main_window.search_previous(),
         }
 
         print(f"✅ Method mappings created: {len(method_mappings)} methods")

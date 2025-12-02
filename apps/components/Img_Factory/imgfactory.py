@@ -3505,7 +3505,7 @@ class IMGFactory(QMainWindow):
             self.log_message("ðŸ”§ Applying search and performance fixes...")
 
             # 1. Setup our new consolidated search system
-            from apps.core.guisearch import install_search_system
+            from apps.core.gui_search import install_search_system
             if install_search_system(self):
                 self.log_message("New search system installed")
             else:
@@ -3884,6 +3884,85 @@ class IMGFactory(QMainWindow):
 
         except Exception as e:
             self.log_message(f"Failed to save settings: {str(e)}")
+
+    def setup_search_system(self): #vers 1
+        """Setup search functionality for the application"""
+        try:
+            # Create search manager instance
+            from apps.core.gui_search import SearchManager
+            self.search_manager = SearchManager(self)
+            
+            # Setup search functionality
+            success = self.search_manager.setup_search_functionality()
+            
+            # Add search-related methods to main window
+            self.show_search_dialog = self._show_search_dialog
+            self.search_entries = self._search_entries
+            self.search_next = self._search_next
+            self.search_previous = self._search_previous
+            
+            if success:
+                self.log_message("✅ Search system initialized")
+                return True
+            else:
+                self.log_message("⚠️ Search system initialization incomplete")
+                return False
+                
+        except Exception as e:
+            self.log_message(f"❌ Search system setup error: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def _show_search_dialog(self): #vers 1
+        """Show advanced search dialog"""
+        try:
+            if hasattr(self, 'search_manager'):
+                self.search_manager.show_search_dialog()
+            else:
+                self.log_message("⚠️ Search manager not available")
+        except Exception as e:
+            self.log_message(f"❌ Show search dialog error: {e}")
+
+    def _search_entries(self, search_text=None, options=None): #vers 1
+        """Search entries in current IMG file"""
+        try:
+            if hasattr(self, 'search_manager'):
+                # If no search text provided, get it from the filter input
+                if not search_text:
+                    if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'filter_input'):
+                        search_text = self.gui_layout.filter_input.text()
+                    else:
+                        self.log_message("⚠️ No search text provided")
+                        return []
+                
+                return self.search_manager.perform_search(search_text, options)
+            else:
+                self.log_message("⚠️ Search manager not available")
+                return []
+        except Exception as e:
+            self.log_message(f"❌ Search entries error: {e}")
+            return []
+
+    def _search_next(self): #vers 1
+        """Find next search match"""
+        try:
+            if hasattr(self, 'search_manager'):
+                self.search_manager.find_next()
+            else:
+                self.log_message("⚠️ Search manager not available")
+        except Exception as e:
+            self.log_message(f"❌ Search next error: {e}")
+
+    def _search_previous(self): #vers 1
+        """Find previous search match"""
+        try:
+            if hasattr(self, 'search_manager'):
+                self.search_manager.find_previous()
+            else:
+                self.log_message("⚠️ Search manager not available")
+        except Exception as e:
+            self.log_message(f"❌ Search previous error: {e}")
 
     def closeEvent(self, event): #vers 2
         """Handle application close"""
