@@ -198,10 +198,14 @@ def rename_col_model(main_window): #vers 1
     """Rename COL model with validation"""
     try:
         # Validate tab and get file object
-        if not validate_tab_before_operation(main_window, "Rename COL Model"):
+        if not hasattr(main_window, 'validate_tab_before_operation'):
+            QMessageBox.warning(main_window, "No File", "Please open a COL file first")
             return False
         
-        file_object, file_type = get_current_file_from_active_tab(main_window)
+        if not main_window.validate_tab_before_operation("Rename COL Model"):
+            return False
+        
+        file_object, file_type = main_window.get_current_file_from_active_tab()
         
         if file_type != 'COL' or not file_object:
             QMessageBox.warning(main_window, "No COL File", "Current tab does not contain a COL file")
@@ -346,7 +350,7 @@ def _show_rename_dialog(main_window, current_name: str, item_type: str) -> Optio
         return None
 
 
-def _validate_new_name(new_name: str, file_type: str) -> bool: #vers 1
+def _validate_new_name(new_name: str, file_type: str, main_window=None) -> bool: #vers 1
     """Validate new name based on file type"""
     try:
         if not new_name or not new_name.strip():

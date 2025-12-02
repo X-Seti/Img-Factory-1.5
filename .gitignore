@@ -8,7 +8,6 @@ __pycache__/
 # Dependencies
 .venv/
 venv/
-node_modules/
 
 # Logs and temp files
 *.log
@@ -18,7 +17,7 @@ node_modules/
 # Environment
 .env
 .env.local
-.env.*
+*.env.*
 
 # Editors
 .vscode/
@@ -29,9 +28,7 @@ coverage/
 htmlcov/
 .coverage
 
-# MyPy cache
+# Python cache
 .mypy_cache/
-
-# Pytest cache
 .pytest_cache/
 ```
