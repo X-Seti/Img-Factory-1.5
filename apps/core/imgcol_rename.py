@@ -42,20 +42,29 @@ except ImportError:
 def rename_selected(main_window): #vers 1
     """Main rename function - handles both IMG entries and COL models"""
     try:
-        # Use same tab awareness as other core functions
-        if not validate_tab_before_operation(main_window, "Rename Selected"):
-            return False
-        
-        # Get current file type
-        file_type = get_current_file_type_from_tab(main_window)
-        
-        if file_type == 'IMG':
+        # Check if tab system is available (to fix the missing function error)
+        if not hasattr(main_window, 'validate_tab_before_operation'):
+            # Fallback: check if current_img exists (for non-tab mode)
+            if not hasattr(main_window, 'current_img') or not main_window.current_img:
+                QMessageBox.warning(main_window, "No File", "Please open an IMG or COL file first")
+                return False
+            # If we have current_img, proceed with IMG rename
             return rename_img_entry(main_window)
-        elif file_type == 'COL':
-            return rename_col_model(main_window)
         else:
-            QMessageBox.warning(main_window, "No File", "Please open an IMG or COL file first")
-            return False
+            # Use tab-aware validation
+            if not main_window.validate_tab_before_operation("Rename Selected"):
+                return False
+            
+            # Get current file type
+            file_type = main_window.get_current_file_type_from_tab()
+            
+            if file_type == 'IMG':
+                return rename_img_entry(main_window)
+            elif file_type == 'COL':
+                return rename_col_model(main_window)
+            else:
+                QMessageBox.warning(main_window, "No File", "Please open an IMG or COL file first")
+                return False
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
@@ -67,18 +76,48 @@ def rename_selected(main_window): #vers 1
 def rename_img_entry(main_window): #vers 1
     """Rename IMG entry with validation and IMG_Editor core support"""
     try:
-        # Validate tab and get file object
-        if not validate_tab_before_operation(main_window, "Rename IMG Entry"):
-            return False
-        
-        file_object, file_type = get_current_file_from_active_tab(main_window)
+        # Check if tab system is available
+        if hasattr(main_window, 'validate_tab_before_operation'):
+            # Validate tab and get file object
+            if not main_window.validate_tab_before_operation("Rename IMG Entry"):
+                return False
+            
+            file_object, file_type = main_window.get_current_file_from_active_tab()
+        else:
+            # Fallback to old method for non-tab mode
+            if not hasattr(main_window, 'current_img') or not main_window.current_img:
+                QMessageBox.warning(main_window, "No IMG File", "No IMG file is currently loaded")
+                return False
+            file_object = main_window.current_img
+            file_type = 'IMG'
         
         if file_type != 'IMG' or not file_object:
             QMessageBox.warning(main_window, "No IMG File", "Current tab does not contain an IMG file")
             return False
         
-        # Get selected entry
-        selected_entry = _get_selected_entry_safe(main_window, file_object)
+        # Get selected entry - handle both tab and non-tab modes
+        if hasattr(main_window, 'get_selected_entries_from_active_tab'):
+            selected_entries = main_window.get_selected_entries_from_active_tab()
+            if selected_entries:
+                selected_entry = selected_entries[0]  # Get first selected
+            else:
+                selected_entry = None
+        else:
+            # Fallback for non-tab mode
+            if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+                table = main_window.gui_layout.table
+                selected_items = table.selectedItems()
+                if selected_items:
+                    row = selected_items[0].row()
+                    if hasattr(file_object, 'entries') and 0 <= row < len(file_object.entries):
+                        selected_entry = file_object.entries[row]
+                    else:
+                        selected_entry = None
+                else:
+                    selected_entry = None
+            else:
+                selected_entry = None
+
         if not selected_entry:
             QMessageBox.information(main_window, "No Selection", "Please select an IMG entry to rename")
             return False

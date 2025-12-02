@@ -417,14 +417,14 @@ def rename_entry_safe(img_file, entry_or_name, new_name: str) -> bool: #vers 3
 def integrate_entry_operations(main_window) -> bool: #vers 3
     """Integrate entry operations functions with main window - PORTED FROM MODERN SYSTEM"""
     try:
-        # Add entry operation methods to main window
-        main_window.add_entry_safe = lambda img_file, filename, data: add_entry_safe(img_file, filename, data)
-        main_window.add_multiple_entries = lambda img_file, file_paths: add_multiple_entries(img_file, file_paths)
-        main_window.import_file_to_img = lambda img_file, file_path: import_file_to_img(img_file, file_path)
-        main_window.import_directory_to_img = lambda img_file, directory_path, recursive=False: import_directory_to_img(img_file, directory_path, recursive)
-        main_window.remove_entry_safe = lambda img_file, entry: remove_entry_safe(img_file, entry)
-        main_window.remove_multiple_entries = lambda img_file, entries: remove_multiple_entries(img_file, entries)
-        main_window.rename_entry_safe = lambda img_file, entry, new_name: rename_entry_safe(img_file, entry, new_name)
+        # Add entry operation methods to main window - FIXED: Using proper function references
+        main_window.add_entry_safe = add_entry_safe
+        main_window.add_multiple_entries = add_multiple_entries
+        main_window.import_file_to_img = import_file_to_img
+        main_window.import_directory_to_img = import_directory_to_img
+        main_window.remove_entry_safe = remove_entry_safe
+        main_window.remove_multiple_entries = remove_multiple_entries
+        main_window.rename_entry_safe = rename_entry_safe
         
         # Add aliases that might be used elsewhere
         main_window.add_entry = main_window.add_entry_safe
