@@ -420,6 +420,7 @@ def enhanced_context_menu_event(main_window, event): #vers 2
             return
 
         table = main_window.gui_layout.table
+        # Get the item at the position where the right-click occurred
         item = table.itemAt(event.pos())
         if not item:
             return
@@ -482,7 +483,7 @@ def enhanced_context_menu_event(main_window, event): #vers 2
         replace_action.triggered.connect(lambda: replace_selected_entry(main_window, row))
         menu.addAction(replace_action)
         
-        # Show menu
+        # Show menu at the global position of the event
         menu.exec(event.globalPos())
 
     except Exception as e:
@@ -499,8 +500,8 @@ def add_col_context_menu_to_entries_table(main_window): #vers 4
         # Set up custom context menu
         entries_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         entries_table.customContextMenuRequested.connect(
-            lambda pos: enhanced_context_menu_event(main_window,
-                                                   type('MockEvent', (), {'pos': lambda: pos, 'globalPos': lambda: entries_table.mapToGlobal(pos)})())
+            lambda pos: enhanced_context_menu_event(main_window, 
+                type('MockEvent', (), {'pos': lambda: pos, 'globalPos': lambda: entries_table.mapToGlobal(pos)})())
         )
 
         main_window.log_message("✅ Enhanced COL context menu added to entries table")

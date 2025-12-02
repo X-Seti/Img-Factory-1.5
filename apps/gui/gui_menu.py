@@ -382,11 +382,62 @@ class IMGFactoryMenuBar:
                         if menu_action.action_id in ["toolbar", "statusbar", "log_panel"]:
                             action.setChecked(True)
                     
+                    # Add hover effect styling
+                    action.hovered.connect(lambda act=action: self._on_menu_hover(act))
+                    
                     # Store action
                     self.actions[menu_action.action_id] = action
                     
                     # Add to menu
                     menu.addAction(action)
+        
+        # Add hover effect styling to menu bar
+        self._apply_menu_bar_styling()
+                    
+    def _apply_menu_bar_styling(self):
+        """Apply styling to menu bar for hover effects"""
+        # Apply CSS styling to the menu bar for hover effects
+        menu_style = """
+        QMenuBar {
+            background-color: #f0f0f0;
+            padding: 2px;
+        }
+        QMenuBar::item {
+            background: transparent;
+            padding: 5px 10px;
+            margin: 1px;
+            border-radius: 3px;
+        }
+        QMenuBar::item:selected {
+            background: #d0d0d0;
+        }
+        QMenuBar::item:pressed {
+            background: #b0b0b0;
+        }
+        QMenu {
+            background-color: #f5f5f5;
+            border: 1px solid #ccc;
+            padding: 2px;
+        }
+        QMenu::item {
+            padding: 5px 20px;
+            border: 1px solid transparent;
+        }
+        QMenu::item:selected {
+            background-color: #0078d4;
+            color: white;
+        }
+        QMenu::separator {
+            height: 1px;
+            background: #d0d0d0;
+        }
+        """
+        self.menu_bar.setStyleSheet(menu_style)
+    
+    def _on_menu_hover(self, action):
+        """Handle menu hover effect"""
+        # This is a callback to provide visual feedback when menu items are hovered
+        pass
 
     def _apply_gui_changes(self): #vers 1
         """Apply GUI changes after preferences are saved"""
@@ -481,8 +532,21 @@ class IMGFactoryMenuBar:
     
     def _save_img_file(self):
         """Save IMG file"""
-        if hasattr(self.main_window, 'save_img_entry'):
-            self.main_window.save_img_entry()
+        try:
+            if hasattr(self.main_window, 'save_img_entry'):
+                # Call the save function which should handle the save operation
+                result = self.main_window.save_img_entry()
+                
+                # Log the action
+                if hasattr(self.main_window, 'log_message'):
+                    if result:
+                        self.main_window.log_message("💾 IMG file saved successfully")
+                    else:
+                        self.main_window.log_message("⚠️ No changes to save or save operation cancelled")
+            else:
+                QMessageBox.information(self.main_window, "Save", "Save functionality not available")
+        except Exception as e:
+            QMessageBox.critical(self.main_window, "Save Error", f"Failed to save IMG file: {str(e)}")
     
     def _save_img_as(self):
         """Save IMG file as"""
@@ -504,21 +568,51 @@ class IMGFactoryMenuBar:
     
     def _undo_action(self):
         """Undo last action"""
-        if hasattr(self.main_window, 'undo_manager') and hasattr(self.main_window.undo_manager, 'undo'):
-            self.main_window.undo_manager.undo()
-        elif hasattr(self.main_window, 'undo'):
-            self.main_window.undo()
-        else:
-            QMessageBox.information(self.main_window, "Undo", "Undo functionality not available")
+        try:
+            # First try the undo manager if it exists
+            if hasattr(self.main_window, 'undo_manager') and hasattr(self.main_window.undo_manager, 'undo'):
+                self.main_window.undo_manager.undo()
+                return
+            
+            # Try a direct undo method if it exists
+            if hasattr(self.main_window, 'undo'):
+                self.main_window.undo()
+                return
+                
+            # Try to use a generic undo mechanism
+            if hasattr(self.main_window, 'gui_layout') and hasattr(self.main_window.gui_layout, 'table'):
+                # Check if table has a way to handle undo
+                table = self.main_window.gui_layout.table
+                # For now, fallback to showing an info message
+                QMessageBox.information(self.main_window, "Undo", "No undo operations available")
+            else:
+                QMessageBox.information(self.main_window, "Undo", "Undo functionality not available")
+        except Exception as e:
+            QMessageBox.critical(self.main_window, "Undo Error", f"Failed to perform undo: {str(e)}")
     
     def _redo_action(self):
         """Redo last action"""
-        if hasattr(self.main_window, 'undo_manager') and hasattr(self.main_window.undo_manager, 'redo'):
-            self.main_window.undo_manager.redo()
-        elif hasattr(self.main_window, 'redo'):
-            self.main_window.redo()
-        else:
-            QMessageBox.information(self.main_window, "Redo", "Redo functionality not available")
+        try:
+            # First try the undo manager if it exists
+            if hasattr(self.main_window, 'undo_manager') and hasattr(self.main_window.undo_manager, 'redo'):
+                self.main_window.undo_manager.redo()
+                return
+            
+            # Try a direct redo method if it exists
+            if hasattr(self.main_window, 'redo'):
+                self.main_window.redo()
+                return
+                
+            # Try to use a generic redo mechanism
+            if hasattr(self.main_window, 'gui_layout') and hasattr(self.main_window.gui_layout, 'table'):
+                # Check if table has a way to handle redo
+                table = self.main_window.gui_layout.table
+                # For now, fallback to showing an info message
+                QMessageBox.information(self.main_window, "Redo", "No redo operations available")
+            else:
+                QMessageBox.information(self.main_window, "Redo", "Redo functionality not available")
+        except Exception as e:
+            QMessageBox.critical(self.main_window, "Redo Error", f"Failed to perform redo: {str(e)}")
     
     def _select_all_entries(self):
         """Select all entries in table"""
@@ -554,10 +648,23 @@ class IMGFactoryMenuBar:
     
     def _rename_selected_entry(self):
         """Rename selected entry"""
-        if hasattr(self.main_window, 'rename_entry'):
-            self.main_window.rename_entry()
-        else:
-            QMessageBox.information(self.main_window, "Rename", "Rename functionality coming soon!")
+        try:
+            if hasattr(self.main_window, 'rename_entry'):
+                # Call the rename function which should handle the rename operation
+                self.main_window.rename_entry()
+                
+                # After renaming, we should enable the save functionality
+                if hasattr(self.main_window, 'entries_changed'):
+                    # Emit the signal to indicate entries have changed
+                    self.main_window.entries_changed.emit()
+                
+                # Log the action
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("📝 Rename operation initiated")
+            else:
+                QMessageBox.information(self.main_window, "Rename", "Rename functionality not available")
+        except Exception as e:
+            QMessageBox.critical(self.main_window, "Rename Error", f"Failed to rename entry: {str(e)}")
     
     def _duplicate_selected_entry(self):
         """Duplicate selected entry"""
