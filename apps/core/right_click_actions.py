@@ -380,6 +380,45 @@ def copy_table_selection(main_window): #vers 1
     except Exception as e:
         main_window.log_message(f"Copy selection error: {str(e)}")
 
+def copy_selected_text_from_cell(main_window, row: int, col: int): #vers 1
+    """Copy selected text from current cell to clipboard"""
+    try:
+        table = main_window.gui_layout.table
+        item = table.item(row, col)
+        
+        if item:
+            # Get the QTableWidgetItem
+            cell_widget = table.cellWidget(row, col) if table.cellWidget(row, col) else None
+            
+            if cell_widget and hasattr(cell_widget, 'selectedText') and callable(getattr(cell_widget, 'selectedText')):
+                # If there's a custom widget with selected text
+                selected_text = cell_widget.selectedText()
+            else:
+                # For standard QTableWidgetItem, we need to handle text selection differently
+                # Since standard QTableWidgetItem doesn't support partial text selection,
+                # we'll just copy the full text of the cell
+                selected_text = item.text()
+                
+                # However, if the user wants to copy only selected text, they would need
+                # to select the text in an editable context. For read-only tables,
+                # we'll just copy the whole cell content
+                main_window.log_message(f"Note: Full cell content copied. Partial text selection not supported in read-only table.")
+            
+            if selected_text:
+                from PyQt6.QtWidgets import QApplication
+                QApplication.clipboard().setText(selected_text)
+                main_window.log_message(f"Copied selected text: '{selected_text[:50]}{'...' if len(selected_text) > 50 else ''}'")
+            else:
+                # If no specific text was selected, copy the full cell content
+                full_text = item.text()
+                QApplication.clipboard().setText(full_text)
+                main_window.log_message(f"Copied full cell content: '{full_text[:50]}{'...' if len(full_text) > 50 else ''}'")
+        else:
+            main_window.log_message("No data in selected cell")
+            
+    except Exception as e:
+        main_window.log_message(f"Copy selected text error: {str(e)}")
+
 def copy_filename_only(main_window, row: int): #vers 1
     """Copy filename without extension from first column"""
     try:
@@ -649,6 +688,7 @@ __all__ = [
     'copy_table_row',
     'copy_table_column_data',
     'copy_table_selection',
+    'copy_selected_text_from_cell',
     'copy_filename_only',
     'copy_file_summary',
     'edit_col_from_table',

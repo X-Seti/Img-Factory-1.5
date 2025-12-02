@@ -51,6 +51,7 @@ from apps.methods.rw_versions import get_rw_version_name
 from apps.core.right_click_actions import integrate_right_click_actions, setup_table_context_menu
 from apps.core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
 from apps.core.convert import convert_img, convert_img_format
+from apps.core.reload import integrate_reload_functions
 from apps.core.img_split import integrate_split_functions
 from apps.core.theme_integration import integrate_theme_system
 from apps.core.create import create_new_img
@@ -480,6 +481,7 @@ class IMGFactory(QMainWindow):
         self.dump_all = lambda: dump_all_function(self)
         self.dump_selected = lambda: dump_selected_function(self)
         integrate_refresh_table(self)
+        integrate_reload_functions(self)
 
         # TXD Editor Integration
         try:
