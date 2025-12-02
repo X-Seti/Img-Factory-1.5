@@ -103,7 +103,7 @@ def rename_img_entry(main_window): #vers 1
             return False
         
         # Validate new name
-        if not _validate_new_name(new_name, "IMG"):
+        if not _validate_new_name(new_name, "IMG", main_window):
             return False
         
         # Check for duplicates
@@ -124,6 +124,12 @@ def rename_img_entry(main_window): #vers 1
                 from apps.core.undo_system import RenameCommand
                 undo_cmd = RenameCommand(selected_entry, current_name, new_name)
                 main_window.undo_manager.push_command(undo_cmd)
+        
+            # Mark the file object as modified
+            if hasattr(file_object, 'modified'):
+                file_object.modified = True
+            else:
+                setattr(file_object, 'modified', True)
         
             # Refresh current tab to show changes
             if hasattr(main_window, 'refresh_current_tab_data'):
@@ -179,7 +185,7 @@ def rename_col_model(main_window): #vers 1
             return False
         
         # Validate new name
-        if not _validate_new_name(new_name, "COL"):
+        if not _validate_new_name(new_name, "COL", main_window):
             return False
         
         if hasattr(main_window, 'log_message'):
@@ -254,10 +260,16 @@ def _show_rename_dialog(main_window, current_name: str, item_type: str) -> Optio
         
         # Validation info
         if item_type == "IMG Entry":
-            validation_text = """
+            # Get IMG name limit from settings
+            img_name_limit = 23  # Default fallback
+            if hasattr(main_window, 'app_settings'):
+                settings = getattr(main_window.app_settings, 'current_settings', {})
+                img_name_limit = settings.get('img_name_limit', 23)  # Default to 23 if not set
+            
+            validation_text = f"""
 • Name must be valid filename (no invalid characters)
 • Must include file extension (e.g., .dff, .txd, .col)
-• Maximum length: 24 characters
+• Maximum length: {img_name_limit} characters
 • Cannot duplicate existing entry names
             """
         else:  # COL Model

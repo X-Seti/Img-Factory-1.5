@@ -44,6 +44,7 @@ from apps.core.reload import reload_current_file
 from apps.core.create import create_new_img
 from apps.core.open import _detect_and_open_file, open_file_dialog, _detect_file_type
 from apps.core.close import close_img_file, close_all_img, install_close_functions, setup_close_manager
+from apps.core.sort_via_ide import sort_via_ide
 from apps.methods.colour_ui_for_loaded_img import integrate_color_ui_system
 from apps.gui.gui_context import open_col_editor_dialog
 from apps.methods.refresh_table_functions import refresh_table
@@ -153,6 +154,7 @@ class IMGFactoryGUILayout:
             'select_all_entries': lambda: self.select_all_entries(),
             'select_inverse': lambda: self.select_inverse(),
             'sort_entries': lambda: self.sort_entries(),
+            'sort_via_ide': lambda: sort_via_ide(self.main_window),
             'pin_selected_entries': lambda: self.pin_selected_entries(),
 
             # Edit methods
@@ -1571,8 +1573,8 @@ class IMGFactoryGUILayout:
                         # Select the first cell in each unselected row to select the entire row
                         index = self.table.model().index(row, 0)
                         selection_model.select(index, 
-                            QAbstractItemView.SelectionFlag.Select | 
-                            QAbstractItemView.SelectionFlag.Rows)
+                            selection_model.Select | 
+                            selection_model.Rows)
                 
                 if hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message("✅ Selection inverted")
@@ -1606,7 +1608,8 @@ class IMGFactoryGUILayout:
                     "Filename (Z-A)", 
                     "Size (Smallest First)", 
                     "Size (Largest First)",
-                    "Type (A-Z)"
+                    "Type (A-Z)",
+                    "Sort Via IDE"
                 ])
                 layout.addWidget(sort_combo)
                 
@@ -1642,6 +1645,11 @@ class IMGFactoryGUILayout:
                         self.table.sortItems(2, Qt.SortOrder.DescendingOrder)
                     elif sort_option == "Type (A-Z)":
                         self.table.sortItems(1, Qt.SortOrder.AscendingOrder)  # Assuming type is in column 1
+                    elif sort_option == "Sort Via IDE":
+                        # Call the sort_via_ide function instead of using the table sort
+                        sort_via_ide(self.main_window)
+                        # Skip the selection restoration since the entire table structure might change
+                        return
                     
                     # Restore selection if there were selected items
                     if selected_rows:
@@ -1652,8 +1660,9 @@ class IMGFactoryGUILayout:
                                     if item:
                                         item.setSelected(True)
                     
-                    if hasattr(self.main_window, 'log_message'):
-                        self.main_window.log_message(f"✅ Entries sorted by: {sort_option}")
+                    if sort_option != "Sort Via IDE":  # Log message is handled within sort_via_ide function
+                        if hasattr(self.main_window, 'log_message'):
+                            self.main_window.log_message(f"✅ Entries sorted by: {sort_option}")
                 else:
                     if hasattr(self.main_window, 'log_message'):
                         self.main_window.log_message("❌ Sort operation cancelled")

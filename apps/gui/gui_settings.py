@@ -84,6 +84,7 @@ class GUISettingsDialog(QDialog):
         self.tab_widget.addTab(self._create_fonts_tab(), "🔤 Fonts")
         self.tab_widget.addTab(self._create_icons_tab(), "Icons")
         self.tab_widget.addTab(self._create_behavior_tab(), "⚙️ Behavior")
+        self.tab_widget.addTab(self._create_game_format_tab(), "🎮 Game Format")
         
         layout.addWidget(self.tab_widget)
         
@@ -559,6 +560,22 @@ class GUISettingsDialog(QDialog):
         notifications_layout.addWidget(self.progress_notifications_check)
         
         layout.addWidget(notifications_group)
+        
+        # Game Format Settings
+        format_group = QGroupBox("🎮 Game Format Settings")
+        format_layout = QVBoxLayout(format_group)
+        
+        format_layout.addWidget(QLabel("IMG Name Length Limit:"))
+        self.img_name_format_combo = QComboBox()
+        self.img_name_format_combo.addItems([
+            "GTA III/VC (23 chars)", 
+            "GTASA (32 chars)", 
+            "GTASOL (32 chars)"
+        ])
+        self.img_name_format_combo.setToolTip("Set maximum character limit for IMG entry names based on game format")
+        format_layout.addWidget(self.img_name_format_combo)
+        
+        layout.addWidget(format_group)
         layout.addStretch()
         
         return widget
@@ -770,6 +787,17 @@ class GUISettingsDialog(QDialog):
             settings["sound_notifications"] = self.sound_notifications_check.isChecked()
             settings["progress_notifications"] = self.progress_notifications_check.isChecked()
 
+            # Game format settings
+            format_text = self.img_name_format_combo.currentText()
+            if format_text == "GTA III/VC (23 chars)":
+                settings["img_name_limit"] = 23
+            elif format_text == "GTASA (32 chars)":
+                settings["img_name_limit"] = 32
+            elif format_text == "GTASOL (32 chars)":
+                settings["img_name_limit"] = 32
+            else:
+                settings["img_name_limit"] = 23  # Default fallback
+
             # Apply settings to main window immediately
             self._apply_settings_to_main_window()
 
@@ -856,6 +884,15 @@ class GUISettingsDialog(QDialog):
             self.show_notifications_check.setChecked(settings.get("show_notifications", True))
             self.sound_notifications_check.setChecked(settings.get("sound_notifications", False))
             self.progress_notifications_check.setChecked(settings.get("progress_notifications", True))
+
+            # Game format settings
+            img_name_limit = settings.get("img_name_limit", 23)
+            if img_name_limit == 23:
+                self.img_name_format_combo.setCurrentText("GTA III/VC (23 chars)")
+            elif img_name_limit == 32:
+                self.img_name_format_combo.setCurrentText("GTASA (32 chars)")
+            else:
+                self.img_name_format_combo.setCurrentText("GTA III/VC (23 chars)")
 
         except Exception as e:
             error_msg = f"Error loading settings: {str(e)}"
