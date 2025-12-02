@@ -4,7 +4,6 @@
 __pycache__/
 *.o
 *.obj
-*.out
 
 # Dependencies
 .venv/
@@ -25,62 +24,29 @@ node_modules/
 .vscode/
 .idea/
 
+# Distribution artifacts
+dist/
+build/
+target/
+*.egg-info/
+
+# Python specific
+*.pyo
+*.pyd
+.Python
+*.so
+
 # Coverage
 .coverage
 coverage/
 htmlcov/
 
-# Python specific
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.so
-*.egg-info/
-dist/
-build/
-*.egg
-*.egg~
-*.dist-info/
-
-# MyPy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pytest
+# Testing
 .pytest_cache/
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg-info/
-*.egg~
-
-# IDE
-.idea/
-*.swp
-*.swo
+.mypy_cache/
+.tox/
 
 # OS generated files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 ```

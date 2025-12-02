@@ -7,7 +7,6 @@
 IMG Factory Main Window - Clean Implementation
 Main window setup and layout management
 """
-
 import sys
 from typing import Optional
 from PyQt6.QtWidgets import (
@@ -15,7 +14,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMenuBar, QStatusBar
 )
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QKeySequence
 
 # Import consolidated GUI components
 try:
@@ -38,6 +37,50 @@ except ImportError as e:
         def __init__(self, main_window): pass
     class TearOffPanelManager:
         def __init__(self, main_window): pass
+
+# Add an undo manager for handling undo/redo operations
+class UndoManager:
+    def __init__(self, main_window):
+        self.main_window = main_window
+        self.undo_stack = []
+        self.redo_stack = []
+        
+    def push_command(self, command, description=""):
+        """Push a command to the undo stack"""
+        self.undo_stack.append((command, description))
+        self.redo_stack.clear()  # Clear redo stack when new command is added
+        
+    def undo(self):
+        """Execute the last command from the undo stack"""
+        if self.undo_stack:
+            command, description = self.undo_stack.pop()
+            self.redo_stack.append((command, description))
+            
+            # Execute the undo command
+            if callable(command):
+                command()
+                
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"↩️ Undo: {description}")
+        else:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("⚠️ No operations to undo")
+    
+    def redo(self):
+        """Execute the last command from the redo stack"""
+        if self.redo_stack:
+            command, description = self.redo_stack.pop()
+            self.undo_stack.append((command, description))
+            
+            # Execute the redo command
+            if callable(command):
+                command()
+                
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"↪️ Redo: {description}")
+        else:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("⚠️ No operations to redo")
 
 
 class IMGFactoryMainWindow(QMainWindow):
@@ -62,6 +105,9 @@ class IMGFactoryMainWindow(QMainWindow):
         self.log_panel = None
         self.status_bar = None
         self.splitter = None
+        
+        # Initialize undo manager
+        self.undo_manager = UndoManager(self)
         
         # Panel managers
         self.panel_manager = None
@@ -180,6 +226,25 @@ class IMGFactoryMainWindow(QMainWindow):
             
             # Setup logging
             setup_logging_for_main_window(self)
+            
+            # Add context menu to the table if it exists
+            if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
+                from .gui_context import add_img_context_menu_to_entries_table
+                add_img_context_menu_to_entries_table(self)
+            
+            # Set up keyboard shortcuts for undo/redo
+            undo_shortcut = QKeySequence('Ctrl+Z')
+            redo_shortcut = QKeySequence('Ctrl+Y')
+            
+            undo_action = QAction('Undo', self)
+            undo_action.setShortcut(undo_shortcut)
+            undo_action.triggered.connect(self.undo_manager.undo)
+            self.addAction(undo_action)
+            
+            redo_action = QAction('Redo', self)
+            redo_action.setShortcut(redo_shortcut)
+            redo_action.triggered.connect(self.undo_manager.redo)
+            self.addAction(redo_action)
             
             self.log_message("✅ Panel system initialized")
             
