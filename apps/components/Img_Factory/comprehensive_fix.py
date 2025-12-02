@@ -8,10 +8,10 @@ the requested context menu options for file operations.
 """
 
 from PyQt6.QtWidgets import (
-    QMenu, QAction, QFileDialog, QMessageBox, QInputDialog
+    QMenu, QFileDialog, QMessageBox, QInputDialog
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QContextMenuEvent
+from PyQt6.QtGui import QAction, QContextMenuEvent
 import os
 import shutil
 from pathlib import Path

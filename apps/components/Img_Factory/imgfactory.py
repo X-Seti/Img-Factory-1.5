@@ -10,25 +10,9 @@ from typing import Optional, List, Dict, Any
 from pathlib import Path
 print("Starting application...")
 
-# Setup paths FIRST - before any other imports
-current_dir = Path(__file__).parent
-components_dir = current_dir / "apps.components"
-gui_dir = current_dir / "apps.gui"
-utils_dir = current_dir / "apps.utils"
-
-
-# Add directories to Python path
-if str(current_dir) not in sys.path:
-    sys.path.insert(0, str(current_dir))
-if components_dir.exists() and str(components_dir) not in sys.path:
-    sys.path.insert(0, str(components_dir))
-if gui_dir.exists() and str(gui_dir) not in sys.path:
-    sys.path.insert(0, str(gui_dir))
-if utils_dir.exists() and str(utils_dir) not in sys.path:
-    sys.path.insert(0, str(utils_dir))
+# The path setup is handled by the launcher, so we don't need to do it here
 
 # Now continue with other imports
-from typing import Optional, List, Dict, Any
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QSplitter, QTableWidget, QTableWidgetItem, QTextEdit, QLabel, QDialog,
@@ -40,7 +24,12 @@ from PyQt6.QtWidgets import (
 print("PyQt6.QtCore imported successfully")
 from PyQt6.QtCore import pyqtSignal, QMimeData, Qt, QThread, QTimer, QSettings
 from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent, QFont, QIcon, QPixmap, QShortcut, QTextCursor
-from comprehensive_fix import fix_menu_system_and_functionality
+# Import comprehensive_fix using importlib to avoid relative import issues
+import importlib.util
+spec = importlib.util.spec_from_file_location("comprehensive_fix", os.path.join(os.path.dirname(__file__), "comprehensive_fix.py"))
+comprehensive_fix_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(comprehensive_fix_module)
+fix_menu_system_and_functionality = comprehensive_fix_module.fix_menu_system_and_functionality
 
 
 # OR use the full path:
