@@ -38,13 +38,18 @@ def inverse_selection(main_window):
         # Get total number of rows
         total_rows = table.rowCount()
         
+        # Store the current selection state of each row
+        rows_to_select = []
+        for row in range(total_rows):
+            if row not in current_selected_rows:
+                rows_to_select.append(row)
+        
         # Clear current selection
         table.clearSelection()
         
         # Select all rows that were NOT selected before
-        for row in range(total_rows):
-            if row not in current_selected_rows:
-                table.selectRow(row)
+        for row in rows_to_select:
+            table.selectRow(row)
         
         # Count new selection
         new_selected_items = table.selectedItems()

@@ -430,7 +430,6 @@ def integrate_entry_operations(main_window) -> bool: #vers 3
         main_window.add_entry = main_window.add_entry_safe
         main_window.remove_entry = main_window.remove_entry_safe
         main_window.rename_entry = main_window.rename_entry_safe
-        
         if hasattr(main_window, 'log_message'):
             main_window.log_message("Entry operations integrated - PORTED from modern system")
             main_window.log_message("   • Safe entry addition with modification tracking")
