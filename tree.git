@@ -32,11 +32,11 @@
 │   │   ├── Ide_Editor
 │   │   │   └── ide_editor.py
 │   │   ├── Img_Browser
-│   │   │   ├── img_browser.py
-│   │   │   └── img_browser.py.txt
+│   │   │   └── img_browser.py
 │   │   ├── Img_Creator
 │   │   │   └── img_creator.py
 │   │   ├── Img_Factory
+│   │   │   ├── comprehensive_fix.py
 │   │   │   ├── depends
 │   │   │   │   └── img_factory_thread.py
 │   │   │   ├── imgfactory.py
@@ -309,6 +309,7 @@
 ├── cc.py
 ├── ChangeLog.md
 ├── Credits.md
+├── img_factory_debug.log
 ├── launch_imgfactory.py
 ├── package-lock.json
 ├── reviews
@@ -316,4 +317,4 @@
 ├── TODO.md
 └── tree.git
 
-34 directories, 283 files
+34 directories, 284 files
