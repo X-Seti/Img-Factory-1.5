@@ -3397,46 +3397,45 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"Error in quick_export: {str(e)}")
 
-    def close_img_file(self): #vers1
-        """placeholder - close img debug"""
-
-    def close_all_file(self): #vers1
-        """placeholder - close all debug"""
-
-    def reload_current_file(self): #vers 1
-        """Reload current IMG or COL file (close and reopen)"""
+    def close_img_file(self): #vers2
+        """Close current IMG file using installed close functions"""
         try:
-            if self.current_img and self.current_img.file_path:
-                # Store current IMG path
-                img_path = self.current_img.file_path
-                self.log_message(f"Reloading IMG file: {os.path.basename(img_path)}")
-
-                # Close current file
-                self.close_img_file()
-
-                # Reopen the file
-                self.load_img_file(img_path)
-                self.log_message("IMG file reloaded")
-                return True
-
-            elif self.current_col and hasattr(self.current_col, 'file_path'):
-                # Store current COL path
-                col_path = self.current_col.file_path
-                self.log_message(f"Reloading COL file: {os.path.basename(col_path)}")
-
-                # Close current COL
-                self.current_col = None
-
-                # Reopen the COL file
-                if hasattr(self, 'load_col_file_safely'):
-                    self.load_col_file_safely(col_path)
-                    self.log_message("COL file reloaded")
-                    return True
-
+            if hasattr(self, 'close_manager') and self.close_manager:
+                self.close_manager.close_current_file()
             else:
-                self.log_message("No file to reload")
-                return False
+                # Fallback: clear current references
+                self.current_img = None
+                if hasattr(self, 'current_col'):
+                    self.current_col = None
+                if hasattr(self, 'current_txd'):
+                    self.current_txd = None
+                self._update_ui_for_no_img()
+        except Exception as e:
+            self.log_message(f"Error in close_img_file: {str(e)}")
 
+    def close_all_file(self): #vers2
+        """Close all files using installed close functions"""
+        try:
+            if hasattr(self, 'close_manager') and self.close_manager:
+                self.close_manager.close_all_tabs()
+            else:
+                # Fallback: clear all references
+                self.current_img = None
+                if hasattr(self, 'current_col'):
+                    self.current_col = None
+                if hasattr(self, 'current_txd'):
+                    self.current_txd = None
+                self._update_ui_for_no_img()
+        except Exception as e:
+            self.log_message(f"Error in close_all_file: {str(e)}")
+
+    def reload_current_file(self): #vers 2
+        """Reload current IMG or COL file (close and reopen) - TAB AWARE"""
+        try:
+            # Use the proper tab-aware reload function from reload module
+            from apps.core.reload import reload_current_file as proper_reload_function
+            return proper_reload_function(self)
+            
         except Exception as e:
             self.log_message(f"Reload failed: {str(e)}")
             return False
