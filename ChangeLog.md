@@ -7,6 +7,14 @@ Complete history of fixes, updates, and improvements.
 
 ---
 
+**Fixed**: - December 02, 2025
+img_core_classes.py
+img_entry_operations.py
+
+**Fixed**: - December 02, 2025
+gui/gui_menu.py
+- optimized menu bar, shows only img related menu's unless other apps are docked.
+
 **Fixed**: - November 29, 2025
 methods/common_functions.py
 - Created new shared function module to consolidate duplicate functions
