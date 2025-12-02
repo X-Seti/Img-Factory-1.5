@@ -168,6 +168,42 @@ def show_advanced_context_menu(main_window, position): #vers 3
                 rename_action.triggered.connect(main_window.rename_selected)
                 menu.addAction(rename_action)
 
+        # MOVE OPERATION
+        if hasattr(main_window, 'move_selected_file'):
+            selected_items = table.selectedItems()
+            if selected_items:
+                move_action = QAction("Move", menu_parent)
+                move_action.triggered.connect(main_window.move_selected_file)
+                menu.addAction(move_action)
+
+        # ANALYZE FILE OPERATION
+        if hasattr(main_window, 'analyze_selected_file'):
+            selected_items = table.selectedItems()
+            if selected_items:
+                analyze_action = QAction("Analyze File", menu_parent)
+                analyze_action.triggered.connect(main_window.analyze_selected_file)
+                menu.addAction(analyze_action)
+
+        # HEX EDITOR OPERATION
+        if hasattr(main_window, 'show_hex_editor_selected'):
+            selected_items = table.selectedItems()
+            if selected_items:
+                hex_action = QAction("Show Hex Editor", menu_parent)
+                hex_action.triggered.connect(main_window.show_hex_editor_selected)
+                menu.addAction(hex_action)
+
+        # SPECIAL OPERATIONS FOR DFF FILES
+        if entry_type == 'DFF':
+            # Show texture list for DFF
+            texture_action = QAction("Show Texture List for DFF", menu_parent)
+            texture_action.triggered.connect(lambda: show_dff_texture_list(main_window, row))
+            menu.addAction(texture_action)
+
+            # Show DFF model in viewer
+            model_action = QAction("Show DFF Model in Viewer", menu_parent)
+            model_action.triggered.connect(lambda: show_dff_model_viewer(main_window, row))
+            menu.addAction(model_action)
+
         # PIN OPERATIONS
         if hasattr(main_window, 'toggle_pinned_entries'):
             selected_items = table.selectedItems()
@@ -520,6 +556,75 @@ def integrate_right_click_actions(main_window): #vers 3
         main_window.log_message(f"Right-click integration error: {str(e)}")
         return False
 
+# Additional functions needed for context menu
+def show_dff_texture_list(main_window, row):
+    """Show texture list for DFF file - needed for context menu"""
+    try:
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                entry_info = {
+                    'name': entry.name,
+                    'is_dff': entry.name.lower().endswith('.dff'),
+                    'size': entry.size,
+                    'offset': entry.offset
+                }
+                
+                if entry_info['is_dff']:
+                    # Import from comprehensive fix if available
+                    try:
+                        from apps.components.Img_Factory.comprehensive_fix import show_dff_texture_list as dff_texture_func
+                        dff_texture_func(main_window, row, entry_info)
+                    except ImportError:
+                        # Fallback implementation
+                        from PyQt6.QtWidgets import QMessageBox
+                        QMessageBox.information(main_window, "DFF Texture List", 
+                                              f"Texture List for DFF: {entry.name}\n\n"
+                                              f"Note: DFF texture extraction and listing functionality would be implemented here.\n"
+                                              f"This would parse the DFF file and show all referenced textures.")
+                else:
+                    from PyQt6.QtWidgets import QMessageBox
+                    QMessageBox.warning(main_window, "DFF Texture List", 
+                                      "Selected file is not a DFF file")
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Error showing DFF texture list: {str(e)}")
+
+
+def show_dff_model_viewer(main_window, row):
+    """Show DFF model in viewer - needed for context menu"""
+    try:
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                entry_info = {
+                    'name': entry.name,
+                    'is_dff': entry.name.lower().endswith('.dff'),
+                    'size': entry.size,
+                    'offset': entry.offset
+                }
+                
+                if entry_info['is_dff']:
+                    # Import from comprehensive fix if available
+                    try:
+                        from apps.components.Img_Factory.comprehensive_fix import show_dff_model_viewer as dff_viewer_func
+                        dff_viewer_func(main_window, row, entry_info)
+                    except ImportError:
+                        # Fallback implementation
+                        from PyQt6.QtWidgets import QMessageBox
+                        QMessageBox.information(main_window, "DFF Model Viewer", 
+                                              f"DFF Model Viewer for: {entry.name}\n\n"
+                                              f"Note: 3D model viewer functionality would be implemented here.\n"
+                                              f"This would load and display the DFF model in a 3D viewport.")
+                else:
+                    from PyQt6.QtWidgets import QMessageBox
+                    QMessageBox.warning(main_window, "DFF Model Viewer", 
+                                      "Selected file is not a DFF file")
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Error showing DFF model viewer: {str(e)}")
+
+
 # Export main functions
 __all__ = [
     'setup_table_context_menu',
@@ -537,5 +642,7 @@ __all__ = [
     'show_dff_info',
     'view_txd_textures',
     'get_selected_entries_for_extraction',
-    'integrate_right_click_actions'
+    'integrate_right_click_actions',
+    'show_dff_texture_list',
+    'show_dff_model_viewer'
 ]
