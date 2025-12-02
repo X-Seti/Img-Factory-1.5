@@ -4,44 +4,40 @@
 __pycache__/
 *.o
 *.obj
+*.out
 
 # Dependencies
 .venv/
 venv/
+node_modules/
 
 # Logs and temp files
 *.log
 *.tmp
 *.swp
 
-# Environment
-.env
-.env.local
-.env.*
-
 # Editors
 .vscode/
 .idea/
 
-# Coverage reports
+# Environment
+.env
+.env.local
+*.env.*
+
+# Coverage
+.coverage
 coverage/
 htmlcov/
-.coverage
 
 # Python specific
-*.pyc
-__pycache__/
 *.pyo
 *.pyd
 .Python
 *.so
+*.egg-info/
 
-# Backup files
-*~
-*.bak
-*.swp
-
-# OS generated files
+# System files
 .DS_Store
 Thumbs.db
 ```

@@ -86,6 +86,7 @@ def add_entry_safe(img_archive, entry_name: str, file_data: bytes, auto_save: bo
                     
                     new_entry = IMGEntry()
                     new_entry.name = entry_name
+                    new_entry.original_name = entry_name  # Set original name for rename detection
                     new_entry.data = file_data
                     new_entry.size = len(file_data)
                     new_entry.streaming_size = new_entry.size
@@ -100,7 +101,7 @@ def add_entry_safe(img_archive, entry_name: str, file_data: bytes, auto_save: bo
                     # Mark as new entry for highlighting
                     new_entry.is_new_entry = True
                     new_entry.is_replaced = False
-                    new_entry.modified = True
+                    new_entry.is_modified = True
                     
                     # Add to entries list
                     if not hasattr(img_archive, 'entries'):
@@ -352,8 +353,8 @@ def remove_multiple_entries(img_file, entries: List) -> tuple: #vers 3
             print(f"[ERROR] remove_multiple_entries failed: {e}")
         return 0, entries
 
-def rename_entry_safe(img_file, entry_or_name, new_name: str) -> bool: #vers 3
-    """Rename entry in IMG file - PORTED FROM MODERN SYSTEM"""
+def rename_entry_safe(img_file, entry_or_name, new_name: str) -> bool: #vers 4
+    """Rename entry in IMG file - PORTED FROM MODERN SYSTEM with modification tracking"""
     try:
         # Import debug system
         try:
@@ -395,16 +396,29 @@ def rename_entry_safe(img_file, entry_or_name, new_name: str) -> bool: #vers 3
                 return False
         
         old_name = entry.name
+        
+        # Store original name if not already set
+        if not hasattr(entry, 'original_name') or entry.original_name is None:
+            entry.original_name = old_name
+        
+        # Set the new name
         entry.name = new_name
         
-        # Mark as modified
-        img_file.modified = True
-        if hasattr(entry, 'is_new_entry'):
-            entry.is_new_entry = True
+        # Mark entry as modified
+        if not hasattr(entry, 'is_modified'):
+            entry.is_modified = True
+        else:
+            entry.is_modified = True
         
+        # Mark IMG file as modified
+        if not hasattr(img_file, 'modified'):
+            img_file.modified = True
+        else:
+            img_file.modified = True
+
         if img_debugger:
             img_debugger.success(f"Entry renamed: {old_name} -> {new_name}")
-        
+
         return True
         
     except Exception as e:

@@ -179,6 +179,8 @@ class IMGEntry:
         self.is_encrypted: bool = False
         self.is_new_entry: bool = False
         self.is_replaced: bool = False
+        self.is_modified: bool = False  # ADDED: Track if entry has been modified
+        self.original_name: Optional[str] = None  # ADDED: Store original name for rename detection
         self.flags: int = 0
         self.compression_level = 0
 
@@ -533,6 +535,8 @@ class IMGFile:
         self.total_size: int = 0
         self.creation_time: Optional[float] = None
         self.modification_time: Optional[float] = None
+        self.modified: bool = False  # ADDED: Track if the IMG file has been modified
+        self.deleted_entries: List[IMGEntry] = []  # ADDED: Track deleted entries
 
         # File handles
         self._img_handle: Optional[BinaryIO] = None
@@ -1159,6 +1163,7 @@ class IMGFile:
                     if entry_name:
                         entry = IMGEntry()
                         entry.name = entry_name
+                        entry.original_name = entry_name  # Set original name for rename detection
                         entry.offset = entry_offset * 2048  # Convert sectors to bytes
                         entry.size = entry_size * 2048
                         entry.set_img_file(self)
@@ -1195,6 +1200,7 @@ class IMGFile:
                 if entry_name:
                     entry = IMGEntry()
                     entry.name = entry_name
+                    entry.original_name = entry_name  # Set original name for rename detection
                     entry.offset = entry_offset * 2048  # Convert sectors to bytes
                     entry.size = entry_size * 2048
                     entry.set_img_file(self)
@@ -1238,6 +1244,43 @@ class IMGFile:
                     f.write(data)
         except Exception as e:
             raise RuntimeError(f"Failed to write entry data: {e}")
+
+    def has_new_or_modified_entries(self) -> bool: #vers 1
+        """Check if there are new or modified entries in the IMG file"""
+        try:
+            # Check for new entries
+            for entry in self.entries:
+                if (hasattr(entry, 'is_new_entry') and entry.is_new_entry) or \
+                   (hasattr(entry, 'is_modified') and entry.is_modified):
+                    return True
+            
+            # Check for deleted entries
+            if hasattr(self, 'deleted_entries') and self.deleted_entries:
+                return True
+            
+            # Check for renamed entries
+            for entry in self.entries:
+                if (hasattr(entry, 'original_name') and entry.original_name and 
+                    entry.original_name != entry.name):
+                    return True
+                    
+            return False
+        except Exception:
+            return False
+
+    def clear_modification_tracking(self): #vers 1
+        """Clear all modification tracking flags"""
+        try:
+            for entry in self.entries:
+                entry.is_new_entry = False
+                entry.is_modified = False
+                # Don't clear original_name as it's needed to detect renames
+            if hasattr(self, 'deleted_entries'):
+                self.deleted_entries.clear()
+            if hasattr(self, 'modified'):
+                self.modified = False
+        except Exception:
+            pass
 
     def close(self): #vers 1
         """Close IMG file"""
