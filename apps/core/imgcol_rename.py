@@ -413,6 +413,17 @@ def _rename_with_fallback(main_window, entry, new_name: str) -> bool: #vers 1
             entry.is_modified = True
         else:
             entry.is_modified = True
+            
+        # Mark parent object as modified if it exists
+        if hasattr(entry, 'parent') and hasattr(entry.parent, 'modified'):
+            entry.parent.modified = True
+        elif hasattr(main_window, 'current_file') and hasattr(main_window.current_file, 'modified'):
+            main_window.current_file.modified = True
+        elif hasattr(main_window, 'current_img') and hasattr(main_window.current_img, 'modified'):
+            main_window.current_img.modified = True
+        elif hasattr(main_window, 'current_img'):
+            # Also set modified flag on current_img if it exists
+            setattr(main_window.current_img, 'modified', True)
         
         if hasattr(main_window, 'log_message'):
             main_window.log_message("✅ Entry renamed using fallback method")
