@@ -1092,12 +1092,18 @@ class IMGFactoryGUILayout:
         filter_controls.addWidget(filter_combo)
         filter_layout.addLayout(filter_controls)
 
+        # Store filter_combo as attribute so search manager can access it
+        self.filter_combo = filter_combo
+
         search_controls = QHBoxLayout()
         search_input = QLineEdit()
         search_input.setPlaceholderText("Search filename...")
         search_controls.addWidget(QLabel("Search:"))
         search_controls.addWidget(search_input)
         filter_layout.addLayout(search_controls)
+        
+        # Store search_input as attribute so search manager can access it
+        self.search_input = search_input
 
         filter_box.setLayout(filter_layout)
         right_layout.addWidget(filter_box)

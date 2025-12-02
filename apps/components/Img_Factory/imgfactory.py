@@ -565,10 +565,14 @@ class IMGFactory(QMainWindow):
         # === STARTUP COMPLETE ===
         self.log_message("IMG Factory 1.5 initialized - Ready!")
 
-        # Show window (non-blocking)
-        self.show()
         # Apply comprehensive fixes for menu system and functionality
         fix_menu_system_and_functionality(self)
+        
+        # Apply search and performance fixes
+        self.apply_search_and_performance_fixes()
+
+        # Show window (non-blocking)
+        self.show()
 
 
 
