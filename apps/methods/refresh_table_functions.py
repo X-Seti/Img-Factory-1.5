@@ -415,13 +415,12 @@ def _clear_table(main_window) -> bool: #vers 2
         return False
 
 
-def integrate_refresh_table(main_window): #vers 2
+def integrate_refresh_table(main_window): #vers 3
     """Integrate refresh table function into main window - FIXED"""
     try:
         # Add refresh_table method to main window with multiple aliases
         main_window.refresh_table = lambda: refresh_table(main_window)
         main_window.update_list = lambda: refresh_table(main_window)  # For "Update List" button
-        main_window.reload_table = lambda: refresh_table(main_window)
         main_window.refresh_entries = lambda: refresh_table(main_window)
         main_window.update_table = lambda: refresh_table(main_window)
         

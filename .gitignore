@@ -5,7 +5,6 @@ __pycache__/
 *.o
 *.obj
 *.so
-*.a
 *.dll
 *.exe
 *.out
@@ -20,8 +19,6 @@ target/
 .gradle/
 .mypy_cache/
 .pytest_cache/
-htmlcov/
-.coverage
 
 # Logs and temp files
 *.log
@@ -44,6 +41,8 @@ Thumbs.db
 
 # Coverage
 coverage/
+htmlcov/
+.coverage
 
 # Compressed files
 *.zip
