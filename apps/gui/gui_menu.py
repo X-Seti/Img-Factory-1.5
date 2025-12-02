@@ -82,13 +82,12 @@ class MenuDefinition:
             ],
 
             "Settings": [
-                MenuAction("preferences", "&Preferences", "Ctrl+,"),
+                MenuAction("preferences", "&Theme Prefs ", "Ctrl+,"),
                 MenuAction("customize_interface", "Customize &Interface"),
                 MenuAction("customize_buttons", "Customize &Buttons"),
                 MenuAction("customize_panels", "Customize &Panels"),
                 MenuAction("customize_menus", "Customize &Menus"),
                 MenuAction("sep1", ""),
-                MenuAction("themes", "&Themes"),
                 MenuAction("language", "&Language"),
                 MenuAction("sep2", ""),
                 MenuAction("file_associations", "&File Associations"),

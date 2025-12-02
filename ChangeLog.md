@@ -12,6 +12,8 @@ img_core_classes.py
 img_entry_operations.py
 rename.py
 - Rename has been fixed for the menu bar, right click and panel rename button.
+- Tabbing across all opened files, works flowlessly.
+- Pin selected entries - locking files from being changed
 
 **Fixed**: - December 02, 2025
 gui/gui_menu.py
