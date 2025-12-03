@@ -45,6 +45,7 @@ from apps.core.img_merger import merge_img_function
 from apps.core.convert import convert_img, convert_img_format
 from apps.core.rename import rename_entry
 from apps.core.imgcol_replace import replace_selected
+from apps.core.extract import extract_textures_function
 from apps.core.reload import reload_current_file
 from apps.core.create import create_new_img
 from apps.core.open import _detect_and_open_file, open_file_dialog, _detect_file_type
@@ -165,6 +166,7 @@ class IMGFactoryGUILayout:
             # Edit methods
             'rename_selected': lambda: rename_entry(self.main_window),
             'replace_selected': lambda: replace_selected(self.main_window),
+            'extract_textures': lambda: extract_textures_function(self.main_window),
 
             # Editor methods
             'edit_col_file': lambda: open_col_editor_dialog(self.main_window),
@@ -293,7 +295,7 @@ class IMGFactoryGUILayout:
             #("Quick Exp", "quick_export", "document-send", colors['export_action'], "quick_export_selected"),
             ("Remove", "remove", "edit-delete", colors['remove_action'], "remove_selected"),
             ("Remove via", "remove_via", "document-remvia", colors['remove_action'], "remove_via_entries"),
-            ("Replace", "replace", "edit-copy", colors['edit_action'], "replace_selected"),
+            ("Extract", "extract", "document-export", colors['export_action'], "extract_textures"),
             ("Rename", "rename", "edit-rename", colors['edit_action'], "rename_selected"),
             ("Select All", "select_all", "edit-select-all", colors['select_action'], "select_all_entries"),
             ("Inverse", "sel_inverse", "edit-select", colors['select_action'], "select_inverse"),
@@ -895,8 +897,6 @@ class IMGFactoryGUILayout:
             "document-remvia": get_remove_icon(),
             
             # Edit icons
-            "replace": get_edit_icon(),
-            "edit-copy": get_edit_icon(),
             "rename": get_edit_icon(),
             "edit-rename": get_edit_icon(),
             "edit_select": get_edit_icon(),
@@ -908,6 +908,7 @@ class IMGFactoryGUILayout:
             "view-sort": get_edit_icon(),
             "pin_selected": get_edit_icon(),
             "pin": get_edit_icon(),
+            "extract": get_export_icon(),
             
             # Other icons
             "document-merge": get_view_icon(),
@@ -935,7 +936,7 @@ class IMGFactoryGUILayout:
             "Import via": "Imp via", "Refresh": "Refresh", "Export": "Exp",
             "Export via": "Exp via", "Quick Exp": "Q Exp", "Remove": "Rem",
             "Remove via": "Rem via", "Dump": "Dump", "Pin selected": "Pin",
-            "Rename": "Rename", "Replace": "Replace", "Select All": "Select",
+            "Rename": "Rename", "Extract": "Extract", "Select All": "Select",
             "Inverse": "Inverse", "Sort via": "Sort", "Col Edit": "Col Edit",
             "Txd Edit": "Txd Edit", "Dff Edit": "Dff Edit", "Ipf Edit": "Ipf Edit",
             "IDE Edit": "IDE Edit", "IPL Edit": "IPL Edit", "Dat Edit": "Dat Edit",
