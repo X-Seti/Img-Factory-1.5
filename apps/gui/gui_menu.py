@@ -20,6 +20,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QSettings
 from PyQt6.QtGui import QAction, QFont, QPixmap, QIcon, QKeySequence, QActionGroup
 from .panel_manager import PanelManager
 
+#TODO - Menus need SVG icons.
 
 class MenuAction:
     """Represents a menu action with properties"""
@@ -113,10 +114,10 @@ class COLMenuBuilder:
         """Add COL menu to existing menubar"""
 
         # Create COL menu
-        col_menu = menubar.addMenu("🔧 &COL")
+        col_menu = menubar.addMenu("&COL")
 
         # Main COL Editor
-        editor_action = QAction("✏️ COL &Editor", parent_window)
+        editor_action = QAction("COL &Editor", parent_window)
         editor_action.setShortcut("Ctrl+Shift+C")
         editor_action.setStatusTip("Open COL Editor for collision file editing")
         editor_action.triggered.connect(lambda: COLMenuBuilder._open_col_editor(parent_window))
@@ -131,7 +132,7 @@ class COLMenuBuilder:
         open_col_action.triggered.connect(lambda: COLMenuBuilder._open_col_file(parent_window))
         col_menu.addAction(open_col_action)
 
-        new_col_action = QAction("🆕 &New COL File", parent_window)
+        new_col_action = QAction("&New COL File", parent_window)
         new_col_action.setStatusTip("Create new COL file")
         new_col_action.triggered.connect(lambda: COLMenuBuilder._new_col_file(parent_window))
         col_menu.addAction(new_col_action)
@@ -139,13 +140,13 @@ class COLMenuBuilder:
         col_menu.addSeparator()
 
         # Batch operations
-        batch_action = QAction("⚙️ &Batch Processor", parent_window)
+        batch_action = QAction("&Batch Processor", parent_window)
         batch_action.setShortcut("Ctrl+Shift+B")
         batch_action.setStatusTip("Process multiple COL files with batch operations")
         batch_action.triggered.connect(lambda: COLMenuBuilder._open_batch_processor(parent_window))
         col_menu.addAction(batch_action)
 
-        analyze_action = QAction("📊 &Analyze COL", parent_window)
+        analyze_action = QAction("&Analyze COL", parent_window)
         analyze_action.setShortcut("Ctrl+Shift+A")
         analyze_action.setStatusTip("Analyze COL file structure and quality")
         analyze_action.triggered.connect(lambda: COLMenuBuilder._analyze_col(parent_window))
@@ -154,7 +155,7 @@ class COLMenuBuilder:
         col_menu.addSeparator()
 
         # IMG integration
-        import_submenu = col_menu.addMenu("📥 Import from IMG")
+        import_submenu = col_menu.addMenu("Import from IMG")
 
         extract_col_action = QAction("Extract COL from Current IMG", parent_window)
         extract_col_action.setStatusTip("Extract COL files from currently open IMG")
@@ -185,18 +186,18 @@ class COLMenuBuilder:
         # Corruption Analysis submenu
         corruption_menu = img_menu.addMenu("🔍 Corruption Analysis")
 
-        analyze_action = QAction("🔍 Analyze IMG Corruption", self.main_window)
+        analyze_action = QAction("Analyze IMG Corruption", self.main_window)
         analyze_action.setStatusTip("Analyze IMG file for corrupted entries and filenames")
         analyze_action.triggered.connect(self.main_window.analyze_img_corruption)
         corruption_menu.addAction(analyze_action)
 
-        quick_fix_action = QAction("🔧 Quick Fix Corruption", self.main_window)
+        quick_fix_action = QAction("Quick Fix Corruption", self.main_window)
         quick_fix_action.setStatusTip("Automatically fix common corruption issues")
         quick_fix_action.triggered.connect(self.main_window.quick_fix_corruption)
         corruption_menu.addAction(quick_fix_action)
 
         # Clean filenames only
-        clean_names_action = QAction("🧹 Clean Filenames Only", self.main_window)
+        clean_names_action = QAction("Clean Filenames Only", self.main_window)
         clean_names_action.setStatusTip("Fix only filename corruption, keep all entries")
         clean_names_action.triggered.connect(self.main_window.clean_filenames_only)
         corruption_menu.addAction(clean_names_action)
@@ -403,7 +404,7 @@ class IMGFactoryMenuBar:
 
     def _create_tools_menu(self):
         """Create Tools menu with Sort Via IDE and other tools"""
-        tools_menu = self.menu_bar.addMenu("🔧 &Tools")
+        tools_menu = self.menu_bar.addMenu("&Tools")
         
         # Sort Via IDE
         sort_ide_action = QAction("Sort Via &IDE", self.main_window)
@@ -415,17 +416,17 @@ class IMGFactoryMenuBar:
         tools_menu.addSeparator()
         
         # File Analysis Tools
-        analyze_action = QAction("🔍 &Analyze IMG", self.main_window)
+        analyze_action = QAction("&Analyze IMG", self.main_window)
         analyze_action.setStatusTip("Analyze IMG file structure and properties")
         analyze_action.triggered.connect(self._analyze_img)
         tools_menu.addAction(analyze_action)
         
-        advanced_analyze_action = QAction("🔍 &Advanced Analysis", self.main_window)
+        advanced_analyze_action = QAction("&Advanced Analysis", self.main_window)
         advanced_analyze_action.setStatusTip("Comprehensive analysis of IMG file health and structure")
         advanced_analyze_action.triggered.connect(self._advanced_analysis)
         tools_menu.addAction(advanced_analyze_action)
         
-        validate_action = QAction("✅ &Validate IMG", self.main_window)
+        validate_action = QAction("&Validate IMG", self.main_window)
         validate_action.setStatusTip("Validate IMG file integrity and structure")
         validate_action.triggered.connect(self._validate_img)
         tools_menu.addAction(validate_action)
@@ -433,12 +434,12 @@ class IMGFactoryMenuBar:
         tools_menu.addSeparator()
         
         # File Checking Tools
-        find_dups_action = QAction("🔍 Find &Duplicates", self.main_window)
+        find_dups_action = QAction("Find &Duplicates", self.main_window)
         find_dups_action.setStatusTip("Find duplicate entries in IMG file")
         find_dups_action.triggered.connect(self._find_duplicates)
         tools_menu.addAction(find_dups_action)
         
-        find_corrupt_action = QAction("🔍 Find &Corruption", self.main_window)
+        find_corrupt_action = QAction("Find &Corruption", self.main_window)
         find_corrupt_action.setStatusTip("Find corrupted entries in IMG file")
         find_corrupt_action.triggered.connect(self._find_corruption)
         tools_menu.addAction(find_corrupt_action)
@@ -538,7 +539,7 @@ class IMGFactoryMenuBar:
         
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Error updating recent files submenu: {str(e)}")
+                self.main_window.log_message(f"Error updating recent files submenu: {str(e)}")
     
     def update_recent_files_menu(self):
         """Public method to update the recent files submenu from outside the class"""
@@ -618,12 +619,12 @@ class IMGFactoryMenuBar:
                     self.main_window.gui_layout._update_button_icons_state(show_icons)
 
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("✅ GUI changes applied successfully")
+                self.main_window.log_message("GUI changes applied successfully")
 
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"⚠️ Error applying GUI changes: {str(e)}")
-            print(f"❌ _apply_gui_changes error: {str(e)}")
+                self.main_window.log_message(f"Error applying GUI changes: {str(e)}")
+            print(f"_apply_gui_changes error: {str(e)}")
 
     def _setup_default_callbacks(self):
         """Set up default menu callbacks"""
@@ -725,7 +726,7 @@ class IMGFactoryMenuBar:
             recent_menu.exec()
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Error creating recent files menu: {str(e)}")
+                self.main_window.log_message(f"Error creating recent files menu: {str(e)}")
     
     def _open_recent_file(self, file_path):
         """Open a recent file"""
@@ -735,7 +736,7 @@ class IMGFactoryMenuBar:
             _detect_and_open_file(self.main_window, file_path)
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Error opening recent file {file_path}: {str(e)}")
+                self.main_window.log_message(f"Error opening recent file {file_path}: {str(e)}")
             from PyQt6.QtWidgets import QMessageBox
             QMessageBox.critical(self.main_window, "Open Error", f"Failed to open recent file: {str(e)}")
     
@@ -747,10 +748,10 @@ class IMGFactoryMenuBar:
             settings.setValue("recentFiles", [])
             
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("🗑️ Recent files list cleared")
+                self.main_window.log_message("Recent files list cleared")
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Error clearing recent files: {str(e)}")
+                self.main_window.log_message(f"Error clearing recent files: {str(e)}")
     
     def _save_img_file(self):
         """Save IMG file"""
@@ -762,9 +763,9 @@ class IMGFactoryMenuBar:
                 # Log the action
                 if hasattr(self.main_window, 'log_message'):
                     if result:
-                        self.main_window.log_message("💾 IMG file saved successfully")
+                        self.main_window.log_message("IMG file saved successfully")
                     else:
-                        self.main_window.log_message("⚠️ No changes to save or save operation cancelled")
+                        self.main_window.log_message("No changes to save or save operation cancelled")
             else:
                 QMessageBox.information(self.main_window, "Save", "Save functionality not available")
         except Exception as e:
@@ -881,7 +882,7 @@ class IMGFactoryMenuBar:
                 
                 # Log the action
                 if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("📝 Rename operation initiated")
+                    self.main_window.log_message("Rename operation initiated")
             else:
                 QMessageBox.information(self.main_window, "Rename", "Rename functionality not available")
         except Exception as e:
@@ -941,7 +942,7 @@ class IMGFactoryMenuBar:
                 editor.selection_sync_requested.connect(self._handle_selection_sync)
 
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("✅ IDE Editor opened")
+                self.main_window.log_message("IDE Editor opened")
 
         except ImportError:
             QMessageBox.warning(self.main_window, "IDE Editor", "IDE Editor components not found")
@@ -954,7 +955,7 @@ class IMGFactoryMenuBar:
             if hasattr(self.main_window, 'sort_img_by_ide_order'):
                 self.main_window.sort_img_by_ide_order()
                 if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("📋 IMG entries sorted by IDE order")
+                    self.main_window.log_message("IMG entries sorted by IDE order")
             else:
                 QMessageBox.information(self.main_window, "Sort IMG",
                     "Sort IMG by IDE functionality will be available when IDE file is loaded.")
@@ -982,11 +983,11 @@ class IMGFactoryMenuBar:
                 self.main_window.apply_ide_sort_order(model_order)
 
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"📋 Applied IDE sort order: {len(model_order)} models")
+                self.main_window.log_message(f"Applied IDE sort order: {len(model_order)} models")
 
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Error applying IDE sort: {str(e)}")
+                self.main_window.log_message(f"Error applying IDE sort: {str(e)}")
 
     def _handle_selection_sync(self, selected_models):
         """Handle selection sync request from IDE Editor"""
@@ -996,11 +997,11 @@ class IMGFactoryMenuBar:
                 self.main_window.sync_col_editor_selection(selected_models)
 
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"🔗 Synced selection: {len(selected_models)} models")
+                self.main_window.log_message(f"Synced selection: {len(selected_models)} models")
 
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Error syncing selection: {str(e)}")
+                self.main_window.log_message(f"Error syncing selection: {str(e)}")
 
     def _view_ide(self):
         """View IDE file"""
@@ -1048,7 +1049,7 @@ class IMGFactoryMenuBar:
             from gui.gui_context import open_col_editor_dialog
             open_col_editor_dialog(self.main_window)
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("✅ COL Editor opened")
+                self.main_window.log_message("COL Editor opened")
         except ImportError:
             QMessageBox.warning(self.main_window, "COL Editor", "COL Editor components not found")
         except Exception as e:
@@ -1198,7 +1199,7 @@ class IMGFactoryMenuBar:
                     self.main_window.txd_workshops = []
                 self.main_window.txd_workshops.append(workshop)
 
-                self.main_window.log_message("✅ TXD Workshop opened (docked)")
+                self.main_window.log_message("TXD Workshop opened (docked)")
 
         except Exception as e:
             QMessageBox.critical(self.main_window, "Error",
@@ -1242,7 +1243,7 @@ class IMGFactoryMenuBar:
         col_menu.addSeparator()
 
         # COL Editor
-        editor_action = QAction("✏️ COL Editor", img_factory_instance)
+        editor_action = QAction("COL Editor", img_factory_instance)
         editor_action.setShortcut("Ctrl+E")
         editor_action.triggered.connect(lambda: open_col_editor(img_factory_instance))
         col_menu.addAction(editor_action)
@@ -1357,7 +1358,7 @@ class IMGFactoryMenuBar:
                     self.main_window.gui_layout.apply_all_window_themes()
 
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"🎨 Theme changed: {theme_name}")
+                self.main_window.log_message(f"Theme changed: {theme_name}")
 
         except Exception as e:
             print(f"❌ Instant theme apply error: {e}")
@@ -1398,7 +1399,7 @@ class IMGFactoryMenuBar:
                 if result == QDialog.DialogCode.Accepted:
                     self._apply_gui_changes()
                     if hasattr(self.main_window, 'log_message'):
-                        self.main_window.log_message("✅ Preferences updated")
+                        self.main_window.log_message("Preferences updated")
 
                 # Clean up
                 self._preferences_dialog = None
