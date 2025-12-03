@@ -60,6 +60,9 @@ class MenuDefinition:
                 MenuAction("save_img", "&Save", "Ctrl+S"),
                 MenuAction("save_as_img", "Save &As...", "Ctrl+Shift+S"),
                 MenuAction("sep3", ""),
+                # NEW: Game path setting
+                MenuAction("set_game_path", "Set &Game Path...", "Ctrl+Shift+G"),
+                MenuAction("sep4", ""),
                 MenuAction("exit", "E&xit", "Ctrl+Q", "application-exit"),
             ],
 
@@ -638,6 +641,7 @@ class IMGFactoryMenuBar:
             "save_as_img": self._save_img_as,
             "close_img": self._close_img_file,
             "close_all": self._close_all_img,
+            "set_game_path": self._set_game_path,
 
             # Edit menu
             "undo": self._undo_action,
@@ -677,6 +681,11 @@ class IMGFactoryMenuBar:
         """Create new IMG file"""
         if hasattr(self.main_window, 'create_new_img'):
             self.main_window.create_new_img()
+    
+    def _set_game_path(self):
+        """Set game path"""
+        if hasattr(self.main_window, 'set_game_path'):
+            self.main_window.set_game_path()
     
     def _open_img_file(self):
         """Open IMG file"""
