@@ -357,6 +357,7 @@ class IMGFactoryMenuBar:
         
         self.menu_definition = MenuDefinition()
         self._create_menus()
+        self._create_tools_menu()
         #self.col_menu()
         
         # Set up default callbacks
@@ -399,6 +400,91 @@ class IMGFactoryMenuBar:
         
         # Add hover effect styling to menu bar
         self._apply_menu_bar_styling()
+
+    def _create_tools_menu(self):
+        """Create Tools menu with Sort Via IDE and other tools"""
+        tools_menu = self.menu_bar.addMenu("🔧 &Tools")
+        
+        # Sort Via IDE
+        sort_ide_action = QAction("Sort Via &IDE", self.main_window)
+        sort_ide_action.setShortcut("Ctrl+Shift+D")
+        sort_ide_action.setStatusTip("Sort IMG entries based on IDE file model order")
+        sort_ide_action.triggered.connect(self.main_window.sort_via_ide)
+        tools_menu.addAction(sort_ide_action)
+        
+        tools_menu.addSeparator()
+        
+        # File Analysis Tools
+        analyze_action = QAction("🔍 &Analyze IMG", self.main_window)
+        analyze_action.setStatusTip("Analyze IMG file structure and properties")
+        analyze_action.triggered.connect(self._analyze_img)
+        tools_menu.addAction(analyze_action)
+        
+        advanced_analyze_action = QAction("🔍 &Advanced Analysis", self.main_window)
+        advanced_analyze_action.setStatusTip("Comprehensive analysis of IMG file health and structure")
+        advanced_analyze_action.triggered.connect(self._advanced_analysis)
+        tools_menu.addAction(advanced_analyze_action)
+        
+        validate_action = QAction("✅ &Validate IMG", self.main_window)
+        validate_action.setStatusTip("Validate IMG file integrity and structure")
+        validate_action.triggered.connect(self._validate_img)
+        tools_menu.addAction(validate_action)
+        
+        tools_menu.addSeparator()
+        
+        # File Checking Tools
+        find_dups_action = QAction("🔍 Find &Duplicates", self.main_window)
+        find_dups_action.setStatusTip("Find duplicate entries in IMG file")
+        find_dups_action.triggered.connect(self._find_duplicates)
+        tools_menu.addAction(find_dups_action)
+        
+        find_corrupt_action = QAction("🔍 Find &Corruption", self.main_window)
+        find_corrupt_action.setStatusTip("Find corrupted entries in IMG file")
+        find_corrupt_action.triggered.connect(self._find_corruption)
+        tools_menu.addAction(find_corrupt_action)
+        
+        # Store reference to tools menu
+        self.menus['Tools'] = tools_menu
+
+    def _analyze_img(self):
+        """Analyze IMG file"""
+        if hasattr(self.main_window, 'analyze_img_corruption'):
+            self.main_window.analyze_img_corruption()
+        elif hasattr(self.main_window, 'analyze_corruption'):
+            self.main_window.analyze_corruption()
+        else:
+            QMessageBox.information(self.main_window, "Analyze IMG", "IMG analysis functionality not available")
+
+    def _advanced_analysis(self):
+        """Advanced comprehensive analysis"""
+        if hasattr(self.main_window, 'advanced_img_check'):
+            self.main_window.advanced_img_check()
+        elif hasattr(self.main_window, 'comprehensive_analysis'):
+            self.main_window.comprehensive_analysis()
+        else:
+            QMessageBox.information(self.main_window, "Advanced Analysis", "Advanced analysis functionality not available")
+
+    def _validate_img(self):
+        """Validate IMG file"""
+        if hasattr(self.main_window, 'validate_img'):
+            self.main_window.validate_img()
+        else:
+            QMessageBox.information(self.main_window, "Validate IMG", "IMG validation functionality not available")
+
+    def _find_duplicates(self):
+        """Find duplicate entries in IMG"""
+        try:
+            from apps.methods.find_dups_functions import show_duplicates_dialog
+            show_duplicates_dialog(self.main_window)
+        except ImportError:
+            QMessageBox.information(self.main_window, "Find Duplicates", "Duplicate finding functionality not available")
+
+    def _find_corruption(self):
+        """Find corrupted entries in IMG"""
+        if hasattr(self.main_window, 'analyze_img_corruption'):
+            self.main_window.analyze_img_corruption()
+        else:
+            QMessageBox.information(self.main_window, "Find Corruption", "Corruption analysis functionality not available")
     
     def _create_recent_files_submenu(self, file_menu):
         """Create and add recent files submenu to the File menu"""
