@@ -62,10 +62,107 @@ def add_file_operations_to_main_window(main_window):
         # Add show_dff_model_viewer method (as a general method that handles current selection)
         main_window.show_dff_model_viewer = lambda: show_dff_model_viewer_from_selection(main_window)
         
+        # Add set_game_path method
+        main_window.set_game_path = lambda: set_game_path(main_window)
+        
         main_window.log_message("✅ File operations added to main window")
         
     except Exception as e:
         main_window.log_message(f"❌ Error adding file operations: {str(e)}")
+
+
+def set_game_path(main_window):
+    """
+    Set game path with support for custom paths including Linux paths
+    """
+    try:
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+        import os
+        
+        # Get current path if it exists
+        current_path = getattr(main_window, 'game_root', None)
+        if not current_path or current_path == "C:/":
+            # Default to home directory instead of C:/
+            current_path = os.path.expanduser("~")
+        
+        # Open directory dialog without restricting to Windows paths
+        folder = QFileDialog.getExistingDirectory(
+            main_window,
+            "Select Game Root Directory (Supports Windows and Linux paths)",
+            current_path,
+            QFileDialog.Option.ShowDirsOnly
+        )
+        
+        if folder:
+            # Validate that it's a game directory by checking for common game files
+            game_files = [
+                "gta3.exe", "gta_vc.exe", "gta_sa.exe", "gtasol.exe", "solcore.exe",
+                "gta3.dat", "gta_vc.dat", "gta_sa.dat", "gta_sol.dat", "SOL/gta_sol.dat",
+                "default.ide", "Data/default.dat", "models/", "textures/", "data/"
+            ]
+            
+            # Check if the folder contains game-related files/directories
+            is_game_dir = False
+            for item in os.listdir(folder):
+                item_lower = item.lower()
+                if any(game_file.split('/')[0] in item_lower for game_file in game_files if '/' not in game_file) or \
+                   any(game_file in item_lower for game_file in game_files if '/' not in game_file):
+                    is_game_dir = True
+                    break
+            
+            # Also check subdirectories
+            if not is_game_dir:
+                for root, dirs, files in os.walk(folder):
+                    for d in dirs:
+                        if d.lower() in ['models', 'textures', 'data', 'sfx', 'audio']:
+                            is_game_dir = True
+                            break
+                    if is_game_dir:
+                        break
+            
+            main_window.game_root = folder
+            main_window.log_message(f"Game path set: {folder}")
+            
+            # Update directory tree if it exists
+            if hasattr(main_window, 'directory_tree'):
+                main_window.directory_tree.game_root = folder
+                main_window.directory_tree.current_root = folder
+                if hasattr(main_window.directory_tree, 'path_label'):
+                    main_window.directory_tree.path_label.setText(folder)
+                # Auto-populate the tree
+                if hasattr(main_window.directory_tree, 'populate_tree'):
+                    main_window.directory_tree.populate_tree(folder)
+                    main_window.log_message("Directory tree auto-populated")
+            
+            # Save settings
+            if hasattr(main_window, 'save_settings'):
+                main_window.save_settings()
+            else:
+                # Create a simple save settings if not available
+                try:
+                    from PyQt6.QtCore import QSettings
+                    settings = QSettings("IMG_Factory", "IMG_Factory_Settings")
+                    settings.setValue("game_root", folder)
+                except:
+                    pass
+            
+            # Show success message
+            QMessageBox.information(
+                main_window,
+                "Game Path Set",
+                f"Game path configured:\n{folder}\n\nDirectory tree will now show game files.\nSwitch to the 'Directory Tree' tab to browse."
+            )
+        else:
+            main_window.log_message("Game path selection cancelled")
+            
+    except Exception as e:
+        main_window.log_message(f"Error setting game path: {str(e)}")
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.critical(
+            main_window,
+            "Error Setting Game Path",
+            f"An error occurred while setting the game path:\n\n{str(e)}"
+        )
 
 
 def show_dff_texture_list_from_selection(main_window):
@@ -82,10 +179,124 @@ def show_dff_texture_list_from_selection(main_window):
                 if entry_info and entry_info['is_dff']:
                     show_dff_texture_list(main_window, row, entry_info)
                 else:
-                    QMessageBox.information(main_window, "DFF Texture List", 
-                                          "Please select a DFF file to view texture list")
+                    # Check if it's a DFF file in the IMG that we need to extract and parse
+                    if entry_info and entry_info['name'].lower().endswith('.dff'):
+                        show_dff_texture_list_from_img_dff(main_window, row, entry_info)
+                    else:
+                        from PyQt6.QtWidgets import QMessageBox
+                        QMessageBox.information(main_window, "DFF Texture List", 
+                                              "Please select a DFF file to view texture list")
     except Exception as e:
         main_window.log_message(f"❌ Error showing DFF texture list from selection: {str(e)}")
+
+
+def show_dff_texture_list_from_img_dff(main_window, row, entry_info):
+    """
+    Extract and show DFF texture list from DFF files in IMG
+    """
+    try:
+        from PyQt6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QTextEdit, QPushButton, QHBoxLayout
+        from PyQt6.QtCore import QThread, pyqtSignal
+        import tempfile
+        import os
+        
+        # Get the DFF data from the IMG entry
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            entry = main_window.current_img.entries[row]
+            dff_data = entry.get_data() if hasattr(entry, 'get_data') else None
+            
+            if dff_data:
+                # Create a temporary file to extract the DFF
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.dff', mode='wb') as temp_file:
+                    temp_file.write(dff_data)
+                    temp_dff_path = temp_file.name
+                
+                try:
+                    # Parse the DFF file for texture information
+                    textures = parse_dff_textures_from_data(temp_dff_path)
+                    
+                    # Create dialog to show texture list
+                    dialog = QDialog(main_window)
+                    dialog.setWindowTitle(f"Textures in {entry.name}")
+                    dialog.resize(500, 400)
+                    
+                    layout = QVBoxLayout(dialog)
+                    
+                    # Create text area for texture list
+                    text_area = QTextEdit()
+                    text_area.setReadOnly(True)
+                    
+                    if textures:
+                        texture_list = "\n".join([f"  • {tex}" for tex in textures])
+                        text_content = f"Textures found in {entry.name}:\n\n{texture_list}"
+                    else:
+                        text_content = f"No textures found in {entry.name}"
+                    
+                    text_area.setPlainText(text_content)
+                    layout.addWidget(text_area)
+                    
+                    # Close button
+                    close_btn = QPushButton("Close")
+                    close_btn.clicked.connect(dialog.close)
+                    layout.addWidget(close_btn)
+                    
+                    dialog.exec()
+                    
+                finally:
+                    # Clean up temporary file
+                    if os.path.exists(temp_dff_path):
+                        os.remove(temp_dff_path)
+            else:
+                QMessageBox.warning(main_window, "DFF Texture List", 
+                                  f"Could not extract data from {entry.name}")
+    except Exception as e:
+        main_window.log_message(f"❌ Error showing DFF texture list from IMG: {str(e)}")
+
+
+def parse_dff_textures_from_data(dff_path):
+    """
+    Parse a DFF file to extract texture names
+    """
+    try:
+        textures = []
+        
+        # This is a simplified implementation - in a real application,
+        # you'd need a proper DFF parser
+        with open(dff_path, 'rb') as f:
+            data = f.read()
+            
+        # Look for texture-related patterns in the DFF data
+        # This is a simplified approach - real DFF parsing is complex
+        # Look for common texture name patterns
+        import re
+        
+        # Search for potential texture names in the binary data
+        # This looks for sequences that might be texture names
+        # This is a very basic implementation - proper DFF parsing would be more complex
+        text_data = data.decode('ascii', errors='ignore')
+        
+        # Look for potential texture names (alphanumeric with underscores, hyphens, dots)
+        potential_textures = re.findall(r'[A-Za-z0-9_\-]{3,20}\.(?:txd|png|jpg|bmp|dxt)', text_data, re.IGNORECASE)
+        
+        # Also look for names without extensions
+        potential_names = re.findall(r'[A-Za-z][A-Za-z0-9_\-]{2,19}(?=\.|\s|$)', text_data)
+        
+        # Combine and deduplicate
+        all_matches = list(set(potential_textures + potential_names))
+        
+        # Filter for likely texture names
+        for name in all_matches:
+            if any(tex in name.lower() for tex in ['tex', 'texture', 'material', 'diffuse', 'specular']):
+                textures.append(name)
+            elif len(name) > 2 and not any(c.isdigit() for c in name[:2]):  # Avoid names starting with numbers
+                textures.append(name)
+        
+        # Return unique textures
+        return list(set(textures))
+        
+    except Exception as e:
+        print(f"Error parsing DFF textures: {str(e)}")
+        return []
 
 
 def show_dff_model_viewer_from_selection(main_window):
@@ -102,6 +313,7 @@ def show_dff_model_viewer_from_selection(main_window):
                 if entry_info and entry_info['is_dff']:
                     show_dff_model_viewer(main_window, row, entry_info)
                 else:
+                    from PyQt6.QtWidgets import QMessageBox
                     QMessageBox.information(main_window, "DFF Model Viewer", 
                                           "Please select a DFF file to view in model viewer")
     except Exception as e:

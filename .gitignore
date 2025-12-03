@@ -4,11 +4,15 @@
 __pycache__/
 *.o
 *.obj
+*.out
 
 # Dependencies
 .venv/
 venv/
 node_modules/
+dist/
+build/
+*.egg-info/
 
 # Logs and temp files
 *.log
@@ -18,83 +22,20 @@ node_modules/
 # Environment
 .env
 .env.local
-.env.*
+*.env.*
 
 # Editors
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # Coverage
 .coverage
 coverage/
 htmlcov/
 
-# Python specific
-*.pyc
-__pycache__/
-*.pyo
-*.pyd
-.Python
-*.so
-
-# Distribution / packaging
-.Python
-*.so
-.Python
-*.pyc
-__pycache__/
-*$py.class
-*$py.py
-*$py.pyc
-*$py.pyo
-*.pyc
-*.pyo
-*.pyd
-*.so
-*.egg
-*.egg-info/
-dist/
-build/
-*.egg-info
-*.egg-info/*
-*.dist-info/
-*.dist-info/*
-.installed.cfg
-*.egg-link
-*.egg-link/*
-.eggs/
-.eggs/*
-develop-eggs/
-develop-eggs/*
-parts/
-parts/*
-sdist/
-sdist/*
-var/
-var/*
-*.tar.gz
-*.whl
-pip-log.txt
-pip-delete-this-directory.txt
-.tox/
-.tox/*
-.coverage
-.coverage.*
-.cache
-.cache/*
+# Python cache
+.mypy_cache/
 .pytest_cache/
-.pytest_cache/*
-.hypothesis/
-.hypothesis/*
-.coverage.xml
-.coverage.*
-.coverage
-nosetests.xml
-coverage.xml
-*.cover
-*.log
-.git/
-.hg/
-.svn/
-.wafpickle-*
 ```

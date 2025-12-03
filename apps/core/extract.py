@@ -325,3 +325,163 @@ def extract_textures_function(main_window):
         dialog.exec()
     except Exception as e:
         main_window.log_message(f"Error opening extract dialog: {str(e)}")
+
+
+def extract_dff_texture_lists(main_window):
+    """Extract DFF texture lists from all DFF files in the current IMG"""
+    try:
+        if not hasattr(main_window, 'current_img') or not main_window.current_img:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(main_window, "No IMG File", "Please open an IMG file first")
+            return
+
+        # Find all DFF files in the current IMG
+        dff_entries = []
+        for i, entry in enumerate(main_window.current_img.entries):
+            if entry.name.lower().endswith('.dff'):
+                dff_entries.append((i, entry))
+
+        if not dff_entries:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(main_window, "No DFF Files", "No DFF files found in the current IMG")
+            return
+
+        # Create a dialog to show the texture lists
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QPushButton, QHBoxLayout
+        dialog = QDialog(main_window)
+        dialog.setWindowTitle("DFF Texture Lists from IMG")
+        dialog.resize(700, 500)
+
+        layout = QVBoxLayout(dialog)
+
+        # Create text area to show texture lists
+        text_area = QTextEdit()
+        text_area.setReadOnly(True)
+
+        # Extract and format texture information
+        full_text = f"DFF Texture Lists from IMG: {main_window.current_img.file_path}\n"
+        full_text += "=" * 80 + "\n\n"
+
+        extractor = TextureExtractor(main_window)
+        for idx, entry in dff_entries:
+            try:
+                # Extract DFF data temporarily
+                dff_data = entry.get_data()
+                if dff_data:
+                    import tempfile
+                    import os
+                    # Create temporary file
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.dff', mode='wb') as temp_file:
+                        temp_file.write(dff_data)
+                        temp_dff_path = temp_file.name
+
+                    try:
+                        # Parse textures from the DFF
+                        textures = extractor._parse_dff_for_textures(temp_dff_path)
+                        full_text += f"DFF File: {entry.name}\n"
+                        full_text += f"Textures ({len(textures)}): {', '.join(textures) if textures else 'None'}\n\n"
+                    finally:
+                        # Clean up temp file
+                        if os.path.exists(temp_dff_path):
+                            os.remove(temp_dff_path)
+                else:
+                    full_text += f"DFF File: {entry.name}\n"
+                    full_text += "Textures: Could not extract data\n\n"
+            except Exception as e:
+                full_text += f"DFF File: {entry.name}\n"
+                full_text += f"Error parsing: {str(e)}\n\n"
+
+        text_area.setPlainText(full_text)
+        layout.addWidget(text_area)
+
+        # Add export button
+        button_layout = QHBoxLayout()
+        export_btn = QPushButton("Export to File")
+        export_btn.clicked.connect(lambda: export_dff_texture_lists(main_window, dff_entries))
+        button_layout.addWidget(export_btn)
+
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dialog.close)
+        button_layout.addWidget(close_btn)
+
+        layout.addLayout(button_layout)
+
+        dialog.exec()
+
+    except Exception as e:
+        main_window.log_message(f"Error extracting DFF texture lists: {str(e)}")
+
+
+def export_dff_texture_lists(main_window, dff_entries):
+    """Export DFF texture lists to a text file"""
+    try:
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+        import os
+
+        # Get save file path
+        file_path, _ = QFileDialog.getSaveFileName(
+            main_window,
+            "Export DFF Texture Lists",
+            os.path.join(os.path.dirname(main_window.current_img.file_path), "dff_texture_lists.txt"),
+            "Text Files (*.txt);;All Files (*)"
+        )
+
+        if not file_path:
+            return
+
+        # Extract texture information
+        extractor = TextureExtractor(main_window)
+        output_lines = []
+        output_lines.append(f"DFF Texture Lists from IMG: {main_window.current_img.file_path}")
+        output_lines.append("=" * 80)
+        output_lines.append("")
+
+        for idx, entry in dff_entries:
+            try:
+                # Extract DFF data temporarily
+                dff_data = entry.get_data()
+                if dff_data:
+                    import tempfile
+                    # Create temporary file
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.dff', mode='wb') as temp_file:
+                        temp_file.write(dff_data)
+                        temp_dff_path = temp_file.name
+
+                    try:
+                        # Parse textures from the DFF
+                        textures = extractor._parse_dff_for_textures(temp_dff_path)
+                        output_lines.append(f"DFF File: {entry.name}")
+                        output_lines.append(f"Textures ({len(textures)}): {', '.join(textures) if textures else 'None'}")
+                        output_lines.append("")
+                    finally:
+                        # Clean up temp file
+                        import os
+                        if os.path.exists(temp_dff_path):
+                            os.remove(temp_dff_path)
+                else:
+                    output_lines.append(f"DFF File: {entry.name}")
+                    output_lines.append("Textures: Could not extract data")
+                    output_lines.append("")
+            except Exception as e:
+                output_lines.append(f"DFF File: {entry.name}")
+                output_lines.append(f"Error parsing: {str(e)}")
+                output_lines.append("")
+
+        # Write to file
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(output_lines))
+
+        QMessageBox.information(
+            main_window,
+            "Export Complete",
+            f"DFF texture lists exported to:\n{file_path}"
+        )
+
+    except Exception as e:
+        main_window.log_message(f"Error exporting DFF texture lists: {str(e)}")
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.critical(
+            main_window,
+            "Export Error",
+            f"An error occurred while exporting:\n{str(e)}"
+        )
