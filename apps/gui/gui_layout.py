@@ -14,6 +14,11 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer, QSize, pyqtSignal, QPoint
 from PyQt6.QtGui import QFont, QAction, QIcon, QShortcut, QKeySequence, QPalette, QTextCursor
 from apps.core.gui_search import ASearchDialog, SearchManager
+from apps.methods.svg_shared_icons import (
+    get_add_icon, get_open_icon, get_refresh_icon, get_close_icon, 
+    get_save_icon, get_export_icon, get_import_icon, get_remove_icon,
+    get_edit_icon, get_view_icon, get_search_icon, get_settings_icon
+)
 from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
 from apps.components.Img_Creator.img_creator import NewIMGDialog, IMGCreationThread
@@ -740,6 +745,12 @@ class IMGFactoryGUILayout:
         btn.setMaximumHeight(22)
         btn.setMinimumHeight(20)
 
+        # Set icon based on the icon identifier
+        icon_obj = self._get_svg_icon(icon)
+        if icon_obj:
+            btn.setIcon(icon_obj)
+            btn.setIconSize(QSize(16, 16))  # Set a reasonable icon size
+
         # Detect if we're using a dark theme
         is_dark_theme = self._is_dark_theme()
 
@@ -837,6 +848,81 @@ class IMGFactoryGUILayout:
             return f"#{r:02x}{g:02x}{b:02x}"
         except:
             return color
+
+
+    def _get_svg_icon(self, icon_name: str) -> QIcon:
+        """Get SVG icon based on icon name identifier"""
+        icon_map = {
+            # Create/new icons
+            "new": get_add_icon(),
+            "document-new": get_add_icon(),
+            
+            # Open icons
+            "open": get_open_icon(),
+            "document-open": get_open_icon(),
+            
+            # Reload/refresh icons
+            "reload": get_refresh_icon(),
+            "document-reload": get_refresh_icon(),
+            "view-refresh": get_refresh_icon(),
+            "update": get_refresh_icon(),
+            
+            # Close icons
+            "close": get_close_icon(),
+            "window-close": get_close_icon(),
+            "edit-clear": get_close_icon(),
+            
+            # Save icons
+            "save_entry": get_save_icon(),
+            "document-save": get_save_icon(),
+            "document-save-entry": get_save_icon(),
+            
+            # Import icons
+            "import": get_import_icon(),
+            "document-import": get_import_icon(),
+            "import_via": get_import_icon(),
+            
+            # Export icons
+            "export": get_export_icon(),
+            "document-export": get_export_icon(),
+            "export_via": get_export_icon(),
+            "document-send": get_export_icon(),
+            
+            # Remove/delete icons
+            "remove": get_remove_icon(),
+            "edit-delete": get_remove_icon(),
+            "remove_via": get_remove_icon(),
+            "document-remvia": get_remove_icon(),
+            
+            # Edit icons
+            "replace": get_edit_icon(),
+            "edit-copy": get_edit_icon(),
+            "rename": get_edit_icon(),
+            "edit-rename": get_edit_icon(),
+            "edit_select": get_edit_icon(),
+            "edit-select": get_edit_icon(),
+            "select_all": get_edit_icon(),
+            "edit-select-all": get_edit_icon(),
+            "sel_inverse": get_edit_icon(),
+            "sort": get_edit_icon(),
+            "view-sort": get_edit_icon(),
+            "pin_selected": get_edit_icon(),
+            "pin": get_edit_icon(),
+            
+            # Other icons
+            "document-merge": get_view_icon(),
+            "edit-cut": get_view_icon(),
+            "transform": get_view_icon(),
+            "document-dump": get_view_icon(),
+            
+            # Search icons
+            "search": get_search_icon(),
+            
+            # Placeholder (no icon)
+            "placeholder": None,
+        }
+        
+        return icon_map.get(icon_name, None)
 
 
     def _get_short_text(self, label): #vers 1
