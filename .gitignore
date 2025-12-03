@@ -1,13 +1,6 @@
 ```
-# Compiled and build artifacts
-*.pyc
-__pycache__/
-*.o
-*.obj
-
-# Dependencies
-.venv/
-venv/
+# IDE files
+*.ide
 
 # Logs and temp files
 *.log
