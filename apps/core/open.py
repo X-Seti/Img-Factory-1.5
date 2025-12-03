@@ -134,6 +134,10 @@ def add_to_recent_files(main_window, file_path):
         # Log the action
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"📁 Added to recent files: {os.path.basename(file_path)}")
+        
+        # Update the recent files menu if it exists
+        if hasattr(main_window, 'menu_bar_system') and hasattr(main_window.menu_bar_system, 'update_recent_files_menu'):
+            main_window.menu_bar_system.update_recent_files_menu()
             
     except Exception as e:
         if hasattr(main_window, 'log_message'):
