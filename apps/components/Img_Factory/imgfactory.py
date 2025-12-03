@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 X-Seti - July22 2025 - IMG Factory 1.5 - AtariST version :D
-#this belongs in root /imgfactory.py - version 71
+#this belongs in root /imgfactory.py - version 73
 """
 import sys
 import os
@@ -26,7 +26,7 @@ from PyQt6.QtCore import pyqtSignal, QMimeData, Qt, QThread, QTimer, QSettings
 from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent, QFont, QIcon, QPixmap, QShortcut, QTextCursor
 # Import comprehensive_fix using importlib to avoid relative import issues
 import importlib.util
-spec = importlib.util.spec_from_file_location("comprehensive_fix", os.path.join(os.path.dirname(__file__), "comprehensive_fix.py"))
+spec = importlib.util.spec_from_file_location("comprehensive", os.path.join(os.path.dirname(__file__), "comprehensive.py"))
 comprehensive_fix_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(comprehensive_fix_module)
 fix_menu_system_and_functionality = comprehensive_fix_module.fix_menu_system_and_functionality
