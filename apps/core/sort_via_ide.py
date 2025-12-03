@@ -25,16 +25,23 @@ def parse_ide_for_model_order(ide_path: str) -> List[str]:
     """Parse IDE file to extract model names in order"""
     try:
         # Use the existing IDE parser
-        ide_data = parse_ide_file(ide_path)
+        ide_parser = parse_ide_file(ide_path)
         
-        if not ide_data or 'objs' not in ide_data:
+        if not ide_parser:
             return []
         
-        # Extract model names from the objs section in order
+        # Extract model names from all sections that contain objects in order
         model_order = []
-        for obj in ide_data['objs']:
-            if 'modelname' in obj:
-                model_order.append(obj['modelname'].lower())
+        
+        # Process sections in order: objs, tobj, weap, cars, peds, ped, etc.
+        for section_name in ['objs', 'tobj', 'weap', 'cars', 'peds', 'ped']:
+            if section_name in ide_parser.sections:
+                for entry in ide_parser.sections[section_name]:
+                    if 'model' in entry:  # This is the model name from the parsed entry
+                        model_name = entry['model']
+                        # Add the model name to order list if not already present
+                        if model_name.lower() not in [m.lower() for m in model_order]:
+                            model_order.append(model_name)
         
         return model_order
         
@@ -69,12 +76,21 @@ def sort_img_entries_by_ide(main_window, model_order: List[str]):
         remaining_models = []
         
         # First, add models in the order they appear in the IDE
+        # Check for exact matches (with or without .dff extension)
         for model_name in model_order:
+            matched_entry = None
             for entry in model_entries:
-                if entry.name.lower() == model_name:
-                    ordered_models.append(entry)
-                    model_entries.remove(entry)
+                entry_name = entry.name.lower()
+                # Check for exact match or match with .dff extension
+                if (entry_name == model_name.lower() or 
+                    entry_name == f"{model_name.lower()}.dff" or
+                    entry_name.replace('.dff', '') == model_name.lower()):
+                    matched_entry = entry
                     break
+            
+            if matched_entry:
+                ordered_models.append(matched_entry)
+                model_entries.remove(matched_entry)
         
         # Add any remaining models that weren't in the IDE
         remaining_models = model_entries
