@@ -4,15 +4,11 @@
 __pycache__/
 *.o
 *.obj
-*.out
 
 # Dependencies
 .venv/
 venv/
 node_modules/
-dist/
-build/
-*.egg-info/
 
 # Logs and temp files
 *.log
@@ -27,15 +23,31 @@ build/
 # Editors
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# Coverage
-.coverage
+# Coverage reports
 coverage/
 htmlcov/
+.coverage
 
-# Python cache
-.mypy_cache/
-.pytest_cache/
+# Python specific
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg-info/
+
+# Distribution / packaging
+dist/
+build/
+*.egg
+*.whl
+pip-log.txt
+pip-delete-this-directory.txt
+
+# IDE
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
 ```

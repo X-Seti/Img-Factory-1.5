@@ -1185,7 +1185,7 @@ class IMGFactoryMenuBar:
                     original_entry = self.main_window.current_img.entries[row]
                     
                     # Create a new entry by copying the original
-                    from apps.methods.img_parsing_functions import IMGEntry
+                    from apps.methods.img_core_classes import IMGEntry
                     new_entry = IMGEntry()
                     new_entry.name = original_entry.name + "_copy"
                     new_entry.offset = original_entry.offset
