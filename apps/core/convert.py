@@ -8,8 +8,7 @@ IMG Factory Convert Functions
 from PyQt6.QtWidgets import QMessageBox, QFileDialog
 import os
 import shutil
-from apps.methods.img_parsing_functions import IMGFile, IMGEntry
-from apps.methods.img_core_classes import IMGCoreManager
+from apps.methods.img_core_classes import IMGFile, IMGEntry
 
 def convert_img(main_window): #vers 3
     """Convert IMG between versions"""
