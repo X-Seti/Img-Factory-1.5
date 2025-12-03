@@ -1200,6 +1200,9 @@ class IMGFactory(QMainWindow):
         self.remove_selected = self._remove_selected_entries
         self.select_inverse_entries = self._select_inverse_entries
         self.extract_textures = lambda: extract_textures_function(self)
+        # NEW: Add extract DFF texture lists functionality
+        from apps.core.extract import extract_dff_texture_lists
+        self.extract_dff_texture_lists = lambda: extract_dff_texture_lists(self)
         self.undo = self._undo_action
         self.redo = self._redo_action
 
