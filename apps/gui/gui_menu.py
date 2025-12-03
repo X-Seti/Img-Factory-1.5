@@ -49,7 +49,9 @@ class MenuDefinition:
                 MenuAction("new_img", "&New IMG", "Ctrl+N", "document-new"),
                 MenuAction("open_img", "&Open IMG", "Ctrl+O", "document-open"),
                 MenuAction("open_multiple", "Open &Multiple Files", "Ctrl+Shift+O", "folder-open"),
-                MenuAction("recent_files", "&Recent Files"),
+                # Recent files will be added dynamically as a submenu
+                MenuAction("recent_files_separator", ""),  # Placeholder for separator
+                # Recent files submenu will be added here dynamically
                 MenuAction("sep1", ""),
                 MenuAction("close_img", "&Close", "Ctrl+W", "window-close"),
                 MenuAction("close_all", "Close &All", "Ctrl+Shift+W"),
@@ -369,6 +371,11 @@ class IMGFactoryMenuBar:
             for menu_action in menu_actions:
                 if menu_action.action_id.startswith("sep"):
                     menu.addSeparator()
+                elif menu_name == "File" and menu_action.action_id == "recent_files_separator":
+                    # Add recent files submenu after the separator
+                    menu.addSeparator()
+                    # Create the recent files submenu
+                    self._create_recent_files_submenu(menu)
                 else:
                     action = QAction(menu_action.text, self.main_window)
                     
@@ -392,6 +399,65 @@ class IMGFactoryMenuBar:
         
         # Add hover effect styling to menu bar
         self._apply_menu_bar_styling()
+    
+    def _create_recent_files_submenu(self, file_menu):
+        """Create and add recent files submenu to the File menu"""
+        # Create submenu for recent files
+        recent_menu = file_menu.addMenu("&Recent Files")
+        
+        # Add placeholder initially
+        no_files_action = recent_menu.addAction("No recent files")
+        no_files_action.setEnabled(False)
+        
+        # Add separator
+        recent_menu.addSeparator()
+        
+        # Add clear action
+        clear_action = recent_menu.addAction("Clear Recent Files")
+        clear_action.triggered.connect(self._clear_recent_files)
+        
+        # Store reference to recent menu for dynamic updates
+        self.recent_files_menu = recent_menu
+        self.recent_files_no_files_action = no_files_action
+        
+        # Now populate the actual recent files
+        self._update_recent_files_submenu()
+    
+    def _update_recent_files_submenu(self):
+        """Update the recent files submenu with actual recent files"""
+        try:
+            from PyQt6.QtCore import QSettings
+            
+            # Clear existing items except the clear action
+            for action in self.recent_files_menu.actions()[1:-1]:  # Skip first (no files) and last (clear)
+                self.recent_files_menu.removeAction(action)
+            
+            # Get settings for recent files
+            settings = QSettings("IMG-Factory", "IMG-Factory")
+            recent_files = settings.value("recentFiles", [])
+            
+            if not recent_files:
+                # No recent files - keep the "No recent files" message
+                self.recent_files_no_files_action.setEnabled(False)
+                self.recent_files_no_files_action.setVisible(True)
+            else:
+                # Remove the "No recent files" placeholder
+                self.recent_files_no_files_action.setVisible(False)
+                self.recent_files_no_files_action.setEnabled(False)
+                
+                # Add recent files to submenu (up to 10)
+                for file_path in recent_files[:10]:
+                    action = self.recent_files_menu.addAction(file_path)
+                    action.triggered.connect(lambda checked=False, fp=file_path: self._open_recent_file(fp))
+        
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Error updating recent files submenu: {str(e)}")
+    
+    def update_recent_files_menu(self):
+        """Public method to update the recent files submenu from outside the class"""
+        if hasattr(self, 'recent_files_menu'):
+            self._update_recent_files_submenu()
                     
     def _apply_menu_bar_styling(self):
         """Apply styling to menu bar for hover effects"""
@@ -531,17 +597,14 @@ class IMGFactoryMenuBar:
             self.main_window.open_img_file()
     
     def _show_recent_files(self):
-        """Show recent files menu"""
-        try:
-            # Check if the main window has a recent files system
-            if hasattr(self.main_window, 'recent_files_manager'):
-                self.main_window.recent_files_manager.show_recent_files_menu()
-            else:
-                # Create a simple recent files menu using QSettings
-                self._create_recent_files_menu()
-        except Exception as e:
-            if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Error showing recent files: {str(e)}")
+        """Update the recent files submenu (this is now handled automatically in the menu)"""
+        # This method is kept for compatibility, but the submenu is already shown in the menu
+        # Just update the submenu to reflect any changes
+        if hasattr(self, 'recent_files_menu'):
+            self._update_recent_files_submenu()
+        else:
+            # Fallback: Create a simple recent files menu using QSettings
+            self._create_recent_files_menu()
     
     def _create_recent_files_menu(self):
         """Create and show recent files submenu"""
@@ -581,21 +644,9 @@ class IMGFactoryMenuBar:
     def _open_recent_file(self, file_path):
         """Open a recent file"""
         try:
-            if hasattr(self.main_window, 'open_file_dialog'):
-                # Use the existing open functionality
-                self.main_window.open_file_dialog(file_path)
-            elif hasattr(self.main_window, '_load_img_file'):
-                # Try to load the file directly
-                self.main_window._load_img_file(file_path)
-            else:
-                # Fallback: try to use the open_img_file method with the path
-                if hasattr(self.main_window, 'open_img_file'):
-                    # Temporarily set the last opened directory
-                    import os
-                    from PyQt6.QtCore import QSettings
-                    settings = QSettings("IMG-Factory", "IMG-Factory")
-                    settings.setValue("lastOpenedDirectory", os.path.dirname(file_path))
-                    self.main_window.open_img_file(file_path)
+            # Use the detect and open file function from the core module
+            from apps.core.open import _detect_and_open_file
+            _detect_and_open_file(self.main_window, file_path)
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"❌ Error opening recent file {file_path}: {str(e)}")
@@ -1016,13 +1067,7 @@ class IMGFactoryMenuBar:
         QMessageBox.information(self.main_window, "Optimize Textures", "Texture optimization coming soon!")
 
     def _batch_export(self): #vers 1
-        """BatTraceback (most recent call last):
-  File "/home/x2/Documents/GitHub/Img Factory 1.5/./imgfactory.py", line 93, in <module>
-    from gui.gui_menu import IMGFactoryMenuBar
-  File "/home/x2/Documents/GitHub/Img Factory 1.5/gui/gui_menu.py", line 580
-    def __init__(self, main_window, pa            "txd_editor": self._open_txd_editor,nel_manager: PanelManager = None):
-                                                  ^^^^^^^^^^^^
-ch export textures"""
+        """Batch export textures"""
         QMessageBox.information(self.main_window, "Batch Export", "Batch export coming soon!")
 
     def _batch_convert(self): #vers 1
