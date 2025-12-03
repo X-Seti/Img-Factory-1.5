@@ -406,6 +406,9 @@ class IMGFactory(QMainWindow):
 
         # === PHASE 3: GUI CREATION (Medium) ===
 
+        # Integrate functionality that menu system depends on
+        integrate_sort_via_ide(self)
+
         # Create GUI layout
         self.gui_layout = IMGFactoryGUILayout(self)
         integrate_directory_tree_system(self)
@@ -457,7 +460,6 @@ class IMGFactory(QMainWindow):
         integrate_undo_system(self)
         integrate_pin_functions(self)
         integrate_inverse_selection(self)
-        integrate_sort_via_ide(self)
         integrate_advanced_img_tools(self)
 
         self.export_via = lambda: export_via_function(self)

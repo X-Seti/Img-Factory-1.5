@@ -19,4 +19,14 @@ __pycache__/
 .idea/
 *.swp
 *.swo
+
+# Dependencies
+.venv/
+venv/
+node_modules/
+
+# Build artifacts
+dist/
+build/
+target/
 ```
