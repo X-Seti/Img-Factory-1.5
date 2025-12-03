@@ -772,7 +772,26 @@ class IMGFactoryMenuBar:
     
     def _save_img_as(self):
         """Save IMG file as"""
-        QMessageBox.information(self.main_window, "Save As", "Save As functionality coming soon!")
+        try:
+            from PyQt6.QtWidgets import QFileDialog
+            if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
+                file_path, _ = QFileDialog.getSaveFileName(
+                    self.main_window, 
+                    "Save IMG As", 
+                    "", 
+                    "IMG Files (*.img);;All Files (*.*)"
+                )
+                if file_path:
+                    self.main_window.current_img.save(file_path)
+                    self.main_window.current_img.file_path = file_path  # Update file path
+                    self.main_window.log_message(f"IMG file saved as: {file_path}")
+                    # Update window title if possible
+                    if hasattr(self.main_window, 'setWindowTitle'):
+                        self.main_window.setWindowTitle(f"IMG Factory - {file_path}")
+            else:
+                QMessageBox.warning(self.main_window, "Warning", "No IMG file loaded to save")
+        except Exception as e:
+            QMessageBox.critical(self.main_window, "Save Error", f"Failed to save IMG file: {str(e)}")
     
     def _close_img_file(self):
         """Close IMG file"""
@@ -857,15 +876,259 @@ class IMGFactoryMenuBar:
     
     def _find_entries(self):
         """Find entries"""
-        QMessageBox.information(self.main_window, "Find", "Find functionality coming soon!")
+        try:
+            from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox
+            from PyQt6.QtCore import Qt
+            
+            dialog = QDialog(self.main_window)
+            dialog.setWindowTitle("Find Entries")
+            dialog.setModal(True)
+            dialog.resize(400, 150)
+            
+            layout = QVBoxLayout(dialog)
+            
+            # Search term input
+            search_layout = QHBoxLayout()
+            search_layout.addWidget(QLabel("Search for:"))
+            search_input = QLineEdit()
+            search_layout.addWidget(search_input)
+            layout.addLayout(search_layout)
+            
+            # Options
+            case_sensitive = QCheckBox("Case sensitive")
+            layout.addWidget(case_sensitive)
+            
+            match_whole_name = QCheckBox("Match whole name")
+            layout.addWidget(match_whole_name)
+            
+            # Buttons
+            button_layout = QHBoxLayout()
+            find_btn = QPushButton("Find")
+            cancel_btn = QPushButton("Cancel")
+            
+            find_btn.clicked.connect(dialog.accept)
+            cancel_btn.clicked.connect(dialog.reject)
+            
+            button_layout.addWidget(find_btn)
+            button_layout.addWidget(cancel_btn)
+            layout.addLayout(button_layout)
+            
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                search_term = search_input.text().strip()
+                if not search_term:
+                    return
+                
+                # Get the current table
+                table = getattr(self.main_window, 'img_table', None)
+                if not table:
+                    QMessageBox.warning(self.main_window, "Error", "No IMG table found")
+                    return
+                
+                # Clear current selection
+                table.clearSelection()
+                
+                # Search through entries
+                case_sensitive_flag = Qt.CaseSensitive if case_sensitive.isChecked() else Qt.CaseInsensitive
+                matches = []
+                
+                for row in range(table.rowCount()):
+                    item = table.item(row, 0)  # Assuming name is in first column
+                    if item:
+                        text = item.text()
+                        if match_whole_name.isChecked():
+                            if case_sensitive_flag == Qt.CaseSensitive:
+                                match = text == search_term
+                            else:
+                                match = text.lower() == search_term.lower()
+                        else:
+                            if case_sensitive_flag == Qt.CaseSensitive:
+                                match = search_term in text
+                            else:
+                                match = search_term.lower() in text.lower()
+                        
+                        if match:
+                            matches.append(row)
+                
+                if matches:
+                    # Select the first match
+                    table.selectRow(matches[0])
+                    table.scrollToItem(table.item(matches[0], 0))
+                    self.main_window.log_message(f"Found {len(matches)} matching entries")
+                    
+                    # Store matches for find next functionality
+                    self.main_window.current_find_matches = matches
+                    self.main_window.current_find_index = 0
+                else:
+                    QMessageBox.information(self.main_window, "Find", "No matching entries found")
+                    
+        except Exception as e:
+            self.main_window.log_message(f"Error in find entries: {str(e)}")
+            QMessageBox.critical(self.main_window, "Find Error", f"Failed to find entries: {str(e)}")
     
     def _find_next_entries(self):
         """Find next entry"""
-        QMessageBox.information(self.main_window, "Find Next", "Find Next functionality coming soon!")
+        try:
+            # Get the current table
+            table = getattr(self.main_window, 'img_table', None)
+            if not table:
+                QMessageBox.warning(self.main_window, "Error", "No IMG table found")
+                return
+            
+            # Check if we have stored matches from previous find
+            if hasattr(self.main_window, 'current_find_matches') and self.main_window.current_find_matches:
+                # Move to next match
+                current_index = getattr(self.main_window, 'current_find_index', 0)
+                next_index = (current_index + 1) % len(self.main_window.current_find_matches)
+                
+                # Update the current index
+                self.main_window.current_find_index = next_index
+                row = self.main_window.current_find_matches[next_index]
+                
+                # Select the next match
+                table.clearSelection()
+                table.selectRow(row)
+                table.scrollToItem(table.item(row, 0))
+                
+                self.main_window.log_message(f"Found next match ({next_index + 1}/{len(self.main_window.current_find_matches)})")
+            else:
+                # If no previous search, trigger the find dialog
+                self._find_entries()
+                
+        except Exception as e:
+            self.main_window.log_message(f"Error in find next entries: {str(e)}")
+            QMessageBox.critical(self.main_window, "Find Next Error", f"Failed to find next entry: {str(e)}")
     
     def _replace_entries(self):
         """Replace entries"""
-        QMessageBox.information(self.main_window, "Replace", "Replace functionality coming soon!")
+        try:
+            from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox
+            from PyQt6.QtCore import Qt
+            
+            dialog = QDialog(self.main_window)
+            dialog.setWindowTitle("Replace Entries")
+            dialog.setModal(True)
+            dialog.resize(400, 200)
+            
+            layout = QVBoxLayout(dialog)
+            
+            # Search term input
+            search_layout = QHBoxLayout()
+            search_layout.addWidget(QLabel("Find:"))
+            search_input = QLineEdit()
+            search_layout.addWidget(search_input)
+            layout.addLayout(search_layout)
+            
+            # Replace term input
+            replace_layout = QHBoxLayout()
+            replace_layout.addWidget(QLabel("Replace with:"))
+            replace_input = QLineEdit()
+            replace_layout.addWidget(replace_input)
+            layout.addLayout(replace_layout)
+            
+            # Options
+            case_sensitive = QCheckBox("Case sensitive")
+            layout.addWidget(case_sensitive)
+            
+            match_whole_name = QCheckBox("Match whole name")
+            layout.addWidget(match_whole_name)
+            
+            replace_all = QCheckBox("Replace all occurrences")
+            layout.addWidget(replace_all)
+            
+            # Buttons
+            button_layout = QHBoxLayout()
+            replace_btn = QPushButton("Replace")
+            cancel_btn = QPushButton("Cancel")
+            
+            replace_btn.clicked.connect(dialog.accept)
+            cancel_btn.clicked.connect(dialog.reject)
+            
+            button_layout.addWidget(replace_btn)
+            button_layout.addWidget(cancel_btn)
+            layout.addLayout(button_layout)
+            
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                search_term = search_input.text().strip()
+                replace_term = replace_input.text().strip()
+                
+                if not search_term:
+                    QMessageBox.warning(self.main_window, "Warning", "Please enter a search term")
+                    return
+                
+                # Get the current table
+                table = getattr(self.main_window, 'img_table', None)
+                if not table:
+                    QMessageBox.warning(self.main_window, "Error", "No IMG table found")
+                    return
+                
+                # Get the current IMG file
+                if not hasattr(self.main_window, 'current_img') or not self.main_window.current_img:
+                    QMessageBox.warning(self.main_window, "Error", "No IMG file loaded")
+                    return
+                
+                case_sensitive_flag = Qt.CaseSensitive if case_sensitive.isChecked() else Qt.CaseInsensitive
+                matches = []
+                
+                # Search through entries
+                for row in range(table.rowCount()):
+                    item = table.item(row, 0)  # Assuming name is in first column
+                    if item:
+                        text = item.text()
+                        if match_whole_name.isChecked():
+                            if case_sensitive_flag == Qt.CaseSensitive:
+                                match = text == search_term
+                            else:
+                                match = text.lower() == search_term.lower()
+                        else:
+                            if case_sensitive_flag == Qt.CaseSensitive:
+                                match = search_term in text
+                            else:
+                                match = search_term.lower() in text.lower()
+                        
+                        if match:
+                            matches.append((row, text))
+                
+                if not matches:
+                    QMessageBox.information(self.main_window, "Replace", "No matching entries found")
+                    return
+                
+                # Confirm replacement
+                reply = QMessageBox.question(
+                    self.main_window,
+                    "Confirm Replace",
+                    f"Found {len(matches)} matching entries. Replace them?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                
+                if reply == QMessageBox.StandardButton.Yes:
+                    # Perform replacement
+                    for row, original_text in matches:
+                        # Create the new text based on search and replace
+                        if match_whole_name.isChecked():
+                            new_text = replace_term
+                        else:
+                            if case_sensitive_flag == Qt.CaseSensitive:
+                                new_text = original_text.replace(search_term, replace_term)
+                            else:
+                                # For case-insensitive replacement, we need to handle it differently
+                                import re
+                                new_text = re.sub(re.escape(search_term), replace_term, original_text, flags=re.IGNORECASE)
+                        
+                        # Update the table
+                        table.item(row, 0).setText(new_text)
+                        
+                        # Update the actual entry in the IMG file
+                        if row < len(self.main_window.current_img.entries):
+                            self.main_window.current_img.entries[row].name = new_text
+                            # Update the file name in the entry
+                            table.item(row, 0).setText(new_text)
+                    
+                    self.main_window.log_message(f"Replaced {len(matches)} entries")
+                    QMessageBox.information(self.main_window, "Replace", f"Successfully replaced {len(matches)} entries")
+                    
+        except Exception as e:
+            self.main_window.log_message(f"Error in replace entries: {str(e)}")
+            QMessageBox.critical(self.main_window, "Replace Error", f"Failed to replace entries: {str(e)}")
     
     def _rename_selected_entry(self):
         """Rename selected entry"""
@@ -889,7 +1152,58 @@ class IMGFactoryMenuBar:
     
     def _duplicate_selected_entry(self):
         """Duplicate selected entry"""
-        QMessageBox.information(self.main_window, "Duplicate", "Duplicate functionality coming soon!")
+        try:
+            # Get the current table
+            table = getattr(self.main_window, 'img_table', None)
+            if not table:
+                QMessageBox.warning(self.main_window, "Error", "No IMG table found")
+                return
+            
+            # Get selected rows
+            selected_rows = [index.row() for index in table.selectionModel().selectedRows()]
+            if not selected_rows:
+                QMessageBox.warning(self.main_window, "Warning", "Please select an entry to duplicate")
+                return
+            
+            if not hasattr(self.main_window, 'current_img') or not self.main_window.current_img:
+                QMessageBox.warning(self.main_window, "Error", "No IMG file loaded")
+                return
+            
+            # For each selected entry, duplicate it
+            for row in selected_rows:
+                if row < len(self.main_window.current_img.entries):
+                    original_entry = self.main_window.current_img.entries[row]
+                    
+                    # Create a new entry by copying the original
+                    from apps.methods.img_parsing_functions import IMGEntry
+                    new_entry = IMGEntry()
+                    new_entry.name = original_entry.name + "_copy"
+                    new_entry.offset = original_entry.offset
+                    new_entry.size = original_entry.size
+                    new_entry.data = original_entry.data if hasattr(original_entry, 'data') else b''
+                    
+                    # Add the new entry to the IMG file
+                    self.main_window.current_img.entries.append(new_entry)
+                    
+                    # Add the new entry to the table
+                    row_count = table.rowCount()
+                    table.setRowCount(row_count + 1)
+                    
+                    # Add the new entry to the table (name column)
+                    table.setItem(row_count, 0, QTableWidgetItem(new_entry.name))
+                    table.setItem(row_count, 1, QTableWidgetItem(str(new_entry.size)))
+                    table.setItem(row_count, 2, QTableWidgetItem(str(new_entry.offset)))
+                    
+                    # Add data column if it exists
+                    if hasattr(new_entry, 'data'):
+                        table.setItem(row_count, 3, QTableWidgetItem(str(len(new_entry.data) if new_entry.data else 0)))
+            
+            self.main_window.log_message(f"Duplicated {len(selected_rows)} entries")
+            QMessageBox.information(self.main_window, "Duplicate", f"Successfully duplicated {len(selected_rows)} entries")
+            
+        except Exception as e:
+            self.main_window.log_message(f"Error in duplicate entry: {str(e)}")
+            QMessageBox.critical(self.main_window, "Duplicate Error", f"Failed to duplicate entry: {str(e)}")
     
     def _remove_selected_entries(self):
         """Remove selected entries"""
@@ -908,7 +1222,85 @@ class IMGFactoryMenuBar:
     
     def _change_language(self):
         """Change language"""
-        QMessageBox.information(self.main_window, "Language", "Language settings coming soon!")
+        try:
+            from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton
+            from PyQt6.QtCore import QLocale, QTranslator
+            import os
+            
+            dialog = QDialog(self.main_window)
+            dialog.setWindowTitle("Change Language")
+            dialog.setModal(True)
+            dialog.resize(300, 120)
+            
+            layout = QVBoxLayout(dialog)
+            
+            # Language selection
+            lang_layout = QHBoxLayout()
+            lang_layout.addWidget(QLabel("Select Language:"))
+            lang_combo = QComboBox()
+            
+            # Add available languages
+            lang_combo.addItem("English", "en")
+            lang_combo.addItem("Spanish", "es")
+            lang_combo.addItem("French", "fr")
+            lang_combo.addItem("German", "de")
+            lang_combo.addItem("Italian", "it")
+            lang_combo.addItem("Portuguese", "pt")
+            lang_combo.addItem("Russian", "ru")
+            lang_combo.addItem("Chinese", "zh")
+            lang_combo.addItem("Japanese", "ja")
+            
+            # Try to set current language if available
+            current_settings = getattr(self.main_window, 'app_settings', {})
+            current_lang = current_settings.get('language', 'en')
+            current_index = 0
+            for i in range(lang_combo.count()):
+                if lang_combo.itemData(i) == current_lang:
+                    current_index = i
+                    break
+            lang_combo.setCurrentIndex(current_index)
+            
+            lang_layout.addWidget(lang_combo)
+            layout.addLayout(lang_layout)
+            
+            # Buttons
+            button_layout = QHBoxLayout()
+            ok_btn = QPushButton("OK")
+            cancel_btn = QPushButton("Cancel")
+            
+            def change_language():
+                selected_lang = lang_combo.itemData(lang_combo.currentIndex())
+                
+                # Update settings
+                if hasattr(self.main_window, 'app_settings'):
+                    self.main_window.app_settings['language'] = selected_lang
+                    # Save settings to file
+                    self._save_app_settings()
+                
+                # Log the change
+                self.main_window.log_message(f"Language changed to: {selected_lang}")
+                
+                # Show message about restart requirement
+                QMessageBox.information(
+                    self.main_window, 
+                    "Language Changed", 
+                    f"Language changed to {lang_combo.currentText()}. Please restart the application for changes to take effect."
+                )
+                
+                dialog.accept()
+            
+            ok_btn.clicked.connect(change_language)
+            cancel_btn.clicked.connect(dialog.reject)
+            
+            button_layout.addWidget(ok_btn)
+            button_layout.addWidget(cancel_btn)
+            layout.addLayout(button_layout)
+            
+            dialog.exec()
+            
+        except Exception as e:
+            self.main_window.log_message(f"Error changing language: {str(e)}")
+            QMessageBox.critical(self.main_window, "Language Error", f"Failed to change language: {str(e)}")
     
     def _file_associations(self):
         """File associations"""
@@ -916,15 +1308,273 @@ class IMGFactoryMenuBar:
     
     def _default_directories(self):
         """Default directories"""
-        QMessageBox.information(self.main_window, "Default Directories", "Default directories settings coming soon!")
+        try:
+            from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QFileDialog, QGroupBox
+            import os
+            
+            dialog = QDialog(self.main_window)
+            dialog.setWindowTitle("Default Directories")
+            dialog.setModal(True)
+            dialog.resize(500, 250)
+            
+            layout = QVBoxLayout(dialog)
+            
+            # Create group for directory settings
+            dir_group = QGroupBox("Default Directories")
+            dir_layout = QVBoxLayout(dir_group)
+            
+            # Recent files directory
+            recent_layout = QHBoxLayout()
+            recent_layout.addWidget(QLabel("Recent Files:"))
+            self.recent_dir_input = QLineEdit()
+            recent_btn = QPushButton("Browse...")
+            
+            # Load current setting if available
+            current_settings = getattr(self.main_window, 'app_settings', {})
+            recent_dir = current_settings.get('recent_dir', os.path.expanduser("~"))
+            self.recent_dir_input.setText(recent_dir)
+            
+            def browse_recent_dir():
+                directory = QFileDialog.getExistingDirectory(
+                    dialog, "Select Recent Files Directory", recent_dir
+                )
+                if directory:
+                    self.recent_dir_input.setText(directory)
+            
+            recent_btn.clicked.connect(browse_recent_dir)
+            recent_layout.addWidget(self.recent_dir_input)
+            recent_layout.addWidget(recent_btn)
+            dir_layout.addLayout(recent_layout)
+            
+            # IMG files directory
+            img_layout = QHBoxLayout()
+            img_layout.addWidget(QLabel("IMG Files:"))
+            self.img_dir_input = QLineEdit()
+            img_btn = QPushButton("Browse...")
+            
+            img_dir = current_settings.get('img_dir', os.path.expanduser("~"))
+            self.img_dir_input.setText(img_dir)
+            
+            def browse_img_dir():
+                directory = QFileDialog.getExistingDirectory(
+                    dialog, "Select IMG Files Directory", img_dir
+                )
+                if directory:
+                    self.img_dir_input.setText(directory)
+            
+            img_btn.clicked.connect(browse_img_dir)
+            img_layout.addWidget(self.img_dir_input)
+            img_layout.addWidget(img_btn)
+            dir_layout.addLayout(img_layout)
+            
+            # Export directory
+            export_layout = QHBoxLayout()
+            export_layout.addWidget(QLabel("Export:"))
+            self.export_dir_input = QLineEdit()
+            export_btn = QPushButton("Browse...")
+            
+            export_dir = current_settings.get('export_dir', os.path.expanduser("~/Documents"))
+            self.export_dir_input.setText(export_dir)
+            
+            def browse_export_dir():
+                directory = QFileDialog.getExistingDirectory(
+                    dialog, "Select Export Directory", export_dir
+                )
+                if directory:
+                    self.export_dir_input.setText(directory)
+            
+            export_btn.clicked.connect(browse_export_dir)
+            export_layout.addWidget(self.export_dir_input)
+            export_layout.addWidget(export_btn)
+            dir_layout.addLayout(export_layout)
+            
+            layout.addWidget(dir_group)
+            
+            # Buttons
+            button_layout = QHBoxLayout()
+            ok_btn = QPushButton("OK")
+            cancel_btn = QPushButton("Cancel")
+            
+            def save_directories():
+                # Update settings
+                if hasattr(self.main_window, 'app_settings'):
+                    self.main_window.app_settings['recent_dir'] = self.recent_dir_input.text()
+                    self.main_window.app_settings['img_dir'] = self.img_dir_input.text()
+                    self.main_window.app_settings['export_dir'] = self.export_dir_input.text()
+                    # Save settings to file
+                    self._save_app_settings()
+                
+                self.main_window.log_message("Default directories updated")
+                dialog.accept()
+            
+            ok_btn.clicked.connect(save_directories)
+            cancel_btn.clicked.connect(dialog.reject)
+            
+            button_layout.addWidget(ok_btn)
+            button_layout.addWidget(cancel_btn)
+            layout.addLayout(button_layout)
+            
+            dialog.exec()
+            
+        except Exception as e:
+            self.main_window.log_message(f"Error setting default directories: {str(e)}")
+            QMessageBox.critical(self.main_window, "Directory Error", f"Failed to set default directories: {str(e)}")
     
     def _performance_settings(self):
         """Performance settings"""
-        QMessageBox.information(self.main_window, "Performance", "Performance settings coming soon!")
+        try:
+            from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QCheckBox, QPushButton, QGroupBox
+            import os
+            
+            dialog = QDialog(self.main_window)
+            dialog.setWindowTitle("Performance Settings")
+            dialog.setModal(True)
+            dialog.resize(450, 350)
+            
+            layout = QVBoxLayout(dialog)
+            
+            # Memory settings group
+            memory_group = QGroupBox("Memory Settings")
+            memory_layout = QVBoxLayout(memory_group)
+            
+            # Maximum memory usage
+            max_memory_layout = QHBoxLayout()
+            max_memory_layout.addWidget(QLabel("Max Memory (MB):"))
+            self.max_memory_spin = QSpinBox()
+            self.max_memory_spin.setRange(64, 8192)  # 64MB to 8GB
+            self.max_memory_spin.setSingleStep(64)
+            self.max_memory_spin.setValue(1024)  # Default 1GB
+            
+            # Load current setting if available
+            current_settings = getattr(self.main_window, 'app_settings', {})
+            current_max_memory = current_settings.get('max_memory', 1024)
+            self.max_memory_spin.setValue(current_max_memory)
+            
+            max_memory_layout.addWidget(self.max_memory_spin)
+            memory_layout.addLayout(max_memory_layout)
+            
+            # Memory buffer size
+            buffer_layout = QHBoxLayout()
+            buffer_layout.addWidget(QLabel("Buffer Size (MB):"))
+            self.buffer_size_spin = QSpinBox()
+            self.buffer_size_spin.setRange(16, 512)  # 16MB to 512MB
+            self.buffer_size_spin.setSingleStep(16)
+            self.buffer_size_spin.setValue(128)  # Default 128MB
+            
+            current_buffer_size = current_settings.get('buffer_size', 128)
+            self.buffer_size_spin.setValue(current_buffer_size)
+            
+            buffer_layout.addWidget(self.buffer_size_spin)
+            memory_layout.addLayout(buffer_layout)
+            
+            layout.addWidget(memory_group)
+            
+            # Processing settings group
+            process_group = QGroupBox("Processing Settings")
+            process_layout = QVBoxLayout(process_group)
+            
+            # Parallel processing
+            self.parallel_processing_check = QCheckBox("Enable Parallel Processing")
+            current_parallel = current_settings.get('parallel_processing', True)
+            self.parallel_processing_check.setChecked(current_parallel)
+            process_layout.addWidget(self.parallel_processing_check)
+            
+            # Thread count
+            thread_layout = QHBoxLayout()
+            thread_layout.addWidget(QLabel("Processing Threads:"))
+            self.thread_count_spin = QSpinBox()
+            self.thread_count_spin.setRange(1, 16)
+            self.thread_count_spin.setSingleStep(1)
+            
+            current_threads = current_settings.get('thread_count', 4)
+            self.thread_count_spin.setValue(current_threads)
+            
+            thread_layout.addWidget(self.thread_count_spin)
+            process_layout.addLayout(thread_layout)
+            
+            # Large file handling
+            self.large_file_check = QCheckBox("Optimize for Large Files")
+            current_large_file = current_settings.get('large_file_optimization', False)
+            self.large_file_check.setChecked(current_large_file)
+            process_layout.addWidget(self.large_file_check)
+            
+            layout.addWidget(process_group)
+            
+            # Buttons
+            button_layout = QHBoxLayout()
+            ok_btn = QPushButton("OK")
+            cancel_btn = QPushButton("Cancel")
+            
+            def save_performance_settings():
+                # Update settings
+                if hasattr(self.main_window, 'app_settings'):
+                    self.main_window.app_settings['max_memory'] = self.max_memory_spin.value()
+                    self.main_window.app_settings['buffer_size'] = self.buffer_size_spin.value()
+                    self.main_window.app_settings['parallel_processing'] = self.parallel_processing_check.isChecked()
+                    self.main_window.app_settings['thread_count'] = self.thread_count_spin.value()
+                    self.main_window.app_settings['large_file_optimization'] = self.large_file_check.isChecked()
+                    # Save settings to file
+                    self._save_app_settings()
+                
+                self.main_window.log_message("Performance settings updated")
+                dialog.accept()
+            
+            ok_btn.clicked.connect(save_performance_settings)
+            cancel_btn.clicked.connect(dialog.reject)
+            
+            button_layout.addWidget(ok_btn)
+            button_layout.addWidget(cancel_btn)
+            layout.addLayout(button_layout)
+            
+            dialog.exec()
+            
+        except Exception as e:
+            self.main_window.log_message(f"Error setting performance settings: {str(e)}")
+            QMessageBox.critical(self.main_window, "Performance Error", f"Failed to set performance settings: {str(e)}")
     
     def _reset_settings(self):
         """Reset settings"""
-        QMessageBox.information(self.main_window, "Reset Settings", "Reset settings coming soon!")
+        try:
+            reply = QMessageBox.question(
+                self.main_window,
+                "Reset Settings",
+                "Are you sure you want to reset all settings to default values?\nThis action cannot be undone.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                # Reset to default settings
+                default_settings = {
+                    'language': 'en',
+                    'recent_dir': '',
+                    'img_dir': '',
+                    'export_dir': '',
+                    'max_memory': 1024,
+                    'buffer_size': 128,
+                    'parallel_processing': True,
+                    'thread_count': 4,
+                    'large_file_optimization': False,
+                    'window_size': [1200, 800],
+                    'window_position': [100, 100],
+                    'recent_files': []
+                }
+                
+                # Update the main window settings
+                if hasattr(self.main_window, 'app_settings'):
+                    self.main_window.app_settings = default_settings
+                    # Save settings to file
+                    self._save_app_settings()
+                
+                self.main_window.log_message("Settings have been reset to defaults")
+                QMessageBox.information(
+                    self.main_window, 
+                    "Settings Reset", 
+                    "All settings have been reset to their default values."
+                )
+            
+        except Exception as e:
+            self.main_window.log_message(f"Error resetting settings: {str(e)}")
+            QMessageBox.critical(self.main_window, "Reset Error", f"Failed to reset settings: {str(e)}")
 
 
 
