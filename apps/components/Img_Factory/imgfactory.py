@@ -1188,7 +1188,645 @@ class IMGFactory(QMainWindow):
         self.has_txd = lambda name: name.lower().endswith('.txd') if name else False
         self.get_entry_type = lambda name: name.split('.')[-1].upper() if name and '.' in name else "Unknown"
 
+        # Add missing functions for menu system
+        self.save_img_as = self._save_img_as
+        self.find_entries = self._find_entries
+        self.find_next_entries = self._find_next_entries
+        self.replace_entries = self._replace_entries
+        self.duplicate_selected = self._duplicate_selected
+        self.rename_entry = self._rename_entry
+        self.rename_selected = self._rename_selected
+        self.remove_selected = self._remove_selected_entries
+        self.select_inverse_entries = self._select_inverse_entries
+        self.undo = self._undo_action
+        self.redo = self._redo_action
+
         self.log_message("Missing utility functions added")
+
+    def _save_img_as(self):
+        """Save IMG file as a new file"""
+        try:
+            if not hasattr(self, 'current_img') or not self.current_img:
+                QMessageBox.warning(self, "Save As", "No IMG file loaded to save.")
+                return False
+
+            # Get file path from user
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save IMG As",
+                "",
+                "IMG Files (*.img);;All Files (*.*)"
+            )
+
+            if file_path:
+                # Ensure file has .img extension
+                if not file_path.lower().endswith('.img'):
+                    file_path += '.img'
+
+                try:
+                    # Save the IMG file
+                    if hasattr(self.current_img, 'save_to_path'):
+                        success = self.current_img.save_to_path(file_path)
+                    elif hasattr(self.current_img, 'save'):
+                        # Temporarily change the file path and save
+                        original_path = getattr(self.current_img, 'file_path', None)
+                        self.current_img.file_path = file_path
+                        success = self.current_img.save()
+                        self.current_img.file_path = original_path
+                    else:
+                        # Create a new IMG file and copy entries
+                        from apps.methods.img_core_classes import IMGFile
+                        new_img = IMGFile(file_path)
+                        new_img.entries = self.current_img.entries[:]
+                        success = new_img.save()
+
+                    if success:
+                        self.log_message(f"IMG file saved as: {file_path}")
+                        QMessageBox.information(self, "Save As", f"File saved successfully as:\n{file_path}")
+                        return True
+                    else:
+                        QMessageBox.critical(self, "Save As", "Failed to save IMG file.")
+                        return False
+
+                except Exception as e:
+                    QMessageBox.critical(self, "Save As", f"Error saving file:\n{str(e)}")
+                    return False
+            else:
+                # User cancelled
+                return False
+
+        except Exception as e:
+            self.log_message(f"Error in save_img_as: {str(e)}")
+            QMessageBox.critical(self, "Save As Error", f"Failed to save IMG file:\n{str(e)}")
+            return False
+
+    def _find_entries(self):
+        """Find entries in the table"""
+        try:
+            # Show find dialog
+            from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QLabel
+            from PyQt6.QtCore import Qt
+            
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Find Entries")
+            dialog.setModal(True)
+            dialog.resize(400, 120)
+            
+            layout = QVBoxLayout(dialog)
+            
+            # Search input
+            search_layout = QHBoxLayout()
+            search_label = QLabel("Find what:")
+            search_input = QLineEdit()
+            search_layout.addWidget(search_label)
+            search_layout.addWidget(search_input)
+            layout.addLayout(search_layout)
+            
+            # Options
+            options_layout = QHBoxLayout()
+            case_sensitive = QPushButton("Aa")
+            case_sensitive.setCheckable(True)
+            case_sensitive.setToolTip("Case sensitive")
+            regex_mode = QPushButton(".*")
+            regex_mode.setCheckable(True)
+            regex_mode.setToolTip("Regular expression")
+            options_layout.addWidget(case_sensitive)
+            options_layout.addWidget(regex_mode)
+            layout.addLayout(options_layout)
+            
+            # Buttons
+            button_layout = QHBoxLayout()
+            find_btn = QPushButton("Find Next")
+            find_btn.clicked.connect(lambda: self._perform_find(search_input.text(), case_sensitive.isChecked(), regex_mode.isChecked()))
+            cancel_btn = QPushButton("Cancel")
+            cancel_btn.clicked.connect(dialog.reject)
+            button_layout.addWidget(find_btn)
+            button_layout.addWidget(cancel_btn)
+            layout.addLayout(button_layout)
+            
+            # Set focus to search input
+            search_input.setFocus()
+            
+            # Enter key to find next
+            search_input.returnPressed.connect(find_btn.click)
+            
+            dialog.exec()
+            
+        except Exception as e:
+            self.log_message(f"Error in find_entries: {str(e)}")
+
+    def _perform_find(self, search_text, case_sensitive, regex_mode):
+        """Perform the actual find operation"""
+        try:
+            if not search_text or not hasattr(self, 'gui_layout') or not hasattr(self.gui_layout, 'table'):
+                return
+
+            table = self.gui_layout.table
+            current_row = table.currentRow()
+            current_col = table.currentColumn()
+            
+            if current_row < 0:
+                current_row = 0
+                current_col = 0
+
+            # Determine search range (start from next cell)
+            start_row = current_row
+            start_col = current_col + 1
+            
+            # If we're at the end of the row, go to next row
+            if start_col >= table.columnCount():
+                start_row += 1
+                start_col = 0
+            
+            # Search from current position to end of table
+            for row in range(start_row, table.rowCount()):
+                for col in range(start_col if row == start_row else 0, table.columnCount()):
+                    item = table.item(row, col)
+                    if item:
+                        text = item.text()
+                        
+                        # Perform search based on mode
+                        match = False
+                        if regex_mode:
+                            import re
+                            flags = 0 if case_sensitive else re.IGNORECASE
+                            try:
+                                match = bool(re.search(search_text, text, flags))
+                            except re.error:
+                                QMessageBox.warning(self, "Find", "Invalid regular expression")
+                                return
+                        else:
+                            if case_sensitive:
+                                match = search_text in text
+                            else:
+                                match = search_text.lower() in text.lower()
+                        
+                        if match:
+                            # Select and scroll to the found item
+                            table.setCurrentItem(item)
+                            table.scrollToItem(item)
+                            self.log_message(f"Found '{search_text}' at row {row}, column {col}")
+                            return
+                
+                # Reset start_col for subsequent rows
+                start_col = 0
+
+            # If not found, wrap around and search from beginning
+            for row in range(0, start_row + 1):
+                for col in range(0, table.columnCount()):
+                    # Skip items we already checked
+                    if row == start_row and col < (start_col if row == start_row else 0):
+                        continue
+                    
+                    item = table.item(row, col)
+                    if item:
+                        text = item.text()
+                        
+                        # Perform search based on mode
+                        match = False
+                        if regex_mode:
+                            import re
+                            flags = 0 if case_sensitive else re.IGNORECASE
+                            try:
+                                match = bool(re.search(search_text, text, flags))
+                            except re.error:
+                                QMessageBox.warning(self, "Find", "Invalid regular expression")
+                                return
+                        else:
+                            if case_sensitive:
+                                match = search_text in text
+                            else:
+                                match = search_text.lower() in text.lower()
+                        
+                        if match:
+                            # Select and scroll to the found item
+                            table.setCurrentItem(item)
+                            table.scrollToItem(item)
+                            self.log_message(f"Found '{search_text}' at row {row}, column {col}")
+                            return
+
+            # Not found anywhere
+            QMessageBox.information(self, "Find", f"'{search_text}' not found in table.")
+            
+        except Exception as e:
+            self.log_message(f"Error in perform_find: {str(e)}")
+
+    def _find_next_entries(self):
+        """Find next entry (just calls the same find functionality)"""
+        # This would typically continue the search from the last found position
+        # For now, we'll just show the find dialog again
+        self._find_entries()
+
+    def _replace_entries(self):
+        """Replace entries in the table"""
+        try:
+            from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QLabel, QCheckBox
+            from PyQt6.QtCore import Qt
+            
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Replace Entries")
+            dialog.setModal(True)
+            dialog.resize(400, 180)
+            
+            layout = QVBoxLayout(dialog)
+            
+            # Find input
+            find_layout = QHBoxLayout()
+            find_label = QLabel("Find what:")
+            find_input = QLineEdit()
+            find_layout.addWidget(find_label)
+            find_layout.addWidget(find_input)
+            layout.addLayout(find_layout)
+            
+            # Replace input
+            replace_layout = QHBoxLayout()
+            replace_label = QLabel("Replace with:")
+            replace_input = QLineEdit()
+            replace_layout.addWidget(replace_label)
+            replace_layout.addWidget(replace_input)
+            layout.addLayout(replace_layout)
+            
+            # Options
+            options_layout = QHBoxLayout()
+            case_sensitive = QCheckBox("Case sensitive")
+            regex_mode = QCheckBox("Regular expression")
+            options_layout.addWidget(case_sensitive)
+            options_layout.addWidget(regex_mode)
+            layout.addLayout(options_layout)
+            
+            # Buttons
+            button_layout = QHBoxLayout()
+            replace_btn = QPushButton("Replace")
+            replace_all_btn = QPushButton("Replace All")
+            cancel_btn = QPushButton("Cancel")
+            
+            replace_btn.clicked.connect(lambda: self._perform_replace(find_input.text(), replace_input.text(), 
+                                                                     case_sensitive.isChecked(), regex_mode.isChecked(), False))
+            replace_all_btn.clicked.connect(lambda: self._perform_replace(find_input.text(), replace_input.text(), 
+                                                                         case_sensitive.isChecked(), regex_mode.isChecked(), True))
+            cancel_btn.clicked.connect(dialog.reject)
+            
+            button_layout.addWidget(replace_btn)
+            button_layout.addWidget(replace_all_btn)
+            button_layout.addWidget(cancel_btn)
+            layout.addLayout(button_layout)
+            
+            # Set focus to find input
+            find_input.setFocus()
+            
+            dialog.exec()
+            
+        except Exception as e:
+            self.log_message(f"Error in replace_entries: {str(e)}")
+
+    def _perform_replace(self, find_text, replace_text, case_sensitive, regex_mode, replace_all):
+        """Perform the actual replace operation"""
+        try:
+            if not find_text or not hasattr(self, 'gui_layout') or not hasattr(self.gui_layout, 'table'):
+                return
+
+            table = self.gui_layout.table
+            replacements = 0
+            
+            for row in range(table.rowCount()):
+                for col in range(table.columnCount()):
+                    item = table.item(row, col)
+                    if item:
+                        original_text = item.text()
+                        new_text = original_text
+                        
+                        # Perform replacement based on mode
+                        if regex_mode:
+                            import re
+                            flags = 0 if case_sensitive else re.IGNORECASE
+                            try:
+                                if replace_all:
+                                    new_text = re.sub(find_text, replace_text, original_text, flags=flags)
+                                else:
+                                    # Replace only first occurrence
+                                    new_text = re.sub(find_text, replace_text, original_text, count=1, flags=flags)
+                            except re.error:
+                                QMessageBox.warning(self, "Replace", "Invalid regular expression")
+                                return
+                        else:
+                            if case_sensitive:
+                                if replace_all:
+                                    new_text = original_text.replace(find_text, replace_text)
+                                else:
+                                    # Replace only first occurrence
+                                    idx = original_text.find(find_text)
+                                    if idx != -1:
+                                        new_text = (original_text[:idx] + replace_text + 
+                                                   original_text[idx + len(find_text):])
+                            else:
+                                # Case insensitive replacement - more complex
+                                if replace_all:
+                                    # This is a simplified case-insensitive replacement
+                                    temp_text = original_text
+                                    start = 0
+                                    while True:
+                                        idx = temp_text.lower().find(find_text.lower(), start)
+                                        if idx == -1:
+                                            break
+                                        temp_text = (temp_text[:idx] + replace_text + 
+                                                    temp_text[idx + len(find_text):])
+                                        start = idx + len(replace_text)
+                                        if not replace_all:  # Only replace first if not replace_all
+                                            break
+                                    new_text = temp_text
+                                else:
+                                    # Replace only first occurrence (case-insensitive)
+                                    idx = original_text.lower().find(find_text.lower())
+                                    if idx != -1:
+                                        new_text = (original_text[:idx] + replace_text + 
+                                                   original_text[idx + len(find_text):])
+                        
+                        if new_text != original_text:
+                            item.setText(new_text)
+                            replacements += 1
+                            if not replace_all:
+                                # Select and scroll to the replaced item
+                                table.setCurrentItem(item)
+                                table.scrollToItem(item)
+                                break
+                if not replace_all and replacements > 0:
+                    break
+            
+            if replacements > 0:
+                self.log_message(f"Replaced {replacements} occurrence(s)")
+                QMessageBox.information(self, "Replace", f"Replaced {replacements} occurrence(s).")
+            else:
+                self.log_message("No replacements made")
+                QMessageBox.information(self, "Replace", "No matches found.")
+                
+        except Exception as e:
+            self.log_message(f"Error in perform_replace: {str(e)}")
+
+    def _duplicate_selected(self):
+        """Duplicate selected entries"""
+        try:
+            if not hasattr(self, 'gui_layout') or not hasattr(self.gui_layout, 'table'):
+                QMessageBox.warning(self, "Duplicate", "Table not available.")
+                return
+
+            table = self.gui_layout.table
+            selected_items = table.selectedItems()
+            
+            if not selected_items:
+                QMessageBox.information(self, "Duplicate", "Please select entries to duplicate.")
+                return
+
+            # Get selected rows
+            selected_rows = list(set(item.row() for item in selected_items))
+            
+            if not hasattr(self, 'current_img') or not self.current_img:
+                QMessageBox.warning(self, "Duplicate", "No IMG file loaded.")
+                return
+
+            # Duplicate the selected entries
+            duplicated_count = 0
+            for row in selected_rows:
+                if row < len(self.current_img.entries):
+                    original_entry = self.current_img.entries[row]
+                    
+                    # Create a copy of the entry
+                    from apps.methods.img_core_classes import IMGEntry
+                    new_entry = IMGEntry()
+                    new_entry.name = original_entry.name + "_copy"
+                    new_entry.size = original_entry.size
+                    new_entry.offset = original_entry.offset
+                    new_entry.data = getattr(original_entry, 'data', b'')  # Copy data if available
+                    
+                    # Add to IMG file
+                    self.current_img.entries.append(new_entry)
+                    duplicated_count += 1
+
+            # Refresh the table to show new entries
+            if hasattr(self, 'reload_current_file'):
+                self.reload_current_file()
+            elif hasattr(self, 'populate_img_table'):
+                self.populate_img_table()
+
+            self.log_message(f"Duplicated {duplicated_count} entry(ies)")
+            QMessageBox.information(self, "Duplicate", f"Duplicated {duplicated_count} entry(ies).")
+            
+        except Exception as e:
+            self.log_message(f"Error in duplicate_selected: {str(e)}")
+            QMessageBox.critical(self, "Duplicate Error", f"Failed to duplicate entries:\n{str(e)}")
+
+    def _rename_entry(self):
+        """Rename entry (for menu system)"""
+        self._rename_selected()
+
+    def _rename_selected(self):
+        """Rename selected entry"""
+        try:
+            if not hasattr(self, 'gui_layout') or not hasattr(self.gui_layout, 'table'):
+                QMessageBox.warning(self, "Rename", "Table not available.")
+                return
+
+            table = self.gui_layout.table
+            selected_items = table.selectedItems()
+            
+            if not selected_items:
+                QMessageBox.information(self, "Rename", "Please select an entry to rename.")
+                return
+
+            # Get the first selected row (use the row of the first selected item)
+            row = selected_items[0].row()
+            
+            if not hasattr(self, 'current_img') or not self.current_img:
+                QMessageBox.warning(self, "Rename", "No IMG file loaded.")
+                return
+
+            if row >= len(self.current_img.entries):
+                QMessageBox.warning(self, "Rename", "Selected row is out of range.")
+                return
+
+            # Get current entry name
+            current_entry = self.current_img.entries[row]
+            current_name = current_entry.name
+
+            # Show input dialog for new name
+            new_name, ok = QInputDialog.getText(
+                self,
+                "Rename Entry",
+                f"Enter new name for '{current_name}':",
+                text=current_name
+            )
+
+            if ok and new_name and new_name != current_name:
+                # Validate the new name
+                if self._validate_entry_name(new_name):
+                    # Check for duplicates
+                    if not self._check_duplicate_name(new_name, current_entry):
+                        # Perform the rename
+                        current_entry.name = new_name
+                        
+                        # Update the table display
+                        name_item = table.item(row, 0)  # Assuming name is in column 0
+                        if name_item:
+                            name_item.setText(new_name)
+
+                        # Mark as modified
+                        if hasattr(self.current_img, 'modified'):
+                            self.current_img.modified = True
+
+                        self.log_message(f"Renamed '{current_name}' to '{new_name}'")
+                        QMessageBox.information(self, "Rename Successful", 
+                                              f"Successfully renamed to '{new_name}'")
+                    else:
+                        QMessageBox.warning(self, "Duplicate Name", 
+                                          f"An entry named '{new_name}' already exists")
+                else:
+                    QMessageBox.warning(self, "Invalid Name", 
+                                      "The name provided is invalid")
+                    
+        except Exception as e:
+            self.log_message(f"Error in rename_selected: {str(e)}")
+            QMessageBox.critical(self, "Rename Error", f"Failed to rename entry:\n{str(e)}")
+
+    def _validate_entry_name(self, name):
+        """Validate entry name for IMG file"""
+        try:
+            # Check for empty name
+            if not name or not name.strip():
+                return False
+            
+            # Check for invalid characters
+            invalid_chars = '<>:"/\\|?*'
+            if any(char in name for char in invalid_chars):
+                return False
+            
+            # Check length (IMG entries typically have 24 char limit)
+            if len(name) > 24:
+                return False
+            
+            return True
+        except:
+            return False
+
+    def _check_duplicate_name(self, new_name, current_entry):
+        """Check if new name would create duplicate"""
+        try:
+            if hasattr(self, 'current_img') and self.current_img:
+                for entry in self.current_img.entries:
+                    if entry != current_entry and getattr(entry, 'name', '') == new_name:
+                        return True
+            return False
+        except:
+            return True  # Return True on error to be safe
+
+    def _remove_selected_entries(self):
+        """Remove selected entries from IMG file"""
+        try:
+            if not hasattr(self, 'gui_layout') or not hasattr(self.gui_layout, 'table'):
+                QMessageBox.warning(self, "Remove", "Table not available.")
+                return
+
+            table = self.gui_layout.table
+            selected_items = table.selectedItems()
+            
+            if not selected_items:
+                QMessageBox.information(self, "Remove", "Please select entries to remove.")
+                return
+
+            # Get selected rows
+            selected_rows = sorted(set(item.row() for item in selected_items), reverse=True)  # Reverse order for safe deletion
+            
+            if not hasattr(self, 'current_img') or not self.current_img:
+                QMessageBox.warning(self, "Remove", "No IMG file loaded.")
+                return
+
+            # Confirm removal
+            reply = QMessageBox.question(
+                self,
+                "Remove Entries",
+                f"Remove {len(selected_rows)} selected entry(ies)?\n\n"
+                f"This action cannot be undone.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+
+            if reply == QMessageBox.StandardButton.Yes:
+                # Remove entries in reverse order to maintain correct indices
+                removed_count = 0
+                for row in selected_rows:
+                    if row < len(self.current_img.entries):
+                        del self.current_img.entries[row]
+                        removed_count += 1
+
+                # Refresh the table to reflect changes
+                if hasattr(self, 'reload_current_file'):
+                    self.reload_current_file()
+                elif hasattr(self, 'populate_img_table'):
+                    self.populate_img_table()
+
+                self.log_message(f"Removed {removed_count} entry(ies)")
+                QMessageBox.information(self, "Remove", f"Removed {removed_count} entry(ies).")
+                
+        except Exception as e:
+            self.log_message(f"Error in remove_selected_entries: {str(e)}")
+            QMessageBox.critical(self, "Remove Error", f"Failed to remove entries:\n{str(e)}")
+
+    def _select_inverse_entries(self):
+        """Invert the current selection"""
+        try:
+            if not hasattr(self, 'gui_layout') or not hasattr(self.gui_layout, 'table'):
+                return
+
+            table = self.gui_layout.table
+            all_selected = []
+            
+            # Get all currently selected items
+            for row in range(table.rowCount()):
+                for col in range(table.columnCount()):
+                    item = table.item(row, col)
+                    if item and item.isSelected():
+                        all_selected.append((row, col))
+            
+            # Clear current selection
+            table.clearSelection()
+            
+            # Select all items that were NOT selected
+            for row in range(table.rowCount()):
+                for col in range(table.columnCount()):
+                    item = table.item(row, col)
+                    if item and (row, col) not in all_selected:
+                        item.setSelected(True)
+            
+            self.log_message("Selection inverted")
+            
+        except Exception as e:
+            self.log_message(f"Error in select_inverse_entries: {str(e)}")
+
+    def _undo_action(self):
+        """Undo last action"""
+        # Try to use undo system if available
+        if hasattr(self, 'undo_manager') and hasattr(self.undo_manager, 'undo'):
+            try:
+                self.undo_manager.undo()
+                self.log_message("Undo operation performed")
+            except Exception as e:
+                self.log_message(f"Undo failed: {str(e)}")
+                QMessageBox.information(self, "Undo", f"Undo operation failed:\n{str(e)}")
+        else:
+            self.log_message("No undo operations available")
+            QMessageBox.information(self, "Undo", "No undo operations available")
+
+    def _redo_action(self):
+        """Redo last action"""
+        # Try to use undo system if available
+        if hasattr(self, 'undo_manager') and hasattr(self.undo_manager, 'redo'):
+            try:
+                self.undo_manager.redo()
+                self.log_message("Redo operation performed")
+            except Exception as e:
+                self.log_message(f"Redo failed: {str(e)}")
+                QMessageBox.information(self, "Redo", f"Redo operation failed:\n{str(e)}")
+        else:
+            self.log_message("No redo operations available")
+            QMessageBox.information(self, "Redo", "No redo operations available")
 
 
     # INTEGRATION FIX for imgfactory.py:
