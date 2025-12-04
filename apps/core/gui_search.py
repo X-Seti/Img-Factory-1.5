@@ -35,11 +35,11 @@ class SearchManager:
             # Setup keyboard shortcuts
             self._setup_shortcuts()
             
-            self.main_window.log_message("✅ Search functionality setup complete")
+            self.main_window.log_message("Search functionality setup complete")
             return True
             
         except Exception as e:
-            self.main_window.log_message(f"❌ Search setup error: {e}")
+            self.main_window.log_message(f"Search setup error: {e}")
             return False
     
     def _connect_search_input(self):
@@ -58,9 +58,9 @@ class SearchManager:
             search_input.textChanged.connect(self._on_search_text_changed)
             search_input.returnPressed.connect(self._perform_live_search)
             
-            self.main_window.log_message("✅ Search input connected")
+            self.main_window.log_message("Search input connected")
         else:
-            self.main_window.log_message("⚠️ Search input not found")
+            self.main_window.log_message("Search input not found")
     
     def _find_search_input(self):
         """Find search input widget in various locations"""
@@ -111,7 +111,7 @@ class SearchManager:
             self.perform_search(search_text, options)
             
         except Exception as e:
-            self.main_window.log_message(f"❌ Live search error: {e}")
+            self.main_window.log_message(f"Live search error: {e}")
     
     def _get_search_text(self):
         """Get current search text"""
@@ -153,16 +153,16 @@ class SearchManager:
             
             # Log results
             if matches:
-                self.main_window.log_message(f"🔍 Found {len(matches)} matches for '{search_text}'")
+                self.main_window.log_message(f"Found {len(matches)} matches for '{search_text}'")
                 if matches:
                     self._select_first_match()
             else:
-                self.main_window.log_message(f"🔍 No matches found for '{search_text}'")
+                self.main_window.log_message(f"No matches found for '{search_text}'")
             
             return matches
             
         except Exception as e:
-            self.main_window.log_message(f"❌ Search error: {e}")
+            self.main_window.log_message(f"Search error: {e}")
             return []
     
     def _find_matches(self, search_text, options):
@@ -304,7 +304,7 @@ class SearchManager:
                     table.selectRow(row)
             
         except Exception as e:
-            self.main_window.log_message(f"❌ Highlight error: {e}")
+            self.main_window.log_message(f"Highlight error: {e}")
     
     def _select_first_match(self):
         """Select and scroll to first match"""
@@ -316,7 +316,7 @@ class SearchManager:
                     table.scrollToItem(table.item(first_match, 0))
                     self.current_match_index = 0
         except Exception as e:
-            self.main_window.log_message(f"❌ Select first match error: {e}")
+            self.main_window.log_message(f"Select first match error: {e}")
     
     def _clear_search(self):
         """Clear search results"""
@@ -328,7 +328,7 @@ class SearchManager:
             self.current_match_index = -1
             
         except Exception as e:
-            self.main_window.log_message(f"❌ Clear search error: {e}")
+            self.main_window.log_message(f"Clear search error: {e}")
     
     def find_next(self):
         """Find next match"""
@@ -380,7 +380,7 @@ class SearchManager:
                     )
                     
         except Exception as e:
-            self.main_window.log_message(f"❌ Jump to match error: {e}")
+            self.main_window.log_message(f"Jump to match error: {e}")
     
     def show_search_dialog(self):
         """Show advanced search dialog"""
@@ -390,7 +390,7 @@ class SearchManager:
             dialog.exec()
             
         except Exception as e:
-            self.main_window.log_message(f"❌ Search dialog error: {e}")
+            self.main_window.log_message(f"Search dialog error: {e}")
 
 
 class ASearchDialog(QDialog):

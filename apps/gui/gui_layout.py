@@ -1166,35 +1166,6 @@ class IMGFactoryGUILayout:
         options_box.setLayout(options_layout)
         right_layout.addWidget(options_box)
 
-        # Filter Section
-        filter_box = QGroupBox("Filter & Search")
-        filter_layout = QVBoxLayout()
-        filter_layout.setSpacing(4)
-
-        # Filter controls
-        filter_controls = QHBoxLayout()
-        filter_combo = QComboBox()
-        filter_combo.addItems(["All Files", "DFF Models", "TXD Textures", "COL Collision", "IFP Animations"])
-        filter_controls.addWidget(QLabel("Type:"))
-        filter_controls.addWidget(filter_combo)
-        filter_layout.addLayout(filter_controls)
-
-        # Store filter_combo as attribute so search manager can access it
-        self.filter_combo = filter_combo
-
-        search_controls = QHBoxLayout()
-        search_input = QLineEdit()
-        search_input.setPlaceholderText("Search filename...")
-        search_controls.addWidget(QLabel("Search:"))
-        search_controls.addWidget(search_input)
-        filter_layout.addLayout(search_controls)
-        
-        # Store search_input as attribute so search manager can access it
-        self.search_input = search_input
-
-        filter_box.setLayout(filter_layout)
-        right_layout.addWidget(filter_box)
-
         # Add stretch to push everything up
         right_layout.addStretch()
         return right_panel
