@@ -857,9 +857,3 @@ class GUISettingsDialog(QDialog):
             self.individual_tab_height_spin.setValue(32)
             self.tab_font_size_spin.setValue(11)
             self.tab_padding_spin.setValue(8)
-
-    def _save_and_close(self):
-        """Save settings and close dialog"""
-        self._save_settings()
-        self.settings_changed.emit()
-        self.accept()
