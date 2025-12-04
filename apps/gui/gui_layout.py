@@ -299,6 +299,7 @@ class IMGFactoryGUILayout:
             ("Rename", "rename", "edit-rename", colors['edit_action'], "rename_selected"),
             ("Select All", "select_all", "edit-select-all", colors['select_action'], "select_all_entries"),
             ("Inverse", "sel_inverse", "edit-select", colors['select_action'], "select_inverse"),
+            ("Search", "search", "search", colors['select_action'], "show_search_dialog"),
             ("Sort via", "sort", "view-sort", colors['select_action'], "sort_entries"),
             ("Pin selected", "pin_selected", "pin", colors['select_action'], "pin_selected_entries"),
         ]
