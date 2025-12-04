@@ -11,7 +11,7 @@ import sys
 from typing import Optional
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, 
-    QApplication, QMenuBar, QStatusBar
+    QApplication, QMenuBar, QStatusBar, QMainWindow
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QAction, QKeySequence
