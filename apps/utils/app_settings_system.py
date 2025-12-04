@@ -1585,7 +1585,13 @@ class AppSettings:
             'remember_export_path': True,
             'last_img_output_path': '',
             'last_import_path': '',
-            'last_export_path': ''
+            'last_export_path': '',
+            # Button settings
+            'use_pastel_buttons': True,
+            'high_contrast_buttons': False,
+            'button_size': 24,
+            'icon_size': 16,
+            'button_format': 'both'  # 'both', 'icon_only', 'text_only', 'separate'
         }
 
         print(f"Looking for themes in: {self.themes_dir}")
