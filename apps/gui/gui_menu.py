@@ -929,10 +929,11 @@ class IMGFactoryMenuBar:
                     return
                 
                 # Get the current table
-                table = getattr(self.main_window, 'img_table', None)
-                if not table:
+                gui_layout = getattr(self.main_window, 'gui_layout', None)
+                if not gui_layout or not hasattr(gui_layout, 'table') or not self.main_window.gui_layout.table:
                     QMessageBox.warning(self.main_window, "Error", "No IMG table found")
                     return
+                table = self.main_window.gui_layout.table
                 
                 # Clear current selection
                 table.clearSelection()
@@ -979,10 +980,11 @@ class IMGFactoryMenuBar:
         """Find next entry"""
         try:
             # Get the current table
-            table = getattr(self.main_window, 'img_table', None)
-            if not table:
+            gui_layout = getattr(self.main_window, 'gui_layout', None)
+            if not gui_layout or not hasattr(gui_layout, 'table') or not self.main_window.gui_layout.table:
                 QMessageBox.warning(self.main_window, "Error", "No IMG table found")
                 return
+            table = self.main_window.gui_layout.table
             
             # Check if we have stored matches from previous find
             if hasattr(self.main_window, 'current_find_matches') and self.main_window.current_find_matches:
@@ -1066,10 +1068,11 @@ class IMGFactoryMenuBar:
                     return
                 
                 # Get the current table
-                table = getattr(self.main_window, 'img_table', None)
-                if not table:
+                gui_layout = getattr(self.main_window, 'gui_layout', None)
+                if not gui_layout or not hasattr(gui_layout, 'table') or not self.main_window.gui_layout.table:
                     QMessageBox.warning(self.main_window, "Error", "No IMG table found")
                     return
+                table = self.main_window.gui_layout.table
                 
                 # Get the current IMG file
                 if not hasattr(self.main_window, 'current_img') or not self.main_window.current_img:
@@ -1164,10 +1167,11 @@ class IMGFactoryMenuBar:
         """Duplicate selected entry"""
         try:
             # Get the current table
-            table = getattr(self.main_window, 'img_table', None)
-            if not table:
+            gui_layout = getattr(self.main_window, 'gui_layout', None)
+            if not gui_layout or not hasattr(gui_layout, 'table') or not self.main_window.gui_layout.table:
                 QMessageBox.warning(self.main_window, "Error", "No IMG table found")
                 return
+            table = self.main_window.gui_layout.table
             
             # Get selected rows
             selected_rows = [index.row() for index in table.selectionModel().selectedRows()]
