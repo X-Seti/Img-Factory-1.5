@@ -94,28 +94,56 @@ class TextureExtractor:
     def _parse_dff_for_textures(self, dff_file: str) -> List[str]:
         """
         Parse a single DFF file to extract texture names
-        This is a placeholder - actual DFF parsing would go here
+        Uses the proper DFF parser from the TXD editor
         """
-        # This would contain the actual DFF parsing logic
-        # For now, we'll simulate the process
-        textures = []
-        
-        # Read DFF file and extract texture names
-        # This would require actual DFF parsing library
-        # For now, just return a simulated list
+        import struct
+
         try:
-            # Simulate reading the DFF file to extract texture names
-            # In a real implementation, this would parse the DFF structure
             with open(dff_file, 'rb') as f:
-                # Read file header to identify it's a DFF
-                header = f.read(12)  # Read first 12 bytes
-                # This is where actual DFF parsing would occur
-                textures = ["texture1", "texture2", "texture3"]  # Simulated textures
-        except Exception:
-            # If file can't be read, return empty list
-            textures = []
-        
-        return textures
+                dff_data = f.read()
+
+            materials = []
+            offset = 0
+
+            # Simple RenderWare parser - look for material sections
+            while offset < len(dff_data) - 12:
+                try:
+                    section_type = struct.unpack('<I', dff_data[offset:offset+4])[0]
+                    section_size = struct.unpack('<I', dff_data[offset+4:offset+8])[0]
+
+                    # Material section (0x07) or Texture section (0x06)
+                    if section_type == 0x07:  # Material
+                        # Look for string data in material section
+                        mat_end = min(offset + section_size + 12, len(dff_data))
+                        mat_data = dff_data[offset:mat_end]
+
+                        # Find null-terminated strings (potential texture names)
+                        for i in range(len(mat_data) - 32):
+                            if mat_data[i:i+1].isalpha():
+                                # Try to extract string
+                                end = i
+                                while end < len(mat_data) and mat_data[end] != 0 and end < i + 32:
+                                    end += 1
+
+                                if end > i + 3:  # At least 4 chars
+                                    try:
+                                        name = mat_data[i:end].decode('ascii', errors='ignore')
+                                        if name and len(name) > 3 and name.replace('_', '').replace('.', '').isalnum():
+                                            if name not in materials:
+                                                materials.append(name)
+                                    except:
+                                        pass
+
+                    offset += 12 + section_size
+
+                except:
+                    offset += 1
+
+            return materials
+
+        except Exception as e:
+            self.main_window.log_message(f"DFF parse error: {str(e)}")
+            return []
 
 
 class ExtractDialog(QDialog):
@@ -144,6 +172,10 @@ class ExtractDialog(QDialog):
         # DFF parsing tab
         dff_tab = self.create_dff_tab()
         tab_widget.addTab(dff_tab, "Parse DFF Textures")
+        
+        # External DFF models tab
+        external_dff_tab = self.create_external_dff_tab()
+        tab_widget.addTab(external_dff_tab, "External DFF Models")
         
         layout.addWidget(tab_widget)
         
@@ -238,6 +270,61 @@ class ExtractDialog(QDialog):
         
         return widget
         
+    def create_external_dff_tab(self):
+        """Create the external DFF models tab"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        # Description
+        desc_label = QLabel("Browse and extract external DFF models (not from IMG):")
+        desc_label.setWordWrap(True)
+        layout.addWidget(desc_label)
+        
+        # DFF file selection
+        dff_layout = QHBoxLayout()
+        dff_label = QLabel("External DFF Files:")
+        self.external_dff_files_edit = QTextEdit()
+        self.external_dff_files_edit.setMaximumHeight(60)
+        self.external_dff_files_edit.setPlaceholderText("Select external DFF files to extract textures from...")
+        browse_external_dff_btn = QPushButton("Browse")
+        browse_external_dff_btn.clicked.connect(self.browse_external_dff_files)
+        
+        dff_layout.addWidget(dff_label)
+        dff_layout.addWidget(self.external_dff_files_edit)
+        dff_layout.addWidget(browse_external_dff_btn)
+        layout.addLayout(dff_layout)
+        
+        # Output directory selection
+        output_layout = QHBoxLayout()
+        output_label = QLabel("Output Directory:")
+        self.external_output_dir_edit = QTextEdit()
+        self.external_output_dir_edit.setMaximumHeight(30)
+        self.external_output_dir_edit.setPlaceholderText("Select output directory for extracted textures...")
+        browse_output_btn = QPushButton("Browse")
+        browse_output_btn.clicked.connect(self.browse_external_output_dir)
+        
+        output_layout.addWidget(output_label)
+        output_layout.addWidget(self.external_output_dir_edit)
+        output_layout.addWidget(browse_output_btn)
+        layout.addLayout(output_layout)
+        
+        # Extract button
+        self.extract_external_btn = QPushButton("Extract Textures from External DFFs")
+        self.extract_external_btn.clicked.connect(self.extract_external_dff_textures)
+        layout.addWidget(self.extract_external_btn)
+        
+        # Progress bar
+        self.external_progress_bar = QProgressBar()
+        self.external_progress_bar.setVisible(False)
+        layout.addWidget(self.external_progress_bar)
+        
+        # Log area
+        self.external_log_area = QTextEdit()
+        self.external_log_area.setReadOnly(True)
+        layout.addWidget(self.external_log_area)
+        
+        return widget
+        
     def browse_output_dir(self):
         """Browse for output directory"""
         directory = QFileDialog.getExistingDirectory(
@@ -316,6 +403,89 @@ class ExtractDialog(QDialog):
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Parsing failed: {str(e)}")
+
+    def browse_external_dff_files(self):
+        """Browse for external DFF files"""
+        files, _ = QFileDialog.getOpenFileNames(
+            self, "Select External DFF Files", "", 
+            "DFF Files (*.dff);;All Files (*)"
+        )
+        if files:
+            self.external_dff_files_edit.setPlainText("\n".join(files))
+            
+    def browse_external_output_dir(self):
+        """Browse for external output directory"""
+        directory = QFileDialog.getExistingDirectory(
+            self, "Select Output Directory", "", 
+            QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontResolveSymlinks
+        )
+        if directory:
+            self.external_output_dir_edit.setPlainText(directory)
+            
+    def extract_external_dff_textures(self):
+        """Extract textures from external DFF files"""
+        dff_text = self.external_dff_files_edit.toPlainText().strip()
+        if not dff_text:
+            QMessageBox.warning(self, "Error", "Please select external DFF files to extract textures from")
+            return
+            
+        output_dir = self.external_output_dir_edit.toPlainText().strip()
+        if not output_dir:
+            QMessageBox.warning(self, "Error", "Please select an output directory")
+            return
+            
+        dff_files = [line.strip() for line in dff_text.split('\n') if line.strip()]
+        
+        # Validate files exist
+        for dff_file in dff_files:
+            if not os.path.exists(dff_file):
+                QMessageBox.warning(self, "Error", f"DFF file does not exist: {dff_file}")
+                return
+        
+        # Show progress
+        self.external_progress_bar.setVisible(True)
+        self.external_progress_bar.setRange(0, 0)  # Indeterminate progress
+        
+        try:
+            extracted_count = 0
+            total_files = len(dff_files)
+            
+            for i, dff_file in enumerate(dff_files):
+                # Update progress
+                progress = int((i / total_files) * 100) if total_files > 0 else 0
+                self.external_progress_bar.setValue(progress)
+                self.external_log_area.append(f"Processing {os.path.basename(dff_file)}... ({i+1}/{total_files})")
+                
+                # Extract textures from the DFF file
+                textures = self.extractor._parse_dff_for_textures(dff_file)
+                
+                # Create a subdirectory for this DFF's textures
+                dff_name = os.path.splitext(os.path.basename(dff_file))[0]
+                dff_output_dir = os.path.join(output_dir, dff_name)
+                os.makedirs(dff_output_dir, exist_ok=True)
+                
+                # Create a texture list file for this DFF
+                texture_list_file = os.path.join(dff_output_dir, f"{dff_name}_textures.txt")
+                with open(texture_list_file, 'w', encoding='utf-8') as f:
+                    f.write(f"Textures for {dff_file}:\n")
+                    f.write("=" * 50 + "\n")
+                    for texture in textures:
+                        f.write(f"{texture}\n")
+                
+                extracted_count += len(textures)
+                self.external_log_area.append(f"  Found {len(textures)} textures in {dff_name}")
+            
+            self.external_log_area.append(f"\n✅ Extraction complete! Total textures found: {extracted_count}")
+            QMessageBox.information(
+                self, 
+                "Success", 
+                f"Textures extracted from {len(dff_files)} DFF files to:\n{output_dir}\n\nTotal textures found: {extracted_count}"
+            )
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"External DFF extraction failed: {str(e)}")
+        finally:
+            self.external_progress_bar.setVisible(False)
 
 
 def extract_textures_function(main_window):
