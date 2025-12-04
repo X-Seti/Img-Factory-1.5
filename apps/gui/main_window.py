@@ -61,10 +61,10 @@ class UndoManager:
                 command()
                 
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"↩️ Undo: {description}")
+                self.main_window.log_message(f"Undo: {description}")
         else:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("⚠️ No operations to undo")
+                self.main_window.log_message("No operations to undo")
     
     def redo(self):
         """Execute the last command from the redo stack"""
@@ -77,10 +77,10 @@ class UndoManager:
                 command()
                 
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"↪️ Redo: {description}")
+                self.main_window.log_message(f"Redo: {description}")
         else:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("⚠️ No operations to redo")
+                self.main_window.log_message("No operations to redo")
 
 
 class IMGFactoryMainWindow(QMainWindow):
@@ -132,7 +132,7 @@ class IMGFactoryMainWindow(QMainWindow):
             from apps.core.importer import import_via_function
             import_via_function(self)
         except Exception as e:
-            self.log_message(f"❌ Import via error: {str(e)}")
+            self.log_message(f"Import via error: {str(e)}")
 
     def remove_via_entries(self):
         """Remove entries via IDE file"""
@@ -140,7 +140,7 @@ class IMGFactoryMainWindow(QMainWindow):
             from apps.core.remove import remove_via_entries_function
             remove_via_entries_function(self)
         except Exception as e:
-            self.log_message(f"❌ Remove via error: {str(e)}")
+            self.log_message(f"Remove via error: {str(e)}")
 
     def dump_entries(self):
         """Dump all entries"""
@@ -148,7 +148,7 @@ class IMGFactoryMainWindow(QMainWindow):
             from apps.core.exporter import dump_all_function
             dump_all_function(self)
         except Exception as e:
-            self.log_message(f"❌ Dump error: {str(e)}")
+            self.log_message(f"Dump error: {str(e)}")
 
     def export_selected_via(self):
         """Export selected via IDE"""
@@ -156,7 +156,7 @@ class IMGFactoryMainWindow(QMainWindow):
             from apps.core.exporter import export_via_function
             export_via_function(self)
         except Exception as e:
-            self.log_message(f"❌ Export via error: {str(e)}")
+            self.log_message(f"Export via error: {str(e)}")
 
     def quick_export_selected(self):
         """Quick export to project folder"""
@@ -164,7 +164,7 @@ class IMGFactoryMainWindow(QMainWindow):
             from apps.core.exporter import quick_export_function
             quick_export_function(self)
         except Exception as e:
-            self.log_message(f"❌ Quick export error: {str(e)}")
+            self.log_message(f"Quick export error: {str(e)}")
 
     def setup_window(self):
         """Setup basic window properties"""
