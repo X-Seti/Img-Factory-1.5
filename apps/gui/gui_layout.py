@@ -25,6 +25,7 @@ from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
 from apps.components.Img_Creator.img_creator import NewIMGDialog, IMGCreationThread
 from apps.components.Ide_Editor.ide_editor import open_ide_editor
+from apps.gui.gui_backend import GUIBackend, ButtonDisplayMode
 
 #core
 from apps.core.impotr import import_files_function
@@ -120,6 +121,9 @@ class IMGFactoryGUILayout:
         self.info_bar = None
         self.tearoff_button = None
 
+        # Initialize backend for button management
+        self.backend = GUIBackend(main_window)
+        
         # Initialize method_mappings FIRST before buttons
         self.method_mappings = self._create_method_mappings()
 
@@ -829,9 +833,11 @@ class IMGFactoryGUILayout:
         """Create a button with pastel coloring that adapts to light/dark themes"""
         # Get localized label
         localized_label = tr_button(label)
+        
+        # Create button with the [%][text] format - showing both icon and text by default
         btn = QPushButton(localized_label)
-        btn.setMaximumHeight(22)
-        btn.setMinimumHeight(20)
+        btn.setMaximumHeight(24)  # Slightly taller to accommodate both icon and text
+        btn.setMinimumHeight(22)
 
         # Set icon based on the icon identifier
         icon_obj = self._get_svg_icon(icon)
@@ -865,7 +871,7 @@ class IMGFactoryGUILayout:
                 background-color: {button_bg};
                 border: 1px solid {border_color};
                 border-radius: 3px;
-                padding: 2px 6px;
+                padding: 3px 8px;
                 font-size: 8pt;
                 font-weight: bold;
                 color: {text_color};
@@ -885,6 +891,9 @@ class IMGFactoryGUILayout:
         # Store original and localized labels for later use
         btn.original_text = label
         btn.localized_text = localized_label
+        btn.full_text = localized_label
+        btn.short_text = self._get_short_text(localized_label)
+        btn.icon_name = icon
 
         # Connect to method_mappings
         try:
@@ -1217,9 +1226,10 @@ class IMGFactoryGUILayout:
         
         for i, (label, action_type, icon, color, method_name) in enumerate(img_buttons_data):
             btn = self.create_pastel_button(label, action_type, icon, color, method_name)
-            btn.full_text = label
-            btn.short_text = self._get_short_text(label)
             self.img_buttons.append(btn)
+            # Add to backend as well
+            if hasattr(self, 'backend'):
+                self.backend.img_buttons.append(btn)
             img_layout.addWidget(btn, i // 3, i % 3)
         
         img_box.setLayout(img_layout)
@@ -1235,9 +1245,10 @@ class IMGFactoryGUILayout:
         
         for i, (label, action_type, icon, color, method_name) in enumerate(entry_buttons_data):
             btn = self.create_pastel_button(label, action_type, icon, color, method_name)
-            btn.full_text = label
-            btn.short_text = self._get_short_text(label)
             self.entry_buttons.append(btn)
+            # Add to backend as well
+            if hasattr(self, 'backend'):
+                self.backend.entry_buttons.append(btn)
             entries_layout.addWidget(btn, i // 3, i % 3)
         
         entries_box.setLayout(entries_layout)
@@ -1253,9 +1264,10 @@ class IMGFactoryGUILayout:
         
         for i, (label, action_type, icon, color, method_name) in enumerate(options_buttons_data):
             btn = self.create_pastel_button(label, action_type, icon, color, method_name)
-            btn.full_text = label
-            btn.short_text = self._get_short_text(label)
             self.options_buttons.append(btn)
+            # Add to backend as well
+            if hasattr(self, 'backend'):
+                self.backend.options_buttons.append(btn)
             options_layout.addWidget(btn, i // 3, i % 3)
         
         options_box.setLayout(options_layout)
@@ -1264,6 +1276,21 @@ class IMGFactoryGUILayout:
         # Add stretch to push everything up
         right_layout.addStretch()
         return right_panel
+
+    def set_button_display_mode(self, mode: str):
+        """Set button display mode for all buttons in the layout"""
+        if hasattr(self, 'backend'):
+            # Convert string mode to enum
+            if mode == "text_only":
+                display_mode = ButtonDisplayMode.TEXT_ONLY
+            elif mode == "icons_only":
+                display_mode = ButtonDisplayMode.ICONS_ONLY
+            elif mode == "icons_with_text":
+                display_mode = ButtonDisplayMode.ICONS_WITH_TEXT
+            else:
+                display_mode = ButtonDisplayMode.ICONS_WITH_TEXT  # Default
+            
+            self.backend.set_button_display_mode(display_mode)
 
 
     def create_status_window(self): #vers 5

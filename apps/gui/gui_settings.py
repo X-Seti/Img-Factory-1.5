@@ -684,7 +684,7 @@ class GUISettingsDialog(QDialog):
                 else:
                     mode = "text_only"
 
-                main_window.gui_layout.backend.set_button_display_mode(mode)
+                main_window.gui_layout.set_button_display_mode(mode)
                 main_window.log_message(f"✅ Button display mode: {mode_text}")
 
         except Exception as e:
