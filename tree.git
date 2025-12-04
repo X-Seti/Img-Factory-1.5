@@ -218,6 +218,9 @@
 │   ├── __init__.py
 │   ├── locale
 │   │   └── local_settings.json
+│   ├── locals
+│   │   ├── __init__.py
+│   │   └── localization.py
 │   ├── methods
 │   │   ├── col_core_classes.py
 │   │   ├── col_export_functions.py
@@ -322,4 +325,4 @@
 ├── TODO.md
 └── tree.git
 
-34 directories, 289 files
+35 directories, 291 files

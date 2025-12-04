@@ -7,6 +7,13 @@ Complete history of fixes, updates, and improvements.
 
 ---
 
+**Fixed**: - December 04, 2025
+gui_menu.py
+gui_layout.py
+- Fixed search functions
+- Fixed tab check for search functions
+
+
 **Fixed**: - December 02, 2025
 img_core_classes.py
 img_entry_operations.py
