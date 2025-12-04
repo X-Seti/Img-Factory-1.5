@@ -550,42 +550,79 @@ class IMGFactoryMenuBar:
             self._update_recent_files_submenu()
                     
     def _apply_menu_bar_styling(self):
-        """Apply styling to menu bar for hover effects"""
-        # Apply CSS styling to the menu bar for hover effects
-        menu_style = """
-        QMenuBar {
-            background-color: #f0f0f0;
+        """Apply styling to menu bar for hover effects - THEME AWARE"""
+        # Get theme colors from app settings
+        if hasattr(self.main_window, 'app_settings'):
+            theme_colors = self.main_window.app_settings.get_theme_colors()
+        else:
+            # Fallback colors
+            theme_colors = {
+                'bg_primary': '#f0f0f0',
+                'bg_secondary': '#f5f5f5',
+                'bg_tertiary': '#e9ecef',
+                'text_primary': '#000000',
+                'text_secondary': '#666666',
+                'accent_primary': '#0078d4',
+                'accent_secondary': '#0A7Ad4',
+                'border': '#cccccc',
+                'selection_background': '#0078d4',
+                'selection_text': '#ffffff'
+            }
+        
+        # Extract colors for menu styling
+        bg_primary = theme_colors.get('bg_primary', '#f0f0f0')
+        bg_secondary = theme_colors.get('bg_secondary', '#f5f5f5')
+        bg_tertiary = theme_colors.get('bg_tertiary', '#e9ecef')
+        text_primary = theme_colors.get('text_primary', '#000000')
+        text_secondary = theme_colors.get('text_secondary', '#666666')
+        accent_primary = theme_colors.get('accent_primary', '#0078d4')
+        accent_secondary = theme_colors.get('accent_secondary', '#0A7Ad4')
+        border = theme_colors.get('border', '#cccccc')
+        selection_bg = theme_colors.get('selection_background', '#0078d4')
+        selection_text = theme_colors.get('selection_text', '#ffffff')
+        
+        # Apply CSS styling to the menu bar for hover effects using theme colors
+        menu_style = f"""
+        QMenuBar {{
+            background-color: {bg_primary};
             padding: 2px;
-        }
-        QMenuBar::item {
+            border: none;
+        }}
+        QMenuBar::item {{
             background: transparent;
             padding: 5px 10px;
             margin: 1px;
             border-radius: 3px;
-        }
-        QMenuBar::item:selected {
-            background: #d0d0d0;
-        }
-        QMenuBar::item:pressed {
-            background: #b0b0b0;
-        }
-        QMenu {
-            background-color: #f5f5f5;
-            border: 1px solid #ccc;
+            color: {text_primary};
+        }}
+        QMenuBar::item:selected {{
+            background: {bg_tertiary};
+        }}
+        QMenuBar::item:pressed {{
+            background: {bg_secondary};
+        }}
+        QMenu {{
+            background-color: {bg_secondary};
+            border: 1px solid {border};
             padding: 2px;
-        }
-        QMenu::item {
+            color: {text_primary};
+        }}
+        QMenu::item {{
             padding: 5px 20px;
             border: 1px solid transparent;
-        }
-        QMenu::item:selected {
-            background-color: #0078d4;
-            color: white;
-        }
-        QMenu::separator {
+            color: {text_primary};
+        }}
+        QMenu::item:selected {{
+            background-color: {selection_bg};
+            color: {selection_text};
+        }}
+        QMenu::item:disabled {{
+            color: {text_secondary};
+        }}
+        QMenu::separator {{
             height: 1px;
-            background: #d0d0d0;
-        }
+            background: {border};
+        }}
         """
         self.menu_bar.setStyleSheet(menu_style)
     
@@ -613,6 +650,9 @@ class IMGFactoryMenuBar:
             if hasattr(self.main_window, 'app_settings'):
                 stylesheet = self.main_window.app_settings.get_stylesheet()
                 self.main_window.setStyleSheet(stylesheet)
+
+            # Refresh menu bar styling to match new theme
+            self._apply_menu_bar_styling()
 
             # Refresh button display if changed
             if hasattr(self.main_window, 'gui_layout'):
