@@ -448,6 +448,9 @@ class IMGFactory(QMainWindow):
         integrate_img_functions(self)
         integrate_export_functions(self)
         integrate_import_functions(self)
+        
+        # Apply button display mode from settings
+        self._apply_button_display_mode_from_settings()
         integrate_remove_functions(self)
         integrate_save_entry_function(self)
         integrate_batch_rebuild_functions(self)
@@ -605,6 +608,33 @@ class IMGFactory(QMainWindow):
                 scrollbar.setValue(scrollbar.maximum())
         except Exception:
             pass
+
+    def _apply_button_display_mode_from_settings(self):
+        """Apply button display mode from app settings"""
+        try:
+            # Get the button display mode from settings
+            if hasattr(self, 'app_settings') and hasattr(self.app_settings, 'current_settings'):
+                button_mode = self.app_settings.current_settings.get('button_display_mode', 'both')
+                
+                # Map the settings mode to the GUI mode
+                mode_mapping = {
+                    'both': 'icons_with_text',    # Icons + Text
+                    'icons': 'icons_only',        # Icons Only  
+                    'text': 'text_only'           # Text Only
+                }
+                
+                gui_mode = mode_mapping.get(button_mode, 'icons_with_text')
+                
+                # Apply to GUI layout if available
+                if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'set_button_display_mode'):
+                    self.gui_layout.set_button_display_mode(gui_mode)
+                    self.log_message(f"Applied button display mode: {button_mode} -> {gui_mode}")
+                else:
+                    self.log_message("GUI layout not ready for button display mode")
+            else:
+                self.log_message("App settings not available for button display mode")
+        except Exception as e:
+            self.log_message(f"Error applying button display mode: {str(e)}")
 
     def debug_img_before_loading(self, file_path): #vers 1
         """Quick debug before loading IMG"""

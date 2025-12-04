@@ -8,6 +8,7 @@ __pycache__/
 # Dependencies
 .venv/
 venv/
+env/
 node_modules/
 
 # Logs and temp files
@@ -23,6 +24,8 @@ node_modules/
 # Editors
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # Coverage
 .coverage
