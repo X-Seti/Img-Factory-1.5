@@ -4,29 +4,17 @@
 __pycache__/
 *.o
 *.obj
-*.so
-*.dll
-*.exe
-*.out
 
 # Dependencies
 .venv/
 venv/
 env/
 node_modules/
-dist/
-build/
-target/
-.gradle/
-.mypy_cache/
-.pytest_cache/
-.coverage
 
 # Logs and temp files
 *.log
 *.tmp
 *.swp
-*.swo
 
 # Environment
 .env
@@ -39,35 +27,36 @@ target/
 *.swp
 *.swo
 
-# System files
-.DS_Store
-Thumbs.db
-
 # Coverage
+.coverage
 coverage/
 htmlcov/
 
-# Compressed files
-*.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
+# Python specific
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+.tox/
+.coverage
+
+# Distribution / packaging
+.Python
+*.so
+.libs/
 *.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
+*.whl
+dist/
+build/
+*.egg-info/
+
+# OS generated files
+.DS_Store
+Thumbs.db
 ```

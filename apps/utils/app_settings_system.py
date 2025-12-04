@@ -3061,7 +3061,7 @@ class SettingsDialog(QDialog): #vers 15
         button_layout.addWidget(apply_btn)
 
         ok_btn = QPushButton("OK")
-        ok_btn.clicked.connect(self.accept)
+        ok_btn.clicked.connect(self._ok_clicked)
         button_layout.addWidget(ok_btn)
 
         cancel_btn = QPushButton("Cancel")

@@ -1321,19 +1321,34 @@ class IMGFactoryGUILayout:
         return right_panel
 
     def set_button_display_mode(self, mode: str):
-        """Set button display mode for all buttons in the layout"""
-        if hasattr(self, 'backend'):
-            # Convert string mode to enum
-            if mode == "text_only":
-                display_mode = ButtonDisplayMode.TEXT_ONLY
-            elif mode == "icons_only":
-                display_mode = ButtonDisplayMode.ICONS_ONLY
-            elif mode == "icons_with_text":
-                display_mode = ButtonDisplayMode.ICONS_WITH_TEXT
-            else:
-                display_mode = ButtonDisplayMode.ICONS_WITH_TEXT  # Default
+        """
+        Set button display mode: 'text_only', 'icons_only', or 'icons_with_text'
+        """
+        try:
+            # Store the current mode
+            self.button_display_mode = mode
             
-            self.backend.set_button_display_mode(display_mode)
+            # Update all buttons to reflect the new mode
+            self._update_all_buttons_display_mode()
+            
+            # Also update via backend if available
+            if hasattr(self, 'backend'):
+                # Convert string mode to enum
+                if mode == "text_only":
+                    display_mode = ButtonDisplayMode.TEXT_ONLY
+                elif mode == "icons_only":
+                    display_mode = ButtonDisplayMode.ICONS_ONLY
+                elif mode == "icons_with_text":
+                    display_mode = ButtonDisplayMode.ICONS_WITH_TEXT
+                else:
+                    display_mode = ButtonDisplayMode.ICONS_WITH_TEXT  # Default
+                
+                self.backend.set_button_display_mode(display_mode)
+            
+            print(f"✅ Button display mode set to: {mode}")
+            
+        except Exception as e:
+            print(f"❌ Error setting button display mode: {e}")
 
     def update_button_settings(self, settings):
         """Update button settings from app settings"""
