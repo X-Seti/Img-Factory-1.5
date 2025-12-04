@@ -996,7 +996,7 @@ class IMGFactoryGUILayout:
             return color
 
 
-    def _get_svg_icon(self, icon_name: str) -> QIcon:
+    def _get_svg_icon(self, icon_name: str, is_dark_theme: bool = False) -> QIcon:
         """Get SVG icon based on icon name identifier"""
         icon_map = {
             # Create/new icons
