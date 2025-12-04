@@ -24,7 +24,8 @@
 │   │   │       ├── COL_Parser.py
 │   │   │       └── Materials Reference.md
 │   │   ├── File_Browser
-│   │   │   └── dolphin_dialog.py
+│   │   │   ├── dolphin_dialog.py
+│   │   │   └── highlight_status_dialog.py
 │   │   ├── File_Editor
 │   │   │   ├── file_dirtree_backend.py
 │   │   │   ├── file_dirtree_browser.py
@@ -321,4 +322,4 @@
 ├── TODO.md
 └── tree.git
 
-34 directories, 288 files
+34 directories, 289 files
