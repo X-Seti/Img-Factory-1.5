@@ -42,7 +42,7 @@ from PyQt6.QtCore import QByteArray, QSize
 # get_error_icon
 # get_success_icon
 
-def svg_to_icon(svg_data: bytes, size: int = 24, color: str = None) -> QIcon: #vers 1
+def svg_to_icon(svg_data: bytes, size: int = 24, color: str = None) -> QIcon: #vers 2
     """Convert SVG data to QIcon with optional color override
     
     Args:
@@ -54,6 +54,12 @@ def svg_to_icon(svg_data: bytes, size: int = 24, color: str = None) -> QIcon: #v
         QIcon object
     """
     try:
+        # If a specific color is provided, replace currentColor with that color
+        if color:
+            svg_string = svg_data.decode('utf-8')
+            svg_string = svg_string.replace('currentColor', color)
+            svg_data = svg_string.encode('utf-8')
+        
         renderer = QSvgRenderer(QByteArray(svg_data))
         pixmap = QPixmap(QSize(size, size))
         pixmap.fill(QColor(0, 0, 0, 0))  # Transparent background

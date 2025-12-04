@@ -899,7 +899,9 @@ class IMGFactoryGUILayout:
                 pressed_bg = "#d0d0d0"    # Medium gray when pressed
 
         # Set icon based on the icon identifier
-        icon_obj = self._get_svg_icon(icon)
+        # Detect if we're using a dark theme to potentially adjust icon colors
+        is_dark_theme = self._is_dark_theme()
+        icon_obj = self._get_svg_icon(icon, is_dark_theme)
         if icon_obj:
             btn.setIcon(icon_obj)
             # Get icon size from settings if available
