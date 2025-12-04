@@ -939,7 +939,7 @@ class IMGFactoryMenuBar:
                 table.clearSelection()
                 
                 # Search through entries
-                case_sensitive_flag = Qt.CaseSensitive if case_sensitive.isChecked() else Qt.CaseInsensitive
+                case_sensitive_flag = Qt.CaseSensitive if case_sensitive.isChecked() else Qt.MatchFlag.CaseInsensitive
                 matches = []
                 
                 for row in range(table.rowCount()):
@@ -1079,7 +1079,7 @@ class IMGFactoryMenuBar:
                     QMessageBox.warning(self.main_window, "Error", "No IMG file loaded")
                     return
                 
-                case_sensitive_flag = Qt.CaseSensitive if case_sensitive.isChecked() else Qt.CaseInsensitive
+                case_sensitive_flag = Qt.CaseSensitive if case_sensitive.isChecked() else Qt.MatchFlag.CaseInsensitive
                 matches = []
                 
                 # Search through entries
