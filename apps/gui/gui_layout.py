@@ -17,8 +17,10 @@ from apps.core.gui_search import ASearchDialog, SearchManager
 from apps.methods.svg_shared_icons import (
     get_add_icon, get_open_icon, get_refresh_icon, get_close_icon, 
     get_save_icon, get_export_icon, get_import_icon, get_remove_icon,
-    get_edit_icon, get_view_icon, get_search_icon, get_settings_icon
+    get_edit_icon, get_view_icon, get_search_icon, get_settings_icon,
+    get_rebuild_icon
 )
+from apps.locals.localization import tr_button
 from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
 from apps.components.Img_Creator.img_creator import NewIMGDialog, IMGCreationThread
@@ -696,6 +698,87 @@ class IMGFactoryGUILayout:
         except Exception as e:
             self.main_window.log_message(f"❌ Failed to launch TXD Workshop: {e}")
 
+    def set_button_display_mode(self, mode: str):
+        """
+        Set button display mode: 'text_only', 'icons_only', or 'icons_with_text'
+        """
+        try:
+            # Store the current mode
+            self.button_display_mode = mode
+            
+            # Update all buttons to reflect the new mode
+            self._update_all_buttons_display_mode()
+            
+            print(f"✅ Button display mode set to: {mode}")
+            
+        except Exception as e:
+            print(f"❌ Error setting button display mode: {e}")
+
+    def _update_all_buttons_display_mode(self):
+        """Update all buttons to reflect the current display mode"""
+        try:
+            # Get all button collections
+            all_buttons = []
+            if hasattr(self, 'img_buttons'):
+                all_buttons.extend(self.img_buttons)
+            if hasattr(self, 'entry_buttons'):
+                all_buttons.extend(self.entry_buttons)
+            if hasattr(self, 'options_buttons'):
+                all_buttons.extend(self.options_buttons)
+            
+            # Update each button
+            for btn in all_buttons:
+                self._update_button_display_mode(btn)
+                
+        except Exception as e:
+            print(f"❌ Error updating all buttons display mode: {e}")
+
+    def _update_button_display_mode(self, btn):
+        """Update a single button to reflect the current display mode"""
+        try:
+            mode = getattr(self, 'button_display_mode', 'text_only')  # Default to text_only
+            
+            if mode == 'text_only':
+                # Show text only, hide icon
+                btn.setText(btn.localized_text if hasattr(btn, 'localized_text') else btn.text())
+                btn.setIcon(QIcon())  # Remove icon
+                btn.setMinimumWidth(0)  # Reset minimum width
+                btn.setMaximumWidth(16777215)  # Maximum width (default)
+                
+            elif mode == 'icons_only':
+                # Show icon only, hide text
+                btn.setText("")  # Remove text
+                # Keep the icon if it exists
+                if hasattr(btn, 'original_text'):
+                    btn.setToolTip(btn.original_text)  # Add tooltip with original text
+                elif hasattr(btn, 'localized_text'):
+                    btn.setToolTip(btn.localized_text)
+                else:
+                    btn.setToolTip(btn.text())
+                btn.setMinimumWidth(64)  # Set fixed width for icon-only mode
+                btn.setMaximumWidth(64)
+                btn.setMinimumHeight(64)  # Set fixed height for icon-only mode
+                btn.setMaximumHeight(64)
+                
+            elif mode == 'icons_with_text':
+                # Show both icon and text
+                btn.setText(btn.localized_text if hasattr(btn, 'localized_text') else btn.text())
+                # Keep the icon if it exists
+                btn.setMinimumWidth(0)  # Reset minimum width
+                btn.setMaximumWidth(16777215)  # Maximum width (default)
+                btn.setMinimumHeight(20)  # Reset height
+                btn.setMaximumHeight(22)
+                
+            else:
+                # Default to text only
+                btn.setText(btn.localized_text if hasattr(btn, 'localized_text') else btn.text())
+                btn.setIcon(QIcon())
+                btn.setMinimumWidth(0)
+                btn.setMaximumWidth(16777215)
+                
+        except Exception as e:
+            print(f"❌ Error updating button display mode: {e}")
+
     def _update_button_theme(self, btn, bg_color): #vers 2
         """Update a single button's theme styling"""
         try:
@@ -744,7 +827,9 @@ class IMGFactoryGUILayout:
 
     def create_pastel_button(self, label, action_type, icon, bg_color, method_name): #vers 3
         """Create a button with pastel coloring that adapts to light/dark themes"""
-        btn = QPushButton(label)
+        # Get localized label
+        localized_label = tr_button(label)
+        btn = QPushButton(localized_label)
         btn.setMaximumHeight(22)
         btn.setMinimumHeight(20)
 
@@ -796,6 +881,10 @@ class IMGFactoryGUILayout:
 
         # Set action type property
         btn.setProperty("action-type", action_type)
+
+        # Store original and localized labels for later use
+        btn.original_text = label
+        btn.localized_text = localized_label
 
         # Connect to method_mappings
         try:
@@ -869,6 +958,8 @@ class IMGFactoryGUILayout:
             "document-reload": get_refresh_icon(),
             "view-refresh": get_refresh_icon(),
             "update": get_refresh_icon(),
+            "rebuild": get_rebuild_icon(),
+            "view-rebuild": get_rebuild_icon(),
             
             # Close icons
             "close": get_close_icon(),
@@ -929,11 +1020,14 @@ class IMGFactoryGUILayout:
 
     def _get_short_text(self, label): #vers 1
         """Get short text for button"""
+        # First get the localized version of the label
+        localized_label = tr_button(label)
+        
         short_map = {
             "Create": "New", "Open": "Open", "Reload": "Reload", "     ": " ",
             "Close": "Close", "Close All": "Close A", "Rebuild": "Rebld",
             "Rebuild All": "Rebld Al", "Save Entry": "Save", "Merge": "Merge",
-            "Split via": "Split", "Convert": "Conv", "Import": "Imp",
+            "Device": "Dev", "Convert": "Conv", "Import": "Imp",  # Updated for localized "Device"
             "Import via": "Imp via", "Refresh": "Refresh", "Export": "Exp",
             "Export via": "Exp via", "Quick Exp": "Q Exp", "Remove": "Rem",
             "Remove via": "Rem via", "Dump": "Dump", "Pin selected": "Pin",
@@ -947,7 +1041,7 @@ class IMGFactoryGUILayout:
             "Objects": "Objects", "SCM code": "SCM Code", "GXT font": "GXT Edit",
             "Menu Edit": "Menu Ed",
         }
-        return short_map.get(label, label)
+        return short_map.get(localized_label, localized_label)
 
 
     def create_main_ui_with_splitters(self, main_layout): #vers 3

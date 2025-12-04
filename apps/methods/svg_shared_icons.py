@@ -391,6 +391,21 @@ def get_app_icon(size: int = 64) -> QIcon: #vers 1
     return svg_to_icon(svg_data, size)
 
 
+def get_rebuild_icon(size: int = 24) -> QIcon: #vers 1
+    """Rebuild/refresh icon"""
+    svg_data = b'''<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17 10V7a5 5 0 00-10 0v3" 
+            stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="12" y1="17" x2="12" y2="21" 
+            stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <line x1="8" y1="21" x2="16" y2="21" 
+            stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M8 14v-4a4 4 0 018 0v4" 
+            stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>'''
+    return svg_to_icon(svg_data, size)
+
+
 # Export all icon functions
 __all__ = [
     'svg_to_icon',
@@ -423,4 +438,5 @@ __all__ = [
     'get_error_icon',
     'get_success_icon',
     'get_app_icon',
+    'get_rebuild_icon',
 ]
