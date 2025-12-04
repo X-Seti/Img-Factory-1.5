@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 X-Seti - July22 2025 - IMG Factory 1.5 - AtariST version :D
-#this belongs in root /imgfactory.py - version 71
+#this belongs in root /imgfactory.py - version 73
 """
 import sys
 import os
@@ -10,25 +10,9 @@ from typing import Optional, List, Dict, Any
 from pathlib import Path
 print("Starting application...")
 
-# Setup paths FIRST - before any other imports
-current_dir = Path(__file__).parent
-components_dir = current_dir / "apps.components"
-gui_dir = current_dir / "apps.gui"
-utils_dir = current_dir / "apps.utils"
-
-
-# Add directories to Python path
-if str(current_dir) not in sys.path:
-    sys.path.insert(0, str(current_dir))
-if components_dir.exists() and str(components_dir) not in sys.path:
-    sys.path.insert(0, str(components_dir))
-if gui_dir.exists() and str(gui_dir) not in sys.path:
-    sys.path.insert(0, str(gui_dir))
-if utils_dir.exists() and str(utils_dir) not in sys.path:
-    sys.path.insert(0, str(utils_dir))
+# The path setup is handled by the launcher, so we don't need to do it here
 
 # Now continue with other imports
-from typing import Optional, List, Dict, Any
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QSplitter, QTableWidget, QTableWidgetItem, QTextEdit, QLabel, QDialog,
@@ -40,7 +24,12 @@ from PyQt6.QtWidgets import (
 print("PyQt6.QtCore imported successfully")
 from PyQt6.QtCore import pyqtSignal, QMimeData, Qt, QThread, QTimer, QSettings
 from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent, QFont, QIcon, QPixmap, QShortcut, QTextCursor
-from comprehensive_fix import fix_menu_system_and_functionality
+# Import comprehensive_fix using importlib to avoid relative import issues
+import importlib.util
+spec = importlib.util.spec_from_file_location("comprehensive", os.path.join(os.path.dirname(__file__), "comprehensive.py"))
+comprehensive_fix_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(comprehensive_fix_module)
+fix_menu_system_and_functionality = comprehensive_fix_module.fix_menu_system_and_functionality
 
 
 # OR use the full path:
@@ -57,11 +46,13 @@ from apps.debug.unified_debug_functions import integrate_all_improvements, insta
 #Core functions.
 from apps.core.img_formats import GameSpecificIMGDialog, IMGCreator
 from apps.core.file_extraction import setup_complete_extraction_integration
+from apps.core.extract import extract_textures_function
 from apps.core.file_type_filter import integrate_file_filtering
 from apps.methods.rw_versions import get_rw_version_name
 from apps.core.right_click_actions import integrate_right_click_actions, setup_table_context_menu
 from apps.core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
 from apps.core.convert import convert_img, convert_img_format
+from apps.core.reload import integrate_reload_functions
 from apps.core.img_split import integrate_split_functions
 from apps.core.theme_integration import integrate_theme_system
 from apps.core.create import create_new_img
@@ -86,6 +77,7 @@ from apps.core.undo_system import integrate_undo_system
 from apps.core.pin_entries import integrate_pin_functions
 from apps.core.inverse_selection import integrate_inverse_selection
 from apps.core.sort_via_ide import integrate_sort_via_ide
+from apps.core.advanced_img_tools import integrate_advanced_img_tools
 from apps.core.rw_unk_snapshot import integrate_unknown_rw_detection
 from apps.core.col_viewer_integration import integrate_col_viewer
 #from apps.core.analyze_rw import integrate_rw_analysis_trigger
@@ -415,6 +407,9 @@ class IMGFactory(QMainWindow):
 
         # === PHASE 3: GUI CREATION (Medium) ===
 
+        # Integrate functionality that menu system depends on
+        integrate_sort_via_ide(self)
+
         # Create GUI layout
         self.gui_layout = IMGFactoryGUILayout(self)
         integrate_directory_tree_system(self)
@@ -466,7 +461,7 @@ class IMGFactory(QMainWindow):
         integrate_undo_system(self)
         integrate_pin_functions(self)
         integrate_inverse_selection(self)
-        integrate_sort_via_ide(self)
+        integrate_advanced_img_tools(self)
 
         self.export_via = lambda: export_via_function(self)
         integrate_import_via_functions(self)
@@ -475,6 +470,7 @@ class IMGFactory(QMainWindow):
         integrate_img_import_functions(self)
         integrate_img_export_functions(self)
         integrate_col_export_functions(self)
+        # No specific integration needed for extract functionality
 
         # File operations
         install_close_functions(self)
@@ -491,6 +487,7 @@ class IMGFactory(QMainWindow):
         self.dump_all = lambda: dump_all_function(self)
         self.dump_selected = lambda: dump_selected_function(self)
         integrate_refresh_table(self)
+        integrate_reload_functions(self)
 
         # TXD Editor Integration
         try:
@@ -574,10 +571,14 @@ class IMGFactory(QMainWindow):
         # === STARTUP COMPLETE ===
         self.log_message("IMG Factory 1.5 initialized - Ready!")
 
-        # Show window (non-blocking)
-        self.show()
         # Apply comprehensive fixes for menu system and functionality
         fix_menu_system_and_functionality(self)
+        
+        # Apply search and performance fixes
+        self.apply_search_and_performance_fixes()
+
+        # Show window (non-blocking)
+        self.show()
 
 
 
@@ -1189,7 +1190,648 @@ class IMGFactory(QMainWindow):
         self.has_txd = lambda name: name.lower().endswith('.txd') if name else False
         self.get_entry_type = lambda name: name.split('.')[-1].upper() if name and '.' in name else "Unknown"
 
+        # Add missing functions for menu system
+        self.save_img_as = self._save_img_as
+        self.find_entries = self._find_entries
+        self.find_next_entries = self._find_next_entries
+        self.duplicate_selected = self._duplicate_selected
+        self.rename_entry = self._rename_entry
+        self.rename_selected = self._rename_selected
+        self.remove_selected = self._remove_selected_entries
+        self.select_inverse_entries = self._select_inverse_entries
+        self.extract_textures = lambda: extract_textures_function(self)
+        # NEW: Add extract DFF texture lists functionality
+        from apps.core.extract import extract_dff_texture_lists
+        self.extract_dff_texture_lists = lambda: extract_dff_texture_lists(self)
+        self.undo = self._undo_action
+        self.redo = self._redo_action
+
         self.log_message("Missing utility functions added")
+
+    def _save_img_as(self):
+        """Save IMG file as a new file"""
+        try:
+            if not hasattr(self, 'current_img') or not self.current_img:
+                QMessageBox.warning(self, "Save As", "No IMG file loaded to save.")
+                return False
+
+            # Get file path from user
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save IMG As",
+                "",
+                "IMG Files (*.img);;All Files (*.*)"
+            )
+
+            if file_path:
+                # Ensure file has .img extension
+                if not file_path.lower().endswith('.img'):
+                    file_path += '.img'
+
+                try:
+                    # Save the IMG file
+                    if hasattr(self.current_img, 'save_to_path'):
+                        success = self.current_img.save_to_path(file_path)
+                    elif hasattr(self.current_img, 'save'):
+                        # Temporarily change the file path and save
+                        original_path = getattr(self.current_img, 'file_path', None)
+                        self.current_img.file_path = file_path
+                        success = self.current_img.save()
+                        self.current_img.file_path = original_path
+                    else:
+                        # Create a new IMG file and copy entries
+                        from apps.methods.img_core_classes import IMGFile
+                        new_img = IMGFile(file_path)
+                        new_img.entries = self.current_img.entries[:]
+                        success = new_img.save()
+
+                    if success:
+                        self.log_message(f"IMG file saved as: {file_path}")
+                        QMessageBox.information(self, "Save As", f"File saved successfully as:\n{file_path}")
+                        return True
+                    else:
+                        QMessageBox.critical(self, "Save As", "Failed to save IMG file.")
+                        return False
+
+                except Exception as e:
+                    QMessageBox.critical(self, "Save As", f"Error saving file:\n{str(e)}")
+                    return False
+            else:
+                # User cancelled
+                return False
+
+        except Exception as e:
+            self.log_message(f"Error in save_img_as: {str(e)}")
+            QMessageBox.critical(self, "Save As Error", f"Failed to save IMG file:\n{str(e)}")
+            return False
+
+    def _find_entries(self):
+        """Find entries in the table"""
+        try:
+            # Show find dialog
+            from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QLabel
+            from PyQt6.QtCore import Qt
+            
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Find Entries")
+            dialog.setModal(True)
+            dialog.resize(400, 120)
+            
+            layout = QVBoxLayout(dialog)
+            
+            # Search input
+            search_layout = QHBoxLayout()
+            search_label = QLabel("Find what:")
+            search_input = QLineEdit()
+            search_layout.addWidget(search_label)
+            search_layout.addWidget(search_input)
+            layout.addLayout(search_layout)
+            
+            # Options
+            options_layout = QHBoxLayout()
+            case_sensitive = QPushButton("Aa")
+            case_sensitive.setCheckable(True)
+            case_sensitive.setToolTip("Case sensitive")
+            regex_mode = QPushButton(".*")
+            regex_mode.setCheckable(True)
+            regex_mode.setToolTip("Regular expression")
+            options_layout.addWidget(case_sensitive)
+            options_layout.addWidget(regex_mode)
+            layout.addLayout(options_layout)
+            
+            # Buttons
+            button_layout = QHBoxLayout()
+            find_btn = QPushButton("Find Next")
+            find_btn.clicked.connect(lambda: self._perform_find(search_input.text(), case_sensitive.isChecked(), regex_mode.isChecked()))
+            cancel_btn = QPushButton("Cancel")
+            cancel_btn.clicked.connect(dialog.reject)
+            button_layout.addWidget(find_btn)
+            button_layout.addWidget(cancel_btn)
+            layout.addLayout(button_layout)
+            
+            # Set focus to search input
+            search_input.setFocus()
+            
+            # Enter key to find next
+            search_input.returnPressed.connect(find_btn.click)
+            
+            dialog.exec()
+            
+        except Exception as e:
+            self.log_message(f"Error in find_entries: {str(e)}")
+
+    def _perform_find(self, search_text, case_sensitive, regex_mode):
+        """Perform the actual find operation"""
+        try:
+            if not search_text or not hasattr(self, 'gui_layout') or not hasattr(self.gui_layout, 'table'):
+                return
+
+            table = self.gui_layout.table
+            current_row = table.currentRow()
+            current_col = table.currentColumn()
+            
+            if current_row < 0:
+                current_row = 0
+                current_col = 0
+
+            # Determine search range (start from next cell)
+            start_row = current_row
+            start_col = current_col + 1
+            
+            # If we're at the end of the row, go to next row
+            if start_col >= table.columnCount():
+                start_row += 1
+                start_col = 0
+            
+            # Search from current position to end of table
+            for row in range(start_row, table.rowCount()):
+                for col in range(start_col if row == start_row else 0, table.columnCount()):
+                    item = table.item(row, col)
+                    if item:
+                        text = item.text()
+                        
+                        # Perform search based on mode
+                        match = False
+                        if regex_mode:
+                            import re
+                            flags = 0 if case_sensitive else re.IGNORECASE
+                            try:
+                                match = bool(re.search(search_text, text, flags))
+                            except re.error:
+                                QMessageBox.warning(self, "Find", "Invalid regular expression")
+                                return
+                        else:
+                            if case_sensitive:
+                                match = search_text in text
+                            else:
+                                match = search_text.lower() in text.lower()
+                        
+                        if match:
+                            # Select and scroll to the found item
+                            table.setCurrentItem(item)
+                            table.scrollToItem(item)
+                            self.log_message(f"Found '{search_text}' at row {row}, column {col}")
+                            return
+                
+                # Reset start_col for subsequent rows
+                start_col = 0
+
+            # If not found, wrap around and search from beginning
+            for row in range(0, start_row + 1):
+                for col in range(0, table.columnCount()):
+                    # Skip items we already checked
+                    if row == start_row and col < (start_col if row == start_row else 0):
+                        continue
+                    
+                    item = table.item(row, col)
+                    if item:
+                        text = item.text()
+                        
+                        # Perform search based on mode
+                        match = False
+                        if regex_mode:
+                            import re
+                            flags = 0 if case_sensitive else re.IGNORECASE
+                            try:
+                                match = bool(re.search(search_text, text, flags))
+                            except re.error:
+                                QMessageBox.warning(self, "Find", "Invalid regular expression")
+                                return
+                        else:
+                            if case_sensitive:
+                                match = search_text in text
+                            else:
+                                match = search_text.lower() in text.lower()
+                        
+                        if match:
+                            # Select and scroll to the found item
+                            table.setCurrentItem(item)
+                            table.scrollToItem(item)
+                            self.log_message(f"Found '{search_text}' at row {row}, column {col}")
+                            return
+
+            # Not found anywhere
+            QMessageBox.information(self, "Find", f"'{search_text}' not found in table.")
+            
+        except Exception as e:
+            self.log_message(f"Error in perform_find: {str(e)}")
+
+    def _find_next_entries(self):
+        """Find next entry (just calls the same find functionality)"""
+        # This would typically continue the search from the last found position
+        # For now, we'll just show the find dialog again
+        self._find_entries()
+
+    def _replace_entries(self):
+        """Replace entries in the table"""
+        try:
+            from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QLabel, QCheckBox
+            from PyQt6.QtCore import Qt
+            
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Replace Entries")
+            dialog.setModal(True)
+            dialog.resize(400, 180)
+            
+            layout = QVBoxLayout(dialog)
+            
+            # Find input
+            find_layout = QHBoxLayout()
+            find_label = QLabel("Find what:")
+            find_input = QLineEdit()
+            find_layout.addWidget(find_label)
+            find_layout.addWidget(find_input)
+            layout.addLayout(find_layout)
+            
+            # Replace input
+            replace_layout = QHBoxLayout()
+            replace_label = QLabel("Replace with:")
+            replace_input = QLineEdit()
+            replace_layout.addWidget(replace_label)
+            replace_layout.addWidget(replace_input)
+            layout.addLayout(replace_layout)
+            
+            # Options
+            options_layout = QHBoxLayout()
+            case_sensitive = QCheckBox("Case sensitive")
+            regex_mode = QCheckBox("Regular expression")
+            options_layout.addWidget(case_sensitive)
+            options_layout.addWidget(regex_mode)
+            layout.addLayout(options_layout)
+            
+            # Buttons
+            button_layout = QHBoxLayout()
+            replace_btn = QPushButton("Replace")
+            replace_all_btn = QPushButton("Replace All")
+            cancel_btn = QPushButton("Cancel")
+            
+            replace_btn.clicked.connect(lambda: self._perform_replace(find_input.text(), replace_input.text(), 
+                                                                     case_sensitive.isChecked(), regex_mode.isChecked(), False))
+            replace_all_btn.clicked.connect(lambda: self._perform_replace(find_input.text(), replace_input.text(), 
+                                                                         case_sensitive.isChecked(), regex_mode.isChecked(), True))
+            cancel_btn.clicked.connect(dialog.reject)
+            
+            button_layout.addWidget(replace_btn)
+            button_layout.addWidget(replace_all_btn)
+            button_layout.addWidget(cancel_btn)
+            layout.addLayout(button_layout)
+            
+            # Set focus to find input
+            find_input.setFocus()
+            
+            dialog.exec()
+            
+        except Exception as e:
+            self.log_message(f"Error in replace_entries: {str(e)}")
+
+    def _perform_replace(self, find_text, replace_text, case_sensitive, regex_mode, replace_all):
+        """Perform the actual replace operation"""
+        try:
+            if not find_text or not hasattr(self, 'gui_layout') or not hasattr(self.gui_layout, 'table'):
+                return
+
+            table = self.gui_layout.table
+            replacements = 0
+            
+            for row in range(table.rowCount()):
+                for col in range(table.columnCount()):
+                    item = table.item(row, col)
+                    if item:
+                        original_text = item.text()
+                        new_text = original_text
+                        
+                        # Perform replacement based on mode
+                        if regex_mode:
+                            import re
+                            flags = 0 if case_sensitive else re.IGNORECASE
+                            try:
+                                if replace_all:
+                                    new_text = re.sub(find_text, replace_text, original_text, flags=flags)
+                                else:
+                                    # Replace only first occurrence
+                                    new_text = re.sub(find_text, replace_text, original_text, count=1, flags=flags)
+                            except re.error:
+                                QMessageBox.warning(self, "Replace", "Invalid regular expression")
+                                return
+                        else:
+                            if case_sensitive:
+                                if replace_all:
+                                    new_text = original_text.replace(find_text, replace_text)
+                                else:
+                                    # Replace only first occurrence
+                                    idx = original_text.find(find_text)
+                                    if idx != -1:
+                                        new_text = (original_text[:idx] + replace_text + 
+                                                   original_text[idx + len(find_text):])
+                            else:
+                                # Case insensitive replacement - more complex
+                                if replace_all:
+                                    # This is a simplified case-insensitive replacement
+                                    temp_text = original_text
+                                    start = 0
+                                    while True:
+                                        idx = temp_text.lower().find(find_text.lower(), start)
+                                        if idx == -1:
+                                            break
+                                        temp_text = (temp_text[:idx] + replace_text + 
+                                                    temp_text[idx + len(find_text):])
+                                        start = idx + len(replace_text)
+                                        if not replace_all:  # Only replace first if not replace_all
+                                            break
+                                    new_text = temp_text
+                                else:
+                                    # Replace only first occurrence (case-insensitive)
+                                    idx = original_text.lower().find(find_text.lower())
+                                    if idx != -1:
+                                        new_text = (original_text[:idx] + replace_text + 
+                                                   original_text[idx + len(find_text):])
+                        
+                        if new_text != original_text:
+                            item.setText(new_text)
+                            replacements += 1
+                            if not replace_all:
+                                # Select and scroll to the replaced item
+                                table.setCurrentItem(item)
+                                table.scrollToItem(item)
+                                break
+                if not replace_all and replacements > 0:
+                    break
+            
+            if replacements > 0:
+                self.log_message(f"Replaced {replacements} occurrence(s)")
+                QMessageBox.information(self, "Replace", f"Replaced {replacements} occurrence(s).")
+            else:
+                self.log_message("No replacements made")
+                QMessageBox.information(self, "Replace", "No matches found.")
+                
+        except Exception as e:
+            self.log_message(f"Error in perform_replace: {str(e)}")
+
+    def _duplicate_selected(self):
+        """Duplicate selected entries"""
+        try:
+            if not hasattr(self, 'gui_layout') or not hasattr(self.gui_layout, 'table'):
+                QMessageBox.warning(self, "Duplicate", "Table not available.")
+                return
+
+            table = self.gui_layout.table
+            selected_items = table.selectedItems()
+            
+            if not selected_items:
+                QMessageBox.information(self, "Duplicate", "Please select entries to duplicate.")
+                return
+
+            # Get selected rows
+            selected_rows = list(set(item.row() for item in selected_items))
+            
+            if not hasattr(self, 'current_img') or not self.current_img:
+                QMessageBox.warning(self, "Duplicate", "No IMG file loaded.")
+                return
+
+            # Duplicate the selected entries
+            duplicated_count = 0
+            for row in selected_rows:
+                if row < len(self.current_img.entries):
+                    original_entry = self.current_img.entries[row]
+                    
+                    # Create a copy of the entry
+                    from apps.methods.img_core_classes import IMGEntry
+                    new_entry = IMGEntry()
+                    new_entry.name = original_entry.name + "_copy"
+                    new_entry.size = original_entry.size
+                    new_entry.offset = original_entry.offset
+                    new_entry.data = getattr(original_entry, 'data', b'')  # Copy data if available
+                    
+                    # Add to IMG file
+                    self.current_img.entries.append(new_entry)
+                    duplicated_count += 1
+
+            # Refresh the table to show new entries
+            if hasattr(self, 'reload_current_file'):
+                self.reload_current_file()
+            elif hasattr(self, 'populate_img_table'):
+                self.populate_img_table()
+
+            self.log_message(f"Duplicated {duplicated_count} entry(ies)")
+            QMessageBox.information(self, "Duplicate", f"Duplicated {duplicated_count} entry(ies).")
+            
+        except Exception as e:
+            self.log_message(f"Error in duplicate_selected: {str(e)}")
+            QMessageBox.critical(self, "Duplicate Error", f"Failed to duplicate entries:\n{str(e)}")
+
+    def _rename_entry(self):
+        """Rename entry (for menu system)"""
+        self._rename_selected()
+
+    def _rename_selected(self):
+        """Rename selected entry"""
+        try:
+            if not hasattr(self, 'gui_layout') or not hasattr(self.gui_layout, 'table'):
+                QMessageBox.warning(self, "Rename", "Table not available.")
+                return
+
+            table = self.gui_layout.table
+            selected_items = table.selectedItems()
+            
+            if not selected_items:
+                QMessageBox.information(self, "Rename", "Please select an entry to rename.")
+                return
+
+            # Get the first selected row (use the row of the first selected item)
+            row = selected_items[0].row()
+            
+            if not hasattr(self, 'current_img') or not self.current_img:
+                QMessageBox.warning(self, "Rename", "No IMG file loaded.")
+                return
+
+            if row >= len(self.current_img.entries):
+                QMessageBox.warning(self, "Rename", "Selected row is out of range.")
+                return
+
+            # Get current entry name
+            current_entry = self.current_img.entries[row]
+            current_name = current_entry.name
+
+            # Show input dialog for new name
+            new_name, ok = QInputDialog.getText(
+                self,
+                "Rename Entry",
+                f"Enter new name for '{current_name}':",
+                text=current_name
+            )
+
+            if ok and new_name and new_name != current_name:
+                # Validate the new name
+                if self._validate_entry_name(new_name):
+                    # Check for duplicates
+                    if not self._check_duplicate_name(new_name, current_entry):
+                        # Perform the rename
+                        current_entry.name = new_name
+                        
+                        # Update the table display
+                        name_item = table.item(row, 0)  # Assuming name is in column 0
+                        if name_item:
+                            name_item.setText(new_name)
+
+                        # Mark as modified
+                        if hasattr(self.current_img, 'modified'):
+                            self.current_img.modified = True
+
+                        self.log_message(f"Renamed '{current_name}' to '{new_name}'")
+                        QMessageBox.information(self, "Rename Successful", 
+                                              f"Successfully renamed to '{new_name}'")
+                    else:
+                        QMessageBox.warning(self, "Duplicate Name", 
+                                          f"An entry named '{new_name}' already exists")
+                else:
+                    QMessageBox.warning(self, "Invalid Name", 
+                                      "The name provided is invalid")
+                    
+        except Exception as e:
+            self.log_message(f"Error in rename_selected: {str(e)}")
+            QMessageBox.critical(self, "Rename Error", f"Failed to rename entry:\n{str(e)}")
+
+    def _validate_entry_name(self, name):
+        """Validate entry name for IMG file"""
+        try:
+            # Check for empty name
+            if not name or not name.strip():
+                return False
+            
+            # Check for invalid characters
+            invalid_chars = '<>:"/\\|?*'
+            if any(char in name for char in invalid_chars):
+                return False
+            
+            # Check length (IMG entries typically have 24 char limit)
+            if len(name) > 24:
+                return False
+            
+            return True
+        except:
+            return False
+
+    def _check_duplicate_name(self, new_name, current_entry):
+        """Check if new name would create duplicate"""
+        try:
+            if hasattr(self, 'current_img') and self.current_img:
+                for entry in self.current_img.entries:
+                    if entry != current_entry and getattr(entry, 'name', '') == new_name:
+                        return True
+            return False
+        except:
+            return True  # Return True on error to be safe
+
+    def _remove_selected_entries(self):
+        """Remove selected entries from IMG file"""
+        try:
+            if not hasattr(self, 'gui_layout') or not hasattr(self.gui_layout, 'table'):
+                QMessageBox.warning(self, "Remove", "Table not available.")
+                return
+
+            table = self.gui_layout.table
+            selected_items = table.selectedItems()
+            
+            if not selected_items:
+                QMessageBox.information(self, "Remove", "Please select entries to remove.")
+                return
+
+            # Get selected rows
+            selected_rows = sorted(set(item.row() for item in selected_items), reverse=True)  # Reverse order for safe deletion
+            
+            if not hasattr(self, 'current_img') or not self.current_img:
+                QMessageBox.warning(self, "Remove", "No IMG file loaded.")
+                return
+
+            # Confirm removal
+            reply = QMessageBox.question(
+                self,
+                "Remove Entries",
+                f"Remove {len(selected_rows)} selected entry(ies)?\n\n"
+                f"This action cannot be undone.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+
+            if reply == QMessageBox.StandardButton.Yes:
+                # Remove entries in reverse order to maintain correct indices
+                removed_count = 0
+                for row in selected_rows:
+                    if row < len(self.current_img.entries):
+                        del self.current_img.entries[row]
+                        removed_count += 1
+
+                # Refresh the table to reflect changes
+                if hasattr(self, 'reload_current_file'):
+                    self.reload_current_file()
+                elif hasattr(self, 'populate_img_table'):
+                    self.populate_img_table()
+
+                self.log_message(f"Removed {removed_count} entry(ies)")
+                QMessageBox.information(self, "Remove", f"Removed {removed_count} entry(ies).")
+                
+        except Exception as e:
+            self.log_message(f"Error in remove_selected_entries: {str(e)}")
+            QMessageBox.critical(self, "Remove Error", f"Failed to remove entries:\n{str(e)}")
+
+    def _select_inverse_entries(self):
+        """Invert the current selection"""
+        try:
+            if not hasattr(self, 'gui_layout') or not hasattr(self.gui_layout, 'table'):
+                return
+
+            table = self.gui_layout.table
+            all_selected = []
+            
+            # Get all currently selected items
+            for row in range(table.rowCount()):
+                for col in range(table.columnCount()):
+                    item = table.item(row, col)
+                    if item and item.isSelected():
+                        all_selected.append((row, col))
+            
+            # Clear current selection
+            table.clearSelection()
+            
+            # Select all items that were NOT selected
+            for row in range(table.rowCount()):
+                for col in range(table.columnCount()):
+                    item = table.item(row, col)
+                    if item and (row, col) not in all_selected:
+                        item.setSelected(True)
+            
+            self.log_message("Selection inverted")
+            
+        except Exception as e:
+            self.log_message(f"Error in select_inverse_entries: {str(e)}")
+
+    def _undo_action(self):
+        """Undo last action"""
+        # Try to use undo system if available
+        if hasattr(self, 'undo_manager') and hasattr(self.undo_manager, 'undo'):
+            try:
+                self.undo_manager.undo()
+                self.log_message("Undo operation performed")
+            except Exception as e:
+                self.log_message(f"Undo failed: {str(e)}")
+                QMessageBox.information(self, "Undo", f"Undo operation failed:\n{str(e)}")
+        else:
+            self.log_message("No undo operations available")
+            QMessageBox.information(self, "Undo", "No undo operations available")
+
+    def _redo_action(self):
+        """Redo last action"""
+        # Try to use undo system if available
+        if hasattr(self, 'undo_manager') and hasattr(self.undo_manager, 'redo'):
+            try:
+                self.undo_manager.redo()
+                self.log_message("Redo operation performed")
+            except Exception as e:
+                self.log_message(f"Redo failed: {str(e)}")
+                QMessageBox.information(self, "Redo", f"Redo operation failed:\n{str(e)}")
+        else:
+            self.log_message("No redo operations available")
+            QMessageBox.information(self, "Redo", "No redo operations available")
 
 
     # INTEGRATION FIX for imgfactory.py:
@@ -3406,46 +4048,45 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"Error in quick_export: {str(e)}")
 
-    def close_img_file(self): #vers1
-        """placeholder - close img debug"""
-
-    def close_all_file(self): #vers1
-        """placeholder - close all debug"""
-
-    def reload_current_file(self): #vers 1
-        """Reload current IMG or COL file (close and reopen)"""
+    def close_img_file(self): #vers2
+        """Close current IMG file using installed close functions"""
         try:
-            if self.current_img and self.current_img.file_path:
-                # Store current IMG path
-                img_path = self.current_img.file_path
-                self.log_message(f"Reloading IMG file: {os.path.basename(img_path)}")
-
-                # Close current file
-                self.close_img_file()
-
-                # Reopen the file
-                self.load_img_file(img_path)
-                self.log_message("IMG file reloaded")
-                return True
-
-            elif self.current_col and hasattr(self.current_col, 'file_path'):
-                # Store current COL path
-                col_path = self.current_col.file_path
-                self.log_message(f"Reloading COL file: {os.path.basename(col_path)}")
-
-                # Close current COL
-                self.current_col = None
-
-                # Reopen the COL file
-                if hasattr(self, 'load_col_file_safely'):
-                    self.load_col_file_safely(col_path)
-                    self.log_message("COL file reloaded")
-                    return True
-
+            if hasattr(self, 'close_manager') and self.close_manager:
+                self.close_manager.close_current_file()
             else:
-                self.log_message("No file to reload")
-                return False
+                # Fallback: clear current references
+                self.current_img = None
+                if hasattr(self, 'current_col'):
+                    self.current_col = None
+                if hasattr(self, 'current_txd'):
+                    self.current_txd = None
+                self._update_ui_for_no_img()
+        except Exception as e:
+            self.log_message(f"Error in close_img_file: {str(e)}")
 
+    def close_all_file(self): #vers2
+        """Close all files using installed close functions"""
+        try:
+            if hasattr(self, 'close_manager') and self.close_manager:
+                self.close_manager.close_all_tabs()
+            else:
+                # Fallback: clear all references
+                self.current_img = None
+                if hasattr(self, 'current_col'):
+                    self.current_col = None
+                if hasattr(self, 'current_txd'):
+                    self.current_txd = None
+                self._update_ui_for_no_img()
+        except Exception as e:
+            self.log_message(f"Error in close_all_file: {str(e)}")
+
+    def reload_current_file(self): #vers 2
+        """Reload current IMG or COL file (close and reopen) - TAB AWARE"""
+        try:
+            # Use the proper tab-aware reload function from reload module
+            from apps.core.reload import reload_current_file as proper_reload_function
+            return proper_reload_function(self)
+            
         except Exception as e:
             self.log_message(f"Reload failed: {str(e)}")
             return False
@@ -3516,7 +4157,7 @@ class IMGFactory(QMainWindow):
             self.log_message("ðŸ”§ Applying search and performance fixes...")
 
             # 1. Setup our new consolidated search system
-            from apps.core.guisearch import install_search_system
+            from apps.core.gui_search import install_search_system
             if install_search_system(self):
                 self.log_message("New search system installed")
             else:
@@ -3896,6 +4537,85 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"Failed to save settings: {str(e)}")
 
+    def setup_search_system(self): #vers 1
+        """Setup search functionality for the application"""
+        try:
+            # Create search manager instance
+            from apps.core.gui_search import SearchManager
+            self.search_manager = SearchManager(self)
+            
+            # Setup search functionality
+            success = self.search_manager.setup_search_functionality()
+            
+            # Add search-related methods to main window
+            self.show_search_dialog = self._show_search_dialog
+            self.search_entries = self._search_entries
+            self.search_next = self._search_next
+            self.search_previous = self._search_previous
+            
+            if success:
+                self.log_message("✅ Search system initialized")
+                return True
+            else:
+                self.log_message("⚠️ Search system initialization incomplete")
+                return False
+                
+        except Exception as e:
+            self.log_message(f"❌ Search system setup error: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def _show_search_dialog(self): #vers 1
+        """Show advanced search dialog"""
+        try:
+            if hasattr(self, 'search_manager'):
+                self.search_manager.show_search_dialog()
+            else:
+                self.log_message("⚠️ Search manager not available")
+        except Exception as e:
+            self.log_message(f"❌ Show search dialog error: {e}")
+
+    def _search_entries(self, search_text=None, options=None): #vers 1
+        """Search entries in current IMG file"""
+        try:
+            if hasattr(self, 'search_manager'):
+                # If no search text provided, get it from the filter input
+                if not search_text:
+                    if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'filter_input'):
+                        search_text = self.gui_layout.filter_input.text()
+                    else:
+                        self.log_message("⚠️ No search text provided")
+                        return []
+                
+                return self.search_manager.perform_search(search_text, options)
+            else:
+                self.log_message("⚠️ Search manager not available")
+                return []
+        except Exception as e:
+            self.log_message(f"❌ Search entries error: {e}")
+            return []
+
+    def _search_next(self): #vers 1
+        """Find next search match"""
+        try:
+            if hasattr(self, 'search_manager'):
+                self.search_manager.find_next()
+            else:
+                self.log_message("⚠️ Search manager not available")
+        except Exception as e:
+            self.log_message(f"❌ Search next error: {e}")
+
+    def _search_previous(self): #vers 1
+        """Find previous search match"""
+        try:
+            if hasattr(self, 'search_manager'):
+                self.search_manager.find_previous()
+            else:
+                self.log_message("⚠️ Search manager not available")
+        except Exception as e:
+            self.log_message(f"❌ Search previous error: {e}")
+
     def closeEvent(self, event): #vers 2
         """Handle application close"""
         try:
@@ -3998,6 +4718,878 @@ def main():
        import traceback
        traceback.print_exc()
        return 1
+
+
+def fix_menu_system_and_functionality(main_window):
+    """
+    Comprehensive fix for menu system and functionality
+    """
+    try:
+        # Fix the rename functionality to work from both right-click and double-click
+        fix_rename_functionality(main_window)
+        
+        # Implement context menu for active tab
+        implement_tab_context_menu(main_window)
+        
+        # Add requested file operations to main window
+        add_file_operations_to_main_window(main_window)
+        
+        # Set up proper double-click rename functionality
+        setup_double_click_rename(main_window)
+        
+        main_window.log_message("✅ Comprehensive menu system and functionality fix applied")
+        return True
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Error applying comprehensive fix: {str(e)}")
+        return False
+
+
+def add_file_operations_to_main_window(main_window):
+    """
+    Add the requested file operations as methods to the main window
+    """
+    try:
+        # Add move_selected_file method
+        main_window.move_selected_file = lambda: move_selected_file(main_window)
+        
+        # Add analyze_selected_file method
+        main_window.analyze_selected_file = lambda: analyze_selected_file(main_window)
+        
+        # Add show_hex_editor_selected method
+        main_window.show_hex_editor_selected = lambda: show_hex_editor_selected(main_window)
+        
+        # Add show_dff_texture_list method (as a general method that handles current selection)
+        main_window.show_dff_texture_list = lambda: show_dff_texture_list_from_selection(main_window)
+        
+        # Add show_dff_model_viewer method (as a general method that handles current selection)
+        main_window.show_dff_model_viewer = lambda: show_dff_model_viewer_from_selection(main_window)
+        
+        # Add set_game_path method
+        main_window.set_game_path = lambda: set_game_path(main_window)
+        
+        main_window.log_message("✅ File operations added to main window")
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Error adding file operations: {str(e)}")
+
+
+def set_game_path(main_window):
+    """
+    Set game path with support for custom paths including Linux paths
+    """
+    try:
+        # Get current path if it exists
+        current_path = getattr(main_window, 'game_root', None)
+        if not current_path or current_path == "C:/":
+            # Default to home directory instead of C:/
+            current_path = os.path.expanduser("~")
+        
+        # Open directory dialog without restricting to Windows paths
+        folder = QFileDialog.getExistingDirectory(
+            main_window,
+            "Select Game Root Directory (Supports Windows and Linux paths)",
+            current_path,
+            QFileDialog.Option.ShowDirsOnly
+        )
+        
+        if folder:
+            # Validate that it's a game directory by checking for common game files
+            game_files = [
+                "gta3.exe", "gta_vc.exe", "gta_sa.exe", "gtasol.exe", "solcore.exe",
+                "gta3.dat", "gta_vc.dat", "gta_sa.dat", "gta_sol.dat", "SOL/gta_sol.dat",
+                "default.ide", "Data/default.dat", "models/", "textures/", "data/"
+            ]
+            
+            # Check if the folder contains game-related files/directories
+            is_game_dir = False
+            for item in os.listdir(folder):
+                item_lower = item.lower()
+                if any(game_file.split('/')[0] in item_lower for game_file in game_files if '/' not in game_file) or \
+                   any(game_file in item_lower for game_file in game_files if '/' not in game_file):
+                    is_game_dir = True
+                    break
+            
+            # Also check subdirectories
+            if not is_game_dir:
+                for root, dirs, files in os.walk(folder):
+                    for d in dirs:
+                        if d.lower() in ['models', 'textures', 'data', 'sfx', 'audio']:
+                            is_game_dir = True
+                            break
+                    if is_game_dir:
+                        break
+            
+            main_window.game_root = folder
+            main_window.log_message(f"Game path set: {folder}")
+            
+            # Update directory tree if it exists
+            if hasattr(main_window, 'directory_tree'):
+                main_window.directory_tree.game_root = folder
+                main_window.directory_tree.current_root = folder
+                if hasattr(main_window.directory_tree, 'path_label'):
+                    main_window.directory_tree.path_label.setText(folder)
+                # Auto-populate the tree
+                if hasattr(main_window.directory_tree, 'populate_tree'):
+                    main_window.directory_tree.populate_tree(folder)
+                    main_window.log_message("Directory tree auto-populated")
+            
+            # Save settings
+            if hasattr(main_window, 'save_settings'):
+                main_window.save_settings()
+            else:
+                # Create a simple save settings if not available
+                try:
+                    from PyQt6.QtCore import QSettings
+                    settings = QSettings("IMG_Factory", "IMG_Factory_Settings")
+                    settings.setValue("game_root", folder)
+                except:
+                    pass
+            
+            # Show success message
+            QMessageBox.information(
+                main_window,
+                "Game Path Set",
+                f"Game path configured:\\n{folder}\\n\\nDirectory tree will now show game files.\\nSwitch to the 'Directory Tree' tab to browse."
+            )
+        else:
+            main_window.log_message("Game path selection cancelled")
+            
+    except Exception as e:
+        main_window.log_message(f"Error setting game path: {str(e)}")
+        QMessageBox.critical(
+            main_window,
+            "Error Setting Game Path",
+            f"An error occurred while setting the game path:\\n\\n{str(e)}"
+        )
+
+
+def show_dff_texture_list_from_selection(main_window):
+    """
+    Show DFF texture list for currently selected entry
+    """
+    try:
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            table = main_window.gui_layout.table
+            selected_items = table.selectedItems()
+            if selected_items:
+                row = selected_items[0].row()
+                entry_info = get_entry_info(main_window, row)
+                if entry_info and entry_info['is_dff']:
+                    show_dff_texture_list(main_window, row, entry_info)
+                else:
+                    # Check if it's a DFF file in the IMG that we need to extract and parse
+                    if entry_info and entry_info['name'].lower().endswith('.dff'):
+                        show_dff_texture_list_from_img_dff(main_window, row, entry_info)
+                    else:
+                        QMessageBox.information(main_window, "DFF Texture List", 
+                                              "Please select a DFF file to view texture list")
+    except Exception as e:
+        main_window.log_message(f"❌ Error showing DFF texture list from selection: {str(e)}")
+
+
+def show_dff_texture_list_from_img_dff(main_window, row, entry_info):
+    """
+    Extract and show DFF texture list from DFF files in IMG
+    """
+    try:
+        # Get the DFF data from the IMG entry
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            entry = main_window.current_img.entries[row]
+            dff_data = entry.get_data() if hasattr(entry, 'get_data') else None
+            
+            if dff_data:
+                # Create a temporary file to extract the DFF
+                import tempfile
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.dff', mode='wb') as temp_file:
+                    temp_file.write(dff_data)
+                    temp_dff_path = temp_file.name
+                
+                try:
+                    # Parse the DFF file for texture information
+                    textures = parse_dff_textures_from_data(temp_dff_path)
+                    
+                    # Create dialog to show texture list
+                    dialog = QDialog(main_window)
+                    dialog.setWindowTitle(f"Textures in {entry.name}")
+                    dialog.resize(500, 400)
+                    
+                    layout = QVBoxLayout(dialog)
+                    
+                    # Create text area for texture list
+                    text_area = QTextEdit()
+                    text_area.setReadOnly(True)
+                    
+                    if textures:
+                        texture_list = "\\n".join([f"  • {tex}" for tex in textures])
+                        text_content = f"Textures found in {entry.name}:\\n\\n{texture_list}"
+                    else:
+                        text_content = f"No textures found in {entry.name}"
+                    
+                    text_area.setPlainText(text_content)
+                    layout.addWidget(text_area)
+                    
+                    # Close button
+                    close_btn = QPushButton("Close")
+                    close_btn.clicked.connect(dialog.close)
+                    layout.addWidget(close_btn)
+                    
+                    dialog.exec()
+                    
+                finally:
+                    # Clean up temporary file
+                    if os.path.exists(temp_dff_path):
+                        os.remove(temp_dff_path)
+            else:
+                QMessageBox.warning(main_window, "DFF Texture List", 
+                                  f"Could not extract data from {entry.name}")
+    except Exception as e:
+        main_window.log_message(f"❌ Error showing DFF texture list from IMG: {str(e)}")
+
+
+def parse_dff_textures_from_data(dff_path):
+    """
+    Parse a DFF file to extract texture names
+    """
+    try:
+        textures = []
+        
+        # This is a simplified implementation - in a real application,
+        # you'd need a proper DFF parser
+        with open(dff_path, 'rb') as f:
+            data = f.read()
+            
+        # Look for texture-related patterns in the DFF data
+        # This is a simplified approach - real DFF parsing is complex
+        # Look for common texture name patterns
+        import re
+        
+        # Search for potential texture names in the binary data
+        text_data = data.decode('ascii', errors='ignore')
+        
+        # Look for potential texture names (alphanumeric with underscores, hyphens, dots)
+        potential_textures = re.findall(r'[A-Za-z0-9_\\-]{3,20}\\.(?:txd|png|jpg|bmp|dxt)', text_data, re.IGNORECASE)
+        
+        # Also look for names without extensions
+        potential_names = re.findall(r'[A-Za-z][A-Za-z0-9_\\-]{2,19}(?=\\.|\\s|$)', text_data)
+        
+        # Combine and deduplicate
+        all_matches = list(set(potential_textures + potential_names))
+        
+        # Filter for likely texture names
+        for name in all_matches:
+            if any(tex in name.lower() for tex in ['tex', 'texture', 'material', 'diffuse', 'specular']):
+                textures.append(name)
+            elif len(name) > 2 and not any(c.isdigit() for c in name[:2]):  # Avoid names starting with numbers
+                textures.append(name)
+        
+        # Return unique textures
+        return list(set(textures))
+        
+    except Exception as e:
+        print(f"Error parsing DFF textures: {str(e)}")
+        return []
+
+
+def show_dff_model_viewer_from_selection(main_window):
+    """
+    Show DFF model viewer for currently selected entry
+    """
+    try:
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            table = main_window.gui_layout.table
+            selected_items = table.selectedItems()
+            if selected_items:
+                row = selected_items[0].row()
+                entry_info = get_entry_info(main_window, row)
+                if entry_info and entry_info['is_dff']:
+                    show_dff_model_viewer(main_window, row, entry_info)
+                else:
+                    QMessageBox.information(main_window, "DFF Model Viewer", 
+                                          "Please select a DFF file to view in model viewer")
+    except Exception as e:
+        main_window.log_message(f"❌ Error showing DFF model viewer from selection: {str(e)}")
+
+
+def fix_rename_functionality(main_window):
+    """
+    Fix rename functionality to work from both right-click and double-click
+    """
+    try:
+        # Ensure rename_selected function is properly connected
+        if not hasattr(main_window, 'rename_selected'):
+            from apps.core.imgcol_rename import integrate_imgcol_rename_functions
+            integrate_imgcol_rename_functions(main_window)
+        
+        # Connect double-click event to table for rename
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            table = main_window.gui_layout.table
+            # Connect double-click to rename function
+            table.cellDoubleClicked.connect(lambda row, col: handle_double_click_rename(main_window, row, col))
+        
+        main_window.log_message("✅ Rename functionality fixed")
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Error fixing rename functionality: {str(e)}")
+
+
+def handle_double_click_rename(main_window, row, col):
+    """
+    Handle double-click rename functionality
+    """
+    try:
+        # Only allow renaming when clicking on the name column (usually column 0)
+        if col == 0:  # Assuming name column is first column
+            if hasattr(main_window, 'current_img') and main_window.current_img:
+                if 0 <= row < len(main_window.current_img.entries):
+                    # Get the current entry
+                    entry = main_window.current_img.entries[row]
+                    current_name = entry.name
+                    
+                    # Show input dialog for new name
+                    new_name, ok = QInputDialog.getText(
+                        main_window,
+                        "Rename File",
+                        f"Enter new name for '{current_name}':",
+                        text=current_name
+                    )
+                    
+                    if ok and new_name and new_name != current_name:
+                        # Validate the new name
+                        if validate_new_name(main_window, new_name):
+                            # Check for duplicates
+                            if not check_duplicate_name(main_window, new_name, entry):
+                                # Perform the rename
+                                entry.name = new_name
+                                
+                                if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+                                    table = main_window.gui_layout.table
+                                    table.item(row, 0).setText(new_name)
+
+                                # Mark as modified
+                                if hasattr(main_window.current_img, 'modified'):
+                                    main_window.current_img.modified = True
+
+                                main_window.log_message(f"✅ Renamed '{current_name}' to '{new_name}'")
+                                QMessageBox.information(main_window, "Rename Successful",
+                                                      f"Successfully renamed to '{new_name}'")
+                            else:
+                                QMessageBox.warning(main_window, "Duplicate Name",
+                                                  f"An entry named '{new_name}' already exists")
+                        else:
+                            QMessageBox.warning(main_window, "Invalid Name",
+                                              "The name provided is invalid")
+        else:
+            # For other columns, we might want to handle different actions
+            main_window.log_message(f"Double-clicked on row {row}, column {col}")
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error handling double-click rename: {str(e)}")
+
+
+def validate_new_name(main_window, new_name):
+    """
+    Validate new name for file entry
+    """
+    try:
+        # Check for empty name
+        if not new_name or not new_name.strip():
+            return False
+
+        # Check for invalid characters
+        invalid_chars = '<>:"/\\\\|?*'
+        if any(char in new_name for char in invalid_chars):
+            return False
+
+        # Check length (typically IMG entries have 24 char limit)
+        if len(new_name) > 24:
+            return False
+
+        return True
+    except Exception:
+        return False
+
+
+def check_duplicate_name(main_window, new_name, current_entry):
+    """
+    Check if new name would create duplicate
+    """
+    try:
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            for entry in main_window.current_img.entries:
+                if entry != current_entry and getattr(entry, 'name', '') == new_name:
+                    return True
+        return False
+    except Exception:
+        return True  # Return True on error to be safe
+
+
+def implement_tab_context_menu(main_window):
+    """
+    Implement context menu for active tab with file operations
+    This integrates with the existing context menu system to avoid conflicts
+    """
+    try:
+        # Add context menu to the main window
+        main_window.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        main_window.customContextMenuRequested.connect(lambda pos: show_main_context_menu(main_window, pos))
+
+        # For the table, we need to integrate with the existing context menu system
+        # rather than replacing it to avoid conflicts with the existing setup
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            table = main_window.gui_layout.table
+
+            # Instead of replacing the context menu policy, we'll enhance the existing one
+            # by making sure our features are available through the existing system
+
+            # The existing setup_table_context_menu should already handle the basic context menu
+            # We'll enhance it by making sure our operations are available
+
+            # Store a reference to our enhanced functionality
+            table._enhanced_context_menu = True
+
+        main_window.log_message("✅ Tab context menu enhanced with additional operations")
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error implementing tab context menu: {str(e)}")
+
+
+def show_main_context_menu(main_window, position):
+    """
+    Show context menu for the main window/active tab
+    """
+    try:
+        menu = QMenu(main_window)
+
+        # Add file operations that were requested
+        add_requested_file_operations(main_window, menu)
+
+        # Add common operations
+        add_common_operations(main_window, menu)
+
+        # Show the menu
+        menu.exec(main_window.mapToGlobal(position))
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error showing main context menu: {str(e)}")
+
+
+def show_table_context_menu(main_window, position):
+    """
+    Show context menu for the table
+    """
+    try:
+        table = main_window.gui_layout.table
+        item = table.itemAt(position)
+
+        if not item:
+            # Show generic menu if no item clicked
+            show_main_context_menu(main_window, position)
+            return
+
+        row = item.row()
+        menu = QMenu(table)
+
+        # Add file operations that were requested
+        add_requested_file_operations(main_window, menu, row)
+
+        # Add common operations
+        add_common_operations(main_window, menu, row)
+
+        # Show the menu
+        menu.exec(table.mapToGlobal(position))
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error showing table context menu: {str(e)}")
+
+
+def add_requested_file_operations(main_window, menu, row=None):
+    """
+    Add the requested file operations to context menu
+    """
+    try:
+        # Get entry info if row is specified
+        entry_info = None
+        if row is not None and hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                entry_info = {
+                    'entry': entry,
+                    'name': entry.name,
+                    'is_col': entry.name.lower().endswith('.col'),
+                    'is_dff': entry.name.lower().endswith('.dff'),
+                    'is_txd': entry.name.lower().endswith('.txd'),
+                    'path': getattr(entry, 'full_path', '') if hasattr(entry, 'full_path') else ''
+                }
+
+        # Rename action
+        rename_action = QAction("Rename", menu)
+        if row is not None:
+            rename_action.triggered.connect(lambda: handle_double_click_rename(main_window, row, 0))
+        else:
+            rename_action.triggered.connect(main_window.rename_selected)
+        menu.addAction(rename_action)
+
+        # Move action
+        move_action = QAction("Move", menu)
+        if row is not None and entry_info:
+            move_action.triggered.connect(lambda: move_file(main_window, row, entry_info))
+        else:
+            move_action.triggered.connect(lambda: move_selected_file(main_window))
+        menu.addAction(move_action)
+
+        # Analyze file action
+        analyze_action = QAction("Analyze File", menu)
+        if row is not None and entry_info:
+            analyze_action.triggered.connect(lambda: analyze_file(main_window, row, entry_info))
+        else:
+            analyze_action.triggered.connect(lambda: analyze_selected_file(main_window))
+        menu.addAction(analyze_action)
+
+        # Show hex editor action
+        hex_action = QAction("Show Hex Editor", menu)
+        if row is not None and entry_info:
+            hex_action.triggered.connect(lambda: show_hex_editor(main_window, row, entry_info))
+        else:
+            hex_action.triggered.connect(lambda: show_hex_editor_selected(main_window))
+        menu.addAction(hex_action)
+
+        # Show texture list for DFF (if DFF file)
+        if entry_info and entry_info['is_dff']:
+            texture_action = QAction("Show Texture List for DFF", menu)
+            texture_action.triggered.connect(lambda: show_dff_texture_list(main_window, row, entry_info))
+            menu.addAction(texture_action)
+
+        # Show DFF model in viewer (if DFF file)
+        if entry_info and entry_info['is_dff']:
+            model_action = QAction("Show DFF Model in Viewer", menu)
+            model_action.triggered.connect(lambda: show_dff_model_viewer(main_window, row, entry_info))
+            menu.addAction(model_action)
+
+        menu.addSeparator()
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error adding requested file operations: {str(e)}")
+
+
+def add_common_operations(main_window, menu, row=None):
+    """
+    Add common operations to context menu
+    """
+    try:
+        # Export action
+        if hasattr(main_window, 'export_selected'):
+            export_action = QAction("Export", menu)
+            export_action.triggered.connect(main_window.export_selected)
+            menu.addAction(export_action)
+
+        # Remove action
+        if hasattr(main_window, 'remove_selected'):
+            remove_action = QAction("Remove", menu)
+            remove_action.triggered.connect(main_window.remove_selected)
+            menu.addAction(remove_action)
+
+        # Copy operations
+        copy_submenu = menu.addMenu("Copy")
+
+        copy_name_action = QAction("Copy Name", menu)
+        if row is not None:
+            copy_name_action.triggered.connect(lambda: copy_entry_name(main_window, row))
+        copy_submenu.addAction(copy_name_action)
+
+        copy_info_action = QAction("Copy Info", menu)
+        if row is not None:
+            copy_info_action.triggered.connect(lambda: copy_entry_info(main_window, row))
+        copy_submenu.addAction(copy_info_action)
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error adding common operations: {str(e)}")
+
+
+def move_file(main_window, row, entry_info):
+    """
+    Move selected file to a new location
+    """
+    try:
+        # Get current entry
+        entry = entry_info['entry']
+        current_name = entry.name
+
+        # Show dialog to select destination
+        dest_dir = QFileDialog.getExistingDirectory(
+            main_window,
+            "Select Destination Directory",
+            ""
+        )
+
+        if dest_dir:
+            # For IMG entries, we can't actually move files since they're inside the IMG
+            # Instead, we can rename to change the path-like structure
+            QMessageBox.information(main_window, "Move Operation",
+                                  f"Moving '{current_name}' to '{dest_dir}'\\n\\n"
+                                  f"Note: In IMG files, entries are virtual and cannot be moved to different directories.\\n"
+                                  f"You can rename the entry to reflect a new path structure if needed.")
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error moving file: {str(e)}")
+
+
+def move_selected_file(main_window):
+    """
+    Move selected file (when no specific row selected)
+    """
+    try:
+        # Get selected items from table
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            table = main_window.gui_layout.table
+            selected_items = table.selectedItems()
+            if selected_items:
+                row = selected_items[0].row()
+                entry_info = get_entry_info(main_window, row)
+                if entry_info:
+                    move_file(main_window, row, entry_info)
+    except Exception as e:
+        main_window.log_message(f"❌ Error moving selected file: {str(e)}")
+
+
+def analyze_file(main_window, row, entry_info):
+    """
+    Analyze selected file
+    """
+    try:
+        entry = entry_info['entry']
+        name = entry.name
+
+        # Determine file type and perform appropriate analysis
+        if entry_info['is_col']:
+            # Use existing COL analysis functionality
+            try:
+                from apps.gui.gui_context import analyze_col_from_img_entry
+                analyze_col_from_img_entry(main_window, row)
+            except:
+                QMessageBox.information(main_window, "COL Analysis",
+                                      f"COL Analysis for: {name}\\n\\n"
+                                      f"Size: {entry.size} bytes\\n"
+                                      f"Offset: 0x{entry.offset:08X}\\n"
+                                      f"Type: Collision File")
+        elif entry_info['is_dff']:
+            # DFF analysis
+            QMessageBox.information(main_window, "DFF Analysis",
+                                  f"DFF Analysis for: {name}\\n\\n"
+                                  f"Size: {entry.size} bytes\\n"
+                                  f"Offset: 0x{entry.offset:08X}\\n"
+                                  f"Type: DFF Model File")
+        elif entry_info['is_txd']:
+            # TXD analysis
+            QMessageBox.information(main_window, "TXD Analysis",
+                                  f"TXD Analysis for: {name}\\n\\n"
+                                  f"Size: {entry.size} bytes\\n"
+                                  f"Offset: 0x{entry.offset:08X}\\n"
+                                  f"Type: Texture Dictionary File")
+        else:
+            # Generic analysis
+            QMessageBox.information(main_window, "File Analysis",
+                                  f"Analysis for: {name}\\n\\n"
+                                  f"Size: {entry.size} bytes\\n"
+                                  f"Offset: 0x{entry.offset:08X}\\n"
+                                  f"Type: Generic IMG Entry")
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error analyzing file: {str(e)}")
+
+
+def analyze_selected_file(main_window):
+    """
+    Analyze selected file (when no specific row selected)
+    """
+    try:
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            table = main_window.gui_layout.table
+            selected_items = table.selectedItems()
+            if selected_items:
+                row = selected_items[0].row()
+                entry_info = get_entry_info(main_window, row)
+                if entry_info:
+                    analyze_file(main_window, row, entry_info)
+    except Exception as e:
+        main_window.log_message(f"❌ Error analyzing selected file: {str(e)}")
+
+
+def show_hex_editor(main_window, row, entry_info):
+    """
+    Show hex editor for selected file
+    """
+    try:
+        # Extract the file data to a temporary location for hex editing
+        # Try to extract the file data
+        if entry_info['is_col']:
+            try:
+                from apps.gui.gui_context import open_col_file_dialog
+                # Use the existing COL functionality
+                open_col_file_dialog(main_window)
+            except:
+                QMessageBox.information(main_window, "Hex Editor",
+                                      f"Hex Editor for: {entry_info['name']}\\n\\n"
+                                      f"File type: {entry_info['name'].split('.')[-1].upper()}\\n\\n"
+                                      f"Note: Hex editor functionality would open here.")
+
+        else:
+            # For non-COL files, we'd need a different extraction method
+            QMessageBox.information(main_window, "Hex Editor",
+                                  f"Hex Editor for: {entry_info['name']}\\n\\n"
+                                  f"File type: {entry_info['name'].split('.')[-1].upper()}\\n\\n"
+                                  f"Note: Hex editor functionality would open here.")
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error showing hex editor: {str(e)}")
+
+
+def show_hex_editor_selected(main_window):
+    """
+    Show hex editor for selected file (when no specific row selected)
+    """
+    try:
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            table = main_window.gui_layout.table
+            selected_items = table.selectedItems()
+            if selected_items:
+                row = selected_items[0].row()
+                entry_info = get_entry_info(main_window, row)
+                if entry_info:
+                    show_hex_editor(main_window, row, entry_info)
+    except Exception as e:
+        main_window.log_message(f"❌ Error showing hex editor for selected: {str(e)}")
+
+
+def show_dff_texture_list(main_window, row, entry_info):
+    """
+    Show texture list for DFF file
+    """
+    try:
+        # This would require DFF parsing functionality
+        QMessageBox.information(main_window, "DFF Texture List",
+                              f"Texture List for DFF: {entry_info['name']}\\n\\n"
+                              f"Note: DFF texture extraction and listing functionality would be implemented here.\\n"
+                              f"This would parse the DFF file and show all referenced textures.")
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error showing DFF texture list: {str(e)}")
+
+
+def show_dff_model_viewer(main_window, row, entry_info):
+    """
+    Show DFF model in viewer
+    """
+    try:
+        # This would require a 3D model viewer component
+        QMessageBox.information(main_window, "DFF Model Viewer",
+                              f"DFF Model Viewer for: {entry_info['name']}\\n\\n"
+                              f"Note: 3D model viewer functionality would be implemented here.\\n"
+                              f"This would load and display the DFF model in a 3D viewport.")
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error showing DFF model viewer: {str(e)}")
+
+
+def copy_entry_name(main_window, row):
+    """
+    Copy entry name to clipboard
+    """
+    try:
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                clipboard = QApplication.clipboard()
+                clipboard.setText(entry.name)
+                main_window.log_message(f"📋 Copied name: {entry.name}")
+    except Exception as e:
+        main_window.log_message(f"❌ Error copying entry name: {str(e)}")
+
+
+def copy_entry_info(main_window, row):
+    """
+    Copy entry info to clipboard
+    """
+    try:
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                info_text = f"Name: {entry.name}\\nSize: {entry.size}\\nOffset: 0x{entry.offset:08X}"
+                clipboard = QApplication.clipboard()
+                clipboard.setText(info_text)
+                main_window.log_message(f"📋 Copied info for: {entry.name}")
+    except Exception as e:
+        main_window.log_message(f"❌ Error copying entry info: {str(e)}")
+
+
+def get_entry_info(main_window, row):
+    """
+    Get entry information for a given row
+    """
+    try:
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                return {
+                    'entry': entry,
+                    'name': entry.name,
+                    'is_col': entry.name.lower().endswith('.col'),
+                    'is_dff': entry.name.lower().endswith('.dff'),
+                    'is_txd': entry.name.lower().endswith('.txd'),
+                    'size': entry.size,
+                    'offset': entry.offset
+                }
+        return None
+    except Exception:
+        return None
+
+
+def setup_double_click_rename(main_window):
+    """
+    Setup double-click rename functionality
+    """
+    try:
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            table = main_window.gui_layout.table
+
+            # Store original double-click handler if it exists
+            if hasattr(table, '_original_double_click_handler'):
+                return  # Already set up
+
+            # Connect double-click event
+            table.cellDoubleClicked.connect(lambda row, col: handle_double_click_rename(main_window, row, col))
+
+            # Mark as set up
+            table._original_double_click_handler = True
+
+            main_window.log_message("✅ Double-click rename functionality set up")
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error setting up double-click rename: {str(e)}")
+
+
+def setup_double_click_rename(main_window):
+    """
+    Setup double-click rename functionality
+    """
+    try:
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            table = main_window.gui_layout.table
+
+            # Store original double-click handler if it exists
+            if hasattr(table, '_original_double_click_handler'):
+                return  # Already set up
+
+            # Connect double-click event
+            table.cellDoubleClicked.connect(lambda row, col: handle_double_click_rename(main_window, row, col))
+
+            # Mark as set up
+            table._original_double_click_handler = True
+
+            main_window.log_message("✅ Double-click rename functionality set up")
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error setting up double-click rename: {str(e)}")
 
 
 if __name__ == "__main__":

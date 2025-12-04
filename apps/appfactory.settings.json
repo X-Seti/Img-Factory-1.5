@@ -60,5 +60,6 @@
   "table_font_size": 9,
   "table_font_weight": "Normal",
   "tooltip_font_size": 8,
-  "tooltip_font_weight": "Normal"
+  "tooltip_font_weight": "Normal",
+  "right_panel_width": 279
 }

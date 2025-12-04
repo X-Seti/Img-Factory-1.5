@@ -16,7 +16,23 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from apps.methods.file_validation import validate_img_file, validate_any_file, get_selected_entries_for_operation
-from apps.methods.tab_system import get_current_file_from_active_tab, validate_tab_before_operation, get_current_file_type_from_tab
+try:
+    from apps.methods.tab_system import get_current_file_from_active_tab, validate_tab_before_operation, get_current_file_type_from_tab
+except ImportError:
+    # Fallback if tab_system is not available
+    def validate_tab_before_operation(main_window, operation_name):
+        # Simple fallback that always allows the operation
+        return True
+    def get_current_file_from_active_tab(main_window):
+        # Fallback that returns current_img if available
+        if hasattr(main_window, 'current_img'):
+            return main_window.current_img, 'IMG'
+        return None, None
+    def get_current_file_type_from_tab(main_window):
+        # Fallback that returns IMG if current_img is available
+        if hasattr(main_window, 'current_img'):
+            return 'IMG'
+        return None
 
 # IMG_Editor core integration support
 try:
@@ -113,6 +129,18 @@ def rename_img_entry(main_window): #vers 2
         success = _rename_with_img_core(main_window, file_object, selected_entry, new_name)
         
         if success:
+            # Add undo command to the undo manager
+            if hasattr(main_window, 'undo_manager'):
+                from apps.core.undo_system import RenameCommand
+                undo_cmd = RenameCommand(selected_entry, current_name, new_name)
+                main_window.undo_manager.push_command(undo_cmd)
+        
+            # Mark the file object as modified
+            if hasattr(file_object, 'modified'):
+                file_object.modified = True
+            else:
+                setattr(file_object, 'modified', True)
+        
             # Refresh current tab to show changes
             if hasattr(main_window, 'refresh_current_tab_data'):
                 main_window.refresh_current_tab_data()
@@ -431,6 +459,10 @@ def _rename_with_fallback_method(main_window, entry, new_name: str) -> bool: #ve
         # Get old name before renaming
         old_name = getattr(entry, 'name', '')
         
+        # Store original name for change detection if not already stored
+        if not hasattr(entry, 'original_name'):
+            entry.original_name = old_name
+        
         # Create undo command before making changes
         from apps.core.undo_system import RenameCommand
         if hasattr(main_window, 'undo_manager'):
@@ -444,6 +476,13 @@ def _rename_with_fallback_method(main_window, entry, new_name: str) -> bool: #ve
         if hasattr(entry, 'modified'):
             entry.modified = True
             
+        # Also set is_modified flag that save function looks for
+        if hasattr(entry, 'is_modified'):
+            entry.is_modified = True
+        else:
+            # Create the is_modified attribute if it doesn't exist
+            setattr(entry, 'is_modified', True)
+            
         # Mark parent object as modified if it exists
         if hasattr(entry, 'parent') and hasattr(entry.parent, 'modified'):
             entry.parent.modified = True
@@ -451,6 +490,9 @@ def _rename_with_fallback_method(main_window, entry, new_name: str) -> bool: #ve
             main_window.current_file.modified = True
         elif hasattr(main_window, 'current_img') and hasattr(main_window.current_img, 'modified'):
             main_window.current_img.modified = True
+        elif hasattr(main_window, 'current_img'):
+            # Also set modified flag on current_img if it exists
+            setattr(main_window.current_img, 'modified', True)
         
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"Successfully renamed entry using fallback method: {old_name} -> {new_name}")

@@ -14,6 +14,11 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer, QSize, pyqtSignal, QPoint
 from PyQt6.QtGui import QFont, QAction, QIcon, QShortcut, QKeySequence, QPalette, QTextCursor
 from apps.core.gui_search import ASearchDialog, SearchManager
+from apps.methods.svg_shared_icons import (
+    get_add_icon, get_open_icon, get_refresh_icon, get_close_icon, 
+    get_save_icon, get_export_icon, get_import_icon, get_remove_icon,
+    get_edit_icon, get_view_icon, get_search_icon, get_settings_icon
+)
 from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
 from apps.components.Img_Creator.img_creator import NewIMGDialog, IMGCreationThread
@@ -40,6 +45,7 @@ from apps.core.img_merger import merge_img_function
 from apps.core.convert import convert_img, convert_img_format
 from apps.core.rename import rename_entry
 from apps.core.imgcol_replace import replace_selected
+from apps.core.extract import extract_textures_function
 from apps.core.reload import reload_current_file
 from apps.core.create import create_new_img
 from apps.core.open import _detect_and_open_file, open_file_dialog, _detect_file_type
@@ -160,6 +166,7 @@ class IMGFactoryGUILayout:
             # Edit methods
             'rename_selected': lambda: rename_entry(self.main_window),
             'replace_selected': lambda: replace_selected(self.main_window),
+            'extract_textures': lambda: extract_textures_function(self.main_window),
 
             # Editor methods
             'edit_col_file': lambda: open_col_editor_dialog(self.main_window),
@@ -182,6 +189,12 @@ class IMGFactoryGUILayout:
             'editscm': lambda: self._log_missing_method('editscm'),
             'editgxt': lambda: self._log_missing_method('editgxt'),
             'editmenu': lambda: self._log_missing_method('editmenu'),
+            
+            # Search methods
+            'show_search_dialog': lambda: self.main_window.show_search_dialog(),
+            'search_entries': lambda: self.main_window.search_entries(),
+            'search_next': lambda: self.main_window.search_next(),
+            'search_previous': lambda: self.main_window.search_previous(),
         }
 
         print(f"✅ Method mappings created: {len(method_mappings)} methods")
@@ -282,7 +295,7 @@ class IMGFactoryGUILayout:
             #("Quick Exp", "quick_export", "document-send", colors['export_action'], "quick_export_selected"),
             ("Remove", "remove", "edit-delete", colors['remove_action'], "remove_selected"),
             ("Remove via", "remove_via", "document-remvia", colors['remove_action'], "remove_via_entries"),
-            ("Replace", "replace", "edit-copy", colors['edit_action'], "replace_selected"),
+            ("Extract", "extract", "document-export", colors['export_action'], "extract_textures"),
             ("Rename", "rename", "edit-rename", colors['edit_action'], "rename_selected"),
             ("Select All", "select_all", "edit-select-all", colors['select_action'], "select_all_entries"),
             ("Inverse", "sel_inverse", "edit-select", colors['select_action'], "select_inverse"),
@@ -734,6 +747,12 @@ class IMGFactoryGUILayout:
         btn.setMaximumHeight(22)
         btn.setMinimumHeight(20)
 
+        # Set icon based on the icon identifier
+        icon_obj = self._get_svg_icon(icon)
+        if icon_obj:
+            btn.setIcon(icon_obj)
+            btn.setIconSize(QSize(16, 16))  # Set a reasonable icon size
+
         # Detect if we're using a dark theme
         is_dark_theme = self._is_dark_theme()
 
@@ -833,6 +852,80 @@ class IMGFactoryGUILayout:
             return color
 
 
+    def _get_svg_icon(self, icon_name: str) -> QIcon:
+        """Get SVG icon based on icon name identifier"""
+        icon_map = {
+            # Create/new icons
+            "new": get_add_icon(),
+            "document-new": get_add_icon(),
+            
+            # Open icons
+            "open": get_open_icon(),
+            "document-open": get_open_icon(),
+            
+            # Reload/refresh icons
+            "reload": get_refresh_icon(),
+            "document-reload": get_refresh_icon(),
+            "view-refresh": get_refresh_icon(),
+            "update": get_refresh_icon(),
+            
+            # Close icons
+            "close": get_close_icon(),
+            "window-close": get_close_icon(),
+            "edit-clear": get_close_icon(),
+            
+            # Save icons
+            "save_entry": get_save_icon(),
+            "document-save": get_save_icon(),
+            "document-save-entry": get_save_icon(),
+            
+            # Import icons
+            "import": get_import_icon(),
+            "document-import": get_import_icon(),
+            "import_via": get_import_icon(),
+            
+            # Export icons
+            "export": get_export_icon(),
+            "document-export": get_export_icon(),
+            "export_via": get_export_icon(),
+            "document-send": get_export_icon(),
+            
+            # Remove/delete icons
+            "remove": get_remove_icon(),
+            "edit-delete": get_remove_icon(),
+            "remove_via": get_remove_icon(),
+            "document-remvia": get_remove_icon(),
+            
+            # Edit icons
+            "rename": get_edit_icon(),
+            "edit-rename": get_edit_icon(),
+            "edit_select": get_edit_icon(),
+            "edit-select": get_edit_icon(),
+            "select_all": get_edit_icon(),
+            "edit-select-all": get_edit_icon(),
+            "sel_inverse": get_edit_icon(),
+            "sort": get_edit_icon(),
+            "view-sort": get_edit_icon(),
+            "pin_selected": get_edit_icon(),
+            "pin": get_edit_icon(),
+            "extract": get_export_icon(),
+            
+            # Other icons
+            "document-merge": get_view_icon(),
+            "edit-cut": get_view_icon(),
+            "transform": get_view_icon(),
+            "document-dump": get_view_icon(),
+            
+            # Search icons
+            "search": get_search_icon(),
+            
+            # Placeholder (no icon)
+            "placeholder": None,
+        }
+        
+        return icon_map.get(icon_name, None)
+
+
     def _get_short_text(self, label): #vers 1
         """Get short text for button"""
         short_map = {
@@ -843,7 +936,7 @@ class IMGFactoryGUILayout:
             "Import via": "Imp via", "Refresh": "Refresh", "Export": "Exp",
             "Export via": "Exp via", "Quick Exp": "Q Exp", "Remove": "Rem",
             "Remove via": "Rem via", "Dump": "Dump", "Pin selected": "Pin",
-            "Rename": "Rename", "Replace": "Replace", "Select All": "Select",
+            "Rename": "Rename", "Extract": "Extract", "Select All": "Select",
             "Inverse": "Inverse", "Sort via": "Sort", "Col Edit": "Col Edit",
             "Txd Edit": "Txd Edit", "Dff Edit": "Dff Edit", "Ipf Edit": "Ipf Edit",
             "IDE Edit": "IDE Edit", "IPL Edit": "IPL Edit", "Dat Edit": "Dat Edit",
@@ -948,6 +1041,8 @@ class IMGFactoryGUILayout:
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.table.setSortingEnabled(True)
+        # Disable cell editing to allow clicking to move entries up/down instead
+        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         
         # Column sizing
         header = self.table.horizontalHeader()
@@ -1084,12 +1179,18 @@ class IMGFactoryGUILayout:
         filter_controls.addWidget(filter_combo)
         filter_layout.addLayout(filter_controls)
 
+        # Store filter_combo as attribute so search manager can access it
+        self.filter_combo = filter_combo
+
         search_controls = QHBoxLayout()
         search_input = QLineEdit()
         search_input.setPlaceholderText("Search filename...")
         search_controls.addWidget(QLabel("Search:"))
         search_controls.addWidget(search_input)
         filter_layout.addLayout(search_controls)
+        
+        # Store search_input as attribute so search manager can access it
+        self.search_input = search_input
 
         filter_box.setLayout(filter_layout)
         right_layout.addWidget(filter_box)
@@ -1572,9 +1673,10 @@ class IMGFactoryGUILayout:
                     for row in rows_to_select:
                         # Select the first cell in each unselected row to select the entire row
                         index = self.table.model().index(row, 0)
-                        selection_model.select(index, 
-                            selection_model.Select | 
-                            selection_model.Rows)
+                        from PyQt6.QtCore import QItemSelectionModel
+                        selection_model.select(index,
+                            QItemSelectionModel.SelectionFlag.Select |
+                            QItemSelectionModel.SelectionFlag.Rows)
                 
                 if hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message("✅ Selection inverted")

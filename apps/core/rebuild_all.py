@@ -127,16 +127,15 @@ class BatchRebuildDialog(QDialog):
         self.open_tabs_radio.setChecked(True)
         source_layout.addWidget(self.open_tabs_radio)
 
-        folder_layout = QHBoxLayout()
-        self.folder_radio = QCheckBox("Rebuild IMG Files from Folder")
-        self.folder_path = QLabel("No folder selected")
-        self.browse_btn = QPushButton("Browse...")
-        self.browse_btn.clicked.connect(self._browse_folder)
-
-        folder_layout.addWidget(self.folder_radio)
-        folder_layout.addWidget(self.folder_path)
-        folder_layout.addWidget(self.browse_btn)
-        source_layout.addLayout(folder_layout)
+        # Highlight status instead of folder browsing
+        highlight_layout = QHBoxLayout()
+        self.highlight_radio = QCheckBox("Rebuild Highlighted Files Only")
+        self.highlight_status = QLabel("No highlighted files found")
+        self.highlight_status.setStyleSheet("color: blue; font-weight: bold;")
+        
+        highlight_layout.addWidget(self.highlight_radio)
+        highlight_layout.addWidget(self.highlight_status)
+        source_layout.addLayout(highlight_layout)
 
         layout.addWidget(source_group)
 
@@ -214,14 +213,7 @@ class BatchRebuildDialog(QDialog):
         # Initial target refresh
         QTimer.singleShot(100, self._refresh_targets)
 
-    def _browse_folder(self):
-        """Browse for folder containing IMG files"""
-        folder = QFileDialog.getExistingDirectory(self, "Select Folder with IMG Files")
-        if folder:
-            self.folder_path.setText(folder)
-            self.folder_radio.setChecked(True)
-            self.open_tabs_radio.setChecked(False)
-            self._refresh_targets()
+
 
     def _refresh_targets(self):
         """Refresh the target files list"""
@@ -231,8 +223,11 @@ class BatchRebuildDialog(QDialog):
         if self.open_tabs_radio.isChecked():
             self.targets = _collect_open_img_tabs(self.main_window)
 
-        elif self.folder_radio.isChecked() and self.folder_path.text() != "No folder selected":
-            self.targets = _collect_img_files_from_folder(self.folder_path.text())
+        elif self.highlight_radio.isChecked():
+            # Get highlighted files from the current IMG table
+            self.targets = self._collect_highlighted_files()
+            # Update highlight status
+            self.highlight_status.setText(f"Found {len(self.targets)} highlighted files")
 
         # Populate list widget
         for target in self.targets:
@@ -242,6 +237,33 @@ class BatchRebuildDialog(QDialog):
 
         # Update button state
         self.start_btn.setEnabled(len(self.targets) > 0)
+    
+    def _collect_highlighted_files(self):
+        """Collect highlighted files from the current IMG table"""
+        targets = []
+        
+        # Get the current tab's IMG file and table
+        if hasattr(self.main_window, 'get_current_active_tab_info'):
+            tab_info = self.main_window.get_current_active_tab_info()
+            if tab_info['file_object'] and tab_info['file_type'] == 'IMG' and tab_info['table_widget']:
+                table = tab_info['table_widget']
+                img_file = tab_info['file_object']
+                
+                # Get highlighted entries
+                for row in range(table.rowCount()):
+                    if table.item(row, 0):  # Make sure item exists
+                        # Check if this row is highlighted by checking the background color
+                        item = table.item(row, 0)
+                        if item and item.background().color().name() in ['#90EE90', '#90ee90', '#FFFFE0', '#ffffe0']:  # Light green or light yellow
+                            if row < len(img_file.entries):
+                                entry = img_file.entries[row]
+                                targets.append({
+                                    'file_path': f"{img_file.file_path}#{entry.name}",  # Use # to indicate entry within IMG
+                                    'source': 'highlighted',
+                                    'entry': entry
+                                })
+        
+        return targets
 
     def _start_rebuild(self):
         """Start batch rebuild process"""

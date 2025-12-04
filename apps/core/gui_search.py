@@ -169,6 +169,10 @@ class SearchManager:
         """Find matching entries based on search criteria"""
         matches = []
         
+        # Check if this is a replace operation
+        search_mode = options.get('search_mode', 'search')
+        replace_text = options.get('replace_text', '')
+        
         # Prepare search text
         if not options.get('case_sensitive', False):
             search_text = search_text.lower()
@@ -188,7 +192,72 @@ class SearchManager:
             if self._matches_search_criteria(entry_name, search_text, options):
                 matches.append(i)
         
+        # Handle replace operations
+        if search_mode == 'replace_all' and replace_text:
+            self._perform_replace_all(matches, search_text, replace_text, options)
+        elif search_mode == 'replace_one' and replace_text:
+            # This would be handled by the UI to replace the currently selected item
+            # For now, just log the operation
+            self.main_window.log_message(f"Replace one operation would replace next match of '{search_text}' with '{replace_text}'")
+        
         return matches
+
+    def _perform_replace_all(self, matches, search_text, replace_text, options):
+        """Perform replace all operation on matched entries"""
+        try:
+            count = 0
+            for match_idx in matches:
+                entry = self.main_window.current_img.entries[match_idx]
+                old_name = entry.name
+                
+                # Apply the replacement based on options
+                if options.get('regex', False):
+                    import re
+                    flags = 0 if options.get('case_sensitive', False) else re.IGNORECASE
+                    try:
+                        new_name = re.sub(search_text, replace_text, old_name, flags=flags)
+                    except re.error:
+                        self.main_window.log_message(f"Invalid regex pattern: {search_text}")
+                        continue
+                else:
+                    if options.get('case_sensitive', False):
+                        new_name = old_name.replace(search_text, replace_text)
+                    else:
+                        # Case-insensitive replacement
+                        import re
+                        pattern = re.escape(search_text)
+                        new_name = re.sub(pattern, replace_text, old_name, flags=re.IGNORECASE)
+                
+                # Only update if name actually changed
+                if new_name != old_name:
+                    entry.name = new_name
+                    count += 1
+                    
+                    # Update the table display if possible
+                    if (hasattr(self.main_window, 'gui_layout') and 
+                        hasattr(self.main_window.gui_layout, 'table')):
+                        table = self.main_window.gui_layout.table
+                        if match_idx < table.rowCount():
+                            table.item(match_idx, 0).setText(new_name)
+            
+            self.main_window.log_message(f"Replace All: {count} entries updated")
+            QMessageBox.information(
+                self.main_window, 
+                "Replace Complete", 
+                f"Replace All completed: {count} entries updated"
+            )
+            
+            # Mark the IMG as modified
+            if hasattr(self.main_window.current_img, 'modified'):
+                self.main_window.current_img.modified = True
+                
+        except Exception as e:
+            self.main_window.log_message(f"Error during replace all: {str(e)}")
+            QMessageBox.critical(
+                self.main_window, 
+                "Replace Error", 
+                f"An error occurred during replace: {str(e)}"
+            )
     
     def _matches_file_type(self, filename, file_type):
         """Check if file matches the selected file type filter"""

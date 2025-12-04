@@ -77,11 +77,21 @@ def show_advanced_context_menu(main_window, position): #vers 3
         # Get entry info for file-type specific actions
         entry_name = ""
         entry_type = ""
-        if hasattr(main_window, 'current_img') and main_window.current_img:
-            if 0 <= row < len(main_window.current_img.entries):
-                entry = main_window.current_img.entries[row]
-                entry_name = entry.name
-                entry_type = entry.name.split('.')[-1].upper() if '.' in entry.name else ""
+        # Use tab-aware approach if available
+        if hasattr(main_window, 'get_current_file_from_active_tab'):
+            file_object, file_type = main_window.get_current_file_from_active_tab()
+            if file_type == 'IMG' and file_object and hasattr(file_object, 'entries'):
+                if 0 <= row < len(file_object.entries):
+                    entry = file_object.entries[row]
+                    entry_name = entry.name
+                    entry_type = entry.name.split('.')[-1].upper() if '.' in entry.name else ""
+        else:
+            # Fallback to old method
+            if hasattr(main_window, 'current_img') and main_window.current_img:
+                if 0 <= row < len(main_window.current_img.entries):
+                    entry = main_window.current_img.entries[row]
+                    entry_name = entry.name
+                    entry_type = entry.name.split('.')[-1].upper() if '.' in entry.name else ""
 
         # FILE-TYPE SPECIFIC ACTIONS (Advanced functionality)
         if entry_type:
@@ -168,6 +178,42 @@ def show_advanced_context_menu(main_window, position): #vers 3
                 rename_action.triggered.connect(main_window.rename_selected)
                 menu.addAction(rename_action)
 
+        # MOVE OPERATION
+        if hasattr(main_window, 'move_selected_file'):
+            selected_items = table.selectedItems()
+            if selected_items:
+                move_action = QAction("Move", menu_parent)
+                move_action.triggered.connect(main_window.move_selected_file)
+                menu.addAction(move_action)
+
+        # ANALYZE FILE OPERATION
+        if hasattr(main_window, 'analyze_selected_file'):
+            selected_items = table.selectedItems()
+            if selected_items:
+                analyze_action = QAction("Analyze File", menu_parent)
+                analyze_action.triggered.connect(main_window.analyze_selected_file)
+                menu.addAction(analyze_action)
+
+        # HEX EDITOR OPERATION
+        if hasattr(main_window, 'show_hex_editor_selected'):
+            selected_items = table.selectedItems()
+            if selected_items:
+                hex_action = QAction("Show Hex Editor", menu_parent)
+                hex_action.triggered.connect(main_window.show_hex_editor_selected)
+                menu.addAction(hex_action)
+
+        # SPECIAL OPERATIONS FOR DFF FILES
+        if entry_type == 'DFF':
+            # Show texture list for DFF
+            texture_action = QAction("Show Texture List for DFF", menu_parent)
+            texture_action.triggered.connect(lambda: show_dff_texture_list(main_window, row))
+            menu.addAction(texture_action)
+
+            # Show DFF model in viewer
+            model_action = QAction("Show DFF Model in Viewer", menu_parent)
+            model_action.triggered.connect(lambda: show_dff_model_viewer(main_window, row))
+            menu.addAction(model_action)
+
         # PIN OPERATIONS
         if hasattr(main_window, 'toggle_pinned_entries'):
             selected_items = table.selectedItems()
@@ -208,6 +254,11 @@ def show_advanced_context_menu(main_window, position): #vers 3
             copy_selection_action = QAction(f"Copy Selection ({len(selected_items)} items)", menu_parent)
             copy_selection_action.triggered.connect(lambda: copy_table_selection(main_window))
             menu.addAction(copy_selection_action)
+        
+        # Copy selected text from current cell (if text is selected)
+        copy_selected_text_action = QAction("Copy Selected Text", menu_parent)
+        copy_selected_text_action.triggered.connect(lambda: copy_selected_text_from_cell(main_window, row, col))
+        menu.addAction(copy_selected_text_action)
 
         # Copy filename only (for first column)
         if col == 0:
@@ -224,7 +275,8 @@ def show_advanced_context_menu(main_window, position): #vers 3
         menu.exec(table.mapToGlobal(position))
 
     except Exception as e:
-        main_window.log_message(f"Error showing context menu: {str(e)}")
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Error showing context menu: {str(e)}")
 
 # CLIPBOARD OPERATIONS
 def copy_table_cell(main_window, row: int, col: int): #vers 1
@@ -327,6 +379,45 @@ def copy_table_selection(main_window): #vers 1
         
     except Exception as e:
         main_window.log_message(f"Copy selection error: {str(e)}")
+
+def copy_selected_text_from_cell(main_window, row: int, col: int): #vers 1
+    """Copy selected text from current cell to clipboard"""
+    try:
+        table = main_window.gui_layout.table
+        item = table.item(row, col)
+        
+        if item:
+            # Get the QTableWidgetItem
+            cell_widget = table.cellWidget(row, col) if table.cellWidget(row, col) else None
+            
+            if cell_widget and hasattr(cell_widget, 'selectedText') and callable(getattr(cell_widget, 'selectedText')):
+                # If there's a custom widget with selected text
+                selected_text = cell_widget.selectedText()
+            else:
+                # For standard QTableWidgetItem, we need to handle text selection differently
+                # Since standard QTableWidgetItem doesn't support partial text selection,
+                # we'll just copy the full text of the cell
+                selected_text = item.text()
+                
+                # However, if the user wants to copy only selected text, they would need
+                # to select the text in an editable context. For read-only tables,
+                # we'll just copy the whole cell content
+                main_window.log_message(f"Note: Full cell content copied. Partial text selection not supported in read-only table.")
+            
+            if selected_text:
+                from PyQt6.QtWidgets import QApplication
+                QApplication.clipboard().setText(selected_text)
+                main_window.log_message(f"Copied selected text: '{selected_text[:50]}{'...' if len(selected_text) > 50 else ''}'")
+            else:
+                # If no specific text was selected, copy the full cell content
+                full_text = item.text()
+                QApplication.clipboard().setText(full_text)
+                main_window.log_message(f"Copied full cell content: '{full_text[:50]}{'...' if len(full_text) > 50 else ''}'")
+        else:
+            main_window.log_message("No data in selected cell")
+            
+    except Exception as e:
+        main_window.log_message(f"Copy selected text error: {str(e)}")
 
 def copy_filename_only(main_window, row: int): #vers 1
     """Copy filename without extension from first column"""
@@ -520,6 +611,75 @@ def integrate_right_click_actions(main_window): #vers 3
         main_window.log_message(f"Right-click integration error: {str(e)}")
         return False
 
+# Additional functions needed for context menu
+def show_dff_texture_list(main_window, row):
+    """Show texture list for DFF file - needed for context menu"""
+    try:
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                entry_info = {
+                    'name': entry.name,
+                    'is_dff': entry.name.lower().endswith('.dff'),
+                    'size': entry.size,
+                    'offset': entry.offset
+                }
+                
+                if entry_info['is_dff']:
+                    # Import from comprehensive fix if available
+                    try:
+                        from apps.components.Img_Factory.comprehensive_fix import show_dff_texture_list as dff_texture_func
+                        dff_texture_func(main_window, row, entry_info)
+                    except ImportError:
+                        # Fallback implementation
+                        from PyQt6.QtWidgets import QMessageBox
+                        QMessageBox.information(main_window, "DFF Texture List", 
+                                              f"Texture List for DFF: {entry.name}\n\n"
+                                              f"Note: DFF texture extraction and listing functionality would be implemented here.\n"
+                                              f"This would parse the DFF file and show all referenced textures.")
+                else:
+                    from PyQt6.QtWidgets import QMessageBox
+                    QMessageBox.warning(main_window, "DFF Texture List", 
+                                      "Selected file is not a DFF file")
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Error showing DFF texture list: {str(e)}")
+
+
+def show_dff_model_viewer(main_window, row):
+    """Show DFF model in viewer - needed for context menu"""
+    try:
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                entry_info = {
+                    'name': entry.name,
+                    'is_dff': entry.name.lower().endswith('.dff'),
+                    'size': entry.size,
+                    'offset': entry.offset
+                }
+                
+                if entry_info['is_dff']:
+                    # Import from comprehensive fix if available
+                    try:
+                        from apps.components.Img_Factory.comprehensive_fix import show_dff_model_viewer as dff_viewer_func
+                        dff_viewer_func(main_window, row, entry_info)
+                    except ImportError:
+                        # Fallback implementation
+                        from PyQt6.QtWidgets import QMessageBox
+                        QMessageBox.information(main_window, "DFF Model Viewer", 
+                                              f"DFF Model Viewer for: {entry.name}\n\n"
+                                              f"Note: 3D model viewer functionality would be implemented here.\n"
+                                              f"This would load and display the DFF model in a 3D viewport.")
+                else:
+                    from PyQt6.QtWidgets import QMessageBox
+                    QMessageBox.warning(main_window, "DFF Model Viewer", 
+                                      "Selected file is not a DFF file")
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"❌ Error showing DFF model viewer: {str(e)}")
+
+
 # Export main functions
 __all__ = [
     'setup_table_context_menu',
@@ -528,6 +688,7 @@ __all__ = [
     'copy_table_row',
     'copy_table_column_data',
     'copy_table_selection',
+    'copy_selected_text_from_cell',
     'copy_filename_only',
     'copy_file_summary',
     'edit_col_from_table',
@@ -537,5 +698,7 @@ __all__ = [
     'show_dff_info',
     'view_txd_textures',
     'get_selected_entries_for_extraction',
-    'integrate_right_click_actions'
+    'integrate_right_click_actions',
+    'show_dff_texture_list',
+    'show_dff_model_viewer'
 ]

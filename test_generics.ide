@@ -1,0 +1,12 @@
+#616 - 1951  Generics.ide for (Generics.img/col)
+objs
+616, Ash1_hi, tree3, 1, 299, 4
+617, Cedar1_hi, tree2, 1, 299, 4
+618, Cedar2_hi, tree2, 1, 299, 4
+
+tobj
+1930, blackcow, 4culbulls, 1, 299, 0, 12, 18
+1931, browncow, 4culbulls, 1, 299, 0, 18, 23
+1932, candycow, 4culbulls, 1, 299, 0, 23, 6
+
+end

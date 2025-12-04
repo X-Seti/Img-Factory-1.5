@@ -32,11 +32,11 @@
 │   │   ├── Ide_Editor
 │   │   │   └── ide_editor.py
 │   │   ├── Img_Browser
-│   │   │   ├── img_browser.py
-│   │   │   └── img_browser.py.txt
+│   │   │   └── img_browser.py
 │   │   ├── Img_Creator
 │   │   │   └── img_creator.py
 │   │   ├── Img_Factory
+│   │   │   ├── comprehensive.py
 │   │   │   ├── depends
 │   │   │   │   └── img_factory_thread.py
 │   │   │   ├── imgfactory.py
@@ -129,6 +129,7 @@
 │   │   │   └── txd_workshop_standalone.py
 │   │   └── unified_signal_handler.py
 │   ├── core
+│   │   ├── advanced_img_tools.py
 │   │   ├── clean.py
 │   │   ├── close.py
 │   │   ├── col_viewer_integration.py
@@ -140,6 +141,7 @@
 │   │   ├── dump.py
 │   │   ├── export.py
 │   │   ├── export_via.py
+│   │   ├── extract.py
 │   │   ├── file_dirtree_backend.py
 │   │   ├── file_dirtree_browser.py
 │   │   ├── file_extraction.py
@@ -148,6 +150,7 @@
 │   │   ├── imgcol_convert.py
 │   │   ├── imgcol_rename.py
 │   │   ├── imgcol_replace.py
+│   │   ├── img_corruption_analyzer.py
 │   │   ├── img_detection.py
 │   │   ├── img_formats.py
 │   │   ├── img_merger.py
@@ -309,11 +312,13 @@
 ├── cc.py
 ├── ChangeLog.md
 ├── Credits.md
+├── img_factory_debug.log
 ├── launch_imgfactory.py
 ├── package-lock.json
 ├── reviews
 │   └── pr-2-approval.md
+├── test_generics.ide
 ├── TODO.md
 └── tree.git
 
-34 directories, 283 files
+34 directories, 288 files
