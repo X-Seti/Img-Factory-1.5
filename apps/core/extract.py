@@ -235,27 +235,23 @@ class ExtractDialog(QDialog):
         layout = QVBoxLayout(widget)
         
         # Description
-        desc_label = QLabel("Parse DFF files to list texture requirements:")
+        desc_label = QLabel("Parse DFF files from loaded IMG to list texture requirements:")
         desc_label.setWordWrap(True)
         layout.addWidget(desc_label)
         
-        # DFF file selection
-        dff_layout = QHBoxLayout()
-        dff_label = QLabel("DFF Files:")
-        self.dff_files_edit = QTextEdit()
-        self.dff_files_edit.setMaximumHeight(60)
-        self.dff_files_edit.setPlaceholderText("Select DFF files to parse for texture requirements...")
-        browse_dff_btn = QPushButton("Browse")
-        browse_dff_btn.clicked.connect(self.browse_dff_files)
+        # Status area showing highlighted DFF files
+        status_group = QGroupBox("Highlighted DFF Files in IMG")
+        status_layout = QVBoxLayout(status_group)
         
-        dff_layout.addWidget(dff_label)
-        dff_layout.addWidget(self.dff_files_edit)
-        dff_layout.addWidget(browse_dff_btn)
-        layout.addLayout(dff_layout)
+        self.highlight_status_label = QLabel("No highlighted DFF files selected")
+        self.highlight_status_label.setWordWrap(True)
+        status_layout.addWidget(self.highlight_status_label)
+        
+        layout.addWidget(status_group)
         
         # Parse button
-        self.parse_btn = QPushButton("Parse DFF Files")
-        self.parse_btn.clicked.connect(self.parse_dff_files)
+        self.parse_btn = QPushButton("Parse Selected DFF Files")
+        self.parse_btn.clicked.connect(self.parse_highlighted_dff_files)
         layout.addWidget(self.parse_btn)
         
         # Results area
@@ -269,6 +265,135 @@ class ExtractDialog(QDialog):
         layout.addWidget(results_group)
         
         return widget
+
+    def showEvent(self, event):
+        """Override show event to start updating the highlight status"""
+        super().showEvent(event)
+        # Update the status immediately and then periodically
+        self.update_highlight_status()
+        # Set up a timer to update the status every 500ms
+        from PyQt6.QtCore import QTimer
+        self.status_timer = QTimer(self)
+        self.status_timer.timeout.connect(self.update_highlight_status)
+        self.status_timer.start(500)  # Update every 500ms
+
+    def update_highlight_status(self):
+        """Update the status label to show highlighted DFF files in the IMG table"""
+        try:
+            if (hasattr(self.main_window, 'current_img') and 
+                self.main_window.current_img and 
+                hasattr(self.main_window, 'gui_layout') and 
+                hasattr(self.main_window.gui_layout, 'table')):
+                
+                table = self.main_window.gui_layout.table
+                selected_items = table.selectedItems()
+                
+                if selected_items:
+                    # Get unique rows that have selected items
+                    selected_rows = list(set([item.row() for item in selected_items]))
+                    dff_files = []
+                    
+                    for row in selected_rows:
+                        filename_item = table.item(row, 0)
+                        if filename_item:
+                            filename = filename_item.text()
+                            if filename.lower().endswith('.dff'):
+                                dff_files.append(filename)
+                    
+                    if dff_files:
+                        count = len(dff_files)
+                        status_text = f"Found {count} highlighted DFF file{'s' if count != 1 else ''}: {', '.join(dff_files)}"
+                        self.highlight_status_label.setText(status_text)
+                    else:
+                        self.highlight_status_label.setText("No highlighted DFF files selected (highlight DFF files in the table)")
+                else:
+                    self.highlight_status_label.setText("No highlighted DFF files selected (highlight DFF files in the table)")
+            else:
+                self.highlight_status_label.setText("No IMG file loaded")
+        except Exception as e:
+            self.highlight_status_label.setText(f"Error updating status: {str(e)}")
+
+    def parse_highlighted_dff_files(self):
+        """Parse highlighted DFF files from the loaded IMG"""
+        try:
+            if not (hasattr(self.main_window, 'current_img') and self.main_window.current_img):
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.warning(self, "Error", "No IMG file loaded")
+                return
+
+            if not (hasattr(self.main_window, 'gui_layout') and 
+                    hasattr(self.main_window.gui_layout, 'table')):
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.warning(self, "Error", "IMG table not available")
+                return
+
+            table = self.main_window.gui_layout.table
+            selected_items = table.selectedItems()
+
+            if not selected_items:
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.warning(self, "Error", "Please highlight DFF files in the table")
+                return
+
+            # Get unique rows that have selected items
+            selected_rows = list(set([item.row() for item in selected_items]))
+            dff_entries = []
+
+            for row in selected_rows:
+                filename_item = table.item(row, 0)
+                if filename_item:
+                    filename = filename_item.text()
+                    if filename.lower().endswith('.dff'):
+                        # Find the corresponding entry in the IMG
+                        for entry in self.main_window.current_img.entries:
+                            if entry.name == filename:
+                                dff_entries.append(entry)
+                                break
+
+            if not dff_entries:
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.warning(self, "Error", "No highlighted DFF files found in the table")
+                return
+
+            # Process each selected DFF file
+            results = f"Parsed {len(dff_entries)} DFF file{'s' if len(dff_entries) != 1 else ''}:\n\n"
+            
+            for entry in dff_entries:
+                try:
+                    # Extract DFF data temporarily
+                    dff_data = entry.get_data()
+                    if dff_data:
+                        import tempfile
+                        import os
+                        
+                        # Create temporary file
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.dff', mode='wb') as temp_file:
+                            temp_file.write(dff_data)
+                            temp_dff_path = temp_file.name
+
+                        try:
+                            # Parse textures from the DFF
+                            textures = self.extractor._parse_dff_for_textures(temp_dff_path)
+                            results += f"DFF File: {entry.name}\n"
+                            results += f"Textures ({len(textures)}): {', '.join(textures) if textures else 'None'}\n\n"
+                        finally:
+                            # Clean up temp file
+                            if os.path.exists(temp_dff_path):
+                                os.remove(temp_dff_path)
+                    else:
+                        results += f"DFF File: {entry.name}\n"
+                        results += "Textures: Could not extract data\n\n"
+                        
+                except Exception as e:
+                    results += f"DFF File: {entry.name}\n"
+                    results += f"Error parsing: {str(e)}\n\n"
+
+            self.results_area.setPlainText(results)
+            self.main_window.log_message(f"Successfully parsed {len(dff_entries)} DFF file(s)")
+
+        except Exception as e:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "Error", f"Failed to parse highlighted DFF files: {str(e)}")
         
     def create_external_dff_tab(self):
         """Create the external DFF models tab"""
@@ -334,15 +459,7 @@ class ExtractDialog(QDialog):
         if directory:
             self.output_dir_edit.setPlainText(directory)
             
-    def browse_dff_files(self):
-        """Browse for DFF files"""
-        files, _ = QFileDialog.getOpenFileNames(
-            self, "Select DFF Files", "", 
-            "DFF Files (*.dff);;All Files (*)"
-        )
-        if files:
-            self.dff_files_edit.setPlainText("\n".join(files))
-            
+
     def extract_textures(self):
         """Extract textures from IMG file"""
         output_dir = self.output_dir_edit.toPlainText().strip()
@@ -375,34 +492,6 @@ class ExtractDialog(QDialog):
         finally:
             self.progress_bar.setVisible(False)
             
-    def parse_dff_files(self):
-        """Parse DFF files to list texture requirements"""
-        dff_text = self.dff_files_edit.toPlainText().strip()
-        if not dff_text:
-            QMessageBox.warning(self, "Error", "Please select DFF files to parse")
-            return
-            
-        dff_files = [line.strip() for line in dff_text.split('\n') if line.strip()]
-        
-        # Validate files exist
-        for dff_file in dff_files:
-            if not os.path.exists(dff_file):
-                QMessageBox.warning(self, "Error", f"DFF file does not exist: {dff_file}")
-                return
-        
-        try:
-            texture_mapping = self.extractor.parse_dff_textures(dff_files)
-            
-            # Display results
-            results = "DFF Texture Requirements:\n\n"
-            for model_name, textures in texture_mapping.items():
-                results += f"Model: {model_name}\n"
-                results += f"Required Textures: {', '.join(textures)}\n\n"
-                
-            self.results_area.setPlainText(results)
-            
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Parsing failed: {str(e)}")
 
     def browse_external_dff_files(self):
         """Browse for external DFF files"""
