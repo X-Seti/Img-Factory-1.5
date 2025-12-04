@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 X-Seti - July22 2025 - IMG Factory 1.5 - AtariST version :D
-#this belongs in root /imgfactory.py - version 73
+#this belongs in root /imgfactory.py - version 75
 """
 import sys
 import os

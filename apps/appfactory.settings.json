@@ -3,8 +3,8 @@
   "debug_level": "INFO",
   "current_theme": "App_Factory",
   "theme": "green_theme_light",
-  "button_display_mode": "both",
-  "use_custom_gadgets": false,
+  "button_display_mode": "icons",
+  "use_custom_gadgets": true,
   "enable_corner_resize": true,
   "use_svg_icons": true,
   "font_family": "Sans Serif",
@@ -37,6 +37,11 @@
   "last_img_output_path": "",
   "last_import_path": "",
   "last_export_path": "",
+  "use_pastel_buttons": true,
+  "high_contrast_buttons": false,
+  "button_size": 24,
+  "icon_size": 16,
+  "button_format": "both",
   "default_font_family": "Noto Sans",
   "default_font_size": 9,
   "title_font_family": "Arial",
@@ -61,5 +66,9 @@
   "table_font_weight": "Normal",
   "tooltip_font_size": 8,
   "tooltip_font_weight": "Normal",
-  "right_panel_width": 279
+  "right_panel_width": 279,
+  "button_icon_size": 16,
+  "button_text_size": 9,
+  "separate_button_format": true,
+  "language": "en"
 }
