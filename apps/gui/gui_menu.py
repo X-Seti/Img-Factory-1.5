@@ -939,7 +939,7 @@ class IMGFactoryMenuBar:
                 table.clearSelection()
                 
                 # Search through entries
-                case_sensitive_flag = Qt.CaseInsensitive if case_sensitive.isChecked() else Qt.CaseSensitive
+                case_sensitive_flag = 1 if case_sensitive.isChecked() else 0  # 1 for case sensitive, 0 for case insensitive
                 matches = []
                 
                 for row in range(table.rowCount()):
@@ -947,12 +947,12 @@ class IMGFactoryMenuBar:
                     if item:
                         text = item.text()
                         if match_whole_name.isChecked():
-                            if case_sensitive_flag == Qt.CaseSensitive:
+                            if case_sensitive_flag == 1:
                                 match = text == search_term
                             else:
                                 match = text.lower() == search_term.lower()
                         else:
-                            if case_sensitive_flag == Qt.CaseSensitive:
+                            if case_sensitive_flag == 1:
                                 match = search_term in text
                             else:
                                 match = search_term.lower() in text.lower()
@@ -1079,7 +1079,7 @@ class IMGFactoryMenuBar:
                     QMessageBox.warning(self.main_window, "Error", "No IMG file loaded")
                     return
                 
-                case_sensitive_flag = Qt.CaseInsensitive if case_sensitive.isChecked() else Qt.CaseSensitive
+                case_sensitive_flag = 1 if case_sensitive.isChecked() else 0  # 1 for case sensitive, 0 for case insensitive
                 matches = []
                 
                 # Search through entries
@@ -1088,12 +1088,12 @@ class IMGFactoryMenuBar:
                     if item:
                         text = item.text()
                         if match_whole_name.isChecked():
-                            if case_sensitive_flag == Qt.CaseSensitive:
+                            if case_sensitive_flag == 1:
                                 match = text == search_term
                             else:
                                 match = text.lower() == search_term.lower()
                         else:
-                            if case_sensitive_flag == Qt.CaseSensitive:
+                            if case_sensitive_flag == 1:
                                 match = search_term in text
                             else:
                                 match = search_term.lower() in text.lower()
@@ -1120,7 +1120,7 @@ class IMGFactoryMenuBar:
                         if match_whole_name.isChecked():
                             new_text = replace_term
                         else:
-                            if case_sensitive_flag == Qt.CaseSensitive:
+                            if case_sensitive_flag == 1:
                                 new_text = original_text.replace(search_term, replace_term)
                             else:
                                 # For case-insensitive replacement, we need to handle it differently
