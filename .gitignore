@@ -8,6 +8,7 @@ __pycache__/
 # Dependencies
 .venv/
 venv/
+node_modules/
 
 # Logs and temp files
 *.log
@@ -17,9 +18,42 @@ venv/
 # Environment
 .env
 .env.local
-*.env.*
+.env.*
 
 # Editors
 .vscode/
 .idea/
+
+# Coverage
+.coverage
+coverage/
+htmlcov/
+
+# Python specific
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+.tox/
+.coverage
+
+# Distribution / packaging
+.Python
+*.so
+.libs/
+*.tar.gz
+*.whl
+dist/
+build/
+*.egg-info/
+
+# OS generated files
+.DS_Store
+Thumbs.db
 ```
