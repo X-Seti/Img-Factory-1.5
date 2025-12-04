@@ -557,6 +557,7 @@ class IMGFactoryMenuBar:
         else:
             # Fallback colors
             theme_colors = {
+                'panel_bg': '#f0f0f0',
                 'bg_primary': '#f0f0f0',
                 'bg_secondary': '#f5f5f5',
                 'bg_tertiary': '#e9ecef',
@@ -570,7 +571,7 @@ class IMGFactoryMenuBar:
             }
         
         # Extract colors for menu styling
-        bg_primary = theme_colors.get('bg_primary', '#f0f0f0')
+        bg_primary = theme_colors.get('panel_bg', '#f0f0f0')
         bg_secondary = theme_colors.get('bg_secondary', '#f5f5f5')
         bg_tertiary = theme_colors.get('bg_tertiary', '#e9ecef')
         text_primary = theme_colors.get('text_primary', '#000000')
