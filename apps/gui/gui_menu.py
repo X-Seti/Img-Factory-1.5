@@ -659,6 +659,7 @@ class IMGFactoryMenuBar:
             # Settings menu
             "preferences": self._show_preferences,
             "customize_interface": self._show_gui_settings,
+            "customize_buttons": self._customize_buttons,
             "customize_menus": self._customize_menus,
             "themes": self._show_theme_settings,
             "language": self._change_language,
@@ -1230,6 +1231,190 @@ class IMGFactoryMenuBar:
     # SETTINGS MENU CALLBACKS
     # ========================================================================
     
+    def _customize_buttons(self):
+        """Customize buttons - Show button settings dialog"""
+        try:
+            from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget, QGroupBox, QLabel, QSpinBox, QComboBox, QCheckBox, QPushButton
+            from PyQt6.QtCore import Qt
+            
+            dialog = QDialog(self.main_window)
+            dialog.setWindowTitle("Button Settings - IMG Factory 1.5")
+            dialog.setModal(True)
+            dialog.resize(500, 400)
+            
+            layout = QVBoxLayout(dialog)
+            
+            # Create tab widget for different button settings
+            tab_widget = QTabWidget()
+            
+            # Button Display Tab
+            display_widget = QWidget()
+            display_layout = QVBoxLayout(display_widget)
+            
+            # Button display mode
+            display_group = QGroupBox("Button Display Mode")
+            display_group_layout = QVBoxLayout(display_group)
+            
+            mode_label = QLabel("Show:")
+            mode_combo = QComboBox()
+            mode_combo.addItems(["Icons Only", "Text Only", "Show Both"])
+            
+            # Get current setting
+            if hasattr(self.main_window, 'app_settings'):
+                current_mode = self.main_window.app_settings.current_settings.get('button_display_mode', 'both')
+                if current_mode == 'icons_only':
+                    mode_combo.setCurrentText("Icons Only")
+                elif current_mode == 'text_only':
+                    mode_combo.setCurrentText("Text Only")
+                else:
+                    mode_combo.setCurrentText("Show Both")
+            
+            display_group_layout.addWidget(mode_label)
+            display_group_layout.addWidget(mode_combo)
+            display_layout.addWidget(display_group)
+            
+            # Button styling
+            style_group = QGroupBox("Button Styling")
+            style_layout = QVBoxLayout(style_group)
+            
+            # Enable Pastel effect
+            pastel_check = QCheckBox("Enable Pastel effect for buttons")
+            if hasattr(self.main_window, 'app_settings'):
+                pastel_enabled = self.main_window.app_settings.current_settings.get('use_pastel_buttons', False)
+                pastel_check.setChecked(pastel_enabled)
+            
+            # High contrast (disabled if pastel is on)
+            contrast_check = QCheckBox("High contrast buttons")
+            if hasattr(self.main_window, 'app_settings'):
+                contrast_enabled = self.main_window.app_settings.current_settings.get('high_contrast_buttons', False)
+                contrast_check.setChecked(contrast_enabled)
+            
+            # Connect pastel check to enable/disable contrast
+            def toggle_contrast_state():
+                if pastel_check.isChecked():
+                    contrast_check.setChecked(False)
+                    contrast_check.setEnabled(False)
+                else:
+                    contrast_check.setEnabled(True)
+            
+            pastel_check.stateChanged.connect(toggle_contrast_state)
+            toggle_contrast_state()  # Initialize state
+            
+            style_layout.addWidget(pastel_check)
+            style_layout.addWidget(contrast_check)
+            display_layout.addWidget(style_group)
+            
+            # Button sizing
+            size_group = QGroupBox("Button Sizing")
+            size_layout = QVBoxLayout(size_group)
+            
+            # Icon size
+            icon_size_layout = QHBoxLayout()
+            icon_size_label = QLabel("Icon size:")
+            icon_size_spin = QSpinBox()
+            icon_size_spin.setRange(8, 64)
+            icon_size_spin.setValue(16)
+            
+            # Text icon size
+            text_size_layout = QHBoxLayout()
+            text_size_label = QLabel("Text size:")
+            text_size_spin = QSpinBox()
+            text_size_spin.setRange(6, 24)
+            text_size_spin.setValue(9)
+            
+            # Get current sizes from settings if available
+            if hasattr(self.main_window, 'app_settings'):
+                icon_size = self.main_window.app_settings.current_settings.get('button_icon_size', 16)
+                text_size = self.main_window.app_settings.current_settings.get('button_text_size', 9)
+                icon_size_spin.setValue(icon_size)
+                text_size_spin.setValue(text_size)
+            
+            icon_size_layout.addWidget(icon_size_label)
+            icon_size_layout.addWidget(icon_size_spin)
+            size_layout.addLayout(icon_size_layout)
+            
+            text_size_layout.addWidget(text_size_label)
+            text_size_layout.addWidget(text_size_spin)
+            size_layout.addLayout(text_size_layout)
+            
+            display_layout.addWidget(size_group)
+            
+            # Button format
+            format_group = QGroupBox("Button Format")
+            format_layout = QVBoxLayout(format_group)
+            
+            format_label = QLabel("Change buttons from [% Text] to [%][Text]:")
+            format_combo = QComboBox()
+            format_combo.addItems(["[% Text] (Default)", "[%][Text] (Separated)"])
+            
+            if hasattr(self.main_window, 'app_settings'):
+                separate_format = self.main_window.app_settings.current_settings.get('separate_button_format', False)
+                format_combo.setCurrentIndex(1 if separate_format else 0)
+            
+            format_layout.addWidget(format_label)
+            format_layout.addWidget(format_combo)
+            display_layout.addWidget(format_group)
+            
+            display_layout.addStretch()
+            tab_widget.addTab(display_widget, "Button Display")
+            
+            # Add tabs to dialog
+            layout.addWidget(tab_widget)
+            
+            # Buttons
+            button_layout = QHBoxLayout()
+            
+            def apply_settings():
+                # Update app settings
+                if hasattr(self.main_window, 'app_settings'):
+                    # Update button display mode
+                    mode_text = mode_combo.currentText()
+                    if mode_text == "Icons Only":
+                        self.main_window.app_settings.current_settings['button_display_mode'] = 'icons_only'
+                    elif mode_text == "Text Only":
+                        self.main_window.app_settings.current_settings['button_display_mode'] = 'text_only'
+                    else:
+                        self.main_window.app_settings.current_settings['button_display_mode'] = 'both'
+                    
+                    # Update button styling
+                    self.main_window.app_settings.current_settings['use_pastel_buttons'] = pastel_check.isChecked()
+                    self.main_window.app_settings.current_settings['high_contrast_buttons'] = contrast_check.isChecked()
+                    
+                    # Update button sizes
+                    self.main_window.app_settings.current_settings['button_icon_size'] = icon_size_spin.value()
+                    self.main_window.app_settings.current_settings['button_text_size'] = text_size_spin.value()
+                    
+                    # Update button format
+                    self.main_window.app_settings.current_settings['separate_button_format'] = (format_combo.currentIndex() == 1)
+                    
+                    # Save settings
+                    self.main_window.app_settings.save_settings()
+                
+                # Apply changes to the UI if possible
+                if hasattr(self.main_window, 'apply_button_settings'):
+                    self.main_window.apply_button_settings()
+                
+                dialog.accept()
+            
+            ok_btn = QPushButton("OK")
+            cancel_btn = QPushButton("Cancel")
+            apply_btn = QPushButton("Apply")
+            
+            ok_btn.clicked.connect(apply_settings)
+            cancel_btn.clicked.connect(dialog.reject)
+            apply_btn.clicked.connect(apply_settings)
+            
+            button_layout.addWidget(ok_btn)
+            button_layout.addWidget(apply_btn)
+            button_layout.addWidget(cancel_btn)
+            
+            layout.addLayout(button_layout)
+            
+            dialog.exec()
+            
+        except Exception as e:
+            QMessageBox.critical(self.main_window, "Error", f"Failed to open button settings: {str(e)}")
+    
     def _customize_menus(self):
         """Customize menus"""
         QMessageBox.information(self.main_window, "Customize Menus", "Menu customization coming soon!")
@@ -1287,9 +1472,9 @@ class IMGFactoryMenuBar:
                 
                 # Update settings
                 if hasattr(self.main_window, 'app_settings'):
-                    self.main_window.app_settings['language'] = selected_lang
+                    self.main_window.app_settings.current_settings['language'] = selected_lang
                     # Save settings to file
-                    self._save_app_settings()
+                    self.main_window.app_settings.save_settings()
                 
                 # Log the change
                 self.main_window.log_message(f"Language changed to: {selected_lang}")
