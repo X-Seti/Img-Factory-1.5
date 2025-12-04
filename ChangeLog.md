@@ -1,5 +1,5 @@
 #this belongs in root /ChangeLog.md - Version: 3
-# X-Seti - October22 2025 - IMG Factory 1.5 ChangeLog
+# X-Seti - October22 - December 04 2025 - IMG Factory 1.5 ChangeLog
 
 # IMG Factory 1.5 - ChangeLog - (New System)
 
@@ -12,7 +12,10 @@ gui_menu.py
 gui_layout.py
 - Fixed search functions
 - Fixed tab check for search functions
-
+- Rewrite on the GUI interface.
+- Local langauge settings - needs work
+- Icon settings, Button Settings
+- Extaction functions, export png images for textures in the img file.
 
 **Fixed**: - December 02, 2025
 img_core_classes.py
