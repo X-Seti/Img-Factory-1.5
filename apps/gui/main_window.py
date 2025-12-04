@@ -10,7 +10,7 @@ Main window setup and layout management
 import sys
 from typing import Optional
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSplitter, 
+    QWidget, QVBoxLayout, QHBoxLayout, QSplitter, 
     QApplication, QMenuBar, QStatusBar
 )
 from PyQt6.QtCore import Qt, pyqtSignal
