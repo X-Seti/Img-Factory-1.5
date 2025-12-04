@@ -2,6 +2,8 @@
 # Compiled and build artifacts
 *.pyc
 __pycache__/
+*.o
+*.obj
 
 # Dependencies
 .venv/
@@ -28,14 +30,45 @@ coverage/
 htmlcov/
 
 # Python specific
+*.pyc
+__pycache__/
 *.pyo
 *.pyd
 .Python
 *.so
-*.egg-info/
 
-# Build directories
-dist/
+# Distribution / packaging
+.Python
+*.so
+.Python
+*.pyc
+__pycache__/
+*$py.class
+*$py.o
+*$py.d
 build/
-target/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
+
+# System files
+.DS_Store
+Thumbs.db
 ```
