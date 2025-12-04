@@ -590,13 +590,276 @@ class GUISettingsDialog(QDialog):
         """Create appearance settings tab with both theme options and button display options"""
         widget = QWidget()
         layout = QVBoxLayout(widget)
-
+        
         # Theme selection
         theme_group = QGroupBox("🎨 Theme Selection")
         theme_layout = QVBoxLayout(theme_group)
-
+        
         self.theme_combo = QComboBox()
-        self.theme_combo.addItems(["IMG Factory Default", "Dark Theme", "Light Professional", "GTA San Andreas", "GTA Vice City", "LCARS (Star Trek)", "Cyberpunk 2077", "Matrix", "Synthwave", "Amiga Workbench"])
+        self.theme_combo.addItems([
+            "IMG Factory Default",
+            "Dark Theme", 
+            "Light Professional",
+            "GTA San Andreas",
+            "GTA Vice City",
+            "LCARS (Star Trek)",
+            "Cyberpunk 2077",
+            "Matrix",
+            "Synthwave",
+            "Amiga Workbench"
+        ])
+        theme_layout.addWidget(QLabel("Select Theme:"))
+        theme_layout.addWidget(self.theme_combo)
+        
+        layout.addWidget(theme_group)
+        
+        # Button display options
+        button_display_group = QGroupBox("ButtonTitles & Icons")
+        button_display_layout = QVBoxLayout(button_display_group)
+        
+        self.button_display_group = QButtonGroup()
+        
+        self.both_radio = QRadioButton("Show Both Icons and Text")
+        self.icons_radio = QRadioButton("Show Icons Only")
+        self.text_radio = QRadioButton("Show Text Only")
+        
+        self.button_display_group.addButton(self.both_radio, 0)
+        self.button_display_group.addButton(self.icons_radio, 1)
+        self.button_display_group.addButton(self.text_radio, 2)
+        
+        button_display_layout.addWidget(self.both_radio)
+        button_display_layout.addWidget(self.icons_radio)
+        button_display_layout.addWidget(self.text_radio)
+        
+        layout.addWidget(button_display_group)
+        
+        # Color customization
+        color_group = QGroupBox("🌈 Color Customization")
+        color_layout = QGridLayout(color_group)
+        
+        # Background color
+        color_layout.addWidget(QLabel("Background Color:"), 0, 0)
+        self.bg_color_btn = QPushButton("Choose Color...")
+        self.bg_color_btn.clicked.connect(lambda: self._choose_color('background'))
+        color_layout.addWidget(self.bg_color_btn, 0, 1)
+        
+        # Text color
+        color_layout.addWidget(QLabel("Text Color:"), 1, 0)
+        self.text_color_btn = QPushButton("Choose Color...")
+        self.text_color_btn.clicked.connect(lambda: self._choose_color('text'))
+        color_layout.addWidget(self.text_color_btn, 1, 1)
+        
+        # Accent color
+        color_layout.addWidget(QLabel("Accent Color:"), 2, 0)
+        self.accent_color_btn = QPushButton("Choose Color...")
+        self.accent_color_btn.clicked.connect(lambda: self._choose_color('accent'))
+        color_layout.addWidget(self.accent_color_btn, 2, 1)
+        
+        layout.addWidget(color_group)
+        
+        # Visual effects
+        effects_group = QGroupBox("✨ Visual Effects")
+        effects_layout = QVBoxLayout(effects_group)
+        
+        self.animations_check = QCheckBox("Enable animations")
+        self.shadows_check = QCheckBox("Enable shadows")
+        self.transparency_check = QCheckBox("Enable transparency effects")
+        self.rounded_corners_check = QCheckBox("Rounded corners")
+        
+        effects_layout.addWidget(self.animations_check)
+        effects_layout.addWidget(self.shadows_check)
+        effects_layout.addWidget(self.transparency_check)
+        effects_layout.addWidget(self.rounded_corners_check)
+        
+        layout.addWidget(effects_group)
         layout.addStretch()
-
+        
         return widget
+    def _load_current_settings(self):
+        """Load current settings into the UI"""
+        # Load theme
+        current_theme = self.app_settings.current_settings.get("theme", "IMG Factory Default")
+        theme_index = self.theme_combo.findText(current_theme)
+        if theme_index >= 0:
+            self.theme_combo.setCurrentIndex(theme_index)
+        
+        # Load button display mode
+        button_mode = self.app_settings.current_settings.get("button_display_mode", "both")
+        if button_mode == "icons":
+            self.icons_radio.setChecked(True)
+        elif button_mode == "text":
+            self.text_radio.setChecked(True)
+        else:  # "both"
+            self.both_radio.setChecked(True)
+        
+        # Load visual effects settings
+        self.animations_check.setChecked(self.app_settings.current_settings.get("enable_animations", True))
+        self.shadows_check.setChecked(self.app_settings.current_settings.get("enable_shadows", True))
+        self.transparency_check.setChecked(self.app_settings.current_settings.get("enable_transparency", True))
+        self.rounded_corners_check.setChecked(self.app_settings.current_settings.get("enable_rounded_corners", True))
+
+    def _apply_settings(self):
+        """Apply settings temporarily without saving"""
+        # Apply theme
+        new_theme = self.theme_combo.currentText()
+        self.app_settings.current_settings["theme"] = new_theme
+        
+        # Apply button display mode
+        if self.icons_radio.isChecked():
+            button_mode = "icons"
+        elif self.text_radio.isChecked():
+            button_mode = "text"
+        else:  # both
+            button_mode = "both"
+        self.app_settings.current_settings["button_display_mode"] = button_mode
+        
+        # Apply visual effects settings
+        self.app_settings.current_settings["enable_animations"] = self.animations_check.isChecked()
+        self.app_settings.current_settings["enable_shadows"] = self.shadows_check.isChecked()
+        self.app_settings.current_settings["enable_transparency"] = self.transparency_check.isChecked()
+        self.app_settings.current_settings["enable_rounded_corners"] = self.rounded_corners_check.isChecked()
+        
+        # Apply changes to the main window
+        self._apply_theme_to_main_window()
+        
+        # Emit signal to notify about changes
+        self.settings_changed.emit()
+        if new_theme != self.app_settings.current_settings.get("theme", "IMG Factory Default"):
+            self.theme_changed.emit(new_theme)
+
+    def _apply_theme_to_main_window(self):
+        """Apply theme settings to the main window"""
+        # Get the main window from parent
+        parent = self.parent()
+        if parent:
+            # Apply unified button theme
+            from .unified_button_theme import apply_unified_button_theme
+            apply_unified_button_theme(parent, self.app_settings)
+            
+            # Apply button display mode
+            self._apply_button_display_mode()
+            
+            # Apply stylesheet
+            stylesheet = self.app_settings.get_stylesheet()
+            parent.setStyleSheet(stylesheet)
+
+    def _apply_button_display_mode(self):
+        """Apply button display mode to all buttons in the main window"""
+        parent = self.parent()
+        if parent and hasattr(parent, "right_panel"):
+            # Update button appearance in right panel
+            self._update_buttons_in_panel(parent.right_panel)
+            
+            # Update button appearance in left panel if exists
+            if hasattr(parent, "left_panel"):
+                self._update_buttons_in_panel(parent.left_panel)
+
+    def _update_buttons_in_panel(self, panel):
+        """Update all buttons in a panel according to the display mode"""
+        if not panel:
+            return
+            
+        # Get the button display mode
+        button_mode = self.app_settings.current_settings.get("button_display_mode", "both")
+        
+        # Find all buttons in the panel and update them
+        buttons = panel.findChildren(QPushButton)
+        for btn in buttons:
+            if button_mode == "icons":
+                btn.setText("")  # Show only icons
+                btn.setMinimumWidth(32)  # Make it more square-like for icons
+            elif button_mode == "text":
+                # Restore text if available (we need to track original text)
+                if hasattr(btn, "_original_text"):
+                    btn.setText(btn._original_text)
+                btn.setIcon(QIcon())  # Remove icon
+                btn.setMinimumWidth(80)  # Make wider for text
+            else:  # "both"
+                # Restore both text and icon if they were originally present
+                if hasattr(btn, "_original_text"):
+                    btn.setText(btn._original_text)
+                btn.setMinimumWidth(80)  # Standard width
+
+    def _save_settings(self):
+        """Save settings permanently"""
+        self._apply_settings()  # Apply current settings first
+        # Save to app settings file
+        self.app_settings.save_settings()
+
+    def _reset_to_defaults(self):
+        """Reset settings to defaults"""
+        # Reset theme
+        self.theme_combo.setCurrentIndex(0)
+        
+        # Reset button display mode
+        self.both_radio.setChecked(True)
+        
+        # Reset visual effects
+        self.animations_check.setChecked(True)
+        self.shadows_check.setChecked(True)
+        self.transparency_check.setChecked(True)
+        self.rounded_corners_check.setChecked(True)
+
+    def _choose_color(self, color_type):
+        """Open color dialog to choose a color"""
+        color = QColorDialog.getColor()
+        if color.isValid():
+            # Store the chosen color in app settings
+            color_key = f"{color_type}_color"
+            self.app_settings.current_settings[color_key] = color.name()
+            # Apply the theme
+            self._apply_theme_to_main_window()
+
+    def _choose_font(self, font_type):
+        """Open font dialog to choose a font"""
+        current_font = QFont()
+        font, ok = QFontDialog.getFont(current_font, self)
+        if ok:
+            # Store font settings
+            self.app_settings.current_settings[f"{font_type}_font_family"] = font.family()
+            self.app_settings.current_settings[f"{font_type}_font_size"] = font.pointSize()
+            self.app_settings.current_settings[f"{font_type}_font_weight"] = font.weight()
+            # Apply the theme
+            self._apply_theme_to_main_window()
+
+    def _update_font_scale_label(self, value):
+        """Update font scale label"""
+        self.font_scale_label.setText(f"{value}%")
+
+    def _preview_tab_changes(self):
+        """Preview tab changes"""
+        # This would apply temporary tab changes for preview
+        pass
+
+    def _reset_tab_settings(self):
+        """Reset tab settings to defaults"""
+        self.main_tab_height_spin.setValue(35)
+        self.individual_tab_height_spin.setValue(24)
+        self.tab_font_size_spin.setValue(9)
+        self.tab_padding_spin.setValue(4)
+        self.tab_container_height_spin.setValue(30)
+        self.tab_style_combo.setCurrentText("Compact")
+
+    def _apply_tab_style_preset(self, preset):
+        """Apply tab style preset"""
+        if preset == "Compact":
+            self.main_tab_height_spin.setValue(35)
+            self.individual_tab_height_spin.setValue(24)
+            self.tab_font_size_spin.setValue(9)
+            self.tab_padding_spin.setValue(4)
+        elif preset == "Standard":
+            self.main_tab_height_spin.setValue(45)
+            self.individual_tab_height_spin.setValue(28)
+            self.tab_font_size_spin.setValue(10)
+            self.tab_padding_spin.setValue(6)
+        elif preset == "Large":
+            self.main_tab_height_spin.setValue(55)
+            self.individual_tab_height_spin.setValue(32)
+            self.tab_font_size_spin.setValue(11)
+            self.tab_padding_spin.setValue(8)
+
+    def _save_and_close(self):
+        """Save settings and close dialog"""
+        self._save_settings()
+        self.settings_changed.emit()
+        self.accept()
