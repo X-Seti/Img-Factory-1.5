@@ -1105,7 +1105,7 @@ class IMGFactoryGUILayout:
         return file_window
 
 
-    def create_right_panel_with_pastel_buttons(self): #vers 2
+    def create_right_panel_with_pastel_buttons(self): #vers 3
         """Create right panel with theme-controlled pastel buttons"""
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
@@ -1171,7 +1171,7 @@ class IMGFactoryGUILayout:
         return right_panel
 
 
-    def create_status_window(self): #vers 4
+    def create_status_window(self): #vers 5
         """Create status window with log"""
         self.status_window = QWidget()
         status_layout = QVBoxLayout(self.status_window)
