@@ -141,6 +141,7 @@
 │   │   ├── dump.py
 │   │   ├── export.py
 │   │   ├── export_via.py
+│   │   ├── extract.py
 │   │   ├── file_dirtree_backend.py
 │   │   ├── file_dirtree_browser.py
 │   │   ├── file_extraction.py
@@ -318,7 +319,6 @@
 │   └── pr-2-approval.md
 ├── test_generics.ide
 ├── TODO.md
-├── tree.git
-└── workspace -> /workspace
+└── tree.git
 
-35 directories, 287 files
+34 directories, 288 files
