@@ -829,7 +829,7 @@ class IMGFactoryGUILayout:
             print(f"❌ Error updating button theme: {e}")
 
 
-    def create_pastel_button(self, label, action_type, icon, bg_color, method_name): #vers 3
+    def create_pastel_button(self, label, action_type, icon, bg_color, method_name, use_pastel=True, high_contrast=False): #vers 3
         """Create a button with pastel coloring that adapts to light/dark themes"""
         # Get localized label
         localized_label = tr_button(label)
@@ -839,31 +839,74 @@ class IMGFactoryGUILayout:
         btn.setMaximumHeight(24)  # Slightly taller to accommodate both icon and text
         btn.setMinimumHeight(22)
 
+        # Detect if we're using a dark theme
+        is_dark_theme = self._is_dark_theme()
+
+        # Determine if we should use high contrast based on settings
+        if hasattr(self.main_window, 'app_settings'):
+            use_pastel = self.main_window.app_settings.current_settings.get('use_pastel_buttons', True)
+            high_contrast = self.main_window.app_settings.current_settings.get('high_contrast_buttons', False) and not use_pastel
+
+        if high_contrast:
+            # High contrast theme - use more distinct colors
+            if is_dark_theme:
+                button_bg = "#333333"  # Dark gray
+                border_color = "#ffffff"  # White border
+                text_color = "#ffffff"    # White text
+                hover_bg = "#555555"      # Lighter gray on hover
+                hover_border = "#ffffff"  # White border on hover
+                pressed_bg = "#111111"    # Darker gray when pressed
+            else:
+                button_bg = "#ffffff"  # White background
+                border_color = "#000000"  # Black border
+                text_color = "#000000"    # Black text
+                hover_bg = "#e0e0e0"      # Light gray on hover
+                hover_border = "#000000"  # Black border on hover
+                pressed_bg = "#cccccc"    # Medium gray when pressed
+        elif use_pastel:
+            # Original pastel theme
+            if is_dark_theme:
+                # Dark theme: darker pastel background, lighter edges, light text
+                button_bg = self._darken_color(bg_color, 0.4)  # Much darker pastel
+                border_color = self._lighten_color(bg_color, 1.3)  # Light border
+                text_color = self._lighten_color(bg_color, 1.5)   # Light text
+                hover_bg = self._darken_color(bg_color, 0.3)      # Slightly lighter on hover
+                hover_border = self._lighten_color(bg_color, 1.4)  # Even lighter border on hover
+                pressed_bg = self._darken_color(bg_color, 0.5)    # Darker when pressed
+            else:
+                # Light theme: light pastel background, dark edges, dark text
+                button_bg = bg_color  # Original pastel color
+                border_color = self._darken_color(bg_color, 0.6)  # Dark border
+                text_color = self._darken_color(bg_color, 1.8)    # Dark text
+                hover_bg = self._darken_color(bg_color, 0.9)      # Slightly darker on hover
+                hover_border = self._darken_color(bg_color, 0.5)  # Darker border on hover
+                pressed_bg = self._darken_color(bg_color, 0.8)    # Darker when pressed
+        else:
+            # Standard theme without pastel effect
+            if is_dark_theme:
+                button_bg = "#2d2d2d"  # Dark gray
+                border_color = "#555555"  # Medium gray border
+                text_color = "#ffffff"    # White text
+                hover_bg = "#3d3d3d"      # Lighter gray on hover
+                hover_border = "#666666"  # Lighter border on hover
+                pressed_bg = "#1d1d1d"    # Darker gray when pressed
+            else:
+                button_bg = "#f0f0f0"  # Light gray
+                border_color = "#a0a0a0"  # Medium gray border
+                text_color = "#000000"    # Black text
+                hover_bg = "#e0e0e0"      # Lighter gray on hover
+                hover_border = "#909090"  # Darker border on hover
+                pressed_bg = "#d0d0d0"    # Medium gray when pressed
+
         # Set icon based on the icon identifier
         icon_obj = self._get_svg_icon(icon)
         if icon_obj:
             btn.setIcon(icon_obj)
-            btn.setIconSize(QSize(16, 16))  # Set a reasonable icon size
-
-        # Detect if we're using a dark theme
-        is_dark_theme = self._is_dark_theme()
-
-        if is_dark_theme:
-            # Dark theme: darker pastel background, lighter edges, light text
-            button_bg = self._darken_color(bg_color, 0.4)  # Much darker pastel
-            border_color = self._lighten_color(bg_color, 1.3)  # Light border
-            text_color = self._lighten_color(bg_color, 1.5)   # Light text
-            hover_bg = self._darken_color(bg_color, 0.3)      # Slightly lighter on hover
-            hover_border = self._lighten_color(bg_color, 1.4)  # Even lighter border on hover
-            pressed_bg = self._darken_color(bg_color, 0.5)    # Darker when pressed
-        else:
-            # Light theme: light pastel background, dark edges, dark text
-            button_bg = bg_color  # Original pastel color
-            border_color = self._darken_color(bg_color, 0.6)  # Dark border
-            text_color = self._darken_color(bg_color, 1.8)    # Dark text
-            hover_bg = self._darken_color(bg_color, 0.9)      # Slightly darker on hover
-            hover_border = self._darken_color(bg_color, 0.5)  # Darker border on hover
-            pressed_bg = self._darken_color(bg_color, 0.8)    # Darker when pressed
+            # Get icon size from settings if available
+            icon_size = 16
+            if hasattr(self.main_window, 'app_settings'):
+                icon_size = self.main_window.app_settings.current_settings.get('icon_size', 16)
+            btn.setIconSize(QSize(icon_size, icon_size))
 
         # Apply theme-aware styling
         btn.setStyleSheet(f"""
@@ -1291,6 +1334,75 @@ class IMGFactoryGUILayout:
                 display_mode = ButtonDisplayMode.ICONS_WITH_TEXT  # Default
             
             self.backend.set_button_display_mode(display_mode)
+
+    def update_button_settings(self, settings):
+        """Update button settings from app settings"""
+        # Update button display mode
+        button_mode = settings.get('button_display_mode', 'icons_with_text')
+        self.set_button_display_mode(button_mode)
+        
+        # Update button size if available
+        button_size = settings.get('button_size', None)
+        if button_size:
+            self.set_button_size(button_size)
+        
+        # Update icon size if available
+        icon_size = settings.get('icon_size', 16)
+        self.set_icon_size(icon_size)
+        
+        # Update pastel effect setting
+        use_pastel = settings.get('use_pastel_buttons', True)
+        self.set_pastel_effect(use_pastel)
+        
+        # Update high contrast setting
+        high_contrast = settings.get('high_contrast_buttons', False)
+        self.set_high_contrast(high_contrast)
+        
+        # Update button format
+        button_format = settings.get('button_format', 'both')
+        self.set_button_format(button_format)
+
+    def set_button_size(self, size):
+        """Set button size for all buttons"""
+        if hasattr(self, 'backend'):
+            all_buttons = (self.img_buttons + self.entry_buttons + self.options_buttons +
+                          self.backend.img_buttons + self.backend.entry_buttons + self.backend.options_buttons)
+            for btn in all_buttons:
+                btn.setMaximumHeight(size)
+                btn.setMinimumHeight(max(20, size - 4))  # Maintain reasonable min height
+
+    def set_icon_size(self, size):
+        """Set icon size for all buttons"""
+        if hasattr(self, 'backend'):
+            all_buttons = (self.img_buttons + self.entry_buttons + self.options_buttons +
+                          self.backend.img_buttons + self.backend.entry_buttons + self.backend.options_buttons)
+            for btn in all_buttons:
+                if btn.icon():
+                    btn.setIconSize(QSize(size, size))
+
+    def set_pastel_effect(self, enabled):
+        """Enable or disable pastel effect on buttons"""
+        # This would modify the button styling based on pastel setting
+        # Implementation depends on how pastel vs regular buttons are handled
+        pass
+
+    def set_high_contrast(self, enabled):
+        """Enable or disable high contrast mode for buttons"""
+        # This would modify the button styling for high contrast
+        pass
+
+    def set_button_format(self, format_type):
+        """Set button format: 'both', 'icon_only', 'text_only', or 'separate'"""
+        # Update the button format based on setting
+        if format_type == 'separate':
+            # This would change how the text is displayed on buttons
+            pass
+        elif format_type == 'both':
+            self.set_button_display_mode('icons_with_text')
+        elif format_type == 'icon_only':
+            self.set_button_display_mode('icons_only')
+        elif format_type == 'text_only':
+            self.set_button_display_mode('text_only')
 
 
     def create_status_window(self): #vers 5
