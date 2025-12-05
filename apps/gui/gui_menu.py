@@ -89,10 +89,7 @@ class MenuDefinition:
 
             "Settings": [
                 MenuAction("preferences", "&Theme Prefs ", "Ctrl+,"),
-                MenuAction("customize_interface", "Customize &Interface"),
-                MenuAction("customize_buttons", "Customize &Buttons"),
-                MenuAction("customize_panels", "Customize &Panels"),
-                MenuAction("customize_menus", "Customize &Menus"),
+                MenuAction("customize_buttons", "Customize &GUI"),
                 MenuAction("sep1", ""),
                 MenuAction("language", "&Language"),
                 MenuAction("sep2", ""),
