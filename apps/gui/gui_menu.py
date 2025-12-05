@@ -123,6 +123,12 @@ class COLMenuBuilder:
         editor_action = QAction("COL &Editor", parent_window)
         editor_action.setShortcut("Ctrl+Shift+C")
         editor_action.setStatusTip("Open COL Editor for collision file editing")
+        # Set SVG icon
+        try:
+            from apps.methods.svg_shared_icons import get_edit_icon
+            editor_action.setIcon(get_edit_icon())
+        except:
+            pass  # Fallback to no icon if SVG loading fails
         editor_action.triggered.connect(lambda: COLMenuBuilder._open_col_editor(parent_window))
         col_menu.addAction(editor_action)
 
@@ -132,11 +138,23 @@ class COLMenuBuilder:
         open_col_action = QAction("&Open COL File", parent_window)
         open_col_action.setShortcut("Ctrl+Shift+O")
         open_col_action.setStatusTip("Open COL file directly")
+        # Set SVG icon
+        try:
+            from apps.methods.svg_shared_icons import get_open_icon
+            open_col_action.setIcon(get_open_icon())
+        except:
+            pass  # Fallback to no icon if SVG loading fails
         open_col_action.triggered.connect(lambda: COLMenuBuilder._open_col_file(parent_window))
         col_menu.addAction(open_col_action)
 
         new_col_action = QAction("&New COL File", parent_window)
         new_col_action.setStatusTip("Create new COL file")
+        # Set SVG icon
+        try:
+            from apps.methods.svg_shared_icons import get_add_icon
+            new_col_action.setIcon(get_add_icon())
+        except:
+            pass  # Fallback to no icon if SVG loading fails
         new_col_action.triggered.connect(lambda: COLMenuBuilder._new_col_file(parent_window))
         col_menu.addAction(new_col_action)
 
@@ -146,12 +164,24 @@ class COLMenuBuilder:
         batch_action = QAction("&Batch Processor", parent_window)
         batch_action.setShortcut("Ctrl+Shift+B")
         batch_action.setStatusTip("Process multiple COL files with batch operations")
+        # Set SVG icon
+        try:
+            from apps.methods.svg_shared_icons import get_refresh_icon
+            batch_action.setIcon(get_refresh_icon())
+        except:
+            pass  # Fallback to no icon if SVG loading fails
         batch_action.triggered.connect(lambda: COLMenuBuilder._open_batch_processor(parent_window))
         col_menu.addAction(batch_action)
 
         analyze_action = QAction("&Analyze COL", parent_window)
         analyze_action.setShortcut("Ctrl+Shift+A")
         analyze_action.setStatusTip("Analyze COL file structure and quality")
+        # Set SVG icon
+        try:
+            from apps.methods.svg_shared_icons import get_search_icon
+            analyze_action.setIcon(get_search_icon())
+        except:
+            pass  # Fallback to no icon if SVG loading fails
         analyze_action.triggered.connect(lambda: COLMenuBuilder._analyze_col(parent_window))
         col_menu.addAction(analyze_action)
 
@@ -162,11 +192,23 @@ class COLMenuBuilder:
 
         extract_col_action = QAction("Extract COL from Current IMG", parent_window)
         extract_col_action.setStatusTip("Extract COL files from currently open IMG")
+        # Set SVG icon
+        try:
+            from apps.methods.svg_shared_icons import get_export_icon
+            extract_col_action.setIcon(get_export_icon())
+        except:
+            pass  # Fallback to no icon if SVG loading fails
         extract_col_action.triggered.connect(lambda: COLMenuBuilder._extract_col_from_img(parent_window))
         import_submenu.addAction(extract_col_action)
 
         import_col_action = QAction("Import COL to Current IMG", parent_window)
         import_col_action.setStatusTip("Import COL file into currently open IMG")
+        # Set SVG icon
+        try:
+            from apps.methods.svg_shared_icons import get_import_icon
+            import_col_action.setIcon(get_import_icon())
+        except:
+            pass  # Fallback to no icon if SVG loading fails
         import_col_action.triggered.connect(lambda: COLMenuBuilder._import_col_to_img(parent_window))
         import_submenu.addAction(import_col_action)
 
@@ -386,6 +428,49 @@ class IMGFactoryMenuBar:
                     
                     if menu_action.shortcut:
                         action.setShortcut(QKeySequence(menu_action.shortcut))
+                    
+                    # Set icon if specified - using SVG icons
+                    if menu_action.icon:
+                        try:
+                            # Import the appropriate SVG icon based on the icon string
+                            from apps.methods.svg_shared_icons import (
+                                get_save_icon, get_open_icon, get_close_icon, 
+                                get_add_icon, get_remove_icon, get_edit_icon,
+                                get_refresh_icon, get_settings_icon, get_info_icon,
+                                get_search_icon, get_export_icon, get_import_icon,
+                                get_trash_icon, get_checkmark_icon, get_view_icon,
+                                get_folder_icon, get_file_icon, get_package_icon,
+                                get_shield_icon, get_image_icon, get_palette_icon,
+                                get_error_icon
+                            )
+                            
+                            # Map icon names to functions
+                            icon_map = {
+                                "document-new": get_add_icon,
+                                "document-open": get_open_icon,
+                                "folder-open": get_folder_icon,
+                                "window-close": get_close_icon,
+                                "application-exit": get_error_icon,  # or another appropriate icon
+                                "edit-undo": get_refresh_icon,  # or appropriate icon
+                                "edit-redo": get_refresh_icon,  # or appropriate icon
+                                "edit-cut": get_trash_icon,  # or appropriate icon
+                                "edit-copy": get_file_icon,  # or appropriate icon
+                                "edit-paste": get_file_icon,  # or appropriate icon
+                                "edit-select-all": get_checkmark_icon,
+                                "edit-find": get_search_icon,
+                                "edit-find-next": get_search_icon,  # or appropriate icon
+                            }
+                            
+                            if menu_action.icon in icon_map:
+                                icon_func = icon_map[menu_action.icon]
+                                action.setIcon(icon_func())
+                            else:
+                                # For other icon names, try to match them to available functions
+                                # Use generic icon if no match found
+                                action.setIcon(get_file_icon())
+                        except:
+                            # Fallback if SVG icon loading fails
+                            pass
                     
                     if menu_action.checkable:
                         action.setCheckable(True)

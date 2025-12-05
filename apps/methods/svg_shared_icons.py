@@ -53,20 +53,31 @@ def svg_to_icon(svg_data: bytes, size: int = 24, color: str = None) -> QIcon: #v
     Returns:
         QIcon object
     """
-
-    #TODO fix get_app
-    # fix currentcolor = text_primary
-    # {bg_secondary}
-    # {bg_primary}
-    # {text_primary}
-    # from theme inself.
-
     try:
+        # Get theme colors from the main application
+        from apps import get_app
+        app = get_app()
+        
+        # Get theme colors - default to dark theme colors if not available
+        bg_secondary = getattr(app, 'bg_secondary', '#2d2d2d')
+        bg_primary = getattr(app, 'bg_primary', '#1e1e1e')
+        text_primary = getattr(app, 'text_primary', '#ffffff')
+        
+        # Replace theme color placeholders in SVG data
+        svg_string = svg_data.decode('utf-8')
+        svg_string = svg_string.replace('{bg_secondary}', bg_secondary)
+        svg_string = svg_string.replace('{bg_primary}', bg_primary)
+        svg_string = svg_string.replace('{text_primary}', text_primary)
+        
         # If a specific color is provided, replace currentColor with that color
         if color:
-            svg_string = svg_data.decode('utf-8')
             svg_string = svg_string.replace('currentColor', color)
-            svg_data = svg_string.encode('utf-8')
+        
+        # Also replace currentColor with text_primary if no specific color provided
+        else:
+            svg_string = svg_string.replace('currentColor', text_primary)
+        
+        svg_data = svg_string.encode('utf-8')
         
         renderer = QSvgRenderer(QByteArray(svg_data))
         pixmap = QPixmap(QSize(size, size))
