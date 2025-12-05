@@ -101,12 +101,12 @@ def get_app_icon(size: int = 64) -> QIcon: #vers 1
     svg_data = b'''<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
         <defs>
             <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:{bg_secondary};stop-opacity:1" />
-                <stop offset="100%" style="stop-color:{bg_primary};stop-opacity:1" />
+                <stop offset="0%" style="stop-color:bg_secondary;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:bg_primary;stop-opacity:1" />
             </linearGradient>
         </defs>
         <rect x="0" y="0" width="64" height="64" rx="12" ry="12" fill="url(#bgGradient)"/>
-        <text x="32" y="38" font-size="24" fill={text_primary} text-anchor="middle" font-weight="bold" font-family="Arial, sans-serif">IMG</text>
+        <text x="32" y="38" font-size="24" fill=text_primary text-anchor="middle" font-weight="bold" font-family="Arial, sans-serif">IMG</text>
     </svg>'''
     return svg_to_icon(svg_data, size)
 

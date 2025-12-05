@@ -89,7 +89,7 @@ class MenuDefinition:
 
             "Settings": [
                 MenuAction("preferences", "&Theme Prefs ", "Ctrl+,"),
-                MenuAction("customize_buttons", "Customize &GUI"),
+                MenuAction("customize_gui", "Customize &GUI"),
                 MenuAction("sep1", ""),
                 MenuAction("language", "&Language"),
                 MenuAction("sep2", ""),
@@ -782,8 +782,8 @@ class IMGFactoryMenuBar:
             # Settings menu
             "preferences": self._show_preferences,
             "customize_interface": self._show_gui_settings,
-            "customize_buttons": self._customize_buttons,
-            "customize_menus": self._customize_menus,
+            "customize_gui": self._customize_gui,
+            "customize_menus": self._customize_menus, #moved to tab
             "themes": self._show_theme_settings,
             "language": self._change_language,
             "file_associations": self._file_associations,
@@ -1354,14 +1354,14 @@ class IMGFactoryMenuBar:
     # SETTINGS MENU CALLBACKS
     # ========================================================================
     
-    def _customize_buttons(self):
+    def _customize_gui(self):
         """Customize buttons - Show button settings dialog"""
         try:
             from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget, QGroupBox, QLabel, QSpinBox, QComboBox, QCheckBox, QPushButton
             from PyQt6.QtCore import Qt
             
             dialog = QDialog(self.main_window)
-            dialog.setWindowTitle("Button Settings - IMG Factory 1.5")
+            dialog.setWindowTitle("GUI Settings - IMG Factory 1.5")
             dialog.setModal(True)
             dialog.resize(500, 400)
             
