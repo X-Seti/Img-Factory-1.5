@@ -3502,7 +3502,14 @@ class IMGFactory(QMainWindow):
                 self.open_files[current_index]['file_object'] = col_file
                 self.log_message(f"Updated tab {current_index} with loaded COL")
             else:
-                self.log_message(f"Tab {current_index} not found in open_files") #TODO warning svg icon
+                # Show warning icon on the tab if possible
+                try:
+                    from apps.methods.svg_shared_icons import get_warning_icon
+                    warning_icon = get_warning_icon()
+                    self.main_tab_widget.setTabIcon(current_index, warning_icon)
+                except:
+                    pass  # Fallback to just the log message if icon setting fails
+                self.log_message(f"Tab {current_index} not found in open_files")
 
             # Apply enhanced COL tab styling after loading
             if hasattr(self, '_apply_individual_col_tab_style'):
