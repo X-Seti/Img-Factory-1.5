@@ -53,6 +53,14 @@ def svg_to_icon(svg_data: bytes, size: int = 24, color: str = None) -> QIcon: #v
     Returns:
         QIcon object
     """
+
+    #TODO fix get_app
+    # fix currentcolor = text_primary
+    # {bg_secondary}
+    # {bg_primary}
+    # {text_primary}
+    # from theme inself.
+
     try:
         # If a specific color is provided, replace currentColor with that color
         if color:
@@ -74,7 +82,24 @@ def svg_to_icon(svg_data: bytes, size: int = 24, color: str = None) -> QIcon: #v
         return QIcon()
 
 
-# ========== FILE TYPE ICONS (Replace emojis in tabs) ==========
+# = App icon
+
+def get_app_icon(size: int = 64) -> QIcon: #vers 1
+    """IMG Factory application icon with 'IMG' text and gradient background"""
+    # Using dark theme colors as default (can be changed based on current theme)
+    svg_data = b'''<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:{bg_secondary};stop-opacity:1" />
+                <stop offset="100%" style="stop-color:{bg_primary};stop-opacity:1" />
+            </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="64" height="64" rx="12" ry="12" fill="url(#bgGradient)"/>
+        <text x="32" y="38" font-size="24" fill={text_primary} text-anchor="middle" font-weight="bold" font-family="Arial, sans-serif">IMG</text>
+    </svg>'''
+    return svg_to_icon(svg_data, size)
+
+# = FILE TYPE ICONS (Replace emojis in tabs)
 
 def get_img_file_icon(size: int = 24) -> QIcon: #vers 1
     """IMG archive icon - Replaces emoji"""
@@ -132,7 +157,7 @@ def get_file_icon(size: int = 24) -> QIcon: #vers 1
     return svg_to_icon(svg_data, size)
 
 
-# ========== ACTION ICONS ==========
+# = ACTION ICONS
 
 def get_trash_icon(size: int = 24) -> QIcon: #vers 1
     """Delete/trash icon - Replaces 🗑️ emoji"""
@@ -377,22 +402,6 @@ def get_image_icon(size: int = 24) -> QIcon: #vers 1
         <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
         <polyline points="21 15 16 10 5 21" 
             stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>'''
-    return svg_to_icon(svg_data, size)
-
-
-def get_app_icon(size: int = 64) -> QIcon: #vers 1
-    """IMG Factory application icon with 'IMG' text and gradient background"""
-    # Using dark theme colors as default (can be changed based on current theme)
-    svg_data = b'''<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#444444;stop-opacity:1" />
-                <stop offset="100%" style="stop-color:#252525;stop-opacity:1" />
-            </linearGradient>
-        </defs>
-        <rect x="0" y="0" width="64" height="64" rx="12" ry="12" fill="url(#bgGradient)"/>
-        <text x="32" y="38" font-size="24" fill="#CCCCCC" text-anchor="middle" font-weight="bold" font-family="Arial, sans-serif">IMG</text>
     </svg>'''
     return svg_to_icon(svg_data, size)
 
