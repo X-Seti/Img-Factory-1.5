@@ -6,7 +6,6 @@ __pycache__/
 # Dependencies
 .venv/
 venv/
-node_modules/
 
 # Logs and temp files
 *.log
@@ -22,21 +21,18 @@ node_modules/
 .vscode/
 .idea/
 
+# System files
+.DS_Store
+Thumbs.db
+
 # Coverage
-.coverage
 coverage/
 htmlcov/
+.coverage
 
-# Python specific
-*.pyo
-*.pyd
-.Python
-*.so
-*.egg-info/
+# MyPy
+.mypy_cache/
 
-# Build directories
-dist/
-build/
-target/
+# Pytest
+.pytest_cache/
 ```
-img_factory_debug.log
