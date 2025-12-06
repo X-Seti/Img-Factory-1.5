@@ -2002,12 +2002,11 @@ class AppSettings:
             self.settings_file.parent.mkdir(parents=True, exist_ok=True)  # ADD THIS LINE
             with open(self.settings_file, 'w', encoding='utf-8') as f:  # ADD encoding='utf-8'
                 json.dump(self.current_settings, f, indent=2, ensure_ascii=False)  # ADD ensure_ascii=False
+            print(f"Settings saved to: {self.settings_file}")
+            return True
         except Exception as e:
-            print(f"Could not save settings: {e}")
-        # Map old 'project_folder' to assists_folder for compatibility
-        if key == 'project_folder':
-            return getattr(self, 'assists_folder', default)
-        return getattr(self, key, default)
+            print(f"Error saving settings: {e}")
+            return False
 
         # Default settings
         self.default_settings = {
@@ -2449,21 +2448,6 @@ class AppSettings:
             print(f"Error loading settings: {e}")
 
         return self.default_settings.copy()
-
-    def save_settings(self):
-        """Save current settings to file"""
-        try:
-            # Ensure parent directory exists
-            self.settings_file.parent.mkdir(exist_ok=True)
-
-            with open(self.settings_file, 'w', encoding='utf-8') as f:
-                json.dump(self.current_settings, f, indent=2, ensure_ascii=False)
-            print(f"Settings saved to: {self.settings_file}")
-            return True
-        except Exception as e:
-            print(f"Error saving settings: {e}")
-            return False
-
 
     def get_theme_info(self, theme_name: str) -> dict:
         """Get detailed info about a specific theme"""

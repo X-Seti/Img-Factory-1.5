@@ -19,7 +19,8 @@ from PyQt6.QtWidgets import (
     QPushButton, QFileDialog, QMessageBox, QMenuBar, QStatusBar,
     QProgressBar, QHeaderView, QGroupBox, QComboBox, QLineEdit,
     QAbstractItemView, QTreeWidget, QTreeWidgetItem, QTabWidget,
-    QGridLayout, QMenu, QButtonGroup, QRadioButton, QToolBar, QFormLayout
+    QGridLayout, QMenu, QButtonGroup, QRadioButton, QToolBar, QFormLayout,
+    QInputDialog
 )
 print("PyQt6.QtCore imported successfully")
 from PyQt6.QtCore import pyqtSignal, QMimeData, Qt, QThread, QTimer, QSettings
@@ -5025,7 +5026,6 @@ def fix_rename_functionality(main_window):
     try:
         # Ensure rename_selected function is properly connected
         if not hasattr(main_window, 'rename_selected'):
-            from apps.core.imgcol_rename import integrate_imgcol_rename_functions
             integrate_imgcol_rename_functions(main_window)
         
         # Connect double-click event to table for rename

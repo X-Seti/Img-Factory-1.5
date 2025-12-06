@@ -266,33 +266,42 @@ def parse_dff_textures_from_data(dff_path):
             data = f.read()
             
         # Look for texture-related patterns in the DFF data
-        # This is a simplified approach - real DFF parsing is complex
-        # Look for common texture name patterns
+        # DFF files often contain texture names in certain sections
         import re
         
         # Search for potential texture names in the binary data
-        # This looks for sequences that might be texture names
-        # This is a very basic implementation - proper DFF parsing would be more complex
+        # DFF files often have ASCII texture names in certain sections
         text_data = data.decode('ascii', errors='ignore')
         
         # Look for potential texture names (alphanumeric with underscores, hyphens, dots)
-        potential_textures = re.findall(r'[A-Za-z0-9_\-]{3,20}\.(?:txd|png|jpg|bmp|dxt)', text_data, re.IGNORECASE)
+        # Common patterns in DFF files for texture names
+        potential_textures = re.findall(r'[A-Za-z0-9_\-]{3,20}\.(?:txd|png|jpg|bmp|dxt|tga)', text_data, re.IGNORECASE)
         
-        # Also look for names without extensions
-        potential_names = re.findall(r'[A-Za-z][A-Za-z0-9_\-]{2,19}(?=\.|\s|$)', text_data)
+        # Also look for names without extensions that might be texture names
+        # Look for names that could be texture names (avoiding too many false positives)
+        potential_names = re.findall(r'[A-Za-z][A-Za-z0-9_\-]{3,19}(?=\.|\s|\0|$)', text_data)
         
         # Combine and deduplicate
         all_matches = list(set(potential_textures + potential_names))
         
         # Filter for likely texture names
         for name in all_matches:
-            if any(tex in name.lower() for tex in ['tex', 'texture', 'material', 'diffuse', 'specular']):
+            # Check if it contains common texture-related terms
+            if any(tex in name.lower() for tex in ['tex', 'texture', 'material', 'diffuse', 'specular', 'normal', 'bump']):
                 textures.append(name)
-            elif len(name) > 2 and not any(c.isdigit() for c in name[:2]):  # Avoid names starting with numbers
-                textures.append(name)
+            # Check if it's a common texture naming pattern (not too generic)
+            elif len(name) > 3 and len(name) < 20 and not any(c.isdigit() for c in name[:2]):  # Avoid names starting with numbers
+                # Additional check: avoid common non-texture words
+                if not any(common_word in name.lower() for common_word in ['object', 'model', 'geometry', 'data', 'file', 'name']):
+                    textures.append(name)
         
-        # Return unique textures
-        return list(set(textures))
+        # Return unique textures, removing duplicates
+        unique_textures = list(set(textures))
+        
+        # Sort for consistent output
+        unique_textures.sort()
+        
+        return unique_textures
         
     except Exception as e:
         print(f"Error parsing DFF textures: {str(e)}")
