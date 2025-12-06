@@ -437,7 +437,8 @@ class HexEditorDialog(QDialog):
             cursor.select(cursor.SelectionType.LineUnderCursor)
             selected_text = cursor.selectedText()
             
-            clipboard = self.main_window.app.clipboard() if hasattr(self.main_window, 'app') else None
+            from PyQt6.QtWidgets import QApplication
+            clipboard = QApplication.clipboard()
             if clipboard:
                 clipboard.setText(selected_text)
                 self.main_window.log_message("Current hex row copied to clipboard")
@@ -454,7 +455,8 @@ class HexEditorDialog(QDialog):
             if cursor.hasSelection():
                 selected_text = cursor.selectedText()
                 
-                clipboard = self.main_window.app.clipboard() if hasattr(self.main_window, 'app') else None
+                from PyQt6.QtWidgets import QApplication
+                clipboard = QApplication.clipboard()
                 if clipboard:
                     clipboard.setText(selected_text)
                     self.main_window.log_message("Selected hex lines copied to clipboard")
@@ -469,7 +471,8 @@ class HexEditorDialog(QDialog):
     def paste_hex_data(self):
         """Paste hex data to current cursor position"""
         try:
-            clipboard = self.main_window.app.clipboard() if hasattr(self.main_window, 'app') else None
+            from PyQt6.QtWidgets import QApplication
+            clipboard = QApplication.clipboard()
             if clipboard:
                 text = clipboard.text()
                 cursor = self.hex_display.textCursor()
@@ -496,7 +499,8 @@ class HexEditorDialog(QDialog):
                 
                 struct_info = f"Offset: {offset}\nSize: {size}\nType: {type_name}\nDescription: {description}"
                 
-                clipboard = self.main_window.app.clipboard() if hasattr(self.main_window, 'app') else None
+                from PyQt6.QtWidgets import QApplication
+                clipboard = QApplication.clipboard()
                 if clipboard:
                     clipboard.setText(struct_info)
                     self.main_window.log_message("Structure info copied to clipboard")
