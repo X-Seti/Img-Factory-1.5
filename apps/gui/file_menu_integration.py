@@ -720,9 +720,9 @@ def validate_game_root_folder(folder_path: str) -> dict: #vers 5
             ("gtasol.exe", "SOL/gta_sol.dat", "default.ide", "GTA Sol"),
             ("gta_sol.exe", "SOL/gta_sol.dat", "default.ide", "GTA Sol"),
             # Also check root locations
-            ("solcore.exe", "gta_sol.dat", "Data/default.dat", "GTA Sol"),
-            ("gtasol.exe", "gta_sol.dat", "Data/default.dat", "GTA Sol"),
-            ("gta_sol.exe", "gta_sol.dat", "Data/default.dat", "GTA Sol"),
+            ("solcore.exe", "sol/gta_sol.dat", "Data/default.dat", "GTA Sol"),
+            ("gtasol.exe", "sol/gta_sol.dat", "Data/default.dat", "GTA Sol"),
+            ("gta_sol.exe", "sol/gta_sol.dat", "Data/default.dat", "GTA Sol"),
         ]
         
         for exe_name, dat_file, ide_file, game_name in gta_signatures:
