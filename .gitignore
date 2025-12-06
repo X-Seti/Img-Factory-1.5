@@ -1,3 +1,4 @@
+```
 # Compiled and build artifacts
 *.pyc
 __pycache__/
@@ -19,6 +20,8 @@ target/
 .gradle/
 .mypy_cache/
 .pytest_cache/
+.julia/
+.zig/
 
 # Logs and temp files
 *.log
@@ -29,15 +32,13 @@ target/
 # Environment
 .env
 .env.local
-*.env.*
+.env.*
 
 # Editors
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# System
+# System files
 .DS_Store
 Thumbs.db
 
@@ -69,3 +70,4 @@ htmlcov/
 *.tar.bz2
 *.tar.xz
 *.tar.zst
+```
