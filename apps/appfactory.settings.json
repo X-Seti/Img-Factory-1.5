@@ -20,6 +20,7 @@
     "FILE_OPERATIONS"
   ],
   "working_gta_folder": "/home/x2/.steam/steam/steamapps/common",
+  "gta_root_override_enabled": false,
   "assists_folder": "/home/x2/Desktop/Assists",
   "textures_folder": "/home/x2/Desktop/Textures",
   "collisions_folder": "/home/x2/Desktop/Collisions",
