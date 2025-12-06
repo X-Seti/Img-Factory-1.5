@@ -4872,6 +4872,52 @@ def set_game_path(main_window):
         )
 
 
+def get_entry_info(main_window, row):
+    """
+    Get entry information for a given row in the table
+    """
+    try:
+        entry_info = {
+            'name': '',
+            'is_dff': False,
+            'size': 0,
+            'offset': 0
+        }
+        
+        # Use tab-aware approach if available
+        if hasattr(main_window, 'get_current_file_from_active_tab'):
+            file_object, file_type = main_window.get_current_file_from_active_tab()
+            if file_type == 'IMG' and file_object and hasattr(file_object, 'entries'):
+                if 0 <= row < len(file_object.entries):
+                    entry = file_object.entries[row]
+                    entry_info['name'] = entry.name
+                    entry_info['is_dff'] = entry.name.lower().endswith('.dff')
+                    entry_info['size'] = entry.size
+                    entry_info['offset'] = entry.offset
+                    return entry_info
+        else:
+            # Fallback to old method
+            if hasattr(main_window, 'current_img') and main_window.current_img:
+                if 0 <= row < len(main_window.current_img.entries):
+                    entry = main_window.current_img.entries[row]
+                    entry_info['name'] = entry.name
+                    entry_info['is_dff'] = entry.name.lower().endswith('.dff')
+                    entry_info['size'] = entry.size
+                    entry_info['offset'] = entry.offset
+                    return entry_info
+        
+        return entry_info
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Error getting entry info: {str(e)}")
+        return {
+            'name': '',
+            'is_dff': False,
+            'size': 0,
+            'offset': 0
+        }
+
+
 def show_dff_texture_list_from_selection(main_window):
     """
     Show DFF texture list for currently selected entry
