@@ -732,41 +732,16 @@ def show_hex_editor(main_window, row, entry_info):
     Show hex editor for selected file
     """
     try:
-        # Extract the file data to a temporary location for hex editing
-        from apps.methods.col_operations import extract_col_from_img_entry, create_temporary_col_file, cleanup_temporary_file
+        # Import the hex editor module
+        from apps.components.Hex_Editor import show_hex_editor_for_entry
         
-        # Try to extract the file data
-        if entry_info['is_col']:
-            extraction_result = extract_col_from_img_entry(main_window, row)
-            if extraction_result:
-                col_data, entry_name = extraction_result
-                temp_path = create_temporary_col_file(col_data, entry_name)
-                
-                if temp_path:
-                    try:
-                        # Show hex editor for the temporary file
-                        QMessageBox.information(main_window, "Hex Editor", 
-                                              f"Hex Editor for: {entry_name}\n\n"
-                                              f"Temporary file created at: {temp_path}\n"
-                                              f"File size: {len(col_data)} bytes\n\n"
-                                              f"Note: Hex editor functionality would open here.")
-                    finally:
-                        cleanup_temporary_file(temp_path)
-                else:
-                    QMessageBox.warning(main_window, "Hex Editor", 
-                                      "Could not create temporary file for hex editing")
-            else:
-                QMessageBox.warning(main_window, "Hex Editor", 
-                                  "Could not extract file data for hex editing")
-        else:
-            # For non-COL files, we'd need a different extraction method
-            QMessageBox.information(main_window, "Hex Editor", 
-                                  f"Hex Editor for: {entry_info['name']}\n\n"
-                                  f"File type: {entry_info['name'].split('.')[-1].upper()}\n\n"
-                                  f"Note: Hex editor functionality would open here.")
+        # Use the new hex editor implementation
+        show_hex_editor_for_entry(main_window, row, entry_info)
         
     except Exception as e:
         main_window.log_message(f"❌ Error showing hex editor: {str(e)}")
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.critical(main_window, "Error", f"Could not open hex editor:\n{str(e)}")
 
 
 def show_hex_editor_selected(main_window):

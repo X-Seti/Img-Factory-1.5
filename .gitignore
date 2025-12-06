@@ -1,11 +1,11 @@
 ```
-# Compiled and build artifacts
+# Compiled Python files
 *.pyc
 __pycache__/
 
-# Dependencies
-.venv/
-venv/
+# Test files
+*.pyc
+test_*.py
 
 # Logs and temp files
 *.log
@@ -21,18 +21,28 @@ venv/
 .vscode/
 .idea/
 
+# Dependencies
+.venv/
+venv/
+node_modules/
+
+# Coverage
+.coverage
+coverage/
+htmlcov/
+
+# Build artifacts
+dist/
+build/
+target/
+
 # System files
 .DS_Store
 Thumbs.db
 
-# Coverage
-coverage/
-htmlcov/
-.coverage
-
-# MyPy
+# MyPy cache
 .mypy_cache/
 
-# Pytest
+# Pytest cache
 .pytest_cache/
 ```
