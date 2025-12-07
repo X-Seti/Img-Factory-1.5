@@ -3,6 +3,7 @@
 ├── apps
 │   ├── appfactory.settings.json
 │   ├── components
+│   │   ├── base_gui_example.py
 │   │   ├── Col_Creator
 │   │   │   └── col_creator.py
 │   │   ├── Col_Editor
@@ -30,6 +31,10 @@
 │   │   │   ├── file_dirtree_backend.py
 │   │   │   ├── file_dirtree_browser.py
 │   │   │   └── gta_file_editors.py
+│   │   ├── Hex_Editor
+│   │   │   ├── Hex_Editor_Panel.py
+│   │   │   ├── Hex_Editor.py
+│   │   │   └── __init__.py
 │   │   ├── Ide_Editor
 │   │   │   └── ide_editor.py
 │   │   ├── Img_Browser
@@ -178,6 +183,7 @@
 │   │   ├── rw_unk_snapshot.py
 │   │   ├── save_entry.py
 │   │   ├── shortcuts.py
+│   │   ├── sort.py
 │   │   ├── sort_via_ide.py
 │   │   ├── theme_integration.py
 │   │   ├── undo_system.py
@@ -324,8 +330,10 @@
 ├── reviews
 │   └── pr-2-approval.md
 ├── test_generics.ide
+├── test_hex_editor_panel.py
+├── test_hex_editor.py
 ├── TODO.md
 ├── tree.git
 └── vulnerability_report.md
 
-36 directories, 293 files
+37 directories, 300 files
