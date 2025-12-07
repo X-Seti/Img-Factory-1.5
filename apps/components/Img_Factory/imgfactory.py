@@ -25,6 +25,12 @@ from PyQt6.QtWidgets import (
 print("PyQt6.QtCore imported successfully")
 from PyQt6.QtCore import pyqtSignal, QMimeData, Qt, QThread, QTimer, QSettings
 from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent, QFont, QIcon, QPixmap, QShortcut, QTextCursor
+# Import comprehensive_fix using importlib to avoid relative import issues
+import importlib.util
+spec = importlib.util.spec_from_file_location("comprehensive", os.path.join(os.path.dirname(__file__), "comprehensive.py"))
+comprehensive_fix_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(comprehensive_fix_module)
+fix_menu_system_and_functionality = comprehensive_fix_module.fix_menu_system_and_functionality
 
 
 # OR use the full path:
@@ -1217,6 +1223,7 @@ class IMGFactory(QMainWindow):
 
         # Add missing functions for menu system
         self.save_img_as = self._save_img_as
+        self.save_img_entry = self._save_img_entry  # Main save function with modification check
         self.find_entries = self._find_entries
         self.find_next_entries = self._find_next_entries
         self.duplicate_selected = self._duplicate_selected
@@ -1288,6 +1295,75 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"Error in save_img_as: {str(e)}")
             QMessageBox.critical(self, "Save As Error", f"Failed to save IMG file:\n{str(e)}")
+            return False
+
+    def _save_img_entry(self):
+        """Save IMG file with modification check - addresses issue #1"""
+        try:
+            if not hasattr(self, 'current_img') or not self.current_img:
+                QMessageBox.warning(self, "Save", "No IMG file loaded to save.")
+                return False
+
+            # Check if the IMG file has been modified
+            is_modified = getattr(self.current_img, 'modified', False)
+            
+            if not is_modified:
+                # Show message that file is unchanged
+                self.log_message("IMG file unchanged, nothing to save")
+                QMessageBox.information(self, "Save", "IMG file unchanged, nothing to save")
+                return False
+
+            # Get the file path - use current file path if available
+            file_path = getattr(self.current_img, 'file_path', None)
+            
+            if not file_path:
+                # If no file path, prompt user to save as new file
+                from PyQt6.QtWidgets import QFileDialog
+                file_path, _ = QFileDialog.getSaveFileName(
+                    self,
+                    "Save IMG File",
+                    "",
+                    "IMG Files (*.img);;All Files (*.*)"
+                )
+                
+                if not file_path:
+                    # User cancelled
+                    return False
+                
+                # Ensure file has .img extension
+                if not file_path.lower().endswith('.img'):
+                    file_path += '.img'
+
+            try:
+                # Save the IMG file using the appropriate method
+                if hasattr(self.current_img, 'save'):
+                    success = self.current_img.save()
+                elif hasattr(self.current_img, 'save_to_path'):
+                    success = self.current_img.save_to_path(file_path)
+                else:
+                    # Fallback: create a new IMG file and copy entries
+                    from apps.methods.img_core_classes import IMGFile
+                    new_img = IMGFile(file_path)
+                    new_img.entries = self.current_img.entries[:]
+                    success = new_img.save()
+
+                if success:
+                    # Reset the modified flag after successful save
+                    self.current_img.modified = False
+                    self.log_message(f"IMG file saved: {file_path}")
+                    QMessageBox.information(self, "Save", f"File saved successfully:\n{file_path}")
+                    return True
+                else:
+                    QMessageBox.critical(self, "Save", "Failed to save IMG file.")
+                    return False
+
+            except Exception as e:
+                QMessageBox.critical(self, "Save Error", f"Error saving file:\n{str(e)}")
+                return False
+
+        except Exception as e:
+            self.log_message(f"Error in save_img_entry: {str(e)}")
+            QMessageBox.critical(self, "Save Error", f"Failed to save IMG file:\n{str(e)}")
             return False
 
     def _find_entries(self):

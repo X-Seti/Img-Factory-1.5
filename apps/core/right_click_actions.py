@@ -244,6 +244,11 @@ def show_advanced_context_menu(main_window, position): #vers 3
         copy_row_action.triggered.connect(lambda: copy_table_row(main_window, row))
         menu.addAction(copy_row_action)
 
+        # Copy row as lines (each cell on a separate line)
+        copy_lines_action = QAction("Copy Lines", menu_parent)
+        copy_lines_action.triggered.connect(lambda: copy_table_row_as_lines(main_window, row))
+        menu.addAction(copy_lines_action)
+
         copy_column_action = QAction(f"Copy Column ({column_name})", menu_parent)
         copy_column_action.triggered.connect(lambda: copy_table_column_data(main_window, col))
         menu.addAction(copy_column_action)
