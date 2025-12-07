@@ -37,28 +37,7 @@ from apps.methods.img_core_classes import format_file_size
 # view_dff_model
 # view_txd_textures
 
-def get_selected_entry_info(main_window, row): #vers 1
-    """Get information about selected entry"""
-    try:
-        if not hasattr(main_window, 'current_img') or not main_window.current_img:
-            return None
-        
-        if row < 0 or row >= len(main_window.current_img.entries):
-            return None
-        
-        entry = main_window.current_img.entries[row]
-        return {
-            'entry': entry,
-            'name': entry.name,
-            'is_col': entry.name.lower().endswith('.col'),
-            'is_dff': entry.name.lower().endswith('.dff'),
-            'is_txd': entry.name.lower().endswith('.txd'),
-            'size': entry.size,
-            'offset': entry.offset
-        }
-    except Exception as e:
-        main_window.log_message(f"❌ Error getting entry info: {str(e)}")
-        return None
+
 
 def edit_col_from_img_entry(main_window, row): #vers 2
     """Edit COL file from IMG entry - WORKING VERSION"""
