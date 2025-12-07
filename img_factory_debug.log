@@ -1,19 +1,19 @@
 === IMG Factory Debug Log ===
-Started: 2025-12-07 04:01:24
+Started: 2025-12-07 04:17:21
 Python: 3.13.7 (main, Aug 15 2025, 12:34:02) [GCC 15.2.1 20250813]
 Platform: linux
 ==================================================
 
-[04:01:31] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.3.0.2 GTA3/VC (PS2) (0xC02FFFF) for dssa_sfechurch.dff
-[04:01:31] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_lsbld4.dff
-[04:01:31] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_lsbld6.dff
-[04:01:31] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_lsbld7.dff
-[04:01:31] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_sfebld2.dff
-[04:01:31] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_offbld.dff
-[04:01:31] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_sfebld3.dff
-[04:01:31] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_lsbld8.dff
-[04:01:31] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_lsbld5.dff
-[04:01:31] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_radihhotwr2.dff
-[04:01:31] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_radiotwr.dff
-[04:01:31] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for CJ_CUSTOM_BAR.dff
-[04:01:31] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for Channel69News.dff
+[04:17:50] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.3.0.2 GTA3/VC (PS2) (0xC02FFFF) for dssa_sfechurch.dff
+[04:17:50] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_lsbld4.dff
+[04:17:50] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_lsbld6.dff
+[04:17:50] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_lsbld7.dff
+[04:17:50] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_sfebld2.dff
+[04:17:50] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_offbld.dff
+[04:17:50] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_sfebld3.dff
+[04:17:50] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_lsbld8.dff
+[04:17:50] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_lsbld5.dff
+[04:17:50] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_radihhotwr2.dff
+[04:17:50] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for dssa_radiotwr.dff
+[04:17:50] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for CJ_CUSTOM_BAR.dff
+[04:17:50] SUCCESS: img_debug_functions.py:111 in success() - Detected RW version 3.1.0.0 GTA VC (PC) (0x1003FFFF) for Channel69News.dff
