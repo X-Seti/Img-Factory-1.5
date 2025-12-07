@@ -320,6 +320,29 @@ def copy_table_row(main_window, row: int): #vers 1
     except Exception as e:
         main_window.log_message(f"Copy row error: {str(e)}")
 
+def copy_table_row_as_lines(main_window, row: int): #vers 1
+    """Copy entire table row to clipboard as separate lines (Issue #3 fix)"""
+    try:
+        table = main_window.gui_layout.table
+        
+        row_data = []
+        for col in range(table.columnCount()):
+            item = table.item(row, col)
+            if item:
+                row_data.append(item.text())
+            else:
+                row_data.append("")
+        
+        # Join with newlines instead of tabs (as separate lines)
+        text = "\n".join(row_data)
+        QApplication.clipboard().setText(text)
+        
+        filename = row_data[0] if row_data else f"Row {row}"
+        main_window.log_message(f"Copied row as lines: {filename}")
+        
+    except Exception as e:
+        main_window.log_message(f"Copy row as lines error: {str(e)}")
+
 def copy_table_column_data(main_window, col: int): #vers 1
     """Copy entire column data to clipboard"""
     try:
