@@ -4,16 +4,27 @@
 __pycache__/
 *.o
 *.obj
+*.so
+*.dll
+*.exe
+*.out
 
 # Dependencies
 .venv/
 venv/
 node_modules/
+dist/
+build/
+target/
+.gradle/
+.mypy_cache/
+.pytest_cache/
 
 # Logs and temp files
 *.log
 *.tmp
 *.swp
+*.swo
 
 # Environment
 .env
@@ -24,36 +35,36 @@ node_modules/
 .vscode/
 .idea/
 
+# System files
+.DS_Store
+Thumbs.db
+
 # Coverage
-.coverage
 coverage/
 htmlcov/
-
-# Python specific
-*.pyc
-__pycache__/
-*.pyo
-*.pyd
-.Python
-*.so
-*.egg-info/
-.eggs/
-
-# Distribution / packaging
-dist/
-build/
-*.egg
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.so
 .coverage
-htmlcov/
-.tox/
-.nox/
-.coverage*
-.cache
-.pytest_cache/
-.mypy_cache/
+
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
 ```
