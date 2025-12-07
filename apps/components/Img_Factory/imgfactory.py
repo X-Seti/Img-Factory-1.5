@@ -5097,20 +5097,25 @@ def show_dff_model_viewer_from_selection(main_window):
 
 def fix_rename_functionality(main_window):
     """
-    Fix rename functionality to work from both right-click and double-click
+    Fix rename functionality to work from right-click menu only (double-click disabled as requested)
     """
     try:
         # Ensure rename_selected function is properly connected
         if not hasattr(main_window, 'rename_selected'):
             integrate_imgcol_rename_functions(main_window)
         
-        # Connect double-click event to table for rename
+        # DO NOT connect double-click event to table for rename (as requested)
+        # Only allow renaming via right-click menu
         if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
             table = main_window.gui_layout.table
-            # Connect double-click to rename function
-            table.cellDoubleClicked.connect(lambda row, col: handle_double_click_rename(main_window, row, col))
+            # Remove any existing double-click connection to prevent double-click renaming
+            try:
+                table.cellDoubleClicked.disconnect()
+            except TypeError:
+                # If no connections exist, this will raise an exception, which is fine
+                pass
         
-        main_window.log_message("✅ Rename functionality fixed")
+        main_window.log_message("✅ Rename functionality fixed (double-click disabled as requested)")
         
     except Exception as e:
         main_window.log_message(f"❌ Error fixing rename functionality: {str(e)}")

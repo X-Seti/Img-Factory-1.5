@@ -649,26 +649,28 @@ def add_common_operations(main_window, menu, row=None):
 
 def setup_double_click_rename(main_window):
     """
-    Setup double-click rename functionality
+    Setup double-click rename functionality - DISABLED as requested
     """
     try:
         if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
             table = main_window.gui_layout.table
             
-            # Store original double-click handler if it exists
-            if hasattr(table, '_original_double_click_handler'):
-                return  # Already set up
+            # Remove any existing double-click connection to rename
+            # This disables the double-click rename functionality as requested
+            try:
+                # Disconnect any existing double-click rename handler
+                table.cellDoubleClicked.disconnect()
+            except TypeError:
+                # If no connections exist, this will raise an exception, which is fine
+                pass
             
-            # Connect double-click event
-            table.cellDoubleClicked.connect(lambda row, col: handle_double_click_rename(main_window, row, col))
+            # Don't connect the rename handler - this disables double-click rename
+            # table.cellDoubleClicked.connect(lambda row, col: handle_double_click_rename(main_window, row, col))
             
-            # Mark as set up
-            table._original_double_click_handler = True
-            
-            main_window.log_message("✅ Double-click rename functionality set up")
+            main_window.log_message("✅ Double-click rename functionality DISABLED as requested")
             
     except Exception as e:
-        main_window.log_message(f"❌ Error setting up double-click rename: {str(e)}")
+        main_window.log_message(f"❌ Error disabling double-click rename: {str(e)}")
 
 
 # Export the main function
