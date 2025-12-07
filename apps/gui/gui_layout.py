@@ -14,10 +14,18 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer, QSize, pyqtSignal, QPoint
 from PyQt6.QtGui import QFont, QAction, QIcon, QShortcut, QKeySequence, QPalette, QTextCursor
 from apps.core.gui_search import ASearchDialog, SearchManager
+from apps.methods.svg_shared_icons import (
+    get_add_icon, get_open_icon, get_refresh_icon, get_close_icon, 
+    get_save_icon, get_export_icon, get_import_icon, get_remove_icon,
+    get_edit_icon, get_view_icon, get_search_icon, get_settings_icon,
+    get_rebuild_icon
+)
+from apps.locals.localization import tr_button
 from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
 from apps.components.Img_Creator.img_creator import NewIMGDialog, IMGCreationThread
 from apps.components.Ide_Editor.ide_editor import open_ide_editor
+from apps.gui.gui_backend import GUIBackend, ButtonDisplayMode
 
 #core
 from apps.core.impotr import import_files_function
@@ -40,6 +48,7 @@ from apps.core.img_merger import merge_img_function
 from apps.core.convert import convert_img, convert_img_format
 from apps.core.rename import rename_entry
 from apps.core.imgcol_replace import replace_selected
+from apps.core.extract import extract_textures_function
 from apps.core.reload import reload_current_file
 from apps.core.create import create_new_img
 from apps.core.open import _detect_and_open_file, open_file_dialog, _detect_file_type
@@ -111,6 +120,9 @@ class IMGFactoryGUILayout:
         self.info_bar = None
         self.tearoff_button = None
 
+        # Initialize backend for button management
+        self.backend = GUIBackend(main_window)
+        
         # Initialize method_mappings FIRST before buttons
         self.method_mappings = self._create_method_mappings()
 
@@ -159,6 +171,7 @@ class IMGFactoryGUILayout:
             # Edit methods
             'rename_selected': lambda: rename_entry(self.main_window),
             'replace_selected': lambda: replace_selected(self.main_window),
+            'extract_textures': lambda: extract_textures_function(self.main_window),
 
             # Editor methods
             'edit_col_file': lambda: open_col_editor_dialog(self.main_window),
@@ -281,10 +294,11 @@ class IMGFactoryGUILayout:
             #("Quick Exp", "quick_export", "document-send", colors['export_action'], "quick_export_selected"),
             ("Remove", "remove", "edit-delete", colors['remove_action'], "remove_selected"),
             ("Remove via", "remove_via", "document-remvia", colors['remove_action'], "remove_via_entries"),
-            ("Replace", "replace", "edit-copy", colors['edit_action'], "replace_selected"),
+            ("Extract", "extract", "document-export", colors['export_action'], "extract_textures"),
             ("Rename", "rename", "edit-rename", colors['edit_action'], "rename_selected"),
             ("Select All", "select_all", "edit-select-all", colors['select_action'], "select_all_entries"),
             ("Inverse", "sel_inverse", "edit-select", colors['select_action'], "select_inverse"),
+            ("Search", "search", "search", colors['select_action'], "show_search_dialog"),
             ("Sort via", "sort", "view-sort", colors['select_action'], "sort_entries"),
             ("Sort IDE", "sort_ide", "view-sort-ide", colors['select_action'], "sort_entries_to_match_ide"),
             ("Pin selected", "pin_selected", "pin", colors['select_action'], "pin_selected_entries"),
@@ -682,6 +696,87 @@ class IMGFactoryGUILayout:
         except Exception as e:
             self.main_window.log_message(f"❌ Failed to launch TXD Workshop: {e}")
 
+    def set_button_display_mode(self, mode: str):
+        """
+        Set button display mode: 'text_only', 'icons_only', or 'icons_with_text'
+        """
+        try:
+            # Store the current mode
+            self.button_display_mode = mode
+            
+            # Update all buttons to reflect the new mode
+            self._update_all_buttons_display_mode()
+            
+            print(f"✅ Button display mode set to: {mode}")
+            
+        except Exception as e:
+            print(f"❌ Error setting button display mode: {e}")
+
+    def _update_all_buttons_display_mode(self):
+        """Update all buttons to reflect the current display mode"""
+        try:
+            # Get all button collections
+            all_buttons = []
+            if hasattr(self, 'img_buttons'):
+                all_buttons.extend(self.img_buttons)
+            if hasattr(self, 'entry_buttons'):
+                all_buttons.extend(self.entry_buttons)
+            if hasattr(self, 'options_buttons'):
+                all_buttons.extend(self.options_buttons)
+            
+            # Update each button
+            for btn in all_buttons:
+                self._update_button_display_mode(btn)
+                
+        except Exception as e:
+            print(f"❌ Error updating all buttons display mode: {e}")
+
+    def _update_button_display_mode(self, btn):
+        """Update a single button to reflect the current display mode"""
+        try:
+            mode = getattr(self, 'button_display_mode', 'text_only')  # Default to text_only
+            
+            if mode == 'text_only':
+                # Show text only, hide icon
+                btn.setText(btn.localized_text if hasattr(btn, 'localized_text') else btn.text())
+                btn.setIcon(QIcon())  # Remove icon
+                btn.setMinimumWidth(0)  # Reset minimum width
+                btn.setMaximumWidth(16777215)  # Maximum width (default)
+                
+            elif mode == 'icons_only':
+                # Show icon only, hide text
+                btn.setText("")  # Remove text
+                # Keep the icon if it exists
+                if hasattr(btn, 'original_text'):
+                    btn.setToolTip(btn.original_text)  # Add tooltip with original text
+                elif hasattr(btn, 'localized_text'):
+                    btn.setToolTip(btn.localized_text)
+                else:
+                    btn.setToolTip(btn.text())
+                btn.setMinimumWidth(64)  # Set fixed width for icon-only mode
+                btn.setMaximumWidth(64)
+                btn.setMinimumHeight(64)  # Set fixed height for icon-only mode
+                btn.setMaximumHeight(64)
+                
+            elif mode == 'icons_with_text':
+                # Show both icon and text
+                btn.setText(btn.localized_text if hasattr(btn, 'localized_text') else btn.text())
+                # Keep the icon if it exists
+                btn.setMinimumWidth(0)  # Reset minimum width
+                btn.setMaximumWidth(16777215)  # Maximum width (default)
+                btn.setMinimumHeight(20)  # Reset height
+                btn.setMaximumHeight(22)
+                
+            else:
+                # Default to text only
+                btn.setText(btn.localized_text if hasattr(btn, 'localized_text') else btn.text())
+                btn.setIcon(QIcon())
+                btn.setMinimumWidth(0)
+                btn.setMaximumWidth(16777215)
+                
+        except Exception as e:
+            print(f"❌ Error updating button display mode: {e}")
+
     def _update_button_theme(self, btn, bg_color): #vers 2
         """Update a single button's theme styling"""
         try:
@@ -728,31 +823,86 @@ class IMGFactoryGUILayout:
             print(f"❌ Error updating button theme: {e}")
 
 
-    def create_pastel_button(self, label, action_type, icon, bg_color, method_name): #vers 3
+    def create_pastel_button(self, label, action_type, icon, bg_color, method_name, use_pastel=True, high_contrast=False): #vers 3
         """Create a button with pastel coloring that adapts to light/dark themes"""
-        btn = QPushButton(label)
-        btn.setMaximumHeight(22)
-        btn.setMinimumHeight(20)
+        # Get localized label
+        localized_label = tr_button(label)
+        
+        # Create button with the [%][text] format - showing both icon and text by default
+        btn = QPushButton(localized_label)
+        btn.setMaximumHeight(24)  # Slightly taller to accommodate both icon and text
+        btn.setMinimumHeight(22)
 
         # Detect if we're using a dark theme
         is_dark_theme = self._is_dark_theme()
 
-        if is_dark_theme:
-            # Dark theme: darker pastel background, lighter edges, light text
-            button_bg = self._darken_color(bg_color, 0.4)  # Much darker pastel
-            border_color = self._lighten_color(bg_color, 1.3)  # Light border
-            text_color = self._lighten_color(bg_color, 1.5)   # Light text
-            hover_bg = self._darken_color(bg_color, 0.3)      # Slightly lighter on hover
-            hover_border = self._lighten_color(bg_color, 1.4)  # Even lighter border on hover
-            pressed_bg = self._darken_color(bg_color, 0.5)    # Darker when pressed
+        # Determine if we should use high contrast based on settings
+        if hasattr(self.main_window, 'app_settings'):
+            use_pastel = self.main_window.app_settings.current_settings.get('use_pastel_buttons', True)
+            high_contrast = self.main_window.app_settings.current_settings.get('high_contrast_buttons', False) and not use_pastel
+
+        if high_contrast:
+            # High contrast theme - use more distinct colors
+            if is_dark_theme:
+                button_bg = "#333333"  # Dark gray
+                border_color = "#ffffff"  # White border
+                text_color = "#ffffff"    # White text
+                hover_bg = "#555555"      # Lighter gray on hover
+                hover_border = "#ffffff"  # White border on hover
+                pressed_bg = "#111111"    # Darker gray when pressed
+            else:
+                button_bg = "#ffffff"  # White background
+                border_color = "#000000"  # Black border
+                text_color = "#000000"    # Black text
+                hover_bg = "#e0e0e0"      # Light gray on hover
+                hover_border = "#000000"  # Black border on hover
+                pressed_bg = "#cccccc"    # Medium gray when pressed
+        elif use_pastel:
+            # Original pastel theme
+            if is_dark_theme:
+                # Dark theme: darker pastel background, lighter edges, light text
+                button_bg = self._darken_color(bg_color, 0.4)  # Much darker pastel
+                border_color = self._lighten_color(bg_color, 1.3)  # Light border
+                text_color = self._lighten_color(bg_color, 1.5)   # Light text
+                hover_bg = self._darken_color(bg_color, 0.3)      # Slightly lighter on hover
+                hover_border = self._lighten_color(bg_color, 1.4)  # Even lighter border on hover
+                pressed_bg = self._darken_color(bg_color, 0.5)    # Darker when pressed
+            else:
+                # Light theme: light pastel background, dark edges, dark text
+                button_bg = bg_color  # Original pastel color
+                border_color = self._darken_color(bg_color, 0.6)  # Dark border
+                text_color = self._darken_color(bg_color, 1.8)    # Dark text
+                hover_bg = self._darken_color(bg_color, 0.9)      # Slightly darker on hover
+                hover_border = self._darken_color(bg_color, 0.5)  # Darker border on hover
+                pressed_bg = self._darken_color(bg_color, 0.8)    # Darker when pressed
         else:
-            # Light theme: light pastel background, dark edges, dark text
-            button_bg = bg_color  # Original pastel color
-            border_color = self._darken_color(bg_color, 0.6)  # Dark border
-            text_color = self._darken_color(bg_color, 1.8)    # Dark text
-            hover_bg = self._darken_color(bg_color, 0.9)      # Slightly darker on hover
-            hover_border = self._darken_color(bg_color, 0.5)  # Darker border on hover
-            pressed_bg = self._darken_color(bg_color, 0.8)    # Darker when pressed
+            # Standard theme without pastel effect
+            if is_dark_theme:
+                button_bg = "#2d2d2d"  # Dark gray
+                border_color = "#555555"  # Medium gray border
+                text_color = "#ffffff"    # White text
+                hover_bg = "#3d3d3d"      # Lighter gray on hover
+                hover_border = "#666666"  # Lighter border on hover
+                pressed_bg = "#1d1d1d"    # Darker gray when pressed
+            else:
+                button_bg = "#f0f0f0"  # Light gray
+                border_color = "#a0a0a0"  # Medium gray border
+                text_color = "#000000"    # Black text
+                hover_bg = "#e0e0e0"      # Lighter gray on hover
+                hover_border = "#909090"  # Darker border on hover
+                pressed_bg = "#d0d0d0"    # Medium gray when pressed
+
+        # Set icon based on the icon identifier
+        # Detect if we're using a dark theme to potentially adjust icon colors
+        is_dark_theme = self._is_dark_theme()
+        icon_obj = self._get_svg_icon(icon, is_dark_theme)
+        if icon_obj:
+            btn.setIcon(icon_obj)
+            # Get icon size from settings if available
+            icon_size = 16
+            if hasattr(self.main_window, 'app_settings'):
+                icon_size = self.main_window.app_settings.current_settings.get('icon_size', 16)
+            btn.setIconSize(QSize(icon_size, icon_size))
 
         # Apply theme-aware styling
         btn.setStyleSheet(f"""
@@ -760,7 +910,7 @@ class IMGFactoryGUILayout:
                 background-color: {button_bg};
                 border: 1px solid {border_color};
                 border-radius: 3px;
-                padding: 2px 6px;
+                padding: 3px 8px;
                 font-size: 8pt;
                 font-weight: bold;
                 color: {text_color};
@@ -776,6 +926,13 @@ class IMGFactoryGUILayout:
 
         # Set action type property
         btn.setProperty("action-type", action_type)
+
+        # Store original and localized labels for later use
+        btn.original_text = label
+        btn.localized_text = localized_label
+        btn.full_text = localized_label
+        btn.short_text = self._get_short_text(localized_label)
+        btn.icon_name = icon
 
         # Connect to method_mappings
         try:
@@ -833,17 +990,96 @@ class IMGFactoryGUILayout:
             return color
 
 
+    def _get_svg_icon(self, icon_name: str, is_dark_theme: bool = False) -> QIcon:
+        """Get SVG icon based on icon name identifier"""
+        icon_map = {
+            # Create/new icons
+            "new": get_add_icon(),
+            "document-new": get_add_icon(),
+            
+            # Open icons
+            "open": get_open_icon(),
+            "document-open": get_open_icon(),
+            
+            # Reload/refresh icons
+            "reload": get_refresh_icon(),
+            "document-reload": get_refresh_icon(),
+            "view-refresh": get_refresh_icon(),
+            "update": get_refresh_icon(),
+            "rebuild": get_rebuild_icon(),
+            "view-rebuild": get_rebuild_icon(),
+            
+            # Close icons
+            "close": get_close_icon(),
+            "window-close": get_close_icon(),
+            "edit-clear": get_close_icon(),
+            
+            # Save icons
+            "save_entry": get_save_icon(),
+            "document-save": get_save_icon(),
+            "document-save-entry": get_save_icon(),
+            
+            # Import icons
+            "import": get_import_icon(),
+            "document-import": get_import_icon(),
+            "import_via": get_import_icon(),
+            
+            # Export icons
+            "export": get_export_icon(),
+            "document-export": get_export_icon(),
+            "export_via": get_export_icon(),
+            "document-send": get_export_icon(),
+            
+            # Remove/delete icons
+            "remove": get_remove_icon(),
+            "edit-delete": get_remove_icon(),
+            "remove_via": get_remove_icon(),
+            "document-remvia": get_remove_icon(),
+            
+            # Edit icons
+            "rename": get_edit_icon(),
+            "edit-rename": get_edit_icon(),
+            "edit_select": get_edit_icon(),
+            "edit-select": get_edit_icon(),
+            "select_all": get_edit_icon(),
+            "edit-select-all": get_edit_icon(),
+            "sel_inverse": get_edit_icon(),
+            "sort": get_edit_icon(),
+            "view-sort": get_edit_icon(),
+            "pin_selected": get_edit_icon(),
+            "pin": get_edit_icon(),
+            "extract": get_export_icon(),
+            
+            # Other icons
+            "document-merge": get_view_icon(),
+            "edit-cut": get_view_icon(),
+            "transform": get_view_icon(),
+            "document-dump": get_view_icon(),
+            
+            # Search icons
+            "search": get_search_icon(),
+            
+            # Placeholder (no icon)
+            "placeholder": None,
+        }
+        
+        return icon_map.get(icon_name, None)
+
+
     def _get_short_text(self, label): #vers 1
         """Get short text for button"""
+        # First get the localized version of the label
+        localized_label = tr_button(label)
+        
         short_map = {
             "Create": "New", "Open": "Open", "Reload": "Reload", "     ": " ",
             "Close": "Close", "Close All": "Close A", "Rebuild": "Rebld",
             "Rebuild All": "Rebld Al", "Save Entry": "Save", "Merge": "Merge",
-            "Split via": "Split", "Convert": "Conv", "Import": "Imp",
+            "Device": "Dev", "Convert": "Conv", "Import": "Imp",  # Updated for localized "Device"
             "Import via": "Imp via", "Refresh": "Refresh", "Export": "Exp",
             "Export via": "Exp via", "Quick Exp": "Q Exp", "Remove": "Rem",
             "Remove via": "Rem via", "Dump": "Dump", "Pin selected": "Pin",
-            "Rename": "Rename", "Replace": "Replace", "Select All": "Select",
+            "Rename": "Rename", "Extract": "Extract", "Select All": "Select",
             "Inverse": "Inverse", "Sort via": "Sort", "Col Edit": "Col Edit",
             "Txd Edit": "Txd Edit", "Dff Edit": "Dff Edit", "Ipf Edit": "Ipf Edit",
             "IDE Edit": "IDE Edit", "IPL Edit": "IPL Edit", "Dat Edit": "Dat Edit",
@@ -853,7 +1089,7 @@ class IMGFactoryGUILayout:
             "Objects": "Objects", "SCM code": "SCM Code", "GXT font": "GXT Edit",
             "Menu Edit": "Menu Ed",
         }
-        return short_map.get(label, label)
+        return short_map.get(localized_label, localized_label)
 
 
     def create_main_ui_with_splitters(self, main_layout): #vers 3
@@ -1010,7 +1246,7 @@ class IMGFactoryGUILayout:
         return file_window
 
 
-    def create_right_panel_with_pastel_buttons(self): #vers 2
+    def create_right_panel_with_pastel_buttons(self): #vers 3
         """Create right panel with theme-controlled pastel buttons"""
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
@@ -1027,9 +1263,10 @@ class IMGFactoryGUILayout:
         
         for i, (label, action_type, icon, color, method_name) in enumerate(img_buttons_data):
             btn = self.create_pastel_button(label, action_type, icon, color, method_name)
-            btn.full_text = label
-            btn.short_text = self._get_short_text(label)
             self.img_buttons.append(btn)
+            # Add to backend as well
+            if hasattr(self, 'backend'):
+                self.backend.img_buttons.append(btn)
             img_layout.addWidget(btn, i // 3, i % 3)
         
         img_box.setLayout(img_layout)
@@ -1045,9 +1282,10 @@ class IMGFactoryGUILayout:
         
         for i, (label, action_type, icon, color, method_name) in enumerate(entry_buttons_data):
             btn = self.create_pastel_button(label, action_type, icon, color, method_name)
-            btn.full_text = label
-            btn.short_text = self._get_short_text(label)
             self.entry_buttons.append(btn)
+            # Add to backend as well
+            if hasattr(self, 'backend'):
+                self.backend.entry_buttons.append(btn)
             entries_layout.addWidget(btn, i // 3, i % 3)
         
         entries_box.setLayout(entries_layout)
@@ -1063,43 +1301,120 @@ class IMGFactoryGUILayout:
         
         for i, (label, action_type, icon, color, method_name) in enumerate(options_buttons_data):
             btn = self.create_pastel_button(label, action_type, icon, color, method_name)
-            btn.full_text = label
-            btn.short_text = self._get_short_text(label)
             self.options_buttons.append(btn)
+            # Add to backend as well
+            if hasattr(self, 'backend'):
+                self.backend.options_buttons.append(btn)
             options_layout.addWidget(btn, i // 3, i % 3)
         
         options_box.setLayout(options_layout)
         right_layout.addWidget(options_box)
 
-        # Filter Section
-        filter_box = QGroupBox("Filter & Search")
-        filter_layout = QVBoxLayout()
-        filter_layout.setSpacing(4)
-
-        # Filter controls
-        filter_controls = QHBoxLayout()
-        filter_combo = QComboBox()
-        filter_combo.addItems(["All Files", "DFF Models", "TXD Textures", "COL Collision", "IFP Animations"])
-        filter_controls.addWidget(QLabel("Type:"))
-        filter_controls.addWidget(filter_combo)
-        filter_layout.addLayout(filter_controls)
-
-        search_controls = QHBoxLayout()
-        search_input = QLineEdit()
-        search_input.setPlaceholderText("Search filename...")
-        search_controls.addWidget(QLabel("Search:"))
-        search_controls.addWidget(search_input)
-        filter_layout.addLayout(search_controls)
-
-        filter_box.setLayout(filter_layout)
-        right_layout.addWidget(filter_box)
-
         # Add stretch to push everything up
         right_layout.addStretch()
         return right_panel
 
+    def set_button_display_mode(self, mode: str):
+        """
+        Set button display mode: 'text_only', 'icons_only', or 'icons_with_text'
+        """
+        try:
+            # Store the current mode
+            self.button_display_mode = mode
+            
+            # Update all buttons to reflect the new mode
+            self._update_all_buttons_display_mode()
+            
+            # Also update via backend if available
+            if hasattr(self, 'backend'):
+                # Convert string mode to enum
+                if mode == "text_only":
+                    display_mode = ButtonDisplayMode.TEXT_ONLY
+                elif mode == "icons_only":
+                    display_mode = ButtonDisplayMode.ICONS_ONLY
+                elif mode == "icons_with_text":
+                    display_mode = ButtonDisplayMode.ICONS_WITH_TEXT
+                else:
+                    display_mode = ButtonDisplayMode.ICONS_WITH_TEXT  # Default
+                
+                self.backend.set_button_display_mode(display_mode)
+            
+            print(f"✅ Button display mode set to: {mode}")
+            
+        except Exception as e:
+            print(f"❌ Error setting button display mode: {e}")
 
-    def create_status_window(self): #vers 4
+    def update_button_settings(self, settings):
+        """Update button settings from app settings"""
+        # Update button display mode
+        button_mode = settings.get('button_display_mode', 'icons_with_text')
+        self.set_button_display_mode(button_mode)
+        
+        # Update button size if available
+        button_size = settings.get('button_size', None)
+        if button_size:
+            self.set_button_size(button_size)
+        
+        # Update icon size if available
+        icon_size = settings.get('icon_size', 16)
+        self.set_icon_size(icon_size)
+        
+        # Update pastel effect setting
+        use_pastel = settings.get('use_pastel_buttons', True)
+        self.set_pastel_effect(use_pastel)
+        
+        # Update high contrast setting
+        high_contrast = settings.get('high_contrast_buttons', False)
+        self.set_high_contrast(high_contrast)
+        
+        # Update button format
+        button_format = settings.get('button_format', 'both')
+        self.set_button_format(button_format)
+
+    def set_button_size(self, size):
+        """Set button size for all buttons"""
+        if hasattr(self, 'backend'):
+            all_buttons = (self.img_buttons + self.entry_buttons + self.options_buttons +
+                          self.backend.img_buttons + self.backend.entry_buttons + self.backend.options_buttons)
+            for btn in all_buttons:
+                btn.setMaximumHeight(size)
+                btn.setMinimumHeight(max(20, size - 4))  # Maintain reasonable min height
+
+    def set_icon_size(self, size):
+        """Set icon size for all buttons"""
+        if hasattr(self, 'backend'):
+            all_buttons = (self.img_buttons + self.entry_buttons + self.options_buttons +
+                          self.backend.img_buttons + self.backend.entry_buttons + self.backend.options_buttons)
+            for btn in all_buttons:
+                if btn.icon():
+                    btn.setIconSize(QSize(size, size))
+
+    def set_pastel_effect(self, enabled):
+        """Enable or disable pastel effect on buttons"""
+        # This would modify the button styling based on pastel setting
+        # Implementation depends on how pastel vs regular buttons are handled
+        pass
+
+    def set_high_contrast(self, enabled):
+        """Enable or disable high contrast mode for buttons"""
+        # This would modify the button styling for high contrast
+        pass
+
+    def set_button_format(self, format_type):
+        """Set button format: 'both', 'icon_only', 'text_only', or 'separate'"""
+        # Update the button format based on setting
+        if format_type == 'separate':
+            # This would change how the text is displayed on buttons
+            pass
+        elif format_type == 'both':
+            self.set_button_display_mode('icons_with_text')
+        elif format_type == 'icon_only':
+            self.set_button_display_mode('icons_only')
+        elif format_type == 'text_only':
+            self.set_button_display_mode('text_only')
+
+
+    def create_status_window(self): #vers 5
         """Create status window with log"""
         self.status_window = QWidget()
         status_layout = QVBoxLayout(self.status_window)

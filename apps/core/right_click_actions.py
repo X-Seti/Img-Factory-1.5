@@ -244,6 +244,11 @@ def show_advanced_context_menu(main_window, position): #vers 3
         copy_row_action.triggered.connect(lambda: copy_table_row(main_window, row))
         menu.addAction(copy_row_action)
 
+        # Copy row as lines (each cell on a separate line)
+        copy_lines_action = QAction("Copy Lines", menu_parent)
+        copy_lines_action.triggered.connect(lambda: copy_table_row_as_lines(main_window, row))
+        menu.addAction(copy_lines_action)
+
         copy_column_action = QAction(f"Copy Column ({column_name})", menu_parent)
         copy_column_action.triggered.connect(lambda: copy_table_column_data(main_window, col))
         menu.addAction(copy_column_action)
@@ -319,6 +324,29 @@ def copy_table_row(main_window, row: int): #vers 1
         
     except Exception as e:
         main_window.log_message(f"Copy row error: {str(e)}")
+
+def copy_table_row_as_lines(main_window, row: int): #vers 1
+    """Copy entire table row to clipboard as separate lines (Issue #3 fix)"""
+    try:
+        table = main_window.gui_layout.table
+        
+        row_data = []
+        for col in range(table.columnCount()):
+            item = table.item(row, col)
+            if item:
+                row_data.append(item.text())
+            else:
+                row_data.append("")
+        
+        # Join with newlines instead of tabs (as separate lines)
+        text = "\n".join(row_data)
+        QApplication.clipboard().setText(text)
+        
+        filename = row_data[0] if row_data else f"Row {row}"
+        main_window.log_message(f"Copied row as lines: {filename}")
+        
+    except Exception as e:
+        main_window.log_message(f"Copy row as lines error: {str(e)}")
 
 def copy_table_column_data(main_window, col: int): #vers 1
     """Copy entire column data to clipboard"""
