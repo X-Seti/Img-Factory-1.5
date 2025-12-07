@@ -680,6 +680,525 @@ def show_dff_model_viewer(main_window, row):
             main_window.log_message(f"❌ Error showing DFF model viewer: {str(e)}")
 
 
+def get_selected_entry_info(main_window, row): #vers 1
+    """Get information about selected entry"""
+    try:
+        if not hasattr(main_window, 'current_img') or not main_window.current_img:
+            return None
+        
+        if row < 0 or row >= len(main_window.current_img.entries):
+            return None
+        
+        entry = main_window.current_img.entries[row]
+        return {
+            'entry': entry,
+            'name': entry.name,
+            'is_col': entry.name.lower().endswith('.col'),
+            'is_dff': entry.name.lower().endswith('.dff'),
+            'is_txd': entry.name.lower().endswith('.txd'),
+            'size': entry.size,
+            'offset': entry.offset
+        }
+    except Exception as e:
+        main_window.log_message(f"❌ Error getting entry info: {str(e)}")
+        return None
+
+
+def edit_col_from_img_entry(main_window, row): #vers 2
+    """Edit COL file from IMG entry - WORKING VERSION"""
+    try:
+        entry_info = get_selected_entry_info(main_window, row)
+        if not entry_info or not entry_info['is_col']:
+            main_window.log_message("❌ Selected entry is not a COL file")
+            return False
+        
+        entry = entry_info['entry']
+        main_window.log_message(f"🔧 Opening COL editor for: {entry.name}")
+        
+        # Use methods from col_operations
+        from apps.methods.col_operations import extract_col_from_img_entry, create_temporary_col_file, cleanup_temporary_file
+        
+        # Extract COL data
+        extraction_result = extract_col_from_img_entry(main_window, row)
+        if not extraction_result:
+            main_window.log_message("❌ Failed to extract COL data")
+            return False
+        
+        col_data, entry_name = extraction_result
+        
+        # Create temporary COL file
+        temp_path = create_temporary_col_file(col_data, entry_name)
+        if not temp_path:
+            main_window.log_message("❌ Failed to create temporary COL file")
+            return False
+        
+        try:
+            # Import and open COL editor
+            from apps.components.Col_Editor.col_editor import COLEditorDialog
+            
+            editor = COLEditorDialog(main_window)
+            
+            # Load the temporary COL file
+            if editor.load_col_file(temp_path):
+                editor.setWindowTitle(f"COL Editor - {entry.name}")
+                editor.show()  # Use show() instead of exec() for non-modal
+                main_window.log_message(f"✅ COL editor opened for: {entry.name}")
+                return True
+            else:
+                main_window.log_message("❌ Failed to load COL file in editor")
+                return False
+                
+        finally:
+            # Clean up temporary file
+            cleanup_temporary_file(temp_path)
+        
+    except ImportError:
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.information(main_window, "COL Editor", 
+            "COL editor component not available. Please check components.Col_Editor.col_editor.py")
+        return False
+    except Exception as e:
+        main_window.log_message(f"❌ Error editing COL file: {str(e)}")
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.critical(main_window, "Error", f"Failed to edit COL file: {str(e)}")
+        return False
+
+
+def view_col_collision(main_window, row): #vers 2
+    """View COL collision - WORKING VERSION"""
+    try:
+        entry_info = get_selected_entry_info(main_window, row)
+        if not entry_info or not entry_info['is_col']:
+            main_window.log_message("❌ Selected entry is not a COL file")
+            return False
+        
+        entry = entry_info['entry']
+        main_window.log_message(f"🔍 Viewing COL collision for: {entry.name}")
+        
+        # Use methods from col_operations
+        from apps.methods.col_operations import extract_col_from_img_entry, get_col_basic_info
+        
+        # Extract COL data
+        extraction_result = extract_col_from_img_entry(main_window, row)
+        if not extraction_result:
+            main_window.log_message("❌ Failed to extract COL data")
+            return False
+        
+        col_data, entry_name = extraction_result
+        
+        # Get basic info
+        basic_info = get_col_basic_info(col_data)
+        
+        if 'error' in basic_info:
+            main_window.log_message(f"❌ COL analysis error: {basic_info['error']}")
+            return False
+        
+        # Build info display
+        from apps.methods.img_core_classes import format_file_size
+        info_text = f"COL File: {entry.name}\\n"
+        info_text += f"Size: {format_file_size(len(col_data))}\\n"
+        info_text += f"Version: {basic_info.get('version', 'Unknown')}\\n"
+        info_text += f"Models: {basic_info.get('model_count', 0)}\\n"
+        info_text += f"Signature: {basic_info.get('signature', b'Unknown')}\\n"
+        
+        # Show info dialog
+        from apps.gui.col_dialogs import show_col_info_dialog
+        show_col_info_dialog(main_window, info_text, f"COL Collision Info - {entry.name}")
+        
+        main_window.log_message(f"✅ COL collision viewed for: {entry.name}")
+        return True
+        
+    except ImportError:
+        main_window.log_message("❌ COL operations not available")
+        return False
+    except Exception as e:
+        main_window.log_message(f"❌ Error viewing COL collision: {str(e)}")
+        return False
+
+
+def analyze_col_from_img_entry(main_window, row): #vers 2
+    """Analyze COL file from IMG entry - WORKING VERSION"""
+    try:
+        entry_info = get_selected_entry_info(main_window, row)
+        if not entry_info or not entry_info['is_col']:
+            main_window.log_message("❌ Selected entry is not a COL file")
+            return False
+        
+        entry = entry_info['entry']
+        main_window.log_message(f"🔍 Analyzing COL file: {entry.name}")
+        
+        # Use methods from col_operations
+        from apps.methods.col_operations import extract_col_from_img_entry, validate_col_data, create_temporary_col_file, cleanup_temporary_file, get_col_detailed_analysis
+        
+        # Extract COL data
+        extraction_result = extract_col_from_img_entry(main_window, row)
+        if not extraction_result:
+            main_window.log_message("❌ Failed to extract COL data")
+            return False
+        
+        col_data, entry_name = extraction_result
+        
+        # Validate COL data
+        validation_result = validate_col_data(col_data)
+        
+        # Get detailed analysis if possible
+        temp_path = create_temporary_col_file(col_data, entry_name)
+        analysis_data = {}
+        
+        if temp_path:
+            try:
+                detailed_analysis = get_col_detailed_analysis(temp_path)
+                if 'error' not in detailed_analysis:
+                    analysis_data.update(detailed_analysis)
+            finally:
+                cleanup_temporary_file(temp_path)
+        
+        # Combine validation and analysis data
+        final_analysis = {
+            'size': len(col_data),
+            **analysis_data,
+            **validation_result
+        }
+        
+        # Show analysis dialog
+        from apps.gui.col_dialogs import show_col_analysis_dialog
+        show_col_analysis_dialog(main_window, final_analysis, entry.name)
+        
+        main_window.log_message(f"✅ COL analysis completed for: {entry.name}")
+        return True
+        
+    except ImportError:
+        main_window.log_message("❌ COL analysis components not available")
+        return False
+    except Exception as e:
+        main_window.log_message(f"❌ Error analyzing COL file: {str(e)}")
+        return False
+
+
+def edit_col_collision(main_window, row): #vers 2
+    """Edit COL collision - WORKING VERSION (alias for edit_col_from_img_entry)"""
+    return edit_col_from_img_entry(main_window, row)
+
+
+def edit_dff_model(main_window, row): #vers 1
+    """Edit DFF model"""
+    main_window.log_message(f"✏️ Edit DFF model from row {row} - not yet implemented")
+
+
+def edit_txd_textures(main_window, row): #vers 1
+    """Edit TXD textures"""
+    main_window.log_message(f"🎨 Edit TXD textures from row {row} - not yet implemented")
+
+
+def view_dff_model(main_window, row): #vers 1
+    """View DFF model"""
+    main_window.log_message(f"👁️ View DFF model from row {row} - not yet implemented")
+
+
+def view_txd_textures(main_window, row): #vers 1
+    """View TXD textures"""
+    main_window.log_message(f"View TXD textures from row {row} - not yet implemented")
+
+
+def replace_selected_entry(main_window, row): #vers 1
+    """Replace selected entry"""
+    main_window.log_message(f"🔄 Replace entry from row {row} - not yet implemented")
+
+
+def show_entry_properties(main_window, row): #vers 1
+    """Show entry properties"""
+    entry_info = get_selected_entry_info(main_window, row)
+    if entry_info:
+        from apps.methods.img_core_classes import format_file_size
+        props_text = f"Entry Properties:\\n\\n"
+        props_text += f"Name: {entry_info['name']}\\n"
+        props_text += f"Size: {format_file_size(entry_info['size'])}\\n"
+        props_text += f"Offset: 0x{entry_info['offset']:08X}\\n"
+        props_text += f"Type: {'COL' if entry_info['is_col'] else 'DFF' if entry_info['is_dff'] else 'TXD' if entry_info['is_txd'] else 'Other'}\\n"
+        
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.information(main_window, "Entry Properties", props_text)
+        main_window.log_message(f"📋 Properties shown for: {entry_info['name']}")
+    else:
+        main_window.log_message(f"❌ Unable to get properties for row {row}")
+
+
+def enhanced_context_menu_event(main_window, event): #vers 2
+    """Enhanced context menu with working COL functions"""
+    try:
+        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
+            return
+
+        table = main_window.gui_layout.table
+        # Get the item at the position where the right-click occurred
+        item = table.itemAt(event.pos())
+        if not item:
+            return
+
+        row = item.row()
+        entry_info = get_selected_entry_info(main_window, row)
+        if not entry_info:
+            return
+
+        # Create context menu
+        from PyQt6.QtWidgets import QMenu
+        menu = QMenu(table)
+        
+        # Add file-type specific actions
+        if entry_info['is_col']:
+            # COL file actions
+            from PyQt6.QtGui import QAction
+            view_action = QAction("🔍 View Collision", table)
+            view_action.triggered.connect(lambda: view_col_collision(main_window, row))
+            menu.addAction(view_action)
+            
+            edit_action = QAction("🔧 Edit COL File", table)
+            edit_action.triggered.connect(lambda: edit_col_from_img_entry(main_window, row))
+            menu.addAction(edit_action)
+            
+            analyze_action = QAction("📊 Analyze COL", table)
+            analyze_action.triggered.connect(lambda: analyze_col_from_img_entry(main_window, row))
+            menu.addAction(analyze_action)
+            
+            menu.addSeparator()
+            
+        elif entry_info['is_dff']:
+            # DFF model actions
+            from PyQt6.QtGui import QAction
+            view_action = QAction("👁️ View Model", table)
+            view_action.triggered.connect(lambda: view_dff_model(main_window, row))
+            menu.addAction(view_action)
+            
+            edit_action = QAction("✏️ Edit Model", table)
+            edit_action.triggered.connect(lambda: edit_dff_model(main_window, row))
+            menu.addAction(edit_action)
+            
+            menu.addSeparator()
+            
+        elif entry_info['is_txd']:
+            # TXD texture actions
+            from PyQt6.QtGui import QAction
+            view_action = QAction("View Textures", table)
+            view_action.triggered.connect(lambda: view_txd_textures(main_window, row))
+            menu.addAction(view_action)
+            
+            edit_action = QAction("🎨 Edit Textures", table)
+            edit_action.triggered.connect(lambda: edit_txd_textures(main_window, row))
+            menu.addAction(edit_action)
+            
+            menu.addSeparator()
+        
+        # Common actions
+        from PyQt6.QtGui import QAction
+        props_action = QAction("📋 Properties", table)
+        props_action.triggered.connect(lambda: show_entry_properties(main_window, row))
+        menu.addAction(props_action)
+        
+        replace_action = QAction("🔄 Replace Entry", table)
+        replace_action.triggered.connect(lambda: replace_selected_entry(main_window, row))
+        menu.addAction(replace_action)
+        
+        # Show menu at the global position of the event
+        menu.exec(event.globalPos())
+
+    except Exception as e:
+        main_window.log_message(f"❌ Error showing context menu: {str(e)}")
+
+
+def move_file(main_window, row, entry_info):
+    """
+    Move selected file to a new location
+    """
+    try:
+        # Get current entry
+        entry = entry_info['entry']
+        current_name = entry.name
+        
+        # Show dialog to select destination
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+        dest_dir = QFileDialog.getExistingDirectory(
+            main_window,
+            "Select Destination Directory",
+            ""
+        )
+        
+        if dest_dir:
+            # For IMG entries, we can't actually move files since they're inside the IMG
+            # Instead, we can rename to change the path-like structure
+            QMessageBox.information(main_window, "Move Operation", 
+                                  f"Moving '{current_name}' to '{dest_dir}'\\n\\n"
+                                  f"Note: In IMG files, entries are virtual and cannot be moved to different directories.\\n"
+                                  f"You can rename the entry to reflect a new path structure if needed.")
+            
+    except Exception as e:
+        main_window.log_message(f"❌ Error moving file: {str(e)}")
+
+
+def move_selected_file(main_window):
+    """
+    Move selected file (when no specific row selected)
+    """
+    try:
+        # Get selected items from table
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            table = main_window.gui_layout.table
+            selected_items = table.selectedItems()
+            if selected_items:
+                row = selected_items[0].row()
+                entry_info = get_entry_info(main_window, row)
+                if entry_info:
+                    move_file(main_window, row, entry_info)
+    except Exception as e:
+        main_window.log_message(f"❌ Error moving selected file: {str(e)}")
+
+
+def analyze_file(main_window, row, entry_info):
+    """
+    Analyze selected file
+    """
+    try:
+        entry = entry_info['entry']
+        name = entry.name
+        
+        # Determine file type and perform appropriate analysis
+        if entry_info['is_col']:
+            # Use existing COL analysis functionality
+            analyze_col_from_img_entry(main_window, row)
+        elif entry_info['is_dff']:
+            # DFF analysis
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(main_window, "DFF Analysis", 
+                                  f"DFF Analysis for: {name}\\n\\n"
+                                  f"Size: {entry.size} bytes\\n"
+                                  f"Offset: 0x{entry.offset:08X}\\n"
+                                  f"Type: DFF Model File")
+        elif entry_info['is_txd']:
+            # TXD analysis
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(main_window, "TXD Analysis", 
+                                  f"TXD Analysis for: {name}\\n\\n"
+                                  f"Size: {entry.size} bytes\\n"
+                                  f"Offset: 0x{entry.offset:08X}\\n"
+                                  f"Type: Texture Dictionary File")
+        else:
+            # Generic analysis
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(main_window, "File Analysis", 
+                                  f"Analysis for: {name}\\n\\n"
+                                  f"Size: {entry.size} bytes\\n"
+                                  f"Offset: 0x{entry.offset:08X}\\n"
+                                  f"Type: Generic IMG Entry")
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Error analyzing file: {str(e)}")
+
+
+def analyze_selected_file(main_window):
+    """
+    Analyze selected file (when no specific row selected)
+    """
+    try:
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            table = main_window.gui_layout.table
+            selected_items = table.selectedItems()
+            if selected_items:
+                row = selected_items[0].row()
+                entry_info = get_entry_info(main_window, row)
+                if entry_info:
+                    analyze_file(main_window, row, entry_info)
+    except Exception as e:
+        main_window.log_message(f"❌ Error analyzing selected file: {str(e)}")
+
+
+def show_hex_editor(main_window, row, entry_info):
+    """
+    Show hex editor for selected file
+    """
+    try:
+        # Import the hex editor module
+        from apps.components.Hex_Editor import show_hex_editor_for_entry
+        
+        # Use the new hex editor implementation
+        show_hex_editor_for_entry(main_window, row, entry_info)
+        
+    except Exception as e:
+        main_window.log_message(f"❌ Error showing hex editor: {str(e)}")
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.critical(main_window, "Error", f"Could not open hex editor:\\n{str(e)}")
+
+
+def show_hex_editor_selected(main_window):
+    """
+    Show hex editor for selected file (when no specific row selected)
+    """
+    try:
+        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
+            table = main_window.gui_layout.table
+            selected_items = table.selectedItems()
+            if selected_items:
+                row = selected_items[0].row()
+                entry_info = get_entry_info(main_window, row)
+                if entry_info:
+                    show_hex_editor(main_window, row, entry_info)
+    except Exception as e:
+        main_window.log_message(f"❌ Error showing hex editor for selected: {str(e)}")
+
+
+def copy_entry_name(main_window, row):
+    """
+    Copy entry name to clipboard
+    """
+    try:
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                from PyQt6.QtWidgets import QApplication
+                clipboard = QApplication.clipboard()
+                clipboard.setText(entry.name)
+                main_window.log_message(f"📋 Copied name: {entry.name}")
+    except Exception as e:
+        main_window.log_message(f"❌ Error copying entry name: {str(e)}")
+
+
+def copy_entry_info(main_window, row):
+    """
+    Copy entry info to clipboard
+    """
+    try:
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                info_text = f"Name: {entry.name}\\nSize: {entry.size}\\nOffset: 0x{entry.offset:08X}"
+                from PyQt6.QtWidgets import QApplication
+                clipboard = QApplication.clipboard()
+                clipboard.setText(info_text)
+                main_window.log_message(f"📋 Copied info for: {entry.name}")
+    except Exception as e:
+        main_window.log_message(f"❌ Error copying entry info: {str(e)}")
+
+
+def get_entry_info(main_window, row):
+    """
+    Get entry information for a given row
+    """
+    try:
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                return {
+                    'entry': entry,
+                    'name': entry.name,
+                    'is_col': entry.name.lower().endswith('.col'),
+                    'is_dff': entry.name.lower().endswith('.dff'),
+                    'is_txd': entry.name.lower().endswith('.txd'),
+                    'size': entry.size,
+                    'offset': entry.offset
+                }
+        return None
+    except Exception:
+        return None
+
+
 # Export main functions
 __all__ = [
     'setup_table_context_menu',
@@ -700,5 +1219,26 @@ __all__ = [
     'get_selected_entries_for_extraction',
     'integrate_right_click_actions',
     'show_dff_texture_list',
-    'show_dff_model_viewer'
+    'show_dff_model_viewer',
+    'get_selected_entry_info',
+    'edit_col_from_img_entry',
+    'view_col_collision',
+    'analyze_col_from_img_entry',
+    'edit_col_collision',
+    'edit_dff_model',
+    'edit_txd_textures',
+    'view_dff_model',
+    'view_txd_textures',
+    'replace_selected_entry',
+    'show_entry_properties',
+    'enhanced_context_menu_event',
+    'move_file',
+    'move_selected_file',
+    'analyze_file',
+    'analyze_selected_file',
+    'show_hex_editor',
+    'show_hex_editor_selected',
+    'copy_entry_name',
+    'copy_entry_info',
+    'get_entry_info'
 ]
