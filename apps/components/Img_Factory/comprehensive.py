@@ -266,33 +266,42 @@ def parse_dff_textures_from_data(dff_path):
             data = f.read()
             
         # Look for texture-related patterns in the DFF data
-        # This is a simplified approach - real DFF parsing is complex
-        # Look for common texture name patterns
+        # DFF files often contain texture names in certain sections
         import re
         
         # Search for potential texture names in the binary data
-        # This looks for sequences that might be texture names
-        # This is a very basic implementation - proper DFF parsing would be more complex
+        # DFF files often have ASCII texture names in certain sections
         text_data = data.decode('ascii', errors='ignore')
         
         # Look for potential texture names (alphanumeric with underscores, hyphens, dots)
-        potential_textures = re.findall(r'[A-Za-z0-9_\-]{3,20}\.(?:txd|png|jpg|bmp|dxt)', text_data, re.IGNORECASE)
+        # Common patterns in DFF files for texture names
+        potential_textures = re.findall(r'[A-Za-z0-9_\-]{3,20}\.(?:txd|png|jpg|bmp|dxt|tga)', text_data, re.IGNORECASE)
         
-        # Also look for names without extensions
-        potential_names = re.findall(r'[A-Za-z][A-Za-z0-9_\-]{2,19}(?=\.|\s|$)', text_data)
+        # Also look for names without extensions that might be texture names
+        # Look for names that could be texture names (avoiding too many false positives)
+        potential_names = re.findall(r'[A-Za-z][A-Za-z0-9_\-]{3,19}(?=\.|\s|\0|$)', text_data)
         
         # Combine and deduplicate
         all_matches = list(set(potential_textures + potential_names))
         
         # Filter for likely texture names
         for name in all_matches:
-            if any(tex in name.lower() for tex in ['tex', 'texture', 'material', 'diffuse', 'specular']):
+            # Check if it contains common texture-related terms
+            if any(tex in name.lower() for tex in ['tex', 'texture', 'material', 'diffuse', 'specular', 'normal', 'bump']):
                 textures.append(name)
-            elif len(name) > 2 and not any(c.isdigit() for c in name[:2]):  # Avoid names starting with numbers
-                textures.append(name)
+            # Check if it's a common texture naming pattern (not too generic)
+            elif len(name) > 3 and len(name) < 20 and not any(c.isdigit() for c in name[:2]):  # Avoid names starting with numbers
+                # Additional check: avoid common non-texture words
+                if not any(common_word in name.lower() for common_word in ['object', 'model', 'geometry', 'data', 'file', 'name']):
+                    textures.append(name)
         
-        # Return unique textures
-        return list(set(textures))
+        # Return unique textures, removing duplicates
+        unique_textures = list(set(textures))
+        
+        # Sort for consistent output
+        unique_textures.sort()
+        
+        return unique_textures
         
     except Exception as e:
         print(f"Error parsing DFF textures: {str(e)}")
@@ -616,250 +625,26 @@ def add_common_operations(main_window, menu, row=None):
         main_window.log_message(f"❌ Error adding common operations: {str(e)}")
 
 
-def move_file(main_window, row, entry_info):
-    """
-    Move selected file to a new location
-    """
-    try:
-        # Get current entry
-        entry = entry_info['entry']
-        current_name = entry.name
-        
-        # Show dialog to select destination
-        dest_dir = QFileDialog.getExistingDirectory(
-            main_window,
-            "Select Destination Directory",
-            ""
-        )
-        
-        if dest_dir:
-            # For IMG entries, we can't actually move files since they're inside the IMG
-            # Instead, we can rename to change the path-like structure
-            QMessageBox.information(main_window, "Move Operation", 
-                                  f"Moving '{current_name}' to '{dest_dir}'\n\n"
-                                  f"Note: In IMG files, entries are virtual and cannot be moved to different directories.\n"
-                                  f"You can rename the entry to reflect a new path structure if needed.")
-            
-    except Exception as e:
-        main_window.log_message(f"❌ Error moving file: {str(e)}")
 
 
-def move_selected_file(main_window):
-    """
-    Move selected file (when no specific row selected)
-    """
-    try:
-        # Get selected items from table
-        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
-            table = main_window.gui_layout.table
-            selected_items = table.selectedItems()
-            if selected_items:
-                row = selected_items[0].row()
-                entry_info = get_entry_info(main_window, row)
-                if entry_info:
-                    move_file(main_window, row, entry_info)
-    except Exception as e:
-        main_window.log_message(f"❌ Error moving selected file: {str(e)}")
 
 
-def analyze_file(main_window, row, entry_info):
-    """
-    Analyze selected file
-    """
-    try:
-        entry = entry_info['entry']
-        name = entry.name
-        
-        # Determine file type and perform appropriate analysis
-        if entry_info['is_col']:
-            # Use existing COL analysis functionality
-            from apps.gui.gui_context import analyze_col_from_img_entry
-            analyze_col_from_img_entry(main_window, row)
-        elif entry_info['is_dff']:
-            # DFF analysis
-            QMessageBox.information(main_window, "DFF Analysis", 
-                                  f"DFF Analysis for: {name}\n\n"
-                                  f"Size: {entry.size} bytes\n"
-                                  f"Offset: 0x{entry.offset:08X}\n"
-                                  f"Type: DFF Model File")
-        elif entry_info['is_txd']:
-            # TXD analysis
-            QMessageBox.information(main_window, "TXD Analysis", 
-                                  f"TXD Analysis for: {name}\n\n"
-                                  f"Size: {entry.size} bytes\n"
-                                  f"Offset: 0x{entry.offset:08X}\n"
-                                  f"Type: Texture Dictionary File")
-        else:
-            # Generic analysis
-            QMessageBox.information(main_window, "File Analysis", 
-                                  f"Analysis for: {name}\n\n"
-                                  f"Size: {entry.size} bytes\n"
-                                  f"Offset: 0x{entry.offset:08X}\n"
-                                  f"Type: Generic IMG Entry")
-        
-    except Exception as e:
-        main_window.log_message(f"❌ Error analyzing file: {str(e)}")
 
 
-def analyze_selected_file(main_window):
-    """
-    Analyze selected file (when no specific row selected)
-    """
-    try:
-        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
-            table = main_window.gui_layout.table
-            selected_items = table.selectedItems()
-            if selected_items:
-                row = selected_items[0].row()
-                entry_info = get_entry_info(main_window, row)
-                if entry_info:
-                    analyze_file(main_window, row, entry_info)
-    except Exception as e:
-        main_window.log_message(f"❌ Error analyzing selected file: {str(e)}")
 
 
-def show_hex_editor(main_window, row, entry_info):
-    """
-    Show hex editor for selected file
-    """
-    try:
-        # Extract the file data to a temporary location for hex editing
-        from apps.methods.col_operations import extract_col_from_img_entry, create_temporary_col_file, cleanup_temporary_file
-        
-        # Try to extract the file data
-        if entry_info['is_col']:
-            extraction_result = extract_col_from_img_entry(main_window, row)
-            if extraction_result:
-                col_data, entry_name = extraction_result
-                temp_path = create_temporary_col_file(col_data, entry_name)
-                
-                if temp_path:
-                    try:
-                        # Show hex editor for the temporary file
-                        QMessageBox.information(main_window, "Hex Editor", 
-                                              f"Hex Editor for: {entry_name}\n\n"
-                                              f"Temporary file created at: {temp_path}\n"
-                                              f"File size: {len(col_data)} bytes\n\n"
-                                              f"Note: Hex editor functionality would open here.")
-                    finally:
-                        cleanup_temporary_file(temp_path)
-                else:
-                    QMessageBox.warning(main_window, "Hex Editor", 
-                                      "Could not create temporary file for hex editing")
-            else:
-                QMessageBox.warning(main_window, "Hex Editor", 
-                                  "Could not extract file data for hex editing")
-        else:
-            # For non-COL files, we'd need a different extraction method
-            QMessageBox.information(main_window, "Hex Editor", 
-                                  f"Hex Editor for: {entry_info['name']}\n\n"
-                                  f"File type: {entry_info['name'].split('.')[-1].upper()}\n\n"
-                                  f"Note: Hex editor functionality would open here.")
-        
-    except Exception as e:
-        main_window.log_message(f"❌ Error showing hex editor: {str(e)}")
 
 
-def show_hex_editor_selected(main_window):
-    """
-    Show hex editor for selected file (when no specific row selected)
-    """
-    try:
-        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
-            table = main_window.gui_layout.table
-            selected_items = table.selectedItems()
-            if selected_items:
-                row = selected_items[0].row()
-                entry_info = get_entry_info(main_window, row)
-                if entry_info:
-                    show_hex_editor(main_window, row, entry_info)
-    except Exception as e:
-        main_window.log_message(f"❌ Error showing hex editor for selected: {str(e)}")
 
 
-def show_dff_texture_list(main_window, row, entry_info):
-    """
-    Show texture list for DFF file
-    """
-    try:
-        # This would require DFF parsing functionality
-        QMessageBox.information(main_window, "DFF Texture List", 
-                              f"Texture List for DFF: {entry_info['name']}\n\n"
-                              f"Note: DFF texture extraction and listing functionality would be implemented here.\n"
-                              f"This would parse the DFF file and show all referenced textures.")
-        
-    except Exception as e:
-        main_window.log_message(f"❌ Error showing DFF texture list: {str(e)}")
 
 
-def show_dff_model_viewer(main_window, row, entry_info):
-    """
-    Show DFF model in viewer
-    """
-    try:
-        # This would require a 3D model viewer component
-        QMessageBox.information(main_window, "DFF Model Viewer", 
-                              f"DFF Model Viewer for: {entry_info['name']}\n\n"
-                              f"Note: 3D model viewer functionality would be implemented here.\n"
-                              f"This would load and display the DFF model in a 3D viewport.")
-        
-    except Exception as e:
-        main_window.log_message(f"❌ Error showing DFF model viewer: {str(e)}")
 
 
-def copy_entry_name(main_window, row):
-    """
-    Copy entry name to clipboard
-    """
-    try:
-        if hasattr(main_window, 'current_img') and main_window.current_img:
-            if 0 <= row < len(main_window.current_img.entries):
-                entry = main_window.current_img.entries[row]
-                from PyQt6.QtWidgets import QApplication
-                clipboard = QApplication.clipboard()
-                clipboard.setText(entry.name)
-                main_window.log_message(f"📋 Copied name: {entry.name}")
-    except Exception as e:
-        main_window.log_message(f"❌ Error copying entry name: {str(e)}")
 
 
-def copy_entry_info(main_window, row):
-    """
-    Copy entry info to clipboard
-    """
-    try:
-        if hasattr(main_window, 'current_img') and main_window.current_img:
-            if 0 <= row < len(main_window.current_img.entries):
-                entry = main_window.current_img.entries[row]
-                info_text = f"Name: {entry.name}\nSize: {entry.size}\nOffset: 0x{entry.offset:08X}"
-                from PyQt6.QtWidgets import QApplication
-                clipboard = QApplication.clipboard()
-                clipboard.setText(info_text)
-                main_window.log_message(f"📋 Copied info for: {entry.name}")
-    except Exception as e:
-        main_window.log_message(f"❌ Error copying entry info: {str(e)}")
 
 
-def get_entry_info(main_window, row):
-    """
-    Get entry information for a given row
-    """
-    try:
-        if hasattr(main_window, 'current_img') and main_window.current_img:
-            if 0 <= row < len(main_window.current_img.entries):
-                entry = main_window.current_img.entries[row]
-                return {
-                    'entry': entry,
-                    'name': entry.name,
-                    'is_col': entry.name.lower().endswith('.col'),
-                    'is_dff': entry.name.lower().endswith('.dff'),
-                    'is_txd': entry.name.lower().endswith('.txd'),
-                    'size': entry.size,
-                    'offset': entry.offset
-                }
-        return None
-    except Exception:
-        return None
 
 
 def setup_double_click_rename(main_window):

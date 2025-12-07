@@ -19,7 +19,8 @@ from PyQt6.QtWidgets import (
     QPushButton, QFileDialog, QMessageBox, QMenuBar, QStatusBar,
     QProgressBar, QHeaderView, QGroupBox, QComboBox, QLineEdit,
     QAbstractItemView, QTreeWidget, QTreeWidgetItem, QTabWidget,
-    QGridLayout, QMenu, QButtonGroup, QRadioButton, QToolBar, QFormLayout
+    QGridLayout, QMenu, QButtonGroup, QRadioButton, QToolBar, QFormLayout,
+    QInputDialog
 )
 print("PyQt6.QtCore imported successfully")
 from PyQt6.QtCore import pyqtSignal, QMimeData, Qt, QThread, QTimer, QSettings
@@ -3532,7 +3533,14 @@ class IMGFactory(QMainWindow):
                 self.open_files[current_index]['file_object'] = col_file
                 self.log_message(f"Updated tab {current_index} with loaded COL")
             else:
-                self.log_message(f"Tab {current_index} not found in open_files") #TODO warning svg icon
+                # Show warning icon on the tab if possible
+                try:
+                    from apps.methods.svg_shared_icons import get_warning_icon
+                    warning_icon = get_warning_icon()
+                    self.main_tab_widget.setTabIcon(current_index, warning_icon)
+                except:
+                    pass  # Fallback to just the log message if icon setting fails
+                self.log_message(f"Tab {current_index} not found in open_files")
 
             # Apply enhanced COL tab styling after loading
             if hasattr(self, '_apply_individual_col_tab_style'):
@@ -4894,6 +4902,52 @@ def set_game_path(main_window):
         )
 
 
+def get_entry_info(main_window, row):
+    """
+    Get entry information for a given row in the table
+    """
+    try:
+        entry_info = {
+            'name': '',
+            'is_dff': False,
+            'size': 0,
+            'offset': 0
+        }
+        
+        # Use tab-aware approach if available
+        if hasattr(main_window, 'get_current_file_from_active_tab'):
+            file_object, file_type = main_window.get_current_file_from_active_tab()
+            if file_type == 'IMG' and file_object and hasattr(file_object, 'entries'):
+                if 0 <= row < len(file_object.entries):
+                    entry = file_object.entries[row]
+                    entry_info['name'] = entry.name
+                    entry_info['is_dff'] = entry.name.lower().endswith('.dff')
+                    entry_info['size'] = entry.size
+                    entry_info['offset'] = entry.offset
+                    return entry_info
+        else:
+            # Fallback to old method
+            if hasattr(main_window, 'current_img') and main_window.current_img:
+                if 0 <= row < len(main_window.current_img.entries):
+                    entry = main_window.current_img.entries[row]
+                    entry_info['name'] = entry.name
+                    entry_info['is_dff'] = entry.name.lower().endswith('.dff')
+                    entry_info['size'] = entry.size
+                    entry_info['offset'] = entry.offset
+                    return entry_info
+        
+        return entry_info
+    except Exception as e:
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Error getting entry info: {str(e)}")
+        return {
+            'name': '',
+            'is_dff': False,
+            'size': 0,
+            'offset': 0
+        }
+
+
 def show_dff_texture_list_from_selection(main_window):
     """
     Show DFF texture list for currently selected entry
@@ -5048,7 +5102,6 @@ def fix_rename_functionality(main_window):
     try:
         # Ensure rename_selected function is properly connected
         if not hasattr(main_window, 'rename_selected'):
-            from apps.core.imgcol_rename import integrate_imgcol_rename_functions
             integrate_imgcol_rename_functions(main_window)
         
         # Connect double-click event to table for rename
@@ -5450,28 +5503,16 @@ def show_hex_editor(main_window, row, entry_info):
     Show hex editor for selected file
     """
     try:
-        # Extract the file data to a temporary location for hex editing
-        # Try to extract the file data
-        if entry_info['is_col']:
-            try:
-                from apps.gui.gui_context import open_col_file_dialog
-                # Use the existing COL functionality
-                open_col_file_dialog(main_window)
-            except:
-                QMessageBox.information(main_window, "Hex Editor",
-                                      f"Hex Editor for: {entry_info['name']}\\n\\n"
-                                      f"File type: {entry_info['name'].split('.')[-1].upper()}\\n\\n"
-                                      f"Note: Hex editor functionality would open here.")
-
-        else:
-            # For non-COL files, we'd need a different extraction method
-            QMessageBox.information(main_window, "Hex Editor",
-                                  f"Hex Editor for: {entry_info['name']}\\n\\n"
-                                  f"File type: {entry_info['name'].split('.')[-1].upper()}\\n\\n"
-                                  f"Note: Hex editor functionality would open here.")
-
+        # Import the hex editor module
+        from apps.components.Hex_Editor import show_hex_editor_for_entry
+        
+        # Use the new hex editor implementation
+        show_hex_editor_for_entry(main_window, row, entry_info)
+        
     except Exception as e:
         main_window.log_message(f"❌ Error showing hex editor: {str(e)}")
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.critical(main_window, "Error", f"Could not open hex editor:\n{str(e)}")
 
 
 def show_hex_editor_selected(main_window):
@@ -5486,141 +5527,10 @@ def show_hex_editor_selected(main_window):
                 row = selected_items[0].row()
                 entry_info = get_entry_info(main_window, row)
                 if entry_info:
-                    show_hex_editor(main_window, row, entry_info)
+                    # Import the hex editor module
+                    from apps.components.Hex_Editor import show_hex_editor_for_entry
+                    
+                    # Use the new hex editor implementation
+                    show_hex_editor_for_entry(main_window, row, entry_info)
     except Exception as e:
         main_window.log_message(f"❌ Error showing hex editor for selected: {str(e)}")
-
-
-def show_dff_texture_list(main_window, row, entry_info):
-    """
-    Show texture list for DFF file
-    """
-    try:
-        # This would require DFF parsing functionality
-        QMessageBox.information(main_window, "DFF Texture List",
-                              f"Texture List for DFF: {entry_info['name']}\\n\\n"
-                              f"Note: DFF texture extraction and listing functionality would be implemented here.\\n"
-                              f"This would parse the DFF file and show all referenced textures.")
-
-    except Exception as e:
-        main_window.log_message(f"❌ Error showing DFF texture list: {str(e)}")
-
-
-def show_dff_model_viewer(main_window, row, entry_info):
-    """
-    Show DFF model in viewer
-    """
-    try:
-        # This would require a 3D model viewer component
-        QMessageBox.information(main_window, "DFF Model Viewer",
-                              f"DFF Model Viewer for: {entry_info['name']}\\n\\n"
-                              f"Note: 3D model viewer functionality would be implemented here.\\n"
-                              f"This would load and display the DFF model in a 3D viewport.")
-
-    except Exception as e:
-        main_window.log_message(f"❌ Error showing DFF model viewer: {str(e)}")
-
-
-def copy_entry_name(main_window, row):
-    """
-    Copy entry name to clipboard
-    """
-    try:
-        if hasattr(main_window, 'current_img') and main_window.current_img:
-            if 0 <= row < len(main_window.current_img.entries):
-                entry = main_window.current_img.entries[row]
-                clipboard = QApplication.clipboard()
-                clipboard.setText(entry.name)
-                main_window.log_message(f"📋 Copied name: {entry.name}")
-    except Exception as e:
-        main_window.log_message(f"❌ Error copying entry name: {str(e)}")
-
-
-def copy_entry_info(main_window, row):
-    """
-    Copy entry info to clipboard
-    """
-    try:
-        if hasattr(main_window, 'current_img') and main_window.current_img:
-            if 0 <= row < len(main_window.current_img.entries):
-                entry = main_window.current_img.entries[row]
-                info_text = f"Name: {entry.name}\\nSize: {entry.size}\\nOffset: 0x{entry.offset:08X}"
-                clipboard = QApplication.clipboard()
-                clipboard.setText(info_text)
-                main_window.log_message(f"📋 Copied info for: {entry.name}")
-    except Exception as e:
-        main_window.log_message(f"❌ Error copying entry info: {str(e)}")
-
-
-def get_entry_info(main_window, row):
-    """
-    Get entry information for a given row
-    """
-    try:
-        if hasattr(main_window, 'current_img') and main_window.current_img:
-            if 0 <= row < len(main_window.current_img.entries):
-                entry = main_window.current_img.entries[row]
-                return {
-                    'entry': entry,
-                    'name': entry.name,
-                    'is_col': entry.name.lower().endswith('.col'),
-                    'is_dff': entry.name.lower().endswith('.dff'),
-                    'is_txd': entry.name.lower().endswith('.txd'),
-                    'size': entry.size,
-                    'offset': entry.offset
-                }
-        return None
-    except Exception:
-        return None
-
-
-def setup_double_click_rename(main_window):
-    """
-    Setup double-click rename functionality
-    """
-    try:
-        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
-            table = main_window.gui_layout.table
-
-            # Store original double-click handler if it exists
-            if hasattr(table, '_original_double_click_handler'):
-                return  # Already set up
-
-            # Connect double-click event
-            table.cellDoubleClicked.connect(lambda row, col: handle_double_click_rename(main_window, row, col))
-
-            # Mark as set up
-            table._original_double_click_handler = True
-
-            main_window.log_message("✅ Double-click rename functionality set up")
-
-    except Exception as e:
-        main_window.log_message(f"❌ Error setting up double-click rename: {str(e)}")
-
-
-def setup_double_click_rename(main_window):
-    """
-    Setup double-click rename functionality
-    """
-    try:
-        if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
-            table = main_window.gui_layout.table
-
-            # Store original double-click handler if it exists
-            if hasattr(table, '_original_double_click_handler'):
-                return  # Already set up
-
-            # Connect double-click event
-            table.cellDoubleClicked.connect(lambda row, col: handle_double_click_rename(main_window, row, col))
-
-            # Mark as set up
-            table._original_double_click_handler = True
-
-            main_window.log_message("✅ Double-click rename functionality set up")
-
-    except Exception as e:
-        main_window.log_message(f"❌ Error setting up double-click rename: {str(e)}")
-
-
-if __name__ == "__main__":
-   sys.exit(main())

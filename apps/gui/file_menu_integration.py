@@ -237,8 +237,8 @@ def handle_browse_game_directory(main_window): #vers 1
         return False
 
 
-def handle_set_game_root_folder(main_window): #vers 3
-    """Handle Set Game Root Folder menu action with directory tree integration"""
+def handle_set_game_root_folder(main_window): #vers 4
+    """Handle Set Game Root Folder menu action with directory tree integration and override support"""
     try:
         current_game_root = getattr(main_window, 'game_root', None)
         start_dir = current_game_root if current_game_root else os.path.expanduser("~")
@@ -251,12 +251,23 @@ def handle_set_game_root_folder(main_window): #vers 3
         )
 
         if folder:
+            # Temporarily set main_window reference for validation function to check override
+            validate_game_root_folder._override_check = main_window
             # Validate game root
             game_info = validate_game_root_folder(folder)
+            # Clear the reference after validation
+            if hasattr(validate_game_root_folder, '_override_check'):
+                delattr(validate_game_root_folder, '_override_check')
+                
             if game_info:
                 main_window.game_root = folder
                 main_window.log_message(f"Game root set: {folder}")
-                main_window.log_message(f"Detected: {game_info['name']} ({game_info['version']})")
+                
+                # Log detection info
+                if game_info.get('game_name', '').endswith('(Override)'):
+                    main_window.log_message(f"Game root set with override: {folder}")
+                else:
+                    main_window.log_message(f"Detected: {game_info['game_name']}")
 
                 # Update directory tree if it exists
                 if hasattr(main_window, 'directory_tree') and main_window.directory_tree:
@@ -273,10 +284,15 @@ def handle_set_game_root_folder(main_window): #vers 3
                 save_project_settings(main_window)
 
                 # Show success dialog with option to browse
+                if game_info.get('game_name', '').endswith('(Override)'):
+                    message = f"Game root configured with override:\n{folder}\n\nThis folder will be used as your GTA installation directory regardless of standard file detection.\n\nWould you like to browse the directory now?"
+                else:
+                    message = f"Game root configured:\n{folder}\n\nDetected: {game_info['game_name']}\nEXE: {game_info['exe_file']}\nDAT: {game_info['dat_file']}\nIDE: {game_info['ide_file']}\n\nWould you like to browse the directory now?"
+                
                 result = QMessageBox.question(
                     main_window,
                     "Game Root Set Successfully",
-                    f"Game root configured:\n{folder}\n\nDetected: {game_info['name']} ({game_info['version']})\n\nWould you like to browse the directory now?",
+                    message,
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                     QMessageBox.StandardButton.Yes
                 )
@@ -288,13 +304,48 @@ def handle_set_game_root_folder(main_window): #vers 3
                 return True
             else:
                 # Invalid game root
-                QMessageBox.warning(
-                    main_window,
-                    "Invalid Game Directory",
-                    f"The selected directory does not appear to be a valid GTA installation:\n{folder}\n\nPlease select the main GTA directory (where gta_sa.exe or similar is located)."
-                )
-                main_window.log_message(f"Invalid game root selected: {folder}")
-                return False
+                override_enabled = getattr(main_window, 'app_settings', None) and main_window.app_settings.current_settings.get('gta_root_override_enabled', False) if hasattr(main_window, 'app_settings') else False
+                
+                if override_enabled:
+                    # If override is enabled but no standard files found, still allow setting
+                    main_window.game_root = folder
+                    main_window.log_message(f"Game root set with override: {folder}")
+                    
+                    # Update directory tree if it exists
+                    if hasattr(main_window, 'directory_tree') and main_window.directory_tree:
+                        main_window.directory_tree.game_root = folder
+                        main_window.directory_tree.current_root = folder
+                        if hasattr(main_window.directory_tree, 'path_label'):
+                            main_window.directory_tree.path_label.setText(f"Root: {folder}")
+                        # Auto-populate the tree
+                        if hasattr(main_window.directory_tree, 'populate_tree'):
+                            main_window.directory_tree.populate_tree(folder)
+                            main_window.log_message("Directory tree auto-populated")
+                    
+                    # Save settings
+                    save_project_settings(main_window)
+                    
+                    # Show success message
+                    result = QMessageBox.question(
+                        main_window,
+                        "Game Root Set Successfully (Override)",
+                        f"Game root configured with override:\n{folder}\n\nThis folder will be used as your GTA installation directory regardless of standard file detection.\n\nWould you like to browse the directory now?",
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                        QMessageBox.StandardButton.Yes
+                    )
+                    
+                    if result == QMessageBox.StandardButton.Yes:
+                        handle_browse_game_directory(main_window)
+                    
+                    return True
+                else:
+                    QMessageBox.warning(
+                        main_window,
+                        "Invalid Game Directory",
+                        f"The selected directory does not appear to be a valid GTA installation:\n{folder}\n\nPlease select the main GTA directory (where gta_sa.exe or similar is located).\n\nTo bypass this check, enable 'GTA Root Override' in Project Settings."
+                    )
+                    main_window.log_message(f"Invalid game root selected: {folder}")
+                    return False
         else:
             main_window.log_message("Game root selection cancelled")
             return False
@@ -405,12 +456,30 @@ def handle_set_game_root_folder(main_window): #vers 2
         main_window.log_message(f"Error setting game root: {str(e)}")
 
 
-def handle_auto_detect_game(main_window): #vers 2
-    """Handle Auto-Detect Game menu action with EXE + DAT validation"""
+def handle_auto_detect_game(main_window): #vers 3
+    """Handle Auto-Detect Game menu action with EXE + DAT validation and override support"""
     try:
         main_window.log_message("Auto-detecting GTA installations...")
         
         detected_info = detect_gta_installations_with_info()
+        
+        # Check if override is enabled and no standard installations found
+        override_enabled = getattr(main_window, 'app_settings', None) and main_window.app_settings.current_settings.get('gta_root_override_enabled', False) if hasattr(main_window, 'app_settings') else False
+        
+        if not detected_info and override_enabled:
+            # If override is enabled but no standard installations found, allow user to set any folder
+            from PyQt6.QtWidgets import QMessageBox
+            result = QMessageBox.question(
+                main_window,
+                "GTA Root Override Enabled",
+                "No standard GTA installations detected, but GTA Root Override is enabled.\n\nWould you like to manually select a game root folder?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes
+            )
+            
+            if result == QMessageBox.StandardButton.Yes:
+                handle_set_game_root_folder(main_window)
+                return
         
         if not detected_info:
             QMessageBox.information(
@@ -499,14 +568,14 @@ def handle_auto_detect_game(main_window): #vers 2
         main_window.log_message(f"Error in auto-detection: {str(e)}")
 
 
-def handle_project_settings(main_window): #vers 1
-    """Handle Project Settings menu action"""
+def handle_project_settings(main_window): #vers 2
+    """Handle Project Settings menu action with override option"""
     try:
-        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QLineEdit, QPushButton, QLabel, QGroupBox, QHBoxLayout
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QLineEdit, QPushButton, QLabel, QGroupBox, QHBoxLayout, QCheckBox
         
         dialog = QDialog(main_window)
         dialog.setWindowTitle("Project Settings")
-        dialog.setMinimumSize(500, 400)
+        dialog.setMinimumSize(500, 500)
         
         layout = QVBoxLayout(dialog)
         
@@ -521,6 +590,24 @@ def handle_project_settings(main_window): #vers 1
         current_layout.addRow("Game Root:", QLabel(game_root))
         
         layout.addWidget(current_group)
+        
+        # Override settings group
+        override_group = QGroupBox("Override Settings")
+        override_layout = QVBoxLayout(override_group)
+        
+        # GTA Root Override checkbox
+        gta_override_checkbox = QCheckBox("Bypass GTA installation validation (GTA Root Override)")
+        override_enabled = getattr(main_window, 'app_settings', None) and main_window.app_settings.current_settings.get('gta_root_override_enabled', False) if hasattr(main_window, 'app_settings') else False
+        gta_override_checkbox.setChecked(override_enabled)
+        
+        gta_override_label = QLabel("When enabled, allows setting any folder as GTA root without checking for standard game files (gta_sa.exe, gta_vc.exe, etc.)")
+        gta_override_label.setWordWrap(True)
+        gta_override_label.setStyleSheet("font-size: 8pt; color: #666666; margin-top: 5px;")
+        
+        override_layout.addWidget(gta_override_checkbox)
+        override_layout.addWidget(gta_override_label)
+        
+        layout.addWidget(override_group)
         
         # Quick actions group
         actions_group = QGroupBox("Quick Actions")
@@ -539,6 +626,16 @@ def handle_project_settings(main_window): #vers 1
         actions_layout.addWidget(auto_detect_btn)
         
         layout.addWidget(actions_group)
+        
+        # Connect the checkbox to save the setting
+        def on_override_changed(checked):
+            if hasattr(main_window, 'app_settings') and main_window.app_settings:
+                main_window.app_settings.current_settings['gta_root_override_enabled'] = checked
+                # Save the setting to the settings file
+                main_window.app_settings.save_settings()
+                main_window.log_message(f"GTA Root Override setting changed to: {checked}")
+        
+        gta_override_checkbox.stateChanged.connect(on_override_changed)
         
         # Buttons
         button_layout = QHBoxLayout()
@@ -584,9 +681,24 @@ def create_project_folder_structure(main_window, base_folder: str) -> bool: #ver
         return False
 
 
-def validate_game_root_folder(folder_path: str) -> dict: #vers 4
+def validate_game_root_folder(folder_path: str) -> dict: #vers 5
     """Validate that folder contains GTA installation using EXE + DAT method"""
     try:
+        # Check if override is enabled - if so, return basic validation
+        if hasattr(validate_game_root_folder, '_override_check'):
+            # If we have access to main_window, check the setting
+            main_window = validate_game_root_folder._override_check
+            if hasattr(main_window, 'app_settings') and main_window.app_settings:
+                override_enabled = main_window.app_settings.current_settings.get('gta_root_override_enabled', False)
+                if override_enabled and os.path.exists(folder_path):
+                    return {
+                        'game_name': 'Custom GTA Installation (Override)',
+                        'exe_file': 'Unknown',
+                        'dat_file': 'Unknown', 
+                        'ide_file': 'Unknown',
+                        'validated': True
+                    }
+        
         # Define GTA game signatures: (exe_name, dat_file, ide_file, game_name)
         gta_signatures = [
             # GTA Vice City
@@ -611,6 +723,18 @@ def validate_game_root_folder(folder_path: str) -> dict: #vers 4
             ("solcore.exe", "gta_sol.dat", "Data/default.dat", "GTA Sol"),
             ("gtasol.exe", "gta_sol.dat", "Data/default.dat", "GTA Sol"),
             ("gta_sol.exe", "gta_sol.dat", "Data/default.dat", "GTA Sol"),
+            # Additional GTA Sol patterns that might exist
+            ("solcore.exe", "gta_sol.dat", "default.ide", "GTA Sol"),
+            ("gtasol.exe", "gta_sol.dat", "default.ide", "GTA Sol"),
+            ("gta_sol.exe", "gta_sol.dat", "default.ide", "GTA Sol"),
+            # Check for SOL folder structure
+            ("solcore.exe", "SOL/gta_sol.dat", "SOL/default.ide", "GTA Sol"),
+            ("gtasol.exe", "SOL/gta_sol.dat", "SOL/default.ide", "GTA Sol"),
+            ("gta_sol.exe", "SOL/gta_sol.dat", "SOL/default.ide", "GTA Sol"),
+            # Check for data folder
+            ("solcore.exe", "gta_sol.dat", "data/default.dat", "GTA Sol"),
+            ("gtasol.exe", "gta_sol.dat", "data/default.dat", "GTA Sol"),
+            ("gta_sol.exe", "gta_sol.dat", "data/default.dat", "GTA Sol"),
         ]
         
         for exe_name, dat_file, ide_file, game_name in gta_signatures:
@@ -723,9 +847,10 @@ def detect_gta_installations() -> list: #vers 3 # TODO - add custom game paths, 
     return potential_paths
 
 
-def save_project_settings(main_window): #vers 1
-    """Save project settings to file"""
+def save_project_settings(main_window): #vers 2
+    """Save project settings to file - now also updates appfactory.settings.json"""
     try:
+        # Use QSettings as before for compatibility
         settings = QSettings("IMG Factory", "Project Settings")
         
         if hasattr(main_window, 'project_folder'):
@@ -733,7 +858,15 @@ def save_project_settings(main_window): #vers 1
             
         if hasattr(main_window, 'game_root'):
             settings.setValue("game_root", main_window.game_root)
-            
+        
+        # NEW: Also save to appfactory.settings.json if available
+        if hasattr(main_window, 'app_settings') and main_window.app_settings:
+            # Update the current settings in the app_settings object
+            if hasattr(main_window, 'game_root') and main_window.game_root:
+                main_window.app_settings.current_settings['working_gta_folder'] = main_window.game_root
+            # Save to the JSON file
+            main_window.app_settings.save_settings()
+        
         main_window.log_message("Project settings saved")
         
     except Exception as e:

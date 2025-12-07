@@ -1534,7 +1534,7 @@ class FileBrowserWidget(QWidget):
             
             system = platform.system()
             if system == "Windows":
-                subprocess.run(f'explorer "{dir_path}"', shell=True)
+                subprocess.run(["explorer", dir_path], shell=False)
             elif system == "Darwin":  # macOS
                 subprocess.run(["open", dir_path])
             else:  # Linux

@@ -14,7 +14,8 @@ from PyQt6.QtWidgets import (
     QPushButton, QSlider, QColorDialog, QFontDialog,
     QMessageBox, QGridLayout, QFrame, QButtonGroup,
     QRadioButton, QLineEdit, QTextEdit, QListWidget,
-    QListWidgetItem, QSplitter, QScrollArea, QFormLayout
+    QListWidgetItem, QSplitter, QScrollArea, QFormLayout,
+    QApplication
 )
 from pathlib import Path
 from PyQt6.QtCore import Qt, pyqtSignal
@@ -733,7 +734,7 @@ class GUISettingsDialog(QDialog):
         parent = self.parent()
         if parent:
             # Apply unified button theme
-            from .unified_button_theme import apply_unified_button_theme
+            from apps.gui.unified_button_theme import apply_unified_button_theme
             apply_unified_button_theme(parent, self.app_settings)
             
             # Apply button display mode
@@ -742,6 +743,10 @@ class GUISettingsDialog(QDialog):
             # Apply stylesheet
             stylesheet = self.app_settings.get_stylesheet()
             parent.setStyleSheet(stylesheet)
+            
+            # Force update to ensure visual changes are applied
+            parent.update()
+            QApplication.processEvents()  # Process any pending events
 
     def _apply_button_display_mode(self):
         """Apply button display mode to all buttons in the main window"""
@@ -753,6 +758,10 @@ class GUISettingsDialog(QDialog):
             # Update button appearance in left panel if exists
             if hasattr(parent, "left_panel"):
                 self._update_buttons_in_panel(parent.left_panel)
+        
+        # Refresh the parent to ensure visual updates
+        if parent:
+            parent.update()
 
     def _update_buttons_in_panel(self, panel):
         """Update all buttons in a panel according to the display mode"""
@@ -778,11 +787,15 @@ class GUISettingsDialog(QDialog):
                 # Restore both text and icon if they were originally present
                 if hasattr(btn, "_original_text"):
                     btn.setText(btn._original_text)
+                # Don't remove the icon in 'both' mode, keep existing icon
                 btn.setMinimumWidth(80)  # Standard width
 
     def _save_settings(self):
         """Save settings permanently"""
-        self._apply_settings()  # Apply current settings first
+        # Apply current settings first
+        # Note: _apply_settings() is called again here even if already called from Apply button
+        # This ensures all UI values are captured when OK is pressed directly
+        self._apply_settings()
         # Save to app settings file
         self.app_settings.save_settings()
 

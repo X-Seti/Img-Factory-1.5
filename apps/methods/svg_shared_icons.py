@@ -42,7 +42,7 @@ from PyQt6.QtCore import QByteArray, QSize
 # get_error_icon
 # get_success_icon
 
-def svg_to_icon(svg_data: bytes, size: int = 24, color: str = None) -> QIcon: #vers 1
+def svg_to_icon(svg_data: bytes, size: int = 24, color: str = None) -> QIcon: #vers 2
     """Convert SVG data to QIcon with optional color override
     
     Args:
@@ -54,6 +54,31 @@ def svg_to_icon(svg_data: bytes, size: int = 24, color: str = None) -> QIcon: #v
         QIcon object
     """
     try:
+        # Get theme colors from the main application
+        from apps import get_app
+        app = get_app()
+        
+        # Get theme colors - default to dark theme colors if not available
+        bg_secondary = getattr(app, 'bg_secondary', '#2d2d2d')
+        bg_primary = getattr(app, 'bg_primary', '#1e1e1e')
+        text_primary = getattr(app, 'text_primary', '#ffffff')
+        
+        # Replace theme color placeholders in SVG data
+        svg_string = svg_data.decode('utf-8')
+        svg_string = svg_string.replace('{bg_secondary}', bg_secondary)
+        svg_string = svg_string.replace('{bg_primary}', bg_primary)
+        svg_string = svg_string.replace('{text_primary}', text_primary)
+        
+        # If a specific color is provided, replace currentColor with that color
+        if color:
+            svg_string = svg_string.replace('currentColor', color)
+        
+        # Also replace currentColor with text_primary if no specific color provided
+        else:
+            svg_string = svg_string.replace('currentColor', text_primary)
+        
+        svg_data = svg_string.encode('utf-8')
+        
         renderer = QSvgRenderer(QByteArray(svg_data))
         pixmap = QPixmap(QSize(size, size))
         pixmap.fill(QColor(0, 0, 0, 0))  # Transparent background
@@ -68,7 +93,24 @@ def svg_to_icon(svg_data: bytes, size: int = 24, color: str = None) -> QIcon: #v
         return QIcon()
 
 
-# ========== FILE TYPE ICONS (Replace emojis in tabs) ==========
+# = App icon
+
+def get_app_icon(size: int = 64) -> QIcon: #vers 1
+    """IMG Factory application icon with 'IMG' text and gradient background"""
+    # Using dark theme colors as default (can be changed based on current theme)
+    svg_data = b'''<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:bg_secondary;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:bg_primary;stop-opacity:1" />
+            </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="64" height="64" rx="12" ry="12" fill="url(#bgGradient)"/>
+        <text x="32" y="38" font-size="24" fill=text_primary text-anchor="middle" font-weight="bold" font-family="Arial, sans-serif">IMG</text>
+    </svg>'''
+    return svg_to_icon(svg_data, size)
+
+# = FILE TYPE ICONS (Replace emojis in tabs)
 
 def get_img_file_icon(size: int = 24) -> QIcon: #vers 1
     """IMG archive icon - Replaces emoji"""
@@ -126,7 +168,7 @@ def get_file_icon(size: int = 24) -> QIcon: #vers 1
     return svg_to_icon(svg_data, size)
 
 
-# ========== ACTION ICONS ==========
+# = ACTION ICONS
 
 def get_trash_icon(size: int = 24) -> QIcon: #vers 1
     """Delete/trash icon - Replaces 🗑️ emoji"""
@@ -371,22 +413,6 @@ def get_image_icon(size: int = 24) -> QIcon: #vers 1
         <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
         <polyline points="21 15 16 10 5 21" 
             stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>'''
-    return svg_to_icon(svg_data, size)
-
-
-def get_app_icon(size: int = 64) -> QIcon: #vers 1
-    """IMG Factory application icon with 'IMG' text and gradient background"""
-    # Using dark theme colors as default (can be changed based on current theme)
-    svg_data = b'''<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#444444;stop-opacity:1" />
-                <stop offset="100%" style="stop-color:#252525;stop-opacity:1" />
-            </linearGradient>
-        </defs>
-        <rect x="0" y="0" width="64" height="64" rx="12" ry="12" fill="url(#bgGradient)"/>
-        <text x="32" y="38" font-size="24" fill="#CCCCCC" text-anchor="middle" font-weight="bold" font-family="Arial, sans-serif">IMG</text>
     </svg>'''
     return svg_to_icon(svg_data, size)
 
