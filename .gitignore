@@ -6,6 +6,7 @@ __pycache__/
 # Dependencies
 .venv/
 venv/
+node_modules/
 
 # Logs and temp files
 *.log
@@ -15,7 +16,7 @@ venv/
 # Environment
 .env
 .env.local
-*.env.*
+.env.*
 
 # Editors
 .vscode/
@@ -35,4 +36,38 @@ htmlcov/
 
 # Pytest
 .pytest_cache/
+
+# Build directories
+dist/
+build/
+target/
+.gradle/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
 ```
