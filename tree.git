@@ -43,12 +43,11 @@
 │   │   ├── Img_Creator
 │   │   │   └── img_creator.py
 │   │   ├── Img_Factory
-│   │   │   ├── comprehensive.py
 │   │   │   ├── depends
-│   │   │   │   └── img_factory_thread.py
+│   │   │   │   ├── img_factory_thread.py
+│   │   │   │   └── mui_demo.py
 │   │   │   ├── imgfactory.py
-│   │   │   ├── __init__.py
-│   │   │   └── mui_demo.py
+│   │   │   └── __init__.py
 │   │   ├── __init__.py
 │   │   ├── Map_Editor
 │   │   │   ├── Map_Workshop.py
@@ -321,13 +320,13 @@
 │   ├── unified_signal_handler.py
 │   └── utils
 │       ├── app_settings_system.py
-│       ├── app_settings_system.py-old
 │       ├── themer_settings.json
 │       ├── themes -> /home/x2/Documents/GitHub/Img Factory 1.5/themes
 │       └── update_themes_script.py
 ├── cc.py
 ├── ChangeLog.md
 ├── Credits.md
+├── img_factory_debug.log
 ├── launch_imgfactory.py
 ├── package-lock.json
 ├── reviews
@@ -335,4 +334,4 @@
 ├── TODO.md
 └── tree.git
 
-37 directories, 299 files
+37 directories, 298 files
