@@ -326,12 +326,9 @@
 ├── cc.py
 ├── ChangeLog.md
 ├── Credits.md
-├── img_factory_debug.log
 ├── launch_imgfactory.py
 ├── package-lock.json
-├── reviews
-│   └── pr-2-approval.md
 ├── TODO.md
 └── tree.git
 
-37 directories, 298 files
+36 directories, 296 files
