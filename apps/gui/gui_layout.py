@@ -1185,7 +1185,7 @@ class IMGFactoryGUILayout:
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.table.setSortingEnabled(True)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-
+        
         # Column sizing
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Num
