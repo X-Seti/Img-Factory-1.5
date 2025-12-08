@@ -1,5 +1,6 @@
 .
 ├── AI_Rules.md
+├── appfactory.settings.json
 ├── apps
 │   ├── appfactory.settings.json
 │   ├── components
@@ -46,7 +47,8 @@
 │   │   │   ├── depends
 │   │   │   │   └── img_factory_thread.py
 │   │   │   ├── imgfactory.py
-│   │   │   └── __init__.py
+│   │   │   ├── __init__.py
+│   │   │   └── mui_demo.py
 │   │   ├── __init__.py
 │   │   ├── Map_Editor
 │   │   │   ├── Map_Workshop.py
@@ -312,6 +314,7 @@
 │   │   ├── red_theme_dark.json
 │   │   ├── rockstar_dark.json
 │   │   ├── synthwave_outrun_dark.json
+│   │   ├── system_kde.json
 │   │   ├── tea_and_toast_dark.json
 │   │   ├── themes_organization.md
 │   │   └── yellow_theme_light.json
@@ -322,17 +325,14 @@
 │       ├── themer_settings.json
 │       ├── themes -> /home/x2/Documents/GitHub/Img Factory 1.5/themes
 │       └── update_themes_script.py
-├── app_system_settings.py
 ├── cc.py
 ├── ChangeLog.md
 ├── Credits.md
-├── img_factory_debug.log
 ├── launch_imgfactory.py
 ├── package-lock.json
 ├── reviews
 │   └── pr-2-approval.md
 ├── TODO.md
-├── tree.git
-└── vulnerability_report.md
+└── tree.git
 
 37 directories, 299 files
