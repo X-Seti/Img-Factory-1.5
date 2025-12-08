@@ -7,6 +7,13 @@ Complete history of fixes, updates, and improvements.
 
 ---
 
+**Fixed**: - December 07, 2025
+
+methods/svg_shared_icons.py - get_app_icon() Version: 2
+- Fixed color placeholder replacement
+- Changed from runtime theme colors to hardcoded values
+- Icon now renders correctly with gradient background
+
 **Fixed**: - December 04, 2025
 gui_menu.py
 gui_layout.py

@@ -405,32 +405,16 @@ def get_shield_icon(size: int = 24) -> QIcon: #vers 1
     return svg_to_icon(svg_data, size)
 
 
-def get_app_icon(size: int = 64) -> QIcon: #vers 2
-    """IMG Factory application icon - Fixed color rendering"""
-    svg_data = b'''<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#3a3a3a;stop-opacity:1" />
-                <stop offset="100%" style="stop-color:#2d2d2d;stop-opacity:1" />
-            </linearGradient>
-        </defs>
-        <rect x="0" y="0" width="64" height="64" rx="12" ry="12" fill="url(#bgGradient)"/>
-        <text x="32" y="42" font-size="28" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Arial, sans-serif">IMG</text>
+def get_image_icon(size: int = 24) -> QIcon: #vers 1
+    """Image/picture icon"""
+    svg_data = b'''<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" 
+            stroke="currentColor" stroke-width="2" fill="none"/>
+        <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+        <polyline points="21 15 16 10 5 21" 
+            stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>'''
-
-    try:
-        renderer = QSvgRenderer(QByteArray(svg_data))
-        pixmap = QPixmap(QSize(size, size))
-        pixmap.fill(QColor(0, 0, 0, 0))
-
-        painter = QPainter(pixmap)
-        renderer.render(painter)
-        painter.end()
-
-        return QIcon(pixmap)
-    except Exception as e:
-        print(f"Error creating app icon: {e}")
-        return QIcon()
+    return svg_to_icon(svg_data, size)
 
 
 def get_rebuild_icon(size: int = 24) -> QIcon: #vers 1

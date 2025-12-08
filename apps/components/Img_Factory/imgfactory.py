@@ -26,11 +26,6 @@ print("PyQt6.QtCore imported successfully")
 from PyQt6.QtCore import pyqtSignal, QMimeData, Qt, QThread, QTimer, QSettings
 from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent, QFont, QIcon, QPixmap, QShortcut, QTextCursor
 # Import comprehensive_fix using importlib to avoid relative import issues
-import importlib.util
-spec = importlib.util.spec_from_file_location("comprehensive", os.path.join(os.path.dirname(__file__), "comprehensive.py"))
-comprehensive_fix_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(comprehensive_fix_module)
-fix_menu_system_and_functionality = comprehensive_fix_module.fix_menu_system_and_functionality
 
 
 # OR use the full path:
@@ -50,7 +45,7 @@ from apps.core.file_extraction import setup_complete_extraction_integration
 from apps.core.extract import extract_textures_function
 from apps.core.file_type_filter import integrate_file_filtering
 from apps.methods.rw_versions import get_rw_version_name
-from apps.core.right_click_actions import setup_table_context_menu
+from apps.core.right_click_actions import integrate_right_click_actions, setup_table_context_menu
 from apps.core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
 from apps.core.convert import convert_img, convert_img_format
 from apps.core.reload import integrate_reload_functions
@@ -135,6 +130,9 @@ from apps.methods.img_templates import IMGTemplateManager, TemplateManagerDialog
 from apps.methods.img_import_functions import integrate_img_import_functions
 from apps.methods.img_export_functions import integrate_img_export_functions
 from apps.methods.col_export_functions import integrate_col_export_functions
+
+# MUI Demo Integration
+from apps.components.Img_Factory.depends.mui_demo import MUIWindow
 
 App_name = "Img Factory 1.5"
 App_build ="November 29"
@@ -5448,7 +5446,7 @@ def add_common_operations(main_window, menu, row=None):
             menu.addAction(remove_action)
 
         # Copy operations
-        copy_submenu = menu.addMenu("Copy")
+        copy_submenu = menu.addMenu("Copy Selected")
 
         copy_name_action = QAction("Copy Name", menu)
         if row is not None:
@@ -5460,8 +5458,14 @@ def add_common_operations(main_window, menu, row=None):
             copy_info_action.triggered.connect(lambda: copy_entry_info(main_window, row))
         copy_submenu.addAction(copy_info_action)
 
+        # Copy selected row
+        copy_row_action = QAction("Copy Selected Row", table)
+        if row is not None:
+            copy_row_action.triggered.connect(lambda: copy_entry_row(main_window, row))
+        copy_submenu.addAction(copy_row_action)
+
     except Exception as e:
-        main_window.log_message(f"❌ Error adding common operations: {str(e)}")
+        main_window.log_message(f"Error adding common operations: {str(e)}")
 
 
 def move_file(main_window, row, entry_info):

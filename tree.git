@@ -1,8 +1,10 @@
 .
 ├── AI_Rules.md
+├── appfactory.settings.json
 ├── apps
 │   ├── appfactory.settings.json
 │   ├── components
+│   │   ├── base_gui_example.py
 │   │   ├── Col_Creator
 │   │   │   └── col_creator.py
 │   │   ├── Col_Editor
@@ -30,6 +32,10 @@
 │   │   │   ├── file_dirtree_backend.py
 │   │   │   ├── file_dirtree_browser.py
 │   │   │   └── gta_file_editors.py
+│   │   ├── Hex_Editor
+│   │   │   ├── Hex_Editor_Panel.py
+│   │   │   ├── Hex_Editor.py
+│   │   │   └── __init__.py
 │   │   ├── Ide_Editor
 │   │   │   └── ide_editor.py
 │   │   ├── Img_Browser
@@ -37,9 +43,9 @@
 │   │   ├── Img_Creator
 │   │   │   └── img_creator.py
 │   │   ├── Img_Factory
-│   │   │   ├── comprehensive.py
 │   │   │   ├── depends
-│   │   │   │   └── img_factory_thread.py
+│   │   │   │   ├── img_factory_thread.py
+│   │   │   │   └── mui_demo.py
 │   │   │   ├── imgfactory.py
 │   │   │   └── __init__.py
 │   │   ├── __init__.py
@@ -178,6 +184,7 @@
 │   │   ├── rw_unk_snapshot.py
 │   │   ├── save_entry.py
 │   │   ├── shortcuts.py
+│   │   ├── sort.py
 │   │   ├── sort_via_ide.py
 │   │   ├── theme_integration.py
 │   │   ├── undo_system.py
@@ -306,6 +313,7 @@
 │   │   ├── red_theme_dark.json
 │   │   ├── rockstar_dark.json
 │   │   ├── synthwave_outrun_dark.json
+│   │   ├── system_kde.json
 │   │   ├── tea_and_toast_dark.json
 │   │   ├── themes_organization.md
 │   │   └── yellow_theme_light.json
@@ -318,14 +326,9 @@
 ├── cc.py
 ├── ChangeLog.md
 ├── Credits.md
-├── img_factory_debug.log
 ├── launch_imgfactory.py
 ├── package-lock.json
-├── reviews
-│   └── pr-2-approval.md
-├── test_generics.ide
 ├── TODO.md
-├── tree.git
-└── vulnerability_report.md
+└── tree.git
 
-36 directories, 293 files
+36 directories, 296 files

@@ -44,11 +44,11 @@ def edit_col_from_img_entry(main_window, row): #vers 2
     try:
         entry_info = get_selected_entry_info(main_window, row)
         if not entry_info or not entry_info['is_col']:
-            main_window.log_message("❌ Selected entry is not a COL file")
+            main_window.log_message("Selected entry is not a COL file")
             return False
         
         entry = entry_info['entry']
-        main_window.log_message(f"🔧 Opening COL editor for: {entry.name}")
+        main_window.log_message(f"Opening COL editor for: {entry.name}")
         
         # Use methods from col_operations
         from apps.methods.col_operations import extract_col_from_img_entry, create_temporary_col_file, cleanup_temporary_file
@@ -56,7 +56,7 @@ def edit_col_from_img_entry(main_window, row): #vers 2
         # Extract COL data
         extraction_result = extract_col_from_img_entry(main_window, row)
         if not extraction_result:
-            main_window.log_message("❌ Failed to extract COL data")
+            main_window.log_message("Failed to extract COL data")
             return False
         
         col_data, entry_name = extraction_result
@@ -64,7 +64,7 @@ def edit_col_from_img_entry(main_window, row): #vers 2
         # Create temporary COL file
         temp_path = create_temporary_col_file(col_data, entry_name)
         if not temp_path:
-            main_window.log_message("❌ Failed to create temporary COL file")
+            main_window.log_message("Failed to create temporary COL file")
             return False
         
         try:
@@ -76,10 +76,10 @@ def edit_col_from_img_entry(main_window, row): #vers 2
             if editor.load_col_file(temp_path):
                 editor.setWindowTitle(f"COL Editor - {entry.name}")
                 editor.show()  # Use show() instead of exec() for non-modal
-                main_window.log_message(f"✅ COL editor opened for: {entry.name}")
+                main_window.log_message(f"COL editor opened for: {entry.name}")
                 return True
             else:
-                main_window.log_message("❌ Failed to load COL file in editor")
+                main_window.log_message("Failed to load COL file in editor")
                 return False
                 
         finally:
@@ -91,7 +91,7 @@ def edit_col_from_img_entry(main_window, row): #vers 2
             "COL editor component not available. Please check components.Col_Editor.col_editor.py")
         return False
     except Exception as e:
-        main_window.log_message(f"❌ Error editing COL file: {str(e)}")
+        main_window.log_message(f"Error editing COL file: {str(e)}")
         QMessageBox.critical(main_window, "Error", f"Failed to edit COL file: {str(e)}")
         return False
 
@@ -100,11 +100,11 @@ def view_col_collision(main_window, row): #vers 2
     try:
         entry_info = get_selected_entry_info(main_window, row)
         if not entry_info or not entry_info['is_col']:
-            main_window.log_message("❌ Selected entry is not a COL file")
+            main_window.log_message("Selected entry is not a COL file")
             return False
         
         entry = entry_info['entry']
-        main_window.log_message(f"🔍 Viewing COL collision for: {entry.name}")
+        main_window.log_message(f"Viewing COL collision for: {entry.name}")
         
         # Use methods from col_operations
         from apps.methods.col_operations import extract_col_from_img_entry, get_col_basic_info
@@ -112,7 +112,7 @@ def view_col_collision(main_window, row): #vers 2
         # Extract COL data
         extraction_result = extract_col_from_img_entry(main_window, row)
         if not extraction_result:
-            main_window.log_message("❌ Failed to extract COL data")
+            main_window.log_message("Failed to extract COL data")
             return False
         
         col_data, entry_name = extraction_result
@@ -121,7 +121,7 @@ def view_col_collision(main_window, row): #vers 2
         basic_info = get_col_basic_info(col_data)
         
         if 'error' in basic_info:
-            main_window.log_message(f"❌ COL analysis error: {basic_info['error']}")
+            main_window.log_message(f"COL analysis error: {basic_info['error']}")
             return False
         
         # Build info display
@@ -135,14 +135,14 @@ def view_col_collision(main_window, row): #vers 2
         from gui.col_dialogs import show_col_info_dialog
         show_col_info_dialog(main_window, info_text, f"COL Collision Info - {entry.name}")
         
-        main_window.log_message(f"✅ COL collision viewed for: {entry.name}")
+        main_window.log_message(f"COL collision viewed for: {entry.name}")
         return True
         
     except ImportError:
-        main_window.log_message("❌ COL operations not available")
+        main_window.log_message("COL operations not available")
         return False
     except Exception as e:
-        main_window.log_message(f"❌ Error viewing COL collision: {str(e)}")
+        main_window.log_message(f"Error viewing COL collision: {str(e)}")
         return False
 
 def analyze_col_from_img_entry(main_window, row): #vers 2
@@ -150,11 +150,11 @@ def analyze_col_from_img_entry(main_window, row): #vers 2
     try:
         entry_info = get_selected_entry_info(main_window, row)
         if not entry_info or not entry_info['is_col']:
-            main_window.log_message("❌ Selected entry is not a COL file")
+            main_window.log_message("Selected entry is not a COL file")
             return False
         
         entry = entry_info['entry']
-        main_window.log_message(f"🔍 Analyzing COL file: {entry.name}")
+        main_window.log_message(f"Analyzing COL file: {entry.name}")
         
         # Use methods from col_operations
         from apps.methods.col_operations import extract_col_from_img_entry, validate_col_data, create_temporary_col_file, cleanup_temporary_file, get_col_detailed_analysis
@@ -162,7 +162,7 @@ def analyze_col_from_img_entry(main_window, row): #vers 2
         # Extract COL data
         extraction_result = extract_col_from_img_entry(main_window, row)
         if not extraction_result:
-            main_window.log_message("❌ Failed to extract COL data")
+            main_window.log_message("Failed to extract COL data")
             return False
         
         col_data, entry_name = extraction_result
@@ -193,14 +193,14 @@ def analyze_col_from_img_entry(main_window, row): #vers 2
         from gui.col_dialogs import show_col_analysis_dialog
         show_col_analysis_dialog(main_window, final_analysis, entry.name)
         
-        main_window.log_message(f"✅ COL analysis completed for: {entry.name}")
+        main_window.log_message(f"COL analysis completed for: {entry.name}")
         return True
         
     except ImportError:
-        main_window.log_message("❌ COL analysis components not available")
+        main_window.log_message("COL analysis components not available")
         return False
     except Exception as e:
-        main_window.log_message(f"❌ Error analyzing COL file: {str(e)}")
+        main_window.log_message(f"Error analyzing COL file: {str(e)}")
         return False
 
 def edit_col_collision(main_window, row): #vers 2
@@ -213,22 +213,22 @@ def open_col_editor_dialog(main_window): #vers 3
         # Try to import and open COL editor
         from apps.components.Col_Editor.col_editor import COLEditorDialog
         
-        main_window.log_message("🔧 Opening COL editor...")
+        main_window.log_message("Opening COL editor...")
         editor = COLEditorDialog(main_window)
         editor.setWindowTitle("COL Editor - IMG Factory 1.5")
         
         # Show the editor
         editor.show()  # Use show() for non-modal
-        main_window.log_message("✅ COL editor opened successfully")
+        main_window.log_message("COL editor opened successfully")
         return True
         
     except ImportError:
         QMessageBox.information(main_window, "COL Editor", 
             "COL editor component not available.\n\nPlease ensure components.Col_Editor.col_editor.py is properly installed.")
-        main_window.log_message("❌ COL editor component not found")
+        main_window.log_message("COL editor component not found")
         return False
     except Exception as e:
-        main_window.log_message(f"❌ Error opening COL editor: {str(e)}")
+        main_window.log_message(f"Error opening COL editor: {str(e)}")
         QMessageBox.critical(main_window, "Error", f"Failed to open COL editor:\n{str(e)}")
         return False
 
@@ -238,26 +238,26 @@ def open_col_batch_proc_dialog(main_window): #vers 3
         # Try to import and open batch processor
         from apps.methods.col_utilities import COLBatchProcessor
         
-        main_window.log_message("⚙️ Opening COL batch processor...")
+        main_window.log_message("Opening COL batch processor...")
         processor = COLBatchProcessor(main_window)
         processor.setWindowTitle("COL Batch Processor - IMG Factory 1.5")
         
         # Show the processor
         result = processor.exec()
         if result == 1:
-            main_window.log_message("✅ COL batch processor completed")
+            main_window.log_message("COL batch processor completed")
         else:
-            main_window.log_message("🔄 COL batch processor closed")
+            main_window.log_message("COL batch processor closed")
         
         return result == 1
         
     except ImportError:
         QMessageBox.information(main_window, "Batch Processor", 
             "COL batch processor component not available.\n\nPlease ensure methods.col_utilities.py is properly installed.")
-        main_window.log_message("❌ COL batch processor component not found")
+        main_window.log_message("COL batch processor component not found")
         return False
     except Exception as e:
-        main_window.log_message(f"❌ Error opening batch processor: {str(e)}")
+        main_window.log_message(f"Error opening batch processor: {str(e)}")
         QMessageBox.critical(main_window, "Error", f"Failed to open batch processor:\n{str(e)}")
         return False
 
@@ -296,7 +296,7 @@ def open_col_file_dialog(main_window): #vers 3
         return False
 
     except Exception as e:
-        main_window.log_message(f"❌ Error opening COL file: {str(e)}")
+        main_window.log_message(f"Error opening COL file: {str(e)}")
         QMessageBox.critical(main_window, "Error", f"Failed to open COL file:\n{str(e)}")
         return False
 
@@ -311,7 +311,7 @@ def analyze_col_file_dialog(main_window): #vers 3
         )
 
         if file_path:
-            main_window.log_message(f"🔍 Analyzing COL file: {os.path.basename(file_path)}")
+            main_window.log_message(f"Analyzing COL file: {os.path.basename(file_path)}")
             
             try:
                 from apps.methods.col_operations import get_col_detailed_analysis, validate_col_data
@@ -340,7 +340,7 @@ def analyze_col_file_dialog(main_window): #vers 3
                 from gui.col_dialogs import show_col_analysis_dialog
                 show_col_analysis_dialog(main_window, final_analysis, os.path.basename(file_path))
                 
-                main_window.log_message(f"✅ COL analysis completed for: {os.path.basename(file_path)}")
+                main_window.log_message(f"COL analysis completed for: {os.path.basename(file_path)}")
                 return True
                 
             except ImportError:
@@ -351,22 +351,22 @@ def analyze_col_file_dialog(main_window): #vers 3
         return False
 
     except Exception as e:
-        main_window.log_message(f"❌ Error analyzing COL file: {str(e)}")
+        main_window.log_message(f"Error analyzing COL file: {str(e)}")
         QMessageBox.critical(main_window, "Error", f"Failed to analyze COL file:\n{str(e)}")
         return False
 
 # Other file type functions (keeping existing stubs for now)
 def edit_dff_model(main_window, row): #vers 1
     """Edit DFF model"""
-    main_window.log_message(f"✏️ Edit DFF model from row {row} - not yet implemented")
+    main_window.log_message(f"Edit DFF model from row {row} - not yet implemented")
 
 def edit_txd_textures(main_window, row): #vers 1
     """Edit TXD textures"""
-    main_window.log_message(f"🎨 Edit TXD textures from row {row} - not yet implemented")
+    main_window.log_message(f"Edit TXD textures from row {row} - not yet implemented")
 
 def view_dff_model(main_window, row): #vers 1
     """View DFF model"""
-    main_window.log_message(f"👁️ View DFF model from row {row} - not yet implemented")
+    main_window.log_message(f"View DFF model from row {row} - not yet implemented")
 
 def view_txd_textures(main_window, row): #vers 1
     """View TXD textures"""
@@ -374,7 +374,7 @@ def view_txd_textures(main_window, row): #vers 1
 
 def replace_selected_entry(main_window, row): #vers 1
     """Replace selected entry"""
-    main_window.log_message(f"🔄 Replace entry from row {row} - not yet implemented")
+    main_window.log_message(f"Replace entry from row {row} - not yet implemented")
 
 def show_entry_properties(main_window, row): #vers 1
     """Show entry properties"""
@@ -387,9 +387,9 @@ def show_entry_properties(main_window, row): #vers 1
         props_text += f"Type: {'COL' if entry_info['is_col'] else 'DFF' if entry_info['is_dff'] else 'TXD' if entry_info['is_txd'] else 'Other'}\n"
         
         QMessageBox.information(main_window, "Entry Properties", props_text)
-        main_window.log_message(f"📋 Properties shown for: {entry_info['name']}")
+        main_window.log_message(f"Properties shown for: {entry_info['name']}")
     else:
-        main_window.log_message(f"❌ Unable to get properties for row {row}")
+        main_window.log_message(f"Unable to get properties for row {row}")
 
 # Context menu setup functions (enhanced versions)
 def enhanced_context_menu_event(main_window, event): #vers 2
@@ -415,15 +415,15 @@ def enhanced_context_menu_event(main_window, event): #vers 2
         # Add file-type specific actions
         if entry_info['is_col']:
             # COL file actions
-            view_action = QAction("🔍 View Collision", table)
+            view_action = QAction("View Collision", table)
             view_action.triggered.connect(lambda: view_col_collision(main_window, row))
             menu.addAction(view_action)
             
-            edit_action = QAction("🔧 Edit COL File", table)
+            edit_action = QAction("Edit COL File", table)
             edit_action.triggered.connect(lambda: edit_col_from_img_entry(main_window, row))
             menu.addAction(edit_action)
             
-            analyze_action = QAction("📊 Analyze COL", table)
+            analyze_action = QAction("Analyze COL", table)
             analyze_action.triggered.connect(lambda: analyze_col_from_img_entry(main_window, row))
             menu.addAction(analyze_action)
             
@@ -431,11 +431,11 @@ def enhanced_context_menu_event(main_window, event): #vers 2
             
         elif entry_info['is_dff']:
             # DFF model actions
-            view_action = QAction("👁️ View Model", table)
+            view_action = QAction("View Model", table)
             view_action.triggered.connect(lambda: view_dff_model(main_window, row))
             menu.addAction(view_action)
             
-            edit_action = QAction("✏️ Edit Model", table)
+            edit_action = QAction("Edit Model", table)
             edit_action.triggered.connect(lambda: edit_dff_model(main_window, row))
             menu.addAction(edit_action)
             
@@ -447,18 +447,18 @@ def enhanced_context_menu_event(main_window, event): #vers 2
             view_action.triggered.connect(lambda: view_txd_textures(main_window, row))
             menu.addAction(view_action)
             
-            edit_action = QAction("🎨 Edit Textures", table)
+            edit_action = QAction("Edit Textures", table)
             edit_action.triggered.connect(lambda: edit_txd_textures(main_window, row))
             menu.addAction(edit_action)
             
             menu.addSeparator()
         
         # Common actions
-        props_action = QAction("📋 Properties", table)
+        props_action = QAction("Properties", table)
         props_action.triggered.connect(lambda: show_entry_properties(main_window, row))
         menu.addAction(props_action)
         
-        replace_action = QAction("🔄 Replace Entry", table)
+        replace_action = QAction("Replace Entry", table)
         replace_action.triggered.connect(lambda: replace_selected_entry(main_window, row))
         menu.addAction(replace_action)
         
@@ -466,7 +466,7 @@ def enhanced_context_menu_event(main_window, event): #vers 2
         menu.exec(event.globalPos())
 
     except Exception as e:
-        main_window.log_message(f"❌ Error showing context menu: {str(e)}")
+        main_window.log_message(f"Error showing context menu: {str(e)}")
 
 def add_col_context_menu_to_entries_table(main_window): #vers 4
     """Add enhanced COL context menu to entries table"""
@@ -483,11 +483,11 @@ def add_col_context_menu_to_entries_table(main_window): #vers 4
                 type('MockEvent', (), {'pos': lambda: pos, 'globalPos': lambda: entries_table.mapToGlobal(pos)})())
         )
 
-        main_window.log_message("✅ Enhanced COL context menu added to entries table")
+        main_window.log_message("Enhanced COL context menu added to entries table")
         return True
 
     except Exception as e:
-        main_window.log_message(f"❌ Error adding COL context menu: {str(e)}")
+        main_window.log_message(f"Error adding COL context menu: {str(e)}")
         return False
 
 def add_img_context_menu_to_entries_table(main_window): #vers 5

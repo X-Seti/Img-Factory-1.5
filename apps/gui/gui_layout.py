@@ -1174,10 +1174,6 @@ class IMGFactoryGUILayout:
         
         # Create main table
         self.table = QTableWidget()
-
-        # Disable cell editing on double-click
-        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-
         self.table.setColumnCount(9)
         self.table.setHorizontalHeaderLabels([
             "Num", "Name", "Extension", "Size", "Hash", "Hex", "Version", "Compression", "Status"
@@ -1189,7 +1185,7 @@ class IMGFactoryGUILayout:
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.table.setSortingEnabled(True)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-
+        
         # Column sizing
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Num
