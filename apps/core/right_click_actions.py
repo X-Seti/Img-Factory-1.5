@@ -276,11 +276,6 @@ def show_advanced_context_menu(main_window, position): #vers 3
         copy_summary_action.triggered.connect(lambda: copy_file_summary(main_window, row))
         menu.addAction(copy_summary_action)
 
-        # Copy selected row
-        copy_row_action = QAction("Copy Selected Row", menu_parent)
-        copy_row_action.triggered.connect(lambda: copy_table_row(main_window, row))
-        menu.addAction(copy_row_action)
-
         # Show menu at cursor position
         menu.exec(table.mapToGlobal(position))
 
@@ -1030,6 +1025,22 @@ def enhanced_context_menu_event(main_window, event): #vers 2
         replace_action = QAction("🔄 Replace Entry", table)
         replace_action.triggered.connect(lambda: replace_selected_entry(main_window, row))
         menu.addAction(replace_action)
+        
+        # Clipboard operations
+        # Copy filename only (acts as "Copy Name")
+        copy_name_action = QAction("📋 Copy Name", table)
+        copy_name_action.triggered.connect(lambda: copy_filename_only(main_window, row))
+        menu.addAction(copy_name_action)
+        
+        # Copy file summary (acts as "Copy Info")
+        copy_info_action = QAction("📋 Copy Info", table)
+        copy_info_action.triggered.connect(lambda: copy_file_summary(main_window, row))
+        menu.addAction(copy_info_action)
+        
+        # Copy selected row
+        copy_row_action = QAction("📋 Copy Selected Row", table)
+        copy_row_action.triggered.connect(lambda: copy_table_row(main_window, row))
+        menu.addAction(copy_row_action)
         
         # Show menu at the global position of the event
         menu.exec(event.globalPos())
