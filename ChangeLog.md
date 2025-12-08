@@ -7,19 +7,6 @@ Complete history of fixes, updates, and improvements.
 
 ---
 
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
 **Fixed**: - December 07, 2025
 
 methods/svg_shared_icons.py - get_app_icon() Version: 2
@@ -237,20 +224,6 @@ core/import_via.py
 - 3DS Max style controls
 
 ---
-
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
   
 ## September 2025
 
@@ -261,20 +234,6 @@ imgfactory.py
 - ✅ Error handling improved
 
 ---
-
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
 
 ## August 2025
 
@@ -288,20 +247,6 @@ imgfactory.py
 
 ---
 
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
-
 ### August 15, 2025 - Export & Dump Functions
 **Fixed**:
 - ✅ Fixed Export functions
@@ -313,20 +258,6 @@ imgfactory.py
 
 ---
 
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
-
 ### August 14, 2025 - IDE Editor & Menu
 **Fixed**:
 - ✅ IDE Editor - Updated and bugs fixed
@@ -335,20 +266,6 @@ imgfactory.py
 - ✅ Improved menu navigation
 
 ---
-
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
 
 ### August 12, 2025 - COL Editor Core
 **Fixed**:
@@ -361,20 +278,6 @@ imgfactory.py
 
 ---
 
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
-
 ### August 10, 2025 - Tab System
 **Fixed**:
 - ✅ Tab system for IMG's fixed
@@ -384,20 +287,6 @@ imgfactory.py
 
 ---
 
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
-
 ### August 9, 2025 - Startup System
 **Fixed**:
 - ✅ Init startup order fixed
@@ -406,20 +295,6 @@ imgfactory.py
 - ✅ Reduced startup errors
 
 ---
-
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
 
 ### August 7, 2025 - Theme System Update
 **Fixed**:
@@ -436,20 +311,6 @@ imgfactory.py
 - More theme variations needed
 
 ---
-
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
 
 ### August 6, 2025 - Multiple Fixes
 **Fixed**:
@@ -481,20 +342,6 @@ imgfactory.py
 
 ---
 
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
-
 ### August 4, 2025 - Testing & Verification
 **Checked**:
 - ✅ Loading single IMG
@@ -504,20 +351,6 @@ imgfactory.py
 - ✅ All core operations verified
 
 ---
-
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
 
 ## July 2025
 
@@ -546,20 +379,6 @@ imgfactory.py
 
 ---
 
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
-
 ### July 2025 - Project Start
 **Initialized**:
 - ✅ IMG Factory 1.5 project started
@@ -569,20 +388,6 @@ imgfactory.py
 - ✅ Proper documentation standards
 
 ---
-
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
 
 ## Version History Summary
 
@@ -611,20 +416,6 @@ imgfactory.py
 - Tab management
 
 ---
-
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
 
 ## Statistics
 
@@ -656,20 +447,6 @@ imgfactory.py
 
 ---
 
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
-
 ## Naming Conventions Applied
 Throughout development, these rules have been enforced:
 
@@ -694,20 +471,6 @@ Throughout development, these rules have been enforced:
 
 ---
 
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
-
 ## Known Issues (Moving to TODO)
 
 Items from old changelog moved to TODO.md:
@@ -727,20 +490,6 @@ See `TODO.md` for complete task list.
 
 ---
 
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
-
 ## Development Philosophy
 
 **Established Standards**:
@@ -757,20 +506,6 @@ imgfactory.py
 
 ---
 
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
-
 ## Contributors
 
 **Primary Developer**: X-Seti (2025)
@@ -780,20 +515,6 @@ imgfactory.py
 See `Credits.md` for complete attribution.
 
 ---
-
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
 
 ## Next Release
 
@@ -807,20 +528,6 @@ See `TODO.md` for planned features and fixes.
 - DFF texture mapping (future)
 
 ---
-
-**Fixed**: - December 09, 2025
-core/right_click_actions.py
-gui/gui_context.py
-col_integration.py
-imgfactory.py
-- Consolidated right-click context menu functions
-- Renamed enhanced_context_menu_event → context_menu_event
-- Removed duplicate add_col_context_menu_to_entries_table from gui/gui_context.py
-- setup_table_context_menu is now primary in core/right_click_actions.py
-- Removed all emoji icons from context menus (replaced with text)
-- Fixed import paths: imgfactory.py and col_integration.py now use core/right_click_actions
-- Added save() method to IMGFile class to fix "no attribute save" error
-
 
 **Last Updated**: October 22, 2025
 **Total Commits**: 100+ improvements
