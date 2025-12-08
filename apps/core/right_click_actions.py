@@ -671,7 +671,7 @@ def show_dff_texture_list(main_window, row):
                                       "Selected file is not a DFF file")
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error showing DFF texture list: {str(e)}")
+            main_window.log_message(f"Error showing DFF texture list: {str(e)}")
 
 
 def show_dff_model_viewer(main_window, row):
@@ -705,7 +705,7 @@ def show_dff_model_viewer(main_window, row):
                                       "Selected file is not a DFF file")
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error showing DFF model viewer: {str(e)}")
+            main_window.log_message(f"Error showing DFF model viewer: {str(e)}")
 
 
 def get_selected_entry_info(main_window, row): #vers 1
@@ -728,7 +728,7 @@ def get_selected_entry_info(main_window, row): #vers 1
             'offset': entry.offset
         }
     except Exception as e:
-        main_window.log_message(f"❌ Error getting entry info: {str(e)}")
+        main_window.log_message(f"Error getting entry info: {str(e)}")
         return None
 
 
@@ -737,11 +737,11 @@ def edit_col_from_img_entry(main_window, row): #vers 2
     try:
         entry_info = get_selected_entry_info(main_window, row)
         if not entry_info or not entry_info['is_col']:
-            main_window.log_message("❌ Selected entry is not a COL file")
+            main_window.log_message("Selected entry is not a COL file")
             return False
         
         entry = entry_info['entry']
-        main_window.log_message(f"🔧 Opening COL editor for: {entry.name}")
+        main_window.log_message(f"Opening COL editor for: {entry.name}")
         
         # Use methods from col_operations
         from apps.methods.col_operations import extract_col_from_img_entry, create_temporary_col_file, cleanup_temporary_file
@@ -749,7 +749,7 @@ def edit_col_from_img_entry(main_window, row): #vers 2
         # Extract COL data
         extraction_result = extract_col_from_img_entry(main_window, row)
         if not extraction_result:
-            main_window.log_message("❌ Failed to extract COL data")
+            main_window.log_message("Failed to extract COL data")
             return False
         
         col_data, entry_name = extraction_result
@@ -757,7 +757,7 @@ def edit_col_from_img_entry(main_window, row): #vers 2
         # Create temporary COL file
         temp_path = create_temporary_col_file(col_data, entry_name)
         if not temp_path:
-            main_window.log_message("❌ Failed to create temporary COL file")
+            main_window.log_message("Failed to create temporary COL file")
             return False
         
         try:
@@ -770,10 +770,10 @@ def edit_col_from_img_entry(main_window, row): #vers 2
             if editor.load_col_file(temp_path):
                 editor.setWindowTitle(f"COL Editor - {entry.name}")
                 editor.show()  # Use show() instead of exec() for non-modal
-                main_window.log_message(f"✅ COL editor opened for: {entry.name}")
+                main_window.log_message(f"COL editor opened for: {entry.name}")
                 return True
             else:
-                main_window.log_message("❌ Failed to load COL file in editor")
+                main_window.log_message("Failed to load COL file in editor")
                 return False
                 
         finally:
@@ -786,7 +786,7 @@ def edit_col_from_img_entry(main_window, row): #vers 2
             "COL editor component not available. Please check components.Col_Editor.col_editor.py")
         return False
     except Exception as e:
-        main_window.log_message(f"❌ Error editing COL file: {str(e)}")
+        main_window.log_message(f"Error editing COL file: {str(e)}")
         from PyQt6.QtWidgets import QMessageBox
         QMessageBox.critical(main_window, "Error", f"Failed to edit COL file: {str(e)}")
         return False
@@ -797,11 +797,11 @@ def view_col_collision(main_window, row): #vers 2
     try:
         entry_info = get_selected_entry_info(main_window, row)
         if not entry_info or not entry_info['is_col']:
-            main_window.log_message("❌ Selected entry is not a COL file")
+            main_window.log_message("Selected entry is not a COL file")
             return False
         
         entry = entry_info['entry']
-        main_window.log_message(f"🔍 Viewing COL collision for: {entry.name}")
+        main_window.log_message(f"Viewing COL collision for: {entry.name}")
         
         # Use methods from col_operations
         from apps.methods.col_operations import extract_col_from_img_entry, get_col_basic_info
@@ -809,7 +809,7 @@ def view_col_collision(main_window, row): #vers 2
         # Extract COL data
         extraction_result = extract_col_from_img_entry(main_window, row)
         if not extraction_result:
-            main_window.log_message("❌ Failed to extract COL data")
+            main_window.log_message("Failed to extract COL data")
             return False
         
         col_data, entry_name = extraction_result
@@ -818,7 +818,7 @@ def view_col_collision(main_window, row): #vers 2
         basic_info = get_col_basic_info(col_data)
         
         if 'error' in basic_info:
-            main_window.log_message(f"❌ COL analysis error: {basic_info['error']}")
+            main_window.log_message(f"COL analysis error: {basic_info['error']}")
             return False
         
         # Build info display
@@ -833,14 +833,14 @@ def view_col_collision(main_window, row): #vers 2
         from apps.gui.col_dialogs import show_col_info_dialog
         show_col_info_dialog(main_window, info_text, f"COL Collision Info - {entry.name}")
         
-        main_window.log_message(f"✅ COL collision viewed for: {entry.name}")
+        main_window.log_message(f"COL collision viewed for: {entry.name}")
         return True
         
     except ImportError:
-        main_window.log_message("❌ COL operations not available")
+        main_window.log_message("COL operations not available")
         return False
     except Exception as e:
-        main_window.log_message(f"❌ Error viewing COL collision: {str(e)}")
+        main_window.log_message(f"Error viewing COL collision: {str(e)}")
         return False
 
 
@@ -849,7 +849,7 @@ def analyze_col_from_img_entry(main_window, row): #vers 2
     try:
         entry_info = get_selected_entry_info(main_window, row)
         if not entry_info or not entry_info['is_col']:
-            main_window.log_message("❌ Selected entry is not a COL file")
+            main_window.log_message("Selected entry is not a COL file")
             return False
         
         entry = entry_info['entry']
@@ -861,7 +861,7 @@ def analyze_col_from_img_entry(main_window, row): #vers 2
         # Extract COL data
         extraction_result = extract_col_from_img_entry(main_window, row)
         if not extraction_result:
-            main_window.log_message("❌ Failed to extract COL data")
+            main_window.log_message("Failed to extract COL data")
             return False
         
         col_data, entry_name = extraction_result
@@ -892,14 +892,14 @@ def analyze_col_from_img_entry(main_window, row): #vers 2
         from apps.gui.col_dialogs import show_col_analysis_dialog
         show_col_analysis_dialog(main_window, final_analysis, entry.name)
         
-        main_window.log_message(f"✅ COL analysis completed for: {entry.name}")
+        main_window.log_message(f"COL analysis completed for: {entry.name}")
         return True
         
     except ImportError:
-        main_window.log_message("❌ COL analysis components not available")
+        main_window.log_message("COL analysis components not available")
         return False
     except Exception as e:
-        main_window.log_message(f"❌ Error analyzing COL file: {str(e)}")
+        main_window.log_message(f"Error analyzing COL file: {str(e)}")
         return False
 
 
@@ -910,17 +910,17 @@ def edit_col_collision(main_window, row): #vers 2
 
 def edit_dff_model(main_window, row): #vers 1
     """Edit DFF model"""
-    main_window.log_message(f"✏️ Edit DFF model from row {row} - not yet implemented")
+    main_window.log_message(f"Edit DFF model from row {row} - not yet implemented")
 
 
 def edit_txd_textures(main_window, row): #vers 1
     """Edit TXD textures"""
-    main_window.log_message(f"🎨 Edit TXD textures from row {row} - not yet implemented")
+    main_window.log_message(f"Edit TXD textures from row {row} - not yet implemented")
 
 
 def view_dff_model(main_window, row): #vers 1
     """View DFF model"""
-    main_window.log_message(f"👁️ View DFF model from row {row} - not yet implemented")
+    main_window.log_message(f"View DFF model from row {row} - not yet implemented")
 
 
 def view_txd_textures(main_window, row): #vers 1
@@ -930,7 +930,7 @@ def view_txd_textures(main_window, row): #vers 1
 
 def replace_selected_entry(main_window, row): #vers 1
     """Replace selected entry"""
-    main_window.log_message(f"🔄 Replace entry from row {row} - not yet implemented")
+    main_window.log_message(f"Replace entry from row {row} - not yet implemented")
 
 
 def show_entry_properties(main_window, row): #vers 1
@@ -946,9 +946,9 @@ def show_entry_properties(main_window, row): #vers 1
         
         from PyQt6.QtWidgets import QMessageBox
         QMessageBox.information(main_window, "Entry Properties", props_text)
-        main_window.log_message(f"📋 Properties shown for: {entry_info['name']}")
+        main_window.log_message(f"Properties shown for: {entry_info['name']}")
     else:
-        main_window.log_message(f"❌ Unable to get properties for row {row}")
+        main_window.log_message(f"Unable to get properties for row {row}")
 
 
 def enhanced_context_menu_event(main_window, event): #vers 2
@@ -976,15 +976,15 @@ def enhanced_context_menu_event(main_window, event): #vers 2
         if entry_info['is_col']:
             # COL file actions
             from PyQt6.QtGui import QAction
-            view_action = QAction("🔍 View Collision", table)
+            view_action = QAction("View Collision", table)
             view_action.triggered.connect(lambda: view_col_collision(main_window, row))
             menu.addAction(view_action)
             
-            edit_action = QAction("🔧 Edit COL File", table)
+            edit_action = QAction("Edit COL File", table)
             edit_action.triggered.connect(lambda: edit_col_from_img_entry(main_window, row))
             menu.addAction(edit_action)
             
-            analyze_action = QAction("📊 Analyze COL", table)
+            analyze_action = QAction("Analyze COL", table)
             analyze_action.triggered.connect(lambda: analyze_col_from_img_entry(main_window, row))
             menu.addAction(analyze_action)
             
@@ -993,11 +993,11 @@ def enhanced_context_menu_event(main_window, event): #vers 2
         elif entry_info['is_dff']:
             # DFF model actions
             from PyQt6.QtGui import QAction
-            view_action = QAction("👁️ View Model", table)
+            view_action = QAction("View Model", table)
             view_action.triggered.connect(lambda: view_dff_model(main_window, row))
             menu.addAction(view_action)
             
-            edit_action = QAction("✏️ Edit Model", table)
+            edit_action = QAction("Edit Model", table)
             edit_action.triggered.connect(lambda: edit_dff_model(main_window, row))
             menu.addAction(edit_action)
             
@@ -1010,7 +1010,7 @@ def enhanced_context_menu_event(main_window, event): #vers 2
             view_action.triggered.connect(lambda: view_txd_textures(main_window, row))
             menu.addAction(view_action)
             
-            edit_action = QAction("🎨 Edit Textures", table)
+            edit_action = QAction("Edit Textures", table)
             edit_action.triggered.connect(lambda: edit_txd_textures(main_window, row))
             menu.addAction(edit_action)
             
@@ -1018,27 +1018,27 @@ def enhanced_context_menu_event(main_window, event): #vers 2
         
         # Common actions
         from PyQt6.QtGui import QAction
-        props_action = QAction("📋 Properties", table)
+        props_action = QAction("Properties", table)
         props_action.triggered.connect(lambda: show_entry_properties(main_window, row))
         menu.addAction(props_action)
         
-        replace_action = QAction("🔄 Replace Entry", table)
+        replace_action = QAction("Replace Entry", table)
         replace_action.triggered.connect(lambda: replace_selected_entry(main_window, row))
         menu.addAction(replace_action)
         
         # Clipboard operations
         # Copy filename only (acts as "Copy Name")
-        copy_name_action = QAction("📋 Copy Name", table)
+        copy_name_action = QAction("Copy Name", table)
         copy_name_action.triggered.connect(lambda: copy_filename_only(main_window, row))
         menu.addAction(copy_name_action)
         
         # Copy file summary (acts as "Copy Info")
-        copy_info_action = QAction("📋 Copy Info", table)
+        copy_info_action = QAction("Copy Info", table)
         copy_info_action.triggered.connect(lambda: copy_file_summary(main_window, row))
         menu.addAction(copy_info_action)
         
         # Copy selected row
-        copy_row_action = QAction("📋 Copy Selected Row", table)
+        copy_row_action = QAction("Copy Selected Row", table)
         copy_row_action.triggered.connect(lambda: copy_table_row(main_window, row))
         menu.addAction(copy_row_action)
         
@@ -1046,7 +1046,7 @@ def enhanced_context_menu_event(main_window, event): #vers 2
         menu.exec(event.globalPos())
 
     except Exception as e:
-        main_window.log_message(f"❌ Error showing context menu: {str(e)}")
+        main_window.log_message(f"Error showing context menu: {str(e)}")
 
 
 def move_file(main_window, row, entry_info):
@@ -1075,7 +1075,7 @@ def move_file(main_window, row, entry_info):
                                   f"You can rename the entry to reflect a new path structure if needed.")
             
     except Exception as e:
-        main_window.log_message(f"❌ Error moving file: {str(e)}")
+        main_window.log_message(f"Error moving file: {str(e)}")
 
 
 def move_selected_file(main_window):
@@ -1093,7 +1093,7 @@ def move_selected_file(main_window):
                 if entry_info:
                     move_file(main_window, row, entry_info)
     except Exception as e:
-        main_window.log_message(f"❌ Error moving selected file: {str(e)}")
+        main_window.log_message(f"Error moving selected file: {str(e)}")
 
 
 def analyze_file(main_window, row, entry_info):
@@ -1134,7 +1134,7 @@ def analyze_file(main_window, row, entry_info):
                                   f"Type: Generic IMG Entry")
         
     except Exception as e:
-        main_window.log_message(f"❌ Error analyzing file: {str(e)}")
+        main_window.log_message(f"Error analyzing file: {str(e)}")
 
 
 def analyze_selected_file(main_window):
@@ -1151,7 +1151,7 @@ def analyze_selected_file(main_window):
                 if entry_info:
                     analyze_file(main_window, row, entry_info)
     except Exception as e:
-        main_window.log_message(f"❌ Error analyzing selected file: {str(e)}")
+        main_window.log_message(f"Error analyzing selected file: {str(e)}")
 
 
 def show_hex_editor(main_window, row, entry_info):
@@ -1166,7 +1166,7 @@ def show_hex_editor(main_window, row, entry_info):
         show_hex_editor_for_entry(main_window, row, entry_info)
         
     except Exception as e:
-        main_window.log_message(f"❌ Error showing hex editor: {str(e)}")
+        main_window.log_message(f"Error showing hex editor: {str(e)}")
         from PyQt6.QtWidgets import QMessageBox
         QMessageBox.critical(main_window, "Error", f"Could not open hex editor:\\n{str(e)}")
 
@@ -1185,7 +1185,7 @@ def show_hex_editor_selected(main_window):
                 if entry_info:
                     show_hex_editor(main_window, row, entry_info)
     except Exception as e:
-        main_window.log_message(f"❌ Error showing hex editor for selected: {str(e)}")
+        main_window.log_message(f"Error showing hex editor for selected: {str(e)}")
 
 
 def copy_entry_name(main_window, row):
@@ -1199,9 +1199,9 @@ def copy_entry_name(main_window, row):
                 from PyQt6.QtWidgets import QApplication
                 clipboard = QApplication.clipboard()
                 clipboard.setText(entry.name)
-                main_window.log_message(f"📋 Copied name: {entry.name}")
+                main_window.log_message(f"Copied name: {entry.name}")
     except Exception as e:
-        main_window.log_message(f"❌ Error copying entry name: {str(e)}")
+        main_window.log_message(f"Error copying entry name: {str(e)}")
 
 
 def copy_entry_info(main_window, row):
@@ -1216,9 +1216,9 @@ def copy_entry_info(main_window, row):
                 from PyQt6.QtWidgets import QApplication
                 clipboard = QApplication.clipboard()
                 clipboard.setText(info_text)
-                main_window.log_message(f"📋 Copied info for: {entry.name}")
+                main_window.log_message(f"Copied info for: {entry.name}")
     except Exception as e:
-        main_window.log_message(f"❌ Error copying entry info: {str(e)}")
+        main_window.log_message(f"Error copying entry info: {str(e)}")
 
 
 def get_entry_info(main_window, row):
