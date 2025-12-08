@@ -26,11 +26,6 @@ print("PyQt6.QtCore imported successfully")
 from PyQt6.QtCore import pyqtSignal, QMimeData, Qt, QThread, QTimer, QSettings
 from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent, QFont, QIcon, QPixmap, QShortcut, QTextCursor
 # Import comprehensive_fix using importlib to avoid relative import issues
-import importlib.util
-spec = importlib.util.spec_from_file_location("comprehensive", os.path.join(os.path.dirname(__file__), "comprehensive.py"))
-comprehensive_fix_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(comprehensive_fix_module)
-fix_menu_system_and_functionality = comprehensive_fix_module.fix_menu_system_and_functionality
 
 
 # OR use the full path:
