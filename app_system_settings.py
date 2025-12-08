@@ -840,8 +840,241 @@ def main():
     
     main_tab_widget.addTab(tab2, "Basic Gadgets")
     
+    # Create third tab for image backgrounds
+    tab3 = QWidget()
+    tab3_layout = QVBoxLayout(tab3)
+    
+    # Add image background controls
+    image_group, image_layout = main_tab_widget.create_mui_group("Image Backgrounds")
+    
+    # Primary background image controls
+    image_layout.addWidget(QLabel("Primary Background Image:"))
+    primary_image_btn = QPushButton("Select Image")
+    primary_image_path = QLineEdit()
+    primary_image_btn.clicked.connect(lambda: select_image_file(primary_image_path))
+    primary_image_layout = QHBoxLayout()
+    primary_image_layout.addWidget(primary_image_path)
+    primary_image_layout.addWidget(primary_image_btn)
+    image_layout.addLayout(primary_image_layout)
+    
+    primary_mode_layout = QHBoxLayout()
+    primary_mode_layout.addWidget(QLabel("Mode:"))
+    primary_mode_combo = QComboBox()
+    primary_mode_combo.addItems(["stretch", "tile", "center", "fit", "shaded"])
+    primary_mode_layout.addWidget(primary_mode_combo)
+    image_layout.addLayout(primary_mode_layout)
+    
+    primary_opacity_layout = QHBoxLayout()
+    primary_opacity_layout.addWidget(QLabel("Opacity:"))
+    primary_opacity_spin = QSpinBox()
+    primary_opacity_spin.setRange(0, 100)
+    primary_opacity_spin.setValue(100)
+    primary_opacity_layout.addWidget(primary_opacity_spin)
+    image_layout.addLayout(primary_opacity_layout)
+    
+    # Secondary background image controls
+    image_layout.addWidget(QLabel("Secondary Background Image:"))
+    secondary_image_btn = QPushButton("Select Image")
+    secondary_image_path = QLineEdit()
+    secondary_image_btn.clicked.connect(lambda: select_image_file(secondary_image_path))
+    secondary_image_layout = QHBoxLayout()
+    secondary_image_layout.addWidget(secondary_image_path)
+    secondary_image_layout.addWidget(secondary_image_btn)
+    image_layout.addLayout(secondary_image_layout)
+    
+    secondary_mode_layout = QHBoxLayout()
+    secondary_mode_layout.addWidget(QLabel("Mode:"))
+    secondary_mode_combo = QComboBox()
+    secondary_mode_combo.addItems(["stretch", "tile", "center", "fit", "shaded"])
+    secondary_mode_layout.addWidget(secondary_mode_combo)
+    image_layout.addLayout(secondary_mode_layout)
+    
+    secondary_opacity_layout = QHBoxLayout()
+    secondary_opacity_layout.addWidget(QLabel("Opacity:"))
+    secondary_opacity_spin = QSpinBox()
+    secondary_opacity_spin.setRange(0, 100)
+    secondary_opacity_spin.setValue(100)
+    secondary_opacity_layout.addWidget(secondary_opacity_spin)
+    image_layout.addLayout(secondary_opacity_layout)
+    
+    # Panel background image controls
+    image_layout.addWidget(QLabel("Panel Background Image:"))
+    panel_image_btn = QPushButton("Select Image")
+    panel_image_path = QLineEdit()
+    panel_image_btn.clicked.connect(lambda: select_image_file(panel_image_path))
+    panel_image_layout = QHBoxLayout()
+    panel_image_layout.addWidget(panel_image_path)
+    panel_image_layout.addWidget(panel_image_btn)
+    image_layout.addLayout(panel_image_layout)
+    
+    panel_mode_layout = QHBoxLayout()
+    panel_mode_layout.addWidget(QLabel("Mode:"))
+    panel_mode_combo = QComboBox()
+    panel_mode_combo.addItems(["stretch", "tile", "center", "fit", "shaded"])
+    panel_mode_layout.addWidget(panel_mode_combo)
+    image_layout.addLayout(panel_mode_layout)
+    
+    panel_opacity_layout = QHBoxLayout()
+    panel_opacity_layout.addWidget(QLabel("Opacity:"))
+    panel_opacity_spin = QSpinBox()
+    panel_opacity_spin.setRange(0, 100)
+    panel_opacity_spin.setValue(100)
+    panel_opacity_layout.addWidget(panel_opacity_spin)
+    image_layout.addLayout(panel_opacity_layout)
+    
+    # Apply button to set the image backgrounds
+    apply_image_btn = QPushButton("Apply Image Backgrounds")
+    def apply_image_backgrounds():
+        # Update system settings with image paths and modes
+        system_settings.current_settings['bg_primary_image'] = primary_image_path.text()
+        system_settings.current_settings['bg_primary_mode'] = primary_mode_combo.currentText()
+        system_settings.current_settings['bg_primary_opacity'] = primary_opacity_spin.value()
+        
+        system_settings.current_settings['bg_secondary_image'] = secondary_image_path.text()
+        system_settings.current_settings['bg_secondary_mode'] = secondary_mode_combo.currentText()
+        system_settings.current_settings['bg_secondary_opacity'] = secondary_opacity_spin.value()
+        
+        system_settings.current_settings['panel_bg_image'] = panel_image_path.text()
+        system_settings.current_settings['panel_bg_mode'] = panel_mode_combo.currentText()
+        system_settings.current_settings['panel_bg_opacity'] = panel_opacity_spin.value()
+        
+        # Update image settings
+        image_settings = ThemeImageSettings(
+            bg_primary_image=primary_image_path.text(),
+            bg_secondary_image=secondary_image_path.text(),
+            panel_bg_image=panel_image_path.text(),
+            bg_primary_mode=primary_mode_combo.currentText(),
+            bg_secondary_mode=secondary_mode_combo.currentText(),
+            panel_bg_mode=panel_mode_combo.currentText(),
+            bg_primary_opacity=primary_opacity_spin.value(),
+            bg_secondary_opacity=secondary_opacity_spin.value(),
+            panel_bg_opacity=panel_opacity_spin.value()
+        )
+        
+        # Apply to the tab widget
+        main_tab_widget.set_image_backgrounds(image_settings)
+        print("Image backgrounds applied successfully!")
+    
+    apply_image_btn.clicked.connect(apply_image_backgrounds)
+    image_layout.addWidget(apply_image_btn)
+    
+    tab3_layout.addWidget(image_group)
+    
+    # Add preview area
+    preview_group, preview_layout = main_tab_widget.create_mui_group("Preview")
+    preview_label = QLabel("Image backgrounds will appear here when applied")
+    preview_label.setMinimumHeight(200)
+    preview_label.setStyleSheet("background-color: lightgray; border: 1px solid gray;")
+    preview_layout.addWidget(preview_label)
+    tab3_layout.addWidget(preview_group)
+    
+    main_tab_widget.addTab(tab3, "Image Backgrounds")
+    
+    # Create fourth tab for system theme capture
+    tab4 = QWidget()
+    tab4_layout = QVBoxLayout(tab4)
+    
+    theme_group, theme_layout = main_tab_widget.create_mui_group("System Theme Capture")
+    
+    theme_layout.addWidget(QLabel("System Theme Detection and Capture"))
+    
+    # System theme info display
+    theme_info_display = QTextEdit()
+    theme_info_display.setReadOnly(True)
+    theme_info_display.setMaximumHeight(150)
+    theme_layout.addWidget(theme_info_display)
+    
+    # Capture system theme button
+    capture_theme_btn = QPushButton("Capture System Theme")
+    def capture_system_theme():
+        theme_data = system_settings.detect_and_save_system_theme()
+        if theme_data:
+            theme_info_display.setPlainText(f"System theme captured successfully!\n\nTheme: {theme_data['name']}\nDark mode: {theme_data['mui_settings'].get('is_dark_mode', False)}")
+            print("System theme captured and saved!")
+        else:
+            theme_info_display.setPlainText("Failed to capture system theme.")
+            print("Failed to capture system theme.")
+    
+    capture_theme_btn.clicked.connect(capture_system_theme)
+    theme_layout.addWidget(capture_theme_btn)
+    
+    # Convert to JSON button
+    convert_to_json_btn = QPushButton("Convert to JSON Theme File")
+    def convert_theme_to_json():
+        theme_data = system_settings.detect_and_save_system_theme()
+        if theme_data:
+            # Save as JSON file in themes directory
+            themes_dir = Path("apps/themes")
+            themes_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Generate a unique filename
+            timestamp = QDateTime.currentDateTime().toString("yyyyMMdd_hhmmss")
+            theme_file = themes_dir / f"system_theme_{timestamp}.json"
+            
+            try:
+                with open(theme_file, 'w', encoding='utf-8') as f:
+                    json.dump(theme_data, f, indent=2, ensure_ascii=False)
+                theme_info_display.append(f"\n\nTheme saved as JSON: {theme_file}")
+                print(f"Theme saved as JSON: {theme_file}")
+            except Exception as e:
+                theme_info_display.append(f"\n\nError saving theme as JSON: {e}")
+                print(f"Error saving theme as JSON: {e}")
+        else:
+            theme_info_display.append("\n\nFailed to capture system theme for JSON conversion.")
+            print("Failed to capture system theme for JSON conversion.")
+    
+    convert_to_json_btn.clicked.connect(convert_theme_to_json)
+    theme_layout.addWidget(convert_to_json_btn)
+    
+    # Load theme from file button
+    load_theme_btn = QPushButton("Load Theme from JSON File")
+    def load_theme_from_file():
+        file_path, _ = QFileDialog.getOpenFileName(
+            None, "Load Theme File", "apps/themes", "JSON Files (*.json)"
+        )
+        if file_path:
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    theme_data = json.load(f)
+                
+                # Update current settings with loaded theme
+                system_settings.current_settings.update({
+                    'theme': theme_data.get('name', 'Custom Theme'),
+                    'colors': theme_data.get('colors', {}),
+                    'mui_settings': theme_data.get('mui_settings', {})
+                })
+                
+                theme_info_display.append(f"\n\nTheme loaded from: {file_path}")
+                print(f"Theme loaded from: {file_path}")
+            except Exception as e:
+                theme_info_display.append(f"\n\nError loading theme: {e}")
+                print(f"Error loading theme: {e}")
+    
+    load_theme_btn.clicked.connect(load_theme_from_file)
+    theme_layout.addWidget(load_theme_btn)
+    
+    tab4_layout.addWidget(theme_group)
+    
+    # Add preview of system theme
+    theme_preview_group, theme_preview_layout = main_tab_widget.create_mui_group("Theme Preview")
+    theme_preview_label = QLabel("System theme colors will be displayed here")
+    theme_preview_label.setMinimumHeight(100)
+    theme_preview_label.setStyleSheet(f"background-color: {system_settings.current_settings.get('colors', {}).get('bg_primary', '#F0F0F0')}; border: 1px solid gray;")
+    theme_preview_layout.addWidget(theme_preview_label)
+    tab4_layout.addWidget(theme_preview_group)
+    
+    main_tab_widget.addTab(tab4, "System Theme Capture")
+    
     # Set the main tab widget as central widget
     window.setCentralWidget(main_tab_widget)
+    
+    # Define function to select image files
+    def select_image_file(line_edit):
+        file_path, _ = QFileDialog.getOpenFileName(
+            None, "Select Image", "", "Image Files (*.png *.jpg *.jpeg *.gif *.bmp *.tiff *.svg)"
+        )
+        if file_path:
+            line_edit.setText(file_path)
     
     # Add a menu for testing new features
     menu_bar = window.menuBar()
