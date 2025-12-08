@@ -44,7 +44,8 @@
 │   │   │   │   ├── img_factory_thread.py
 │   │   │   │   └── mui_demo.py
 │   │   │   ├── imgfactory.py
-│   │   │   └── __init__.py
+│   │   │   ├── __init__.py
+│   │   │   └── mui_demo.py
 │   │   ├── __init__.py
 │   │   ├── Map_Editor
 │   │   │   ├── Map_Workshop.py
@@ -313,7 +314,6 @@
 ├── cc.py
 ├── ChangeLog.md
 ├── Credits.md
-├── img_factory_debug.log
 ├── launch_imgfactory.py
 ├── package-lock.json
 ├── TODO.md
