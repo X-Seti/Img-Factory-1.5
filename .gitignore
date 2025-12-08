@@ -1,8 +1,7 @@
+```python
 # Compiled and build artifacts
 *.pyc
 __pycache__/
-*.o
-*.obj
 
 # Dependencies
 .venv/
@@ -23,30 +22,30 @@ node_modules/
 .vscode/
 .idea/
 
-# Coverage
+# Coverage reports
 .coverage
 coverage/
 htmlcov/
 
-# Distribution artifacts
-dist/
-build/
-*.egg-info/
-
 # Python specific
 *.pyo
+*.pyd
 .Python
 *.so
-*.dylib
-
-# MyPy
-.mypy_cache/
-
-# PyTest
-.pytest_cache/
+*.egg-info/
+dist/
+build/
+*.egg
 
 # System files
 .DS_Store
 Thumbs.db
-*.swp
-*.swo
+```
+
+Wait, let me reconsider. The only modified file is `apps/core/right_click_actions.py` which is a Python source file. There are no build artifacts, dependency directories, or temporary files in the change list that would require new ignore rules. The current .gitignore appears to be empty based on the format shown.
+
+Since only a source code file was modified and no artifacts that should be ignored were present, the output should be empty.
+
+```python
+
+```
