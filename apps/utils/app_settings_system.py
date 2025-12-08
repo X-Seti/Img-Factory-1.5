@@ -3029,6 +3029,21 @@ class SettingsDialog(QDialog): #vers 15
         self.interface_tab = self._create_interface_tab()
         self.tabs.addTab(self.interface_tab, "Interface")
 
+        self.background_tab = self._create_background_tab()
+        self.tabs.addTab(self.background_tab, "Background")
+
+        self.advanced_gadgets_tab = self._create_advanced_gadgets_tab()
+        self.tabs.addTab(self.advanced_gadgets_tab, "Advanced Gadgets")
+
+        self.transparency_tab = self._create_transparency_tab()
+        self.tabs.addTab(self.transparency_tab, "Transparency")
+
+        self.shadows_tab = self._create_shadows_tab()
+        self.tabs.addTab(self.shadows_tab, "Shadows")
+
+        self.ui_management_tab = self._create_ui_management_tab()
+        self.tabs.addTab(self.ui_management_tab, "UI Management")
+
         content_layout.addWidget(self.tabs)
 
         # Buttons
@@ -5698,6 +5713,1123 @@ Ready for operations..."""
         layout.addStretch()
 
         return widget
+
+    def _create_background_tab(self): #vers 1
+        """Create background settings tab - Image backgrounds for panels, buttons, etc."""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+
+        # Instructions
+        info_label = QLabel(
+            "<b>Background Images:</b><br>"
+            "Set background images for various UI elements with positioning options."
+        )
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("padding: 8px; border-radius: 4px;")
+        layout.addWidget(info_label)
+
+        # Scroll area for controls
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+        scroll_layout.setSpacing(15)
+
+        # Panel Background
+        panel_group = QGroupBox("Panel Background")
+        panel_layout = QVBoxLayout(panel_group)
+
+        # Panel Background Image
+        panel_bg_layout = QHBoxLayout()
+        panel_bg_layout.addWidget(QLabel("Image Path:"))
+        self.panel_bg_path = QLineEdit()
+        self.panel_bg_path.setPlaceholderText("Path to background image")
+        panel_bg_layout.addWidget(self.panel_bg_path)
+
+        browse_panel_btn = QPushButton("Browse")
+        browse_panel_btn.clicked.connect(lambda: self._browse_background_image("panel"))
+        panel_bg_layout.addWidget(browse_panel_btn)
+
+        clear_panel_btn = QPushButton("Clear")
+        clear_panel_btn.clicked.connect(lambda: self._clear_background_image("panel"))
+        panel_bg_layout.addWidget(clear_panel_btn)
+
+        panel_layout.addLayout(panel_bg_layout)
+
+        # Panel Background Mode
+        panel_mode_layout = QHBoxLayout()
+        panel_mode_layout.addWidget(QLabel("Display Mode:"))
+        self.panel_bg_mode = QComboBox()
+        self.panel_bg_mode.addItems(["Tiled", "Stretched", "Shaded"])
+        panel_mode_layout.addWidget(self.panel_bg_mode)
+        panel_mode_layout.addStretch()
+        panel_layout.addLayout(panel_mode_layout)
+
+        scroll_layout.addWidget(panel_group)
+
+        # Primary Background
+        primary_group = QGroupBox("Primary Background")
+        primary_layout = QVBoxLayout(primary_group)
+
+        # Primary Background Image
+        primary_bg_layout = QHBoxLayout()
+        primary_bg_layout.addWidget(QLabel("Image Path:"))
+        self.primary_bg_path = QLineEdit()
+        self.primary_bg_path.setPlaceholderText("Path to primary background image")
+        primary_bg_layout.addWidget(self.primary_bg_path)
+
+        browse_primary_btn = QPushButton("Browse")
+        browse_primary_btn.clicked.connect(lambda: self._browse_background_image("primary"))
+        primary_bg_layout.addWidget(browse_primary_btn)
+
+        clear_primary_btn = QPushButton("Clear")
+        clear_primary_btn.clicked.connect(lambda: self._clear_background_image("primary"))
+        primary_bg_layout.addWidget(clear_primary_btn)
+
+        primary_layout.addLayout(primary_bg_layout)
+
+        # Primary Background Mode
+        primary_mode_layout = QHBoxLayout()
+        primary_mode_layout.addWidget(QLabel("Display Mode:"))
+        self.primary_bg_mode = QComboBox()
+        self.primary_bg_mode.addItems(["Tiled", "Stretched", "Shaded"])
+        primary_mode_layout.addWidget(self.primary_bg_mode)
+        primary_mode_layout.addStretch()
+        primary_layout.addLayout(primary_mode_layout)
+
+        scroll_layout.addWidget(primary_group)
+
+        # Secondary Background
+        secondary_group = QGroupBox("Secondary Background")
+        secondary_layout = QVBoxLayout(secondary_group)
+
+        # Secondary Background Image
+        secondary_bg_layout = QHBoxLayout()
+        secondary_bg_layout.addWidget(QLabel("Image Path:"))
+        self.secondary_bg_path = QLineEdit()
+        self.secondary_bg_path.setPlaceholderText("Path to secondary background image")
+        secondary_bg_layout.addWidget(self.secondary_bg_path)
+
+        browse_secondary_btn = QPushButton("Browse")
+        browse_secondary_btn.clicked.connect(lambda: self._browse_background_image("secondary"))
+        secondary_bg_layout.addWidget(browse_secondary_btn)
+
+        clear_secondary_btn = QPushButton("Clear")
+        clear_secondary_btn.clicked.connect(lambda: self._clear_background_image("secondary"))
+        secondary_bg_layout.addWidget(clear_secondary_btn)
+
+        secondary_layout.addLayout(secondary_bg_layout)
+
+        # Secondary Background Mode
+        secondary_mode_layout = QHBoxLayout()
+        secondary_mode_layout.addWidget(QLabel("Display Mode:"))
+        self.secondary_bg_mode = QComboBox()
+        self.secondary_bg_mode.addItems(["Tiled", "Stretched", "Shaded"])
+        secondary_mode_layout.addWidget(self.secondary_bg_mode)
+        secondary_mode_layout.addStretch()
+        secondary_layout.addLayout(secondary_mode_layout)
+
+        scroll_layout.addWidget(secondary_group)
+
+        # Button Background
+        button_group = QGroupBox("Button Background")
+        button_layout = QVBoxLayout(button_group)
+
+        # Button Background Image
+        button_bg_layout = QHBoxLayout()
+        button_bg_layout.addWidget(QLabel("Image Path:"))
+        self.button_bg_path = QLineEdit()
+        self.button_bg_path.setPlaceholderText("Path to button background image")
+        button_bg_layout.addWidget(self.button_bg_path)
+
+        browse_button_btn = QPushButton("Browse")
+        browse_button_btn.clicked.connect(lambda: self._browse_background_image("button"))
+        button_bg_layout.addWidget(browse_button_btn)
+
+        clear_button_btn = QPushButton("Clear")
+        clear_button_btn.clicked.connect(lambda: self._clear_background_image("button"))
+        button_bg_layout.addWidget(clear_button_btn)
+
+        button_layout.addLayout(button_bg_layout)
+
+        # Button Background Mode
+        button_mode_layout = QHBoxLayout()
+        button_mode_layout.addWidget(QLabel("Display Mode:"))
+        self.button_bg_mode = QComboBox()
+        self.button_bg_mode.addItems(["Tiled", "Stretched", "Shaded"])
+        button_mode_layout.addWidget(self.button_bg_mode)
+        button_mode_layout.addStretch()
+        button_layout.addLayout(button_mode_layout)
+
+        scroll_layout.addWidget(button_group)
+
+        scroll_layout.addStretch()
+        scroll.setWidget(scroll_widget)
+        layout.addWidget(scroll)
+
+        return tab
+
+    def _create_transparency_tab(self): #vers 1
+        """Create transparency settings tab - Opacity controls for UI elements."""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+
+        # Instructions
+        info_label = QLabel(
+            "<b>Transparency Settings:</b><br>"
+            "Configure opacity levels for various UI elements (0.0 = fully transparent, 1.0 = fully opaque)."
+        )
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("padding: 8px; border-radius: 4px;")
+        layout.addWidget(info_label)
+
+        # Scroll area for controls
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+        scroll_layout.setSpacing(15)
+
+        # Titlebar Transparency
+        titlebar_group = QGroupBox("Titlebar Transparency")
+        titlebar_layout = QVBoxLayout(titlebar_group)
+
+        # Titlebar Opacity
+        titlebar_opacity_layout = QHBoxLayout()
+        titlebar_opacity_layout.addWidget(QLabel("Opacity:"))
+        self.titlebar_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.titlebar_opacity_slider.setRange(0, 100)
+        self.titlebar_opacity_slider.setValue(100)  # Fully opaque by default
+        self.titlebar_opacity_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.titlebar_opacity_slider.setTickInterval(10)
+        titlebar_opacity_layout.addWidget(self.titlebar_opacity_slider)
+        self.titlebar_opacity_label = QLabel("1.0")
+        self.titlebar_opacity_label.setFixedWidth(40)
+        titlebar_opacity_layout.addWidget(self.titlebar_opacity_label)
+        titlebar_layout.addLayout(titlebar_opacity_layout)
+
+        self.titlebar_opacity_slider.valueChanged.connect(
+            lambda v: self.titlebar_opacity_label.setText(f"{v/100:.1f}")
+        )
+
+        scroll_layout.addWidget(titlebar_group)
+
+        # Panel Transparency
+        panel_group = QGroupBox("Panel Transparency")
+        panel_layout = QVBoxLayout(panel_group)
+
+        # Panel Opacity
+        panel_opacity_layout = QHBoxLayout()
+        panel_opacity_layout.addWidget(QLabel("Opacity:"))
+        self.panel_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.panel_opacity_slider.setRange(0, 100)
+        self.panel_opacity_slider.setValue(100)  # Fully opaque by default
+        self.panel_opacity_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.panel_opacity_slider.setTickInterval(10)
+        panel_opacity_layout.addWidget(self.panel_opacity_slider)
+        self.panel_opacity_label = QLabel("1.0")
+        self.panel_opacity_label.setFixedWidth(40)
+        panel_opacity_layout.addWidget(self.panel_opacity_label)
+        panel_layout.addLayout(panel_opacity_layout)
+
+        self.panel_opacity_slider.valueChanged.connect(
+            lambda v: self.panel_opacity_label.setText(f"{v/100:.1f}")
+        )
+
+        scroll_layout.addWidget(panel_group)
+
+        # Button Transparency
+        button_group = QGroupBox("Button Transparency")
+        button_layout = QVBoxLayout(button_group)
+
+        # Button Opacity
+        button_opacity_layout = QHBoxLayout()
+        button_opacity_layout.addWidget(QLabel("Opacity:"))
+        self.button_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.button_opacity_slider.setRange(0, 100)
+        self.button_opacity_slider.setValue(100)  # Fully opaque by default
+        self.button_opacity_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.button_opacity_slider.setTickInterval(10)
+        button_opacity_layout.addWidget(self.button_opacity_slider)
+        self.button_opacity_label = QLabel("1.0")
+        self.button_opacity_label.setFixedWidth(40)
+        button_opacity_layout.addWidget(self.button_opacity_label)
+        button_layout.addLayout(button_opacity_layout)
+
+        self.button_opacity_slider.valueChanged.connect(
+            lambda v: self.button_opacity_label.setText(f"{v/100:.1f}")
+        )
+
+        scroll_layout.addWidget(button_group)
+
+        # Widget Transparency
+        widget_group = QGroupBox("Widget Transparency")
+        widget_layout = QVBoxLayout(widget_group)
+
+        # Widget Opacity
+        widget_opacity_layout = QHBoxLayout()
+        widget_opacity_layout.addWidget(QLabel("Opacity:"))
+        self.widget_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.widget_opacity_slider.setRange(0, 100)
+        self.widget_opacity_slider.setValue(100)  # Fully opaque by default
+        self.widget_opacity_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.widget_opacity_slider.setTickInterval(10)
+        widget_opacity_layout.addWidget(self.widget_opacity_slider)
+        self.widget_opacity_label = QLabel("1.0")
+        self.widget_opacity_label.setFixedWidth(40)
+        widget_opacity_layout.addWidget(self.widget_opacity_label)
+        widget_layout.addLayout(widget_opacity_layout)
+
+        self.widget_opacity_slider.valueChanged.connect(
+            lambda v: self.widget_opacity_label.setText(f"{v/100:.1f}")
+        )
+
+        scroll_layout.addWidget(widget_group)
+
+        scroll_layout.addStretch()
+        scroll.setWidget(scroll_widget)
+        layout.addWidget(scroll)
+
+        return tab
+
+    def _create_shadows_tab(self): #vers 1
+        """Create shadow effects settings tab - Depth and shadow controls for UI elements."""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+
+        # Instructions
+        info_label = QLabel(
+            "<b>Shadow Effects:</b><br>"
+            "Configure shadow depth and appearance for buttons, panels, and other UI elements."
+        )
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("padding: 8px; border-radius: 4px;")
+        layout.addWidget(info_label)
+
+        # Scroll area for controls
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+        scroll_layout.setSpacing(15)
+
+        # Button Shadow Settings
+        button_shadow_group = QGroupBox("Button Shadows")
+        button_shadow_layout = QVBoxLayout(button_shadow_group)
+
+        # Shadow Depth
+        shadow_depth_layout = QHBoxLayout()
+        shadow_depth_layout.addWidget(QLabel("Shadow Depth:"))
+        self.button_shadow_depth = QSlider(Qt.Orientation.Horizontal)
+        self.button_shadow_depth.setRange(0, 20)
+        self.button_shadow_depth.setValue(3)
+        self.button_shadow_depth.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.button_shadow_depth.setTickInterval(5)
+        shadow_depth_layout.addWidget(self.button_shadow_depth)
+        self.button_shadow_depth_label = QLabel("3px")
+        self.button_shadow_depth_label.setFixedWidth(40)
+        shadow_depth_layout.addWidget(self.button_shadow_depth_label)
+        button_shadow_layout.addLayout(shadow_depth_layout)
+
+        self.button_shadow_depth.valueChanged.connect(
+            lambda v: self.button_shadow_depth_label.setText(f"{v}px")
+        )
+
+        # Shadow Blur
+        shadow_blur_layout = QHBoxLayout()
+        shadow_blur_layout.addWidget(QLabel("Shadow Blur:"))
+        self.button_shadow_blur = QSlider(Qt.Orientation.Horizontal)
+        self.button_shadow_blur.setRange(0, 20)
+        self.button_shadow_blur.setValue(5)
+        self.button_shadow_blur.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.button_shadow_blur.setTickInterval(5)
+        shadow_blur_layout.addWidget(self.button_shadow_blur)
+        self.button_shadow_blur_label = QLabel("5px")
+        self.button_shadow_blur_label.setFixedWidth(40)
+        shadow_blur_layout.addWidget(self.button_shadow_blur_label)
+        button_shadow_layout.addLayout(shadow_blur_layout)
+
+        self.button_shadow_blur.valueChanged.connect(
+            lambda v: self.button_shadow_blur_label.setText(f"{v}px")
+        )
+
+        # Shadow Opacity
+        shadow_opacity_layout = QHBoxLayout()
+        shadow_opacity_layout.addWidget(QLabel("Shadow Opacity:"))
+        self.button_shadow_opacity = QSlider(Qt.Orientation.Horizontal)
+        self.button_shadow_opacity.setRange(0, 100)
+        self.button_shadow_opacity.setValue(30)
+        self.button_shadow_opacity.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.button_shadow_opacity.setTickInterval(25)
+        shadow_opacity_layout.addWidget(self.button_shadow_opacity)
+        self.button_shadow_opacity_label = QLabel("30%")
+        self.button_shadow_opacity_label.setFixedWidth(40)
+        shadow_opacity_layout.addWidget(self.button_shadow_opacity_label)
+        button_shadow_layout.addLayout(shadow_opacity_layout)
+
+        self.button_shadow_opacity.valueChanged.connect(
+            lambda v: self.button_shadow_opacity_label.setText(f"{v}%")
+        )
+
+        scroll_layout.addWidget(button_shadow_group)
+
+        # Panel Shadow Settings
+        panel_shadow_group = QGroupBox("Panel Shadows")
+        panel_shadow_layout = QVBoxLayout(panel_shadow_group)
+
+        # Shadow Depth
+        panel_shadow_depth_layout = QHBoxLayout()
+        panel_shadow_depth_layout.addWidget(QLabel("Shadow Depth:"))
+        self.panel_shadow_depth = QSlider(Qt.Orientation.Horizontal)
+        self.panel_shadow_depth.setRange(0, 20)
+        self.panel_shadow_depth.setValue(5)
+        self.panel_shadow_depth.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.panel_shadow_depth.setTickInterval(5)
+        panel_shadow_depth_layout.addWidget(self.panel_shadow_depth)
+        self.panel_shadow_depth_label = QLabel("5px")
+        self.panel_shadow_depth_label.setFixedWidth(40)
+        panel_shadow_depth_layout.addWidget(self.panel_shadow_depth_label)
+        panel_shadow_layout.addLayout(panel_shadow_depth_layout)
+
+        self.panel_shadow_depth.valueChanged.connect(
+            lambda v: self.panel_shadow_depth_label.setText(f"{v}px")
+        )
+
+        # Shadow Blur
+        panel_shadow_blur_layout = QHBoxLayout()
+        panel_shadow_blur_layout.addWidget(QLabel("Shadow Blur:"))
+        self.panel_shadow_blur = QSlider(Qt.Orientation.Horizontal)
+        self.panel_shadow_blur.setRange(0, 20)
+        self.panel_shadow_blur.setValue(8)
+        self.panel_shadow_blur.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.panel_shadow_blur.setTickInterval(5)
+        panel_shadow_blur_layout.addWidget(self.panel_shadow_blur)
+        self.panel_shadow_blur_label = QLabel("8px")
+        self.panel_shadow_blur_label.setFixedWidth(40)
+        panel_shadow_blur_layout.addWidget(self.panel_shadow_blur_label)
+        panel_shadow_layout.addLayout(panel_shadow_blur_layout)
+
+        self.panel_shadow_blur.valueChanged.connect(
+            lambda v: self.panel_shadow_blur_label.setText(f"{v}px")
+        )
+
+        # Shadow Opacity
+        panel_shadow_opacity_layout = QHBoxLayout()
+        panel_shadow_opacity_layout.addWidget(QLabel("Shadow Opacity:"))
+        self.panel_shadow_opacity = QSlider(Qt.Orientation.Horizontal)
+        self.panel_shadow_opacity.setRange(0, 100)
+        self.panel_shadow_opacity.setValue(25)
+        self.panel_shadow_opacity.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.panel_shadow_opacity.setTickInterval(25)
+        panel_shadow_opacity_layout.addWidget(self.panel_shadow_opacity)
+        self.panel_shadow_opacity_label = QLabel("25%")
+        self.panel_shadow_opacity_label.setFixedWidth(40)
+        panel_shadow_opacity_layout.addWidget(self.panel_shadow_opacity_label)
+        panel_shadow_layout.addLayout(panel_shadow_opacity_layout)
+
+        self.panel_shadow_opacity.valueChanged.connect(
+            lambda v: self.panel_shadow_opacity_label.setText(f"{v}%")
+        )
+
+        scroll_layout.addWidget(panel_shadow_group)
+
+        # General Shadow Settings
+        general_shadow_group = QGroupBox("General Shadow Settings")
+        general_shadow_layout = QVBoxLayout(general_shadow_group)
+
+        # Enable Shadows
+        self.enable_shadows_check = QCheckBox("Enable shadows for all UI elements")
+        self.enable_shadows_check.setChecked(True)
+        general_shadow_layout.addWidget(self.enable_shadows_check)
+
+        # Shadow Color
+        shadow_color_layout = QHBoxLayout()
+        shadow_color_layout.addWidget(QLabel("Shadow Color:"))
+        self.shadow_color_button = QPushButton("Select Color")
+        self.shadow_color_button.clicked.connect(self._select_shadow_color)
+        shadow_color_layout.addWidget(self.shadow_color_button)
+        shadow_color_layout.addStretch()
+        general_shadow_layout.addLayout(shadow_color_layout)
+
+        scroll_layout.addWidget(general_shadow_group)
+
+        scroll_layout.addStretch()
+        scroll.setWidget(scroll_widget)
+        layout.addWidget(scroll)
+
+        return tab
+
+    def _create_advanced_gadgets_tab(self): #vers 1
+        """Create advanced gadgets support tab - String, Gauge, Scale, Colorfield, List, Numeric, Knob, Levelmeter, Slider, Radio, Cycle, Palette, Popstring"""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+
+        # Instructions
+        info_label = QLabel(
+            "<b>Advanced Gadgets:</b><br>"
+            "Configure Amiga MUI style gadgets with proper styling."
+        )
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("padding: 8px; border-radius: 4px;")
+        layout.addWidget(info_label)
+
+        # Scroll area for controls
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+        scroll_layout.setSpacing(15)
+
+        # String Gadgets
+        string_group = QGroupBox("String Gadgets")
+        string_layout = QVBoxLayout(string_group)
+
+        # String Background Color
+        string_bg_layout = QHBoxLayout()
+        string_bg_layout.addWidget(QLabel("Background Color:"))
+        self.string_bg_color = QPushButton("Select Color")
+        self.string_bg_color.clicked.connect(lambda: self._select_color_for_gadget("string_bg"))
+        string_bg_layout.addWidget(self.string_bg_color)
+        string_bg_layout.addStretch()
+        string_layout.addLayout(string_bg_layout)
+
+        # String Text Color
+        string_text_layout = QHBoxLayout()
+        string_text_layout.addWidget(QLabel("Text Color:"))
+        self.string_text_color = QPushButton("Select Color")
+        self.string_text_color.clicked.connect(lambda: self._select_color_for_gadget("string_text"))
+        string_text_layout.addWidget(self.string_text_color)
+        string_text_layout.addStretch()
+        string_layout.addLayout(string_text_layout)
+
+        # String Border Color
+        string_border_layout = QHBoxLayout()
+        string_border_layout.addWidget(QLabel("Border Color:"))
+        self.string_border_color = QPushButton("Select Color")
+        self.string_border_color.clicked.connect(lambda: self._select_color_for_gadget("string_border"))
+        string_border_layout.addWidget(self.string_border_color)
+        string_border_layout.addStretch()
+        string_layout.addLayout(string_border_layout)
+
+        scroll_layout.addWidget(string_group)
+
+        # Gauge Gadgets
+        gauge_group = QGroupBox("Gauge Gadgets")
+        gauge_layout = QVBoxLayout(gauge_group)
+
+        # Gauge Background Color
+        gauge_bg_layout = QHBoxLayout()
+        gauge_bg_layout.addWidget(QLabel("Background Color:"))
+        self.gauge_bg_color = QPushButton("Select Color")
+        self.gauge_bg_color.clicked.connect(lambda: self._select_color_for_gadget("gauge_bg"))
+        gauge_bg_layout.addWidget(self.gauge_bg_color)
+        gauge_bg_layout.addStretch()
+        gauge_layout.addLayout(gauge_bg_layout)
+
+        # Gauge Fill Color
+        gauge_fill_layout = QHBoxLayout()
+        gauge_fill_layout.addWidget(QLabel("Fill Color:"))
+        self.gauge_fill_color = QPushButton("Select Color")
+        self.gauge_fill_color.clicked.connect(lambda: self._select_color_for_gadget("gauge_fill"))
+        gauge_fill_layout.addWidget(self.gauge_fill_color)
+        gauge_fill_layout.addStretch()
+        gauge_layout.addLayout(gauge_fill_layout)
+
+        # Gauge Border Color
+        gauge_border_layout = QHBoxLayout()
+        gauge_border_layout.addWidget(QLabel("Border Color:"))
+        self.gauge_border_color = QPushButton("Select Color")
+        self.gauge_border_color.clicked.connect(lambda: self._select_color_for_gadget("gauge_border"))
+        gauge_border_layout.addWidget(self.gauge_border_color)
+        gauge_border_layout.addStretch()
+        gauge_layout.addLayout(gauge_border_layout)
+
+        scroll_layout.addWidget(gauge_group)
+
+        # Scale Gadgets
+        scale_group = QGroupBox("Scale Gadgets")
+        scale_layout = QVBoxLayout(scale_group)
+
+        # Scale Background Color
+        scale_bg_layout = QHBoxLayout()
+        scale_bg_layout.addWidget(QLabel("Background Color:"))
+        self.scale_bg_color = QPushButton("Select Color")
+        self.scale_bg_color.clicked.connect(lambda: self._select_color_for_gadget("scale_bg"))
+        scale_bg_layout.addWidget(self.scale_bg_color)
+        scale_bg_layout.addStretch()
+        scale_layout.addLayout(scale_bg_layout)
+
+        # Scale Handle Color
+        scale_handle_layout = QHBoxLayout()
+        scale_handle_layout.addWidget(QLabel("Handle Color:"))
+        self.scale_handle_color = QPushButton("Select Color")
+        self.scale_handle_color.clicked.connect(lambda: self._select_color_for_gadget("scale_handle"))
+        scale_handle_layout.addWidget(self.scale_handle_color)
+        scale_handle_layout.addStretch()
+        scale_layout.addLayout(scale_handle_layout)
+
+        scroll_layout.addWidget(scale_group)
+
+        # Colorfield Gadgets
+        colorfield_group = QGroupBox("Colorfield Gadgets")
+        colorfield_layout = QVBoxLayout(colorfield_group)
+
+        # Colorfield Background Color
+        colorfield_bg_layout = QHBoxLayout()
+        colorfield_bg_layout.addWidget(QLabel("Background Color:"))
+        self.colorfield_bg_color = QPushButton("Select Color")
+        self.colorfield_bg_color.clicked.connect(lambda: self._select_color_for_gadget("colorfield_bg"))
+        colorfield_bg_layout.addWidget(self.colorfield_bg_color)
+        colorfield_bg_layout.addStretch()
+        colorfield_layout.addLayout(colorfield_bg_layout)
+
+        # Colorfield Border Color
+        colorfield_border_layout = QHBoxLayout()
+        colorfield_border_layout.addWidget(QLabel("Border Color:"))
+        self.colorfield_border_color = QPushButton("Select Color")
+        self.colorfield_border_color.clicked.connect(lambda: self._select_color_for_gadget("colorfield_border"))
+        colorfield_border_layout.addWidget(self.colorfield_border_color)
+        colorfield_border_layout.addStretch()
+        colorfield_layout.addLayout(colorfield_border_layout)
+
+        scroll_layout.addWidget(colorfield_group)
+
+        # List Gadgets
+        list_group = QGroupBox("List Gadgets")
+        list_layout = QVBoxLayout(list_group)
+
+        # List Background Color
+        list_bg_layout = QHBoxLayout()
+        list_bg_layout.addWidget(QLabel("Background Color:"))
+        self.list_bg_color = QPushButton("Select Color")
+        self.list_bg_color.clicked.connect(lambda: self._select_color_for_gadget("list_bg"))
+        list_bg_layout.addWidget(self.list_bg_color)
+        list_bg_layout.addStretch()
+        list_layout.addLayout(list_bg_layout)
+
+        # List Text Color
+        list_text_layout = QHBoxLayout()
+        list_text_layout.addWidget(QLabel("Text Color:"))
+        self.list_text_color = QPushButton("Select Color")
+        self.list_text_color.clicked.connect(lambda: self._select_color_for_gadget("list_text"))
+        list_text_layout.addWidget(self.list_text_color)
+        list_text_layout.addStretch()
+        list_layout.addLayout(list_text_layout)
+
+        # List Selection Color
+        list_select_layout = QHBoxLayout()
+        list_select_layout.addWidget(QLabel("Selection Color:"))
+        self.list_select_color = QPushButton("Select Color")
+        self.list_select_color.clicked.connect(lambda: self._select_color_for_gadget("list_select"))
+        list_select_layout.addWidget(self.list_select_color)
+        list_select_layout.addStretch()
+        list_layout.addLayout(list_select_layout)
+
+        scroll_layout.addWidget(list_group)
+
+        # Numeric Gadgets
+        numeric_group = QGroupBox("Numeric Gadgets")
+        numeric_layout = QVBoxLayout(numeric_group)
+
+        # Numeric Background Color
+        numeric_bg_layout = QHBoxLayout()
+        numeric_bg_layout.addWidget(QLabel("Background Color:"))
+        self.numeric_bg_color = QPushButton("Select Color")
+        self.numeric_bg_color.clicked.connect(lambda: self._select_color_for_gadget("numeric_bg"))
+        numeric_bg_layout.addWidget(self.numeric_bg_color)
+        numeric_bg_layout.addStretch()
+        numeric_layout.addLayout(numeric_bg_layout)
+
+        # Numeric Text Color
+        numeric_text_layout = QHBoxLayout()
+        numeric_text_layout.addWidget(QLabel("Text Color:"))
+        self.numeric_text_color = QPushButton("Select Color")
+        self.numeric_text_color.clicked.connect(lambda: self._select_color_for_gadget("numeric_text"))
+        numeric_text_layout.addWidget(self.numeric_text_color)
+        numeric_text_layout.addStretch()
+        numeric_layout.addLayout(numeric_text_layout)
+
+        scroll_layout.addWidget(numeric_group)
+
+        # Knob Gadgets
+        knob_group = QGroupBox("Knob Gadgets")
+        knob_layout = QVBoxLayout(knob_group)
+
+        # Knob Background Color
+        knob_bg_layout = QHBoxLayout()
+        knob_bg_layout.addWidget(QLabel("Background Color:"))
+        self.knob_bg_color = QPushButton("Select Color")
+        self.knob_bg_color.clicked.connect(lambda: self._select_color_for_gadget("knob_bg"))
+        knob_bg_layout.addWidget(self.knob_bg_color)
+        knob_bg_layout.addStretch()
+        knob_layout.addLayout(knob_bg_layout)
+
+        # Knob Handle Color
+        knob_handle_layout = QHBoxLayout()
+        knob_handle_layout.addWidget(QLabel("Handle Color:"))
+        self.knob_handle_color = QPushButton("Select Color")
+        self.knob_handle_color.clicked.connect(lambda: self._select_color_for_gadget("knob_handle"))
+        knob_handle_layout.addWidget(self.knob_handle_color)
+        knob_handle_layout.addStretch()
+        knob_layout.addLayout(knob_handle_layout)
+
+        scroll_layout.addWidget(knob_group)
+
+        # Levelmeter Gadgets
+        levelmeter_group = QGroupBox("Levelmeter Gadgets")
+        levelmeter_layout = QVBoxLayout(levelmeter_group)
+
+        # Levelmeter Background Color
+        levelmeter_bg_layout = QHBoxLayout()
+        levelmeter_bg_layout.addWidget(QLabel("Background Color:"))
+        self.levelmeter_bg_color = QPushButton("Select Color")
+        self.levelmeter_bg_color.clicked.connect(lambda: self._select_color_for_gadget("levelmeter_bg"))
+        levelmeter_bg_layout.addWidget(self.levelmeter_bg_color)
+        levelmeter_bg_layout.addStretch()
+        levelmeter_layout.addLayout(levelmeter_bg_layout)
+
+        # Levelmeter Fill Color
+        levelmeter_fill_layout = QHBoxLayout()
+        levelmeter_fill_layout.addWidget(QLabel("Fill Color:"))
+        self.levelmeter_fill_color = QPushButton("Select Color")
+        self.levelmeter_fill_color.clicked.connect(lambda: self._select_color_for_gadget("levelmeter_fill"))
+        levelmeter_fill_layout.addWidget(self.levelmeter_fill_color)
+        levelmeter_fill_layout.addStretch()
+        levelmeter_layout.addLayout(levelmeter_fill_layout)
+
+        scroll_layout.addWidget(levelmeter_group)
+
+        # Radio Gadgets
+        radio_group = QGroupBox("Radio Gadgets")
+        radio_layout = QVBoxLayout(radio_group)
+
+        # Radio Background Color
+        radio_bg_layout = QHBoxLayout()
+        radio_bg_layout.addWidget(QLabel("Background Color:"))
+        self.radio_bg_color = QPushButton("Select Color")
+        self.radio_bg_color.clicked.connect(lambda: self._select_color_for_gadget("radio_bg"))
+        radio_bg_layout.addWidget(self.radio_bg_color)
+        radio_bg_layout.addStretch()
+        radio_layout.addLayout(radio_bg_layout)
+
+        # Radio Text Color
+        radio_text_layout = QHBoxLayout()
+        radio_text_layout.addWidget(QLabel("Text Color:"))
+        self.radio_text_color = QPushButton("Select Color")
+        self.radio_text_color.clicked.connect(lambda: self._select_color_for_gadget("radio_text"))
+        radio_text_layout.addWidget(self.radio_text_color)
+        radio_text_layout.addStretch()
+        radio_layout.addLayout(radio_text_layout)
+
+        scroll_layout.addWidget(radio_group)
+
+        # Cycle Gadgets
+        cycle_group = QGroupBox("Cycle Gadgets")
+        cycle_layout = QVBoxLayout(cycle_group)
+
+        # Cycle Background Color
+        cycle_bg_layout = QHBoxLayout()
+        cycle_bg_layout.addWidget(QLabel("Background Color:"))
+        self.cycle_bg_color = QPushButton("Select Color")
+        self.cycle_bg_color.clicked.connect(lambda: self._select_color_for_gadget("cycle_bg"))
+        cycle_bg_layout.addWidget(self.cycle_bg_color)
+        cycle_bg_layout.addStretch()
+        cycle_layout.addLayout(cycle_bg_layout)
+
+        # Cycle Text Color
+        cycle_text_layout = QHBoxLayout()
+        cycle_text_layout.addWidget(QLabel("Text Color:"))
+        self.cycle_text_color = QPushButton("Select Color")
+        self.cycle_text_color.clicked.connect(lambda: self._select_color_for_gadget("cycle_text"))
+        cycle_text_layout.addWidget(self.cycle_text_color)
+        cycle_text_layout.addStretch()
+        cycle_layout.addLayout(cycle_text_layout)
+
+        scroll_layout.addWidget(cycle_group)
+
+        # Palette Gadgets
+        palette_group = QGroupBox("Palette Gadgets")
+        palette_layout = QVBoxLayout(palette_group)
+
+        # Palette Background Color
+        palette_bg_layout = QHBoxLayout()
+        palette_bg_layout.addWidget(QLabel("Background Color:"))
+        self.palette_bg_color = QPushButton("Select Color")
+        self.palette_bg_color.clicked.connect(lambda: self._select_color_for_gadget("palette_bg"))
+        palette_bg_layout.addWidget(self.palette_bg_color)
+        palette_bg_layout.addStretch()
+        palette_layout.addLayout(palette_bg_layout)
+
+        # Palette Border Color
+        palette_border_layout = QHBoxLayout()
+        palette_border_layout.addWidget(QLabel("Border Color:"))
+        self.palette_border_color = QPushButton("Select Color")
+        self.palette_border_color.clicked.connect(lambda: self._select_color_for_gadget("palette_border"))
+        palette_border_layout.addWidget(self.palette_border_color)
+        palette_border_layout.addStretch()
+        palette_layout.addLayout(palette_border_layout)
+
+        scroll_layout.addWidget(palette_group)
+
+        # Popstring Gadgets
+        popstring_group = QGroupBox("Popstring Gadgets")
+        popstring_layout = QVBoxLayout(popstring_group)
+
+        # Popstring Background Color
+        popstring_bg_layout = QHBoxLayout()
+        popstring_bg_layout.addWidget(QLabel("Background Color:"))
+        self.popstring_bg_color = QPushButton("Select Color")
+        self.popstring_bg_color.clicked.connect(lambda: self._select_color_for_gadget("popstring_bg"))
+        popstring_bg_layout.addWidget(self.popstring_bg_color)
+        popstring_bg_layout.addStretch()
+        popstring_layout.addLayout(popstring_bg_layout)
+
+        # Popstring Text Color
+        popstring_text_layout = QHBoxLayout()
+        popstring_text_layout.addWidget(QLabel("Text Color:"))
+        self.popstring_text_color = QPushButton("Select Color")
+        self.popstring_text_color.clicked.connect(lambda: self._select_color_for_gadget("popstring_text"))
+        popstring_text_layout.addWidget(self.popstring_text_color)
+        popstring_text_layout.addStretch()
+        popstring_layout.addLayout(popstring_text_layout)
+
+        scroll_layout.addWidget(popstring_group)
+
+        scroll_layout.addStretch()
+        scroll.setWidget(scroll_widget)
+        layout.addWidget(scroll)
+
+        return tab
+
+    def _select_color_for_gadget(self, gadget_type): #vers 1
+        """Open color dialog to select color for specific gadget type"""
+        from PyQt6.QtWidgets import QColorDialog
+        from PyQt6.QtGui import QColor
+        
+        current_color = QColor(255, 255, 255)  # Default white
+        color = QColorDialog.getColor(current_color, self, f"Select {gadget_type.replace('_', ' ').title()} Color")
+        
+        if color.isValid():
+            color_name = color.name()
+            # Update the button text to show selected color
+            button_map = {
+                "string_bg": self.string_bg_color,
+                "string_text": self.string_text_color,
+                "string_border": self.string_border_color,
+                "gauge_bg": self.gauge_bg_color,
+                "gauge_fill": self.gauge_fill_color,
+                "gauge_border": self.gauge_border_color,
+                "scale_bg": self.scale_bg_color,
+                "scale_handle": self.scale_handle_color,
+                "colorfield_bg": self.colorfield_bg_color,
+                "colorfield_border": self.colorfield_border_color,
+                "list_bg": self.list_bg_color,
+                "list_text": self.list_text_color,
+                "list_select": self.list_select_color,
+                "numeric_bg": self.numeric_bg_color,
+                "numeric_text": self.numeric_text_color,
+                "knob_bg": self.knob_bg_color,
+                "knob_handle": self.knob_handle_color,
+                "levelmeter_bg": self.levelmeter_bg_color,
+                "levelmeter_fill": self.levelmeter_fill_color,
+                "radio_bg": self.radio_bg_color,
+                "radio_text": self.radio_text_color,
+                "cycle_bg": self.cycle_bg_color,
+                "cycle_text": self.cycle_text_color,
+                "palette_bg": self.palette_bg_color,
+                "palette_border": self.palette_border_color,
+                "popstring_bg": self.popstring_bg_color,
+                "popstring_text": self.popstring_text_color,
+            }
+            
+            if gadget_type in button_map:
+                button_map[gadget_type].setText(f"Selected: {color_name}")
+            
+            # Store the color for later use
+            setattr(self, f"{gadget_type}_color", color_name)
+            print(f"{gadget_type} color selected: {color_name}")
+
+    def _select_shadow_color(self): #vers 1
+        """Open color dialog to select shadow color"""
+        from PyQt6.QtWidgets import QColorDialog
+        from PyQt6.QtGui import QColor
+        
+        current_color = QColor(0, 0, 0, 128)  # Default: black with 50% opacity
+        color = QColorDialog.getColor(current_color, self, "Select Shadow Color")
+        
+        if color.isValid():
+            # For now, just store the color for later use
+            self.shadow_color = color.name()
+            self.shadow_color_button.setText(f"Selected: {color.name()}")
+            print(f"Shadow color selected: {color.name()}")
+
+    def _create_ui_management_tab(self): #vers 1
+        """Create UI Management Components tab - Group, Scrollbar, Listview, Register, Virtgroup, Scrollgroup, Popobject"""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+
+        # Instructions
+        info_label = QLabel(
+            "<b>UI Management Components:</b><br>"
+            "Configure container and management components for UI layout."
+        )
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("padding: 8px; border-radius: 4px;")
+        layout.addWidget(info_label)
+
+        # Scroll area for controls
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+        scroll_layout.setSpacing(15)
+
+        # Group Components
+        group_group = QGroupBox("Group Components")
+        group_layout = QVBoxLayout(group_group)
+
+        # Group Background Color
+        group_bg_layout = QHBoxLayout()
+        group_bg_layout.addWidget(QLabel("Background Color:"))
+        self.group_bg_color = QPushButton("Select Color")
+        self.group_bg_color.clicked.connect(lambda: self._select_color_for_component("group_bg"))
+        group_bg_layout.addWidget(self.group_bg_color)
+        group_bg_layout.addStretch()
+        group_layout.addLayout(group_bg_layout)
+
+        # Group Border Color
+        group_border_layout = QHBoxLayout()
+        group_border_layout.addWidget(QLabel("Border Color:"))
+        self.group_border_color = QPushButton("Select Color")
+        self.group_border_color.clicked.connect(lambda: self._select_color_for_component("group_border"))
+        group_border_layout.addWidget(self.group_border_color)
+        group_border_layout.addStretch()
+        group_layout.addLayout(group_border_layout)
+
+        scroll_layout.addWidget(group_group)
+
+        # Scrollbar Components
+        scrollbar_group = QGroupBox("Scrollbar Components")
+        scrollbar_layout = QVBoxLayout(scrollbar_group)
+
+        # Scrollbar Background Color
+        scrollbar_bg_layout = QHBoxLayout()
+        scrollbar_bg_layout.addWidget(QLabel("Background Color:"))
+        self.scrollbar_bg_color = QPushButton("Select Color")
+        self.scrollbar_bg_color.clicked.connect(lambda: self._select_color_for_component("scrollbar_bg"))
+        scrollbar_bg_layout.addWidget(self.scrollbar_bg_color)
+        scrollbar_bg_layout.addStretch()
+        scrollbar_layout.addLayout(scrollbar_bg_layout)
+
+        # Scrollbar Handle Color
+        scrollbar_handle_layout = QHBoxLayout()
+        scrollbar_handle_layout.addWidget(QLabel("Handle Color:"))
+        self.scrollbar_handle_color = QPushButton("Select Color")
+        self.scrollbar_handle_color.clicked.connect(lambda: self._select_color_for_component("scrollbar_handle"))
+        scrollbar_handle_layout.addWidget(self.scrollbar_handle_color)
+        scrollbar_handle_layout.addStretch()
+        scrollbar_layout.addLayout(scrollbar_handle_layout)
+
+        # Scrollbar Width
+        scrollbar_width_layout = QHBoxLayout()
+        scrollbar_width_layout.addWidget(QLabel("Width:"))
+        self.scrollbar_width_slider = QSlider(Qt.Orientation.Horizontal)
+        self.scrollbar_width_slider.setRange(8, 20)
+        self.scrollbar_width_slider.setValue(12)
+        self.scrollbar_width_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.scrollbar_width_slider.setTickInterval(2)
+        scrollbar_width_layout.addWidget(self.scrollbar_width_slider)
+        self.scrollbar_width_label = QLabel("12px")
+        self.scrollbar_width_label.setFixedWidth(40)
+        scrollbar_width_layout.addWidget(self.scrollbar_width_label)
+        scrollbar_layout.addLayout(scrollbar_width_layout)
+
+        self.scrollbar_width_slider.valueChanged.connect(
+            lambda v: self.scrollbar_width_label.setText(f"{v}px")
+        )
+
+        scroll_layout.addWidget(scrollbar_group)
+
+        # Listview Components
+        listview_group = QGroupBox("Listview Components")
+        listview_layout = QVBoxLayout(listview_group)
+
+        # Listview Background Color
+        listview_bg_layout = QHBoxLayout()
+        listview_bg_layout.addWidget(QLabel("Background Color:"))
+        self.listview_bg_color = QPushButton("Select Color")
+        self.listview_bg_color.clicked.connect(lambda: self._select_color_for_component("listview_bg"))
+        listview_bg_layout.addWidget(self.listview_bg_color)
+        listview_bg_layout.addStretch()
+        listview_layout.addLayout(listview_bg_layout)
+
+        # Listview Text Color
+        listview_text_layout = QHBoxLayout()
+        listview_text_layout.addWidget(QLabel("Text Color:"))
+        self.listview_text_color = QPushButton("Select Color")
+        self.listview_text_color.clicked.connect(lambda: self._select_color_for_component("listview_text"))
+        listview_text_layout.addWidget(self.listview_text_color)
+        listview_text_layout.addStretch()
+        listview_layout.addLayout(listview_text_layout)
+
+        # Listview Selection Color
+        listview_select_layout = QHBoxLayout()
+        listview_select_layout.addWidget(QLabel("Selection Color:"))
+        self.listview_select_color = QPushButton("Select Color")
+        self.listview_select_color.clicked.connect(lambda: self._select_color_for_component("listview_select"))
+        listview_select_layout.addWidget(self.listview_select_color)
+        listview_select_layout.addStretch()
+        listview_layout.addLayout(listview_select_layout)
+
+        scroll_layout.addWidget(listview_group)
+
+        # Register Components
+        register_group = QGroupBox("Register Components")
+        register_layout = QVBoxLayout(register_group)
+
+        # Register Background Color
+        register_bg_layout = QHBoxLayout()
+        register_bg_layout.addWidget(QLabel("Background Color:"))
+        self.register_bg_color = QPushButton("Select Color")
+        self.register_bg_color.clicked.connect(lambda: self._select_color_for_component("register_bg"))
+        register_bg_layout.addWidget(self.register_bg_color)
+        register_bg_layout.addStretch()
+        register_layout.addLayout(register_bg_layout)
+
+        # Register Text Color
+        register_text_layout = QHBoxLayout()
+        register_text_layout.addWidget(QLabel("Text Color:"))
+        self.register_text_color = QPushButton("Select Color")
+        self.register_text_color.clicked.connect(lambda: self._select_color_for_component("register_text"))
+        register_text_layout.addWidget(self.register_text_color)
+        register_text_layout.addStretch()
+        register_layout.addLayout(register_text_layout)
+
+        scroll_layout.addWidget(register_group)
+
+        # Virtgroup Components
+        virtgroup_group = QGroupBox("Virtgroup Components")
+        virtgroup_layout = QVBoxLayout(virtgroup_group)
+
+        # Virtgroup Background Color
+        virtgroup_bg_layout = QHBoxLayout()
+        virtgroup_bg_layout.addWidget(QLabel("Background Color:"))
+        self.virtgroup_bg_color = QPushButton("Select Color")
+        self.virtgroup_bg_color.clicked.connect(lambda: self._select_color_for_component("virtgroup_bg"))
+        virtgroup_bg_layout.addWidget(self.virtgroup_bg_color)
+        virtgroup_bg_layout.addStretch()
+        virtgroup_layout.addLayout(virtgroup_bg_layout)
+
+        # Virtgroup Border Color
+        virtgroup_border_layout = QHBoxLayout()
+        virtgroup_border_layout.addWidget(QLabel("Border Color:"))
+        self.virtgroup_border_color = QPushButton("Select Color")
+        self.virtgroup_border_color.clicked.connect(lambda: self._select_color_for_component("virtgroup_border"))
+        virtgroup_border_layout.addWidget(self.virtgroup_border_color)
+        virtgroup_border_layout.addStretch()
+        virtgroup_layout.addLayout(virtgroup_border_layout)
+
+        scroll_layout.addWidget(virtgroup_group)
+
+        # Scrollgroup Components
+        scrollgroup_group = QGroupBox("Scrollgroup Components")
+        scrollgroup_layout = QVBoxLayout(scrollgroup_group)
+
+        # Scrollgroup Background Color
+        scrollgroup_bg_layout = QHBoxLayout()
+        scrollgroup_bg_layout.addWidget(QLabel("Background Color:"))
+        self.scrollgroup_bg_color = QPushButton("Select Color")
+        self.scrollgroup_bg_color.clicked.connect(lambda: self._select_color_for_component("scrollgroup_bg"))
+        scrollgroup_bg_layout.addWidget(self.scrollgroup_bg_color)
+        scrollgroup_bg_layout.addStretch()
+        scrollgroup_layout.addLayout(scrollgroup_bg_layout)
+
+        # Scrollgroup Border Color
+        scrollgroup_border_layout = QHBoxLayout()
+        scrollgroup_border_layout.addWidget(QLabel("Border Color:"))
+        self.scrollgroup_border_color = QPushButton("Select Color")
+        self.scrollgroup_border_color.clicked.connect(lambda: self._select_color_for_component("scrollgroup_border"))
+        scrollgroup_border_layout.addWidget(self.scrollgroup_border_color)
+        scrollgroup_border_layout.addStretch()
+        scrollgroup_layout.addLayout(scrollgroup_border_layout)
+
+        scroll_layout.addWidget(scrollgroup_group)
+
+        # Popobject Components
+        popobject_group = QGroupBox("Popobject Components")
+        popobject_layout = QVBoxLayout(popobject_group)
+
+        # Popobject Background Color
+        popobject_bg_layout = QHBoxLayout()
+        popobject_bg_layout.addWidget(QLabel("Background Color:"))
+        self.popobject_bg_color = QPushButton("Select Color")
+        self.popobject_bg_color.clicked.connect(lambda: self._select_color_for_component("popobject_bg"))
+        popobject_bg_layout.addWidget(self.popobject_bg_color)
+        popobject_bg_layout.addStretch()
+        popobject_layout.addLayout(popobject_bg_layout)
+
+        # Popobject Border Color
+        popobject_border_layout = QHBoxLayout()
+        popobject_border_layout.addWidget(QLabel("Border Color:"))
+        self.popobject_border_color = QPushButton("Select Color")
+        self.popobject_border_color.clicked.connect(lambda: self._select_color_for_component("popobject_border"))
+        popobject_border_layout.addWidget(self.popobject_border_color)
+        popobject_border_layout.addStretch()
+        popobject_layout.addLayout(popobject_border_layout)
+
+        scroll_layout.addWidget(popobject_group)
+
+        scroll_layout.addStretch()
+        scroll.setWidget(scroll_widget)
+        layout.addWidget(scroll)
+
+        return tab
+
+    def _select_color_for_component(self, component_type): #vers 1
+        """Open color dialog to select color for specific UI component type"""
+        from PyQt6.QtWidgets import QColorDialog
+        from PyQt6.QtGui import QColor
+        
+        current_color = QColor(255, 255, 255)  # Default white
+        color = QColorDialog.getColor(current_color, self, f"Select {component_type.replace('_', ' ').title()} Color")
+        
+        if color.isValid():
+            color_name = color.name()
+            # Update the button text to show selected color
+            button_map = {
+                "group_bg": self.group_bg_color,
+                "group_border": self.group_border_color,
+                "scrollbar_bg": self.scrollbar_bg_color,
+                "scrollbar_handle": self.scrollbar_handle_color,
+                "listview_bg": self.listview_bg_color,
+                "listview_text": self.listview_text_color,
+                "listview_select": self.listview_select_color,
+                "register_bg": self.register_bg_color,
+                "register_text": self.register_text_color,
+                "virtgroup_bg": self.virtgroup_bg_color,
+                "virtgroup_border": self.virtgroup_border_color,
+                "scrollgroup_bg": self.scrollgroup_bg_color,
+                "scrollgroup_border": self.scrollgroup_border_color,
+                "popobject_bg": self.popobject_bg_color,
+                "popobject_border": self.popobject_border_color,
+            }
+            
+            if component_type in button_map:
+                button_map[component_type].setText(f"Selected: {color_name}")
+            
+            # Store the color for later use
+            setattr(self, f"{component_type}_color", color_name)
+            print(f"{component_type} color selected: {color_name}")
 
     # ===== GLOBAL SLIDER HANDLERS =====
 
