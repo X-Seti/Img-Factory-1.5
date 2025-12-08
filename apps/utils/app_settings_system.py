@@ -3923,7 +3923,7 @@ class SettingsDialog(QDialog): #vers 15
             "Customize widget appearance and see changes instantly in the preview panel."
         )
         info_label.setWordWrap(True)
-        info_label.setStyleSheet("padding: 8px; background-color: #f0f8ff; border-radius: 4px;")
+        info_label.setStyleSheet("padding: 8px; border-radius: 4px;")
         main_layout.addWidget(info_label)
 
         # Create splitter for left (controls) and right (preview)
@@ -3945,7 +3945,7 @@ class SettingsDialog(QDialog): #vers 15
         scroll_layout.setSpacing(15)
 
         # ========== BUTTON STYLING ==========
-        button_group = QGroupBox("🔘 Button Styling")
+        button_group = QGroupBox("Button Styling")
         button_layout = QVBoxLayout(button_group)
 
         # Button Shape
@@ -4016,7 +4016,7 @@ class SettingsDialog(QDialog): #vers 15
         scroll_layout.addWidget(button_group)
 
         # ========== SLIDER STYLING ==========
-        slider_group = QGroupBox("🎚️ Slider Styling")
+        slider_group = QGroupBox("Slider Styling")
         slider_layout = QVBoxLayout(slider_group)
 
         # Slider Height
@@ -4063,7 +4063,7 @@ class SettingsDialog(QDialog): #vers 15
         scroll_layout.addWidget(slider_group)
 
         # ========== CHECKBOX STYLING ==========
-        checkbox_group = QGroupBox("☑️ Checkbox Styling")
+        checkbox_group = QGroupBox("Checkbox Styling")
         checkbox_layout = QVBoxLayout(checkbox_group)
 
         # Checkbox Size
@@ -4098,7 +4098,7 @@ class SettingsDialog(QDialog): #vers 15
         scroll_layout.addWidget(checkbox_group)
 
         # ========== SCROLLBAR STYLING ==========
-        scrollbar_group = QGroupBox("📜 Scrollbar Styling")
+        scrollbar_group = QGroupBox("Scrollbar Styling")
         scrollbar_layout = QVBoxLayout(scrollbar_group)
 
         # Scrollbar Width
@@ -4140,7 +4140,7 @@ class SettingsDialog(QDialog): #vers 15
         scroll_layout.addWidget(scrollbar_group)
 
         # ========== SPLITTER STYLING ==========
-        splitter_group = QGroupBox("⚡ Splitter Styling")
+        splitter_group = QGroupBox("Splitter Styling")
         splitter_layout = QVBoxLayout(splitter_group)
 
         # Splitter Width
@@ -4191,7 +4191,7 @@ class SettingsDialog(QDialog): #vers 15
         scroll_layout.addWidget(splitter_group)
 
         # ========== ADVANCED STYLING ==========
-        advanced_group = QGroupBox("⚙️ Advanced Styling")
+        advanced_group = QGroupBox("Advanced Styling")
         advanced_layout = QVBoxLayout(advanced_group)
 
         # Panel Opacity
@@ -5260,7 +5260,7 @@ Ready for operations..."""
         layout = QVBoxLayout(widget)
 
         # Debug Mode Group
-        debug_group = QGroupBox("🐛 Debug Mode")
+        debug_group = QGroupBox("Debug Mode")
         debug_layout = QVBoxLayout(debug_group)
 
         self.debug_enabled_check = QCheckBox("Enable debug mode")
