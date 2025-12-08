@@ -50,7 +50,7 @@ from apps.core.file_extraction import setup_complete_extraction_integration
 from apps.core.extract import extract_textures_function
 from apps.core.file_type_filter import integrate_file_filtering
 from apps.methods.rw_versions import get_rw_version_name
-from apps.core.right_click_actions import integrate_right_click_actions, setup_table_context_menu
+from apps.core.right_click_actions import setup_table_context_menu
 from apps.core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
 from apps.core.convert import convert_img, convert_img_format
 from apps.core.reload import integrate_reload_functions
