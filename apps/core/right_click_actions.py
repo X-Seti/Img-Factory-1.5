@@ -276,6 +276,11 @@ def show_advanced_context_menu(main_window, position): #vers 3
         copy_summary_action.triggered.connect(lambda: copy_file_summary(main_window, row))
         menu.addAction(copy_summary_action)
 
+        # Copy selected row
+        copy_row_action = QAction("Copy Selected Row", menu_parent)
+        copy_row_action.triggered.connect(lambda: copy_table_row(main_window, row))
+        menu.addAction(copy_row_action)
+
         # Show menu at cursor position
         menu.exec(table.mapToGlobal(position))
 
