@@ -5446,7 +5446,7 @@ def add_common_operations(main_window, menu, row=None):
             menu.addAction(remove_action)
 
         # Copy operations
-        copy_submenu = menu.addMenu("Copy")
+        copy_submenu = menu.addMenu("Copy Selected")
 
         copy_name_action = QAction("Copy Name", menu)
         if row is not None:
@@ -5458,8 +5458,14 @@ def add_common_operations(main_window, menu, row=None):
             copy_info_action.triggered.connect(lambda: copy_entry_info(main_window, row))
         copy_submenu.addAction(copy_info_action)
 
+        # Copy selected row
+        copy_row_action = QAction("Copy Selected Row", table)
+        if row is not None:
+            copy_row_action.triggered.connect(lambda: copy_entry_row(main_window, row))
+        copy_submenu.addAction(copy_row_action)
+
     except Exception as e:
-        main_window.log_message(f"❌ Error adding common operations: {str(e)}")
+        main_window.log_message(f"Error adding common operations: {str(e)}")
 
 
 def move_file(main_window, row, entry_info):
