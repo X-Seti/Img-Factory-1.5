@@ -132,7 +132,7 @@ from apps.methods.img_export_functions import integrate_img_export_functions
 from apps.methods.col_export_functions import integrate_col_export_functions
 
 # MUI Demo Integration
-from apps.components.Img_Factory.mui_demo import MUIWindow
+from apps.components.Img_Factory.depends.mui_demo import MUIWindow
 
 App_name = "Img Factory 1.5"
 App_build ="November 29"
