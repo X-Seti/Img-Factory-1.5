@@ -1,1 +1,22 @@
-Nothing to output - the modified file 'apps/gui/gui_layout.py' is a source code file and no build artifacts, dependencies, or temporary files are present in the changes.
+```gitignore
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs and temp files
+*.log
+*.tmp
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+```
