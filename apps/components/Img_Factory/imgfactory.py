@@ -167,7 +167,7 @@ def create_rebuild_menu(self): #vers 1
     """Create rebuild menu with mode options"""
     try:
         # Add to your existing menu bar
-        rebuild_menu = self.menuBar().addMenu("ðŸ”§ Rebuild")
+        rebuild_menu = self.menuBar().addMenu("  Rebuild")
 
         # Regular rebuild (shows dialog)
         rebuild_action = QAction("Rebuild IMG...", self)
@@ -724,7 +724,7 @@ class IMGFactory(QMainWindow):
                 QMessageBox.warning(self, "No IMG File", "Please open an IMG file first")
                 return
 
-            self.log_message("ðŸ”§ Quick fixing IMG corruption...")
+            self.log_message("  Quick fixing IMG corruption...")
 
             # Analyze first
             from apps.core.img_corruption_analyzer import analyze_img_corruption
@@ -4261,7 +4261,7 @@ class IMGFactory(QMainWindow):
     def apply_search_and_performance_fixes(self): #vers 2
         """Apply search and performance fixes"""
         try:
-            self.log_message("ðŸ”§ Applying search and performance fixes...")
+            self.log_message("  Applying search and performance fixes...")
 
             # 1. Setup our new consolidated search system
             from apps.core.gui_search import install_search_system
