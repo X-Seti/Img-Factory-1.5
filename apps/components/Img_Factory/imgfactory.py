@@ -5289,7 +5289,7 @@ def implement_tab_context_menu(main_window):
     try:
         # Add context menu to the main window
         main_window.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        main_window.customContextMenuRequested.connect(lambda pos: show_main_context_menu(main_window, pos))
+        main_window.customContextMenuRequested.connect(lambda pos: show_advanced_context_menu(main_window, pos))
 
         # For the table, we need to integrate with the existing context menu system
         # rather than replacing it to avoid conflicts with the existing setup
