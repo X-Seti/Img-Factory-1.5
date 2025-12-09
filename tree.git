@@ -4,21 +4,18 @@
 ├── apps
 │   ├── appfactory.settings.json
 │   ├── components
-│   │   ├── base_gui_example.py
 │   │   ├── Col_Creator
 │   │   │   └── col_creator.py
 │   │   ├── Col_Editor
 │   │   │   ├── col_workshop.py
-│   │   │   ├── depends
-│   │   │   │   ├── col_3d_viewport.py
-│   │   │   │   ├── col_core_classes.py
-│   │   │   │   ├── col_dialogs.py
-│   │   │   │   ├── col_preview_generator.py
-│   │   │   │   ├── img_debug_functions.py
-│   │   │   │   └── standalone
-│   │   │   └── img_factory_debug.log
+│   │   │   └── depends
+│   │   │       ├── col_3d_viewport.py
+│   │   │       ├── col_core_classes.py
+│   │   │       ├── col_dialogs.py
+│   │   │       ├── col_preview_generator.py
+│   │   │       ├── img_debug_functions.py
+│   │   │       └── standalone
 │   │   ├── Col_Viewer
-│   │   │   ├── COL_VIEWER_INTEGRATION_INSTRUCTIONS.txt
 │   │   │   ├── col_viewer.py
 │   │   │   └── depends
 │   │   │       ├── COL_materials.md
@@ -51,73 +48,65 @@
 │   │   ├── __init__.py
 │   │   ├── Map_Editor
 │   │   │   ├── Map_Workshop.py
-│   │   │   ├── moomapper-090-src-r2_repacked
-│   │   │   │   ├── About.ddp
-│   │   │   │   ├── About.dfm
-│   │   │   │   ├── About.pas
-│   │   │   │   ├── AudioADF.pas
-│   │   │   │   ├── DirDialog.pas
-│   │   │   │   ├── EditorArchive.ddp
-│   │   │   │   ├── EditorArchive.dfm
-│   │   │   │   ├── EditorArchive.pas
-│   │   │   │   ├── EditorDAT.ddp
-│   │   │   │   ├── EditorDAT.dfm
-│   │   │   │   ├── EditorDAT.pas
-│   │   │   │   ├── EditorIDE.ddp
-│   │   │   │   ├── EditorIDE.dfm
-│   │   │   │   ├── EditorIDE.pas
-│   │   │   │   ├── EditorIPL.ddp
-│   │   │   │   ├── EditorIPL.dfm
-│   │   │   │   ├── EditorIPL.pas
-│   │   │   │   ├── EditorItem.ddp
-│   │   │   │   ├── EditorItem.dfm
-│   │   │   │   ├── EditorItem.pas
-│   │   │   │   ├── ExtraView.ddp
-│   │   │   │   ├── ExtraView.dfm
-│   │   │   │   ├── ExtraView.pas
-│   │   │   │   ├── GLViewDetached.ddp
-│   │   │   │   ├── GLViewDetached.dfm
-│   │   │   │   ├── GLViewDetached.pas
-│   │   │   │   ├── GLView.pas
-│   │   │   │   ├── GTACol.pas
-│   │   │   │   ├── GTADff.pas
-│   │   │   │   ├── GTAIde.pas
-│   │   │   │   ├── GTAImg.pas
-│   │   │   │   ├── GTAText.pas
-│   │   │   │   ├── GTATxd.pas
-│   │   │   │   ├── GTAZon.pas
-│   │   │   │   ├── KCow.ico
-│   │   │   │   ├── KEd.cfg
-│   │   │   │   ├── KEd.dof
-│   │   │   │   ├── KEd.dpr
-│   │   │   │   ├── KEd.res
-│   │   │   │   ├── Loading.ddp
-│   │   │   │   ├── Loading.dfm
-│   │   │   │   ├── Loading.pas
-│   │   │   │   ├── Main.ddp
-│   │   │   │   ├── Main.dfm
-│   │   │   │   ├── Main.pas
-│   │   │   │   ├── Output
-│   │   │   │   │   └── output folder.txt
-│   │   │   │   ├── readme.txt
-│   │   │   │   ├── RequiredTypes.pas
-│   │   │   │   ├── Startup.ddp
-│   │   │   │   ├── Startup.dfm
-│   │   │   │   ├── Startup.pas
-│   │   │   │   ├── TextureView.ddp
-│   │   │   │   ├── TextureView.dfm
-│   │   │   │   ├── TextureView.pas
-│   │   │   │   ├── Validate.ddp
-│   │   │   │   ├── Validate.dfm
-│   │   │   │   └── Validate.pas
-│   │   │   └── MooMapper3
-│   │   │       ├── clip.txt
-│   │   │       ├── GAMES.TXT
-│   │   │       ├── internal.txd
-│   │   │       ├── KEd.exe
-│   │   │       ├── MooMapper.cnt
-│   │   │       ├── MooMapper.exe
-│   │   │       └── MooMapper.hlp
+│   │   │   └── moomapper-090-src-r2_repacked
+│   │   │       ├── About.ddp
+│   │   │       ├── About.dfm
+│   │   │       ├── About.pas
+│   │   │       ├── AudioADF.pas
+│   │   │       ├── DirDialog.pas
+│   │   │       ├── EditorArchive.ddp
+│   │   │       ├── EditorArchive.dfm
+│   │   │       ├── EditorArchive.pas
+│   │   │       ├── EditorDAT.ddp
+│   │   │       ├── EditorDAT.dfm
+│   │   │       ├── EditorDAT.pas
+│   │   │       ├── EditorIDE.ddp
+│   │   │       ├── EditorIDE.dfm
+│   │   │       ├── EditorIDE.pas
+│   │   │       ├── EditorIPL.ddp
+│   │   │       ├── EditorIPL.dfm
+│   │   │       ├── EditorIPL.pas
+│   │   │       ├── EditorItem.ddp
+│   │   │       ├── EditorItem.dfm
+│   │   │       ├── EditorItem.pas
+│   │   │       ├── ExtraView.ddp
+│   │   │       ├── ExtraView.dfm
+│   │   │       ├── ExtraView.pas
+│   │   │       ├── GLViewDetached.ddp
+│   │   │       ├── GLViewDetached.dfm
+│   │   │       ├── GLViewDetached.pas
+│   │   │       ├── GLView.pas
+│   │   │       ├── GTACol.pas
+│   │   │       ├── GTADff.pas
+│   │   │       ├── GTAIde.pas
+│   │   │       ├── GTAImg.pas
+│   │   │       ├── GTAText.pas
+│   │   │       ├── GTATxd.pas
+│   │   │       ├── GTAZon.pas
+│   │   │       ├── KCow.ico
+│   │   │       ├── KEd.cfg
+│   │   │       ├── KEd.dof
+│   │   │       ├── KEd.dpr
+│   │   │       ├── KEd.res
+│   │   │       ├── Loading.ddp
+│   │   │       ├── Loading.dfm
+│   │   │       ├── Loading.pas
+│   │   │       ├── Main.ddp
+│   │   │       ├── Main.dfm
+│   │   │       ├── Main.pas
+│   │   │       ├── Output
+│   │   │       │   └── output folder.txt
+│   │   │       ├── readme.txt
+│   │   │       ├── RequiredTypes.pas
+│   │   │       ├── Startup.ddp
+│   │   │       ├── Startup.dfm
+│   │   │       ├── Startup.pas
+│   │   │       ├── TextureView.ddp
+│   │   │       ├── TextureView.dfm
+│   │   │       ├── TextureView.pas
+│   │   │       ├── Validate.ddp
+│   │   │       ├── Validate.dfm
+│   │   │       └── Validate.pas
 │   │   ├── Project_Manager
 │   │   │   └── img_project_manager.py
 │   │   ├── Txd_Converter
@@ -223,12 +212,11 @@
 │   │   ├── txd_context_menu.py
 │   │   └── unified_button_theme.py
 │   ├── __init__.py
-│   ├── locale
-│   │   └── local_settings.json
 │   ├── locals
 │   │   ├── __init__.py
 │   │   ├── locales
-│   │   └── localization.py
+│   │   ├── localization.py
+│   │   └── local_settings.json
 │   ├── methods
 │   │   ├── col_core_classes.py
 │   │   ├── col_export_functions.py
@@ -321,14 +309,14 @@
 │   └── utils
 │       ├── app_settings_system.py
 │       ├── themer_settings.json
-│       ├── themes -> /home/x2/Documents/GitHub/Img Factory 1.5/themes
 │       └── update_themes_script.py
 ├── cc.py
 ├── ChangeLog.md
 ├── Credits.md
+├── img_factory_debug.log
 ├── launch_imgfactory.py
 ├── package-lock.json
 ├── TODO.md
 └── tree.git
 
-36 directories, 296 files
+34 directories, 286 files
