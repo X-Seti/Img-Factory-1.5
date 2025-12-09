@@ -1,5 +1,5 @@
 # X-Seti - October26 2025 - IMG Factory 1.5 - Shared SVG Icon System
-# This belongs in methods/svg_shared_icons.py - Version: 1
+# This belongs in methods/svg_shared_icons.py - Version: 3
 
 """
 Shared SVG Icon System - Replaces ALL emojis with clean SVG icons
@@ -53,17 +53,20 @@ def svg_to_icon(svg_data: bytes, size: int = 24, color: str = None) -> QIcon: #v
     Returns:
         QIcon object
     """
-    try:
-        # Get theme colors from the main application
-        from apps import get_app
-        app = get_app()
+        # Get theme colors from AppSettings
+        try:
+            from apps.utils.app_settings_system import AppSettings
+            settings = AppSettings()
+            colors = settings.get_theme_colors()
+            bg_secondary = colors.get("bg_secondary", "#2d2d2d")
+            bg_primary = colors.get("bg_primary", "#1e1e1e")
+            text_primary = colors.get("text_primary", "#ffffff")
+        except:
+            # Fallback to dark theme if settings unavailable
+            bg_secondary = "#2d2d2d"
+            bg_primary = "#1e1e1e"
+            text_primary = "#ffffff"
         
-        # Get theme colors - default to dark theme colors if not available
-        bg_secondary = getattr(app, 'bg_secondary', '#2d2d2d')
-        bg_primary = getattr(app, 'bg_primary', '#1e1e1e')
-        text_primary = getattr(app, 'text_primary', '#ffffff')
-        
-        # Replace theme color placeholders in SVG data
         svg_string = svg_data.decode('utf-8')
         svg_string = svg_string.replace('{bg_secondary}', bg_secondary)
         svg_string = svg_string.replace('{bg_primary}', bg_primary)
@@ -95,18 +98,17 @@ def svg_to_icon(svg_data: bytes, size: int = 24, color: str = None) -> QIcon: #v
 
 # = App icon
 
-def get_app_icon(size: int = 64) -> QIcon: #vers 1
+def get_app_icon(size: int = 64) -> QIcon: #vers 2
     """IMG Factory application icon with 'IMG' text and gradient background"""
-    # Using dark theme colors as default (can be changed based on current theme)
     svg_data = b'''<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
         <defs>
             <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:bg_secondary;stop-opacity:1" />
-                <stop offset="100%" style="stop-color:bg_primary;stop-opacity:1" />
+                <stop offset="0%" style="stop-color:#3a3a3a;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#2d2d2d;stop-opacity:1" />
             </linearGradient>
         </defs>
         <rect x="0" y="0" width="64" height="64" rx="12" ry="12" fill="url(#bgGradient)"/>
-        <text x="32" y="38" font-size="24" fill=text_primary text-anchor="middle" font-weight="bold" font-family="Arial, sans-serif">IMG</text>
+        <text x="32" y="42" font-size="28" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Arial, sans-serif">IMG</text>
     </svg>'''
     return svg_to_icon(svg_data, size)
 
