@@ -42,7 +42,7 @@ from PyQt6.QtCore import QByteArray, QSize
 # get_error_icon
 # get_success_icon
 
-def svg_to_icon(svg_data: bytes, size: int = 24, color: str = None) -> QIcon: #vers 2
+def svg_to_icon(svg_data: bytes, size: int = 24, color: str = None) -> QIcon: #vers 3
     """Convert SVG data to QIcon with optional color override
     
     Args:
@@ -53,34 +53,26 @@ def svg_to_icon(svg_data: bytes, size: int = 24, color: str = None) -> QIcon: #v
     Returns:
         QIcon object
     """
-        # Get theme colors from AppSettings
-        try:
-            from apps.utils.app_settings_system import AppSettings
-            settings = AppSettings()
-            colors = settings.get_theme_colors()
-            bg_secondary = colors.get("bg_secondary", "#2d2d2d")
-            bg_primary = colors.get("bg_primary", "#1e1e1e")
-            text_primary = colors.get("text_primary", "#ffffff")
-        except:
-            # Fallback to dark theme if settings unavailable
-            bg_secondary = "#2d2d2d"
-            bg_primary = "#1e1e1e"
-            text_primary = "#ffffff"
+    try:
+        # Use fallback colors to avoid circular import with AppSettings
+        bg_secondary = "#2d2d2d"
+        bg_primary = "#1e1e1e"
+        text_primary = "#ffffff"
         
-        svg_string = svg_data.decode('utf-8')
-        svg_string = svg_string.replace('{bg_secondary}', bg_secondary)
-        svg_string = svg_string.replace('{bg_primary}', bg_primary)
-        svg_string = svg_string.replace('{text_primary}', text_primary)
+        # Replace theme color placeholders in SVG data
+        svg_string = svg_data.decode("utf-8")
+        svg_string = svg_string.replace("{bg_secondary}", bg_secondary)
+        svg_string = svg_string.replace("{bg_primary}", bg_primary)
+        svg_string = svg_string.replace("{text_primary}", text_primary)
         
         # If a specific color is provided, replace currentColor with that color
         if color:
-            svg_string = svg_string.replace('currentColor', color)
-        
-        # Also replace currentColor with text_primary if no specific color provided
+            svg_string = svg_string.replace("currentColor", color)
         else:
-            svg_string = svg_string.replace('currentColor', text_primary)
+            # Replace currentColor with text_primary
+            svg_string = svg_string.replace("currentColor", text_primary)
         
-        svg_data = svg_string.encode('utf-8')
+        svg_data = svg_string.encode("utf-8")
         
         renderer = QSvgRenderer(QByteArray(svg_data))
         pixmap = QPixmap(QSize(size, size))
@@ -93,13 +85,12 @@ def svg_to_icon(svg_data: bytes, size: int = 24, color: str = None) -> QIcon: #v
         return QIcon(pixmap)
     except Exception as e:
         print(f"Error creating icon: {e}")
-        return QIcon()
 
 
 # = App icon
 
-def get_app_icon(size: int = 64) -> QIcon: #vers 2
-    """IMG Factory application icon with 'IMG' text and gradient background"""
+def get_app_icon(size: int = 64) -> QIcon: #vers 3
+    """IMG Factory application icon - Fixed color rendering"""
     svg_data = b'''<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
         <defs>
             <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -109,6 +100,10 @@ def get_app_icon(size: int = 64) -> QIcon: #vers 2
         </defs>
         <rect x="0" y="0" width="64" height="64" rx="12" ry="12" fill="url(#bgGradient)"/>
         <text x="32" y="42" font-size="28" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Arial, sans-serif">IMG</text>
+    </svg>'
+    return svg_to_icon(svg_data, size)
+
+
     </svg>'''
     return svg_to_icon(svg_data, size)
 
