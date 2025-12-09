@@ -1,3 +1,0 @@
-"C:\Grand Theft Auto Vice City\",SOL
-"C:\Rockstar Games\Grand Theft Auto Vice City\",SOL2
-"C:\Rockstar Games\DEV-SOL46.5\GTASOL Beta47.2\",SOL47.2

@@ -92,7 +92,8 @@ from apps.gui.directory_tree_system import integrate_directory_tree_system
 from apps.gui.tearoff_integration import integrate_tearoff_system
 
 # After GUI setup:
-from apps.gui.gui_context import (add_col_context_menu_to_entries_table, open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
+from apps.core.right_click_actions import setup_table_context_menu
+from apps.gui.gui_context import (open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
 
 #Shared Methods - Shared Functions.
 from apps.methods.img_core_classes import (
@@ -4841,7 +4842,7 @@ def fix_menu_system_and_functionality(main_window):
         add_file_operations_to_main_window(main_window)
         
         # Set up proper double-click rename functionality
-        setup_double_click_rename(main_window)
+        #setup_double_click_rename(main_window)
         
         main_window.log_message("✅ Comprehensive menu system and functionality fix applied")
         return True

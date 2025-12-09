@@ -596,6 +596,12 @@ class IMGFile:
             print(f"[ERROR] Failed to save IMG file: {e}")
             return False
 
+    def save(self, file_path=None): #vers 1
+        """Save IMG file - wrapper for save_img_file()"""
+        if file_path:
+            self.file_path = file_path
+        return self.save_img_file()
+
     def rebuild_img_file(self) -> bool: #vers 1
         """Rebuild IMG file based on version"""
         try:

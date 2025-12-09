@@ -144,14 +144,14 @@ def open_col_viewer_dialog(main_window, row: int) -> bool: #vers 1
 def add_view_col_3d_to_context_menu(main_window) -> bool: #vers 1
     """Add 'View COL (3D)' option to right-click context menu"""
     try:
-        # Patch the enhanced_context_menu_event function
+        # Patch the context_menu_event function
         from gui import gui_context
         
         # Store original function
-        if not hasattr(gui_context, '_original_enhanced_context_menu'):
-            gui_context._original_enhanced_context_menu = gui_context.enhanced_context_menu_event
+        if not hasattr(gui_context, '_original_context_menu'):
+            gui_context._original_context_menu = gui_context.context_menu_event
         
-        def enhanced_context_menu_with_viewer(main_window, event): #vers 1
+        def context_menu_with_viewer(main_window, event): #vers 1
             """Enhanced context menu with COL 3D viewer option"""
             try:
                 if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
@@ -177,19 +177,19 @@ def add_view_col_3d_to_context_menu(main_window) -> bool: #vers 1
                 
                 # Add COL 3D viewer option FIRST if COL file
                 if entry_info['is_col']:
-                    view_3d_action = QAction("🎮 View COL (3D)", table)
+                    view_3d_action = QAction("View COL (3D)", table)
                     view_3d_action.triggered.connect(lambda: open_col_viewer_dialog(main_window, row))
                     menu.addAction(view_3d_action)
                     menu.addSeparator()
                 
                 # Call original context menu function to add other options
-                gui_context._original_enhanced_context_menu(main_window, event)
+                gui_context._original_context_menu(main_window, event)
                 
             except Exception as e:
                 main_window.log_message(f"Context menu error: {str(e)}")
         
         # Replace function
-        gui_context.enhanced_context_menu_event = enhanced_context_menu_with_viewer
+        gui_context.context_menu_event = context_menu_with_viewer
         
         main_window.log_message("COL 3D viewer added to context menu")
         return True

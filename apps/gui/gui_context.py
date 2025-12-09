@@ -392,8 +392,8 @@ def show_entry_properties(main_window, row): #vers 1
         main_window.log_message(f"Unable to get properties for row {row}")
 
 # Context menu setup functions (enhanced versions)
-def enhanced_context_menu_event(main_window, event): #vers 2
-    """Enhanced context menu with working COL functions"""
+def context_menu_event(main_window, event): #vers 2
+    """Context menu with working COL functions"""
     try:
         if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
             return
@@ -468,51 +468,3 @@ def enhanced_context_menu_event(main_window, event): #vers 2
     except Exception as e:
         main_window.log_message(f"Error showing context menu: {str(e)}")
 
-def add_col_context_menu_to_entries_table(main_window): #vers 4
-    """Add enhanced COL context menu to entries table"""
-    try:
-        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            return False
-
-        entries_table = main_window.gui_layout.table
-
-        # Set up custom context menu
-        entries_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        entries_table.customContextMenuRequested.connect(
-            lambda pos: enhanced_context_menu_event(main_window, 
-                type('MockEvent', (), {'pos': lambda: pos, 'globalPos': lambda: entries_table.mapToGlobal(pos)})())
-        )
-
-        main_window.log_message("Enhanced COL context menu added to entries table")
-        return True
-
-    except Exception as e:
-        main_window.log_message(f"Error adding COL context menu: {str(e)}")
-        return False
-
-def add_img_context_menu_to_entries_table(main_window): #vers 5
-    """Add IMG-specific context menu items to entries table"""
-    # Use the enhanced COL context menu which handles all file types
-    return add_col_context_menu_to_entries_table(main_window)
-
-# Export functions
-__all__ = [
-    'add_col_context_menu_to_entries_table',
-    'add_img_context_menu_to_entries_table', 
-    'analyze_col_file_dialog',
-    'analyze_col_from_img_entry',
-    'edit_col_collision',
-    'edit_col_from_img_entry',
-    'enhanced_context_menu_event',
-    'get_selected_entry_info',
-    'open_col_batch_proc_dialog',
-    'open_col_editor_dialog',
-    'open_col_file_dialog',
-    'show_entry_properties',
-    'view_col_collision',
-    'view_dff_model',
-    'view_txd_textures',
-    'edit_dff_model',
-    'edit_txd_textures',
-    'replace_selected_entry'
-]

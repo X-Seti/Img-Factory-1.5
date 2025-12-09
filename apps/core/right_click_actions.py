@@ -853,7 +853,7 @@ def analyze_col_from_img_entry(main_window, row): #vers 2
             return False
         
         entry = entry_info['entry']
-        main_window.log_message(f"🔍 Analyzing COL file: {entry.name}")
+        main_window.log_message(f"Analyzing COL file: {entry.name}")
         
         # Use methods from col_operations
         from apps.methods.col_operations import extract_col_from_img_entry, validate_col_data, create_temporary_col_file, cleanup_temporary_file, get_col_detailed_analysis
@@ -951,104 +951,6 @@ def show_entry_properties(main_window, row): #vers 1
         main_window.log_message(f"Unable to get properties for row {row}")
 
 
-def enhanced_context_menu_event(main_window, event): #vers 2
-    """Enhanced context menu with working COL functions"""
-    try:
-        if not hasattr(main_window, 'gui_layout') or not hasattr(main_window.gui_layout, 'table'):
-            return
-
-        table = main_window.gui_layout.table
-        # Get the item at the position where the right-click occurred
-        item = table.itemAt(event.pos())
-        if not item:
-            return
-
-        row = item.row()
-        entry_info = get_selected_entry_info(main_window, row)
-        if not entry_info:
-            return
-
-        # Create context menu
-        from PyQt6.QtWidgets import QMenu
-        menu = QMenu(table)
-        
-        # Add file-type specific actions
-        if entry_info['is_col']:
-            # COL file actions
-            from PyQt6.QtGui import QAction
-            view_action = QAction("View Collision", table)
-            view_action.triggered.connect(lambda: view_col_collision(main_window, row))
-            menu.addAction(view_action)
-            
-            edit_action = QAction("Edit COL File", table)
-            edit_action.triggered.connect(lambda: edit_col_from_img_entry(main_window, row))
-            menu.addAction(edit_action)
-            
-            analyze_action = QAction("Analyze COL", table)
-            analyze_action.triggered.connect(lambda: analyze_col_from_img_entry(main_window, row))
-            menu.addAction(analyze_action)
-            
-            menu.addSeparator()
-            
-        elif entry_info['is_dff']:
-            # DFF model actions
-            from PyQt6.QtGui import QAction
-            view_action = QAction("View Model", table)
-            view_action.triggered.connect(lambda: view_dff_model(main_window, row))
-            menu.addAction(view_action)
-            
-            edit_action = QAction("Edit Model", table)
-            edit_action.triggered.connect(lambda: edit_dff_model(main_window, row))
-            menu.addAction(edit_action)
-            
-            menu.addSeparator()
-            
-        elif entry_info['is_txd']:
-            # TXD texture actions
-            from PyQt6.QtGui import QAction
-            view_action = QAction("View Textures", table)
-            view_action.triggered.connect(lambda: view_txd_textures(main_window, row))
-            menu.addAction(view_action)
-            
-            edit_action = QAction("Edit Textures", table)
-            edit_action.triggered.connect(lambda: edit_txd_textures(main_window, row))
-            menu.addAction(edit_action)
-            
-            menu.addSeparator()
-        
-        # Common actions
-        from PyQt6.QtGui import QAction
-        props_action = QAction("Properties", table)
-        props_action.triggered.connect(lambda: show_entry_properties(main_window, row))
-        menu.addAction(props_action)
-        
-        replace_action = QAction("Replace Entry", table)
-        replace_action.triggered.connect(lambda: replace_selected_entry(main_window, row))
-        menu.addAction(replace_action)
-        
-        # Clipboard operations
-        # Copy filename only (acts as "Copy Name")
-        copy_name_action = QAction("Copy Name", table)
-        copy_name_action.triggered.connect(lambda: copy_filename_only(main_window, row))
-        menu.addAction(copy_name_action)
-        
-        # Copy file summary (acts as "Copy Info")
-        copy_info_action = QAction("Copy Info", table)
-        copy_info_action.triggered.connect(lambda: copy_file_summary(main_window, row))
-        menu.addAction(copy_info_action)
-        
-        # Copy selected row
-        copy_row_action = QAction("Copy Selected Row", table)
-        copy_row_action.triggered.connect(lambda: copy_table_row(main_window, row))
-        menu.addAction(copy_row_action)
-        
-        # Show menu at the global position of the event
-        menu.exec(event.globalPos())
-
-    except Exception as e:
-        main_window.log_message(f"Error showing context menu: {str(e)}")
-
-
 def move_file(main_window, row, entry_info):
     """
     Move selected file to a new location
@@ -1089,7 +991,7 @@ def move_selected_file(main_window):
             selected_items = table.selectedItems()
             if selected_items:
                 row = selected_items[0].row()
-                entry_info = get_entry_info(main_window, row)
+                entry_info = get_selected_entry_info(main_window, row)
                 if entry_info:
                     move_file(main_window, row, entry_info)
     except Exception as e:
@@ -1147,7 +1049,7 @@ def analyze_selected_file(main_window):
             selected_items = table.selectedItems()
             if selected_items:
                 row = selected_items[0].row()
-                entry_info = get_entry_info(main_window, row)
+                entry_info = get_selected_entry_info(main_window, row)
                 if entry_info:
                     analyze_file(main_window, row, entry_info)
     except Exception as e:
@@ -1181,7 +1083,7 @@ def show_hex_editor_selected(main_window):
             selected_items = table.selectedItems()
             if selected_items:
                 row = selected_items[0].row()
-                entry_info = get_entry_info(main_window, row)
+                entry_info = get_selected_entry_info(main_window, row)
                 if entry_info:
                     show_hex_editor(main_window, row, entry_info)
     except Exception as e:
@@ -1221,7 +1123,7 @@ def copy_entry_info(main_window, row):
         main_window.log_message(f"Error copying entry info: {str(e)}")
 
 
-def get_entry_info(main_window, row):
+def get_selected_entry_info(main_window, row):
     """
     Get entry information for a given row
     """
@@ -1275,7 +1177,6 @@ __all__ = [
     'view_txd_textures',
     'replace_selected_entry',
     'show_entry_properties',
-    'enhanced_context_menu_event',
     'move_file',
     'move_selected_file',
     'analyze_file',
@@ -1284,5 +1185,5 @@ __all__ = [
     'show_hex_editor_selected',
     'copy_entry_name',
     'copy_entry_info',
-    'get_entry_info'
+    'get_selected_entry_info'
 ]

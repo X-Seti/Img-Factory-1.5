@@ -815,15 +815,15 @@ def setup_col_integration_full(main_window): #vers 3
             if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
                 try:
                     # Try to import the context menu function from the correct location
-                    from gui.gui_context import add_col_context_menu_to_entries_table
-                    add_col_context_menu_to_entries_table(main_window)
+                    from apps.core.right_click_actions import setup_table_context_menu
+                    setup_table_context_menu(main_window)
                     img_debugger.debug("[COL-COL_INTEGRATION] COL context menu added to entries table")
                 except ImportError as e:
                     img_debugger.warning(f"[COL-COL_INTEGRATION] Could not import context menu function: {e}")
                     # Try alternative import paths
                     try:
-                        from apps.components.col_functions import add_col_context_menu_to_entries_table
-                        add_col_context_menu_to_entries_table(main_window)
+                        from apps.core.right_click_actions import setup_table_context_menu
+                        setup_table_context_menu(main_window)
                         img_debugger.debug("[COL-COL_INTEGRATION] COL context menu added (alternative import)")
                     except ImportError:
                         img_debugger.warning("[COL-COL_INTEGRATION] Context menu not available, continuing without it")
@@ -872,10 +872,10 @@ def integrate_col_methods(main_window) -> bool: #vers 1
 def integrate_col_context_menus(main_window) -> bool: #vers 1
     """Integrate COL context menus"""
     try:
-        from gui.gui_context import add_col_context_menu_to_entries_table
+        from apps.core.right_click_actions import setup_table_context_menu
 
         # Add enhanced context menu with COL support
-        success = add_col_context_menu_to_entries_table(main_window)
+        success = setup_table_context_menu(main_window)
 
         if success:
             img_debugger.success("✅ COL context menus integrated")
