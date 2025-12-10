@@ -137,8 +137,25 @@ from apps.methods.col_export_functions import integrate_col_export_functions
 from apps.components.Img_Factory.depends.mui_demo import MUIWindow
 
 App_name = "Img Factory 1.5"
-App_build ="November 29"
+App_build ="December 10"
 App_auth = "X-Seti"
+
+def get_current_git_branch(): #vers 1
+    """Get current git branch name"""
+    try:
+        import subprocess
+        result = subprocess.run(
+            ['git', 'branch', '--show-current'],
+            capture_output=True,
+            text=True,
+            cwd=os.path.dirname(os.path.abspath(__file__))
+        )
+        if result.returncode == 0:
+            branch = result.stdout.strip()
+            return f"({branch})" if branch else ""
+        return ""
+    except:
+        return ""
 
 def setup_rebuild_system(self): #vers 1
     """Setup hybrid rebuild system with mode selection"""
