@@ -23,14 +23,6 @@ import numpy as np
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple
 
-
-# Add project root to path for standalone mode
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
-
-# Import PyQt6
 from PyQt6.QtWidgets import (QApplication, QSlider, QCheckBox,
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QListWidget, QDialog, QFormLayout, QSpinBox,  QListWidgetItem, QLabel, QPushButton, QFrame, QFileDialog, QLineEdit, QTextEdit, QMessageBox, QScrollArea, QGroupBox, QTableWidget, QTableWidgetItem, QColorDialog, QHeaderView, QAbstractItemView, QMenu, QComboBox, QInputDialog, QTabWidget, QDoubleSpinBox, QRadioButton
 )
@@ -45,6 +37,12 @@ from depends.svg_icon_factory import SVGIconFactory
 #from apps.methods.col_integration import get_col_detailed_analysis, create_temporary_col_file, cleanup_temporary_file
 from apps.gui.col_dialogs import show_col_analysis_dialog
 
+# Add project root to path for standalone mode
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 # Import COL viewport and preview from depends
 try:
     from apps.components.Col_Editor.depends.col_3d_viewport import COL3DViewport
@@ -56,10 +54,6 @@ except ImportError:
     VIEWPORT_AVAILABLE = False
     COL3DViewport = None
     print("Warning: COL 3D viewport not available - install PyOpenGL")
-
-# Add root directory to path
-App_name = "Col Workshop"
-DEBUG_STANDALONE = False
 
 # Use new 3D viewport if available, fallback to text display
 if VIEWPORT_AVAILABLE:
@@ -75,6 +69,9 @@ try:
 except ImportError:
     APPSETTINGS_AVAILABLE = False
     print("Warning: AppSettings not available")
+
+App_name = "Col Workshop"
+DEBUG_STANDALONE = False
 
 ##class COLModelListWidget: -
 # __init__

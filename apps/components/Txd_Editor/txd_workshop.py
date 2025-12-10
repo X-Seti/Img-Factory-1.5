@@ -81,8 +81,8 @@ except ImportError:
     APPSETTINGS_AVAILABLE = False
     print("Warning: AppSettings not available")
 
-DEBUG_STANDALONE = False
 App_name = "Txd Workshop"
+DEBUG_STANDALONE = False
 
 ##Methods list -
 # _apply_gaussian_blur                  # Gaussian blur for bumpmap smoothing
