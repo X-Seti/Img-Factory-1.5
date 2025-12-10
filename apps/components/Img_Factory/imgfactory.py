@@ -137,7 +137,7 @@ from apps.methods.col_export_functions import integrate_col_export_functions
 from apps.components.Img_Factory.depends.mui_demo import MUIWindow
 
 App_name = "Img Factory 1.5"
-App_build ="December 10"
+App_build ="December 10 - "
 App_auth = "X-Seti"
 
 def get_current_git_branch(): #vers 1
@@ -4334,14 +4334,48 @@ class IMGFactory(QMainWindow):
 
 
     # COL and editor functions
-    def open_col_editor(self): #vers 2
-        """Open COL file editor - WORKING VERSION"""
+    def open_col_editor(self): #vers 4
+        """Open COL Workshop with current COL data and selected entry"""
+        try:
+            from apps.components.Col_Editor.col_workshop import COLWorkshop
 
-        from apps.components.Col_Editor.col_workshop import COLEditorDialog
-        self.log_message("Opening COL Workshop...")
-        editor = COLEditorDialog(self)
-        editor.show()
-        self.log_message("COL Workshop opened")
+            # Get selected COL entry name from table
+            selected_col_name = None
+            if hasattr(self, 'gui_layout') and hasattr(self.gui_layout, 'table'):
+                table = self.gui_layout.table
+                selected_items = table.selectedItems()
+                if selected_items:
+                    row = selected_items[0].row()
+                    name_item = table.item(row, 0)  # Column 0 is name
+                    if name_item:
+                        selected_col_name = name_item.text()
+
+            # Get COL/IMG path if available
+            col_path = None
+            if hasattr(self, 'current_col') and self.current_col:
+                col_path = self.current_col.file_path
+            elif hasattr(self, 'current_img') and self.current_img:
+                col_path = self.current_img.file_path
+
+            # Open docked workshop
+            workshop = self.open_col_workshop_docked()
+
+            # Load COL/IMG if available
+            if workshop and col_path:
+                if col_path.lower().endswith('.col'):
+                    workshop.open_col_file(col_path)
+                else:
+                    workshop.load_from_img_archive(col_path)
+
+                # Auto-select the entry that was clicked
+                if selected_col_name and hasattr(workshop, 'select_col_by_name'):
+                    workshop.select_col_by_name(selected_col_name)
+
+            self.log_message(f"COL Workshop opened - Selected: {selected_col_name or 'None'}")
+
+        except Exception as e:
+            self.log_message(f"Error opening COL Workshop: {str(e)}")
+
 
    #TODO below, coming soon.
     def open_dff_editor(self): #vers 1

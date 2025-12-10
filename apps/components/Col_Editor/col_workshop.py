@@ -23,10 +23,12 @@ import numpy as np
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple
 
-# Add project root to path FIRST
+
+# Add project root to path for standalone mode
 current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(os.path.dirname(current_dir))
-sys.path.insert(0, project_root)
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 # Import PyQt6
 from PyQt6.QtWidgets import (QApplication, QSlider, QCheckBox,
@@ -39,6 +41,7 @@ from PyQt6.QtSvg import QSvgRenderer
 # Import project modules AFTER path setup
 from apps.debug.debug_functions import img_debugger
 from apps.methods.col_core_classes import COLFile, COLModel, COLVersion, Vector3
+from depends.svg_icon_factory import SVGIconFactory
 #from apps.methods.col_integration import get_col_detailed_analysis, create_temporary_col_file, cleanup_temporary_file
 from apps.gui.col_dialogs import show_col_analysis_dialog
 
@@ -64,6 +67,14 @@ if VIEWPORT_AVAILABLE:
 else:
     ViewportWidget = QLabel  # Fallback text display
 
+
+# Import AppSettings
+try:
+    from apps.utils.app_settings_system import AppSettings, SettingsDialog
+    APPSETTINGS_AVAILABLE = True
+except ImportError:
+    APPSETTINGS_AVAILABLE = False
+    print("Warning: AppSettings not available")
 
 ##class COLModelListWidget: -
 # __init__
@@ -189,10 +200,12 @@ class COLModelListWidget(QListWidget): #vers 1
         # Connect selection
         self.currentRowChanged.connect(self.on_selection_changed)
 
+
     def set_col_file(self, col_file: COLFile): #vers 1
         """Set COL file and populate list"""
         self.current_file = col_file
         self.populate_models()
+
 
     def populate_models(self): #vers 1
         """Populate model list"""
@@ -228,6 +241,7 @@ class COLModelListWidget(QListWidget): #vers 1
             model_index = item.data(Qt.ItemDataRole.UserRole)
             self.model_context_menu.emit(model_index, self.mapToGlobal(position))
 
+
 class COLPropertiesWidget(QTabWidget): #vers 2
     """Enhanced properties editor widget for COL elements"""
 
@@ -239,12 +253,13 @@ class COLPropertiesWidget(QTabWidget): #vers 2
 
         self.setup_tabs()
 
+
     def setup_tabs(self): #vers 1
         """Setup property tabs"""
         # Model properties tab
         self.model_tab = QWidget()
         self.setup_model_tab()
-        self.addTab(self.model_tab, "Model")
+        self.addTab(self.model_tab, "  Model")
 
         # Spheres tab
         self.spheres_tab = QWidget()
@@ -254,12 +269,13 @@ class COLPropertiesWidget(QTabWidget): #vers 2
         # Boxes tab
         self.boxes_tab = QWidget()
         self.setup_boxes_tab()
-        self.addTab(self.boxes_tab, "Boxes")
+        self.addTab(self.boxes_tab, "  Boxes")
 
         # Mesh tab
         self.mesh_tab = QWidget()
         self.setup_mesh_tab()
         self.addTab(self.mesh_tab, "🌐 Mesh")
+
 
     def setup_model_tab(self): #vers 1
         """Setup model properties tab"""
@@ -317,6 +333,7 @@ class COLPropertiesWidget(QTabWidget): #vers 2
         layout.addWidget(bbox_group)
         layout.addStretch()
 
+
     def setup_spheres_tab(self): #vers 1
         """Setup spheres tab"""
         layout = QVBoxLayout(self.spheres_tab)
@@ -343,6 +360,7 @@ class COLPropertiesWidget(QTabWidget): #vers 2
         spheres_buttons.addStretch()
         layout.addLayout(spheres_buttons)
 
+
     def setup_boxes_tab(self): #vers 1
         """Setup boxes tab"""
         layout = QVBoxLayout(self.boxes_tab)
@@ -368,6 +386,7 @@ class COLPropertiesWidget(QTabWidget): #vers 2
 
         boxes_buttons.addStretch()
         layout.addLayout(boxes_buttons)
+
 
     def setup_mesh_tab(self): #vers 1
         """Setup mesh tab"""
@@ -400,10 +419,12 @@ class COLPropertiesWidget(QTabWidget): #vers 2
 
         layout.addStretch()
 
+
     def set_current_model(self, model: COLModel): #vers 1
         """Set current model for editing"""
         self.current_model = model
         self.update_properties()
+
 
     def update_properties(self): #vers 1
         """Update property displays"""
@@ -445,6 +466,7 @@ class COLPropertiesWidget(QTabWidget): #vers 2
         except Exception as e:
             img_debugger.error(f"Error updating properties: {str(e)}")
 
+
     def clear_properties(self): #vers 1
         """Clear all property displays"""
         self.model_name_edit.clear()
@@ -458,6 +480,7 @@ class COLPropertiesWidget(QTabWidget): #vers 2
         self.boxes_table.setRowCount(0)
         self.vertices_count_label.setText("0")
         self.faces_count_label.setText("0")
+
 
     def update_spheres_table(self): #vers 1
         """Update spheres table"""
@@ -477,6 +500,7 @@ class COLPropertiesWidget(QTabWidget): #vers 2
                 self.spheres_table.setItem(i, 3, QTableWidgetItem(f"{sphere.radius:.3f}"))
             if hasattr(sphere, 'material'):
                 self.spheres_table.setItem(i, 4, QTableWidgetItem(str(sphere.material)))
+
 
     def update_boxes_table(self): #vers 1
         """Update boxes table"""
@@ -499,6 +523,7 @@ class COLPropertiesWidget(QTabWidget): #vers 2
             if hasattr(box, 'material'):
                 self.boxes_table.setItem(i, 6, QTableWidgetItem(str(box.material)))
 
+
     def update_mesh_info(self): #vers 1
         """Update mesh information"""
         if not self.current_model:
@@ -510,31 +535,38 @@ class COLPropertiesWidget(QTabWidget): #vers 2
         self.vertices_count_label.setText(str(vertices_count))
         self.faces_count_label.setText(str(faces_count))
 
+
     def on_version_changed(self): #vers 1
         """Handle version change"""
         if self.current_model:
             new_version = self.model_version_combo.currentData()
             self.property_changed.emit('version', new_version)
 
+
     def add_sphere(self): #vers 1
         """Add new sphere"""
         img_debugger.info("Add sphere - not yet implemented")
+
 
     def remove_sphere(self): #vers 1
         """Remove selected sphere"""
         img_debugger.info("Remove sphere - not yet implemented")
 
+
     def add_box(self): #vers 1
         """Add new box"""
         img_debugger.info("Add box - not yet implemented")
+
 
     def remove_box(self): #vers 1
         """Remove selected box"""
         img_debugger.info("Remove box - not yet implemented")
 
+
     def import_mesh(self): #vers 1
         """Import mesh from file"""
         img_debugger.info("Import mesh - not yet implemented")
+
 
     def export_mesh(self): #vers 1
         """Export mesh to file"""
@@ -545,6 +577,7 @@ class COLWorkshop(QWidget): #vers 3
     """COL Workshop - Main window"""
 
     workshop_closed = pyqtSignal()
+    window_closed = pyqtSignal()
 
     def __init__(self, parent=None, main_window=None): #vers 10
         """initialize_features"""
@@ -568,6 +601,12 @@ class COLWorkshop(QWidget): #vers 3
         self.button_font = QFont("Arial", 10)
         self.infobar_font = QFont("Courier New", 9)
         self.standalone_mode = (main_window is None)
+
+        # Get app_settings from main_window if available
+        if main_window and hasattr(main_window, 'app_settings'):
+            self.app_settings = main_window.app_settings
+        else:
+            self.app_settings = None
 
         # Preview settings
         self._show_checkerboard = True
@@ -637,6 +676,7 @@ class COLWorkshop(QWidget): #vers 3
 
         if DEBUG_STANDALONE and self.standalone_mode:
             print(App_name + " initialized")
+
 
     def setup_ui(self): #vers 7
         """Setup the main UI layout"""
@@ -727,6 +767,30 @@ class COLWorkshop(QWidget): #vers 3
                 self.status_modified.setStyleSheet("")
 
 
+    def select_col_by_name(self, col_name): #vers 1
+        """Select a specific COL model by name in the list"""
+        try:
+            if not hasattr(self, 'model_list'):
+                return False
+
+            # Search through model list for matching name
+            for i in range(self.model_list.count()):
+                item = self.model_list.item(i)
+                item_text = item.text()
+                # Extract model name from display text (format: "name (version - stats)")
+                if item_text.startswith(col_name):
+                    self.model_list.setCurrentRow(i)
+                    img_debugger.success(f"Auto-selected COL: {col_name}")
+                    return True
+
+            img_debugger.warning(f"COL not found in list: {col_name}")
+            return False
+
+        except Exception as e:
+            img_debugger.error(f"Error selecting COL by name: {str(e)}")
+            return False
+
+
 # - Panel Creation
 
     def _create_status_bar(self): #vers 1
@@ -765,7 +829,7 @@ class COLWorkshop(QWidget): #vers 3
         from PyQt6.QtGui import QFont
 
         dialog = QDialog(self)
-        dialog.setWindowTitle(App_name + " Settings")
+        dialog.setWindowTitle(App_name + "Settings")
         dialog.setMinimumWidth(650)
         dialog.setMinimumHeight(550)
 
@@ -780,7 +844,7 @@ class COLWorkshop(QWidget): #vers 3
         fonts_layout = QVBoxLayout(fonts_tab)
 
         # Default Font
-        default_font_group = QGroupBox("📝 Default Font")
+        default_font_group = QGroupBox("Default Font")
         default_font_layout = QHBoxLayout()
 
         default_font_combo = QFontComboBox()
@@ -1126,7 +1190,7 @@ class COLWorkshop(QWidget): #vers 3
             self.button_display_mode = mode_map[button_mode_combo.currentIndex()]
 
             # EXPORT
-            self.default_export_format = format_combo.currentText()
+            self.default_export_format = self.format_combo.currentText()
 
             # PREVIEW
             self.zoom_level = zoom_spin.value() / 100.0
@@ -1882,6 +1946,23 @@ class COLWorkshop(QWidget): #vers 3
     # Do not add to main window's menu system
     def _create_toolbar(self): #vers 12
         """Create toolbar - FIXED: Hide drag button when docked, ensure buttons visible"""
+        self.titlebar = QFrame()
+        self.titlebar.setFrameStyle(QFrame.Shape.StyledPanel)
+        self.titlebar.setFixedHeight(45)
+        self.titlebar.setObjectName("titlebar")
+
+        # Install event filter for drag detection
+        self.titlebar.installEventFilter(self)
+        self.titlebar.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
+        self.titlebar.setMouseTracking(True)
+
+        self.layout = QHBoxLayout(self.titlebar)
+        self.layout.setContentsMargins(5, 5, 5, 5)
+        self.layout.setSpacing(5)
+
+        # Get icon color from theme
+        icon_color = self._get_icon_color()
+
         self.toolbar = QFrame()
         self.toolbar.setFrameStyle(QFrame.Shape.StyledPanel)
         self.toolbar.setMaximumHeight(50)
@@ -1902,6 +1983,14 @@ class COLWorkshop(QWidget): #vers 3
 
         layout.addStretch()
 
+        # App title in center
+        self.title_label = QLabel(App_name)
+        self.title_label.setFont(self.title_font)
+        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.title_label)
+
+        layout.addStretch()
+
         # Only show "Open IMG" button if NOT standalone
         if not self.standalone_mode:
             self.open_img_btn = QPushButton("OpenIMG")
@@ -1915,7 +2004,7 @@ class COLWorkshop(QWidget): #vers 3
         self.open_btn = QPushButton()
         self.open_btn.setFont(self.button_font)
         self.open_btn.setIcon(self._create_open_icon())
-        self.open_btn.setText("OpenCOL")
+        self.open_btn.setText("Open")
         self.open_btn.setIconSize(QSize(20, 20))
         self.open_btn.setShortcut("Ctrl+O")
         if self.button_display_mode == 'icons':
@@ -1928,7 +2017,7 @@ class COLWorkshop(QWidget): #vers 3
         self.save_btn = QPushButton()
         self.save_btn.setFont(self.button_font)
         self.save_btn.setIcon(self._create_save_icon())
-        self.save_btn.setText("SaveCOL")
+        self.save_btn.setText("Save")
         self.save_btn.setIconSize(QSize(20, 20))
         self.save_btn.setShortcut("Ctrl+S")
         if self.button_display_mode == 'icons':
@@ -1942,7 +2031,7 @@ class COLWorkshop(QWidget): #vers 3
         self.saveall_btn = QPushButton()
         self.saveall_btn.setFont(self.button_font)
         self.saveall_btn.setIcon(self._create_saveas_icon())
-        self.saveall_btn.setText("Save ALL")
+        self.saveall_btn.setText("Save +")
         self.saveall_btn.setIconSize(QSize(20, 20))
         self.saveall_btn.setShortcut("Ctrl+S")
         if self.button_display_mode == 'icons':
@@ -1973,7 +2062,7 @@ class COLWorkshop(QWidget): #vers 3
         self.export_btn.setEnabled(False)
         layout.addWidget(self.export_btn)
 
-        self.export_all_btn = QPushButton("Export All")
+        self.export_all_btn = QPushButton("Export +")
         self.export_all_btn.setFont(self.button_font)
         self.export_all_btn.setIcon(self._create_package_icon())
         self.export_all_btn.setIconSize(QSize(20, 20))
@@ -1983,17 +2072,6 @@ class COLWorkshop(QWidget): #vers 3
         layout.addWidget(self.export_all_btn)
 
         layout.addSpacing(10)
-
-        # Switch button
-        self.switch_btn = QPushButton("Mesh")
-        self.switch_btn.setFont(self.button_font)
-        self.switch_btn.setIcon(self._create_flip_vert_icon())
-        self.switch_btn.setIconSize(QSize(20, 20))
-        #self.switch_btn.clicked.connect(self.switch_surface_view)
-        self.switch_btn.setEnabled(False)
-        self.switch_btn.setToolTip("Cycle: Wireframe → Mesh → Painted → Overlay")
-        layout.addWidget(self.switch_btn)
-
 
         self.undo_btn = QPushButton()
         self.undo_btn.setFont(self.button_font)
@@ -2031,7 +2109,16 @@ class COLWorkshop(QWidget): #vers 3
         self.info_btn.clicked.connect(self._show_col_info)
         layout.addWidget(self.info_btn)
 
-        layout.addStretch()
+        # Properties/Theme button
+        self.properties_btn = QPushButton()
+        self.properties_btn.setFont(self.button_font)
+        self.properties_btn.setIcon(SVGIconFactory.properties_icon(24, icon_color))
+        self.properties_btn.setToolTip("Theme")
+        self.properties_btn.setFixedSize(35, 35)
+        self.properties_btn.clicked.connect(self._show_settings_dialog)
+        self.properties_btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.properties_btn.customContextMenuRequested.connect(self._show_settings_context_menu)
+        layout.addWidget(self.properties_btn)
 
         # Dock button [D]
         self.dock_btn = QPushButton("D")
@@ -2311,51 +2398,10 @@ class COLWorkshop(QWidget): #vers 3
 
         layout.addSpacing(5)
 
-        """
-        # Filters
-        self.filters_btn = QPushButton()
-        self.filters_btn.setFont(self.button_font)
-        self.filters_btn.setIcon(self._create_filter_icon())
-        self.filters_btn.setText("Filters")
-        self.filters_btn.setIconSize(QSize(20, 20))
-        if self.button_display_mode == 'icons':
-            self.filters_btn.setFixedSize(40, 40)
-        #self.filters_btn.clicked.connect(self._open_filters_dialog)
-        self.filters_btn.setEnabled(False)
-        self.filters_btn.setToolTip("Brightness, Contrast, Saturation")
-        layout.addWidget(self.filters_btn)
-        """
-
         layout.addStretch()
 
         return self.transform_panel
 
-    """
-    def _create_left_panel(self): #vers 6
-        #Create left panel - col file list (only in IMG Factory mode)
-        # Only create panel in IMG Factory mode
-        if not self.main_window:
-            # Standalone mode - return None to hide this panel
-            return None
-
-        panel = QFrame()
-        panel.setFrameStyle(QFrame.Shape.StyledPanel)
-        panel.setMinimumWidth(200)
-        panel.setMaximumWidth(300)
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(5, 5, 5, 5)
-
-        header = QLabel("Img File") # only show this panel when docked to Img factory
-        header.setFont(QFont("Arial", 10, QFont.Weight.Bold))
-        layout.addWidget(header)
-
-        self.panelone_widget = QListWidget()
-        self.panelone_widget.setAlternatingRowColors(True)
-        #self.panelone_widget.itemClicked.connect(self._on_selected)
-        layout.addWidget(self.panelone_widget)
-
-        return panel
-    """
 
     def _create_left_panel(self): #vers 5
         """Create left panel - COL file list (only in IMG Factory mode)"""
@@ -2419,6 +2465,7 @@ class COLWorkshop(QWidget): #vers 3
         if hasattr(self, 'infobar_font'):
             if hasattr(self, 'info_bar'):
                 self.info_bar.setFont(self.infobar_font)
+
 
     def _load_img_col_list(self): #vers 2
         """Load COL files from IMG archive"""
@@ -2490,6 +2537,7 @@ class COLWorkshop(QWidget): #vers 3
         self.collision_list.customContextMenuRequested.connect(self._show_collision_context_menu)
         return panel
 
+
     def _create_right_panel(self): #vers 10
         """Create right panel with editing controls - compact layout"""
         panel = QFrame()
@@ -2556,6 +2604,16 @@ class COLWorkshop(QWidget): #vers 3
             format_layout.addWidget(self.format_combo)
 
             format_layout.addStretch()
+
+            # Switch button
+            self.switch_btn = QPushButton("Mesh")
+            self.switch_btn.setFont(self.button_font)
+            self.switch_btn.setIcon(self._create_flip_vert_icon())
+            self.switch_btn.setIconSize(QSize(20, 20))
+            #self.switch_btn.clicked.connect(self.switch_surface_view)
+            self.switch_btn.setEnabled(False)
+            self.switch_btn.setToolTip("Cycle: Wireframe → Mesh → Painted → Overlay")
+            format_layout.addWidget(self.switch_btn)
 
             # Convert
             self.convert_btn = QPushButton("Convert")
@@ -2630,6 +2688,7 @@ class COLWorkshop(QWidget): #vers 3
 
         main_layout.addWidget(info_group, stretch=0)
         return panel
+
 
     def _create_preview_controls(self): #vers 5
         """Create preview control buttons - vertical layout on right"""
@@ -3137,6 +3196,23 @@ class COLWorkshop(QWidget): #vers 3
             img_debugger.error(f"Error toggling tear-off: {str(e)}")
             from PyQt6.QtWidgets import QMessageBox
             QMessageBox.warning(self, "Tear-off Error", f"Could not toggle tear-off state:\n{str(e)}")
+
+
+    def _open_settings_dialog(self): #vers 1
+        """Open settings dialog and refresh on save"""
+        dialog = SettingsDialog(self.mel_settings, self)
+        if dialog.exec():
+            # Refresh platform list with new ROM path
+            self._scan_platforms()
+            self.status_label.setText("Settings saved - platforms refreshed")
+
+
+    def _setup_settings_button(self): #vers 1
+        """Setup settings button in UI"""
+        settings_btn = QPushButton("âš™ Settings")
+        settings_btn.clicked.connect(self._open_settings_dialog)
+        settings_btn.setMaximumWidth(120)
+        return settings_btn
 
 
     def _show_settings_dialog(self): #vers 5
@@ -3654,6 +3730,153 @@ class COLWorkshop(QWidget): #vers 3
 
         dialog.exec()
 
+    def _show_settings_context_menu(self, pos): #vers 1
+        """Show context menu for Settings button"""
+        from PyQt6.QtWidgets import QMenu
+
+        menu = QMenu(self)
+
+        # Move window action
+        move_action = menu.addAction("Move Window")
+        move_action.triggered.connect(self._enable_move_mode)
+
+        # Maximize window action
+        max_action = menu.addAction("Maximize Window")
+        max_action.triggered.connect(self._toggle_maximize)
+
+        # Minimize action
+        min_action = menu.addAction("Minimize")
+        min_action.triggered.connect(self.showMinimized)
+
+        menu.addSeparator()
+
+        # Upscale Native action
+        upscale_action = menu.addAction("Upscale Native")
+        upscale_action.setCheckable(True)
+        upscale_action.setChecked(False)
+        upscale_action.triggered.connect(self._toggle_upscale_native)
+
+        # Shaders action
+        shaders_action = menu.addAction("Shaders")
+        shaders_action.triggered.connect(self._show_shaders_dialog)
+
+        menu.addSeparator()
+
+        # Icon display mode submenu # TODO icon only system is missing.
+        display_menu = menu.addMenu("Platform Display")
+
+        icons_text_action = display_menu.addAction("Icons & Text")
+        icons_text_action.setCheckable(True)
+        icons_text_action.setChecked(self.icon_display_mode == "icons_and_text")
+        icons_text_action.triggered.connect(lambda: self._set_icon_display_mode("icons_and_text"))
+
+        icons_only_action = display_menu.addAction("Icons Only")
+        icons_only_action.setCheckable(True)
+        icons_only_action.setChecked(self.icon_display_mode == "icons_only")
+        icons_only_action.triggered.connect(lambda: self._set_icon_display_mode("icons_only"))
+
+        text_only_action = display_menu.addAction("Text Only")
+        text_only_action.setCheckable(True)
+        text_only_action.setChecked(self.icon_display_mode == "text_only")
+        text_only_action.triggered.connect(lambda: self._set_icon_display_mode("text_only"))
+
+        # Show menu at button position
+        menu.exec(self.settings_btn.mapToGlobal(pos))
+
+    def _enable_move_mode(self): #vers 2
+        """Enable move window mode using system move"""
+        # Use Qt's system move which works on Windows, Linux, etc.
+        if hasattr(self.windowHandle(), 'startSystemMove'):
+            self.windowHandle().startSystemMove()
+        else:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(self, "Move Window",
+                "Drag the titlebar to move the window")
+
+    def _toggle_upscale_native(self): #vers 1
+        """Toggle upscale native resolution"""
+        # Placeholder for upscale native functionality
+        print("Upscale Native toggled")
+
+    def _show_shaders_dialog(self): #vers 1
+        """Show shaders configuration dialog"""
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.information(self, "Shaders",
+            "Shader configuration coming soon!\n\nThis will allow you to:\n"
+            "- Select shader presets\n"
+            "- Configure CRT effects\n"
+            "- Adjust visual filters")
+
+    def _show_window_context_menu(self, pos): #vers 1
+        """Show context menu for titlebar right-click"""
+        from PyQt6.QtWidgets import QMenu
+
+
+        # Move window action
+        move_action = menu.addAction("Move Window")
+        move_action.triggered.connect(self._enable_move_mode)
+
+        # Maximize/Restore action
+        if self.isMaximized():
+            max_action = menu.addAction("Restore Window")
+        else:
+            max_action = menu.addAction("Maximize Window")
+        max_action.triggered.connect(self._toggle_maximize)
+
+        # Minimize action
+        min_action = menu.addAction("Minimize")
+        min_action.triggered.connect(self.showMinimized)
+
+        menu.addSeparator()
+
+        # Close action
+        close_action = menu.addAction("Close")
+        close_action.triggered.connect(self.close)
+
+        # Show menu at global position
+        menu.exec(self.mapToGlobal(pos))
+
+
+
+    def _get_icon_color(self): #vers 1
+        """Get icon color from current theme"""
+        if APPSETTINGS_AVAILABLE and self.app_settings:
+            colors = self.app_settings.get_theme_colors()
+            return colors.get('text_primary', '#ffffff')
+        return '#ffffff'
+
+
+    def _apply_fonts_to_widgets(self): #vers 1
+        """Apply fonts from AppSettings to all widgets"""
+        if not hasattr(self, 'default_font'):
+            return
+
+        print("\n=== Applying Fonts ===")
+        print(f"Default font: {self.default_font.family()} {self.default_font.pointSize()}pt")
+        print(f"Title font: {self.title_font.family()} {self.title_font.pointSize()}pt")
+        print(f"Panel font: {self.panel_font.family()} {self.panel_font.pointSize()}pt")
+        print(f"Button font: {self.button_font.family()} {self.button_font.pointSize()}pt")
+
+        # Apply default font to main window
+        self.setFont(self.default_font)
+
+        # Apply title font to titlebar
+        if hasattr(self, 'title_label'):
+            self.title_label.setFont(self.title_font)
+
+        # Apply panel font to lists
+        if hasattr(self, 'platform_list'):
+            self.platform_list.setFont(self.panel_font)
+        if hasattr(self, 'game_list'):
+            self.game_list.setFont(self.panel_font)
+
+        # Apply button font to all buttons
+        for btn in self.findChildren(QPushButton):
+            btn.setFont(self.button_font)
+
+        print("Fonts applied to widgets")
+        print("======================\n")
+
 
     def _apply_theme(self): #vers 2
         """Apply theme from main window"""
@@ -3702,6 +3925,7 @@ class COLWorkshop(QWidget): #vers 3
         self._apply_panel_font()
         self._apply_button_font()
         self._apply_infobar_font()
+        self.default_export_format = format_combo.currentText()
 
         # Apply button display mode
         mode_map = ["icons", "text", "both"]
@@ -3712,7 +3936,6 @@ class COLWorkshop(QWidget): #vers 3
 
         # Locale setting (would need implementation)
         locale_text = self.settings_locale_combo.currentText()
-
 
 
     def _refresh_main_window(self): #vers 1
@@ -3780,6 +4003,7 @@ class COLWorkshop(QWidget): #vers 3
             img_debugger.error(f"Error saving file: {str(e)}")
             QMessageBox.critical(self, "Error", f"Failed to save file:\n{str(e)}")
 
+
     def _save_file_as(self): #vers 1
         """Save As dialog"""
         try:
@@ -3817,8 +4041,6 @@ class COLWorkshop(QWidget): #vers 3
                     self.last_save_directory = settings.get('last_save_directory', None)
         except Exception as e:
             print(f"Failed to load settings: {e}")
-
-
 
 
     def _save_settings(self): #vers 1
@@ -3890,6 +4112,7 @@ class COLWorkshop(QWidget): #vers 3
             QMessageBox.critical(self, "Error", f"Failed to open COL file:\n{str(e)}")
             return False
 
+
     def load_from_img_archive(self, img_path): #vers 1
         """Load COL files from IMG archive"""
         try:
@@ -3906,6 +4129,7 @@ class COLWorkshop(QWidget): #vers 3
             img_debugger.error(f"Error loading from IMG archive: {str(e)}")
             QMessageBox.critical(self, "Error", f"Failed to load from IMG:\n{str(e)}")
             return False
+
 
     def _analyze_collision(self): #vers 1
         """Analyze current COL file"""
@@ -3935,6 +4159,7 @@ class COLWorkshop(QWidget): #vers 3
             img_debugger.error(f"Error analyzing file: {str(e)}")
             QMessageBox.critical(self, "Error", f"Failed to analyze file:\n{str(e)}")
 
+
     def _on_col_selected(self, item): #vers 1
         """Handle COL file selection"""
         try:
@@ -3948,6 +4173,7 @@ class COLWorkshop(QWidget): #vers 3
         except Exception as e:
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"❌ Error selecting COL: {str(e)}")
+
 
     def _extract_col_from_img(self, entry): #vers 2
         """Extract TXD data from IMG entry"""
@@ -4044,6 +4270,7 @@ class COLWorkshop(QWidget): #vers 3
 
         menu.exec(self.collision_list.mapToGlobal(position))
 
+
     def _show_model_details(self, model, index): #vers 1
         """Show detailed model information dialog"""
         from PyQt6.QtWidgets import QDialog, QTextEdit, QVBoxLayout, QPushButton
@@ -4107,6 +4334,7 @@ class COLWorkshop(QWidget): #vers 3
 
         dialog.exec()
 
+
     def _copy_model_info(self, model, index): #vers 1
         """Copy model info to clipboard"""
         info = f"{model.name} | S:{len(model.spheres)} B:{len(model.boxes)} V:{len(model.vertices)} F:{len(model.faces)}"
@@ -4114,11 +4342,13 @@ class COLWorkshop(QWidget): #vers 3
         if hasattr(self, 'status_bar'):
             self.status_bar.showMessage("Model info copied to clipboard", 2000)
 
+
     def _copy_text_to_clipboard(self, text): #vers 1
         """Copy text to system clipboard"""
         from PyQt6.QtWidgets import QApplication
         clipboard = QApplication.clipboard()
         clipboard.setText(text)
+
 
     def _populate_collision_list(self): #vers 4
         """Populate collision table with models - matches TXD Workshop style"""
@@ -4200,6 +4430,7 @@ class COLWorkshop(QWidget): #vers 3
         except Exception as e:
             img_debugger.error(f"Error toggling spheres: {str(e)}")
 
+
     def _toggle_boxes(self, checked): #vers 3
         """Toggle box visibility"""
         try:
@@ -4208,6 +4439,7 @@ class COLWorkshop(QWidget): #vers 3
             img_debugger.debug(f"Boxes visibility: {checked}")
         except Exception as e:
             img_debugger.error(f"Error toggling boxes: {str(e)}")
+
 
     def _toggle_mesh(self, checked): #vers 3
         """Toggle mesh visibility"""
@@ -4270,7 +4502,6 @@ class COLWorkshop(QWidget): #vers 3
 
         except Exception as e:
             img_debugger.error(f"Error updating 3D viewer: {str(e)}")
-
 
 
     def _generate_collision_thumbnail(self, model, width, height): #vers 2
@@ -5022,6 +5253,7 @@ class COLWorkshop(QWidget): #vers 3
 
         dialog.exec()
 
+
     def _ensure_depends_structure(self): #vers 1
         """Ensure depends/ folder exists in standalone mode with required files"""
         if not self.standalone_mode:
@@ -5054,6 +5286,7 @@ class COLWorkshop(QWidget): #vers 3
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f" Missing import modules: {', '.join(missing)}")
+
 
     def _show_col_info(self): #vers 4
         """Show TXD Workshop information dialog - About and capabilities"""
@@ -5155,6 +5388,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_resize_icon(self): #vers 2
         """Create resize icon"""
         svg_data = b'''<svg viewBox="0 0 24 24">
@@ -5162,6 +5396,7 @@ class COLWorkshop(QWidget): #vers 3
                 d="M10,21V19H6.41L10.91,14.5L9.5,13.09L5,17.59V14H3V21H10M14.5,10.91L19,6.41V10H21V3H14V5H17.59L13.09,9.5L14.5,10.91Z"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_warning_icon_svg(self): #vers 1
         """Create SVG warning icon for table display"""
@@ -5174,6 +5409,7 @@ class COLWorkshop(QWidget): #vers 3
         return QIcon(QPixmap.fromImage(
             QImage.fromData(QByteArray(svg_data))
         ))
+
 
     def _create_resize_icon2(self): #vers 1
         """Resize grip icon - diagonal arrows"""
@@ -5240,6 +5476,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_manage_icon(self): #vers 1
         """Create manage/settings icon for bumpmap manager"""
         svg_data = b'''<svg viewBox="0 0 24 24">
@@ -5250,6 +5487,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_paint_icon(self): #vers 1
         """Create paint brush icon"""
         svg_data = b'''<svg viewBox="0 0 24 24">
@@ -5257,6 +5495,7 @@ class COLWorkshop(QWidget): #vers 3
                 fill="currentColor"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_compress_icon(self): #vers 2
         """Create compress icon"""
@@ -5266,6 +5505,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_build_icon(self): #vers 1
         """Create build/construct icon"""
         svg_data = b'''<svg viewBox="0 0 24 24">
@@ -5274,12 +5514,14 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_uncompress_icon(self): #vers 2
         """Create uncompress icon"""
         svg_data = b'''<svg viewBox="0 0 24 24">
             <path fill="currentColor" d="M11,4V2H13V4H11M13,21V19H11V21H13M4,12V10H20V12H4Z"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_view_icon(self): #vers 2
         """Create view/eye icon"""
@@ -5293,12 +5535,14 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_add_icon(self): #vers 2
         """Create add/plus icon"""
         svg_data = b'''<svg viewBox="0 0 24 24">
             <path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_delete_icon(self): #vers 2
         """Create delete/minus icon"""
@@ -5307,6 +5551,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_color_picker_icon(self): #vers 1
         """Color picker icon"""
         svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5314,6 +5559,7 @@ class COLWorkshop(QWidget): #vers 3
             <path d="M10 3v4M10 13v4M3 10h4M13 10h4" stroke="currentColor" stroke-width="2"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_zoom_in_icon(self): #vers 1
         """Zoom in icon (+)"""
@@ -5324,6 +5570,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_zoom_out_icon(self): #vers 1
         """Zoom out icon (-)"""
         svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5333,12 +5580,14 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_reset_icon(self): #vers 1
         """Reset/1:1 icon"""
         svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M16 10A6 6 0 1 1 4 10M4 10l3-3m-3 3l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_fit_icon(self): #vers 1
         """Fit to window icon"""
@@ -5348,12 +5597,14 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_arrow_up_icon(self): #vers 1
         """Arrow up"""
         svg_data = b'''<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M8 3v10M4 7l4-4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=16)
+
 
     def _create_arrow_down_icon(self): #vers 1
         """Arrow down"""
@@ -5362,6 +5613,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=16)
 
+
     def _create_arrow_left_icon(self): #vers 1
         """Arrow left"""
         svg_data = b'''<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5369,12 +5621,14 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=16)
 
+
     def _create_arrow_right_icon(self): #vers 1
         """Arrow right"""
         svg_data = b'''<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M13 8H3M9 12l4-4-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=16)
+
 
     def _create_flip_vert_icon(self): #vers 1
         """Create vertical flip SVG icon"""
@@ -5387,6 +5641,7 @@ class COLWorkshop(QWidget): #vers 3
 
         return self._svg_to_icon(svg_data)
 
+
     def _create_flip_horz_icon(self): #vers 1
         """Create horizontal flip SVG icon"""
         from PyQt6.QtGui import QIcon, QPixmap, QPainter
@@ -5398,6 +5653,7 @@ class COLWorkshop(QWidget): #vers 3
 
         return self._svg_to_icon(svg_data)
 
+
     def _create_rotate_cw_icon(self): #vers 1
         """Create clockwise rotation SVG icon"""
         svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5406,6 +5662,7 @@ class COLWorkshop(QWidget): #vers 3
 
         return self._svg_to_icon(svg_data)
 
+
     def _create_rotate_ccw_icon(self): #vers 1
         """Create counter-clockwise rotation SVG icon"""
         svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5413,6 +5670,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
 
         return self._svg_to_icon(svg_data)
+
 
     def _create_copy_icon(self): #vers 1
         """Create copy SVG icon"""
@@ -5423,6 +5681,7 @@ class COLWorkshop(QWidget): #vers 3
 
         return self._svg_to_icon(svg_data)
 
+
     def _create_paste_icon(self): #vers 1
         """Create paste SVG icon"""
         svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5431,6 +5690,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
 
         return self._svg_to_icon(svg_data)
+
 
     def _create_edit_icon(self): #vers 1
         """Create edit SVG icon"""
@@ -5441,6 +5701,7 @@ class COLWorkshop(QWidget): #vers 3
 
         return self._svg_to_icon(svg_data)
 
+
     def _create_convert_icon(self): #vers 1
         """Create convert SVG icon"""
         svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5449,6 +5710,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
 
         return self._svg_to_icon(svg_data)
+
 
     def _create_undo_icon(self): #vers 2
         """Undo - Curved arrow icon"""
@@ -5459,6 +5721,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_info_icon(self): #vers 1
         """Info - circle with 'i' icon"""
         svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5467,12 +5730,14 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data)
 
+
     def _create_folder_icon(self): #vers 1
         """Open IMG - Folder icon"""
         svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-7l-2-2H5a2 2 0 00-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data)
+
 
     def _create_file_icon(self): #vers 1
         """Open col - File icon"""
@@ -5492,6 +5757,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_save_icon(self): #vers 1
         """Save col - Floppy disk icon"""
         svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5500,6 +5766,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data)
 
+
     def _create_import_icon(self): #vers 1
         """Import - Download/Import icon"""
         svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5507,12 +5774,14 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data)
 
+
     def _create_export_icon(self): #vers 1
         """Export - Upload/Export icon"""
         svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data)
+
 
     def _create_saveas_icon(self): #vers 1
         """Save - Floppy disk icon"""
@@ -5529,6 +5798,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_analyze_icon(self): #vers 1
         """Analyze - Bar chart icon"""
         svg_data = b'''<svg viewBox="0 0 24 24">
@@ -5541,6 +5811,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_sphere_icon(self): #vers 1
         """Sphere - Circle icon"""
         svg_data = b'''<svg viewBox="0 0 24 24">
@@ -5552,6 +5823,7 @@ class COLWorkshop(QWidget): #vers 3
                 fill="none"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_box_icon(self): #vers 1
         """Box - Cube icon"""
@@ -5566,6 +5838,7 @@ class COLWorkshop(QWidget): #vers 3
                 stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_mesh_icon(self): #vers 1
         """Mesh - Grid/wireframe icon"""
@@ -5593,6 +5866,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data)
 
+
     def _create_properties_icon(self): #vers 1
         """Properties - Info/Details icon"""
         svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5600,6 +5874,7 @@ class COLWorkshop(QWidget): #vers 3
             <path d="M12 16v-4M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data)
+
 
     # CONTEXT MENU ICONS
 
@@ -5611,6 +5886,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data)
 
+
     def _create_document_icon(self): #vers 1
         """Create New col - Document icon"""
         svg_data = b'''<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5619,6 +5895,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data)
 
+
     def _create_filter_icon(self): #vers 1
         """Filter/sliders icon"""
         svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5630,6 +5907,7 @@ class COLWorkshop(QWidget): #vers 3
             <rect x="9" y="12" width="2" height="4" fill="currentColor"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_add_icon(self): #vers 1
         """Add/plus icon"""
@@ -5638,12 +5916,14 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_trash_icon(self): #vers 1
         """Delete/trash icon"""
         svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 5h14M8 5V3h4v2M6 5v11a1 1 0 001 1h6a1 1 0 001-1V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_filter_icon(self): #vers 1
         """Filter/sliders icon"""
@@ -5657,12 +5937,14 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_delete_icon(self): #vers 1
         """Delete/trash icon"""
         svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 5h14M8 5V3h4v2M6 5v11a1 1 0 001 1h6a1 1 0 001-1V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_duplicate_icon(self): #vers 1
         """Duplicate/copy icon"""
@@ -5672,12 +5954,14 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_create_icon(self): #vers 1
         """Create/new icon"""
         svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_filter_icon(self): #vers 1
         """Filter/sliders icon"""
@@ -5690,6 +5974,7 @@ class COLWorkshop(QWidget): #vers 3
             <rect x="9" y="12" width="2" height="4" fill="currentColor"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_pencil_icon(self): #vers 1
         """Edit - Pencil icon"""
@@ -5706,6 +5991,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data)
 
+
     def _create_check_icon(self): #vers 2
         """Create check/verify icon - document with checkmark"""
         svg_data = b'''<svg viewBox="0 0 24 24">
@@ -5718,6 +6004,7 @@ class COLWorkshop(QWidget): #vers 3
                 stroke-linecap="round" stroke-linejoin="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_eye_icon(self): #vers 1
         """View - Eye icon"""
@@ -5734,6 +6021,7 @@ class COLWorkshop(QWidget): #vers 3
             <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data)
+
 
     # WINDOW CONTROL ICONS
 
@@ -5760,6 +6048,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data)
 
+
     def _create_settings_icon(self): #vers 1
         """Settings/gear icon"""
         svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5767,6 +6056,7 @@ class COLWorkshop(QWidget): #vers 3
             <path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.93 4.93l1.41 1.41M13.66 13.66l1.41 1.41M4.93 15.07l1.41-1.41M13.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_minimize_icon(self): #vers 1
         """Minimize - Horizontal line icon"""
@@ -5777,6 +6067,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_maximize_icon(self): #vers 1
         """Maximize - Square icon"""
         svg_data = b'''<svg viewBox="0 0 24 24">
@@ -5785,6 +6076,7 @@ class COLWorkshop(QWidget): #vers 3
                 fill="none" rx="2"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_close_icon(self): #vers 1
         """Close - X icon"""
@@ -5798,6 +6090,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_add_icon(self): #vers 1
         """Add - Plus icon"""
         svg_data = b'''<svg viewBox="0 0 24 24">
@@ -5810,6 +6103,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_delete_icon(self): #vers 1
         """Delete - Trash icon"""
         svg_data = b'''<svg viewBox="0 0 24 24">
@@ -5821,6 +6115,7 @@ class COLWorkshop(QWidget): #vers 3
                 fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_import_icon(self): #vers 1
         """Import - Download arrow icon"""
@@ -5837,6 +6132,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_export_icon(self): #vers 1
         """Export - Upload arrow icon"""
         svg_data = b'''<svg viewBox="0 0 24 24">
@@ -5852,6 +6148,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_checkerboard_icon(self): #vers 1
         """Create checkerboard pattern icon"""
         svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5866,6 +6163,7 @@ class COLWorkshop(QWidget): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_undo_icon(self): #vers 2
         """Undo - Curved arrow icon"""
         svg_data = b'''<svg viewBox="0 0 24 24">
@@ -5874,6 +6172,7 @@ class COLWorkshop(QWidget): #vers 3
                 stroke-linecap="round" stroke-linejoin="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _svg_to_icon(self, svg_data, size=24): #vers 2
         """Convert SVG data to QIcon with theme color support"""
@@ -5902,6 +6201,8 @@ class COLWorkshop(QWidget): #vers 3
         except:
             # Fallback to no icon if SVG fails
             return QIcon()
+
+
 
 class ZoomablePreview(QLabel): #vers 2
     """Fixed preview widget with zoom and pan"""
@@ -5959,10 +6260,12 @@ class ZoomablePreview(QLabel): #vers 2
 
         self.update()  # Trigger repaint
 
+
     def set_model(self, model): #vers 1
         """Set collision model to display"""
         self.current_model = model
         self.render_collision()
+
 
     def render_collision(self): #vers 2
         """Render the collision model with current view settings"""
@@ -5991,6 +6294,7 @@ class ZoomablePreview(QLabel): #vers 2
         self._update_scaled_pixmap()
         self.update()
 
+
     def _update_scaled_pixmap(self): #vers
         """Update scaled pixmap based on zoom"""
         if not self.original_pixmap:
@@ -6005,6 +6309,7 @@ class ZoomablePreview(QLabel): #vers 2
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation
         )
+
 
     def paintEvent(self, event): #vers 2
         """Paint the preview with background and image"""
@@ -6029,16 +6334,19 @@ class ZoomablePreview(QLabel): #vers 2
             painter.setPen(QColor(150, 150, 150))
             painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self.placeholder_text)
 
+
     def set_checkerboard_background(self): #vers 1
         """Enable checkerboard background"""
         self.background_mode = 'checkerboard'
         self.update()
+
 
     def set_background_color(self, color): #vers 1
         """Set solid background color"""
         self.background_mode = 'solid'
         self.bg_color = color
         self.update()
+
 
     def _draw_checkerboard(self, painter): #vers 1
         """Draw checkerboard background pattern"""
@@ -6059,11 +6367,13 @@ class ZoomablePreview(QLabel): #vers 2
         self._update_scaled_pixmap()
         self.update()
 
+
     def zoom_out(self): #vers 1
         """Zoom out"""
         self.zoom_level = max(0.1, self.zoom_level / 1.2)
         self._update_scaled_pixmap()
         self.update()
+
 
     def reset_view(self): #vers 1
         """Reset to default view"""
@@ -6073,6 +6383,7 @@ class ZoomablePreview(QLabel): #vers 2
         self.rotation_y = 0
         self.rotation_z = 0
         self.render_collision()
+
 
     def fit_to_window(self): #vers 2
         """Fit image to window size"""
@@ -6096,16 +6407,19 @@ class ZoomablePreview(QLabel): #vers 2
         self.pan_offset += QPoint(dx, dy)
         self.update()
 
+
     # Rotation controls
     def rotate_x(self, degrees): #vers 1
         """Rotate around X axis"""
         self.rotation_x = (self.rotation_x + degrees) % 360
         self.render_collision()
 
+
     def rotate_y(self, degrees): #vers 1
         """Rotate around Y axis"""
         self.rotation_y = (self.rotation_y + degrees) % 360
         self.render_collision()
+
 
     def rotate_z(self, degrees): #vers 1
         """Rotate around Z axis"""
@@ -6120,6 +6434,7 @@ class ZoomablePreview(QLabel): #vers 2
             self.dragging = True
             self.drag_start = event.pos()
             self.drag_mode = 'rotate' if event.modifiers() & Qt.KeyboardModifier.ControlModifier else 'pan'
+
 
     def mouseMoveEvent(self, event): #vers 1
         """Handle mouse drag"""
@@ -6137,11 +6452,13 @@ class ZoomablePreview(QLabel): #vers 2
 
             self.drag_start = event.pos()
 
+
     def mouseReleaseEvent(self, event): #vers 1
         """Handle mouse release"""
         if event.button() == Qt.MouseButton.LeftButton:
             self.dragging = False
             self.drag_mode = None
+
 
     def wheelEvent(self, event): #vers 1
         """Handle mouse wheel for zoom"""
@@ -6154,6 +6471,7 @@ class ZoomablePreview(QLabel): #vers 2
 
 class COLEditorDialog(QDialog): #vers 3
     """Enhanced COL Editor Dialog"""
+
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -6170,6 +6488,7 @@ class COLEditorDialog(QDialog): #vers 3
         self.connect_signals()
 
         img_debugger.debug(App_name + " dialog created")
+
 
     def setup_ui(self): #vers 1
         """Setup editor UI"""
@@ -6239,6 +6558,7 @@ class COLEditorDialog(QDialog): #vers 3
         self.progress_bar.setVisible(False)
         layout.addWidget(self.progress_bar)
 
+
     def connect_signals(self): #vers 1
         """Connect UI signals"""
         # Toolbar actions
@@ -6263,6 +6583,7 @@ class COLEditorDialog(QDialog): #vers 3
 
         # Properties changes
         self.properties_widget.property_changed.connect(self.on_property_changed)
+
 
     def load_col_file(self, file_path: str) -> bool: #vers 2
         """Load COL file - ENHANCED VERSION"""
@@ -6307,6 +6628,7 @@ class COLEditorDialog(QDialog): #vers 3
             img_debugger.error(error_msg)
             return False
 
+
     def open_file(self): #vers 1
         """Open file dialog"""
         file_path, _ = QFileDialog.getOpenFileName(
@@ -6315,6 +6637,7 @@ class COLEditorDialog(QDialog): #vers 3
 
         if file_path:
             self.load_col_file(file_path)
+
 
     def save_file(self): #vers 1
         """Save current file"""
@@ -6342,6 +6665,7 @@ class COLEditorDialog(QDialog): #vers 3
             QMessageBox.critical(self, "Save Error", error_msg)
             img_debugger.error(error_msg)
 
+
     def save_file_as(self): #vers 1
         """Save file as dialog"""
         file_path, _ = QFileDialog.getSaveFileName(
@@ -6351,6 +6675,7 @@ class COLEditorDialog(QDialog): #vers 3
         if file_path:
             self.file_path = file_path
             self.save_file()
+
 
     def analyze_file(self): #vers 1
         """Analyze current COL file"""
@@ -6383,6 +6708,7 @@ class COLEditorDialog(QDialog): #vers 3
             error_msg = f"Error analyzing COL file: {str(e)}"
             QMessageBox.critical(self, "Analysis Error", error_msg)
             img_debugger.error(error_msg)
+
 
     def on_model_selected(self, model_index: int): #vers 1
         """Handle model selection"""
@@ -6539,6 +6865,7 @@ class COLEditorDialog(QDialog): #vers 3
 
         return controls_widget
 
+
     def _create_sphere_icon(self): #vers 1
         """Sphere collision icon"""
         svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -6547,6 +6874,7 @@ class COLEditorDialog(QDialog): #vers 3
             <path d="M3 10 Q10 13 17 10" stroke="currentColor" stroke-width="1.5" fill="none"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_box_icon(self): #vers 1
         """Box collision icon"""
@@ -6557,6 +6885,7 @@ class COLEditorDialog(QDialog): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_mesh_icon(self): #vers 1
         """Mesh collision icon"""
         svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -6564,6 +6893,7 @@ class COLEditorDialog(QDialog): #vers 3
             <path d="M3 10 L17 10 M10 3 L10 17" stroke="currentColor" stroke-width="1.5"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _create_wireframe_icon(self): #vers 1
         """Wireframe mode icon"""
@@ -6577,6 +6907,7 @@ class COLEditorDialog(QDialog): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_bounds_icon(self): #vers 1
         """Bounding box icon"""
         svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -6585,12 +6916,14 @@ class COLEditorDialog(QDialog): #vers 3
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
+
     def _create_reset_view_icon(self): #vers 1
         """Reset camera view icon"""
         svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M16 10A6 6 0 1 1 4 10M4 10l3-3m-3 3l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
+
 
     def _set_camera_view(self, view_type): #vers 1
         """Set predefined camera view"""
@@ -6608,6 +6941,7 @@ class COLEditorDialog(QDialog): #vers 3
             self.viewer_3d.rotation_y = 90.0
 
         self.viewer_3d.update()
+
 
     def _svg_to_icon(self, svg_data, size=24): #vers 1
         """Convert SVG to QIcon"""
@@ -6680,6 +7014,7 @@ class COLEditorDialog(QDialog): #vers 3
             </svg>'''
             return self._svg_to_icon(svg_data, size=20)
 
+
         def _create_box_icon(self): #vers 1
             """Box collision icon"""
             svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -6689,6 +7024,7 @@ class COLEditorDialog(QDialog): #vers 3
             </svg>'''
             return self._svg_to_icon(svg_data, size=20)
 
+
         def _create_mesh_icon(self): #vers 1
             """Mesh collision icon"""
             svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -6696,6 +7032,7 @@ class COLEditorDialog(QDialog): #vers 3
                 <path d="M3 10 L17 10 M10 3 L10 17" stroke="currentColor" stroke-width="1.5"/>
             </svg>'''
             return self._svg_to_icon(svg_data, size=20)
+
 
         def _create_wireframe_icon(self): #vers 1
             """Wireframe mode icon"""
@@ -6709,6 +7046,7 @@ class COLEditorDialog(QDialog): #vers 3
             </svg>'''
             return self._svg_to_icon(svg_data, size=20)
 
+
         def _create_bounds_icon(self): #vers 1
             """Bounding box icon"""
             svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -6717,12 +7055,14 @@ class COLEditorDialog(QDialog): #vers 3
             </svg>'''
             return self._svg_to_icon(svg_data, size=20)
 
+
         def _create_reset_view_icon(self): #vers 1
             """Reset camera view icon"""
             svg_data = b'''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M16 10A6 6 0 1 1 4 10M4 10l3-3m-3 3l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>'''
             return self._svg_to_icon(svg_data, size=20)
+
 
         def _set_camera_view(self, view_type): #vers 1
             """Set predefined camera view"""
@@ -6737,6 +7077,7 @@ class COLEditorDialog(QDialog): #vers 3
                 self.viewer_3d.rotation_y = 90.0
 
             self.viewer_3d.update()
+
 
         def _svg_to_icon(self, svg_data, size=24): #vers 1
             """Convert SVG to QIcon"""
@@ -6762,6 +7103,7 @@ class COLEditorDialog(QDialog): #vers 3
             except:
                 return QIcon()
 
+
     def closeEvent(self, event): #vers 1
         """Handle close event"""
         if self.is_modified:
@@ -6785,6 +7127,7 @@ class COLEditorDialog(QDialog): #vers 3
 
         img_debugger.debug("COL Editor dialog closed")
 
+
     # Add import/export functionality when docked
     def _add_import_export_functionality(self): #vers 1
         """Add import/export functionality when docked to img factory"""
@@ -6806,6 +7149,7 @@ class COLEditorDialog(QDialog): #vers 3
         except Exception as e:
             img_debugger.error(f"Error adding import/export functionality: {str(e)}")
 
+
     def _import_col_data(self): #vers 1
         """Import COL data from external source"""
         try:
@@ -6817,6 +7161,7 @@ class COLEditorDialog(QDialog): #vers 3
         except Exception as e:
             img_debugger.error(f"Error importing COL data: {str(e)}")
 
+
     def _export_col_data(self): #vers 1
         """Export COL data to external source"""
         try:
@@ -6827,6 +7172,7 @@ class COLEditorDialog(QDialog): #vers 3
                 QMessageBox.information(self, "Export", "Export functionality coming soon!")
         except Exception as e:
             img_debugger.error(f"Error exporting COL data: {str(e)}")
+
 
 # Convenience functions
 def open_col_editor(parent=None, file_path: str = None) -> COLEditorDialog: #vers 2
@@ -6848,6 +7194,7 @@ def open_col_editor(parent=None, file_path: str = None) -> COLEditorDialog: #ver
         if parent:
             QMessageBox.critical(parent, "COL Editor Error", f"Failed to open COL editor:\n{str(e)}")
         return None
+
 
 def create_new_model(model_name: str = "New Model") -> COLModel: #vers 1
     """Create new COL model"""
@@ -6871,6 +7218,7 @@ def create_new_model(model_name: str = "New Model") -> COLModel: #vers 1
         img_debugger.error(f"Error creating new COL model: {str(e)}")
         return None
 
+
 def delete_model(col_file: COLFile, model_index: int) -> bool: #vers 1
     """Delete model from COL file"""
     try:
@@ -6890,6 +7238,7 @@ def delete_model(col_file: COLFile, model_index: int) -> bool: #vers 1
         img_debugger.error(f"Error deleting COL model: {str(e)}")
         return False
 
+
 def export_model(model: COLModel, file_path: str) -> bool: #vers 1
     """Export single model to file"""
     try:
@@ -6900,6 +7249,7 @@ def export_model(model: COLModel, file_path: str) -> bool: #vers 1
     except Exception as e:
         img_debugger.error(f"Error exporting model: {str(e)}")
         return False
+
 
 def import_elements(model: COLModel, file_path: str) -> bool: #vers 1
     """Import collision elements from file"""
@@ -6912,6 +7262,7 @@ def import_elements(model: COLModel, file_path: str) -> bool: #vers 1
         img_debugger.error(f"Error importing elements: {str(e)}")
         return False
 
+
 def refresh_model_list(list_widget: COLModelListWidget, col_file: COLFile): #vers 1
     """Refresh model list widget"""
     try:
@@ -6920,6 +7271,7 @@ def refresh_model_list(list_widget: COLModelListWidget, col_file: COLFile): #ver
 
     except Exception as e:
         img_debugger.error(f"Error refreshing model list: {str(e)}")
+
 
 def update_view_options(viewer: 'COL3DViewport', **options): #vers 1
     """Update 3D viewer options"""
@@ -6999,6 +7351,8 @@ def open_workshop(main_window, img_path=None): #vers 3
         return None
 
 
+# Compatibility alias for imports
+COLEditorDialog = COLWorkshop  #vers 1
 
 if __name__ == "__main__":
     import sys

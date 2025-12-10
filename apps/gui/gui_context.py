@@ -69,7 +69,7 @@ def edit_col_from_img_entry(main_window, row): #vers 2
         
         try:
             # Import and open COL editor
-            from apps.components.Col_Editor.col_editor import COLEditorDialog
+            from apps.components.Col_Editor.col_workshop import COLWorkshop as COLEditorDialog
             editor = COLEditorDialog(main_window)
             
             # Load the temporary COL file
@@ -211,7 +211,7 @@ def open_col_editor_dialog(main_window): #vers 3
     """Open COL editor - WORKING VERSION"""
     try:
         # Try to import and open COL editor
-        from apps.components.Col_Editor.col_editor import COLEditorDialog
+        from apps.components.Col_Editor.col_workshop import COLWorkshop as COLEditorDialog
         
         main_window.log_message("Opening COL editor...")
         editor = COLEditorDialog(main_window)

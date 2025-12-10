@@ -23,10 +23,14 @@ from PyQt6.QtWidgets import (QApplication, QSlider, QCheckBox,
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint, QRect, QByteArray
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QBrush, QColor, QCursor
 from PyQt6.QtSvg import QSvgRenderer
+from depends.svg_icon_factory import SVGIconFactory
 
-# Add root directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-from apps.gui.txd_context_menu import setup_txd_context_menu
+# Add project root to path for standalone mode
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 
 try:
     from PIL import Image
@@ -68,6 +72,14 @@ except ModuleNotFoundError:
         TXDPlatform,
         TXDVersion
     )
+
+# Import AppSettings
+try:
+    from apps.utils.app_settings_system import AppSettings, SettingsDialog
+    APPSETTINGS_AVAILABLE = True
+except ImportError:
+    APPSETTINGS_AVAILABLE = False
+    print("Warning: AppSettings not available")
 
 DEBUG_STANDALONE = False
 App_name = "Txd Workshop"
@@ -1148,7 +1160,7 @@ class TXDWorkshop(QWidget): #vers 3
                 self._update_texture_info(self.selected_texture)
 
             if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("✅ Workshop settings updated successfully")
+                self.main_window.log_message("Workshop settings updated successfully")
 
         apply_btn.clicked.connect(apply_settings)
         btn_layout.addWidget(apply_btn)
@@ -2170,6 +2182,23 @@ class TXDWorkshop(QWidget): #vers 3
 
     def _create_toolbar(self): #vers 12
         """Create toolbar - FIXED: Hide drag button when docked, ensure buttons visible"""
+        self.titlebar = QFrame()
+        self.titlebar.setFrameStyle(QFrame.Shape.StyledPanel)
+        self.titlebar.setFixedHeight(45)
+        self.titlebar.setObjectName("titlebar")
+
+        # Install event filter for drag detection
+        self.titlebar.installEventFilter(self)
+        self.titlebar.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
+        self.titlebar.setMouseTracking(True)
+
+        self.layout = QHBoxLayout(self.titlebar)
+        self.layout.setContentsMargins(5, 5, 5, 5)
+        self.layout.setSpacing(5)
+
+        # Get icon color from theme
+        icon_color = self._get_icon_color()
+
         self.toolbar = QFrame()
         self.toolbar.setFrameStyle(QFrame.Shape.StyledPanel)
         self.toolbar.setMaximumHeight(50)
@@ -2190,6 +2219,14 @@ class TXDWorkshop(QWidget): #vers 3
 
         layout.addStretch()
 
+        # App title in center
+        self.title_label = QLabel(App_name)
+        self.title_label.setFont(self.title_font)
+        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.title_label)
+
+        layout.addStretch()
+
         # Only show "Open IMG" button if NOT standalone
         if not self.standalone_mode:
             self.open_img_btn = QPushButton("OpenIMG")
@@ -2199,14 +2236,14 @@ class TXDWorkshop(QWidget): #vers 3
             self.open_img_btn.clicked.connect(self.open_img_archive)
             layout.addWidget(self.open_img_btn)
 
-        self.open_txd_btn = QPushButton("OpenTXD")
+        self.open_txd_btn = QPushButton("Open")
         self.open_txd_btn.setFont(self.button_font)
         self.open_txd_btn.setIcon(self._create_file_icon())
         self.open_txd_btn.setIconSize(QSize(20, 20))
         self.open_txd_btn.clicked.connect(self.open_txd_file)
         layout.addWidget(self.open_txd_btn)
 
-        self.save_txd_btn = QPushButton("SaveTXD")
+        self.save_txd_btn = QPushButton("Save")
         self.save_txd_btn.setFont(self.button_font)
         self.save_txd_btn.setIcon(self._create_save_icon())
         self.save_txd_btn.setIconSize(QSize(20, 20))
@@ -2232,7 +2269,7 @@ class TXDWorkshop(QWidget): #vers 3
         self.export_btn.setEnabled(False)
         layout.addWidget(self.export_btn)
 
-        self.export_all_btn = QPushButton("Export All")
+        self.export_all_btn = QPushButton("Export +")
         self.export_all_btn.setFont(self.button_font)
         self.export_all_btn.setIcon(self._create_package_icon())
         self.export_all_btn.setIconSize(QSize(20, 20))
@@ -2302,8 +2339,6 @@ class TXDWorkshop(QWidget): #vers 3
         self.undo_btn.setToolTip("Undo last change")
         layout.addWidget(self.undo_btn)
 
-        layout.addStretch()
-
         # Info button
         self.info_btn = QPushButton("")
         self.info_btn.setText("")  # CHANGED from "Info"
@@ -2328,7 +2363,15 @@ class TXDWorkshop(QWidget): #vers 3
         self.info_btn.clicked.connect(self._show_txd_info)
         layout.addWidget(self.info_btn)
 
-        layout.addStretch()
+        # Properties/Theme button
+        self.properties_btn = QPushButton()
+        self.properties_btn.setIcon(SVGIconFactory.properties_icon(24, icon_color))
+        self.properties_btn.setToolTip("Theme")
+        self.properties_btn.setFixedSize(35, 35)
+        self.properties_btn.clicked.connect(self._show_settings_dialog)
+        self.properties_btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.properties_btn.customContextMenuRequested.connect(self._show_settings_context_menu)
+        layout.addWidget(self.properties_btn)
 
         # Dock button [D]
         self.dock_btn = QPushButton("D")
@@ -4238,6 +4281,22 @@ class TXDWorkshop(QWidget): #vers 3
             background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
         """)
 
+    def _open_settings_dialog(self): #vers 1
+        """Open settings dialog and refresh on save"""
+        dialog = SettingsDialog(self.mel_settings, self)
+        if dialog.exec():
+            # Refresh platform list with new ROM path
+            self._scan_platforms()
+            self.status_label.setText("Settings saved - platforms refreshed")
+
+
+    def _setup_settings_button(self): #vers 1
+        """Setup settings button in UI"""
+        settings_btn = QPushButton("âš™ Settings")
+        settings_btn.clicked.connect(self._open_settings_dialog)
+        settings_btn.setMaximumWidth(120)
+        return settings_btn
+
 
     def _show_settings_dialog(self): #vers 5
         """Show comprehensive settings dialog with all tabs including hotkeys"""
@@ -4796,6 +4855,153 @@ class TXDWorkshop(QWidget): #vers 3
         layout.addLayout(button_layout)
 
         dialog.exec()
+
+
+    def _show_settings_context_menu(self, pos): #vers 1
+        """Show context menu for Settings button"""
+        from PyQt6.QtWidgets import QMenu
+
+        menu = QMenu(self)
+
+        # Move window action
+        move_action = menu.addAction("Move Window")
+        move_action.triggered.connect(self._enable_move_mode)
+
+        # Maximize window action
+        max_action = menu.addAction("Maximize Window")
+        max_action.triggered.connect(self._toggle_maximize)
+
+        # Minimize action
+        min_action = menu.addAction("Minimize")
+        min_action.triggered.connect(self.showMinimized)
+
+        menu.addSeparator()
+
+        # Upscale Native action
+        upscale_action = menu.addAction("Upscale Native")
+        upscale_action.setCheckable(True)
+        upscale_action.setChecked(False)
+        upscale_action.triggered.connect(self._toggle_upscale_native)
+
+        # Shaders action
+        shaders_action = menu.addAction("Shaders")
+        shaders_action.triggered.connect(self._show_shaders_dialog)
+
+        menu.addSeparator()
+
+        # Icon display mode submenu # TODO icon only system is missing.
+        display_menu = menu.addMenu("Platform Display")
+
+        icons_text_action = display_menu.addAction("Icons & Text")
+        icons_text_action.setCheckable(True)
+        icons_text_action.setChecked(self.icon_display_mode == "icons_and_text")
+        icons_text_action.triggered.connect(lambda: self._set_icon_display_mode("icons_and_text"))
+
+        icons_only_action = display_menu.addAction("Icons Only")
+        icons_only_action.setCheckable(True)
+        icons_only_action.setChecked(self.icon_display_mode == "icons_only")
+        icons_only_action.triggered.connect(lambda: self._set_icon_display_mode("icons_only"))
+
+        text_only_action = display_menu.addAction("Text Only")
+        text_only_action.setCheckable(True)
+        text_only_action.setChecked(self.icon_display_mode == "text_only")
+        text_only_action.triggered.connect(lambda: self._set_icon_display_mode("text_only"))
+
+        # Show menu at button position
+        menu.exec(self.settings_btn.mapToGlobal(pos))
+
+    def _enable_move_mode(self): #vers 2
+        """Enable move window mode using system move"""
+        # Use Qt's system move which works on Windows, Linux, etc.
+        if hasattr(self.windowHandle(), 'startSystemMove'):
+            self.windowHandle().startSystemMove()
+        else:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(self, "Move Window",
+                "Drag the titlebar to move the window")
+
+    def _toggle_upscale_native(self): #vers 1
+        """Toggle upscale native resolution"""
+        # Placeholder for upscale native functionality
+        print("Upscale Native toggled")
+
+    def _show_shaders_dialog(self): #vers 1
+        """Show shaders configuration dialog"""
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.information(self, "Shaders",
+            "Shader configuration coming soon!\n\nThis will allow you to:\n"
+            "- Select shader presets\n"
+            "- Configure CRT effects\n"
+            "- Adjust visual filters")
+
+    def _show_window_context_menu(self, pos): #vers 1
+        """Show context menu for titlebar right-click"""
+        from PyQt6.QtWidgets import QMenu
+
+
+        # Move window action
+        move_action = menu.addAction("Move Window")
+        move_action.triggered.connect(self._enable_move_mode)
+
+        # Maximize/Restore action
+        if self.isMaximized():
+            max_action = menu.addAction("Restore Window")
+        else:
+            max_action = menu.addAction("Maximize Window")
+        max_action.triggered.connect(self._toggle_maximize)
+
+        # Minimize action
+        min_action = menu.addAction("Minimize")
+        min_action.triggered.connect(self.showMinimized)
+
+        menu.addSeparator()
+
+        # Close action
+        close_action = menu.addAction("Close")
+        close_action.triggered.connect(self.close)
+
+        # Show menu at global position
+        menu.exec(self.mapToGlobal(pos))
+
+
+    def _get_icon_color(self): #vers 1
+        """Get icon color from current theme"""
+        if APPSETTINGS_AVAILABLE and self.app_settings:
+            colors = self.app_settings.get_theme_colors()
+            return colors.get('text_primary', '#ffffff')
+        return '#ffffff'
+
+
+    def _apply_fonts_to_widgets(self): #vers 1
+        """Apply fonts from AppSettings to all widgets"""
+        if not hasattr(self, 'default_font'):
+            return
+
+        print("\n=== Applying Fonts ===")
+        print(f"Default font: {self.default_font.family()} {self.default_font.pointSize()}pt")
+        print(f"Title font: {self.title_font.family()} {self.title_font.pointSize()}pt")
+        print(f"Panel font: {self.panel_font.family()} {self.panel_font.pointSize()}pt")
+        print(f"Button font: {self.button_font.family()} {self.button_font.pointSize()}pt")
+
+        # Apply default font to main window
+        self.setFont(self.default_font)
+
+        # Apply title font to titlebar
+        if hasattr(self, 'title_label'):
+            self.title_label.setFont(self.title_font)
+
+        # Apply panel font to lists
+        if hasattr(self, 'platform_list'):
+            self.platform_list.setFont(self.panel_font)
+        if hasattr(self, 'game_list'):
+            self.game_list.setFont(self.panel_font)
+
+        # Apply button font to all buttons
+        for btn in self.findChildren(QPushButton):
+            btn.setFont(self.button_font)
+
+        print("Fonts applied to widgets")
+        print("======================\n")
 
 
     def _apply_theme(self): #vers 2

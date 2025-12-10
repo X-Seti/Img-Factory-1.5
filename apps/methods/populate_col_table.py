@@ -355,7 +355,10 @@ def update_col_info_bar_enhanced(main_window, col_file, file_path): #vers 2
         info_text = f"{file_name} | {total_models} models | {total_spheres} spheres | {total_boxes} boxes | {total_vertices} vertices | {total_faces} faces"
         
         # Update info bar
-        main_window.gui_layout.info_bar.setText(info_text)
+        # Update info bar safely
+        if hasattr(main_window.gui_layout, 'info_bar') and main_window.gui_layout.info_bar:
+            main_window.gui_layout.info_bar.setText(info_text)
+
         img_debugger.success("COL info bar updated")
         return True
         
