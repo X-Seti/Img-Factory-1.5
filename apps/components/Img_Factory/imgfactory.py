@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 X-Seti - July22 2025 - IMG Factory 1.5 - AtariST version :D
-#this belongs in root /imgfactory.py - version 75
+#this belongs in root /imgfactory.py - version 78
 """
 import sys
 import os
@@ -77,7 +77,7 @@ from apps.core.sort_via_ide import integrate_sort_via_ide
 from apps.core.advanced_img_tools import integrate_advanced_img_tools
 from apps.core.rw_unk_snapshot import integrate_unknown_rw_detection
 from apps.core.col_viewer_integration import integrate_col_viewer
-#from apps.core.analyze_rw import integrate_rw_analysis_trigger
+from apps.core.analyze_rw import integrate_rw_analysis_trigger
 
 #gui-layout
 from apps.gui.ide_dialog import integrate_ide_dialog
