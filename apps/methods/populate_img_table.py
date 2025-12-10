@@ -7,7 +7,7 @@ import os
 from typing import Any, List, Optional
 from PyQt6.QtWidgets import QTableWidgetItem, QTableWidget, QHeaderView
 from PyQt6.QtCore import Qt
-from apps.debug.img_debug_functions import img_debugger
+from apps.debug.debug_functions import img_debugger
 try:
     from apps.utils.img_debug_logger import img_debugger
 except ImportError:

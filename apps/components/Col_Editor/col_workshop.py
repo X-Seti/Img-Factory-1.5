@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#this belongs in components.Col_Editor.col_workshop.py - Version: 1
+#this belongs in components.Col_Editor.col_workshop.py - Version: 11
 # X-Seti - August10 2025 - Converted col editor using gui base template.
 
 """
@@ -37,7 +37,7 @@ from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QBrush, Q
 from PyQt6.QtSvg import QSvgRenderer
 
 # Import project modules AFTER path setup
-from apps.debug.img_debug_functions import img_debugger
+from apps.debug.debug_functions import img_debugger
 from apps.methods.col_core_classes import COLFile, COLModel, COLVersion, Vector3
 #from apps.methods.col_integration import get_col_detailed_analysis, create_temporary_col_file, cleanup_temporary_file
 from apps.gui.col_dialogs import show_col_analysis_dialog
@@ -692,20 +692,6 @@ class COLWorkshop(QWidget): #vers 3
             main_layout.addWidget(status_frame)
 
 
-    def _initialize_features(self): #vers 3
-        """Initialize all features after UI setup"""
-        try:
-            self._apply_theme()
-            self._update_status_indicators()
-
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message("All features initialized")
-
-        except Exception as e:
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Feature init error: {str(e)}")
-
-
     def _enable_name_edit(self, event, is_alpha): #vers 1
         """Enable name editing on click"""
         self.info_name.setReadOnly(False)
@@ -740,6 +726,9 @@ class COLWorkshop(QWidget): #vers 3
                 self.status_modified.setText("")
                 self.status_modified.setStyleSheet("")
 
+
+# - Panel Creation
+
     def _create_status_bar(self): #vers 1
         """Create bottom status bar - single line compact"""
         from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
@@ -761,9 +750,10 @@ class COLWorkshop(QWidget): #vers 3
             tex_count = len(self.collision_list)
             #self.status_col_info.setText(f"Collision: {tex_count} | col: {size_kb:.1f} KB")
 
-
         return status_bar
 
+
+# - Settings Reusable
 
     def _show_workshop_settings(self): #vers 1
         """Show complete workshop settings dialog"""
@@ -1273,7 +1263,7 @@ class COLWorkshop(QWidget): #vers 3
         return locales
 
 
-    def _show_amiga_locale_error(self): #vers 1
+    def _show_amiga_locale_error(self): #vers 2
         """Show Amiga Workbench 3.1 style error dialog"""
         from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
         from PyQt6.QtCore import Qt
@@ -1341,7 +1331,9 @@ class COLWorkshop(QWidget): #vers 3
         dialog.exec()
 
 
-    def _update_dock_button_visibility(self): #vers 1
+# - Docking functions
+
+    def _update_dock_button_visibility(self): #vers 2
         """Show/hide dock and tearoff buttons based on docked state"""
         if hasattr(self, 'dock_btn'):
             # Hide D button when docked, show when standalone
@@ -1352,7 +1344,7 @@ class COLWorkshop(QWidget): #vers 3
             self.tearoff_btn.setVisible(self.is_docked and not self.standalone_mode)
 
 
-    def toggle_dock_mode(self): #vers 1
+    def toggle_dock_mode(self): #vers 2
         """Toggle between docked and standalone mode"""
         if self.is_docked:
             self._undock_from_main()
@@ -1361,34 +1353,37 @@ class COLWorkshop(QWidget): #vers 3
 
         self._update_dock_button_visibility()
 
-    def _dock_to_main(self): #vers 8
+
+    def _dock_to_main(self): #vers 9
         """Dock handled by overlay system in imgfactory - IMPROVED"""
         try:
             if hasattr(self, 'is_overlay') and self.is_overlay:
                 self.show()
                 self.raise_()
                 return
-            
+
             # For proper docking, we need to be called from imgfactory
             # This method should be handled by imgfactory's overlay system
-            if self.main_window and hasattr(self.main_window, 'open_col_workshop_docked'):
+            if self.main_window and hasattr(self.main_window, App_name + '_docked'):
                 # If available, use the main window's docking system
                 self.main_window.open_col_workshop_docked()
             else:
                 # Fallback: just show the window
                 self.show()
                 self.raise_()
-                
+
             # Update dock state
             self.is_docked = True
             self._update_dock_button_visibility()
-            
+
             if hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"{App_name} docked to main window")
                 
+
         except Exception as e:
             img_debugger.error(f"Error docking: {str(e)}")
             self.show()
+
 
     def _undock_from_main(self): #vers 4
         """Undock from overlay mode to standalone window - IMPROVED"""
@@ -1442,6 +1437,56 @@ class COLWorkshop(QWidget): #vers 3
         dialog.close()
 
 
+# - Window functionality
+
+    def _initialize_features(self): #vers 3
+        """Initialize all features after UI setup"""
+        try:
+            self._apply_theme()
+            self._update_status_indicators()
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message("All features initialized")
+
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Feature init error: {str(e)}")
+
+
+    def _is_on_draggable_area(self, pos): #vers 7
+        """Check if position is on draggable titlebar area
+
+        Args:
+            pos: Position in titlebar coordinates (from eventFilter)
+
+        Returns:
+            True if position is on titlebar but not on any button
+        """
+        if not hasattr(self, 'titlebar'):
+            print("[DRAG] No titlebar attribute")
+            return False
+
+        # Verify pos is within titlebar bounds
+        if not self.titlebar.rect().contains(pos):
+            print(f"[DRAG] Position {pos} outside titlebar rect {self.titlebar.rect()}")
+            return False
+
+        # Check if clicking on any button - if so, NOT draggable
+        for widget in self.titlebar.findChildren(QPushButton):
+            if widget.isVisible():
+                # Get button geometry in titlebar coordinates
+                button_rect = widget.geometry()
+                if button_rect.contains(pos):
+                    print(f"[DRAG] Clicked on button: {widget.toolTip()}")
+                    return False
+
+        # Not on any button = draggable
+        print(f"[DRAG] On draggable area at {pos}")
+        return True
+
+
+# - From the fixed gui - move, drag
+
     def _update_all_buttons(self): #vers 4
         """Update all buttons to match display mode"""
         buttons_to_update = [
@@ -1449,6 +1494,7 @@ class COLWorkshop(QWidget): #vers 3
             ('open_btn', 'Open'),
             ('save_btn', 'Save'),
         ]
+
 
     def paintEvent(self, event): #vers 2
         """Paint corner resize triangles"""
@@ -1463,34 +1509,43 @@ class COLWorkshop(QWidget): #vers 3
         normal_color = QColor(100, 100, 100, 150)
         hover_color = QColor(150, 150, 255, 200)
 
+        # Get theme colors for corner indicators
+        if self.app_settings:
+            theme_colors = self._get_theme_colors("default")
+            accent_color = QColor(theme_colors.get('accent_primary', '#1976d2'))
+            accent_color.setAlpha(180)
+        else:
+            accent_color = QColor(100, 150, 255, 180)
+
+        hover_color = QColor(accent_color)
+        hover_color.setAlpha(255)
+
         w = self.width()
         h = self.height()
+        grip_size = 8  # Make corners visible (8x8px)
         size = self.corner_size
 
         # Define corner triangles
         corners = {
-            'top-left': [(0, 0), (size, 0), (0, size)],
-            'top-right': [(w, 0), (w-size, 0), (w, size)],
-            'bottom-left': [(0, h), (size, h), (0, h-size)],
-            'bottom-right': [(w, h), (w-size, h), (w, h-size)]
+            "top-left": [(0, grip_size), (0, 0), (grip_size, 0)],
+            "top-right": [(w-grip_size, 0), (w, 0), (w, grip_size)],
+            "bottom-left": [(0, h-grip_size), (0, h), (grip_size, h)],
+            "bottom-right": [(w-grip_size, h), (w, h), (w, h-grip_size)]
         }
 
+        # Draw all corners with hover effect
         for corner_name, points in corners.items():
-            # Choose color based on hover state
-            if self.hover_corner == corner_name:
-                painter.setBrush(QBrush(hover_color))
-                painter.setPen(QPen(hover_color.darker(120), 1))
-            else:
-                painter.setBrush(QBrush(normal_color))
-                painter.setPen(QPen(normal_color.darker(120), 1))
-
-            # Draw triangle
             path = QPainterPath()
             path.moveTo(points[0][0], points[0][1])
             path.lineTo(points[1][0], points[1][1])
             path.lineTo(points[2][0], points[2][1])
             path.closeSubpath()
 
+            # Use hover color if mouse is over this corner
+            color = hover_color if self.hover_corner == corner_name else accent_color
+
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QBrush(color))
             painter.drawPath(path)
 
         painter.end()
@@ -1504,71 +1559,99 @@ class COLWorkshop(QWidget): #vers 3
 
         if pos.x() < size and pos.y() < size:
             return "top-left"
-
         if pos.x() > w - size and pos.y() < size:
             return "top-right"
-
         if pos.x() < size and pos.y() > h - size:
             return "bottom-left"
-
         if pos.x() > w - size and pos.y() > h - size:
             return "bottom-right"
 
         return None
 
 
-    def mousePressEvent(self, event): #vers 2
-        """Handle mouse press for dragging and resizing"""
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.resize_corner = self._get_resize_corner(event.pos())
+    # KEEP ONLY mousePressEvent with this logic:
+    def mousePressEvent(self, event): #vers 8
+        """Handle ALL mouse press - dragging and resizing"""
+        if event.button() != Qt.MouseButton.LeftButton:
+            super().mousePressEvent(event)
+            return
 
-            if self.resize_corner:
-                self.resizing = True
-                self.drag_position = event.globalPosition().toPoint()
-                self.initial_geometry = self.geometry()
-            else:
-                # Check if clicking on toolbar for dragging
-                if self._is_on_draggable_area(event.pos()):
-                    self.dragging = True
-                    self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+        pos = event.pos()
 
+        # Check corner resize FIRST
+        self.resize_corner = self._get_resize_corner(pos)
+        if self.resize_corner:
+            self.resizing = True
+            self.drag_position = event.globalPosition().toPoint()
+            self.initial_geometry = self.geometry()
             event.accept()
+            return
+
+        # Check if on titlebar
+        if hasattr(self, 'titlebar') and self.titlebar.geometry().contains(pos):
+            titlebar_pos = self.titlebar.mapFromParent(pos)
+            if self._is_on_draggable_area(titlebar_pos):
+                self.windowHandle().startSystemMove()
+                event.accept()
+                return
+
+        super().mousePressEvent(event)
 
 
-    def mouseMoveEvent(self, event): #vers 2
-        """Handle mouse move for dragging, resizing, and hover effects"""
+    def mouseMoveEvent(self, event): #vers 4
+        """Handle mouse move for resizing and hover effects
+
+        Window dragging is handled by eventFilter to avoid conflicts
+        """
         if event.buttons() == Qt.MouseButton.LeftButton:
             if self.resizing and self.resize_corner:
                 self._handle_corner_resize(event.globalPosition().toPoint())
-            elif self.dragging:
-                self.move(event.globalPosition().toPoint() - self.drag_position)
-            event.accept()
+                event.accept()
+                return
         else:
+            # Update hover state and cursor
             corner = self._get_resize_corner(event.pos())
             if corner != self.hover_corner:
                 self.hover_corner = corner
                 self.update()  # Trigger repaint for hover effect
             self._update_cursor(corner)
 
+        # Let parent handle everything else
+        super().mouseMoveEvent(event)
 
-    def mouseReleaseEvent(self, event): #vers 2
-        """Handle mouse release"""
+
+    def mouseDoubleClickEvent(self, event): #vers 2
+        """Handle double-click - maximize/restore
+
+        Handled here instead of eventFilter for better control
+        """
         if event.button() == Qt.MouseButton.LeftButton:
-            self.dragging = False
-            self.resizing = False
-            self.resize_corner = None
-            self.setCursor(Qt.CursorShape.ArrowCursor)
-            event.accept()
+            # Convert to titlebar coordinates if needed
+            if hasattr(self, 'titlebar'):
+                titlebar_pos = self.titlebar.mapFromParent(event.pos())
+                if self._is_on_draggable_area(titlebar_pos):
+                    self._toggle_maximize()
+                    event.accept()
+                    return
+
+        super().mouseDoubleClickEvent(event)
 
 
-    def mouseDoubleClickEvent(self, event): #vers 1
-        """Handle double-click on toolbar to maximize/restore"""
+    def mouseDoubleClickEvent(self, event): #vers 2
+        """Handle double-click - maximize/restore
+
+        Handled here instead of eventFilter for better control
+        """
         if event.button() == Qt.MouseButton.LeftButton:
-            if self._is_on_draggable_area(event.pos()):
-                self._toggle_maximize()
-                event.accept()
-            else:
-                super().mouseDoubleClickEvent(event)
+            # Convert to titlebar coordinates if needed
+            if hasattr(self, 'titlebar'):
+                titlebar_pos = self.titlebar.mapFromParent(event.pos())
+                if self._is_on_draggable_area(titlebar_pos):
+                    self._toggle_maximize()
+                    event.accept()
+                    return
+
+        super().mouseDoubleClickEvent(event)
 
 
     def resizeEvent(self, event): #vers 1
@@ -1709,6 +1792,77 @@ class COLWorkshop(QWidget): #vers 3
         else:
             self.showMaximized()
 
+
+    def _get_resize_corner(self, pos): #vers 1
+        """Determine which corner is under mouse position"""
+        size = self.corner_size
+        w = self.width()
+        h = self.height()
+
+        if pos.x() < size and pos.y() < size:
+            return "top-left"
+        if pos.x() > w - size and pos.y() < size:
+            return "top-right"
+        if pos.x() < size and pos.y() > h - size:
+            return "bottom-left"
+        if pos.x() > w - size and pos.y() > h - size:
+            return "bottom-right"
+
+        return None
+
+
+    def _handle_corner_resize(self, global_pos): #vers 1
+        """Handle window resizing from corners"""
+        if not self.resize_corner or not self.drag_position:
+            return
+
+        delta = global_pos - self.drag_position
+        geometry = self.initial_geometry
+
+        min_width = 800
+        min_height = 600
+
+        if self.resize_corner == "top-left":
+            new_x = geometry.x() + delta.x()
+            new_y = geometry.y() + delta.y()
+            new_width = geometry.width() - delta.x()
+            new_height = geometry.height() - delta.y()
+
+            if new_width >= min_width and new_height >= min_height:
+                self.setGeometry(new_x, new_y, new_width, new_height)
+
+        elif self.resize_corner == "top-right":
+            new_y = geometry.y() + delta.y()
+            new_width = geometry.width() + delta.x()
+            new_height = geometry.height() - delta.y()
+
+            if new_width >= min_width and new_height >= min_height:
+                self.setGeometry(geometry.x(), new_y, new_width, new_height)
+
+        elif self.resize_corner == "bottom-left":
+            new_x = geometry.x() + delta.x()
+            new_width = geometry.width() - delta.x()
+            new_height = geometry.height() + delta.y()
+
+            if new_width >= min_width and new_height >= min_height:
+                self.setGeometry(new_x, geometry.y(), new_width, new_height)
+
+        elif self.resize_corner == "bottom-right":
+            new_width = geometry.width() + delta.x()
+            new_height = geometry.height() + delta.y()
+
+            if new_width >= min_width and new_height >= min_height:
+                self.resize(new_width, new_height)
+
+
+    def closeEvent(self, event): #vers 1
+        """Handle close event"""
+        self.window_closed.emit()
+        event.accept()
+
+
+# - SVG ICONS -- Section.
+
     def _set_checkerboard_bg(self): #vers 1
         """Set checkerboard background"""
         # Create checkerboard pattern
@@ -1723,50 +1877,6 @@ class COLWorkshop(QWidget): #vers 3
             background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
         """)
 
-    def _is_on_draggable_area(self, pos): #vers 3
-        """Check if position is on draggable toolbar area (stretch space, not buttons)"""
-        if not hasattr(self, 'toolbar'):
-            return False
-
-        toolbar_rect = self.toolbar.geometry()
-        if not toolbar_rect.contains(pos):
-            return False
-
-        # Get all buttons in toolbar
-        buttons_to_check = []
-
-        if hasattr(self, 'open_btn'):
-            buttons_to_check.append(self.open_btn)
-        if hasattr(self, 'save_btn'):
-            buttons_to_check.append(self.save_btn)
-        if hasattr(self, 'minimize_btn'):
-            buttons_to_check.append(self.minimize_btn)
-        if hasattr(self, 'maximize_btn'):
-            buttons_to_check.append(self.maximize_btn)
-        if hasattr(self, 'close_btn'):
-            buttons_to_check.append(self.close_btn)
-        # Should be enabled on selection:
-        if hasattr(self, 'undo_btn'):
-            # Undo depends on undo stack, not selection
-            self.undo_btn.setEnabled(len(self.undo_stack) > 0)
-
-        if not hasattr(self, 'drag_btn'):
-            return False
-
-        # Convert to toolbar coordinates
-        toolbar_local_pos = self.toolbar.mapFrom(self, pos)
-
-        # Check if clicking on drag button
-        return self.drag_btn.geometry().contains(toolbar_local_pos)
-
-        # Check if position is NOT on any button (i.e., on stretch area)
-        for btn in buttons_to_check:
-            btn_global_rect = btn.geometry()
-            btn_rect = btn_global_rect.translated(toolbar_rect.topLeft())
-            if btn_rect.contains(pos):
-                return False  # On a button, not draggable
-
-        return True  # On empty stretch area, draggable
 
     # IMPORTANT: This toolbar is isolated to this window only
     # Do not add to main window's menu system
@@ -6816,31 +6926,34 @@ def update_view_options(viewer: 'COL3DViewport', **options): #vers 1
     try:
         viewer.set_view_options(**options)
         img_debugger.debug(f"View options updated: {options}")
-    def _ensure_standalone_functionality(self): #vers 1
-        """Ensure popped-out windows work independently of img factory"""
-        try:
-            # When popped out, ensure all necessary functionality is available
-            if not self.is_docked or getattr(self, 'is_overlay', False) == False:
-                # Enable all UI elements that might be disabled when docked
-                if hasattr(self, 'toolbar') and self.toolbar:
-                    self.toolbar.setEnabled(True)
-                
-                # Ensure all buttons and controls work independently
-                if hasattr(self, 'main_window') and self.main_window is None:
-                    # This is truly standalone, enable all features
-                    if hasattr(self, 'dock_btn'):
-                        self.dock_btn.setText("X")  # Change to close button when standalone
-                        self.dock_btn.setToolTip("Close window")
-                
-                # Set proper window flags for standalone operation
-                if not getattr(self, 'is_overlay', False):
-                    self.setWindowFlags(Qt.WindowType.Window)
-                
-        except Exception as e:
-            img_debugger.error(f"Error ensuring standalone functionality: {str(e)}")
+
+        def _ensure_standalone_functionality(self): #vers 1
+            """Ensure popped-out windows work independently of img factory"""
+            try:
+                # When popped out, ensure all necessary functionality is available
+                if not self.is_docked or getattr(self, 'is_overlay', False) == False:
+                    # Enable all UI elements that might be disabled when docked
+                    if hasattr(self, 'toolbar') and self.toolbar:
+                        self.toolbar.setEnabled(True)
+
+                    # Ensure all buttons and controls work independently
+                    if hasattr(self, 'main_window') and self.main_window is None:
+                        # This is truly standalone, enable all features
+                        if hasattr(self, 'dock_btn'):
+                            self.dock_btn.setText("X")  # Change to close button when standalone
+                            self.dock_btn.setToolTip("Close window")
+
+                    # Set proper window flags for standalone operation
+                    if not getattr(self, 'is_overlay', False):
+                        self.setWindowFlags(Qt.WindowType.Window)
+
+            except Exception as e:
+                img_debugger.error(f"Error ensuring standalone functionality: {str(e)}")
 
     except Exception as e:
         img_debugger.error(f"Error updating view options: {str(e)}")
+
+
 
 def apply_changes(editor: COLEditorDialog) -> bool: #vers 1
     """Apply all pending changes"""

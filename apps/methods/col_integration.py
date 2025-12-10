@@ -18,8 +18,8 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QFont
 
 # Import IMG debug system and COL components
-from apps.debug.img_debug_functions import img_debugger
-from apps.debug.col_debug_functions import col_debug_log
+from apps.debug.debug_functions import img_debugger
+from apps.debug.debug_functions import col_debug_log
 from apps.methods.col_core_classes import COLFile, COLModel, COLVersion
 
 ##Methods list -
@@ -727,7 +727,7 @@ def create_col_file_dialog(main_window): #vers 1
 def toggle_col_debug_setting(main_window): #vers 1
     """Toggle COL debug setting using IMG debug system"""
     try:
-        from apps.debug.col_debug_functions import is_col_debug_enabled, set_col_debug_enabled
+        from apps.debug.debug_functions import is_col_debug_enabled, set_col_debug_enabled
         
         current_state = is_col_debug_enabled()
         new_state = not current_state
@@ -950,7 +950,7 @@ def integrate_complete_col_system(main_window) -> bool: #vers 1
 def setup_col_debug_for_main_window(main_window): #vers 1
     """Setup COL debug functionality for main window using IMG debug system"""
     try:
-        from apps.debug.col_debug_functions import set_col_debug_enabled
+        from apps.debug.debug_functions import set_col_debug_enabled
         
         # Enable COL debug based on main debug state
         if hasattr(main_window, 'debug_enabled') and main_window.debug_enabled:

@@ -29,7 +29,7 @@ def add_entry_safe(img_archive, entry_name: str, file_data: bytes, auto_save: bo
     try:
         # Import debug system
         try:
-            from apps.debug.img_debug_functions import img_debugger
+            from apps.debug.debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -162,7 +162,7 @@ def add_multiple_entries(img_file, file_paths: List[str]) -> int: #vers 3
     try:
         # Import debug system
         try:
-            from apps.debug.img_debug_functions import img_debugger
+            from apps.debug.debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -265,7 +265,7 @@ def remove_entry_safe(img_file, entry_or_name) -> bool: #vers 3
     try:
         # Import debug system
         try:
-            from apps.debug.img_debug_functions import img_debugger
+            from apps.debug.debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -324,7 +324,7 @@ def remove_multiple_entries(img_file, entries: List) -> tuple: #vers 3
     try:
         # Import debug system
         try:
-            from apps.debug.img_debug_functions import img_debugger
+            from apps.debug.debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -357,7 +357,7 @@ def rename_entry_safe(img_file, entry_or_name, new_name: str) -> bool: #vers 3
     try:
         # Import debug system
         try:
-            from apps.debug.img_debug_functions import img_debugger
+            from apps.debug.debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         

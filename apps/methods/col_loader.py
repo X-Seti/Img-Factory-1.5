@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QTableWidgetItem
 from PyQt6.QtCore import QThread, pyqtSignal
 
 # Import IMG debug system and COL classes
-from apps.debug.img_debug_functions import img_debugger
+from apps.debug.debug_functions import img_debugger
 from apps.methods.col_core_classes import COLFile
 
 ##Functions list -

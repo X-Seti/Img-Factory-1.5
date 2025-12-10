@@ -180,10 +180,7 @@
 │   │   ├── undo_system.py
 │   │   └── utils.py
 │   ├── debug
-│   │   ├── col_debug_functions.py
-│   │   ├── enh_debug_system.py
-│   │   ├── img_debug_functions.py
-│   │   └── unified_debug_functions.py
+│   │   └── debug_functions.py
 │   ├── gui
 │   │   ├── autosave_menu.py
 │   │   ├── col_dialogs.py
@@ -321,4 +318,4 @@
 ├── TODO.md
 └── tree.git
 
-34 directories, 288 files
+34 directories, 285 files

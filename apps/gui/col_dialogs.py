@@ -17,7 +17,7 @@ from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QPixmap, QIcon
 
 from apps.methods.img_core_classes import format_file_size
-from apps.debug.img_debug_functions import img_debugger
+from apps.debug.debug_functions import img_debugger
 
 ##Methods list -
 # show_col_analysis_dialog

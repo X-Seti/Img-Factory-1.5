@@ -33,11 +33,12 @@ from apps.utils.app_settings_system import AppSettings, apply_theme_to_app, Sett
 
 #components
 from apps.components.Img_Creator.img_creator import NewIMGDialog, IMGCreationThread
+from apps.components.Col_Editor.col_workshop import COLWorkshop
 #from apps.components.Txd_Editor.txd_workshop import TXDEditor
 
 #debug
-from apps.debug.col_debug_functions import set_col_debug_enabled
-from apps.debug.unified_debug_functions import integrate_all_improvements, install_debug_control_system
+
+from apps.debug.debug_functions import integrate_all_improvements, install_debug_control_system, set_col_debug_enabled
 
 #Core functions.
 from apps.core.img_formats import GameSpecificIMGDialog, IMGCreator
@@ -584,7 +585,6 @@ class IMGFactory(QMainWindow):
         self.show()
 
 
-
     def log_message(self, message: str): #vers 2
         """Optimized logging that works before GUI is ready"""
         try:
@@ -598,6 +598,7 @@ class IMGFactory(QMainWindow):
         except Exception:
             print(f"LOG: {message}")
 
+
     def _append_log_message(self, message: str): #vers 1
         """Internal log message append"""
         try:
@@ -608,6 +609,7 @@ class IMGFactory(QMainWindow):
                 scrollbar.setValue(scrollbar.maximum())
         except Exception:
             pass
+
 
     def _apply_button_display_mode_from_settings(self):
         """Apply button display mode from app settings"""
@@ -636,6 +638,7 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"Error applying button display mode: {str(e)}")
 
+
     def debug_img_before_loading(self, file_path): #vers 1
         """Quick debug before loading IMG"""
         try:
@@ -655,6 +658,7 @@ class IMGFactory(QMainWindow):
 
         except Exception as e:
             self.log_message(f"Debug failed: {e}")
+
 
     def show_debug_settings(self): #vers 1
         """Show debug settings dialog"""
@@ -684,6 +688,7 @@ class IMGFactory(QMainWindow):
     def analyze_corruption(self):
         """Analyze and fix IMG corruption"""
         return self.analyze_img_corruption()
+
 
     def analyze_img_corruption(self): #vers 1
         """Analyze IMG file for corruption - Menu callback"""
@@ -716,6 +721,7 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"Corruption analysis error: {str(e)}")
             QMessageBox.critical(self, "Analysis Error", f"Corruption analysis failed:\n{str(e)}")
+
 
     def quick_fix_corruption(self): #vers 1
         """Quick fix common corruption issues - Menu callback"""
@@ -776,6 +782,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"Quick fix error: {str(e)}")
             QMessageBox.critical(self, "Quick Fix Error", f"Quick fix failed:\n{str(e)}")
 
+
     def clean_filenames_only(self): #vers 1
         """Clean only filenames, keep all entries - Menu callback"""
         try:
@@ -820,6 +827,7 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"Filename cleaning error: {str(e)}")
             QMessageBox.critical(self, "Cleaning Error", f"Filename cleaning failed:\n{str(e)}")
+
 
     def export_corruption_report(self): #vers 1
         """Export corruption report to file - Menu callback"""
@@ -892,6 +900,8 @@ class IMGFactory(QMainWindow):
     def open_txd_workshop_docked(self, txd_name=None, txd_data=None): #vers 3
         """Open TXD Workshop as overlay on file window"""
         from apps.components.Txd_Editor.txd_workshop import TXDWorkshop
+
+
     # Menu isolation: Docked workshops should not affect main window menu
     def open_col_workshop_docked(self, col_name=None, col_data=None): #vers 1
         """Open COL Workshop as overlay on file window - SIMILAR TO TXD VERSION"""

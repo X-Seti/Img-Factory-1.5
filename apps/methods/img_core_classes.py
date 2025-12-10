@@ -19,7 +19,7 @@ from PyQt6.QtCore import pyqtSignal, Qt
 
 # Import existing RW version functions - KEPT ALL ORIGINAL IMPORTS
 from apps.methods.rw_versions import get_rw_version_name, parse_rw_version, get_model_format_version
-from apps.debug.img_debug_functions import img_debugger
+from apps.debug.debug_functions import img_debugger
 
 
 ##Methods list -
