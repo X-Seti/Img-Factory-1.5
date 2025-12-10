@@ -8,13 +8,15 @@
 │   │   │   └── col_creator.py
 │   │   ├── Col_Editor
 │   │   │   ├── col_workshop.py
-│   │   │   └── depends
-│   │   │       ├── col_3d_viewport.py
-│   │   │       ├── col_core_classes.py
-│   │   │       ├── col_dialogs.py
-│   │   │       ├── col_preview_generator.py
-│   │   │       ├── img_debug_functions.py
-│   │   │       └── standalone
+│   │   │   ├── depends
+│   │   │   │   ├── col_3d_viewport.py
+│   │   │   │   ├── col_core_classes.py
+│   │   │   │   ├── col_dialogs.py
+│   │   │   │   ├── col_preview_generator.py
+│   │   │   │   ├── img_debug_functions.py
+│   │   │   │   ├── standalone
+│   │   │   │   └── svg_icon_factory.py
+│   │   │   └── img_factory_debug.log
 │   │   ├── Col_Viewer
 │   │   │   ├── col_viewer.py
 │   │   │   └── depends
@@ -116,6 +118,7 @@
 │   │   │   ├── depends
 │   │   │   │   ├── iff_import.py
 │   │   │   │   ├── indexed_color_import.py
+│   │   │   │   ├── svg_icon_factory.py
 │   │   │   │   ├── txd_serializer.py
 │   │   │   │   ├── txd_versions.py
 │   │   │   │   └── txd_workshop_theme.py
@@ -313,9 +316,10 @@
 ├── Credits.md
 ├── img_factory_debug.log
 ├── launch_imgfactory.py
+├── main-branch
 ├── open-branch
 ├── package-lock.json
 ├── TODO.md
 └── tree.git
 
-34 directories, 285 files
+34 directories, 289 files
