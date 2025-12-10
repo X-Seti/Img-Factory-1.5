@@ -88,7 +88,7 @@ def edit_col_from_img_entry(main_window, row): #vers 2
         
     except ImportError:
         QMessageBox.information(main_window, "COL Editor", 
-            "COL editor component not available. Please check components.Col_Editor.col_editor.py")
+            "COL editor component not available. Please check components.Col_Editor.col_workshop.py")
         return False
     except Exception as e:
         main_window.log_message(f"Error editing COL file: {str(e)}")
@@ -224,7 +224,7 @@ def open_col_editor_dialog(main_window): #vers 3
         
     except ImportError:
         QMessageBox.information(main_window, "COL Editor", 
-            "COL editor component not available.\n\nPlease ensure components.Col_Editor.col_editor.py is properly installed.")
+            "COL editor component not available.\n\nPlease ensure components.Col_Editor.col_workshop.py is properly installed.")
         main_window.log_message("COL editor component not found")
         return False
     except Exception as e:

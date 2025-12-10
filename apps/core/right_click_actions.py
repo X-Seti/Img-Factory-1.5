@@ -788,7 +788,7 @@ def edit_col_from_img_entry(main_window, row): #vers 2
     except ImportError:
         from PyQt6.QtWidgets import QMessageBox
         QMessageBox.information(main_window, "COL Editor", 
-            "COL editor component not available. Please check components.Col_Editor.col_editor.py")
+            "COL editor component not available. Please check components.Col_Editor.col_workshop.py")
         return False
     except Exception as e:
         main_window.log_message(f"Error editing COL file: {str(e)}")

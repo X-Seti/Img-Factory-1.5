@@ -42,7 +42,6 @@ from pathlib import Path
 _col_debug_enabled = False
 
 
-
 def debug_trace(func): #vers 1
     """Simple debug decorator to trace function calls."""
     def wrapper(*args, **kwargs):
