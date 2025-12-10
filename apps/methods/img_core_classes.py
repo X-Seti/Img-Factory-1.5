@@ -19,7 +19,7 @@ from PyQt6.QtCore import pyqtSignal, Qt
 
 # Import existing RW version functions - KEPT ALL ORIGINAL IMPORTS
 from apps.methods.rw_versions import get_rw_version_name, parse_rw_version, get_model_format_version
-from apps.debug.img_debug_functions import img_debugger
+from apps.debug.debug_functions import img_debugger
 
 
 ##Methods list -
@@ -293,6 +293,51 @@ class IMGEntry:
 
         except Exception as e:
             img_debugger.error(f"Error detecting RW version for {self.name}: {e}")
+
+    def detect_rw_version(self, data: bytes = None) -> bool: #vers 1
+        """ADDED: Detect RenderWare version from provided data"""
+        try:
+            # If no data provided, try to get it from the IMG file
+            if data is None:
+                if self._img_file:
+                    data = self.get_data()
+                else:
+                    return False
+            
+            if not data or len(data) < 12:
+                return False
+
+            # Use existing parse_rw_version function on the data
+            version_value, version_name = parse_rw_version(data[8:12])
+            
+            if version_value > 0:
+                self.rw_version = version_value
+                self.rw_version_name = version_name
+                self._version_detected = True
+                if hasattr(img_debugger, 'success'):
+                    img_debugger.success(f"Detected RW version {version_name} (0x{version_value:X}) for {self.name}")
+                return True
+            else:
+                # Fallback: try reading from different offset
+                if len(data) >= 8:
+                    try:
+                        alt_version = struct.unpack('<I', data[4:8])[0]
+                        if 0x30000 <= alt_version <= 0x40000:  # Valid RW version range
+                            self.rw_version = alt_version
+                            self.rw_version_name = get_rw_version_name(alt_version)
+                            self._version_detected = True
+                            if hasattr(img_debugger, 'success'):
+                                img_debugger.success(f"Detected RW version {self.rw_version_name} (alt method) for {self.name}")
+                            return True
+                    except:
+                        pass
+
+            return False
+
+        except Exception as e:
+            if hasattr(img_debugger, 'error'):
+                img_debugger.error(f"Error detecting RW version for {self.name}: {e}")
+            return False
 
     def _read_header_data(self, bytes_to_read: int) -> Optional[bytes]: #vers 1
         """ADDED: Read file header data from IMG file"""

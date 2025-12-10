@@ -276,6 +276,11 @@ def show_advanced_context_menu(main_window, position): #vers 3
         copy_summary_action.triggered.connect(lambda: copy_file_summary(main_window, row))
         menu.addAction(copy_summary_action)
 
+        # Copy selected row
+        copy_row_action = QAction("Copy Selected Row", menu_parent)
+        copy_row_action.triggered.connect(lambda: copy_table_row(main_window, row))
+        menu.addAction(copy_row_action)
+
         # Show menu at cursor position
         menu.exec(table.mapToGlobal(position))
 
@@ -783,7 +788,7 @@ def edit_col_from_img_entry(main_window, row): #vers 2
     except ImportError:
         from PyQt6.QtWidgets import QMessageBox
         QMessageBox.information(main_window, "COL Editor", 
-            "COL editor component not available. Please check components.Col_Editor.col_editor.py")
+            "COL editor component not available. Please check components.Col_Editor.col_workshop.py")
         return False
     except Exception as e:
         main_window.log_message(f"Error editing COL file: {str(e)}")

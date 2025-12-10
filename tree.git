@@ -41,6 +41,7 @@
 │   │   │   └── img_creator.py
 │   │   ├── Img_Factory
 │   │   │   ├── depends
+│   │   │   │   ├── comprehensive.py
 │   │   │   │   ├── img_factory_thread.py
 │   │   │   │   └── mui_demo.py
 │   │   │   ├── imgfactory.py
@@ -179,10 +180,7 @@
 │   │   ├── undo_system.py
 │   │   └── utils.py
 │   ├── debug
-│   │   ├── col_debug_functions.py
-│   │   ├── enh_debug_system.py
-│   │   ├── img_debug_functions.py
-│   │   └── unified_debug_functions.py
+│   │   └── debug_functions.py
 │   ├── gui
 │   │   ├── autosave_menu.py
 │   │   ├── col_dialogs.py
@@ -315,9 +313,9 @@
 ├── Credits.md
 ├── img_factory_debug.log
 ├── launch_imgfactory.py
-├── main-branch
+├── open-branch
 ├── package-lock.json
 ├── TODO.md
 └── tree.git
 
-34 directories, 287 files
+34 directories, 285 files

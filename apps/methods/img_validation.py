@@ -692,7 +692,7 @@ def validate_img_file_structure(img_file) -> List[ValidationResult]: #vers 1
     try:
         # Import debug system
         try:
-            from apps.debug.img_debug_functions import img_debugger
+            from apps.debug.debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -805,7 +805,7 @@ def validate_img_entries(img_file) -> List[ValidationResult]: #vers 1
     try:
         # Import debug system
         try:
-            from apps.debug.img_debug_functions import img_debugger
+            from apps.debug.debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -956,7 +956,7 @@ def check_file_corruption(img_file) -> List[ValidationResult]: #vers 1
     try:
         # Import debug system
         try:
-            from apps.debug.img_debug_functions import img_debugger
+            from apps.debug.debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         
@@ -1098,7 +1098,7 @@ def repair_img_structure(img_file) -> List[ValidationResult]: #vers 1
     try:
         # Import debug system
         try:
-            from apps.debug.img_debug_functions import img_debugger
+            from apps.debug.debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         

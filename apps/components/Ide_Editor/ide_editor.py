@@ -29,7 +29,7 @@ sys.path.insert(0, project_root)
 
 # Import with fallback for standalone execution
 try:
-    from apps.debug.img_debug_functions import img_debugger
+    from apps.debug.debug_functions import img_debugger
 except ImportError:
     from img_debug_functions import img_debugger
 

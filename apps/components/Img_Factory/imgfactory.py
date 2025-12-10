@@ -33,11 +33,12 @@ from apps.utils.app_settings_system import AppSettings, apply_theme_to_app, Sett
 
 #components
 from apps.components.Img_Creator.img_creator import NewIMGDialog, IMGCreationThread
+from apps.components.Col_Editor.col_workshop import COLWorkshop
 #from apps.components.Txd_Editor.txd_workshop import TXDEditor
 
 #debug
-from apps.debug.col_debug_functions import set_col_debug_enabled
-from apps.debug.unified_debug_functions import integrate_all_improvements, install_debug_control_system
+
+from apps.debug.debug_functions import integrate_all_improvements, install_debug_control_system, set_col_debug_enabled
 
 #Core functions.
 from apps.core.img_formats import GameSpecificIMGDialog, IMGCreator
@@ -167,7 +168,7 @@ def create_rebuild_menu(self): #vers 1
     """Create rebuild menu with mode options"""
     try:
         # Add to your existing menu bar
-        rebuild_menu = self.menuBar().addMenu("ðŸ”§ Rebuild")
+        rebuild_menu = self.menuBar().addMenu("  Rebuild")
 
         # Regular rebuild (shows dialog)
         rebuild_action = QAction("Rebuild IMG...", self)
@@ -584,7 +585,6 @@ class IMGFactory(QMainWindow):
         self.show()
 
 
-
     def log_message(self, message: str): #vers 2
         """Optimized logging that works before GUI is ready"""
         try:
@@ -598,6 +598,7 @@ class IMGFactory(QMainWindow):
         except Exception:
             print(f"LOG: {message}")
 
+
     def _append_log_message(self, message: str): #vers 1
         """Internal log message append"""
         try:
@@ -608,6 +609,7 @@ class IMGFactory(QMainWindow):
                 scrollbar.setValue(scrollbar.maximum())
         except Exception:
             pass
+
 
     def _apply_button_display_mode_from_settings(self):
         """Apply button display mode from app settings"""
@@ -636,6 +638,7 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"Error applying button display mode: {str(e)}")
 
+
     def debug_img_before_loading(self, file_path): #vers 1
         """Quick debug before loading IMG"""
         try:
@@ -655,6 +658,7 @@ class IMGFactory(QMainWindow):
 
         except Exception as e:
             self.log_message(f"Debug failed: {e}")
+
 
     def show_debug_settings(self): #vers 1
         """Show debug settings dialog"""
@@ -684,6 +688,7 @@ class IMGFactory(QMainWindow):
     def analyze_corruption(self):
         """Analyze and fix IMG corruption"""
         return self.analyze_img_corruption()
+
 
     def analyze_img_corruption(self): #vers 1
         """Analyze IMG file for corruption - Menu callback"""
@@ -717,6 +722,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"Corruption analysis error: {str(e)}")
             QMessageBox.critical(self, "Analysis Error", f"Corruption analysis failed:\n{str(e)}")
 
+
     def quick_fix_corruption(self): #vers 1
         """Quick fix common corruption issues - Menu callback"""
         try:
@@ -724,7 +730,7 @@ class IMGFactory(QMainWindow):
                 QMessageBox.warning(self, "No IMG File", "Please open an IMG file first")
                 return
 
-            self.log_message("ðŸ”§ Quick fixing IMG corruption...")
+            self.log_message("  Quick fixing IMG corruption...")
 
             # Analyze first
             from apps.core.img_corruption_analyzer import analyze_img_corruption
@@ -776,6 +782,7 @@ class IMGFactory(QMainWindow):
             self.log_message(f"Quick fix error: {str(e)}")
             QMessageBox.critical(self, "Quick Fix Error", f"Quick fix failed:\n{str(e)}")
 
+
     def clean_filenames_only(self): #vers 1
         """Clean only filenames, keep all entries - Menu callback"""
         try:
@@ -820,6 +827,7 @@ class IMGFactory(QMainWindow):
         except Exception as e:
             self.log_message(f"Filename cleaning error: {str(e)}")
             QMessageBox.critical(self, "Cleaning Error", f"Filename cleaning failed:\n{str(e)}")
+
 
     def export_corruption_report(self): #vers 1
         """Export corruption report to file - Menu callback"""
@@ -892,6 +900,8 @@ class IMGFactory(QMainWindow):
     def open_txd_workshop_docked(self, txd_name=None, txd_data=None): #vers 3
         """Open TXD Workshop as overlay on file window"""
         from apps.components.Txd_Editor.txd_workshop import TXDWorkshop
+
+
     # Menu isolation: Docked workshops should not affect main window menu
     def open_col_workshop_docked(self, col_name=None, col_data=None): #vers 1
         """Open COL Workshop as overlay on file window - SIMILAR TO TXD VERSION"""
@@ -4261,7 +4271,7 @@ class IMGFactory(QMainWindow):
     def apply_search_and_performance_fixes(self): #vers 2
         """Apply search and performance fixes"""
         try:
-            self.log_message("ðŸ”§ Applying search and performance fixes...")
+            self.log_message("  Applying search and performance fixes...")
 
             # 1. Setup our new consolidated search system
             from apps.core.gui_search import install_search_system
@@ -5289,7 +5299,7 @@ def implement_tab_context_menu(main_window):
     try:
         # Add context menu to the main window
         main_window.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        main_window.customContextMenuRequested.connect(lambda pos: show_main_context_menu(main_window, pos))
+        main_window.customContextMenuRequested.connect(lambda pos: show_advanced_context_menu(main_window, pos))
 
         # For the table, we need to integrate with the existing context menu system
         # rather than replacing it to avoid conflicts with the existing setup

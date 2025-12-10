@@ -165,7 +165,7 @@ def import_folder(img_archive, folder_path: str, recursive: bool = False,
     try:
         # Import debug system
         try:
-            from apps.debug.img_debug_functions import img_debugger
+            from apps.debug.debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         if not os.path.exists(folder_path):
@@ -205,7 +205,7 @@ def import_folder(img_archive, folder_path: str, recursive: bool = False,
         return import_multiple_files(img_archive, file_paths)
     except Exception as e:
         try:
-            from apps.debug.img_debug_functions import img_debugger
+            from apps.debug.debug_functions import img_debugger
             img_debugger.error(f"Failed to import folder {folder_path}: {str(e)}")
         except:
             print(f"[ERROR] import_folder failed: {e}")

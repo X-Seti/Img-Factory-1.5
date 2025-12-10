@@ -45,17 +45,30 @@ def reload_current_file(main_window) -> bool: #vers 10
         # Store current state before closing
         current_tab_index = main_window.main_tab_widget.currentIndex() if hasattr(main_window, 'main_tab_widget') else 0
         
+        # Log that we're closing the file first
+        if hasattr(main_window, 'log_message'):
+            main_window.log_message(f"Closing file before reload: {filename}")
+        
         # Close the current file properly to free resources
         if file_type == 'IMG':
+            # Close the IMG file properly if it has a close method
+            if file_object and hasattr(file_object, 'close'):
+                file_object.close()
             # Clear current reference
             main_window.current_img = None
         elif file_type == 'COL':
+            # For COL files, we should also close if possible
+            if file_object and hasattr(file_object, 'close'):
+                file_object.close()
             main_window.current_col = None
             
         # Also clear tab reference if using tabs
         if hasattr(main_window, 'main_tab_widget'):
             current_tab = main_window.main_tab_widget.widget(current_tab_index)
             if current_tab and hasattr(current_tab, 'file_object'):
+                # Close the file in the tab as well
+                if hasattr(current_tab.file_object, 'close'):
+                    current_tab.file_object.close()
                 current_tab.file_object = None
                 current_tab.file_type = None
         
@@ -70,7 +83,7 @@ def reload_current_file(main_window) -> bool: #vers 10
             
         if result:
             if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"File reloaded successfully: {filename}")
+                main_window.log_message(f"File successfully reloaded from disk: {filename}")
         return result
     except Exception as e:
         if hasattr(main_window, 'log_message'):
@@ -120,7 +133,7 @@ def _reload_img_in_tab(main_window, file_path: str) -> bool: #vers 2
         
         entry_count = len(new_img.entries) if new_img.entries else 0
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"IMG reloaded: {filename} ({entry_count} entries)")
+            main_window.log_message(f"IMG file fresh from disk: {filename} ({entry_count} entries)")
         return True
     except Exception as e:
         if hasattr(main_window, 'log_message'):
@@ -156,7 +169,7 @@ def _reload_col_in_tab(main_window, file_path: str) -> bool: #vers 1
             main_window.populate_entries_table()
         model_count = len(new_col.models) if hasattr(new_col, 'models') and new_col.models else 0
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"COL reloaded: {filename} ({model_count} models)")
+            main_window.log_message(f"COL file fresh from disk: {filename} ({model_count} models)")
         return True
     except Exception as e:
         if hasattr(main_window, 'log_message'):

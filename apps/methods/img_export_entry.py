@@ -24,7 +24,7 @@ def export_entry(img_archive, entry, output_path: Optional[str] = None, output_d
     try:
         # Import debug system
         try:
-            from apps.debug.img_debug_functions import img_debugger
+            from apps.debug.debug_functions import img_debugger
         except ImportError:
             img_debugger = None
         if not output_path and not output_dir:
@@ -57,7 +57,7 @@ def export_entry(img_archive, entry, output_path: Optional[str] = None, output_d
         return output_path
     except Exception as e:
         try:
-            from apps.debug.img_debug_functions import img_debugger
+            from apps.debug.debug_functions import img_debugger
             img_debugger.error(f"Failed to export entry {entry.name}: {str(e)}")
         except:
             print(f"[ERROR] export_entry failed: {e}")
