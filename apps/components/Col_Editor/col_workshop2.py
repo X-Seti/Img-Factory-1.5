@@ -22,15 +22,6 @@ import io
 import numpy as np
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple
-
-
-# Add project root to path for standalone mode
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
-
-# Import PyQt6
 from PyQt6.QtWidgets import (QApplication, QSlider, QCheckBox,
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QListWidget, QDialog, QFormLayout, QSpinBox,  QListWidgetItem, QLabel, QPushButton, QFrame, QFileDialog, QLineEdit, QTextEdit, QMessageBox, QScrollArea, QGroupBox, QTableWidget, QTableWidgetItem, QColorDialog, QHeaderView, QAbstractItemView, QMenu, QComboBox, QInputDialog, QTabWidget, QDoubleSpinBox, QRadioButton
 )
@@ -38,12 +29,42 @@ from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint, QRect, QByteArray
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QBrush, QColor, QCursor
 from PyQt6.QtSvg import QSvgRenderer
 
-# Import project modules AFTER path setup
-from apps.debug.debug_functions import img_debugger
-from apps.methods.col_core_classes import COLFile, COLModel, COLVersion, Vector3
 from depends.svg_icon_factory import SVGIconFactory
+from apps.methods.col_core_classes import COLFile, COLModel, COLVersion, Vector3
+
 #from apps.methods.col_integration import get_col_detailed_analysis, create_temporary_col_file, cleanup_temporary_file
 from apps.gui.col_dialogs import show_col_analysis_dialog
+
+# Import project modules AFTER path setup
+try:
+    from apps.debug.debug_functions import img_debugger
+except ImportError:
+    # Create minimal fallback for standalone mode
+    class DummyDebugger:
+        def debug(self, msg): print(f"DEBUG: {msg}")
+        def error(self, msg): print(f"ERROR: {msg}")
+        def warning(self, msg): print(f"WARNING: {msg}")
+        def success(self, msg): print(f"SUCCESS: {msg}")
+    img_debugger = DummyDebugger()
+
+# Add project root to path for standalone mode
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+try:
+    from apps.components.Txd_Editor.depends.svg_icon_factory import SVGIconFactory
+except ImportError:
+    try:
+        from depends.svg_icon_factory import SVGIconFactory
+    except ImportError:
+        class SVGIconFactory:
+            @staticmethod
+            def _create_icon(svg_data, size=20, color=None):
+                from PyQt6.QtGui import QIcon
+                return QIcon()
+
 
 # Import COL viewport and preview from depends
 try:
@@ -57,9 +78,6 @@ except ImportError:
     COL3DViewport = None
     print("Warning: COL 3D viewport not available - install PyOpenGL")
 
-# Add root directory to path
-App_name = "Col Workshop"
-DEBUG_STANDALONE = False
 
 # Use new 3D viewport if available, fallback to text display
 if VIEWPORT_AVAILABLE:
@@ -75,6 +93,9 @@ try:
 except ImportError:
     APPSETTINGS_AVAILABLE = False
     print("Warning: AppSettings not available")
+
+App_name = "Col Workshop"
+DEBUG_STANDALONE = False
 
 ##class COLModelListWidget: -
 # __init__
@@ -406,11 +427,11 @@ class COLPropertiesWidget(QTabWidget): #vers 2
         # Mesh buttons
         mesh_buttons = QHBoxLayout()
 
-        self.import_mesh_btn = QPushButton("Import Mesh")
+        self.import_mesh_btn = QPushButton("📥 Import Mesh")
         self.import_mesh_btn.clicked.connect(self.import_mesh)
         mesh_buttons.addWidget(self.import_mesh_btn)
 
-        self.export_mesh_btn = QPushButton("Export Mesh")
+        self.export_mesh_btn = QPushButton("📤 Export Mesh")
         self.export_mesh_btn.clicked.connect(self.export_mesh)
         mesh_buttons.addWidget(self.export_mesh_btn)
 
@@ -580,13 +601,18 @@ class COLWorkshop(QWidget): #vers 3
     window_closed = pyqtSignal()
 
     def __init__(self, parent=None, main_window=None): #vers 10
-        """initialize_features"""
+        """Initialize COL Workshop"""
         if DEBUG_STANDALONE and main_window is None:
             print(App_name + " Initializing ...")
 
         super().__init__(parent)
-
         self.main_window = main_window
+
+        # Get app_settings from main_window if available
+        if main_window and hasattr(main_window, 'app_settings'):
+            self.app_settings = main_window.app_settings
+        else:
+            self.app_settings = None
 
         self.undo_stack = []
         self.button_display_mode = 'both'
@@ -601,12 +627,6 @@ class COLWorkshop(QWidget): #vers 3
         self.button_font = QFont("Arial", 10)
         self.infobar_font = QFont("Courier New", 9)
         self.standalone_mode = (main_window is None)
-
-        # Get app_settings from main_window if available
-        if main_window and hasattr(main_window, 'app_settings'):
-            self.app_settings = main_window.app_settings
-        else:
-            self.app_settings = None
 
         # Preview settings
         self._show_checkerboard = True
@@ -813,6 +833,19 @@ class COLWorkshop(QWidget): #vers 3
             size_kb = len(col_data) / 1024
             tex_count = len(self.collision_list)
             #self.status_col_info.setText(f"Collision: {tex_count} | col: {size_kb:.1f} KB")
+
+        # COL info
+        self.status_col_info = QLabel("COL: None")
+        layout.addWidget(self.status_col_info)
+
+        layout.addStretch()
+
+        # Right: Size and Format
+        self.info_size = QLabel("Size: -")
+        layout.addWidget(self.info_size)
+
+        self.format_status_label = QLabel("Format: -")
+        layout.addWidget(self.format_status_label)
 
         return status_bar
 
