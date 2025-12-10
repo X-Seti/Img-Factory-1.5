@@ -378,7 +378,8 @@ class IMGFactory(QMainWindow):
         self.app_settings = settings if hasattr(settings, 'themes') else AppSettings()
 
         # Window setup
-        self.setWindowTitle(App_name + " - " + App_auth + " - " + App_build)
+        branch = get_current_git_branch()
+        self.setWindowTitle(App_name + " - " + App_auth + " - " + App_build + " " + branch)
         self.setGeometry(100, 100, 1200, 800)
 
         # Core data initialization
