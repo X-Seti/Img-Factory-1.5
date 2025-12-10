@@ -23,13 +23,38 @@ from PyQt6.QtWidgets import (QApplication, QSlider, QCheckBox,
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint, QRect, QByteArray
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QBrush, QColor, QCursor
 from PyQt6.QtSvg import QSvgRenderer
+
 from depends.svg_icon_factory import SVGIconFactory
+from depends.txd_context_menu import setup_txd_context_menu
+
+try:
+    from apps.debug.debug_functions import img_debugger
+except ImportError:
+    # Create minimal fallback for standalone mode
+    class DummyDebugger:
+        def debug(self, msg): print(f"DEBUG: {msg}")
+        def error(self, msg): print(f"ERROR: {msg}")
+        def warning(self, msg): print(f"WARNING: {msg}")
+        def success(self, msg): print(f"SUCCESS: {msg}")
+    img_debugger = DummyDebugger()
 
 # Add project root to path for standalone mode
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
+
+try:
+    from apps.components.Txd_Editor.depends.svg_icon_factory import SVGIconFactory
+except ImportError:
+    try:
+        from depends.svg_icon_factory import SVGIconFactory
+    except ImportError:
+        class SVGIconFactory:
+            @staticmethod
+            def _create_icon(svg_data, size=20, color=None):
+                from PyQt6.QtGui import QIcon
+                return QIcon()
 
 
 try:
@@ -464,15 +489,22 @@ class TXDWorkshop(QWidget): #vers 3
     """TXD Workshop - Main texture editing window"""
 
     workshop_closed = pyqtSignal()
+    window_closed = pyqtSignal()
 
     def __init__(self, parent=None, main_window=None): #vers 10
-        """Initialize TXD Workshop - FIXED: Remove duplicate theme calls"""
+        """Initialize TXD Workshop"""
         if DEBUG_STANDALONE and main_window is None:
-            print("   → Initializing TXD Workshop...")
+            print(App_name + " Initializing ...")
 
         super().__init__(parent)
-
         self.main_window = main_window
+
+        # Initialize app_settings for theme support
+        if main_window and hasattr(main_window, 'app_settings'):
+            self.app_settings = main_window.app_settings
+        else:
+            self.app_settings = None
+
         self.current_img = None
         self.current_txd_data = None
         self.current_txd_name = None
@@ -590,12 +622,12 @@ class TXDWorkshop(QWidget): #vers 3
         if self.main_window and hasattr(self.main_window, 'app_settings'):
             self.update()  # Force widget repaint
 
-
         # Enable mouse tracking
         self.setMouseTracking(True)
 
         if DEBUG_STANDALONE and self.standalone_mode:
             print(App_name + " initialized")
+
 
     def setup_ui(self): #vers 7
         """Setup the main UI layout"""
@@ -667,6 +699,9 @@ class TXDWorkshop(QWidget): #vers 3
         }
         self.txd_tabs.append(tab_info)
 
+
+# - Panel Creation
+
     def _create_status_bar(self): #vers 5
         """Create bottom status bar - single line compact"""
         from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
@@ -703,6 +738,8 @@ class TXDWorkshop(QWidget): #vers 3
 
         return status_bar
 
+
+# - Settings Reusable
 
     def _show_workshop_settings(self): #vers 5
         """Show complete workshop settings dialog"""
