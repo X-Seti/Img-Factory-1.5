@@ -1,80 +1,137 @@
 #!/usr/bin/env python3
-#this belongs in components.Col_Editor.col_workshop.py - Version: 11
-# X-Seti - August10 2025 - Converted col editor using gui base template.
+#this belongs in components/Col_Editor/col_workshop.py - Version: 12
+# X-Seti - December11 2025 - Img Factory 1.5 - COL Workshop Fixed Imports
 
 """
-components/Col_Editor/col_workshop.py
-COL Editor - Main collision editor interface
+COL Workshop - Collision Editor
+Supports both standalone and docked (IMG Factory integrated) modes
 """
 
 import os
-# Force X11/GLX backend for NVIDIA on Wayland
-os.environ['QT_QPA_PLATFORM'] = 'xcb'
-os.environ['QSG_RHI_BACKEND'] = 'opengl'
-os.environ['LIBGL_ALWAYS_SOFTWARE'] = '0'  # Use hardware acceleration
-
-import tempfile
-import subprocess
-import shutil
-import struct
 import sys
-import io
-import numpy as np
+import struct
+import tempfile
 from pathlib import Path
-from typing import Optional, List, Dict, Tuple
-
-
-# Add project root to path for standalone mode
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
-
-# Import PyQt6
-from PyQt6.QtWidgets import (QApplication, QSlider, QCheckBox,
-    QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QListWidget, QDialog, QFormLayout, QSpinBox,  QListWidgetItem, QLabel, QPushButton, QFrame, QFileDialog, QLineEdit, QTextEdit, QMessageBox, QScrollArea, QGroupBox, QTableWidget, QTableWidgetItem, QColorDialog, QHeaderView, QAbstractItemView, QMenu, QComboBox, QInputDialog, QTabWidget, QDoubleSpinBox, QRadioButton
+from typing import Optional, List, Dict, Tuple, Any
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QSplitter, QListWidget, QListWidgetItem, QLabel, QPushButton,
+    QFileDialog, QMessageBox, QGroupBox, QFormLayout, QLineEdit,
+    QTextEdit, QTableWidget, QTableWidgetItem, QHeaderView,
+    QAbstractItemView, QMenu, QDialog, QCheckBox, QSpinBox,
+    QDoubleSpinBox, QComboBox, QTabWidget, QScrollArea, QFrame,
+    QInputDialog, QProgressDialog
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint, QRect, QByteArray
-from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QBrush, QColor, QCursor
-from PyQt6.QtSvg import QSvgRenderer
+from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint, QRect, QTimer
+from PyQt6.QtGui import (
+    QFont, QIcon, QPixmap, QColor, QPainter, QPen, QBrush,
+    QAction, QCursor, QKeySequence
+)
 
-# Import project modules AFTER path setup
-from apps.debug.debug_functions import img_debugger
-from apps.methods.col_core_classes import COLFile, COLModel, COLVersion, Vector3
-from depends.svg_icon_factory import SVGIconFactory
-#from apps.methods.col_integration import get_col_detailed_analysis, create_temporary_col_file, cleanup_temporary_file
-from apps.gui.col_dialogs import show_col_analysis_dialog
-
-# Import COL viewport and preview from depends
+# OpenGL for 3D viewport
 try:
-    from apps.components.Col_Editor.depends.col_3d_viewport import COL3DViewport
-    from apps.components.Col_Editor.depends.col_preview_generator import (
-        COLPreviewGenerator, create_col_preview, create_col_thumbnail
-    )
-    VIEWPORT_AVAILABLE = True
+    from PyQt6.QtOpenGLWidgets import QOpenGLWidget
+    from OpenGL.GL import *
+    from OpenGL.GLU import *
+    OPENGL_AVAILABLE = True
 except ImportError:
-    VIEWPORT_AVAILABLE = False
-    COL3DViewport = None
-    print("Warning: COL 3D viewport not available - install PyOpenGL")
+    OPENGL_AVAILABLE = False
+    print("Warning: OpenGL not available, 3D viewport disabled")
 
-# Add root directory to path
+# Detect if running standalone or docked BEFORE any conditional imports
+def _is_standalone():
+    """Detect if running standalone (not imported by IMG Factory)"""
+    import inspect
+    frame = inspect.currentframe()
+    try:
+        # Check if we're being called from imgfactory.py
+        for _ in range(10):  # Check up to 10 frames up
+            frame = frame.f_back
+            if frame is None:
+                break
+            if 'imgfactory' in frame.f_code.co_filename.lower():
+                return False  # Docked mode
+        return True  # Standalone mode
+    finally:
+        del frame
+
+STANDALONE_MODE = _is_standalone()
 App_name = "Col Workshop"
-DEBUG_STANDALONE = False
+App_build = "December 11 - "
+App_auth = "X-Seti"
 
-# Use new 3D viewport if available, fallback to text display
-if VIEWPORT_AVAILABLE:
-    ViewportWidget = COL3DViewport
+# Conditional imports based on mode
+if STANDALONE_MODE:
+    # STANDALONE MODE - Use local depends/ folder
+    print("COL Workshop: Standalone mode detected")
+
+    # Add current directory to path for depends imports
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    if current_dir not in sys.path:
+        sys.path.insert(0, current_dir)
+
+    try:
+        from depends.col_core_classes import (
+            COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup,
+            COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox
+        )
+        from depends.col_dialogs import (
+            show_col_analysis_dialog, show_col_batch_processor,
+            show_col_file_dialog
+        )
+        from depends.svg_icon_factory import SVGIconFactory
+        from depends.img_debug_functions import img_debugger
+    except ImportError as e:
+        print(f"Warning: Missing standalone dependencies: {e}")
+        # Minimal fallbacks
+        class SVGIconFactory:
+            @staticmethod
+            def _create_icon(svg_data, size=20, color=None):
+                return None
+
+        class img_debugger:
+            @staticmethod
+            def debug(msg): print(f"DEBUG: {msg}")
+            @staticmethod
+            def error(msg): print(f"ERROR: {msg}")
+            @staticmethod
+            def warning(msg): print(f"WARNING: {msg}")
+            @staticmethod
+            def success(msg): print(f"SUCCESS: {msg}")
+
+        # Minimal COL classes
+        class COLFile:
+            def __init__(self): pass
+        class COLModel:
+            def __init__(self): pass
+
 else:
-    ViewportWidget = QLabel  # Fallback text display
+    # DOCKED MODE - Use main app structure (apps.*)
+    print("COL Workshop: Docked mode detected")
 
+    try:
+        from apps.methods.col_core_classes import (
+            COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup,
+            COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox
+        )
+        from apps.gui.col_dialogs import (
+            show_col_analysis_dialog, show_col_batch_processor,
+            show_col_file_dialog
+        )
+        from apps.methods.svg_shared_icons import (
+            get_save_icon, get_open_icon, get_refresh_icon,
+            get_close_icon, get_add_icon, get_remove_icon,
+            get_export_icon, get_import_icon, get_settings_icon,
+            get_view_icon, get_edit_icon
+        )
+        from apps.debug.debug_functions import img_debugger
+    except ImportError as e:
+        print(f"Warning: Missing docked mode imports: {e}")
+        # This shouldn't happen in docked mode, but provide fallback
+        STANDALONE_MODE = True
+        print("Falling back to standalone mode due to import failure")
 
-# Import AppSettings
-try:
-    from apps.utils.app_settings_system import AppSettings, SettingsDialog
-    APPSETTINGS_AVAILABLE = True
-except ImportError:
-    APPSETTINGS_AVAILABLE = False
-    print("Warning: AppSettings not available")
+##Methods list -
 
 ##class COLModelListWidget: -
 # __init__

@@ -27,19 +27,36 @@ from PyQt6.QtGui import QAction
 # get_selected_entries_for_extraction
 # integrate_right_click_actions
 # setup_table_context_menu
-# show_advanced_context_menu
+# show_context_menu
 # show_dff_info
 # view_ide_definitions
 # view_txd_textures
 
 def setup_table_context_menu(main_window): #vers 3
     """Setup comprehensive right-click context menu for the main table"""
+    print("=" * 60)
+    print("DEBUG: setup_table_context_menu CALLED")
+    print(f"DEBUG: main_window type: {type(main_window)}")
+    print(f"DEBUG: has gui_layout: {hasattr(main_window, 'gui_layout')}")
+    if hasattr(main_window, 'gui_layout'):
+        print(f"DEBUG: gui_layout type: {type(main_window.gui_layout)}")
+        print(f"DEBUG: has table: {hasattr(main_window.gui_layout, 'table')}")
+        if hasattr(main_window.gui_layout, 'table'):
+            print(f"DEBUG: table type: {type(main_window.gui_layout.table)}")
+            print(f"DEBUG: table is None: {main_window.gui_layout.table is None}")
+    print("=" * 60)
     try:
         if hasattr(main_window, 'gui_layout') and hasattr(main_window.gui_layout, 'table'):
             table = main_window.gui_layout.table
             table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-            table.customContextMenuRequested.connect(lambda pos: show_advanced_context_menu(main_window, pos))
-            main_window.log_message("Advanced table right-click context menu enabled")
+            print("DEBUG: ✓ Context menu policy set to CustomContextMenu")
+            print("DEBUG: ✓ Context menu policy set to CustomContextMenu")
+            table.customContextMenuRequested.connect(lambda pos: show_context_menu(main_window, pos))
+            print("DEBUG: ✓ Signal connected to show_context_menu")
+            print("DEBUG: ✓ Signal connected to show_context_menu")
+            main_window.log_message("Table right-click context menu enabled")
+            print("DEBUG: ✓ Setup completed successfully, returning True")
+            print("DEBUG: ✓ Setup completed successfully")
             return True
         else:
             main_window.log_message("Table not available for context menu setup")
@@ -48,7 +65,15 @@ def setup_table_context_menu(main_window): #vers 3
         main_window.log_message(f"Error setting up context menu: {str(e)}")
         return False
 
-def show_advanced_context_menu(main_window, position): #vers 3
+def show_context_menu(main_window, position): #vers 3
+    print("\n" + "="*60)
+    print("DEBUG: RIGHT-CLICK DETECTED - show_context_menu CALLED")
+    print(f"DEBUG: position = {position}")
+    print("="*60)
+    print("\n" + "="*60)
+    print("DEBUG: show_context_menu CALLED")
+    print(f"DEBUG: position: {position}")
+    print("="*60)
     """Show comprehensive context menu with file-type specific actions"""
     try:
         table = main_window.gui_layout.table
@@ -1153,7 +1178,7 @@ def get_selected_entry_info(main_window, row):
 # Export main functions
 __all__ = [
     'setup_table_context_menu',
-    'show_advanced_context_menu', 
+    'show_context_menu', 
     'copy_table_cell',
     'copy_table_row',
     'copy_table_column_data',

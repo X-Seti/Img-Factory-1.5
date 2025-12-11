@@ -6,7 +6,7 @@ App Factory - App Settings System - Clean Version
 Settings management without demo code
 """
 
-#This goes in root/ app_settings_system.py - version 60
+#This goes in root/ app_settings_system.py - version 62
 
 import json
 import os
@@ -51,6 +51,10 @@ except ImportError:
 # _get_default_button_colors (vers 1)
 # _on_button_color_changed (vers 1)
 # _collect_current_button_colors (vers 1)
+
+App_name = "GUI - App System Settings"
+App_build = "December 11 - "
+App_auth = "X-Seti"
 
 
 class ThemeSaveDialog(QDialog):
@@ -3671,7 +3675,7 @@ class SettingsDialog(QDialog): #vers 15
             "text_accent": "Text - Accent",
             "accent_primary": "Accent - Primary",
             "accent_secondary": "Accent - Secondary",
-            "border": "Border Color",
+            "border": "Border - Cell Color",
             "button_normal": "Button - Normal",
             "button_hover": "Button - Hover",
             "button_pressed": "Button - Pressed",

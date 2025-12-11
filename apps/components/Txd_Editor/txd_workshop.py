@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-#this belongs in components/Txd_Editor/ txd_workshop.py - Version: 12
-# X-Seti - October10 2025 - Img Factory 1.5 - TXD Workshop Header Update
+#this belongs in components/Txd_Editor/ txd_workshop.py - Version: 13
+# X-Seti - December11 2025 - Img Factory 1.5 - TXD Workshop Fixed Imports
 
 """
-Updated imports and method list for txd_workshop.py
-Replace the existing imports and ##Methods list section
+TXD Workshop - Texture Dictionary Editor
+Supports both standalone and docked (IMG Factory integrated) modes
 """
 
 import os
@@ -17,97 +17,111 @@ import io
 import numpy as np
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple
-from PyQt6.QtWidgets import (QApplication, QSlider, QCheckBox,
-    QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QListWidget, QDialog, QFormLayout, QSpinBox,  QListWidgetItem, QLabel, QPushButton, QFrame, QFileDialog, QLineEdit, QTextEdit, QMessageBox, QScrollArea, QGroupBox, QTableWidget, QTableWidgetItem, QColorDialog, QHeaderView, QAbstractItemView, QMenu, QComboBox, QInputDialog, QTabWidget, QDoubleSpinBox, QRadioButton
+from PyQt6.QtWidgets import (
+    QApplication, QSlider, QCheckBox, QWidget, QVBoxLayout, QHBoxLayout,
+    QSplitter, QListWidget, QDialog, QFormLayout, QSpinBox, QListWidgetItem,
+    QLabel, QPushButton, QFrame, QFileDialog, QLineEdit, QTextEdit,
+    QMessageBox, QScrollArea, QGroupBox, QTableWidget, QTableWidgetItem,
+    QColorDialog, QHeaderView, QAbstractItemView, QMenu, QComboBox,
+    QInputDialog, QTabWidget, QDoubleSpinBox, QRadioButton
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint, QRect, QByteArray
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QBrush, QColor, QCursor
 from PyQt6.QtSvg import QSvgRenderer
 
-from depends.svg_icon_factory import SVGIconFactory
-from depends.txd_context_menu import setup_txd_context_menu
-
-try:
-    from apps.debug.debug_functions import img_debugger
-except ImportError:
-    # Create minimal fallback for standalone mode
-    class DummyDebugger:
-        def debug(self, msg): print(f"DEBUG: {msg}")
-        def error(self, msg): print(f"ERROR: {msg}")
-        def warning(self, msg): print(f"WARNING: {msg}")
-        def success(self, msg): print(f"SUCCESS: {msg}")
-    img_debugger = DummyDebugger()
-
-# Add project root to path for standalone mode
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
-
-try:
-    from apps.components.Txd_Editor.depends.svg_icon_factory import SVGIconFactory
-except ImportError:
-    try:
-        from depends.svg_icon_factory import SVGIconFactory
-    except ImportError:
-        class SVGIconFactory:
-            @staticmethod
-            def _create_icon(svg_data, size=20, color=None):
-                from PyQt6.QtGui import QIcon
-                return QIcon()
-
-
+# PIL for image handling
 try:
     from PIL import Image
 except ImportError:
     Image = None
 
-try:
-    # Try main app path first
-    from apps.components.Txd_Editor.depends.txd_versions import (
-        detect_txd_version, get_platform_name, get_game_from_version,
-        get_version_capabilities, get_platform_capabilities,
-        is_mipmap_supported, is_bumpmap_supported,
-        validate_txd_format, TXDPlatform, detect_platform_from_data
-    )
-except ImportError:
-    # Fallback to standalone depends folder
-    from depends.txd_versions import (
-        detect_txd_version, get_platform_name, get_game_from_version,
-        get_version_capabilities, get_platform_capabilities,
-        is_mipmap_supported, is_bumpmap_supported,
-        validate_txd_format, TXDPlatform, detect_platform_from_data
-    )
+# Detect if running standalone or docked BEFORE any conditional imports
+def _is_standalone():
+    """Detect if running standalone (not imported by IMG Factory)"""
+    import inspect
+    frame = inspect.currentframe()
+    try:
+        # Check if we're being called from imgfactory.py
+        for _ in range(10):  # Check up to 10 frames up
+            frame = frame.f_back
+            if frame is None:
+                break
+            if 'imgfactory' in frame.f_code.co_filename.lower():
+                return False  # Docked mode
+        return True  # Standalone mode
+    finally:
+        del frame
 
-try:
-    from apps.components.Txd_Editor.depends.txd_versions import (
-        detect_txd_version,
-        get_version_string,
-        get_platform_name,
-        get_platform_capabilities,
-        TXDPlatform,
-        TXDVersion
-    )
-except ModuleNotFoundError:
-    from depends.txd_versions import (
-        detect_txd_version,
-        get_version_string,
-        get_platform_name,
-        get_platform_capabilities,
-        TXDPlatform,
-        TXDVersion
-    )
-
-# Import AppSettings
-try:
-    from apps.utils.app_settings_system import AppSettings, SettingsDialog
-    APPSETTINGS_AVAILABLE = True
-except ImportError:
-    APPSETTINGS_AVAILABLE = False
-    print("Warning: AppSettings not available")
-
+STANDALONE_MODE = _is_standalone()
 App_name = "Txd Workshop"
-DEBUG_STANDALONE = False
+App_build = "December 11 - "
+App_auth = "X-Seti"
+
+
+# Conditional imports based on mode
+if STANDALONE_MODE:
+    # STANDALONE MODE - Use local depends/ folder
+    print("TXD Workshop: Standalone mode detected")
+
+    # Add current directory to path for depends imports
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    if current_dir not in sys.path:
+        sys.path.insert(0, current_dir)
+
+    try:
+        from depends.svg_icon_factory import SVGIconFactory
+        from depends.txd_context_menu import setup_txd_context_menu as _setup_context_menu
+        from depends.txd_versions import (
+            detect_txd_version, get_platform_name, get_game_from_version,
+            get_version_capabilities, get_platform_capabilities,
+            is_mipmap_supported, is_bumpmap_supported,
+            validate_txd_format, TXDPlatform, detect_platform_from_data
+        )
+    except ImportError as e:
+        print(f"Warning: Missing standalone dependencies: {e}")
+        # Minimal fallbacks
+        class SVGIconFactory:
+            @staticmethod
+            def _create_icon(svg_data, size=20, color=None):
+                return QIcon()
+
+        def _setup_context_menu(self):
+            pass
+
+    # Minimal debug fallback for standalone
+    class img_debugger:
+        @staticmethod
+        def debug(msg): print(f"DEBUG: {msg}")
+        @staticmethod
+        def error(msg): print(f"ERROR: {msg}")
+        @staticmethod
+        def warning(msg): print(f"WARNING: {msg}")
+        @staticmethod
+        def success(msg): print(f"SUCCESS: {msg}")
+
+else:
+    # DOCKED MODE - Use main app structure (apps.*)
+    print("TXD Workshop: Docked mode detected")
+
+    try:
+        from apps.methods.svg_shared_icons import (
+            get_save_icon, get_open_icon, get_refresh_icon,
+            get_close_icon, get_add_icon, get_remove_icon,
+            get_export_icon, get_import_icon, get_settings_icon
+        )
+        from apps.gui.txd_context_menu import setup_txd_context_menu as _setup_context_menu
+        from apps.debug.debug_functions import img_debugger
+        from apps.methods.txd_versions import (
+            detect_txd_version, get_platform_name, get_game_from_version,
+            get_version_capabilities, get_platform_capabilities,
+            is_mipmap_supported, is_bumpmap_supported,
+            validate_txd_format, TXDPlatform, detect_platform_from_data
+        )
+    except ImportError as e:
+        print(f"Warning: Missing docked mode imports: {e}")
+        # This shouldn't happen in docked mode, but provide fallback
+        STANDALONE_MODE = True  # Fall back to standalone mode
+        print("Falling back to standalone mode due to import failure")
 
 ##Methods list -
 # _apply_gaussian_blur                  # Gaussian blur for bumpmap smoothing
@@ -8167,7 +8181,7 @@ class TXDWorkshop(QWidget): #vers 3
                     return serialize_txd_file(self.texture_list, target_version, target_device)
                 except ImportError:
                     # Fallback to depends folder (standalone)
-                    from depends.txd_serializer import serialize_txd_file
+                    from apps.methods.txd_serializer import serialize_txd_file
                     return serialize_txd_file(self.texture_list, target_version, target_device)
 
             return None
@@ -8891,7 +8905,7 @@ class TXDWorkshop(QWidget): #vers 3
                 from apps.methods.txd_serializer import TXDSerializer
                 log("Loaded serializer from apps.methods.txd_serializer.py")
             except ImportError:
-                from depends.txd_serializer import TXDSerializer
+                from apps.methods.txd_serializer import TXDSerializer
                 log("Loaded serializer from depends/txd_serializer.py (fallback)")
 
             serializer = TXDSerializer()
@@ -9623,7 +9637,7 @@ class TXDWorkshop(QWidget): #vers 3
             try:
                 from apps.methods.txd_serializer import TXDSerializer
             except ImportError:
-                from depends.txd_serializer import TXDSerializer
+                from apps.methods.txd_serializer import TXDSerializer
 
             serializer = TXDSerializer()
 
@@ -9695,7 +9709,7 @@ class TXDWorkshop(QWidget): #vers 3
             except ImportError:
                 print("DEBUG: methods/txd_serializer not found, trying depends/")
                 try:
-                    from depends.txd_serializer import serialize_txd_file
+                    from apps.methods.txd_serializer import serialize_txd_file
                     print("DEBUG: Using depends/txd_serializer")
                 except ImportError:
                     print("DEBUG: ERROR - No serializer found!")

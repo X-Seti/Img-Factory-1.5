@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
+#this belongs in components/Img_Factory/imgfactory.py - Version: 76
+# X-Seti - December11 2025 - IMG Factory 1.5 - Fixed Imports
+
 """
-X-Seti - July22 2025 - IMG Factory 1.5 - AtariST version :D
-#this belongs in root /imgfactory.py - version 78
+IMG Factory 1.5 - Grand Theft Auto Archive Manager
+Main application file - always runs in "main app" mode
 """
+
 import sys
 import os
 import mimetypes
 from typing import Optional, List, Dict, Any
 from pathlib import Path
+
 print("Starting application...")
 
-# The path setup is handled by the launcher, so we don't need to do it here
-
-# Now continue with other imports
+# PyQt6 imports
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QSplitter, QTableWidget, QTableWidgetItem, QTextEdit, QLabel, QDialog,
@@ -22,31 +25,47 @@ from PyQt6.QtWidgets import (
     QGridLayout, QMenu, QButtonGroup, QRadioButton, QToolBar, QFormLayout,
     QInputDialog
 )
-print("PyQt6.QtCore imported successfully")
+print("PyQt6.QtWidgets imported successfully")
+
 from PyQt6.QtCore import pyqtSignal, QMimeData, Qt, QThread, QTimer, QSettings
 from PyQt6.QtGui import QAction, QContextMenuEvent, QDragEnterEvent, QDropEvent, QFont, QIcon, QPixmap, QShortcut, QTextCursor
-# Import comprehensive_fix using importlib to avoid relative import issues
+print("PyQt6.QtCore imported successfully")
 
+# Check for optional MSS library
+try:
+    import mss
+    print("MSS library available")
+except ImportError:
+    print("MSS library not available (screenshots disabled)")
 
-# OR use the full path:
+# Import comprehensive fix using importlib
+import importlib.util
+spec = importlib.util.spec_from_file_location(
+    "depends.comprehensive",
+    os.path.join(os.path.dirname(__file__), "depends/comprehensive.py")
+)
+comprehensive_fix_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(comprehensive_fix_module)
+
+fix_menu_system_and_functionality = comprehensive_fix_module.fix_menu_system_and_functionality
+
+# App utilities
 from apps.utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
 
-#components
+# Components
 from apps.components.Img_Creator.img_creator import NewIMGDialog, IMGCreationThread
-from apps.components.Col_Editor.col_workshop import COLWorkshop
-#from apps.components.Txd_Editor.txd_workshop import TXDEditor
 
-#debug
+# Debug
+from apps.debug.debug_functions import set_col_debug_enabled
+from apps.debug.debug_functions import integrate_all_improvements, install_debug_control_system
 
-from apps.debug.debug_functions import integrate_all_improvements, install_debug_control_system, set_col_debug_enabled
-
-#Core functions.
+# Core functions
 from apps.core.img_formats import GameSpecificIMGDialog, IMGCreator
 from apps.core.file_extraction import setup_complete_extraction_integration
 from apps.core.extract import extract_textures_function
 from apps.core.file_type_filter import integrate_file_filtering
 from apps.methods.rw_versions import get_rw_version_name
-from apps.core.right_click_actions import integrate_right_click_actions, setup_table_context_menu
+from apps.core.right_click_actions import setup_table_context_menu
 from apps.core.shortcuts import setup_all_shortcuts, create_debug_keyboard_shortcuts
 from apps.core.convert import convert_img, convert_img_format
 from apps.core.reload import integrate_reload_functions
@@ -57,9 +76,9 @@ from apps.core.open import _detect_and_open_file, open_file_dialog, _detect_file
 from apps.core.clean import integrate_clean_utilities
 from apps.core.close import install_close_functions, setup_close_manager
 from apps.core.export import integrate_export_functions
-from apps.core.impotr import integrate_import_functions #import impotr
+from apps.core.impotr import integrate_import_functions
 from apps.core.remove import integrate_remove_functions
-from apps.core.export import export_selected_function, export_all_function, integrate_export_functions
+from apps.core.export import export_selected_function, export_all_function
 from apps.core.dump import dump_all_function, dump_selected_function, integrate_dump_functions
 from apps.core.import_via import integrate_import_via_functions
 from apps.core.remove_via import integrate_remove_via_functions
@@ -77,9 +96,8 @@ from apps.core.sort_via_ide import integrate_sort_via_ide
 from apps.core.advanced_img_tools import integrate_advanced_img_tools
 from apps.core.rw_unk_snapshot import integrate_unknown_rw_detection
 from apps.core.col_viewer_integration import integrate_col_viewer
-from apps.core.analyze_rw import integrate_rw_analysis_trigger
 
-#gui-layout
+# GUI Layout
 from apps.gui.ide_dialog import integrate_ide_dialog
 from apps.gui.gui_backend import ButtonDisplayMode, GUIBackend
 from apps.gui.main_window import IMGFactoryMainWindow
@@ -91,21 +109,22 @@ from apps.gui.autosave_menu import integrate_autosave_menu
 from apps.gui.file_menu_integration import add_project_menu_items
 from apps.gui.directory_tree_system import integrate_directory_tree_system
 from apps.gui.tearoff_integration import integrate_tearoff_system
+from apps.gui.gui_context import (
+    open_col_file_dialog, open_col_batch_proc_dialog,
+    open_col_editor_dialog, analyze_col_file_dialog
+)
 
-# After GUI setup:
-from apps.core.right_click_actions import setup_table_context_menu
-from apps.gui.gui_context import (open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
-
-#Shared Methods - Shared Functions.
+# Shared Methods
 from apps.methods.img_core_classes import (
     IMGFile, IMGEntry, IMGVersion, Platform,
-    IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel, format_file_size)
+    IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget,
+    integrate_filtering, create_entries_table_panel, format_file_size
+)
 from apps.methods.col_core_classes import (
     COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup,
     COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox,
     diagnose_col_file, set_col_debug_enabled, is_col_debug_enabled
 )
-
 from apps.methods.col_integration import integrate_complete_col_system
 from apps.methods.col_functions import setup_complete_col_integration
 from apps.methods.col_parsing_functions import load_col_file_safely
@@ -114,8 +133,10 @@ from apps.methods.img_analyze import analyze_img_corruption, show_analysis_dialo
 from apps.methods.img_integration import integrate_img_functions, img_core_functions
 from apps.methods.img_routing_operations import install_operation_routing
 from apps.methods.img_validation import IMGValidator
-
-from apps.methods.tab_system import (setup_tab_system, migrate_tabs, create_tab, update_references, integrate_tab_system)
+from apps.methods.tab_system import (
+    setup_tab_system, migrate_tabs, create_tab,
+    update_references, integrate_tab_system
+)
 from apps.methods.populate_img_table import reset_table_styling, install_img_table_populator
 from apps.methods.progressbar_functions import integrate_progress_system
 from apps.methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate_update_ui_for_loaded_img
@@ -123,22 +144,20 @@ from apps.methods.import_highlight_system import enable_import_highlighting
 from apps.methods.refresh_table_functions import integrate_refresh_table
 from apps.methods.img_entry_operations import integrate_entry_operations
 from apps.methods.mirror_tab_shared import show_mirror_tab_selection
-
 from apps.methods.ide_parser_functions import integrate_ide_parser
 from apps.methods.find_dups_functions import find_duplicates_by_hash, show_duplicates_dialog
 from apps.methods.dragdrop_functions import integrate_drag_drop_system
 from apps.methods.img_templates import IMGTemplateManager, TemplateManagerDialog
-
 from apps.methods.img_import_functions import integrate_img_import_functions
 from apps.methods.img_export_functions import integrate_img_export_functions
 from apps.methods.col_export_functions import integrate_col_export_functions
 
-# MUI Demo Integration
-from apps.components.Img_Factory.depends.mui_demo import MUIWindow
-
+# App metadata
 App_name = "Img Factory 1.5"
-App_build ="December 10 - "
+App_build = "December 11 - "
 App_auth = "X-Seti"
+
+##Methods list -
 
 def get_current_git_branch(): #vers 1
     """Get current git branch name"""
@@ -5351,7 +5370,6 @@ def implement_tab_context_menu(main_window):
     try:
         # Add context menu to the main window
         main_window.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        main_window.customContextMenuRequested.connect(lambda pos: show_advanced_context_menu(main_window, pos))
 
         # For the table, we need to integrate with the existing context menu system
         # rather than replacing it to avoid conflicts with the existing setup
