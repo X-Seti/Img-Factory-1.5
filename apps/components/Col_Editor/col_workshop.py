@@ -1442,7 +1442,7 @@ class COLWorkshop(QWidget): #vers 3
 
             if hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"{App_name} docked to main window")
-                
+
 
         except Exception as e:
             img_debugger.error(f"Error docking: {str(e)}")
@@ -1573,6 +1573,25 @@ class COLWorkshop(QWidget): #vers 3
         normal_color = QColor(100, 100, 100, 150)
         hover_color = QColor(150, 150, 255, 200)
 
+        w = self.width()
+        h = self.height()
+        grip_size = 8  # Make corners visible (8x8px)
+        size = self.corner_size
+
+        # Define corner triangles
+        corners = {
+            'top-left': [(0, 0), (size, 0), (0, size)],
+            'top-right': [(w, 0), (w-size, 0), (w, size)],
+            'bottom-left': [(0, h), (size, h), (0, h-size)],
+            'bottom-right': [(w, h), (w-size, h), (w, h-size)]
+        }
+        corners2 = {
+            "top-left": [(0, grip_size), (0, 0), (grip_size, 0)],
+            "top-right": [(w-grip_size, 0), (w, 0), (w, grip_size)],
+            "bottom-left": [(0, h-grip_size), (0, h), (grip_size, h)],
+            "bottom-right": [(w-grip_size, h), (w, h), (w, h-grip_size)]
+        }
+
         # Get theme colors for corner indicators
         if self.app_settings:
             theme_colors = self._get_theme_colors("default")
@@ -1583,19 +1602,6 @@ class COLWorkshop(QWidget): #vers 3
 
         hover_color = QColor(accent_color)
         hover_color.setAlpha(255)
-
-        w = self.width()
-        h = self.height()
-        grip_size = 8  # Make corners visible (8x8px)
-        size = self.corner_size
-
-        # Define corner triangles
-        corners = {
-            "top-left": [(0, grip_size), (0, 0), (grip_size, 0)],
-            "top-right": [(w-grip_size, 0), (w, 0), (w, grip_size)],
-            "bottom-left": [(0, h-grip_size), (0, h), (grip_size, h)],
-            "bottom-right": [(w-grip_size, h), (w, h), (w, h-grip_size)]
-        }
 
         # Draw all corners with hover effect
         for corner_name, points in corners.items():
@@ -1615,11 +1621,9 @@ class COLWorkshop(QWidget): #vers 3
         painter.end()
 
 
-    def _get_resize_corner(self, pos): #vers 2
+    def _get_resize_corner(self, pos): #vers 3
         """Determine which corner is under mouse position"""
-        size = self.corner_size
-        w = self.width()
-        h = self.height()
+        size = self.corner_size; w = self.width(); h = self.height()
 
         if pos.x() < size and pos.y() < size:
             return "top-left"
@@ -1633,7 +1637,6 @@ class COLWorkshop(QWidget): #vers 3
         return None
 
 
-    # KEEP ONLY mousePressEvent with this logic:
     def mousePressEvent(self, event): #vers 8
         """Handle ALL mouse press - dragging and resizing"""
         if event.button() != Qt.MouseButton.LeftButton:
@@ -1684,45 +1687,14 @@ class COLWorkshop(QWidget): #vers 3
         super().mouseMoveEvent(event)
 
 
-    def mouseDoubleClickEvent(self, event): #vers 2
-        """Handle double-click - maximize/restore
-
-        Handled here instead of eventFilter for better control
-        """
+    def mouseReleaseEvent(self, event): #vers 2
+        """Handle mouse release"""
         if event.button() == Qt.MouseButton.LeftButton:
-            # Convert to titlebar coordinates if needed
-            if hasattr(self, 'titlebar'):
-                titlebar_pos = self.titlebar.mapFromParent(event.pos())
-                if self._is_on_draggable_area(titlebar_pos):
-                    self._toggle_maximize()
-                    event.accept()
-                    return
-
-        super().mouseDoubleClickEvent(event)
-
-
-    def mouseDoubleClickEvent(self, event): #vers 2
-        """Handle double-click - maximize/restore
-
-        Handled here instead of eventFilter for better control
-        """
-        if event.button() == Qt.MouseButton.LeftButton:
-            # Convert to titlebar coordinates if needed
-            if hasattr(self, 'titlebar'):
-                titlebar_pos = self.titlebar.mapFromParent(event.pos())
-                if self._is_on_draggable_area(titlebar_pos):
-                    self._toggle_maximize()
-                    event.accept()
-                    return
-
-        super().mouseDoubleClickEvent(event)
-
-
-    def resizeEvent(self, event): #vers 1
-        '''Keep resize grip in bottom-right corner'''
-        super().resizeEvent(event)
-        if hasattr(self, 'size_grip'):
-            self.size_grip.move(self.width() - 16, self.height() - 16)
+            self.dragging = False
+            self.resizing = False
+            self.resize_corner = None
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+            event.accept()
 
 
     def _handle_corner_resize(self, global_pos): #vers 2
@@ -1849,6 +1821,31 @@ class COLWorkshop(QWidget): #vers 3
         self.drag_position = global_pos
 
 
+    def resizeEvent(self, event): #vers 1
+        '''Keep resize grip in bottom-right corner'''
+        super().resizeEvent(event)
+        if hasattr(self, 'size_grip'):
+            self.size_grip.move(self.width() - 16, self.height() - 16)
+
+
+    def mouseDoubleClickEvent(self, event): #vers 2
+        """Handle double-click - maximize/restore
+
+        Handled here instead of eventFilter for better control
+        """
+        if event.button() == Qt.MouseButton.LeftButton:
+            # Convert to titlebar coordinates if needed
+            if hasattr(self, 'titlebar'):
+                titlebar_pos = self.titlebar.mapFromParent(event.pos())
+                if self._is_on_draggable_area(titlebar_pos):
+                    self._toggle_maximize()
+                    event.accept()
+                    return
+
+        super().mouseDoubleClickEvent(event)
+
+# - Marker 3
+
     def _toggle_maximize(self): #vers 1
         """Toggle window maximize state"""
         if self.isMaximized():
@@ -1857,94 +1854,15 @@ class COLWorkshop(QWidget): #vers 3
             self.showMaximized()
 
 
-    def _get_resize_corner(self, pos): #vers 1
-        """Determine which corner is under mouse position"""
-        size = self.corner_size
-        w = self.width()
-        h = self.height()
-
-        if pos.x() < size and pos.y() < size:
-            return "top-left"
-        if pos.x() > w - size and pos.y() < size:
-            return "top-right"
-        if pos.x() < size and pos.y() > h - size:
-            return "bottom-left"
-        if pos.x() > w - size and pos.y() > h - size:
-            return "bottom-right"
-
-        return None
-
-
-    def _handle_corner_resize(self, global_pos): #vers 1
-        """Handle window resizing from corners"""
-        if not self.resize_corner or not self.drag_position:
-            return
-
-        delta = global_pos - self.drag_position
-        geometry = self.initial_geometry
-
-        min_width = 800
-        min_height = 600
-
-        if self.resize_corner == "top-left":
-            new_x = geometry.x() + delta.x()
-            new_y = geometry.y() + delta.y()
-            new_width = geometry.width() - delta.x()
-            new_height = geometry.height() - delta.y()
-
-            if new_width >= min_width and new_height >= min_height:
-                self.setGeometry(new_x, new_y, new_width, new_height)
-
-        elif self.resize_corner == "top-right":
-            new_y = geometry.y() + delta.y()
-            new_width = geometry.width() + delta.x()
-            new_height = geometry.height() - delta.y()
-
-            if new_width >= min_width and new_height >= min_height:
-                self.setGeometry(geometry.x(), new_y, new_width, new_height)
-
-        elif self.resize_corner == "bottom-left":
-            new_x = geometry.x() + delta.x()
-            new_width = geometry.width() - delta.x()
-            new_height = geometry.height() + delta.y()
-
-            if new_width >= min_width and new_height >= min_height:
-                self.setGeometry(new_x, geometry.y(), new_width, new_height)
-
-        elif self.resize_corner == "bottom-right":
-            new_width = geometry.width() + delta.x()
-            new_height = geometry.height() + delta.y()
-
-            if new_width >= min_width and new_height >= min_height:
-                self.resize(new_width, new_height)
-
-
     def closeEvent(self, event): #vers 1
         """Handle close event"""
         self.window_closed.emit()
         event.accept()
 
 
-# - SVG ICONS -- Section.
+# - Panel Setup
 
-    def _set_checkerboard_bg(self): #vers 1
-        """Set checkerboard background"""
-        # Create checkerboard pattern
-        self.preview_widget.setStyleSheet("""
-            border: 1px solid #3a3a3a;
-            background-image:
-                linear-gradient(45deg, #333 25%, transparent 25%),
-                linear-gradient(-45deg, #333 25%, transparent 25%),
-                linear-gradient(45deg, transparent 75%, #333 75%),
-                linear-gradient(-45deg, transparent 75%, #333 75%);
-            background-size: 20px 20px;
-            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-        """)
-
-
-    # IMPORTANT: This toolbar is isolated to this window only
-    # Do not add to main window's menu system
-    def _create_toolbar(self): #vers 12
+    def _create_toolbar(self): #vers 13
         """Create toolbar - FIXED: Hide drag button when docked, ensure buttons visible"""
         self.titlebar = QFrame()
         self.titlebar.setFrameStyle(QFrame.Shape.StyledPanel)
@@ -1978,7 +1896,7 @@ class COLWorkshop(QWidget): #vers 3
         self.settings_btn.setText("Settings")
         self.settings_btn.setIconSize(QSize(20, 20))
         self.settings_btn.clicked.connect(self._show_workshop_settings)
-        self.settings_btn.setToolTip("Settings")
+        self.settings_btn.setToolTip("Workshop Settings")
         layout.addWidget(self.settings_btn)
 
         layout.addStretch()
@@ -1990,6 +1908,7 @@ class COLWorkshop(QWidget): #vers 3
         layout.addWidget(self.title_label)
 
         layout.addStretch()
+        #layout.addStretch()
 
         # Only show "Open IMG" button if NOT standalone
         if not self.standalone_mode:
@@ -2031,7 +1950,7 @@ class COLWorkshop(QWidget): #vers 3
         self.saveall_btn = QPushButton()
         self.saveall_btn.setFont(self.button_font)
         self.saveall_btn.setIcon(self._create_saveas_icon())
-        self.saveall_btn.setText("Save +")
+        self.saveall_btn.setText("Save All")
         self.saveall_btn.setIconSize(QSize(20, 20))
         self.saveall_btn.setShortcut("Ctrl+S")
         if self.button_display_mode == 'icons':
@@ -2039,30 +1958,9 @@ class COLWorkshop(QWidget): #vers 3
         self.saveall_btn.setEnabled(False)  # Enable when modified
         self.saveall_btn.setToolTip("Save COL file (Ctrl+S)")
         #self.saveall_btn.clicked.connect(self._saveall_file)
-        layout.addWidget(self.saveall_btn)
+        #layout.addWidget(self.saveall_btn)
 
-
-        layout.addSpacing(10)
-
-        self.import_btn = QPushButton("Import")
-        self.import_btn.setFont(self.button_font)
-        self.import_btn.setIcon(self._create_import_icon())
-        self.import_btn.setIconSize(QSize(20, 20))
-        self.import_btn.setToolTip("Import col, cst, 3ds files")
-        #self.import_btn.clicked.connect(self._import_selected)
-        self.import_btn.setEnabled(False)
-        layout.addWidget(self.import_btn)
-
-        self.export_btn = QPushButton("Export")
-        self.export_btn.setFont(self.button_font)
-        self.export_btn.setIcon(self._create_export_icon())
-        self.export_btn.setIconSize(QSize(20, 20))
-        self.export_btn.setToolTip("Export col, cst, 3ds files")
-        #self.export_btn.clicked.connect(self.export_selected)
-        self.export_btn.setEnabled(False)
-        layout.addWidget(self.export_btn)
-
-        self.export_all_btn = QPushButton("Export +")
+        self.export_all_btn = QPushButton("Extract")
         self.export_all_btn.setFont(self.button_font)
         self.export_all_btn.setIcon(self._create_package_icon())
         self.export_all_btn.setIconSize(QSize(20, 20))
@@ -2070,8 +1968,6 @@ class COLWorkshop(QWidget): #vers 3
         #self.export_all_btn.clicked.connect(self.export_all)
         self.export_all_btn.setEnabled(False)
         layout.addWidget(self.export_all_btn)
-
-        layout.addSpacing(10)
 
         self.undo_btn = QPushButton()
         self.undo_btn.setFont(self.button_font)
@@ -2082,8 +1978,6 @@ class COLWorkshop(QWidget): #vers 3
         self.undo_btn.setEnabled(False)
         self.undo_btn.setToolTip("Undo last change")
         layout.addWidget(self.undo_btn)
-
-        layout.addStretch()
 
         # Info button
         self.info_btn = QPushButton("")
@@ -2431,69 +2325,7 @@ class COLWorkshop(QWidget): #vers 3
         self.col_list_widget.setAlternatingRowColors(True)
         self.col_list_widget.itemClicked.connect(self._on_col_selected)
         layout.addWidget(self.col_list_widget)
-
         return panel
-
-
-    def _apply_title_font(self): #vers 1
-        """Apply title font to title bar labels"""
-        if hasattr(self, 'title_font'):
-            # Find all title labels
-            for label in self.findChildren(QLabel):
-                if label.objectName() == "title_label" or "🗺️" in label.text():
-                    label.setFont(self.title_font)
-
-
-    def _apply_panel_font(self): #vers 1
-        """Apply panel font to info panels and labels"""
-        if hasattr(self, 'panel_font'):
-            # Apply to info labels (Mipmaps, Bumpmaps, status labels)
-            for label in self.findChildren(QLabel):
-                if any(x in label.text() for x in ["Mipmaps:", "Bumpmaps:", "Status:", "Type:", "Format:"]):
-                    label.setFont(self.panel_font)
-
-
-    def _apply_button_font(self): #vers 1
-        """Apply button font to all buttons"""
-        if hasattr(self, 'button_font'):
-            for button in self.findChildren(QPushButton):
-                button.setFont(self.button_font)
-
-
-    def _apply_infobar_font(self): #vers 1
-        """Apply fixed-width font to info bar at bottom"""
-        if hasattr(self, 'infobar_font'):
-            if hasattr(self, 'info_bar'):
-                self.info_bar.setFont(self.infobar_font)
-
-
-    def _load_img_col_list(self): #vers 2
-        """Load COL files from IMG archive"""
-        try:
-            # Safety check for standalone mode
-            if self.standalone_mode or not hasattr(self, 'col_list_widget') or self.col_list_widget is None:
-                return
-
-            self.col_list_widget.clear()
-            self.col_list = []
-
-            if not self.current_img:
-                return
-
-            for entry in self.current_img.entries:
-                if entry.name.lower().endswith('.col'):
-                    self.col_list.append(entry)
-                    item = QListWidgetItem(entry.name)
-                    item.setData(Qt.ItemDataRole.UserRole, entry)
-                    size_kb = entry.size / 1024
-                    item.setToolTip(f"{entry.name}\nSize: {size_kb:.1f} KB")
-                    self.col_list_widget.addItem(item)
-
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"📋 Found {len(self.txd_list)} COL files")
-        except Exception as e:
-            if self.main_window and hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Error loading COL list: {str(e)}")
 
 
     def _create_middle_panel(self): #vers 3
@@ -2682,6 +2514,24 @@ class COLWorkshop(QWidget): #vers 3
             self.uncompress_btn.setEnabled(False)
             format_layout.addWidget(self.uncompress_btn)
 
+            self.import_btn = QPushButton("Import")
+            self.import_btn.setFont(self.button_font)
+            self.import_btn.setIcon(self._create_import_icon())
+            self.import_btn.setIconSize(QSize(20, 20))
+            self.import_btn.setToolTip("Import col, cst, 3ds files")
+            #self.import_btn.clicked.connect(self._import_selected)
+            self.import_btn.setEnabled(False)
+            format_layout.addWidget(self.import_btn)
+
+            self.export_btn = QPushButton("Export")
+            self.export_btn.setFont(self.button_font)
+            self.export_btn.setIcon(self._create_export_icon())
+            self.export_btn.setIconSize(QSize(20, 20))
+            self.export_btn.setToolTip("Export col, cst, 3ds files")
+            #self.export_btn.clicked.connect(self.export_selected)
+            self.export_btn.setEnabled(False)
+            format_layout.addWidget(self.export_btn)
+
             info_layout.addLayout(format_layout)
             info_layout.addLayout(view_layout)
             info_layout.addLayout(mipbump_layout)
@@ -2720,7 +2570,6 @@ class COLWorkshop(QWidget): #vers 3
         zoom_out_btn.clicked.connect(self.preview_widget.zoom_out)
         controls_layout.addWidget(zoom_out_btn)
 
-        """
         # Reset
         reset_btn = QPushButton()
         reset_btn.setIcon(self._create_reset_icon())
@@ -2751,7 +2600,7 @@ class COLWorkshop(QWidget): #vers 3
         controls_layout.addWidget(pan_up_btn)
 
         # Pan Down
-        pan_down_btn_create_viewport_controls = QPushButton()
+        pan_down_btn = QPushButton()
         pan_down_btn.setIcon(self._create_arrow_down_icon())
         pan_down_btn.setIconSize(QSize(20, 20))
         pan_down_btn.setFixedSize(40, 40)
@@ -2790,7 +2639,7 @@ class COLWorkshop(QWidget): #vers 3
 
         # View Spheres toggle
         self.view_spheres_btn = QPushButton()
-        self.view_sp_create_viewport_controlsheres_btn.setIcon(self._create_sphere_icon())
+        self.view_spheres_btn.setIcon(self._create_sphere_icon())
         self.view_spheres_btn.setIconSize(QSize(20, 20))
         self.view_spheres_btn.setFixedSize(40, 40)
         self.view_spheres_btn.setCheckable(True)
@@ -2819,35 +2668,83 @@ class COLWorkshop(QWidget): #vers 3
         self.view_mesh_btn.setChecked(True)
         self.view_mesh_btn.setToolTip("Toggle Mesh")
         self.view_mesh_btn.clicked.connect(self._toggle_mesh)
-        controls_layout.addWidget(self.view_mesh_btn)_create_viewport_controls
+        controls_layout.addWidget(self.view_mesh_btn)
         controls_layout.addSpacing(5)
 
-    def _create_preview_controls(self): #vers 4
-        # Background colors
-        bg_black_btn = QPushButton()
-        bg_black_btn.setIconSize(QSize(20, 20))
-        bg_black_btn.setFixedSize(40, 40)
-        bg_black_btn.setStyleSheet("background-color: black; border: 1px solid #555;")
-        bg_black_btn.setToolTip("Black Background")
-        controls_layout.addWidget(bg_black_btn)
-
-        bg_gray_btn = QPushButton()
-        bg_gray_btn.setIconSize(QSize(20, 20))
-        bg_gray_btn.setFixedSize(40, 40)
-        bg_gray_btn.setStyleSheet("background-color: #2a2a2a; border: 1px solid #555;")
-        bg_gray_btn._create_viewport_controlssetToolTip("Gray Background")
-        controls_layout.addWidget(bg_gray_btn)
-
-        bg_white_btn = QPushButton()
-        bg_white_btn.setIconSize(QSize(20, 20))
-        bg_white_btn.setFixedSize(40, 40)
-        bg_white_btn.setStyleSheet("background-color: white; border: 1px solid #555;")
-        bg_white_btn.setToolTip("White Background")
-        controls_layout.addWidget(bg_white_btn)
-
-        controls_layout.addStretch()
-        """
         return controls_frame
+
+
+    def _update_toolbar_for_docking_state(self): #vers 1
+        """Update toolbar visibility based on docking state"""
+        # Hide/show drag button based on docking state
+        if hasattr(self, 'drag_btn'):
+            self.drag_btn.setVisible(not self.is_docked)
+
+
+# - Rest of the logic for the panels
+
+    def _apply_title_font(self): #vers 1
+        """Apply title font to title bar labels"""
+        if hasattr(self, 'title_font'):
+            # Find all title labels
+            for label in self.findChildren(QLabel):
+                if label.objectName() == "title_label" or "🗺️" in label.text():
+                    label.setFont(self.title_font)
+
+
+    def _apply_panel_font(self): #vers 1
+        """Apply panel font to info panels and labels"""
+        if hasattr(self, 'panel_font'):
+            # Apply to info labels (Mipmaps, Bumpmaps, status labels)
+            for label in self.findChildren(QLabel):
+                if any(x in label.text() for x in ["Mipmaps:", "Bumpmaps:", "Status:", "Type:", "Format:"]):
+                    label.setFont(self.panel_font)
+
+
+    def _apply_button_font(self): #vers 1
+        """Apply button font to all buttons"""
+        if hasattr(self, 'button_font'):
+            for button in self.findChildren(QPushButton):
+                button.setFont(self.button_font)
+
+
+    def _apply_infobar_font(self): #vers 1
+        """Apply fixed-width font to info bar at bottom"""
+        if hasattr(self, 'infobar_font'):
+            if hasattr(self, 'info_bar'):
+                self.info_bar.setFont(self.infobar_font)
+
+
+    def _load_img_col_list(self): #vers 2
+        """Load COL files from IMG archive"""
+        try:
+            # Safety check for standalone mode
+            if self.standalone_mode or not hasattr(self, 'col_list_widget') or self.col_list_widget is None:
+                return
+
+            self.col_list_widget.clear()
+            self.col_list = []
+
+            if not self.current_img:
+                return
+
+            for entry in self.current_img.entries:
+                if entry.name.lower().endswith('.col'):
+                    self.col_list.append(entry)
+                    item = QListWidgetItem(entry.name)
+                    item.setData(Qt.ItemDataRole.UserRole, entry)
+                    size_kb = entry.size / 1024
+                    item.setToolTip(f"{entry.name}\nSize: {size_kb:.1f} KB")
+                    self.col_list_widget.addItem(item)
+
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"📋 Found {len(self.txd_list)} COL files")
+        except Exception as e:
+            if self.main_window and hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"❌ Error loading COL list: {str(e)}")
+
+
+# - Rest of the logic for the panels
 
     def _pan_preview(self, dx, dy): #vers 2
         """Pan preview by dx, dy pixels - FIXED"""
@@ -2873,6 +2770,7 @@ class COLWorkshop(QWidget): #vers 3
             background-size: 20px 20px;
             background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
         """)
+
 
     def _create_level_card(self, level_data): #vers 2
         """Create modern level card matching mockup"""
@@ -3139,6 +3037,8 @@ class COLWorkshop(QWidget): #vers 3
         return action_widget
 
 
+# - Marker 5
+
     def _apply_title_font(self): #vers 1
         """Apply title font to title bar labels"""
         if hasattr(self, 'title_font'):
@@ -3171,13 +3071,6 @@ class COLWorkshop(QWidget): #vers 3
                 self.info_bar.setFont(self.infobar_font)
 
 
-    def _update_toolbar_for_docking_state(self): #vers 1
-        """Update toolbar visibility based on docking state"""
-        # Hide/show drag button based on docking state
-        if hasattr(self, 'drag_btn'):
-            self.drag_btn.setVisible(not self.is_docked)
-
-
     def _toggle_tearoff(self): #vers 2
         """Toggle tear-off state (merge back to IMG Factory) - IMPROVED"""
         try:
@@ -3197,6 +3090,8 @@ class COLWorkshop(QWidget): #vers 3
             from PyQt6.QtWidgets import QMessageBox
             QMessageBox.warning(self, "Tear-off Error", f"Could not toggle tear-off state:\n{str(e)}")
 
+
+# - Marker 6
 
     def _open_settings_dialog(self): #vers 1
         """Open settings dialog and refresh on save"""
@@ -3730,6 +3625,7 @@ class COLWorkshop(QWidget): #vers 3
 
         dialog.exec()
 
+
     def _show_settings_context_menu(self, pos): #vers 1
         """Show context menu for Settings button"""
         from PyQt6.QtWidgets import QMenu
@@ -3837,7 +3733,6 @@ class COLWorkshop(QWidget): #vers 3
         menu.exec(self.mapToGlobal(pos))
 
 
-
     def _get_icon_color(self): #vers 1
         """Get icon color from current theme"""
         if APPSETTINGS_AVAILABLE and self.app_settings:
@@ -3937,6 +3832,8 @@ class COLWorkshop(QWidget): #vers 3
         # Locale setting (would need implementation)
         locale_text = self.settings_locale_combo.currentText()
 
+
+# - Marker 7
 
     def _refresh_main_window(self): #vers 1
         """Refresh the main window to show changes"""
