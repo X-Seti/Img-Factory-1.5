@@ -29,13 +29,13 @@ def setup_tab_context_menu(main_window): #vers 1
         )
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Tab context menu enabled")
+            main_window.log_message("Tab context menu enabled")
         
         return True
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error setting up tab context menu: {e}")
+            main_window.log_message(f"Error setting up tab context menu: {e}")
         return False
 
 def show_tab_context_menu(main_window, position): #vers 1
@@ -50,25 +50,25 @@ def show_tab_context_menu(main_window, position): #vers 1
         menu = QMenu(tab_bar)
         
         # Close this tab
-        close_action = QAction("🗙 Close Tab", menu)
+        close_action = QAction("Close Tab", menu)
         close_action.triggered.connect(lambda: main_window.close_tab(tab_index))
         menu.addAction(close_action)
         
         # Close other tabs (only if more than 1 tab)
         if main_window.main_tab_widget.count() > 1:
-            close_others_action = QAction("🗙 Close Other Tabs", menu)
+            close_others_action = QAction("Close Other Tabs", menu)
             close_others_action.triggered.connect(lambda: close_other_tabs(main_window, tab_index))
             menu.addAction(close_others_action)
         
         # Close all tabs
-        close_all_action = QAction("🗙 Close All Tabs", menu)
+        close_all_action = QAction("Close All Tabs", menu)
         close_all_action.triggered.connect(main_window.close_all_tabs)
         menu.addAction(close_all_action)
         
         menu.addSeparator()
         
         # Rename tab
-        rename_action = QAction("✏️ Rename Tab", menu)
+        rename_action = QAction("Rename Tab", menu)
         rename_action.triggered.connect(lambda: rename_tab(main_window, tab_index))
         menu.addAction(rename_action)
         
@@ -78,7 +78,7 @@ def show_tab_context_menu(main_window, position): #vers 1
         tab_text = tab_bar.tabText(tab_index)
         if hasattr(main_window, 'current_img') and main_window.current_img:
             if hasattr(main_window.current_img, 'file_path'):
-                full_path_action = QAction(f"📁 {main_window.current_img.file_path}", menu)
+                full_path_action = QAction(f"{main_window.current_img.file_path}", menu)
                 full_path_action.setEnabled(False)
                 menu.addAction(full_path_action)
         
@@ -86,7 +86,7 @@ def show_tab_context_menu(main_window, position): #vers 1
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error showing tab context menu: {e}")
+            main_window.log_message(f"Error showing tab context menu: {e}")
         print(f"Tab context menu error: {e}")
 
 def close_other_tabs(main_window, keep_index): #vers 1
@@ -109,11 +109,11 @@ def close_other_tabs(main_window, keep_index): #vers 1
                 tab_widget.removeTab(i)
         
         if hasattr(main_window, 'log_message'):
-            main_window.log_message("✅ Closed other tabs")
+            main_window.log_message("Closed other tabs")
         
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error closing other tabs: {e}")
+            main_window.log_message(f"Error closing other tabs: {e}")
 
 def rename_tab(main_window, tab_index): #vers 1
     """Rename tab"""
@@ -131,11 +131,11 @@ def rename_tab(main_window, tab_index): #vers 1
         if ok and new_name:
             tab_widget.setTabText(tab_index, new_name)
             if hasattr(main_window, 'log_message'):
-                main_window.log_message(f"✏️ Renamed tab to: {new_name}")
+                main_window.log_message(f"Renamed tab to: {new_name}")
             
     except Exception as e:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"❌ Error renaming tab: {e}")
+            main_window.log_message(f"Error renaming tab: {e}")
 
 
 # Export functions
