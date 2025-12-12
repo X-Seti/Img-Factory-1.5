@@ -73,6 +73,7 @@ class MenuDefinition:
                 MenuAction("cut", "Cu&t", "Ctrl+X", "edit-cut"),
                 MenuAction("copy", "&Copy", "Ctrl+C", "edit-copy"),
                 MenuAction("paste", "&Paste", "Ctrl+V", "edit-paste"),
+                MenuAction("move", "&Move Selected", "Ctrl+M", "edit-move"),
                 MenuAction("sep2", ""),
                 MenuAction("select_all", "Select &All", "Ctrl+A", "edit-select-all"),
                 MenuAction("select_inverse", "Select &Inverse", "Ctrl+I"),
@@ -426,7 +427,7 @@ class IMGFactoryMenuBar:
                     if menu_action.shortcut:
                         action.setShortcut(QKeySequence(menu_action.shortcut))
 
-                    # Set icon if specified - using SVG icons
+                    # Set icon if specified - using SVG icons TODO - add get_move_icon
                     if menu_action.icon:
                         try:
                             # Import the appropriate SVG icon based on the icon string
@@ -438,7 +439,7 @@ class IMGFactoryMenuBar:
                                 get_trash_icon, get_checkmark_icon, get_view_icon,
                                 get_folder_icon, get_file_icon, get_package_icon,
                                 get_shield_icon, get_image_icon, get_palette_icon,
-                                get_error_icon
+                                get_error_icon #, get_move_icon
                             )
 
                             # Map icon names to functions
@@ -453,6 +454,7 @@ class IMGFactoryMenuBar:
                                 "edit-cut": get_trash_icon,  # or appropriate icon
                                 "edit-copy": get_file_icon,  # or appropriate icon
                                 "edit-paste": get_file_icon,  # or appropriate icon
+                                "edit-move": get_move_icon,  # or appropriate icon
                                 "edit-select-all": get_checkmark_icon,
                                 "edit-find": get_search_icon,
                                 "edit-find-next": get_search_icon,  # or appropriate icon
@@ -506,6 +508,30 @@ class IMGFactoryMenuBar:
         analyze_action.triggered.connect(self._analyze_img)
         tools_menu.addAction(analyze_action)
 
+        # File Analysis Tools TODO - complete functions
+        analyze_action = QAction("&Analyze COL", self.main_window)
+        analyze_action.setStatusTip("Analyze COL file structure and properties")
+        #analyze_action.triggered.connect(self._analyze_col)
+        tools_menu.addAction(analyze_action)
+
+        # File Analysis Tools TODO - complete functions
+        analyze_action = QAction("&Analyze DFF", self.main_window)
+        analyze_action.setStatusTip("Analyze DFF file structure and properties")
+        #analyze_action.triggered.connect(self._analyze_dff)
+        tools_menu.addAction(analyze_action)
+
+        # File Analysis Tools TODO - complete functions
+        analyze_action = QAction("&Analyze TXD", self.main_window)
+        analyze_action.setStatusTip("Analyze TXD file structure and properties")
+        #analyze_action.triggered.connect(self._analyze_txd)
+        tools_menu.addAction(analyze_action)
+
+        # File Analysis Tools TODO - complete functions
+        analyze_action = QAction("&Analyze File", self.main_window)
+        analyze_action.setStatusTip("Analyze file structure and properties")
+        #analyze_action.triggered.connect(self._analyze_file)
+        tools_menu.addAction(analyze_action)
+
         advanced_analyze_action = QAction("&Advanced Analysis", self.main_window)
         advanced_analyze_action.setStatusTip("Comprehensive analysis of IMG file health and structure")
         advanced_analyze_action.triggered.connect(self._advanced_analysis)
@@ -518,6 +544,41 @@ class IMGFactoryMenuBar:
 
         tools_menu.addSeparator()
 
+        # Get entry info if row is specified
+        entry_info = None
+        row = None
+        if row is not None and hasattr(main_window, 'current_img') and main_window.current_img:
+            if 0 <= row < len(main_window.current_img.entries):
+                entry = main_window.current_img.entries[row]
+                entry_info = {
+                    'entry': entry,
+                    'name': entry.name,
+                    'is_col': entry.name.lower().endswith('.col'),
+                    'is_dff': entry.name.lower().endswith('.dff'),
+                    'is_txd': entry.name.lower().endswith('.txd'),
+                    'path': getattr(entry, 'full_path', '') if hasattr(entry, 'full_path') else ''
+                }
+
+        # Show hex editor action
+        hex_action = QAction("Show Hex Editor", self.main_window)
+        if row is not None and entry_info:
+            hex_action.triggered.connect(lambda: show_hex_editor(main_window, row, entry_info))
+        else:
+            hex_action.triggered.connect(lambda: show_hex_editor_selected(main_window))
+        tools_menu.addAction(hex_action)
+
+        # Show texture list for DFF (if DFF file)
+        if entry_info and entry_info['is_dff']:
+            texture_action = QAction("Show Texture List for DFF", self.main_window)
+            texture_action.triggered.connect(lambda: show_dff_texture_list(main_window, row, entry_info))
+            menu.addAction(texture_action)
+
+        # Show DFF model in viewer (if DFF file)
+        if entry_info and entry_info['is_dff']:
+            model_action = QAction("Show DFF Model in Viewer", self.main_window)
+            model_action.triggered.connect(lambda: show_dff_model_viewer(main_window, row, entry_info))
+            menu.addAction(model_action)
+
         # File Checking Tools
         find_dups_action = QAction("Find &Duplicates", self.main_window)
         find_dups_action.setStatusTip("Find duplicate entries in IMG file")
@@ -528,6 +589,21 @@ class IMGFactoryMenuBar:
         find_corrupt_action.setStatusTip("Find corrupted entries in IMG file")
         find_corrupt_action.triggered.connect(self._find_corruption)
         tools_menu.addAction(find_corrupt_action)
+
+        # Move action
+        move_action = QAction("Move Selected", self.main_window)
+        if row is not None and entry_info:
+            move_action.triggered.connect(lambda: move_file(main_window, row, entry_info))
+        else:
+            move_action.triggered.connect(lambda: move_selected_file(main_window))
+        tools_menu.addAction(move_action)
+
+        # Rename action
+        rename_action = QAction("Rename", self.main_window)
+        if row is not None:
+            rename_action.triggered.connect(lambda: handle_double_click_rename(main_window, row, 0))
+
+        tools_menu.addAction(rename_action)
 
         # Store reference to tools menu
         self.menus['Tools'] = tools_menu
@@ -752,7 +828,7 @@ class IMGFactoryMenuBar:
                 self.main_window.log_message(f"Error applying GUI changes: {str(e)}")
             print(f"_apply_gui_changes error: {str(e)}")
 
-    def _setup_default_callbacks(self):
+    def _setup_default_callbacks(self): # TODO - ._move_selected_entries, up or down the file list.
         """Set up default menu callbacks"""
         default_callbacks = {
             # File menu
@@ -775,6 +851,7 @@ class IMGFactoryMenuBar:
             "find": self._find_entries,
             "find_next": self._find_next_entries,
             "replace": self._replace_entries,
+            "move_selected": self._move_selected_entries,
             "rename_selected": self._rename_selected_entry,
             "duplicate_selected": self._duplicate_selected_entry,
             "remove_selected": self._remove_selected_entries,
@@ -1287,6 +1364,28 @@ class IMGFactoryMenuBar:
         except Exception as e:
             QMessageBox.critical(self.main_window, "Rename Error", f"Failed to rename entry: {str(e)}")
 
+
+    def move_selected_entry(self):
+        """Rename selected entry"""
+        try:
+            if hasattr(self.main_window, 'move_entry'):
+                # Call the move function which should handle the rename operation
+                self.main_window.move_entry()
+
+                # After moving, we should enable the save functionality
+                if hasattr(self.main_window, 'entries_changed'):
+                    # Emit the signal to indicate entries have changed
+                    self.main_window.entries_changed.emit()
+
+                # Log the action
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("Move operation initiated")
+            else:
+                QMessageBox.information(self.main_window, "Move", "Move functionality not available")
+        except Exception as e:
+            QMessageBox.critical(self.main_window, "Move Error", f"Failed to move entry: {str(e)}")
+
+
     def _duplicate_selected_entry(self):
         """Duplicate selected entry"""
         try:
@@ -1350,9 +1449,15 @@ class IMGFactoryMenuBar:
         else:
             QMessageBox.information(self.main_window, "Remove", "Remove functionality coming soon!")
 
-    # ========================================================================
-    # SETTINGS MENU CALLBACKS
-    # ========================================================================
+    def _move_selected_entries(self):
+        """Remove selected entries"""
+        if hasattr(self.main_window, 'move_selected'):
+            self.main_window.move_selected()
+        else:
+            QMessageBox.information(self.main_window, "move", "move functionality coming soon!")
+
+
+# - SETTINGS MENU CALLBACKS
 
     def _customize_gui(self):
         """Customize buttons - Show button settings dialog"""
@@ -1538,9 +1643,11 @@ class IMGFactoryMenuBar:
         except Exception as e:
             QMessageBox.critical(self.main_window, "Error", f"Failed to open button settings: {str(e)}")
 
+
     def _customize_menus(self):
         """Customize menus"""
         QMessageBox.information(self.main_window, "Customize Menus", "Menu customization coming soon!")
+
 
     def _change_language(self):
         """Change language"""
@@ -1624,9 +1731,11 @@ class IMGFactoryMenuBar:
             self.main_window.log_message(f"Error changing language: {str(e)}")
             QMessageBox.critical(self.main_window, "Language Error", f"Failed to change language: {str(e)}")
 
+
     def _file_associations(self):
         """File associations"""
         QMessageBox.information(self.main_window, "File Associations", "File associations coming soon!")
+
 
     def _default_directories(self):
         """Default directories"""
@@ -1742,6 +1851,7 @@ class IMGFactoryMenuBar:
             self.main_window.log_message(f"Error setting default directories: {str(e)}")
             QMessageBox.critical(self.main_window, "Directory Error", f"Failed to set default directories: {str(e)}")
 
+
     def _performance_settings(self):
         """Performance settings"""
         try:
@@ -1854,6 +1964,7 @@ class IMGFactoryMenuBar:
             self.main_window.log_message(f"Error setting performance settings: {str(e)}")
             QMessageBox.critical(self.main_window, "Performance Error", f"Failed to set performance settings: {str(e)}")
 
+
     def _reset_settings(self):
         """Reset settings"""
         try:
@@ -1899,7 +2010,6 @@ class IMGFactoryMenuBar:
             QMessageBox.critical(self.main_window, "Reset Error", f"Failed to reset settings: {str(e)}")
 
 
-
     def _open_ide_editor(self):
         """Open IDE Editor"""
         try:
@@ -1920,6 +2030,7 @@ class IMGFactoryMenuBar:
         except Exception as e:
             QMessageBox.critical(self.main_window, "Error", f"Failed to open IDE Editor: {str(e)}")
 
+
     def _sort_img_by_ide(self):
         """Sort IMG entries by IDE order"""
         try:
@@ -1933,6 +2044,7 @@ class IMGFactoryMenuBar:
         except Exception as e:
             QMessageBox.critical(self.main_window, "Error", f"Failed to sort IMG by IDE: {str(e)}")
 
+
     def _sort_col_by_ide(self):
         """Sort COL entries by IDE order"""
         try:
@@ -1945,6 +2057,7 @@ class IMGFactoryMenuBar:
                     "Sort COL by IDE functionality will be available when both IDE and COL files are loaded.")
         except Exception as e:
             QMessageBox.critical(self.main_window, "Error", f"Failed to sort COL by IDE: {str(e)}")
+
 
     def _handle_sort_by_ide(self, model_order):
         """Handle sort by IDE request from IDE Editor"""
@@ -1960,6 +2073,7 @@ class IMGFactoryMenuBar:
             if hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"Error applying IDE sort: {str(e)}")
 
+
     def _handle_selection_sync(self, selected_models):
         """Handle selection sync request from IDE Editor"""
         try:
@@ -1973,6 +2087,7 @@ class IMGFactoryMenuBar:
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"Error syncing selection: {str(e)}")
+
 
     def _view_ide(self):
         """View IDE file"""
@@ -2226,9 +2341,25 @@ class IMGFactoryMenuBar:
         batch_process_action.triggered.connect(lambda: open_col_batch_processor(img_factory_instance))
         col_menu.addAction(batch_process_action)
 
+        analyze_action = QAction("Analyze DFF", img_factory_instance) # TODO finish function
+        analyze_action.triggered.connect(lambda: analyze_dff_file_dialog(img_factory_instance))
+        dff_menu.addAction(analyze_action)
+
+        analyze_action = QAction("Analyze TXD", img_factory_instance) # TODO finish function
+        analyze_action.triggered.connect(lambda: analyze_txd_file_dialog(img_factory_instance))
+        txd_menu.addAction(analyze_action)
+
         analyze_action = QAction("Analyze COL", img_factory_instance)
         analyze_action.triggered.connect(lambda: analyze_col_file_dialog(img_factory_instance))
         col_menu.addAction(analyze_action)
+
+        # Analyze file action
+        analyze_action = QAction("Analyze File", img_factory_instance) # TODO finish function
+        if row is not None and entry_info:
+            analyze_action.triggered.connect(lambda: analyze_file(main_window, row, entry_info))
+        else:
+            analyze_action.triggered.connect(lambda: analyze_selected_file(main_window))
+        menu.addAction(analyze_action)
 
         col_menu.addSeparator()
 
@@ -2563,6 +2694,7 @@ class IMGFactoryMenuBar:
         <p><b>F6:</b> Rebuild IMG</p>
         <p><b>Delete:</b> Remove selected entries</p>
         <p><b>F2:</b> Rename entry</p>
+        <p><b>F2:</b> Move entry</p>
         <p><b>F7:</b> View model</p>
         <p><b>F8:</b> View texture</p>
         <p><b>F9:</b> View collision</p>

@@ -64,7 +64,7 @@ def edit_txd_file(main_window): #vers 3
         entries_table = main_window.gui_layout.table
         selected_items = entries_table.selectedItems()
         if not selected_items:
-            main_window.log_message("❌ No TXD file selected")
+            main_window.log_message("No TXD file selected")
             return
 
         row = selected_items[0].row()
@@ -72,7 +72,7 @@ def edit_txd_file(main_window): #vers 3
         filename = filename_item.text()
 
         if not filename.lower().endswith('.txd'):
-            main_window.log_message("❌ Selected file is not a TXD file")
+            main_window.log_message("Selected file is not a TXD file")
             return
 
         # Open TXD Workshop
@@ -86,12 +86,12 @@ def edit_txd_file(main_window): #vers 3
         workshop = open_txd_workshop(main_window, img_path)
 
         if workshop:
-            main_window.log_message(f"✅ TXD Workshop opened for: {filename}")
+            main_window.log_message(f"TXD Workshop opened for: {filename}")
         else:
-            main_window.log_message(f"❌ Failed to open TXD Workshop")
+            main_window.log_message(f"Failed to open TXD Workshop")
 
     except Exception as e:
-        main_window.log_message(f"❌ Error opening TXD Workshop: {e}")
+        main_window.log_message(f"Error opening TXD Workshop: {e}")
 
 class IMGFactoryGUILayout:
     """Handles the complete GUI layout for IMG Factory 1.5 with theme system"""
@@ -196,16 +196,16 @@ class IMGFactoryGUILayout:
             'editmenu': lambda: self._log_missing_method('editmenu'),
         }
 
-        print(f"✅ Method mappings created: {len(method_mappings)} methods")
+        print(f"Method mappings created: {len(method_mappings)} methods")
         return method_mappings
 
 
     def _log_missing_method(self, method_name): #vers 1
         """Log missing method - unified placeholder"""
         if hasattr(self.main_window, 'log_message') and hasattr(self.main_window, 'gui_layout'):
-            self.main_window.log_message(f"⚠️ Method '{method_name}' not yet implemented")
+            self.main_window.log_message(f"Method '{method_name}' not yet implemented")
         else:
-            print(f"⚠️ Method '{method_name}' not yet implemented")
+            print(f"Method '{method_name}' not yet implemented")
 
 
 
@@ -391,10 +391,10 @@ class IMGFactoryGUILayout:
             # Set as corner widget on the right side of tabs
             self.tab_widget.setCornerWidget(self.tearoff_button, Qt.Corner.TopRightCorner)
 
-            self.main_window.log_message("✅ Tearoff button added to tab widget corner")
+            self.main_window.log_message("Tearoff button added to tab widget corner")
 
         except Exception as e:
-            self.main_window.log_message(f"❌ Error setting up tearoff button: {str(e)}")
+            self.main_window.log_message(f"Error setting up tearoff button: {str(e)}")
 
 
     def _apply_tearoff_button_theme(self): #vers 1
@@ -476,7 +476,7 @@ class IMGFactoryGUILayout:
             original_layout = original_parent.layout() if original_parent else None
 
             if not original_parent or not original_layout:
-                self.main_window.log_message("❌ Cannot tear off: no parent layout found")
+                self.main_window.log_message("Cannot tear off: no parent layout found")
                 return
 
             # Store references on tab widget BEFORE manipulation
@@ -487,7 +487,7 @@ class IMGFactoryGUILayout:
             try:
                 from gui.tear_off import TearOffPanel
             except ImportError:
-                self.main_window.log_message("❌ TearOffPanel not available")
+                self.main_window.log_message("TearOffPanel not available")
                 return
 
             # Create tearoff panel WITHOUT a layout initially
@@ -524,10 +524,10 @@ class IMGFactoryGUILayout:
             cursor_pos = QCursor.pos()
             tearoff_panel.move(cursor_pos.x() - 100, cursor_pos.y() - 50)
 
-            self.main_window.log_message("🔗 Tab widget torn off to separate window")
+            self.main_window.log_message("Tab widget torn off to separate window")
 
         except Exception as e:
-            self.main_window.log_message(f"❌ Error handling tab widget tearoff: {str(e)}")
+            self.main_window.log_message(f"Error handling tab widget tearoff: {str(e)}")
             import traceback
             traceback.print_exc()
 
@@ -536,7 +536,7 @@ class IMGFactoryGUILayout:
         try:
             # Check if actually torn off
             if not hasattr(self.tab_widget, 'is_torn_off') or not self.tab_widget.is_torn_off:
-                self.main_window.log_message("⚠️ Tab widget is not torn off")
+                self.main_window.log_message("Tab widget is not torn off")
                 return
 
             # Get stored references with safety checks
@@ -546,23 +546,23 @@ class IMGFactoryGUILayout:
 
             # Validate we have the required references
             if not original_parent:
-                self.main_window.log_message("❌ Cannot dock back: no original parent stored")
+                self.main_window.log_message("Cannot dock back: no original parent stored")
                 return
 
             if not original_layout:
-                self.main_window.log_message("❌ Cannot dock back: no original layout stored")
+                self.main_window.log_message("Cannot dock back: no original layout stored")
                 return
 
             # Verify original parent still exists and has layout
             try:
                 if original_parent.layout() != original_layout:
-                    self.main_window.log_message("⚠️ Original layout changed, using current layout")
+                    self.main_window.log_message("Original layout changed, using current layout")
                     original_layout = original_parent.layout()
                     if not original_layout:
-                        self.main_window.log_message("❌ Original parent no longer has a layout")
+                        self.main_window.log_message("Original parent no longer has a layout")
                         return
             except:
-                self.main_window.log_message("❌ Original parent is no longer valid")
+                self.main_window.log_message("Original parent is no longer valid")
                 return
 
             # Remove from tearoff panel first
@@ -574,13 +574,13 @@ class IMGFactoryGUILayout:
                     tearoff_panel.hide()
                     tearoff_panel.deleteLater()
                 except Exception as e:
-                    self.main_window.log_message(f"⚠️ Error cleaning up tearoff panel: {str(e)}")
+                    self.main_window.log_message(f"Error cleaning up tearoff panel: {str(e)}")
 
             # Add back to original parent layout
             try:
                 original_layout.addWidget(self.tab_widget)
             except Exception as e:
-                self.main_window.log_message(f"❌ Error adding back to original layout: {str(e)}")
+                self.main_window.log_message(f"Error adding back to original layout: {str(e)}")
                 return
 
             # Clean up references
@@ -599,10 +599,10 @@ class IMGFactoryGUILayout:
             self.tab_widget.show()
             self.tab_widget.update()
 
-            self.main_window.log_message("🔗 Tab widget docked back to main window")
+            self.main_window.log_message("Tab widget docked back to main window")
 
         except Exception as e:
-            self.main_window.log_message(f"❌ Error docking tab widget back: {str(e)}")
+            self.main_window.log_message(f"Error docking tab widget back: {str(e)}")
             import traceback
             traceback.print_exc()
 
@@ -625,9 +625,9 @@ class IMGFactoryGUILayout:
 
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"⚠️ Error updating tearoff button state: {str(e)}")
+                self.main_window.log_message(f"Error updating tearoff button state: {str(e)}")
             else:
-                print(f"⚠️ Error updating tearoff button state: {str(e)}")
+                print(f"Error updating tearoff button state: {str(e)}")
 
 
     def _refresh_all_buttons(self): #vers 4
@@ -659,10 +659,10 @@ class IMGFactoryGUILayout:
                         label, action_type, icon, color, method_name = options_colors[i]
                         self._update_button_theme(btn, color)
                         
-            print(f"✅ Refreshed {len(self.img_buttons + self.entry_buttons + self.options_buttons)} buttons for theme")
+            print(f"Refreshed {len(self.img_buttons + self.entry_buttons + self.options_buttons)} buttons for theme")
                         
         except Exception as e:
-            print(f"❌ Error refreshing buttons: {e}")
+            print(f"Error refreshing buttons: {e}")
 
     def add_txd_editor_button(self): #vers 3
         """Add TXD Editor button to toolbar"""
@@ -687,14 +687,14 @@ class IMGFactoryGUILayout:
 
             if workshop:
                 if img_path:
-                    self.main_window.log_message("✅ TXD Workshop opened with IMG")
+                    self.main_window.log_message("TXD Workshop opened with IMG")
                 else:
-                    self.main_window.log_message("✅ TXD Workshop opened (standalone mode)")
+                    self.main_window.log_message("TXD Workshop opened (standalone mode)")
             else:
-                self.main_window.log_message("❌ Failed to open TXD Workshop")
+                self.main_window.log_message("Failed to open TXD Workshop")
 
         except Exception as e:
-            self.main_window.log_message(f"❌ Failed to launch TXD Workshop: {e}")
+            self.main_window.log_message(f"Failed to launch TXD Workshop: {e}")
 
     def set_button_display_mode(self, mode: str):
         """
@@ -707,10 +707,10 @@ class IMGFactoryGUILayout:
             # Update all buttons to reflect the new mode
             self._update_all_buttons_display_mode()
             
-            print(f"✅ Button display mode set to: {mode}")
+            print(f"Button display mode set to: {mode}")
             
         except Exception as e:
-            print(f"❌ Error setting button display mode: {e}")
+            print(f"Error setting button display mode: {e}")
 
     def _update_all_buttons_display_mode(self):
         """Update all buttons to reflect the current display mode"""
@@ -729,7 +729,7 @@ class IMGFactoryGUILayout:
                 self._update_button_display_mode(btn)
                 
         except Exception as e:
-            print(f"❌ Error updating all buttons display mode: {e}")
+            print(f"Error updating all buttons display mode: {e}")
 
     def _update_button_display_mode(self, btn):
         """Update a single button to reflect the current display mode"""
@@ -775,7 +775,7 @@ class IMGFactoryGUILayout:
                 btn.setMaximumWidth(16777215)
                 
         except Exception as e:
-            print(f"❌ Error updating button display mode: {e}")
+            print(f"Error updating button display mode: {e}")
 
     def _update_button_theme(self, btn, bg_color): #vers 2
         """Update a single button's theme styling"""
@@ -820,7 +820,7 @@ class IMGFactoryGUILayout:
                 }}
             """)
         except Exception as e:
-            print(f"❌ Error updating button theme: {e}")
+            print(f"Error updating button theme: {e}")
 
 
     def create_pastel_button(self, label, action_type, icon, bg_color, method_name, use_pastel=True, high_contrast=False): #vers 3
@@ -939,14 +939,14 @@ class IMGFactoryGUILayout:
             if method_name in self.method_mappings:
                 btn.clicked.connect(self.method_mappings[method_name])
                 if hasattr(self.main_window, 'gui_layout'):
-                    print(f"✅ Connected '{label}' to method_mappings[{method_name}]")
+                    print(f"Connected '{label}' to method_mappings[{method_name}]")
             else:
-                btn.clicked.connect(lambda: self._safe_log(f"⚠️ Method '{method_name}' not in method_mappings"))
+                btn.clicked.connect(lambda: self._safe_log(f"Method '{method_name}' not in method_mappings"))
                 if hasattr(self.main_window, 'gui_layout'):
-                    print(f"⚠️ Method '{method_name}' not found in method_mappings for '{label}'")
+                    print(f"Method '{method_name}' not found in method_mappings for '{label}'")
         except Exception as e:
             if hasattr(self.main_window, 'gui_layout'):
-                print(f"❌ Error connecting button '{label}': {e}")
+                print(f"Error connecting button '{label}': {e}")
             btn.clicked.connect(lambda: self._safe_log(f"Button '{label}' connection error"))
 
         return btn
@@ -1340,10 +1340,10 @@ class IMGFactoryGUILayout:
                 
                 self.backend.set_button_display_mode(display_mode)
             
-            print(f"✅ Button display mode set to: {mode}")
+            print(f"Button display mode set to: {mode}")
             
         except Exception as e:
-            print(f"❌ Error setting button display mode: {e}")
+            print(f"Error setting button display mode: {e}")
 
     def update_button_settings(self, settings):
         """Update button settings from app settings"""
@@ -1631,7 +1631,7 @@ class IMGFactoryGUILayout:
             if hasattr(self.main_window, 'app_settings') and hasattr(self.main_window.app_settings, 'get_theme_colors'):
                 colors = self.main_window.app_settings.get_theme_colors()
                 if colors:
-                    print(f"✅ Using app_settings theme colors: {len(colors)} colors loaded")
+                    print(f"Using app_settings theme colors: {len(colors)} colors loaded")
                     return colors
 
             # Method 2: Try direct theme access
@@ -1640,14 +1640,14 @@ class IMGFactoryGUILayout:
                 theme_data = self.main_window.app_settings.themes.get(current_theme, {})
                 colors = theme_data.get('colors', {})
                 if colors:
-                    print(f"✅ Using direct theme access: {current_theme}")
+                    print(f"Using direct theme access: {current_theme}")
                     return colors
 
         except Exception as e:
-            print(f"❌ Theme color lookup error: {e}")
+            print(f"Theme color lookup error: {e}")
 
         # Fallback with proper theme variables
-        print("⚠️ Using fallback theme colors")
+        print("Using fallback theme colors")
         is_dark = self._is_dark_theme()
         if is_dark:
             return {
@@ -1838,18 +1838,18 @@ class IMGFactoryGUILayout:
             try:
                 from apps.methods.progressbar_functions import integrate_progress_system
                 integrate_progress_system(self.main_window)
-                self.log_message("✅ Status bar with unified progress created")
+                self.log_message("Status bar with unified progress created")
             except ImportError:
-                self.log_message("✅ Status bar created (unified progress not available)")
+                self.log_message("Status bar created (unified progress not available)")
 
         except ImportError:
             # Fallback - create basic status bar
             from PyQt6.QtWidgets import QStatusBar
             self.main_window.setStatusBar(QStatusBar())
             self.main_window.statusBar().showMessage("Ready")
-            self.log_message("⚠️ Basic status bar created (gui.status_bar not available)")
+            self.log_message("Basic status bar created (gui.status_bar not available)")
         except Exception as e:
-            self.log_message(f"❌ Status bar creation error: {str(e)}")
+            self.log_message(f"Status bar creation error: {str(e)}")
 
     def select_all_entries(self):  # vers 1
         """Select all entries in the table"""
@@ -1857,13 +1857,13 @@ class IMGFactoryGUILayout:
             if self.table and hasattr(self.table, 'selectAll'):
                 self.table.selectAll()
                 if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("✅ All entries selected")
+                    self.main_window.log_message("All entries selected")
             else:
                 if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("❌ Table not available for selection")
+                    self.main_window.log_message("Table not available for selection")
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Select all entries error: {str(e)}")
+                self.main_window.log_message(f"Select all entries error: {str(e)}")
 
     def select_inverse(self):  # vers 3
         """Invert the current selection in the table"""
@@ -1912,13 +1912,13 @@ class IMGFactoryGUILayout:
                             item.setSelected(True)
 
                 if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("✅ Selection inverted")
+                    self.main_window.log_message("Selection inverted")
             else:
                 if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("❌ Table not available for selection")
+                    self.main_window.log_message("Table not available for selection")
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Select inverse error: {str(e)}")
+                self.main_window.log_message(f"Select inverse error: {str(e)}")
 
     def sort_entries(self, sort_order="name"):  # vers 2
         """Sort entries in the table with various options"""
@@ -1941,31 +1941,31 @@ class IMGFactoryGUILayout:
                         if ide_path:
                             ide_entries = parse_ide_file(ide_path)
                             if ide_entries:
-                                self.main_window.log_message(f"✅ Found associated IDE file: {ide_path}")
+                                self.main_window.log_message(f"Found associated IDE file: {ide_path}")
                             else:
-                                self.main_window.log_message(f"⚠️ IDE file found but could not be parsed: {ide_path}")
+                                self.main_window.log_message(f"IDE file found but could not be parsed: {ide_path}")
                                 # Fall back to name sorting if IDE parsing failed
                                 sort_order = "name"
                         else:
-                            self.main_window.log_message("⚠️ No associated IDE file found, using name sort")
+                            self.main_window.log_message("No associated IDE file found, using name sort")
                             sort_order = "name"
                     else:
-                        self.main_window.log_message("⚠️ No IMG file loaded, using name sort")
+                        self.main_window.log_message("No IMG file loaded, using name sort")
                         sort_order = "name"
                 
                 # Perform the sorting
                 sort_entries_in_table(self.table, sort_order, ide_entries)
                 
                 if sort_order == "ide_order":
-                    self.main_window.log_message("✅ Entries sorted by IDE model order (TXDs at bottom)")
+                    self.main_window.log_message("Entries sorted by IDE model order (TXDs at bottom)")
                 else:
-                    self.main_window.log_message("✅ Entries sorted by name (TXDs at bottom)")
+                    self.main_window.log_message("Entries sorted by name (TXDs at bottom)")
             else:
                 if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("❌ Table not available for sorting")
+                    self.main_window.log_message("Table not available for sorting")
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Sort entries error: {str(e)}")
+                self.main_window.log_message(f"Sort entries error: {str(e)}")
             import traceback
             traceback.print_exc()
 
@@ -2004,13 +2004,13 @@ class IMGFactoryGUILayout:
                         self.table.setItem(i, j, QTableWidgetItem(cell_data))
                 
                 if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"✅ {len(pinned_data)} entries pinned to top")
+                    self.main_window.log_message(f"{len(pinned_data)} entries pinned to top")
             else:
                 if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("❌ No selected entries to pin or table not available")
+                    self.main_window.log_message("No selected entries to pin or table not available")
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Pin selected entries error: {str(e)}")
+                self.main_window.log_message(f"Pin selected entries error: {str(e)}")
 
     def move_entries_up(self):  # vers 1
         """Move selected entries up in the table"""
@@ -2023,7 +2023,7 @@ class IMGFactoryGUILayout:
                 # Check if any selected rows are already at the top
                 if 0 in selected_rows:
                     if hasattr(self.main_window, 'log_message'):
-                        self.main_window.log_message("⚠️ Cannot move entries up: some are already at top")
+                        self.main_window.log_message("Cannot move entries up: some are already at top")
                     return
                 
                 # Store data for selected rows
@@ -2063,13 +2063,13 @@ class IMGFactoryGUILayout:
                             item.setSelected(True)
                 
                 if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"✅ {len(selected_data)} entries moved up")
+                    self.main_window.log_message(f"{len(selected_data)} entries moved up")
             else:
                 if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("❌ No selected entries to move or table not available")
+                    self.main_window.log_message("No selected entries to move or table not available")
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Move entries up error: {str(e)}")
+                self.main_window.log_message(f"Move entries up error: {str(e)}")
 
     def move_entries_down(self):  # vers 1
         """Move selected entries down in the table"""
@@ -2082,7 +2082,7 @@ class IMGFactoryGUILayout:
                 # Check if any selected rows are already at the bottom
                 if max(selected_rows) >= self.table.rowCount() - 1:
                     if hasattr(self.main_window, 'log_message'):
-                        self.main_window.log_message("⚠️ Cannot move entries down: some are already at bottom")
+                        self.main_window.log_message("Cannot move entries down: some are already at bottom")
                     return
                 
                 # Store data for selected rows
@@ -2120,13 +2120,13 @@ class IMGFactoryGUILayout:
                             item.setSelected(True)
                 
                 if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message(f"✅ {len(selected_data)} entries moved down")
+                    self.main_window.log_message(f"{len(selected_data)} entries moved down")
             else:
                 if hasattr(self.main_window, 'log_message'):
-                    self.main_window.log_message("❌ No selected entries to move or table not available")
+                    self.main_window.log_message("No selected entries to move or table not available")
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"❌ Move entries down error: {str(e)}")
+                self.main_window.log_message(f"Move entries down error: {str(e)}")
 
 # LEGACY COMPATIBILITY FUNCTIONS
 

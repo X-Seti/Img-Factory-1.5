@@ -188,6 +188,13 @@ def show_context_menu(main_window, position): #vers 3
             export_action.triggered.connect(main_window.export_selected)
             menu.addAction(export_action)
 
+        # Remove action
+        if hasattr(main_window, 'remove_selected'):
+            remove_action = QAction("Remove", menu_parent)
+            remove_action.triggered.connect(main_window.remove_selected)
+            menu.addAction(remove_action)
+
+
         if hasattr(main_window, 'remove_selected'):
             selected_items = table.selectedItems()
             if selected_items:
@@ -258,6 +265,7 @@ def show_context_menu(main_window, position): #vers 3
             redo_action.triggered.connect(main_window.redo)
             menu.addAction(redo_action)
 
+
         menu.addSeparator()
 
         # CLIPBOARD OPERATIONS (Basic functionality)
@@ -284,7 +292,20 @@ def show_context_menu(main_window, position): #vers 3
             copy_selection_action = QAction(f"Copy Selection ({len(selected_items)} items)", menu_parent)
             copy_selection_action.triggered.connect(lambda: copy_table_selection(main_window))
             menu.addAction(copy_selection_action)
-        
+
+        # Copy operations
+        copy_submenu = menu.addMenu("Copy")
+
+        copy_name_action = QAction("Copy Name", menu)
+        if row is not None:
+            copy_name_action.triggered.connect(lambda: copy_entry_name(main_window, row))
+        copy_submenu.addAction(copy_name_action)
+
+        copy_info_action = QAction("Copy Info", menu)
+        if row is not None:
+            copy_info_action.triggered.connect(lambda: copy_entry_info(main_window, row))
+        copy_submenu.addAction(copy_info_action)
+
         # Copy selected text from current cell (if text is selected)
         copy_selected_text_action = QAction("Copy Selected Text", menu_parent)
         copy_selected_text_action.triggered.connect(lambda: copy_selected_text_from_cell(main_window, row, col))

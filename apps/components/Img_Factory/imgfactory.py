@@ -38,16 +38,6 @@ try:
 except ImportError:
     print("MSS library not available (screenshots disabled)")
 
-# Import comprehensive fix using importlib
-import importlib.util
-spec = importlib.util.spec_from_file_location(
-    "depends.comprehensive",
-    os.path.join(os.path.dirname(__file__), "depends/comprehensive.py")
-)
-comprehensive_fix_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(comprehensive_fix_module)
-
-fix_menu_system_and_functionality = comprehensive_fix_module.fix_menu_system_and_functionality
 
 # App utilities
 from apps.utils.app_settings_system import AppSettings, apply_theme_to_app, SettingsDialog
@@ -109,22 +99,13 @@ from apps.gui.autosave_menu import integrate_autosave_menu
 from apps.gui.file_menu_integration import add_project_menu_items
 from apps.gui.directory_tree_system import integrate_directory_tree_system
 from apps.gui.tearoff_integration import integrate_tearoff_system
-from apps.gui.gui_context import (
-    open_col_file_dialog, open_col_batch_proc_dialog,
-    open_col_editor_dialog, analyze_col_file_dialog
-)
+from apps.gui.gui_context import (open_col_file_dialog, open_col_batch_proc_dialog, open_col_editor_dialog, analyze_col_file_dialog)
 
 # Shared Methods
-from apps.methods.img_core_classes import (
-    IMGFile, IMGEntry, IMGVersion, Platform,
-    IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget,
-    integrate_filtering, create_entries_table_panel, format_file_size
-)
-from apps.methods.col_core_classes import (
-    COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup,
-    COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox,
-    diagnose_col_file, set_col_debug_enabled, is_col_debug_enabled
-)
+from apps.methods.img_core_classes import (IMGFile, IMGEntry, IMGVersion, Platform, IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel, format_file_size)
+
+from apps.methods.col_core_classes import (COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup, COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox, diagnose_col_file, set_col_debug_enabled, is_col_debug_enabled)
+
 from apps.methods.col_integration import integrate_complete_col_system
 from apps.methods.col_functions import setup_complete_col_integration
 from apps.methods.col_parsing_functions import load_col_file_safely
@@ -133,13 +114,12 @@ from apps.methods.img_analyze import analyze_img_corruption, show_analysis_dialo
 from apps.methods.img_integration import integrate_img_functions, img_core_functions
 from apps.methods.img_routing_operations import install_operation_routing
 from apps.methods.img_validation import IMGValidator
-from apps.methods.tab_system import (
-    setup_tab_system, migrate_tabs, create_tab,
-    update_references, integrate_tab_system
-)
+from apps.methods.tab_system import (setup_tab_system, migrate_tabs, create_tab, update_references, integrate_tab_system)
+
 from apps.methods.populate_img_table import reset_table_styling, install_img_table_populator
 from apps.methods.progressbar_functions import integrate_progress_system
 from apps.methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate_update_ui_for_loaded_img
+
 from apps.methods.import_highlight_system import enable_import_highlighting
 from apps.methods.refresh_table_functions import integrate_refresh_table
 from apps.methods.img_entry_operations import integrate_entry_operations
@@ -151,6 +131,9 @@ from apps.methods.img_templates import IMGTemplateManager, TemplateManagerDialog
 from apps.methods.img_import_functions import integrate_img_import_functions
 from apps.methods.img_export_functions import integrate_img_export_functions
 from apps.methods.col_export_functions import integrate_col_export_functions
+
+#from apps.methods.table_handlers import (
+#    setup_missing_utility_functions, unified_double_click_handler, unified_selection_handler)
 
 # App metadata
 App_name = "Img Factory 1.5"
@@ -1285,6 +1268,17 @@ class IMGFactory(QMainWindow):
         self.redo = self._redo_action
 
         self.log_message("Missing utility functions added")
+
+    """
+    def _unified_double_click_handler(self, row, filename, item): #vers 3
+        unified_double_click_handler(self, row, filename, item)
+
+    def _unified_selection_handler(self, selected_rows, selection_count): #vers 2
+        unified_selection_handler(self, selected_rows, selection_count)
+
+    def setup_missing_utility_functions(self): #vers 2
+        setup_missing_utility_functions(self)
+    """
 
     def _save_img_as(self):
         """Save IMG file as a new file"""
