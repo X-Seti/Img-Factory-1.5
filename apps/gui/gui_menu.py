@@ -608,6 +608,7 @@ class IMGFactoryMenuBar:
         # Store reference to tools menu
         self.menus['Tools'] = tools_menu
 
+
     def _analyze_img(self):
         """Analyze IMG file"""
         if hasattr(self.main_window, 'analyze_img_corruption'):
@@ -616,6 +617,7 @@ class IMGFactoryMenuBar:
             self.main_window.analyze_corruption()
         else:
             QMessageBox.information(self.main_window, "Analyze IMG", "IMG analysis functionality not available")
+
 
     def _advanced_analysis(self):
         """Advanced comprehensive analysis"""
@@ -626,12 +628,14 @@ class IMGFactoryMenuBar:
         else:
             QMessageBox.information(self.main_window, "Advanced Analysis", "Advanced analysis functionality not available")
 
+
     def _validate_img(self):
         """Validate IMG file"""
         if hasattr(self.main_window, 'validate_img'):
             self.main_window.validate_img()
         else:
             QMessageBox.information(self.main_window, "Validate IMG", "IMG validation functionality not available")
+
 
     def _find_duplicates(self):
         """Find duplicate entries in IMG"""
@@ -641,12 +645,14 @@ class IMGFactoryMenuBar:
         except ImportError:
             QMessageBox.information(self.main_window, "Find Duplicates", "Duplicate finding functionality not available")
 
+
     def _find_corruption(self):
         """Find corrupted entries in IMG"""
         if hasattr(self.main_window, 'analyze_img_corruption'):
             self.main_window.analyze_img_corruption()
         else:
             QMessageBox.information(self.main_window, "Find Corruption", "Corruption analysis functionality not available")
+
 
     def _create_recent_files_submenu(self, file_menu):
         """Create and add recent files submenu to the File menu"""
@@ -670,6 +676,7 @@ class IMGFactoryMenuBar:
 
         # Now populate the actual recent files
         self._update_recent_files_submenu()
+
 
     def _update_recent_files_submenu(self):
         """Update the recent files submenu with actual recent files"""
@@ -702,10 +709,12 @@ class IMGFactoryMenuBar:
             if hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"Error updating recent files submenu: {str(e)}")
 
+
     def update_recent_files_menu(self):
         """Public method to update the recent files submenu from outside the class"""
         if hasattr(self, 'recent_files_menu'):
             self._update_recent_files_submenu()
+
 
     def _apply_menu_bar_styling(self):
         """Apply styling to menu bar for hover effects - THEME AWARE"""
@@ -785,10 +794,12 @@ class IMGFactoryMenuBar:
         """
         self.menu_bar.setStyleSheet(menu_style)
 
+
     def _on_menu_hover(self, action):
         """Handle menu hover effect"""
         # This is a callback to provide visual feedback when menu items are hovered
         pass
+
 
     def _apply_gui_changes(self): #vers 1
         """Apply GUI changes after preferences are saved"""
@@ -827,6 +838,7 @@ class IMGFactoryMenuBar:
             if hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"Error applying GUI changes: {str(e)}")
             print(f"_apply_gui_changes error: {str(e)}")
+
 
     def _setup_default_callbacks(self): # TODO - ._move_selected_entries, up or down the file list.
         """Set up default menu callbacks"""
@@ -874,9 +886,8 @@ class IMGFactoryMenuBar:
 
         self.set_callbacks(default_callbacks)
 
-    # ========================================================================
-    # FILE MENU CALLBACKS
-    # ========================================================================
+
+# - FILE MENU CALLBACKS
 
     def _create_new_img(self):
         """Create new IMG file"""
