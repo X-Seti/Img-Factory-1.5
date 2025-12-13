@@ -28,6 +28,8 @@ from PyQt6.QtGui import (
     QAction, QCursor, QKeySequence
 )
 
+from depends.svg_icon_factory import SVGIconFactory
+
 # OpenGL for 3D viewport
 try:
     from PyQt6.QtOpenGLWidgets import QOpenGLWidget
@@ -56,6 +58,7 @@ def _is_standalone():
         del frame
 
 STANDALONE_MODE = _is_standalone()
+APPSETTINGS_AVAILABLE = False
 App_name = "Col Workshop"
 App_build = "December 11 - "
 App_auth = "X-Seti"
@@ -638,8 +641,6 @@ class COLWorkshop(QWidget): #vers 3
 
     def __init__(self, parent=None, main_window=None): #vers 10
         """initialize_features"""
-        if DEBUG_STANDALONE and main_window is None:
-            print(App_name + " Initializing ...")
 
         super().__init__(parent)
 
@@ -737,6 +738,8 @@ class COLWorkshop(QWidget): #vers 3
 
     def setup_ui(self): #vers 7
         """Setup the main UI layout"""
+        from depends.svg_icon_factory import SVGIconFactory
+
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(5, 5, 5, 5)
         main_layout.setSpacing(5)
@@ -1921,6 +1924,8 @@ class COLWorkshop(QWidget): #vers 3
 
     def _create_toolbar(self): #vers 13
         """Create toolbar - FIXED: Hide drag button when docked, ensure buttons visible"""
+        from depends.svg_icon_factory import SVGIconFactory
+
         self.titlebar = QFrame()
         self.titlebar.setFrameStyle(QFrame.Shape.StyledPanel)
         self.titlebar.setFixedHeight(45)
