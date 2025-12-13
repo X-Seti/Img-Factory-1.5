@@ -3458,60 +3458,9 @@ class GUIWorkshop(QWidget): #ver 1
 
         super().keyPressEvent(event)
 
-    def mousePressEvent(self, event): #ver 1
-        if event.button() != Qt.MouseButton.LeftButton:
-            super().mousePressEvent(event); return
-        pos = event.pos()
-        self.resize_corner = self._get_resize_corner(pos)
-        if self.resize_corner:
-            self.resizing = True
-            self.drag_position = event.globalPosition().toPoint()
-            self.initial_geometry = self.geometry()
-            event.accept(); return
 
-        if hasattr(self, 'titlebar') and self.titlebar.geometry().contains(pos):
-            event.accept(); return
-
-        super().mousePressEvent(event)
-
-
-    def mouseMoveEvent(self, event): #ver 1
-        if event.buttons() == Qt.MouseButton.LeftButton:
-            if self.resizing and self.resize_corner:
-                event.accept(); return
-        else:
-            corner = self._get_resize_corner(event.pos())
-            if corner != self.hover_corner:
-                self.hover_corner = corner
-                self.update()
-
-        super().mouseMoveEvent(event)
-
-
-    def mouseReleaseEvent(self, event): #ver 1
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.dragging = False; self.resizing = False; self.resize_corner = None
-        super().mouseReleaseEvent(event)
-
-
-    def _get_resize_corner(self, pos): #vers 1
-        #Determine which corner is under mouse position
-        size = self.corner_size; w = self.width(); h = self.height()
-
-        if pos.x() < size and pos.y() < size:
-            return "top-left"
-        if pos.x() > w - size and pos.y() < size:
-            return "top-right"
-        if pos.x() < size and pos.y() > h - size:
-            return "bottom-left"
-        if pos.x() > w - size and pos.y() > h - size:
-            return "bottom-right"
-
-        return None
-
-
-    def paintEvent(self, event): #vers 1
-        #Paint corner resize triangles
+    def paintEvent(self, event): #vers 2
+        """Paint corner resize triangles"""
         super().paintEvent(event)
 
         from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QPainterPath
@@ -3570,9 +3519,57 @@ class GUIWorkshop(QWidget): #ver 1
 
         painter.end()
 
-    def mousePressEvent(self, event): #vers 1
-        #Handle ALL mouse press - dragging and resizing
 
+    def _get_resize_corner(self, pos): #vers 3
+        """Determine which corner is under mouse position"""
+        size = self.corner_size; w = self.width(); h = self.height()
+
+        if pos.x() < size and pos.y() < size:
+            return "top-left"
+        if pos.x() > w - size and pos.y() < size:
+            return "top-right"
+        if pos.x() < size and pos.y() > h - size:
+            return "bottom-left"
+        if pos.x() > w - size and pos.y() > h - size:
+            return "bottom-right"
+
+        return None
+
+    def mouseMoveEvent(self, event): #vers 4
+        """Handle mouse move for resizing and hover effects
+
+        Window dragging is handled by eventFilter to avoid conflicts
+        """
+        if event.buttons() == Qt.MouseButton.LeftButton:
+            if self.resizing and self.resize_corner:
+                self._handle_corner_resize(event.globalPosition().toPoint())
+                event.accept()
+                return
+        else:
+            # Update hover state and cursor
+            corner = self._get_resize_corner(event.pos())
+            if corner != self.hover_corner:
+                self.hover_corner = corner
+                self.update()  # Trigger repaint for hover effect
+            self._update_cursor(corner)
+
+        # Let parent handle everything else
+        super().mouseMoveEvent(event)
+
+
+    def mouseReleaseEvent(self, event): #vers 2
+        """Handle mouse release"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.dragging = False
+            self.resizing = False
+            self.resize_corner = None
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+            event.accept()
+
+
+    # mousePressEvent with this logic:
+    def mousePressEvent(self, event): #vers 8
+        """Handle ALL mouse press - dragging and resizing"""
         if event.button() != Qt.MouseButton.LeftButton:
             super().mousePressEvent(event)
             return
@@ -3598,41 +3595,9 @@ class GUIWorkshop(QWidget): #ver 1
 
         super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event): #vers 4
-        #Handle mouse move for resizing and hover effects
-        #Window dragging is handled by eventFilter to avoid conflicts
-
-        if event.buttons() == Qt.MouseButton.LeftButton:
-            if self.resizing and self.resize_corner:
-                self._handle_corner_resize(event.globalPosition().toPoint())
-                event.accept()
-                return
-        else:
-            # Update hover state and cursor
-            corner = self._get_resize_corner(event.pos())
-            if corner != self.hover_corner:
-                self.hover_corner = corner
-                self.update()  # Trigger repaint for hover effect
-            self._update_cursor(corner)
-
-        # Let parent handle everything else
-        super().mouseMoveEvent(event)
-
-
-    def mouseReleaseEvent(self, event): #vers 2
-        #Handle mouse release
-
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.dragging = False
-            self.resizing = False
-            self.resize_corner = None
-            self.setCursor(Qt.CursorShape.ArrowCursor)
-            event.accept()
-
 
     def _handle_corner_resize(self, global_pos): #vers 2
-        #Handle window resizing from corners
-
+        """Handle window resizing from corners"""
         if not self.resize_corner or not self.drag_position:
             return
 
@@ -3644,6 +3609,7 @@ class GUIWorkshop(QWidget): #ver 1
 
         # Calculate new geometry based on corner
         if self.resize_corner == "top-left":
+            # Move top-left corner
             new_x = geometry.x() + delta.x()
             new_y = geometry.y() + delta.y()
             new_width = geometry.width() - delta.x()
@@ -3653,6 +3619,7 @@ class GUIWorkshop(QWidget): #ver 1
                 self.setGeometry(new_x, new_y, new_width, new_height)
 
         elif self.resize_corner == "top-right":
+            # Move top-right corner
             new_y = geometry.y() + delta.y()
             new_width = geometry.width() + delta.x()
             new_height = geometry.height() - delta.y()
@@ -3661,6 +3628,7 @@ class GUIWorkshop(QWidget): #ver 1
                 self.setGeometry(geometry.x(), new_y, new_width, new_height)
 
         elif self.resize_corner == "bottom-left":
+            # Move bottom-left corner
             new_x = geometry.x() + delta.x()
             new_width = geometry.width() - delta.x()
             new_height = geometry.height() + delta.y()
@@ -3669,6 +3637,7 @@ class GUIWorkshop(QWidget): #ver 1
                 self.setGeometry(new_x, geometry.y(), new_width, new_height)
 
         elif self.resize_corner == "bottom-right":
+            # Move bottom-right corner
             new_width = geometry.width() + delta.x()
             new_height = geometry.height() + delta.y()
 
@@ -3677,8 +3646,7 @@ class GUIWorkshop(QWidget): #ver 1
 
 
     def _get_resize_direction(self, pos): #vers 1
-        #Determine resize direction based on mouse position
-
+        """Determine resize direction based on mouse position"""
         rect = self.rect()
         margin = self.resize_margin
 
@@ -3708,8 +3676,7 @@ class GUIWorkshop(QWidget): #ver 1
 
 
     def _update_cursor(self, direction): #vers 1
-        #Update cursor based on resize direction
-
+        """Update cursor based on resize direction"""
         if direction == "top" or direction == "bottom":
             self.setCursor(Qt.CursorShape.SizeVerCursor)
         elif direction == "left" or direction == "right":
@@ -3723,7 +3690,7 @@ class GUIWorkshop(QWidget): #ver 1
 
 
     def _handle_resize(self, global_pos): #vers 1
-        #Handle window resizing
+        """Handle window resizing"""
         if not self.resize_direction or not self.drag_position:
             return
 
@@ -3758,16 +3725,17 @@ class GUIWorkshop(QWidget): #ver 1
 
 
     def resizeEvent(self, event): #vers 1
-        #Keep resize grip in bottom-right corner
+        '''Keep resize grip in bottom-right corner'''
         super().resizeEvent(event)
         if hasattr(self, 'size_grip'):
             self.size_grip.move(self.width() - 16, self.height() - 16)
 
 
     def mouseDoubleClickEvent(self, event): #vers 2
-        #Handle double-click - maximize/restore
-        #Handled here instead of eventFilter for better control
+        """Handle double-click - maximize/restore
 
+        Handled here instead of eventFilter for better control
+        """
         if event.button() == Qt.MouseButton.LeftButton:
             # Convert to titlebar coordinates if needed
             if hasattr(self, 'titlebar'):
@@ -3778,6 +3746,8 @@ class GUIWorkshop(QWidget): #ver 1
                     return
 
         super().mouseDoubleClickEvent(event)
+
+
 
 
     def _toggle_maximize(self): #vers 1
