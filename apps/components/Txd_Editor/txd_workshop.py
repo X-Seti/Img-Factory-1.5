@@ -24,6 +24,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint, QRect, QByteArray
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage, QPainter, QPen, QBrush, QColor, QCursor
 from PyQt6.QtSvg import QSvgRenderer
 from depends.svg_icon_factory import SVGIconFactory
+from depends.txd_context_menu import setup_txd_context_menu
 
 # Add project root to path for standalone mode
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -473,6 +474,7 @@ class TXDWorkshop(QWidget): #vers 3
         super().__init__(parent)
 
         self.main_window = main_window
+        self.app_settings = None
         self.current_img = None
         self.current_txd_data = None
         self.current_txd_name = None
@@ -13662,6 +13664,7 @@ class BumpmapManagerWindow(QWidget): #vers 1
         self.parent_workshop = parent
         self.texture_data = texture_data
         self.main_window = main_window
+        self.app_settings = None
         self.modified = False
 
         from PyQt6.QtGui import QFont
@@ -15314,6 +15317,7 @@ class MipmapManagerWindow(QWidget): #vers 2
         self.parent_workshop = parent
         self.texture_data = texture_data
         self.main_window = main_window
+        self.app_settings = None
         self.modified_levels = {}  # Track modified levels
 
         texture_name = texture_data.get('name', 'Unknown')
@@ -15947,6 +15951,7 @@ class MipmapManagerWindow(QWidget): #vers 2
         self.parent_workshop = parent
         self.texture_data = texture_data
         self.main_window = main_window
+        self.app_settings = None
         self.modified_levels = {}  # Track modified levels
 
         texture_name = texture_data.get('name', 'Unknown')
@@ -16695,6 +16700,7 @@ class TexturePropertiesDialog(QDialog): #vers 1
         self.texture_data = texture_data.copy()  # Work on copy
         self.original_texture = texture_data
         self.main_window = main_window
+        self.app_settings = None
         self.changes_made = False
 
         self.setWindowTitle(f"Properties: {texture_data.get('name', 'Unknown')}")
