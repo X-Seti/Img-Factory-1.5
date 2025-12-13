@@ -295,8 +295,8 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
                 for idx in face.indices[:3]:
                     if idx < len(vertices):
                         v = vertices[idx]
-                        if hasattr(v, 'x'):
-                            glVertex3f(v.x, v.y, v.z)
+                        if hasattr(v, 'position') and hasattr(v.position, 'x'):
+                            glVertex3f(v.position.x, v.position.y, v.position.z)
         glEnd()
         
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
@@ -323,15 +323,15 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
     
     def draw_box(self, box): #vers 1
         """Draw collision box"""
-        if not hasattr(box, 'min') or not hasattr(box, 'max'):
+        if not hasattr(box, 'min_point') or not hasattr(box, 'max_point'):
             return
         
         glDisable(GL_LIGHTING)
         glColor4f(self.box_color.redF(), self.box_color.greenF(), 
                  self.box_color.blueF(), 0.4)
         
-        min_v = box.min
-        max_v = box.max
+        min_v = box.min_point
+        max_v = box.max_point
         
         glBegin(GL_LINE_LOOP)
         glVertex3f(min_v.x, min_v.y, min_v.z)
@@ -442,7 +442,7 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
                 for idx in face.indices[:3]:
                     if idx < len(self.current_model.vertices):
                         v = self.current_model.vertices[idx]
-                        glVertex3f(v.x, v.y, v.z)
+                        glVertex3f(v.position.x, v.position.y, v.position.z)
         glEnd()
         
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
