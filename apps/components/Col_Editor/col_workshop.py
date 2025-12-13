@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#this belongs in components.Col_Editor.col_workshop.py - Version: 11
+#this belongs in components.Col_Editor.col_workshop.py - Version: 12
 # X-Seti - August10 2025 - Converted col editor using gui base template.
 
 """
