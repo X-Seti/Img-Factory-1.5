@@ -224,7 +224,7 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
         gluPerspective(45.0, aspect, 0.1, 1000.0)
         glMatrixMode(GL_MODELVIEW)
     
-    def paintGL(self): #vers 1
+    def paintGL(self): #vers 2
         """Render the 3D scene"""
         if not OPENGL_AVAILABLE:
             self._paint_fallback()
@@ -259,7 +259,7 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
         if self.show_bounds and hasattr(self.current_model, 'bounding_box'):
             self._draw_bounding_box(self.current_model.bounding_box)
     
-    def draw_face_mesh(self): #vers 1
+    def draw_face_mesh(self): #vers 2
         """Draw collision mesh faces"""
         if not hasattr(self.current_model, 'faces') or not hasattr(self.current_model, 'vertices'):
             return
@@ -267,11 +267,6 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
         vertices = self.current_model.vertices
         faces = self.current_model.faces
 
-
-        print(f"✅ Drawing {len(faces)} faces, {len(vertices)} vertices")
-        if len(vertices) > 0:
-            v = vertices[0]
-            print(f"   First vertex: ({v.position.x:.3f}, {v.position.y:.3f}, {v.position.z:.3f})")
 
         
         if self.show_wireframe:

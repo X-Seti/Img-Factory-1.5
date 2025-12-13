@@ -192,7 +192,7 @@ class COLModel:
         self.has_box_data = False
         self.has_mesh_data = False
     
-    def get_stats(self) -> str: #vers 2
+    def get_stats(self) -> str: #vers 3
         """Get model statistics"""
         return f"{self.name}: S:{len(self.spheres)} B:{len(self.boxes)} V:{len(self.vertices)} F:{len(self.faces)}"
     
