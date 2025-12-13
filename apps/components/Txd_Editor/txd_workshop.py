@@ -52,6 +52,7 @@ def _is_standalone():
     finally:
         del frame
 
+APPSETTINGS_AVAILABLE = False
 STANDALONE_MODE = _is_standalone()
 App_name = "Txd Workshop"
 App_build = "December 11 - "
@@ -507,8 +508,6 @@ class TXDWorkshop(QWidget): #vers 3
 
     def __init__(self, parent=None, main_window=None): #vers 10
         """Initialize TXD Workshop"""
-        if DEBUG_STANDALONE and main_window is None:
-            print(App_name + " Initializing ...")
 
         super().__init__(parent)
         self.main_window = main_window
