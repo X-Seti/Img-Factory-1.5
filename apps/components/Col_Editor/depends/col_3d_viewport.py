@@ -298,12 +298,9 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
                 # Alternative format with indices attribute
                 for idx in face.indices[:3]:
                     if idx < len(vertices):
-                        vertex = vertices[idx]
-                        if hasattr(vertex, 'position'):
-                            pos = vertex.position
-                            glVertex3f(pos.x, pos.y, pos.z)
-                        else:
-                            glVertex3f(vertex.x, vertex.y, vertex.z)
+                        v = vertices[idx]
+                        if hasattr(v, 'position') and hasattr(v.position, 'x'):
+                            glVertex3f(v.position.x, v.position.y, v.position.z)
         glEnd()
         
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
@@ -437,7 +434,26 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
         glVertex3f(min_v.x, max_v.y, max_v.z)
         glEnd()
     
-    # Shadow mesh functionality removed as it's not supported by current COLModel structure
+    def _draw_shadow_mesh(self): #vers 1
+        """Draw shadow mesh if present"""
+        if not hasattr(self.current_model, 'shadow_faces'):
+            return
+        
+        glDisable(GL_LIGHTING)
+        glColor4f(0.5, 0.5, 0.5, 0.3)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+        
+        # Draw shadow faces similar to regular mesh
+        glBegin(GL_TRIANGLES)
+        for face in self.current_model.shadow_faces:
+            if hasattr(face, 'indices'):
+                for idx in face.indices[:3]:
+                    if idx < len(self.current_model.vertices):
+                        v = self.current_model.vertices[idx]
+                        glVertex3f(v.position.x, v.position.y, v.position.z)
+        glEnd()
+        
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
     
     def mousePressEvent(self, event): #vers 1
         """Handle mouse press for rotation/zoom"""

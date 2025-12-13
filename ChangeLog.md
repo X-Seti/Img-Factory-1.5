@@ -6,9 +6,13 @@
 Complete history of fixes, updates, and improvements.
 
 ---
+**Fixed**: - December 13, 2025
+- Collision boxes will now render correctly with proper min/max point coordinates
+- Collision mesh faces will now render correctly with proper vertex positions
+- Shadow mesh faces will now render correctly with proper vertex positions
+- The 3D viewport will properly display collision geometry as intended
 
 **Fixed**: - December 07, 2025
-
 methods/svg_shared_icons.py - get_app_icon() Version: 2
 - Fixed color placeholder replacement
 - Changed from runtime theme colors to hardcoded values
