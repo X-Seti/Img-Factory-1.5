@@ -104,7 +104,6 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
         self.show_mesh = True
         self.show_wireframe = True
         self.show_bounds = True
-        self.show_shadow_mesh = False
         
         # Current data
         self.current_model = None
@@ -225,7 +224,7 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
         gluPerspective(45.0, aspect, 0.1, 1000.0)
         glMatrixMode(GL_MODELVIEW)
     
-    def paintGL(self): #vers 1
+    def paintGL(self): #vers 2
         """Render the 3D scene"""
         if not OPENGL_AVAILABLE:
             self._paint_fallback()
@@ -259,11 +258,8 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
         
         if self.show_bounds and hasattr(self.current_model, 'bounding_box'):
             self._draw_bounding_box(self.current_model.bounding_box)
-        
-        if self.show_shadow_mesh and hasattr(self.current_model, 'shadow_faces'):
-            self._draw_shadow_mesh()
     
-    def draw_face_mesh(self): #vers 1
+    def draw_face_mesh(self): #vers 2
         """Draw collision mesh faces"""
         if not hasattr(self.current_model, 'faces') or not hasattr(self.current_model, 'vertices'):
             return
@@ -271,11 +267,6 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
         vertices = self.current_model.vertices
         faces = self.current_model.faces
 
-
-        print(f"✅ Drawing {len(faces)} faces, {len(vertices)} vertices")
-        if len(vertices) > 0:
-            v = vertices[0]
-            print(f"   First vertex: ({v.position.x:.3f}, {v.position.y:.3f}, {v.position.z:.3f})")
 
         
         if self.show_wireframe:
@@ -291,7 +282,20 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
         
         glBegin(GL_TRIANGLES)
         for face in faces:
-            if hasattr(face, 'indices') and len(face.indices) >= 3:
+            if hasattr(face, 'vertex_indices') and len(face.vertex_indices) >= 3:
+                # Triangle face with 3 vertex indices
+                for idx in face.vertex_indices[:3]:
+                    if idx < len(vertices):
+                        vertex = vertices[idx]
+                        # Access position through the position attribute
+                        if hasattr(vertex, 'position'):
+                            pos = vertex.position
+                            glVertex3f(pos.x, pos.y, pos.z)
+                        else:
+                            # Fallback for direct coordinate access
+                            glVertex3f(vertex.x, vertex.y, vertex.z)
+            elif hasattr(face, 'indices') and len(face.indices) >= 3:
+                # Alternative format with indices attribute
                 for idx in face.indices[:3]:
                     if idx < len(vertices):
                         v = vertices[idx]
@@ -321,7 +325,7 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
         
         glPopMatrix()
     
-    def draw_box(self, box): #vers 1
+    def draw_box(self, box): #vers 2
         """Draw collision box"""
         if not hasattr(box, 'min_point') or not hasattr(box, 'max_point'):
             return
@@ -389,17 +393,21 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
         glVertex3f(0, 0, 10)
         glEnd()
     
-    def _draw_bounding_box(self, bbox): #vers 1
+    def _draw_bounding_box(self, bbox): #vers 2
         """Draw bounding box"""
         if not bbox or not hasattr(bbox, 'min') or not hasattr(bbox, 'max'):
-            return
+            # Try the alternative attribute names
+            if not bbox or not hasattr(bbox, 'min_point') or not hasattr(bbox, 'max_point'):
+                return
+            min_v = bbox.min_point
+            max_v = bbox.max_point
+        else:
+            min_v = bbox.min
+            max_v = bbox.max
         
         glDisable(GL_LIGHTING)
         glColor3f(self.bounds_color.redF(), self.bounds_color.greenF(), 
                  self.bounds_color.blueF())
-        
-        min_v = bbox.min
-        max_v = bbox.max
         
         glBegin(GL_LINE_LOOP)
         glVertex3f(min_v.x, min_v.y, min_v.z)
@@ -484,7 +492,7 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
         self.update()
     
     def set_view_options(self, show_spheres=None, show_boxes=None, show_mesh=None, 
-                        show_wireframe=None, show_bounds=None, show_shadow=None): #vers 1
+                        show_wireframe=None, show_bounds=None): #vers 2
         """Update view display options"""
         if show_spheres is not None:
             self.show_spheres = show_spheres
@@ -496,8 +504,6 @@ class COL3DViewport(QOpenGLWidget if OPENGL_AVAILABLE else QWidget):
             self.show_wireframe = show_wireframe
         if show_bounds is not None:
             self.show_bounds = show_bounds
-        if show_shadow is not None:
-            self.show_shadow_mesh = show_shadow
         
         self.update()
     

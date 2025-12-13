@@ -192,9 +192,12 @@ class COLModel:
         self.has_box_data = False
         self.has_mesh_data = False
     
-    def get_stats(self) -> str: #vers 1
+    def get_stats(self) -> str: #vers 3
         """Get model statistics"""
         return f"{self.name}: S:{len(self.spheres)} B:{len(self.boxes)} V:{len(self.vertices)} F:{len(self.faces)}"
+    
+    def get_detailed_stats(self) -> Dict[str, int]: #vers 1
+        """Get detailed model statistics"""
         return {
             'version': self.version.value,
             'spheres': len(self.spheres),
@@ -202,8 +205,6 @@ class COLModel:
             'vertices': len(self.vertices),
             'faces': len(self.faces),
             'face_groups': len(self.face_groups),
-            'shadow_vertices': len(self.shadow_vertices),
-            'shadow_faces': len(self.shadow_faces),
             'total_collision_objects': len(self.spheres) + len(self.boxes)
         }
 
