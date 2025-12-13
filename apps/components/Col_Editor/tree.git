@@ -1,0 +1,15 @@
+.
+├── col_workshop.py
+├── depends
+│   ├── col_3d_viewport.py
+│   ├── col_core_classes.py
+│   ├── col_dialogs.py
+│   ├── col_preview_generator.py
+│   ├── img_debug_functions.py
+│   ├── standalone
+│   └── svg_icon_factory.py
+├── desktop_spectacle.png
+├── img_factory_debug.log
+└── tree.git
+
+2 directories, 11 files

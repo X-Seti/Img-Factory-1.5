@@ -16,7 +16,9 @@
 │   │   │   │   ├── img_debug_functions.py
 │   │   │   │   ├── standalone
 │   │   │   │   └── svg_icon_factory.py
-│   │   │   └── img_factory_debug.log
+│   │   │   ├── desktop_spectacle.png
+│   │   │   ├── img_factory_debug.log
+│   │   │   └── tree.git
 │   │   ├── Col_Viewer
 │   │   │   ├── col_viewer.py
 │   │   │   └── depends
@@ -48,6 +50,7 @@
 │   │   │   │   └── mui_demo.py
 │   │   │   ├── imgfactory.py
 │   │   │   └── __init__.py
+│   │   ├── img_factory_debug.log
 │   │   ├── __init__.py
 │   │   ├── Map_Editor
 │   │   │   ├── Map_Workshop.py
@@ -112,6 +115,11 @@
 │   │   │       └── Validate.pas
 │   │   ├── Project_Manager
 │   │   │   └── img_project_manager.py
+│   │   ├── Tmp_Template
+│   │   │   ├── depends
+│   │   │   │   ├── col_3d_viewport.py
+│   │   │   │   └── svg_icon_factory.py
+│   │   │   └── gui_template.py
 │   │   ├── Txd_Converter
 │   │   │   └── txd_converter.py
 │   │   ├── Txd_Editor
@@ -119,6 +127,7 @@
 │   │   │   │   ├── iff_import.py
 │   │   │   │   ├── indexed_color_import.py
 │   │   │   │   ├── svg_icon_factory.py
+│   │   │   │   ├── txd_context_menu.py
 │   │   │   │   ├── txd_serializer.py
 │   │   │   │   ├── txd_versions.py
 │   │   │   │   └── txd_workshop_theme.py
@@ -138,6 +147,7 @@
 │   │   ├── core.py
 │   │   ├── create.py
 │   │   ├── dialogs.py
+│   │   ├── double_click_rename.py
 │   │   ├── dump.py
 │   │   ├── export.py
 │   │   ├── export_via.py
@@ -261,7 +271,9 @@
 │   │   ├── refresh_table_functions.py
 │   │   ├── rw_detection.py
 │   │   ├── rw_versions.py
+│   │   ├── svg_icon_factory.py
 │   │   ├── svg_shared_icons.py
+│   │   ├── table_handlers.py
 │   │   ├── tab_system.py
 │   │   ├── txd_serializer.py
 │   │   ├── txd_versions.py
@@ -282,6 +294,7 @@
 │   │   ├── bluish_light.json
 │   │   ├── classic_dark.json
 │   │   ├── cyberpunk_dark.json
+│   │   ├── garujaro_dark.json
 │   │   ├── green_shad_light.json
 │   │   ├── green_theme_light.json
 │   │   ├── gta_forums_dark.json
@@ -317,9 +330,9 @@
 ├── img_factory_debug.log
 ├── launch_imgfactory.py
 ├── main-branch
-├── open-branch
 ├── package-lock.json
+├── test_col_fixes.py
 ├── TODO.md
 └── tree.git
 
-34 directories, 289 files
+36 directories, 300 files
