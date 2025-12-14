@@ -11,14 +11,13 @@
 │   │   │   ├── depends
 │   │   │   │   ├── col_3d_viewport.py
 │   │   │   │   ├── col_core_classes.py
+│   │   │   │   ├── col_core_classes.py.backup
 │   │   │   │   ├── col_dialogs.py
 │   │   │   │   ├── col_preview_generator.py
 │   │   │   │   ├── img_debug_functions.py
 │   │   │   │   ├── standalone
 │   │   │   │   └── svg_icon_factory.py
-│   │   │   ├── desktop_spectacle.png
-│   │   │   ├── img_factory_debug.log
-│   │   │   └── tree.git
+│   │   │   └── img_factory_debug.log
 │   │   ├── Col_Viewer
 │   │   │   ├── col_viewer.py
 │   │   │   └── depends
@@ -327,12 +326,11 @@
 ├── cc.py
 ├── ChangeLog.md
 ├── Credits.md
+├── dev-branch
 ├── img_factory_debug.log
 ├── launch_imgfactory.py
-├── main-branch
 ├── package-lock.json
-├── test_col_fixes.py
 ├── TODO.md
 └── tree.git
 
-36 directories, 300 files
+36 directories, 298 files

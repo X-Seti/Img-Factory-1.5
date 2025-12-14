@@ -2671,6 +2671,17 @@ class COLWorkshop(QWidget): #vers 3
         controls_layout.addWidget(self.view_mesh_btn)
         controls_layout.addSpacing(5)
 
+        # Icon label
+        self.backface_btn = QPushButton()
+        self.backface_btn.setIcon(self._create_backface_icon())
+        self.backface_btn.setIconSize(QSize(20, 20))
+        self.backface_btn.setFixedSize(40, 40)
+        self.backface_btn.setCheckable(True)
+        self.backface_btn.setChecked(False)
+        self.backface_btn.setToolTip("Toggle Backface")
+        self.backface_btn.clicked.connect(self._toggle_backface_culling)
+        controls_layout.addWidget(self.backface_btn)
+
         return controls_frame
 
 
@@ -4552,6 +4563,19 @@ class COLWorkshop(QWidget): #vers 3
             return pixmap
 
 
+    def _toggle_backface_culling(self): #vers 1
+        """Toggle backface culling on/off"""
+        if hasattr(self, 'preview_widget'):
+            enabled = self.backface_btn.isChecked()
+            self.preview_widget.set_view_options(backface_culling=enabled)
+
+            state = "ON" if enabled else "OFF"
+            self.backface_btn.setToolTip(f"Backface Culling: {state}")
+
+            if hasattr(self, 'log_message'):
+                self.log_message(f"Backface culling: {state}")
+
+
     def _render_collision_preview(self, model, width, height): #vers 2
         """Render collision model for preview panel - IMPROVED VERSION"""
         try:
@@ -5399,6 +5423,30 @@ class COLWorkshop(QWidget): #vers 3
         svg_data = b'''<svg viewBox="0 0 24 24">
             <path fill="currentColor"
                 d="M4,2H20V4H13V10H20V12H4V10H11V4H4V2M4,13H20V15H13V21H20V23H4V21H11V15H4V13Z"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+
+    def _create_backface_icon(self): #vers 1
+        """Backface culling toggle - polygon with front/back sides"""
+        svg_data = b'''<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <!-- Front face (visible - solid) -->
+            <path d="M12 4 L20 8 L16 16 L8 16 L4 8 Z"
+                fill="currentColor" opacity="0.8"/>
+
+            <!-- Back edge (hidden - dashed) -->
+            <path d="M12 4 L8 16 M12 4 L16 16"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-dasharray="2,2"
+                opacity="0.3"
+                fill="none"/>
+
+            <!-- Front edges (visible - solid) -->
+            <path d="M4 8 L12 4 L20 8 L16 16 L8 16 Z"
+                stroke="currentColor"
+                stroke-width="1.5"
+                fill="none"/>
         </svg>'''
         return self._svg_to_icon(svg_data, size=20)
 
