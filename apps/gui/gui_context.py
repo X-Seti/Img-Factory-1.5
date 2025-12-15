@@ -509,9 +509,6 @@ def implement_tab_context_menu(main_window):
         main_window.log_message(f"Error implementing tab context menu: {str(e)}")
 
 
-
-
-
 def view_col_collision(main_window, row): #vers 2
     """View COL collision - WORKING VERSION"""
     try:
@@ -561,6 +558,7 @@ def view_col_collision(main_window, row): #vers 2
     except Exception as e:
         main_window.log_message(f"Error viewing COL collision: {str(e)}")
         return False
+
 
 def analyze_col_from_img_entry(main_window, row): #vers 2
     """Analyze COL file from IMG entry - WORKING VERSION"""
@@ -620,9 +618,11 @@ def analyze_col_from_img_entry(main_window, row): #vers 2
         main_window.log_message(f"Error analyzing COL file: {str(e)}")
         return False
 
+
 def edit_col_collision(main_window, row): #vers 2
     """Edit COL collision - WORKING VERSION (alias for edit_col_from_img_entry)"""
     return edit_col_from_img_entry(main_window, row)
+
 
 def open_col_editor_dialog(main_window): #vers 3
     """Open COL editor - WORKING VERSION"""
@@ -648,6 +648,7 @@ def open_col_editor_dialog(main_window): #vers 3
         main_window.log_message(f"Error opening COL editor: {str(e)}")
         QMessageBox.critical(main_window, "Error", f"Failed to open COL editor:\n{str(e)}")
         return False
+
 
 def open_col_batch_proc_dialog(main_window): #vers 3
     """Open COL batch processor - WORKING VERSION"""
@@ -677,6 +678,7 @@ def open_col_batch_proc_dialog(main_window): #vers 3
         main_window.log_message(f"Error opening batch processor: {str(e)}")
         QMessageBox.critical(main_window, "Error", f"Failed to open batch processor:\n{str(e)}")
         return False
+
 
 def open_col_file_dialog(main_window): #vers 3
     """Open COL file dialog - WORKING VERSION"""
@@ -717,6 +719,7 @@ def open_col_file_dialog(main_window): #vers 3
         QMessageBox.critical(main_window, "Error", f"Failed to open COL file:\n{str(e)}")
         return False
 
+
 def analyze_col_file_dialog(main_window): #vers 3
     """Analyze COL file dialog - WORKING VERSION"""
     try:
@@ -756,7 +759,7 @@ def analyze_col_file_dialog(main_window): #vers 3
                 # Show analysis dialog
                 from gui.col_dialogs import show_col_analysis_dialog
                 show_col_analysis_dialog(main_window, final_analysis, os.path.basename(file_path))
-                
+
                 main_window.log_message(f"COL analysis completed for: {os.path.basename(file_path)}")
                 return True
                 
@@ -777,21 +780,26 @@ def edit_dff_model(main_window, row): #vers 1
     """Edit DFF model"""
     main_window.log_message(f"Edit DFF model from row {row} - not yet implemented")
 
+
 def edit_txd_textures(main_window, row): #vers 1
     """Edit TXD textures"""
     main_window.log_message(f"Edit TXD textures from row {row} - not yet implemented")
+
 
 def view_dff_model(main_window, row): #vers 1
     """View DFF model"""
     main_window.log_message(f"View DFF model from row {row} - not yet implemented")
 
+
 def view_txd_textures(main_window, row): #vers 1
     """View TXD textures"""
     main_window.log_message(f"View TXD textures from row {row} - not yet implemented")
 
+
 def replace_selected_entry(main_window, row): #vers 1
     """Replace selected entry"""
     main_window.log_message(f"Replace entry from row {row} - not yet implemented")
+
 
 def show_entry_properties(main_window, row): #vers 1
     """Show entry properties"""

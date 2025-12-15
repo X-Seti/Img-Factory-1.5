@@ -283,7 +283,7 @@ def switch_tab(main_window, tab_index: int): #vers 1
         )
 
         if file_type == 'COL' and file_object:
-            from apps.components.COL_Workshop.col_workshop import COLWorkshop
+            from apps.components.Col_Editor.col_workshop import COLWorkshop
             workshop = main_window.main_tab_widget.widget(tab_index).findChild(COLWorkshop)
             if workshop:
                 workshop.refresh_display()

@@ -1,4 +1,4 @@
-#this belongs in apps/components/Col_Editor/depends/col_core_classes.py - Version: 3
+#this belongs in apps/methods/col_core_classes.py OR apps/components/Col_Editor/depends/col_core_classes.py - Version: 4
 # X-Seti - December13 2025 - IMG Factory 1.5 - COL Core Classes
 
 """
@@ -12,7 +12,86 @@ import struct
 import os
 from enum import Enum
 from typing import List, Tuple, Optional
-#from apps.debug.debug_functions import img_debugger
+from apps.debug.debug_functions import img_debugger
+
+# Global debug control
+_global_debug_enabled = False
+
+def set_col_debug_enabled(enabled: bool): #vers 1
+    """Enable or disable COL debug output globally"""
+    global _global_debug_enabled
+    _global_debug_enabled = enabled
+    if enabled:
+        img_debugger.info("COL debug output enabled")
+    else:
+        img_debugger.info("COL debug output disabled")
+
+def is_col_debug_enabled() -> bool: #vers 1
+    """Check if COL debug output is enabled"""
+    return _global_debug_enabled
+
+def diagnose_col_file(file_path: str) -> dict: #vers 1
+    """
+    Diagnose COL file and return detailed information
+    
+    Returns:
+        dict with keys: success, error, models, version, size, etc.
+    """
+    result = {
+        'success': False,
+        'error': None,
+        'file_path': file_path,
+        'file_size': 0,
+        'models': [],
+        'model_count': 0
+    }
+    
+    try:
+        if not os.path.exists(file_path):
+            result['error'] = "File not found"
+            return result
+        
+        file_size = os.path.getsize(file_path)
+        result['file_size'] = file_size
+        
+        if file_size < 8:
+            result['error'] = "File too small to be valid COL"
+            return result
+        
+        # Try to load the file
+        col_file = COLFile()
+        success = col_file.load_from_file(file_path)
+        
+        if success:
+            result['success'] = True
+            result['model_count'] = len(col_file.models)
+            
+            for i, model in enumerate(col_file.models):
+                model_info = {
+                    'index': i,
+                    'name': model.name,
+                    'version': model.version.name,
+                    'model_id': model.model_id,
+                    'spheres': len(model.spheres),
+                    'boxes': len(model.boxes),
+                    'vertices': len(model.vertices),
+                    'faces': len(model.faces),
+                    'calculated_face_count': model.calculated_face_count
+                }
+                result['models'].append(model_info)
+        else:
+            result['error'] = col_file.load_error or "Unknown load error"
+        
+        return result
+        
+    except Exception as e:
+        result['error'] = f"Diagnostic error: {str(e)}"
+        return result
+
+##Module Functions -
+# diagnose_col_file
+# is_col_debug_enabled
+# set_col_debug_enabled
 
 ##Methods list -
 # calculate_bounding_box
@@ -43,7 +122,7 @@ from typing import List, Tuple, Optional
 # Vector3
 
 
-# - DATA STRUCTURES
+# ==================== DATA STRUCTURES ====================
 
 class Vector3:
     """3D vector/point"""
@@ -158,7 +237,7 @@ class COLFaceGroup:
         self.faces.append(face)
 
 
-# - COL MODEL
+# ==================== COL MODEL ====================
 
 class COLModel:
     """Complete COL collision model"""
@@ -185,21 +264,16 @@ class COLModel:
         # Debug flags
         self.calculated_face_count = False
     
-    def is_col_debug_enabled(self):
-        pass
-
     def get_stats(self) -> str: #vers 1
         """Get model statistics string"""
         return f"{self.name}: S:{len(self.spheres)} B:{len(self.boxes)} V:{len(self.vertices)} F:{len(self.faces)}"
     
-
     def update_flags(self): #vers 1
         """Update status flags based on data"""
         self.has_sphere_data = len(self.spheres) > 0
         self.has_box_data = len(self.boxes) > 0
         self.has_mesh_data = len(self.vertices) > 0 and len(self.faces) > 0
     
-
     def calculate_bounding_box(self): #vers 1
         """Calculate bounding box from all collision elements"""
         all_vertices = []
@@ -253,7 +327,7 @@ class COLModel:
         self.bounding_box.radius = (dx*dx + dy*dy + dz*dz) ** 0.5 / 2
 
 
-# - COL FILE
+# ==================== COL FILE ====================
 
 class COLFile:
     """COL file container - handles loading, parsing, and saving"""
@@ -265,7 +339,6 @@ class COLFile:
         self.is_loaded = False
         self.load_error = ""
     
-
     def load_from_file(self, file_path: str) -> bool: #vers 1
         """Load COL file from disk"""
         try:
@@ -298,7 +371,6 @@ class COLFile:
             img_debugger.error(traceback.format_exc())
             return False
     
-
     def save_to_file(self, file_path: str) -> bool: #vers 1
         """Save COL file to disk"""
         try:
@@ -324,7 +396,6 @@ class COLFile:
             img_debugger.error(f"Save error: {e}")
             return False
     
-
     def _parse_col_data(self, data: bytes) -> bool: #vers 1
         """Parse COL file data"""
         try:
@@ -362,7 +433,6 @@ class COLFile:
             img_debugger.error(traceback.format_exc())
             return False
     
-
     def _parse_col_model(self, data: bytes, offset: int) -> Tuple[Optional[COLModel], int]: #vers 1
         """Parse single COL model from data"""
         try:
@@ -415,7 +485,6 @@ class COLFile:
             img_debugger.error(traceback.format_exc())
             return None, 0
     
-
     def _parse_col1_model(self, model: COLModel, data: bytes): #vers 2
         """Parse COL1 format model with garbage face count fix"""
         try:
@@ -519,7 +588,6 @@ class COLFile:
             import traceback
             img_debugger.error(traceback.format_exc())
     
-
     def _parse_col23_model(self, model: COLModel, data: bytes): #vers 2
         """Parse COL2/COL3 format model"""
         try:
@@ -610,7 +678,6 @@ class COLFile:
             import traceback
             img_debugger.error(traceback.format_exc())
     
-
     def _calculate_face_count(self, data: bytes, offset: int, num_spheres: int, 
                              num_unknown: int, num_boxes: int, num_vertices: int, 
                              num_faces: int, is_col1: bool = True) -> int: #vers 1
@@ -675,7 +742,6 @@ class COLFile:
             # Return original if calculation fails
             return num_faces
     
-
     def _build_col1_model(self, model: COLModel) -> bytes: #vers 1
         """Build COL1 format binary data"""
         try:
@@ -758,7 +824,6 @@ class COLFile:
             img_debugger.error(f"COL1 build error: {e}")
             return b''
     
-
     def _build_col23_model(self, model: COLModel) -> bytes: #vers 1
         """Build COL2/COL3 format binary data"""
         try:
@@ -844,7 +909,6 @@ class COLFile:
             img_debugger.error(f"COL2/3 build error: {e}")
             return b''
     
-
     def get_info(self) -> str: #vers 1
         """Get comprehensive file information"""
         lines = []
@@ -869,8 +933,9 @@ class COLFile:
         return "\n".join(lines)
 
 
-# Export classes
+# Export classes and functions
 __all__ = [
+    # Data structures
     'Vector3',
     'BoundingBox',
     'COLVersion',
@@ -881,5 +946,9 @@ __all__ = [
     'COLFace',
     'COLFaceGroup',
     'COLModel',
-    'COLFile'
+    'COLFile',
+    # Debug functions
+    'set_col_debug_enabled',
+    'is_col_debug_enabled',
+    'diagnose_col_file'
 ]

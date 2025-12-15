@@ -93,6 +93,38 @@ def edit_txd_file(main_window): #vers 3
     except Exception as e:
         main_window.log_message(f"Error opening TXD Workshop: {e}")
 
+
+def edit_col_file(main_window): #vers 1
+    """Edit selected COL file with COL Workshop - matches TXD pattern"""
+    try:
+        entries_table = main_window.gui_layout.table
+        selected_items = entries_table.selectedItems()
+
+        if not selected_items:
+            main_window.log_message("No COL file selected")
+            return
+
+        row = selected_items[0].row()
+        filename = entries_table.item(row, 0).text()
+
+        if not filename.lower().endswith('.col'):
+            main_window.log_message("Selected file is not a COL file")
+            return
+
+        from apps.components.Col_Editor.col_workshop import open_col_workshop
+
+        img_path = None
+        if hasattr(main_window, 'current_img') and main_window.current_img:
+            img_path = main_window.current_img.file_path
+
+        workshop = open_col_workshop(main_window, img_path)
+
+        if workshop:
+            main_window.log_message(f"COL Workshop opened for: {filename}")
+    except Exception as e:
+        main_window.log_message(f"Error opening COL Workshop: {e}")
+
+
 class IMGFactoryGUILayout:
     """Handles the complete GUI layout for IMG Factory 1.5 with theme system"""
     
@@ -174,7 +206,7 @@ class IMGFactoryGUILayout:
             'extract_textures': lambda: extract_textures_function(self.main_window),
 
             # Editor methods
-            'edit_col_file': lambda: open_col_editor_dialog(self.main_window),
+            'edit_col_file': lambda: edit_col_file(self.main_window),
             'edit_txd_file': lambda: edit_txd_file(self.main_window),
             'edit_dff_file': lambda: self._log_missing_method('edit_dff_file'),
             'edit_ipf_file': lambda: self._log_missing_method('edit_ipf_file'),
@@ -281,6 +313,7 @@ class IMGFactoryGUILayout:
             ("Convert", "convert", "transform", colors['convert_action'], "convert_img_format"),
         ]
 
+
     def _get_entry_buttons_data(self): #vers 3
         """Get Entry buttons data with theme colors"""
         colors = self._get_button_theme_template()
@@ -303,6 +336,7 @@ class IMGFactoryGUILayout:
             ("Sort IDE", "sort_ide", "view-sort-ide", colors['select_action'], "sort_entries_to_match_ide"),
             ("Pin selected", "pin_selected", "pin", colors['select_action'], "pin_selected_entries"),
         ]
+
 
     def _get_options_buttons_data(self): #vers 3
         """Get Options buttons data with theme colors"""
@@ -606,6 +640,7 @@ class IMGFactoryGUILayout:
             import traceback
             traceback.print_exc()
 
+
     def _update_tearoff_button_state(self, is_torn_off): #vers 2
         """Update tearoff button appearance based on state - SAFER VERSION"""
         try:
@@ -664,6 +699,7 @@ class IMGFactoryGUILayout:
         except Exception as e:
             print(f"Error refreshing buttons: {e}")
 
+
     def add_txd_editor_button(self): #vers 3
         """Add TXD Editor button to toolbar"""
         if hasattr(self.main_window, 'button_panel'):
@@ -671,6 +707,7 @@ class IMGFactoryGUILayout:
             txd_button.clicked.connect(self.launch_txd_editor)
             txd_button.setToolTip("Open TXD Texture Editor")
             self.main_window.button_panel.addWidget(txd_button)
+
 
     def launch_txd_editor(self): #vers 3
         """Launch TXD Workshop - works with or without IMG loaded"""
@@ -696,6 +733,7 @@ class IMGFactoryGUILayout:
         except Exception as e:
             self.main_window.log_message(f"Failed to launch TXD Workshop: {e}")
 
+
     def set_button_display_mode(self, mode: str):
         """
         Set button display mode: 'text_only', 'icons_only', or 'icons_with_text'
@@ -711,6 +749,7 @@ class IMGFactoryGUILayout:
             
         except Exception as e:
             print(f"Error setting button display mode: {e}")
+
 
     def _update_all_buttons_display_mode(self):
         """Update all buttons to reflect the current display mode"""
@@ -730,6 +769,7 @@ class IMGFactoryGUILayout:
                 
         except Exception as e:
             print(f"Error updating all buttons display mode: {e}")
+
 
     def _update_button_display_mode(self, btn):
         """Update a single button to reflect the current display mode"""
@@ -776,6 +816,7 @@ class IMGFactoryGUILayout:
                 
         except Exception as e:
             print(f"Error updating button display mode: {e}")
+
 
     def _update_button_theme(self, btn, bg_color): #vers 2
         """Update a single button's theme styling"""

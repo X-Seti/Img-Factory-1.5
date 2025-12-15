@@ -68,9 +68,9 @@ class SVGIconFactory: #vers 6
             print(f"Error creating icon: {e}")
             return QIcon()
     
-    # =====================================
-    # PLAYBACK CONTROL ICONS
-    # =====================================
+
+# - PLAYBACK CONTROL ICONS
+
     
     @staticmethod
     def launch_icon(size: int = 20, color: str = None) -> QIcon: #vers 6
@@ -97,9 +97,9 @@ class SVGIconFactory: #vers 6
         </svg>'''
         return SVGIconFactory._create_icon(svg_data, size, color)
     
-    # =====================================
-    # FILE & FOLDER ICONS
-    # =====================================
+
+# - FILE & FOLDER ICONS
+
     
     @staticmethod
     def folder_icon(size: int = 20, color: str = None) -> QIcon: #vers 6
@@ -128,10 +128,9 @@ class SVGIconFactory: #vers 6
         </svg>'''
         return SVGIconFactory._create_icon(svg_data, size, color)
     
-    # =====================================
-    # SETTINGS & CONFIGURATION ICONS
-    # =====================================
-    
+
+# - SETTINGS & CONFIGURATION ICONS
+
     @staticmethod
     def settings_icon(size: int = 20, color: str = None) -> QIcon: #vers 6
         """Settings gear icon"""
@@ -168,9 +167,9 @@ class SVGIconFactory: #vers 6
         </svg>'''
         return SVGIconFactory._create_icon(svg_data, size, color)
     
-    # =====================================
+
     # WINDOW CONTROL ICONS
-    # =====================================
+
     
     @staticmethod
     def info_icon(size: int = 24, color: str = None) -> QIcon: #vers 6
@@ -206,9 +205,9 @@ class SVGIconFactory: #vers 6
         </svg>'''
         return SVGIconFactory._create_icon(svg_data, size, color)
     
-    # =====================================
+
     # MEDIA CONTROLS
-    # =====================================
+
     
     @staticmethod
     def volume_up_icon(size: int = 20, color: str = None) -> QIcon: #vers 6
@@ -245,9 +244,9 @@ class SVGIconFactory: #vers 6
         </svg>'''
         return SVGIconFactory._create_icon(svg_data, size, None)  # Force no color
     
-    # =====================================
-    # ART & MANAGEMENT ICONS
-    # =====================================
+
+# - ART & MANAGEMENT ICONS
+
     
     @staticmethod
     def search_icon(size: int = 20, color: str = None) -> QIcon: #vers 1
@@ -293,10 +292,28 @@ class SVGIconFactory: #vers 6
                 d="M21,16.5C21,16.88 20.79,17.21 20.47,17.38L12.57,21.82C12.41,21.94 12.21,22 12,22C11.79,22 11.59,21.94 11.43,21.82L3.53,17.38C3.21,17.21 3,16.88 3,16.5V7.5C3,7.12 3.21,6.79 3.53,6.62L11.43,2.18C11.59,2.06 11.79,2 12,2C12.21,2 12.41,2.06 12.57,2.18L20.47,6.62C20.79,6.79 21,7.12 21,7.5V16.5M12,4.15L6.04,7.5L12,10.85L17.96,7.5L12,4.15M5,15.91L11,19.29V12.58L5,9.21V15.91M19,15.91V9.21L13,12.58V19.29L19,15.91Z"/>
         </svg>'''
         return SVGIconFactory._create_icon(svg_data, size, color)
-    
-    # =====================================
-    # APP ICON
-    # =====================================
+
+
+    def create_backface_icon(self): #vers 1
+        """Backface culling toggle icon"""
+        svg_data = b'''<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 4 L20 8 L16 16 L8 16 L4 8 Z"
+                fill="currentColor" opacity="0.8"/>
+            <path d="M12 4 L8 16 M12 4 L16 16"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-dasharray="2,2"
+                opacity="0.3"
+                fill="none"/>
+            <path d="M4 8 L12 4 L20 8 L16 16 L8 16 Z"
+                stroke="currentColor"
+                stroke-width="1.5"
+                fill="none"/>
+        </svg>'''
+        return self._svg_to_icon(svg_data, size=20)
+
+
+# - APP ICON
     
     @staticmethod
     def mel_app_icon(size: int = 64) -> QIcon: #vers 1
