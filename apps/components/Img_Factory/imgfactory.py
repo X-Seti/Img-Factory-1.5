@@ -3645,7 +3645,7 @@ class IMGFactory(QMainWindow):
             else:
                 # Show warning icon on the tab if possible
                 try:
-                    from apps.methods.svg_shared_icons import get_warning_icon
+                    from apps.methods.imgfactory_svg_icons import get_warning_icon
                     warning_icon = get_warning_icon()
                     self.main_tab_widget.setTabIcon(current_index, warning_icon)
                 except:
@@ -4828,7 +4828,7 @@ def main():
 
        # Set application icon
        try:
-           from apps.methods.svg_shared_icons import get_app_icon
+           from apps.methods.imgfactory_svg_icons import get_app_icon
            app_icon = get_app_icon()
            app.setWindowIcon(app_icon)
        except Exception as e:

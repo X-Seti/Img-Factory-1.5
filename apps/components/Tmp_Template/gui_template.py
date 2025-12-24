@@ -115,7 +115,7 @@ else:
             show_col_analysis_dialog, show_col_batch_processor,
             show_col_file_dialog
         )
-        from apps.methods.svg_shared_icons import (
+        from apps.methods.imgfactory_svg_icons import (
             get_save_icon, get_open_icon, get_refresh_icon,
             get_close_icon, get_add_icon, get_remove_icon,
             get_export_icon, get_import_icon, get_settings_icon,

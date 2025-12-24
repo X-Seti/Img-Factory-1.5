@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer, QSize, pyqtSignal, QPoint
 from PyQt6.QtGui import QFont, QAction, QIcon, QShortcut, QKeySequence, QPalette, QTextCursor
 from apps.core.gui_search import ASearchDialog, SearchManager
-from apps.methods.svg_shared_icons import (
+from apps.methods.imgfactory_svg_icons import (
     get_add_icon, get_open_icon, get_refresh_icon, get_close_icon, 
     get_save_icon, get_export_icon, get_import_icon, get_remove_icon,
     get_edit_icon, get_view_icon, get_search_icon, get_settings_icon,
