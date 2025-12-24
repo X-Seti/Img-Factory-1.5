@@ -85,21 +85,19 @@ class SVGIconFactory: #vers 7
     def _create_icon(svg_data: str, size: int = 20, color: str = None) -> QIcon:
         """Create QIcon from SVG data with theme color support"""
         if color is None:
-            try:
-                from apps.utils.app_settings_system import AppSettings
-                settings = AppSettings()
-                theme_colors = settings.get_theme_colors()
-                color = theme_colors.get('text_primary', '#ffffff')
-            except:
-                color = '#ffffff'  # Fallback
-
-        svg_data = svg_data.replace('currentColor', color)
-
+            # Use cached theme color or fallback - avoid circular import
+            if hasattr(SVGIconFactory, "_cached_color"):
+                color = SVGIconFactory._cached_color
+            else:
+                color = "#ffffff"  # Fallback
+        
+        svg_data = svg_data.replace("currentColor", color)
+        
         try:
             renderer = QSvgRenderer(svg_data.encode())
             if not renderer.isValid():
                 return QIcon()
-
+            
             pixmap = QPixmap(size, size)
             pixmap.fill(Qt.GlobalColor.transparent)
             painter = QPainter(pixmap)
@@ -109,6 +107,11 @@ class SVGIconFactory: #vers 7
         except Exception as e:
             print(f"Error: {e}")
             return QIcon()
+    
+    @staticmethod
+    def set_theme_color(color: str):
+        """Set cached theme color for icons"""
+        SVGIconFactory._cached_color = color
 
 
     @staticmethod
@@ -1537,7 +1540,7 @@ class SVGIconFactory: #vers 7
 # - FILE TYPE ICONS (Replace emojis in tabs)
 
     @staticmethod
-    def get_img_file_icon(size: int = 24) -> QIcon: #vers 1
+    def get_img_file_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """IMG archive icon - Replaces emoji"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
@@ -1550,7 +1553,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_col_file_icon(size: int = 24) -> QIcon: #vers 1
+    def get_col_file_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """COL collision icon - Replaces emoji"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <path d="M12 2L4 6v6c0 5.5 3.8 10.7 8 12 4.2-1.3 8-6.5 8-12V6l-8-4z"
@@ -1562,7 +1565,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_txd_file_icon(size: int = 24) -> QIcon: #vers 1
+    def get_txd_file_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """TXD texture icon - Replaces emoji"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <rect x="3" y="3" width="18" height="18" rx="2"
@@ -1576,7 +1579,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_folder_icon(size: int = 24) -> QIcon: #vers 1
+    def get_folder_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Folder icon - Replaces emoji"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-7l-2-2H5a2 2 0 00-2 2z"
@@ -1586,7 +1589,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_file_icon(size: int = 24) -> QIcon: #vers 1
+    def get_file_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Generic file icon - Replaces emoji"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
@@ -1600,7 +1603,7 @@ class SVGIconFactory: #vers 7
 # - ACTION ICONS
 
     @staticmethod
-    def get_trash_icon(size: int = 24) -> QIcon: #vers 1
+    def get_trash_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Delete/trash icon - Replaces emoji"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <polyline points="3 6 5 6 21 6"
@@ -1612,7 +1615,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_refresh_icon(size: int = 24) -> QIcon: #vers 1
+    def get_refresh_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Refresh icon - Replaces emoji"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0117-7l2.5 2.5M22 12.5a10 10 0 01-17 7l-2.5-2.5"
@@ -1622,7 +1625,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_tearoff_icon(size: int = 24) -> QIcon: #vers 1
+    def get_tearoff_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Tearoff/detach icon - Replaces emoji"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"
@@ -1632,7 +1635,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_checkmark_icon(size: int = 24) -> QIcon: #vers 1
+    def get_checkmark_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Checkmark icon - Replaces ✓ emoji"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <polyline points="20 6 9 17 4 12"
@@ -1642,7 +1645,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_palette_icon(size: int = 24) -> QIcon: #vers 1
+    def get_palette_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Theme/palette icon - Replaces emoji"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <path d="M12 2a10 10 0 00-9.95 11.1C2.5 17.7 6.3 21 10.9 21h1.2a2 2 0 002-2v-.3c0-.5.2-1 .6-1.3.4-.4.6-.9.6-1.4 0-1.1-.9-2-2-2h-1.4a8 8 0 110-10.3"
@@ -1655,7 +1658,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_import_icon(size: int = 24) -> QIcon: #vers 1
+    def get_import_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Import/download icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"
@@ -1665,7 +1668,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_export_icon(size: int = 24) -> QIcon: #vers 1
+    def get_export_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Export/upload icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
@@ -1675,7 +1678,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_save_icon(size: int = 24) -> QIcon: #vers 1
+    def get_save_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Save icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
@@ -1687,7 +1690,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_open_icon(size: int = 24) -> QIcon: #vers 1
+    def get_open_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Open file icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
@@ -1699,7 +1702,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_close_icon(size: int = 24) -> QIcon: #vers 1
+    def get_close_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Close/X icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <line x1="18" y1="6" x2="6" y2="18"
@@ -1711,7 +1714,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_add_icon(size: int = 24) -> QIcon: #vers 1
+    def get_add_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Add/plus icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <line x1="12" y1="5" x2="12" y2="19"
@@ -1723,7 +1726,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_remove_icon(size: int = 24) -> QIcon: #vers 1
+    def get_remove_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Remove/minus icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <line x1="5" y1="12" x2="19" y2="12"
@@ -1733,7 +1736,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_edit_icon(size: int = 24) -> QIcon: #vers 1
+    def get_edit_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Edit/pencil icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
@@ -1743,7 +1746,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_view_icon(size: int = 24) -> QIcon: #vers 1
+    def get_view_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """View/eye icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
@@ -1755,7 +1758,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_search_icon(size: int = 24) -> QIcon: #vers 1
+    def get_search_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Search/magnifying glass icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="8"
@@ -1767,7 +1770,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_settings_icon(size: int = 24) -> QIcon: #vers 1
+    def get_settings_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Settings/gear icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="3"
@@ -1779,7 +1782,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_info_icon(size: int = 24) -> QIcon: #vers 1
+    def get_info_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Info/information icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="10"
@@ -1793,7 +1796,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_warning_icon(size: int = 24) -> QIcon: #vers 1
+    def get_warning_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Warning/alert triangle icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
@@ -1807,7 +1810,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_error_icon(size: int = 24) -> QIcon: #vers 1
+    def get_error_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Error/X circle icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="10"
@@ -1821,7 +1824,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_success_icon(size: int = 24) -> QIcon: #vers 1
+    def get_success_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Success/checkmark circle icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="10"
@@ -1833,7 +1836,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_package_icon(size: int = 24) -> QIcon: #vers 1
+    def get_package_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Package/box icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
@@ -1847,7 +1850,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_shield_icon(size: int = 24) -> QIcon: #vers 1
+    def get_shield_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Shield/protection icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
@@ -1857,7 +1860,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_image_icon(size: int = 24) -> QIcon: #vers 1
+    def get_image_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Image/picture icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"
@@ -1870,7 +1873,7 @@ class SVGIconFactory: #vers 7
 
 
     @staticmethod
-    def get_rebuild_icon(size: int = 24) -> QIcon: #vers 1
+    def get_rebuild_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
         """Rebuild/refresh icon"""
         svg_data = '''<svg viewBox="0 0 24 24">
             <path d="M17 10V7a5 5 0 00-10 0v3"
@@ -1961,3 +1964,85 @@ class SVGIconFactory: #vers 7
         return SVGIconFactory._create_icon(svg_data, size, color)
 
 
+
+# = STANDALONE FUNCTION WRAPPERS FOR BACKWARD COMPATIBILITY
+
+def get_app_icon(size: int = 64) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_app_icon"""
+    return SVGIconFactory.get_app_icon(size)
+
+def get_add_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_add_icon"""
+    return SVGIconFactory.get_add_icon(size)
+
+def get_edit_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_edit_icon"""
+    return SVGIconFactory.get_edit_icon(size)
+
+def get_open_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_open_icon"""
+    return SVGIconFactory.get_open_icon(size)
+
+def get_refresh_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_refresh_icon"""
+    return SVGIconFactory.get_refresh_icon(size)
+
+def get_search_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_search_icon"""
+    return SVGIconFactory.get_search_icon(size)
+
+def get_export_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_export_icon"""
+    return SVGIconFactory.get_export_icon(size)
+
+def get_import_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_import_icon"""
+    return SVGIconFactory.get_import_icon(size)
+
+def get_warning_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_warning_icon"""
+    return SVGIconFactory.get_warning_icon(size)
+
+def get_success_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_success_icon"""
+    return SVGIconFactory.get_success_icon(size)
+
+def get_error_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_error_icon"""
+    return SVGIconFactory.get_error_icon(size)
+
+def get_img_file_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_img_file_icon"""
+    return SVGIconFactory.get_img_file_icon(size)
+
+def get_col_file_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_col_file_icon"""
+    return SVGIconFactory.get_col_file_icon(size)
+
+def get_txd_file_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_txd_file_icon"""
+    return SVGIconFactory.get_txd_file_icon(size)
+
+def get_close_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_close_icon"""
+    return SVGIconFactory.get_close_icon(size)
+
+def get_save_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_save_icon"""
+    return SVGIconFactory.get_save_icon(size)
+
+def get_remove_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_remove_icon"""
+    return SVGIconFactory.get_remove_icon(size)
+
+def get_view_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_view_icon"""
+    return SVGIconFactory.get_view_icon(size)
+
+def get_settings_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_settings_icon"""
+    return SVGIconFactory.get_settings_icon(size)
+
+def get_rebuild_icon(size: int = 24, color: str = None) -> QIcon: #vers 1
+    """Wrapper for SVGIconFactory.get_rebuild_icon"""
+    return SVGIconFactory.get_rebuild_icon(size)

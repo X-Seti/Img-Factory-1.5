@@ -1,4 +1,17 @@
 #this belongs in root /ChangeLog.md - Version: 3
+## December 24, 2025 - SVG Icon System Consolidation
+
+### Fixed
+- Consolidated svg_shared_icons.py and svg_icon_factory.py into single imgfactory_svg_icons.py
+- Added backward compatibility wrappers for get_*_icon() functions
+- Fixed circular import in _create_icon() with cached theme color approach
+- All SVG icons now use SVGIconFactory class with standalone function wrappers
+
+### Technical
+- Added SVGIconFactory.set_theme_color() for cached color management
+- Prevents circular AppSettings import during icon creation
+- Maintained theme-aware icon support without initialization loops
+
 # X-Seti - October22 - December 04 2025 - IMG Factory 1.5 ChangeLog
 
 # IMG Factory 1.5 - ChangeLog - (New System)
