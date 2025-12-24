@@ -123,7 +123,7 @@ class COLMenuBuilder:
         editor_action.setStatusTip("Open COL Editor for collision file editing")
         # Set SVG icon
         try:
-            from apps.methods.svg_shared_icons import get_edit_icon
+            from apps.methods.imgfactory_svg_icons import get_edit_icon
             editor_action.setIcon(get_edit_icon())
         except:
             pass  # Fallback to no icon if SVG loading fails
@@ -138,7 +138,7 @@ class COLMenuBuilder:
         open_col_action.setStatusTip("Open COL file directly")
         # Set SVG icon
         try:
-            from apps.methods.svg_shared_icons import get_open_icon
+            from apps.methods.imgfactory_svg_icons import get_open_icon
             open_col_action.setIcon(get_open_icon())
         except:
             pass  # Fallback to no icon if SVG loading fails
@@ -149,7 +149,7 @@ class COLMenuBuilder:
         new_col_action.setStatusTip("Create new COL file")
         # Set SVG icon
         try:
-            from apps.methods.svg_shared_icons import get_add_icon
+            from apps.methods.imgfactory_svg_icons import get_add_icon
             new_col_action.setIcon(get_add_icon())
         except:
             pass  # Fallback to no icon if SVG loading fails
@@ -164,7 +164,7 @@ class COLMenuBuilder:
         batch_action.setStatusTip("Process multiple COL files with batch operations")
         # Set SVG icon
         try:
-            from apps.methods.svg_shared_icons import get_refresh_icon
+            from apps.methods.imgfactory_svg_icons import get_refresh_icon
             batch_action.setIcon(get_refresh_icon())
         except:
             pass  # Fallback to no icon if SVG loading fails
@@ -176,7 +176,7 @@ class COLMenuBuilder:
         analyze_action.setStatusTip("Analyze COL file structure and quality")
         # Set SVG icon
         try:
-            from apps.methods.svg_shared_icons import get_search_icon
+            from apps.methods.imgfactory_svg_icons import get_search_icon
             analyze_action.setIcon(get_search_icon())
         except:
             pass  # Fallback to no icon if SVG loading fails
@@ -192,7 +192,7 @@ class COLMenuBuilder:
         extract_col_action.setStatusTip("Extract COL files from currently open IMG")
         # Set SVG icon
         try:
-            from apps.methods.svg_shared_icons import get_export_icon
+            from apps.methods.imgfactory_svg_icons import get_export_icon
             extract_col_action.setIcon(get_export_icon())
         except:
             pass  # Fallback to no icon if SVG loading fails
@@ -203,7 +203,7 @@ class COLMenuBuilder:
         import_col_action.setStatusTip("Import COL file into currently open IMG")
         # Set SVG icon
         try:
-            from apps.methods.svg_shared_icons import get_import_icon
+            from apps.methods.imgfactory_svg_icons import get_import_icon
             import_col_action.setIcon(get_import_icon())
         except:
             pass  # Fallback to no icon if SVG loading fails
@@ -431,7 +431,7 @@ class IMGFactoryMenuBar:
                     if menu_action.icon:
                         try:
                             # Import the appropriate SVG icon based on the icon string
-                            from apps.methods.svg_shared_icons import (
+                            from apps.methods.imgfactory_svg_icons import (
                                 get_save_icon, get_open_icon, get_close_icon,
                                 get_add_icon, get_remove_icon, get_edit_icon,
                                 get_refresh_icon, get_settings_icon, get_info_icon,

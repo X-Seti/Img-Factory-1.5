@@ -204,11 +204,12 @@ def load_col_file_object(main_window, file_path): #vers 1
         img_debugger.debug(f"Loading COL file: {os.path.basename(file_path)}")
         
         # Create COL file object
-        col_file = COLFile(file_path)
+        col_file = COLFile()
+        if not col_file.load_from_file(file_path):
+            img_debugger.error(f"Failed to load COL file: {col_file.load_error if hasattr(col_file, "load_error") else "Unknown error"}")
+            return None
         
         # Load the file
-        if col_file.load():
-            model_count = len(col_file.models) if hasattr(col_file, 'models') else 0
             img_debugger.success(f"COL file loaded: {model_count} models")
             return col_file
         else:

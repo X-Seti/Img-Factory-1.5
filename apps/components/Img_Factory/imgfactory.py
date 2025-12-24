@@ -104,7 +104,7 @@ from apps.gui.gui_context import (open_col_file_dialog, open_col_batch_proc_dial
 # Shared Methods
 from apps.methods.img_core_classes import (IMGFile, IMGEntry, IMGVersion, Platform, IMGEntriesTable, FilterPanel, IMGFileInfoPanel, TabFilterWidget, integrate_filtering, create_entries_table_panel, format_file_size)
 
-from apps.methods.col_core_classes import (COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup, COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox, diagnose_col_file, set_col_debug_enabled, is_col_debug_enabled)
+from apps.methods.col_core_classes import (COLFile, COLModel, COLVersion, COLMaterial, COLFaceGroup, COLSphere, COLBox, COLVertex, COLFace, Vector3, BoundingBox, diagnose_col_file)
 
 from apps.methods.col_integration import integrate_complete_col_system
 from apps.methods.col_functions import setup_complete_col_integration
@@ -3645,7 +3645,7 @@ class IMGFactory(QMainWindow):
             else:
                 # Show warning icon on the tab if possible
                 try:
-                    from apps.methods.svg_shared_icons import get_warning_icon
+                    from apps.methods.imgfactory_svg_icons import get_warning_icon
                     warning_icon = get_warning_icon()
                     self.main_tab_widget.setTabIcon(current_index, warning_icon)
                 except:
@@ -4828,7 +4828,7 @@ def main():
 
        # Set application icon
        try:
-           from apps.methods.svg_shared_icons import get_app_icon
+           from apps.methods.imgfactory_svg_icons import get_app_icon
            app_icon = get_app_icon()
            app.setWindowIcon(app_icon)
        except Exception as e:

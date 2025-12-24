@@ -1,42 +1,9 @@
-```
-# Compiled and build artifacts
-*.pyc
-__pycache__/
-*.o
-*.obj
-
-# Dependencies
-.venv/
-venv/
-node_modules/
-
-# Logs and temp files
-*.log
-*.tmp
-*.swp
-
-# Environment
-.env
-.env.local
-*.env.*
-
-# Editors
-.vscode/
-.idea/
-
-# Coverage
-.coverage
-coverage/
-htmlcov/
-
-# Python specific
-*.pyo
-*.pyd
-.Python
-*.so
-*.egg-info/
-
-# Build directories
-build/
-dist/
-```
+/apps/core/__pycache__
+/apps/methods/__pycache__
+/apps/gui/__pycache__
+/apps/components/Img_Factory/__pycache__
+/apps/__pycache__
+/apps/components/__pycache__
+/apps/debug/__pycache__
+/apps/components/Img_Creator/__pycache__
+/apps/utils/__pycache__

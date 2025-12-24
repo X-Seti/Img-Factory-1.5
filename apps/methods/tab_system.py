@@ -82,7 +82,7 @@ def create_tab(main_window, file_path=None, file_type=None, file_object=None): #
             if file_name.lower().endswith('.img'):
                 file_name = file_name[:-4]
                 try:
-                    from apps.methods.svg_shared_icons import get_img_file_icon
+                    from apps.methods.imgfactory_svg_icons import get_img_file_icon
                     icon = get_img_file_icon()
                     has_icon = True
                 except:
@@ -91,7 +91,7 @@ def create_tab(main_window, file_path=None, file_type=None, file_object=None): #
             elif file_name.lower().endswith('.col'):
                 file_name = file_name[:-4]
                 try:
-                    from apps.methods.svg_shared_icons import get_col_file_icon
+                    from apps.methods.imgfactory_svg_icons import get_col_file_icon
                     icon = get_col_file_icon()
                     has_icon = True
                 except:
@@ -100,7 +100,7 @@ def create_tab(main_window, file_path=None, file_type=None, file_object=None): #
             elif file_name.lower().endswith('.txd'):
                 file_name = file_name[:-4]
                 try:
-                    from apps.methods.svg_shared_icons import get_txd_file_icon
+                    from apps.methods.imgfactory_svg_icons import get_txd_file_icon
                     icon = get_txd_file_icon()
                     has_icon = True
                 except:
@@ -283,7 +283,7 @@ def switch_tab(main_window, tab_index: int): #vers 1
         )
 
         if file_type == 'COL' and file_object:
-            from apps.components.COL_Workshop.col_workshop import COLWorkshop
+            from apps.components.Col_Editor.col_workshop import COLWorkshop
             workshop = main_window.main_tab_widget.widget(tab_index).findChild(COLWorkshop)
             if workshop:
                 workshop.refresh_display()

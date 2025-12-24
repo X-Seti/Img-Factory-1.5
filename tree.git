@@ -6,17 +6,6 @@
 │   ├── components
 │   │   ├── Col_Creator
 │   │   │   └── col_creator.py
-│   │   ├── Col_Editor
-│   │   │   ├── col_workshop.py
-│   │   │   ├── depends
-│   │   │   │   ├── col_3d_viewport.py
-│   │   │   │   ├── col_core_classes.py
-│   │   │   │   ├── col_dialogs.py
-│   │   │   │   ├── col_preview_generator.py
-│   │   │   │   ├── img_debug_functions.py
-│   │   │   │   ├── standalone
-│   │   │   │   └── svg_icon_factory.py
-│   │   │   └── img_factory_debug.log
 │   │   ├── Col_Viewer
 │   │   │   ├── col_viewer.py
 │   │   │   └── depends
@@ -48,6 +37,7 @@
 │   │   │   │   └── mui_demo.py
 │   │   │   ├── imgfactory.py
 │   │   │   └── __init__.py
+│   │   ├── img_factory_debug.log
 │   │   ├── __init__.py
 │   │   ├── Map_Editor
 │   │   │   ├── Map_Workshop.py
@@ -112,21 +102,13 @@
 │   │   │       └── Validate.pas
 │   │   ├── Project_Manager
 │   │   │   └── img_project_manager.py
+│   │   ├── Tmp_Template
+│   │   │   ├── depends
+│   │   │   │   ├── col_3d_viewport.py
+│   │   │   │   └── svg_icon_factory.py
+│   │   │   └── gui_template.py
 │   │   ├── Txd_Converter
 │   │   │   └── txd_converter.py
-│   │   ├── Txd_Editor
-│   │   │   ├── depends
-│   │   │   │   ├── iff_import.py
-│   │   │   │   ├── indexed_color_import.py
-│   │   │   │   ├── svg_icon_factory.py
-│   │   │   │   ├── txd_serializer.py
-│   │   │   │   ├── txd_versions.py
-│   │   │   │   └── txd_workshop_theme.py
-│   │   │   ├── locale
-│   │   │   │   └── Txd_Workshop_English_Local.lang
-│   │   │   ├── methodlist_script.py
-│   │   │   ├── txd_workshop.py
-│   │   │   └── txd_workshop_standalone.py
 │   │   └── unified_signal_handler.py
 │   ├── core
 │   │   ├── advanced_img_tools.py
@@ -138,6 +120,7 @@
 │   │   ├── core.py
 │   │   ├── create.py
 │   │   ├── dialogs.py
+│   │   ├── double_click_rename.py
 │   │   ├── dump.py
 │   │   ├── export.py
 │   │   ├── export_via.py
@@ -219,7 +202,9 @@
 │   │   ├── localization.py
 │   │   └── local_settings.json
 │   ├── methods
+│   │   ├── col_3d_viewport.py
 │   │   ├── col_core_classes.py
+│   │   ├── col_dialogs.py
 │   │   ├── col_export_functions.py
 │   │   ├── col_functions.py
 │   │   ├── col_integration.py
@@ -227,6 +212,7 @@
 │   │   ├── colour_ui_for_loaded_img.py
 │   │   ├── col_parsing_functions.py
 │   │   ├── col_parsing_helpers.py
+│   │   ├── col_preview_generator.py
 │   │   ├── col_structure_manager.py
 │   │   ├── col_validation.py
 │   │   ├── common_functions.py
@@ -241,6 +227,7 @@
 │   │   ├── img_analyze.py
 │   │   ├── imgcol_exists.py
 │   │   ├── img_core_classes.py
+│   │   ├── img_debug_functions.py
 │   │   ├── img_entry_operations.py
 │   │   ├── img_export_entry.py
 │   │   ├── img_export_functions.py
@@ -261,7 +248,9 @@
 │   │   ├── refresh_table_functions.py
 │   │   ├── rw_detection.py
 │   │   ├── rw_versions.py
+│   │   ├── svg_icon_factory.py
 │   │   ├── svg_shared_icons.py
+│   │   ├── table_handlers.py
 │   │   ├── tab_system.py
 │   │   ├── txd_serializer.py
 │   │   ├── txd_versions.py
@@ -282,6 +271,7 @@
 │   │   ├── bluish_light.json
 │   │   ├── classic_dark.json
 │   │   ├── cyberpunk_dark.json
+│   │   ├── garujaro_dark.json
 │   │   ├── green_shad_light.json
 │   │   ├── green_theme_light.json
 │   │   ├── gta_forums_dark.json
@@ -314,12 +304,11 @@
 ├── cc.py
 ├── ChangeLog.md
 ├── Credits.md
+├── dev-branch
 ├── img_factory_debug.log
 ├── launch_imgfactory.py
-├── main-branch
-├── open-branch
 ├── package-lock.json
 ├── TODO.md
 └── tree.git
 
-34 directories, 289 files
+31 directories, 281 files

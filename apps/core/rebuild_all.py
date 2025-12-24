@@ -311,7 +311,7 @@ class BatchRebuildDialog(QDialog):
         """Handle individual file completion"""
         file_name = os.path.basename(file_path)
         try:
-            from apps.methods.svg_shared_icons import get_success_icon, get_error_icon
+            from apps.methods.imgfactory_svg_icons import get_success_icon, get_error_icon
             if success:
                 status = "✅ Completed"  # Using emoji as a simple visual indicator since full SVG integration would require more complex code
             else:
