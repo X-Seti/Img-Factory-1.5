@@ -37,7 +37,7 @@
   "last_img_output_path": "",
   "last_import_path": "",
   "last_export_path": "",
-  "use_pastel_buttons": false,
+  "use_pastel_buttons": true,
   "high_contrast_buttons": false,
   "button_size": 24,
   "icon_size": 16,
@@ -65,8 +65,5 @@
   "table_font_size": 9,
   "table_font_weight": "Normal",
   "tooltip_font_size": 8,
-  "tooltip_font_weight": "Normal",
-  "button_icon_size": 16,
-  "button_text_size": 9,
-  "separate_button_format": false
+  "tooltip_font_weight": "Normal"
 }

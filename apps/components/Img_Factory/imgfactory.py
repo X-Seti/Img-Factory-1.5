@@ -136,7 +136,7 @@ from apps.methods.col_export_functions import integrate_col_export_functions
 #    setup_missing_utility_functions, unified_double_click_handler, unified_selection_handler)
 
 # App metadata
-App_name = "Img Factory 1.5"
+App_name = "Img Factory 1.6"
 App_build = "December 30 - "
 App_auth = "X-Seti"
 
