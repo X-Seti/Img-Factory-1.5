@@ -814,6 +814,16 @@ class SVGIconFactory: #vers 7
         return SVGIconFactory._create_icon(svg_data, size, color)
     
 
+    @staticmethod
+    def lock_icon(size: int = 20, color: str = None) -> QIcon: #vers 1
+        """Lock icon for pinned entries"""
+        svg_data = '''<svg viewBox="0 0 24 24">
+            <path fill="currentColor" 
+                d="M18,8H17V6A5,5 0 0,0 12,1A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M12,3A3,3 0 0,1 15,6V8H9V6A3,3 0 0,1 12,3M18,20H6V10H18V20Z"/>
+        </svg>'''
+        return SVGIconFactory._create_icon(svg_data, size, color)
+    
+
 # - ARROW ICONS
 
     @staticmethod
@@ -1963,6 +1973,26 @@ class SVGIconFactory: #vers 7
         </svg>'''
         return SVGIconFactory._create_icon(svg_data, size, color)
 
+
+    @staticmethod
+    def get_app_icon(size: int = 64) -> QIcon: #vers 1
+        """IMG Factory application icon - Archive/Package themed"""
+        svg_data = f'''<svg width="{size}" height="{size}" viewBox="0 0 64 64">
+            <defs>
+                <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:color;stop-opacity:1" />
+                </linearGradient>
+            </defs>
+            <rect width="64" height="64" rx="8" fill="url(#grad)"/>
+            <!-- Archive box -->
+            <path d="M 32 12 L 52 22 L 52 42 L 32 52 L 12 42 L 12 22 Z" fill="_cached_color" opacity="0.9"/>
+            <path d="M 32 12 L 52 22 L 32 32 L 12 22 Z" fill="#ffffff" opacity="0.7"/>
+            <path d="M 12 22 L 12 42 L 32 52 L 32 32 Z" fill="#ffffff" opacity="0.5"/>
+            <!-- IMG text -->
+            <text x="32" y="40" font-family="Arial" font-size="12" font-weight="bold" fill="#357ABD" text-anchor="middle">IMG</text>
+        </svg>'''
+        return SVGIconFactory._create_icon(svg_data, size, None)
 
 
 # = STANDALONE FUNCTION WRAPPERS FOR BACKWARD COMPATIBILITY

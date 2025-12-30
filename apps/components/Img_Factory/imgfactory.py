@@ -121,7 +121,7 @@ from apps.methods.progressbar_functions import integrate_progress_system
 from apps.methods.update_ui_for_loaded_img import update_ui_for_loaded_img, integrate_update_ui_for_loaded_img
 
 from apps.methods.import_highlight_system import enable_import_highlighting
-from apps.methods.refresh_table_functions import integrate_refresh_table
+#from apps.methods.refresh_table_functions import integrate_refresh_table
 from apps.methods.img_entry_operations import integrate_entry_operations
 from apps.methods.mirror_tab_shared import show_mirror_tab_selection
 from apps.methods.ide_parser_functions import integrate_ide_parser
@@ -137,7 +137,7 @@ from apps.methods.col_export_functions import integrate_col_export_functions
 
 # App metadata
 App_name = "Img Factory 1.5"
-App_build = "December 11 - "
+App_build = "December 30 - "
 App_auth = "X-Seti"
 
 ##Methods list -
@@ -510,7 +510,7 @@ class IMGFactory(QMainWindow):
         self.export_all = lambda: export_all_function(self)
         self.dump_all = lambda: dump_all_function(self)
         self.dump_selected = lambda: dump_selected_function(self)
-        integrate_refresh_table(self)
+        #integrate_refresh_table(self)
         integrate_reload_functions(self)
 
         # TXD Editor Integration
@@ -1252,13 +1252,13 @@ class IMGFactory(QMainWindow):
 
         # Add missing functions for menu system
         self.save_img_as = self._save_img_as
-        self.save_img_entry = self._save_img_entry  # Main save function with modification check
+        #self.save_img_entry = self._save_img_entry  # Main save function with modification check
         self.find_entries = self._find_entries
         self.find_next_entries = self._find_next_entries
         self.duplicate_selected = self._duplicate_selected
         self.rename_entry = self._rename_entry
         self.rename_selected = self._rename_selected
-        self.remove_selected = self._remove_selected_entries
+        #self.remove_selected = self._remove_selected_entries
         self.select_inverse_entries = self._select_inverse_entries
         self.extract_textures = lambda: extract_textures_function(self)
         # NEW: Add extract DFF texture lists functionality

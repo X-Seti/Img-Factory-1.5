@@ -126,12 +126,22 @@ def save_img_entry(main_window): #vers 1
                 has_changes = True
                 renamed_count += 1
             # Check if entry was renamed by comparing to original names if available
-            elif hasattr(entry, 'original_name') and entry.original_name != entry.name:
+            elif hasattr(entry, 'original_name') and hasattr(entry, 'name') and entry.original_name != entry.name:
+                has_changes = True
+                renamed_count += 1
+            # Check for other modification indicators
+            elif hasattr(entry, 'modified') and entry.modified:
+                has_changes = True
+                renamed_count += 1
+            elif hasattr(entry, 'is_new_entry') and entry.is_new_entry:
+                has_changes = True
+                renamed_count += 1
+            elif hasattr(entry, 'is_replaced') and entry.is_replaced:
                 has_changes = True
                 renamed_count += 1
     if renamed_count > 0:
         if hasattr(main_window, 'log_message'):
-            main_window.log_message(f"Changes detected: {renamed_count} renamed entries")
+            main_window.log_message(f"Changes detected: {renamed_count} renamed or modified entries")
     # Check has_new_or_modified_entries method
     if hasattr(file_object, 'has_new_or_modified_entries') and file_object.has_new_or_modified_entries():
         has_changes = True
@@ -177,9 +187,12 @@ def save_img_entry(main_window): #vers 1
         _refresh_table_with_rw_data(main_window)
         if hasattr(main_window, 'refresh_table'):
             main_window.refresh_table()
-        QMessageBox.information(main_window, "Save Complete",
-            "IMG file saved successfully with RW version detection!\n"
-            "All changes have been written to disk.")
+            QMessageBox.information(main_window, "Save Complete",
+            "IMG file saved successfully with RW version detection!\n All changes have been written to disk.")
+            from apps.core.reload import reload_current_file
+            reload_current_file(main_window)
+            main_window.log_message("Auto-reloaded after save")
+
         if hasattr(main_window, 'log_message'):
             main_window.log_message("Save completed with RW data populated")
         return True

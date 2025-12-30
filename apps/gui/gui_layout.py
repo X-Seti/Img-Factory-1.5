@@ -11,9 +11,10 @@ from PyQt6.QtWidgets import (
     QMessageBox, QSizePolicy, QButtonGroup, QListWidget, QListWidgetItem,
     QFormLayout, QScrollArea, QFrame
 )
-from PyQt6.QtCore import Qt, QTimer, QSize, pyqtSignal, QPoint
+from PyQt6.QtCore import Qt, QTimer, QSize, pyqtSignal, QPoint, QItemSelectionModel
 from PyQt6.QtGui import QFont, QAction, QIcon, QShortcut, QKeySequence, QPalette, QTextCursor
 from apps.core.gui_search import ASearchDialog, SearchManager
+
 from apps.methods.imgfactory_svg_icons import (
     get_add_icon, get_open_icon, get_refresh_icon, get_close_icon, 
     get_save_icon, get_export_icon, get_import_icon, get_remove_icon,
@@ -55,7 +56,7 @@ from apps.core.open import _detect_and_open_file, open_file_dialog, _detect_file
 from apps.core.close import close_img_file, close_all_img, install_close_functions, setup_close_manager
 from apps.methods.colour_ui_for_loaded_img import integrate_color_ui_system
 from apps.gui.gui_context import open_col_editor_dialog
-from apps.methods.refresh_table_functions import refresh_table
+#from apps.methods.refresh_table_functions import refresh_table
 
 
 def edit_txd_file(main_window): #vers 3
@@ -196,6 +197,7 @@ class IMGFactoryGUILayout:
             # Selection methods
             'select_all_entries': lambda: self.select_all_entries(),
             'select_inverse': lambda: self.select_inverse(),
+            'show_search_dialog': lambda: self.show_search_dialog(),
             'sort_entries': lambda: self.sort_entries(),
             'sort_entries_to_match_ide': lambda: self.sort_entries_to_match_ide(),
             'pin_selected_entries': lambda: self.pin_selected_entries(),
@@ -331,7 +333,6 @@ class IMGFactoryGUILayout:
             ("Rename", "rename", "edit-rename", colors['edit_action'], "rename_selected"),
             ("Select All", "select_all", "edit-select-all", colors['select_action'], "select_all_entries"),
             ("Inverse", "sel_inverse", "edit-select", colors['select_action'], "select_inverse"),
-            ("Search", "search", "search", colors['select_action'], "show_search_dialog"),
             ("Sort via", "sort", "view-sort", colors['select_action'], "sort_entries"),
             ("Sort IDE", "sort_ide", "view-sort-ide", colors['select_action'], "sort_entries_to_match_ide"),
             ("Pin selected", "pin_selected", "pin", colors['select_action'], "pin_selected_entries"),
@@ -491,8 +492,6 @@ class IMGFactoryGUILayout:
         self.tearoff_button.setStyleSheet(button_style)
 
 
-    # FIXED TEAROFF METHODS
-
     def _handle_tab_widget_tearoff(self): #vers 2
         """Handle tearoff button click for tab widget - FIXED"""
         try:
@@ -565,8 +564,9 @@ class IMGFactoryGUILayout:
             import traceback
             traceback.print_exc()
 
+
     def _dock_tab_widget_back(self): #vers 2
-        """Dock torn off tab widget back to main window - FIXED"""
+        """Dock torn off tab widget back to main window """
         try:
             # Check if actually torn off
             if not hasattr(self.tab_widget, 'is_torn_off') or not self.tab_widget.is_torn_off:
@@ -1252,7 +1252,7 @@ class IMGFactoryGUILayout:
         tree_layout.setContentsMargins(0, 0, 0, 0)
 
         # Placeholder content - will be replaced by integration
-        placeholder_label = QLabel("🌳 Directory Tree")
+        placeholder_label = QLabel("Directory Tree")
         placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         placeholder_label.setStyleSheet("font-size: 14px; color: #888; font-style: italic;")
         tree_layout.addWidget(placeholder_label)
@@ -1292,17 +1292,21 @@ class IMGFactoryGUILayout:
         """Create right panel with theme-controlled pastel buttons"""
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
+
         right_layout.setContentsMargins(4, 4, 4, 4)
-        right_layout.setSpacing(6)
+        space_between_btnv = 8  # Vertical Button spacing
+        space_between_btnh = 6  # Horizontal Button spacing
+
+        right_layout.setSpacing(0)
 
         # IMG Section with theme colors
         img_box = QGroupBox("IMG, COL, TXD Files")
         img_layout = QGridLayout()
-        img_layout.setSpacing(2)
-        
+        img_layout.setSpacing(space_between_btnv)
+
         # Use theme-controlled button data
         img_buttons_data = self._get_img_buttons_data()
-        
+
         for i, (label, action_type, icon, color, method_name) in enumerate(img_buttons_data):
             btn = self.create_pastel_button(label, action_type, icon, color, method_name)
             self.img_buttons.append(btn)
@@ -1310,18 +1314,18 @@ class IMGFactoryGUILayout:
             if hasattr(self, 'backend'):
                 self.backend.img_buttons.append(btn)
             img_layout.addWidget(btn, i // 3, i % 3)
-        
+
         img_box.setLayout(img_layout)
         right_layout.addWidget(img_box)
 
-        # Entries Section with theme colors  
+        # Entries Section with theme colors
         entries_box = QGroupBox("File Entries")
         entries_layout = QGridLayout()
-        entries_layout.setSpacing(2)
-        
+        entries_layout.setSpacing(space_between_btnv)
+
         # Use theme-controlled button data
         entry_buttons_data = self._get_entry_buttons_data()
-        
+
         for i, (label, action_type, icon, color, method_name) in enumerate(entry_buttons_data):
             btn = self.create_pastel_button(label, action_type, icon, color, method_name)
             self.entry_buttons.append(btn)
@@ -1329,18 +1333,18 @@ class IMGFactoryGUILayout:
             if hasattr(self, 'backend'):
                 self.backend.entry_buttons.append(btn)
             entries_layout.addWidget(btn, i // 3, i % 3)
-        
+
         entries_box.setLayout(entries_layout)
         right_layout.addWidget(entries_box)
 
         # Options Section with theme colors
         options_box = QGroupBox("Editing Options")
         options_layout = QGridLayout()
-        options_layout.setSpacing(2)
-        
+        options_layout.setSpacing(space_between_btnv)
+
         # Use theme-controlled button data
         options_buttons_data = self._get_options_buttons_data()
-        
+
         for i, (label, action_type, icon, color, method_name) in enumerate(options_buttons_data):
             btn = self.create_pastel_button(label, action_type, icon, color, method_name)
             self.options_buttons.append(btn)
@@ -1348,13 +1352,23 @@ class IMGFactoryGUILayout:
             if hasattr(self, 'backend'):
                 self.backend.options_buttons.append(btn)
             options_layout.addWidget(btn, i // 3, i % 3)
-        
+
         options_box.setLayout(options_layout)
         right_layout.addWidget(options_box)
 
-        # Add stretch to push everything up
-        right_layout.addStretch()
+        # Search button section - positioned at the bottom right
+        search_button_layout = QHBoxLayout()
+        search_button_layout.addStretch()  # Add stretch to push button to the right
+        search_btn = self.create_pastel_button("Search", "search", "search", self._get_button_theme_template()['select_action'], "show_search_dialog")
+        # Add to backend as well
+        if hasattr(self, 'backend'):
+            self.backend.options_buttons.append(search_btn)  # Add to options buttons for consistency
+        search_button_layout.addWidget(search_btn)
+        right_layout.addLayout(search_button_layout)
+
         return right_panel
+
+
 
     def set_button_display_mode(self, mode: str):
         """
@@ -1906,7 +1920,8 @@ class IMGFactoryGUILayout:
             if hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"Select all entries error: {str(e)}")
 
-    def select_inverse(self):  # vers 3
+
+    def select_inverse(self):  # vers 4
         """Invert the current selection in the table"""
         try:
             if self.table:
@@ -1917,20 +1932,16 @@ class IMGFactoryGUILayout:
                     currently_selected_rows = set()
                     for index in selection_model.selectedIndexes():
                         currently_selected_rows.add(index.row())
-                    
+
                     # Clear current selection
                     self.table.clearSelection()
-                    
-                    # Select all rows that were NOT selected, and deselect those that were
+
+                    # Select all rows that were NOT selected
                     for row in range(self.table.rowCount()):
-                        if row in currently_selected_rows:
-                            # Leave deselected (these were originally selected)
-                            pass
-                        else:
-                            # Select this row (these were originally NOT selected)
-                            for col in range(self.table.columnCount()):
-                                index = self.table.model().index(row, col)
-                                selection_model.select(index, QAbstractItemView.SelectionFlag.Select)
+                        if row not in currently_selected_rows:
+                            # Select the entire row by selecting the first cell in the row
+                            index = self.table.model().index(row, 0)
+                            selection_model.select(index, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows)
                 else:
                     # Fallback method if selection model is not available
                     # Get all items in the table
@@ -1940,18 +1951,14 @@ class IMGFactoryGUILayout:
                             item = self.table.item(row, col)
                             if item:
                                 all_items.append(item)
-
                     # Store currently selected items
                     currently_selected = set(self.table.selectedItems())
-
                     # Clear selection
                     self.table.clearSelection()
-
                     # Select items that were not selected
                     for item in all_items:
                         if item not in currently_selected:
                             item.setSelected(True)
-
                 if hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message("Selection inverted")
             else:
@@ -1960,9 +1967,102 @@ class IMGFactoryGUILayout:
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"Select inverse error: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
-    def sort_entries(self, sort_order="name"):  # vers 2
-        """Sort entries in the table with various options"""
+
+    def sort_entries(self, sort_order="name"):  # vers 3
+        """Sort entries in the table with various options - shows dialog for options"""
+        try:
+            if self.table:
+                # Show sort options dialog
+                from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QLabel
+                dialog = QDialog(self.main_window)
+                dialog.setWindowTitle("Sort Options")
+                dialog.setModal(True)
+                
+                layout = QVBoxLayout()
+                
+                # Sort by label and combo box
+                sort_layout = QHBoxLayout()
+                sort_layout.addWidget(QLabel("Sort by:"))
+                sort_combo = QComboBox()
+                sort_combo.addItems(["Name", "Type", "Size", "IDE Model Order"])
+                sort_layout.addWidget(sort_combo)
+                layout.addLayout(sort_layout)
+                
+                # OK and Cancel buttons
+                button_layout = QHBoxLayout()
+                ok_btn = QPushButton("OK")
+                cancel_btn = QPushButton("Cancel")
+                
+                def on_ok():
+                    selected_sort = sort_combo.currentText().lower().replace(" ", "_").replace("model_", "")
+                    if "ide" in sort_combo.currentText().lower():
+                        selected_sort = "ide_order"
+                    dialog.accept()
+                    # Import the sorting functionality
+                    from apps.core.sort import sort_entries_in_table, get_associated_ide_file, parse_ide_file
+                    
+                    # Get the current IMG file path if available
+                    img_path = None
+                    if hasattr(self.main_window, 'current_img') and self.main_window.current_img:
+                        img_path = self.main_window.current_img.file_path
+                    
+                    ide_entries = []
+                    
+                    # If sorting by IDE order, try to find and parse the associated IDE file
+                    if selected_sort == "ide_order":
+                        if img_path:
+                            ide_path = get_associated_ide_file(img_path)
+                            if ide_path:
+                                ide_entries = parse_ide_file(ide_path)
+                                if ide_entries:
+                                    self.main_window.log_message(f"Found associated IDE file: {ide_path}")
+                                else:
+                                    self.main_window.log_message(f"IDE file found but could not be parsed: {ide_path}")
+                                    # Fall back to name sorting if IDE parsing failed
+                                    selected_sort = "name"
+                            else:
+                                self.main_window.log_message("No associated IDE file found, using name sort")
+                                selected_sort = "name"
+                        else:
+                            self.main_window.log_message("No IMG file loaded, using name sort")
+                            selected_sort = "name"
+                    
+                    # Perform the sorting
+                    sort_entries_in_table(self.table, selected_sort, ide_entries)
+                    
+                    if selected_sort == "ide_order":
+                        self.main_window.log_message("Entries sorted by IDE model order (TXDs at bottom)")
+                    else:
+                        self.main_window.log_message(f"Entries sorted by {selected_sort} (TXDs at bottom)")
+                
+                def on_cancel():
+                    dialog.reject()
+                
+                ok_btn.clicked.connect(on_ok)
+                cancel_btn.clicked.connect(on_cancel)
+                
+                button_layout.addWidget(ok_btn)
+                button_layout.addWidget(cancel_btn)
+                
+                layout.addLayout(button_layout)
+                dialog.setLayout(layout)
+                
+                # Show the dialog
+                result = dialog.exec()
+            else:
+                if hasattr(self.main_window, 'log_message'):
+                    self.main_window.log_message("Table not available for sorting")
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Sort entries error: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+    def sort_entries_to_match_ide(self):  # vers 2
+        """Sort entries to match IDE model order - direct sort without dialog"""
         try:
             if self.table:
                 # Import the sorting functionality
@@ -1975,44 +2075,34 @@ class IMGFactoryGUILayout:
                 
                 ide_entries = []
                 
-                # If sorting by IDE order, try to find and parse the associated IDE file
-                if sort_order == "ide_order":
-                    if img_path:
-                        ide_path = get_associated_ide_file(img_path)
-                        if ide_path:
-                            ide_entries = parse_ide_file(ide_path)
-                            if ide_entries:
-                                self.main_window.log_message(f"Found associated IDE file: {ide_path}")
-                            else:
-                                self.main_window.log_message(f"IDE file found but could not be parsed: {ide_path}")
-                                # Fall back to name sorting if IDE parsing failed
-                                sort_order = "name"
+                # Find and parse the associated IDE file
+                if img_path:
+                    ide_path = get_associated_ide_file(img_path)
+                    if ide_path:
+                        ide_entries = parse_ide_file(ide_path)
+                        if ide_entries:
+                            self.main_window.log_message(f"Found associated IDE file: {ide_path}")
                         else:
-                            self.main_window.log_message("No associated IDE file found, using name sort")
-                            sort_order = "name"
+                            self.main_window.log_message(f"IDE file found but could not be parsed: {ide_path}")
+                            return  # Don't fall back to name sort since user specifically wants IDE sort
                     else:
-                        self.main_window.log_message("No IMG file loaded, using name sort")
-                        sort_order = "name"
+                        self.main_window.log_message("No associated IDE file found")
+                        return
+                else:
+                    self.main_window.log_message("No IMG file loaded")
+                    return
                 
                 # Perform the sorting
-                sort_entries_in_table(self.table, sort_order, ide_entries)
-                
-                if sort_order == "ide_order":
-                    self.main_window.log_message("Entries sorted by IDE model order (TXDs at bottom)")
-                else:
-                    self.main_window.log_message("Entries sorted by name (TXDs at bottom)")
+                sort_entries_in_table(self.table, "ide_order", ide_entries)
+                self.main_window.log_message("Entries sorted by IDE model order (TXDs at bottom)")
             else:
                 if hasattr(self.main_window, 'log_message'):
                     self.main_window.log_message("Table not available for sorting")
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Sort entries error: {str(e)}")
+                self.main_window.log_message(f"Sort entries to match IDE error: {str(e)}")
             import traceback
             traceback.print_exc()
-
-    def sort_entries_to_match_ide(self):  # vers 1
-        """Sort entries to match IDE model order"""
-        self.sort_entries(sort_order="ide_order")
 
     def pin_selected_entries(self):  # vers 1
         """Pin selected entries to keep them at the top of the table"""
@@ -2052,6 +2142,16 @@ class IMGFactoryGUILayout:
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
                 self.main_window.log_message(f"Pin selected entries error: {str(e)}")
+
+    def show_search_dialog(self):  # vers 1
+        """Show the search dialog"""
+        try:
+            # Create and show the search dialog
+            search_dialog = ASearchDialog(self.main_window)
+            search_dialog.exec()
+        except Exception as e:
+            if hasattr(self.main_window, 'log_message'):
+                self.main_window.log_message(f"Search dialog error: {str(e)}")
 
     def move_entries_up(self):  # vers 1
         """Move selected entries up in the table"""

@@ -11,6 +11,7 @@ FIXED: get_current_file_from_active_tab gets data from tab widget, not current_i
 """
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTableWidget, QMessageBox
+from PyQt6.QtCore import Qt
 from typing import Optional, Tuple, Any, Dict, List
 
 ##Methods list -
@@ -35,6 +36,25 @@ from typing import Optional, Tuple, Any, Dict, List
 # update_references
 # update_tab_info
 # validate_tab_before_operation
+
+
+def _show_tab_context_menu(main_window, position, tab_widget): #vers 1
+    """Show context menu for tab-specific table"""
+    try:
+        from apps.core.right_click_actions import show_context_menu
+        # Temporarily set gui_layout.table to this tab's table
+        original_table = main_window.gui_layout.table if hasattr(main_window, "gui_layout") else None
+        tab_table = getattr(tab_widget, "table_ref", None)
+        
+        if tab_table and hasattr(main_window, "gui_layout"):
+            main_window.gui_layout.table = tab_table
+            show_context_menu(main_window, position)
+            # Restore
+            if original_table:
+                main_window.gui_layout.table = original_table
+    except Exception as e:
+        if hasattr(main_window, "log_message"):
+            main_window.log_message(f"Context menu error: {str(e)}")
 
 
 def create_tab(main_window, file_path=None, file_type=None, file_object=None): #vers 5
@@ -64,9 +84,32 @@ def create_tab(main_window, file_path=None, file_type=None, file_object=None): #
         tables = tab_widget.findChildren(QTableWidget)
         if tables:
             tab_widget.table_ref = tables[-1]
+            # Enable mouse tracking for hover effects
+            tab_widget.table_ref.setMouseTracking(True)
+            tab_widget.table_ref.viewport().setMouseTracking(True)
+            
+            # Apply hover stylesheet
+            existing_style = tab_widget.table_ref.styleSheet()
+            hover_style = """
+                QTableWidget::item:hover {
+                    background-color: rgba(100, 150, 255, 0.25);
+                }
+                QTableWidget::item:selected:hover {
+                    background-color: rgba(90, 150, 250, 0.5);
+                }
+            """
+            tab_widget.table_ref.setStyleSheet(existing_style + hover_style)
         else:
             main_window.log_message("No table found in new tab")
             tab_widget.table_ref = None
+
+        # Setup context menu for THIS tabs table
+        if tab_widget.table_ref:
+            tab_widget.table_ref.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            tab_widget.table_ref.customContextMenuRequested.connect(
+                lambda pos, tw=tab_widget: _show_tab_context_menu(main_window, pos, tw)
+            )
+            main_window.log_message(f"Context menu enabled for tab table")
 
         # Store file data directly on tab widget
         tab_widget.file_path = file_path
@@ -268,21 +311,31 @@ def update_references(main_window, tab_index: int): #vers 1
         main_window.log_message(f"Error updating references: {str(e)}")
 
 
-def switch_tab(main_window, tab_index: int): #vers 1
-    """Handle tab switch event"""
+def switch_tab(main_window, tab_index: int): #vers 2
+    """Handle tab switch event - Updated to refresh table display"""
     try:
         if tab_index < 0:
             return
 
         main_window.log_message(f"Switching to tab {tab_index}")
 
+        # Update current_img, current_col, current_txd references
         update_references(main_window, tab_index)
 
-        file_object, file_type, _ = get_tab_data(
+        # Get file data for this tab
+        file_object, file_type, table_widget = get_tab_data(
             main_window.main_tab_widget.widget(tab_index)
         )
 
-        if file_type == 'COL' and file_object:
+        # Also get the main shared table from gui_layout
+        shared_table = main_window.gui_layout.table
+
+        if file_type == 'IMG' and file_object and file_object.entries:
+            # Populate the shared table with this tab's IMG data
+            from apps.methods.populate_img_table import populate_img_table
+            populate_img_table(shared_table, file_object)
+            
+        elif file_type == 'COL' and file_object:
             from apps.components.Col_Editor.col_workshop import COLWorkshop
             workshop = main_window.main_tab_widget.widget(tab_index).findChild(COLWorkshop)
             if workshop:
@@ -292,10 +345,12 @@ def switch_tab(main_window, tab_index: int): #vers 1
             from apps.components.Txd_Editor.txd_workshop import TXDWorkshop
             workshop = main_window.main_tab_widget.widget(tab_index).findChild(TXDWorkshop)
             if workshop:
-                workshop.load_from_img_archive(file_path)
+                workshop.load_from_img_archive(file_object.file_path)
 
     except Exception as e:
         main_window.log_message(f"Error switching tab: {str(e)}")
+        import traceback
+        traceback.print_exc()
 
 
 def get_tab_file_data(main_window, tab_index: int) -> Tuple[Optional[Any], str]: #vers 4
@@ -494,8 +549,8 @@ def ensure_tab_references_valid(main_window) -> bool: #vers 1
         return False
 
 
-def refresh_current_tab_data(main_window) -> bool: #vers 1
-    """Force refresh of current tab's data and references"""
+def refresh_current_tab_data(main_window) -> bool: #vers 3
+    """Force refresh of current tab's data and references - Updated to refresh table display"""
     try:
         current_index = main_window.main_tab_widget.currentIndex()
         if current_index == -1:
@@ -525,6 +580,31 @@ def refresh_current_tab_data(main_window) -> bool: #vers 1
                     main_window.current_col = None
                     success = True
         
+        # Also refresh the table display with current tab's data
+        # Get the file object from the current tab directly to ensure we have the latest data
+        tab_widget = main_window.main_tab_widget.widget(current_index)
+        if tab_widget and hasattr(tab_widget, 'file_object') and tab_widget.file_object:
+            file_object = tab_widget.file_object
+            file_type = getattr(tab_widget, 'file_type', 'NONE')
+            
+            if file_type == 'IMG' and file_object:
+                # Get the shared table and populate it with the current tab's IMG data
+                shared_table = main_window.gui_layout.table
+                from apps.methods.populate_img_table import populate_img_table
+                populate_img_table(shared_table, file_object)
+            elif file_type == 'COL' and file_object:
+                # Refresh COL display if needed
+                from apps.components.Col_Editor.col_workshop import COLWorkshop
+                workshop = tab_widget.findChild(COLWorkshop)
+                if workshop:
+                    workshop.refresh_display()
+            elif file_type == 'TXD' and file_object:
+                # Refresh TXD display if needed
+                from apps.components.Txd_Editor.txd_workshop import TXDWorkshop
+                workshop = tab_widget.findChild(TXDWorkshop)
+                if workshop:
+                    workshop.load_from_img_archive(file_object.file_path)
+        
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"Tab refresh result: {'Success' if success else 'Failed'}")
         
@@ -533,6 +613,8 @@ def refresh_current_tab_data(main_window) -> bool: #vers 1
     except Exception as e:
         if hasattr(main_window, 'log_message'):
             main_window.log_message(f"Error refreshing tab data: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
